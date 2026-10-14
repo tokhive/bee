@@ -300,7 +300,11 @@ func TestClaudeProfileFailuresAreBoundedAndRedacted(t *testing.T) {
 }
 
 func TestClaudeCLIValidationNeedsNoHivePairing(t *testing.T) {
-	for _, args := range [][]string{{"--help"}, {"--store", "file"}, {"extra"}} {
+	var help bytes.Buffer
+	if err := Run(context.Background(), []string{"claude-status", "--help"}, &help); err != nil || !strings.Contains(help.String(), "-store") {
+		t.Fatalf("help: %v %s", err, help.String())
+	}
+	for _, args := range [][]string{{"--store", "plaintext"}, {"extra"}} {
 		var out bytes.Buffer
 		err := Run(context.Background(), append([]string{"claude-status"}, args...), &out)
 		if err == nil || strings.Contains(err.Error(), "pairing") {

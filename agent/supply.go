@@ -42,7 +42,19 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 	if result.Ready {
 		fmt.Fprintln(out, "supply requirements satisfied")
 	}
-	labels := map[string]string{
+	for _, reason := range result.Reasons {
+		label, ok := supplyReasonLabels[reason]
+		if !ok {
+			label = "supply requirements awaiting verification"
+		}
+		fmt.Fprintln(out, label)
+	}
+	return nil
+}
+
+// supplyReasonLabels says each reason Hive gives for not sending work in a
+// few words, for bee supply-status and bee status.
+var supplyReasonLabels = map[string]string{
 		"capabilities_unknown": "account capabilities unknown or expired", "quota_unknown": "quota awaiting a new query", "quota_exhausted": "account quota exhausted", "rate_limited": "upstream rate limit cooldown active", "concurrency_full": "account concurrency limit reached",
 		"manually_paused": "manually paused", "banned": "banned by administrator", "device_draining": "device being replaced; finishing in-flight execution and settlement", "plan_not_configured": "no concurrency limit configured for this plan", "offline": "Bee offline", "not_configured": "supply not configured",
 		"model_unavailable": "model not tradable", "codex_authorization_rejected": "Codex authorization rejected by upstream",
@@ -53,12 +65,3 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 		"claude_source_unavailable":     "waiting for official Claude Code authorization recovery",
 		"claude_confirmation_required":  "Claude account changed; awaiting explicit confirmation",
 	}
-	for _, reason := range result.Reasons {
-		label, ok := labels[reason]
-		if !ok {
-			label = "supply requirements awaiting verification"
-		}
-		fmt.Fprintln(out, label)
-	}
-	return nil
-}

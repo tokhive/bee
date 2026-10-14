@@ -16,6 +16,9 @@ import (
 type console struct{ logger *slog.Logger }
 
 func newConsole(out io.Writer) *console {
+	if logx.Readable(out) {
+		return &console{logger: slog.New(logx.Friendly(out, slog.LevelInfo))}
+	}
 	return &console{logger: logx.Console(out, "bee")}
 }
 

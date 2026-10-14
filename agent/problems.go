@@ -97,8 +97,8 @@ var problems = map[string]problem{
 		"remove local_url; it exists only for local test fixtures",
 	},
 	"BEE-CONFIG-CLAUDE-STORE": {
-		`the Claude source does not specify store "keychain"`,
-		`set claude.store to "keychain"; it is the only Claude source Bee reads`,
+		`claude.store is neither "keychain" nor "file"`,
+		`set claude.store to "keychain" on macOS or "file" on Linux, or run bee setup to write it`,
 	},
 	"BEE-DEVICE-CONFIG": {
 		"the Bee device configuration cannot be used",
@@ -133,12 +133,12 @@ var problems = map[string]problem{
 		"keep bee run connected so Hive can schedule a refresh; if supply does not resume, sign in again in the official Codex client",
 	},
 	"BEE-CLAUDE-UNSUPPORTED": {
-		"Bee reads the Claude Code sign-in only from the macOS Keychain",
-		"supply Claude from a Mac, or remove the claude section on this system",
+		"the Claude Code Keychain exists only on macOS",
+		`set claude.store to "file" to read Claude Code's .credentials.json, or run bee setup again`,
 	},
 	"BEE-CLAUDE-SOURCE": {
-		"Bee cannot read the Claude Code sign-in from the Keychain",
-		"sign in with Claude Code, unlock the Keychain and allow Bee to read it; check claude.config_dir if you set one",
+		"Bee cannot read the Claude Code sign-in",
+		"sign in with Claude Code as the user running Bee; on macOS unlock the Keychain and allow Bee to read it; check claude.config_dir if you set one",
 	},
 	"BEE-CLAUDE-EXPIRED": {
 		"the Claude Code access token has expired",

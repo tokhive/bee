@@ -203,7 +203,7 @@ func (cfg *egressConfig) validate() error {
 		return fail("BEE-CONFIG-INBOX-KEY", "")
 	}
 	cfg.InboxKeyID = hex.EncodeToString(id)
-	if cfg.Claude != nil && cfg.Claude.Store != "keychain" {
+	if cfg.Claude != nil && cfg.Claude.Store != claudeStoreKeychain && cfg.Claude.Store != claudeStoreFile {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
 	if cfg.Capabilities != nil && cfg.Codex == nil {

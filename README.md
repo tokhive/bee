@@ -11,7 +11,7 @@ Bee runs on your own machine and connects to a **Hive**, the marketplace service
 ## Requirements
 
 - macOS or Linux, including Linux machines without a desktop or browser.
-- Claude subscriptions are supported on macOS only, because Bee reads the Claude Code login from the Keychain.
+- OpenAI (Codex) and Claude (Claude Code) subscriptions are supported on both. Sign in to the official client as the same user that runs Bee.
 - To build from source only: Go 1.27 or newer, plus `git` and `bash`.
 - An account on a Hive. You confirm pairing in that Hive's web console.
 
@@ -70,7 +70,7 @@ bee setup
 `setup` looks for the official clients you are already signed in to. It only reads, and never changes their logins. For each account it finds, it asks whether to contribute it, then writes `egress.json` next to the device configuration. Use `--platform openai,claude --yes` in scripts. Running `setup` again is safe, and is how you add or remove a platform.
 
 - **OpenAI:** Bee reads the Codex login from `--codex-home`, `$CODEX_HOME` or `~/.codex`, in that order. On macOS it falls back to the Keychain.
-- **Claude:** Bee reads the Claude Code login from the macOS Keychain. `--claude-config-dir` selects a non-default Claude Code configuration.
+- **Claude:** Bee reads the Claude Code login where Claude Code keeps it: the Keychain on macOS, and `~/.claude/.credentials.json` on Linux (`$CLAUDE_CONFIG_DIR/.credentials.json` if you set that variable). `--claude-config-dir` selects a non-default Claude Code configuration. On a Linux server, run `claude` once and sign in, then run `bee setup`.
 
 **3. Run Bee.**
 
@@ -124,7 +124,7 @@ While running, `login` and `run` hold a lock file next to the configuration, so 
 
 - `targets` is the allowlist of upstream hosts Bee will open connections to for the TEE.
 - `codex` selects the Codex login. `store` is `file`, `keyring` or `auto`. The top-level `capabilities` enables model and quota reports for OpenAI.
-- `claude` selects the Claude Code login. `capabilities` enables model and quota reports, which are required for taking work. With `refresh: true`, Hive may also schedule token refreshes, and Bee writes the refreshed token back to the official store. The default `false` only re-seals tokens that the official client has refreshed. `config_dir` selects a non-default Claude Code configuration.
+- `claude` selects the Claude Code login. `store` is `keychain` (macOS) or `file`, which reads `.credentials.json` in the Claude Code configuration directory; `bee setup` picks the one Claude Code uses on your system, and Bee never falls back from one to the other. `capabilities` enables model and quota reports, which are required for taking work. With `refresh: true`, Hive may also schedule token refreshes, and Bee writes the refreshed token back to the official store. The default `false` only re-seals tokens that the official client has refreshed. `config_dir` selects a non-default Claude Code configuration.
 - `connect_proxy` (optional, for example `http://127.0.0.1:7890`) sends Bee's outbound connections through a local HTTP proxy.
 
 To contribute only one platform, remove the other platform's entry and its target. Pass the file with `bee run --egress-config PATH`. Without the flag, Bee uses the `egress.json` that `setup` wrote. If neither exists, Bee stays online but serves nothing and prints `BEE-SETUP-NEEDED`.

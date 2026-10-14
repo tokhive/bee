@@ -162,7 +162,7 @@ func TestClaudeStatusVerifiesOnlyCurrentAccessToken(t *testing.T) {
 		return claudeProfileResponse(200, claudeTestProfile), nil
 	})
 	var out bytes.Buffer
-	if err := inspectClaude(context.Background(), read, true, transport, &out); err != nil {
+	if err := inspectClaude(context.Background(), "keychain", read, true, transport, &out); err != nil {
 		t.Fatal(err)
 	}
 	var status map[string]any
@@ -200,7 +200,7 @@ func TestClaudeStatusRejectsChangingSource(t *testing.T) {
 				return claudeProfileResponse(200, claudeTestProfile), nil
 			})
 			var out bytes.Buffer
-			err := inspectClaude(context.Background(), func(ctx context.Context) (claudeCredential, error) { return read(ctx) }, true, transport, &out)
+			err := inspectClaude(context.Background(), "keychain", func(ctx context.Context) (claudeCredential, error) { return read(ctx) }, true, transport, &out)
 			if !errors.Is(err, errClaudeSourceChanged) || out.Len() != 0 {
 				t.Fatal("changed source produced a verified identity")
 			}
@@ -233,7 +233,7 @@ func TestClaudeStatusDistinguishesLocalAndVerifiedState(t *testing.T) {
 			read := func(context.Context) (claudeCredential, error) { return credential, nil }
 			transport := claudeTransport(func(*http.Request) (*http.Response, error) { t.Fatal("unexpected network call"); return nil, nil })
 			var out bytes.Buffer
-			if err := inspectClaude(context.Background(), read, false, transport, &out); err != nil {
+			if err := inspectClaude(context.Background(), "keychain", read, false, transport, &out); err != nil {
 				t.Fatal(err)
 			}
 			var status map[string]any
@@ -242,7 +242,7 @@ func TestClaudeStatusDistinguishesLocalAndVerifiedState(t *testing.T) {
 			}
 			if wantState == "expired" || name == "missing profile" {
 				out.Reset()
-				if err := inspectClaude(context.Background(), read, true, transport, &out); err == nil || out.Len() != 0 {
+				if err := inspectClaude(context.Background(), "keychain", read, true, transport, &out); err == nil || out.Len() != 0 {
 					t.Fatal("invalid credential sent to profile endpoint")
 				}
 			}
@@ -250,7 +250,7 @@ func TestClaudeStatusDistinguishesLocalAndVerifiedState(t *testing.T) {
 	}
 	for _, failure := range []error{errClaudeKeychainMissing, errClaudeKeychainUnavailable} {
 		var out bytes.Buffer
-		err := inspectClaude(context.Background(), func(context.Context) (claudeCredential, error) { return claudeCredential{}, failure }, false, nil, &out)
+		err := inspectClaude(context.Background(), "keychain", func(context.Context) (claudeCredential, error) { return claudeCredential{}, failure }, false, nil, &out)
 		if !errors.Is(err, failure) || out.Len() != 0 {
 			t.Fatal("source failure was hidden")
 		}

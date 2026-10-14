@@ -1,6 +1,7 @@
 package bee_test
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"net/http"
@@ -26,6 +27,21 @@ func TestLoginRejectsInvalidNameBeforeSavingCredential(t *testing.T) {
 		}
 		if _, err = os.Stat(path); !os.IsNotExist(err) {
 			t.Fatal("invalid name persisted and prevents login retry")
+		}
+	}
+}
+
+func TestVersionNeedsNoConfiguration(t *testing.T) {
+	previous := bee.Version
+	bee.Version = "v9.8.7"
+	defer func() { bee.Version = previous }()
+	for _, command := range []string{"version", "--version"} {
+		var out bytes.Buffer
+		if err := bee.Run(context.Background(), []string{command}, &out); err != nil {
+			t.Fatal(command, err)
+		}
+		if !strings.HasPrefix(out.String(), "bee v9.8.7 ") {
+			t.Fatalf("%s printed %q", command, out.String())
 		}
 	}
 }

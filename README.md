@@ -12,10 +12,26 @@ Bee runs on your own machine and connects to a **Hive**, the marketplace service
 
 - macOS or Linux, including Linux machines without a desktop or browser.
 - Claude subscriptions are supported on macOS only, because Bee reads the Claude Code login from the Keychain.
-- Go 1.27 or newer, plus `git` and `bash`, to build from source.
+- To build from source only: Go 1.27 or newer, plus `git` and `bash`.
 - An account on a Hive. You confirm pairing in that Hive's web console.
 
 ## Installation
+
+Prebuilt binaries are published on the [releases page](https://github.com/tokhive/bee/releases) for macOS and Linux, on Intel/AMD (`amd64`) and ARM (`arm64`).
+
+**Install script.** It picks the build for your machine, verifies it against the release's `checksums.txt` and installs `bee` to `~/.local/bin`:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
+```
+
+Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place; restart `bee run` afterwards.
+
+**Manual download.** Download `bee_<os>_<arch>.tar.gz` and `checksums.txt` from the releases page, check the archive with `shasum -a 256 -c checksums.txt --ignore-missing`, then extract it and move `bee` onto your `PATH`. On macOS, a file downloaded through a browser is quarantined and Gatekeeper refuses to run the unsigned binary; clear the flag with `xattr -d com.apple.quarantine bee`. The install script downloads with `curl` and is not affected.
+
+Check the installed version with `bee version`.
+
+### Building from source
 
 ```sh
 git clone https://github.com/tokhive/bee.git
@@ -24,6 +40,8 @@ make build        # fetches the pinned TEE client library, then builds bin/bee
 ```
 
 `make build` runs `scripts/prepare-tee.sh` first. The script downloads the TEE client library at the commit pinned in `TEE_REVISION` and places it in `.cache/reclaim-tee`. That library can't be fetched through the Go module proxy, so `go.mod` points to the local copy. After the first run you can also build with plain `go build -o bin/bee ./cmd/bee`.
+
+The examples below call `bee`; with a source build, put `bin/bee` on your `PATH` or call it as `./bin/bee`.
 
 To run the tests:
 
@@ -36,7 +54,7 @@ make test
 **1. Pair with your Hive.**
 
 ```sh
-./bin/bee login --hive https://hive.example.com --name "my-laptop"
+bee login --hive https://hive.example.com --name "my-laptop"
 ```
 
 Bee prints a short code such as `ABCD-EFGH` and a pairing link. Open `/devices/pair` on your Hive in any browser and sign in. Enter the code, check the device name, then confirm. The code is valid for 10 minutes and can be used once. `--name` defaults to the host name.
@@ -46,7 +64,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 **2. Choose which subscriptions to contribute.**
 
 ```sh
-./bin/bee setup
+bee setup
 ```
 
 `setup` looks for the official clients you are already signed in to. It only reads, and never changes their logins. For each account it finds, it asks whether to contribute it, then writes `egress.json` next to the device configuration. Use `--platform openai,claude --yes` in scripts. Running `setup` again is safe, and is how you add or remove a platform.
@@ -57,7 +75,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 **3. Run Bee.**
 
 ```sh
-./bin/bee run
+bee run
 ```
 
 Once each platform has synchronized, Bee prints `<platform> ready: taking new work`. If it can't take work yet, it prints one `WARN` line per reason, with an error code and a fix. Being online on the devices page doesn't mean an account is ready. Admission also depends on the account's authorization, models, quota and the plan settings in Hive.
@@ -66,6 +84,7 @@ Once each platform has synchronized, Bee prints `<platform> ready: taking new wo
 
 | Command | Purpose |
 | --- | --- |
+| `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
 | `bee login [--hive URL] [--name NAME]` | Pair this machine with a Hive account, or resume a pairing that was interrupted. |
 | `bee setup [--platform openai,claude] [--yes]` | Detect local subscription logins and write the egress configuration. |
 | `bee run [--egress-config PATH]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. |
@@ -129,7 +148,7 @@ To contribute only one platform, remove the other platform's entry and its targe
 Description=TokHive Bee
 
 [Service]
-ExecStart=/absolute/path/bin/bee run --config /absolute/path/bee.json
+ExecStart=%h/.local/bin/bee run
 Restart=on-failure
 RestartSec=10
 
@@ -137,7 +156,7 @@ RestartSec=10
 WantedBy=default.target
 ```
 
-Save it as `~/.config/systemd/user/tokhive-bee.service`, then run `systemctl --user daemon-reload && systemctl --user enable --now tokhive-bee`. If the service must run while nobody is logged in, enable lingering for the user. On macOS, use a LaunchAgent with the same arguments, `RunAtLoad` and `KeepAlive`.
+`%h` is your home directory; change the path if you installed Bee elsewhere, and add `--config` or `--egress-config` if you don't use the defaults. Save it as `~/.config/systemd/user/tokhive-bee.service`, then run `systemctl --user daemon-reload && systemctl --user enable --now tokhive-bee`. If the service must run while nobody is logged in, enable lingering for the user. On macOS, use a LaunchAgent with the same arguments, `RunAtLoad` and `KeepAlive`.
 
 If the network drops, Bee reconnects with exponential backoff from 1 to 30 seconds, so it can be started before Hive is reachable. When you pair a new machine to replace this one, the old Bee finishes the work it already has and then exits.
 
@@ -146,12 +165,16 @@ If the network drops, Bee reconnects with exponential backoff from 1 to 30 secon
 If Bee is online but takes no work, or fails at startup, run:
 
 ```sh
-./bin/bee doctor --egress-config /absolute/path/egress.json
+bee doctor --egress-config /absolute/path/egress.json
 ```
 
 It checks the device configuration, the egress configuration, each platform's local login, the connection to Hive and the device identity, and finally each platform's account and supply state on the Hive side. Checks that need administrator action are marked `fix (administrator)`.
 
 Errors that Bee reports have stable codes such as `BEE-CONFIG-TARGET-MISSING`. [docs/errors.md](docs/errors.md) explains every code and every reason Hive gives for not sending work, and how to fix each one.
+
+## Releasing
+
+Push a tag such as `v0.1.0` to `main`. The [release workflow](.github/workflows/release.yml) runs the tests, then [GoReleaser](https://goreleaser.com) builds the four binaries, archives them with the README, license and error reference, and publishes a GitHub release with `checksums.txt`. Tags with a suffix such as `v0.2.0-rc.1` are marked as pre-releases. To try the build locally without publishing, run `goreleaser release --snapshot --clean`; the output goes to `dist/`.
 
 ## Repository layout
 

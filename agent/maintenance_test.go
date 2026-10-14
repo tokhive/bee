@@ -137,7 +137,7 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 			if err != nil {
 				return
 			}
-			live := relay.New(r.Context(), conn, tunnel.Low, nil)
+			live := relay.New(r.Context(), conn, tunnel.Low, nil, relay.Options{})
 			defer live.Close()
 			<-live.Context.Done()
 		case "/api/bee/platforms/openai/account":

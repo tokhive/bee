@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 	"net"
-	"time"
+	"sync/atomic"
 
 	"github.com/coder/websocket"
 	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
@@ -15,6 +15,7 @@ type Session struct {
 	Mux     *tunnel.Multiplexer
 	Context context.Context
 	cancel  context.CancelFunc
+	carrier *carrier
 }
 
 func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle func(context.Context, *tunnel.Stream, []byte)) *Session {
@@ -37,20 +38,26 @@ func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle
 	})
 	close(carrier.ready)
 	context.AfterFunc(live, func() { conn.CloseNow(); mux.Close() })
-	return &Session{Mux: mux, Context: live, cancel: cancel}
+	return &Session{Mux: mux, Context: live, cancel: cancel, carrier: carrier}
 }
 
 func (s *Session) Close() { s.cancel() }
+
+// Moved is how many tunnel bytes have crossed the WebSocket so far, in both
+// directions.
+func (s *Session) Moved() uint64 { return s.carrier.moved.Load() }
 
 type carrier struct {
 	net.Conn
 	ready  chan struct{}
 	cancel context.CancelFunc
+	moved  atomic.Uint64
 }
 
 func (c *carrier) Read(p []byte) (int, error) {
 	<-c.ready
 	n, err := c.Conn.Read(p)
+	c.moved.Add(uint64(n))
 	if err != nil {
 		c.cancel()
 	}
@@ -59,16 +66,11 @@ func (c *carrier) Read(p []byte) (int, error) {
 
 func (c *carrier) Write(p []byte) (int, error) {
 	n, err := c.Conn.Write(p)
+	c.moved.Add(uint64(n))
 	if err != nil {
 		c.cancel()
 	}
 	return n, err
-}
-
-func Heartbeat(ctx context.Context, conn *websocket.Conn) error {
-	ping, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	return conn.Ping(ping)
 }
 
 func Bridge(ctx context.Context, left, right io.ReadWriteCloser) {

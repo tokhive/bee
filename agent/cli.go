@@ -26,9 +26,13 @@ import (
 func Run(ctx context.Context, args []string, out io.Writer) error {
 	logx.Setup("bee", "BEE_DEBUG")
 	if len(args) == 0 {
-		return errors.New("usage: bee login|run|status [--config PATH]; bee setup [--config PATH] [--platform openai,claude] [--yes]; bee doctor [--config PATH] [--egress-config PATH] [--json]; bee pause|resume|supply-status|account-status --platform openai|claude [--config PATH]; bee confirm-account --platform openai|claude --account-fingerprint FINGERPRINT; bee codex-status --codex-home PATH --store file|keyring|auto; bee claude-status [--verify]")
+		return errors.New("usage: bee version; bee login|run|status [--config PATH]; bee setup [--config PATH] [--platform openai,claude] [--yes]; bee doctor [--config PATH] [--egress-config PATH] [--json]; bee pause|resume|supply-status|account-status --platform openai|claude [--config PATH]; bee confirm-account --platform openai|claude --account-fingerprint FINGERPRINT; bee codex-status --codex-home PATH --store file|keyring|auto; bee claude-status [--verify]")
 	}
 	command := args[0]
+	if command == "version" || command == "--version" {
+		fmt.Fprintln(out, versionLine())
+		return nil
+	}
 	if command == "codex-status" {
 		return codexStatus(ctx, args[1:], out)
 	}
@@ -44,7 +48,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	control := command == "pause" || command == "resume" || command == "supply-status"
 	accountCommand := command == "account-status" || command == "confirm-account"
 	if command != "login" && command != "run" && command != "status" && !control && !accountCommand {
-		return errors.New("unknown Bee command; supported commands: login, setup, run, status, doctor, codex-status, claude-status, pause, resume, supply-status, account-status, confirm-account")
+		return errors.New("unknown Bee command; supported commands: version, login, setup, run, status, doctor, codex-status, claude-status, pause, resume, supply-status, account-status, confirm-account")
 	}
 	flags := flag.NewFlagSet("bee "+command, flag.ContinueOnError)
 	flags.SetOutput(out)
@@ -150,6 +154,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 		if state.Identity == nil {
 			return errors.New("pairing incomplete; run bee login first")
 		}
+		slog.Info(versionLine(), "module", "connect")
 		var egress *egressConfig
 		if egressPath == "" {
 			// bee setup writes here; an explicit --egress-config wins.

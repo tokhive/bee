@@ -12,7 +12,13 @@ import (
 	"github.com/tokhive/bee/agent"
 )
 
+// version is set by release builds: -ldflags "-X main.version=v1.2.3".
+var version string
+
 func main() {
+	if version != "" {
+		bee.Version = version
+	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := bee.Run(ctx, os.Args[1:], os.Stdout); err != nil && !errors.Is(err, context.Canceled) {

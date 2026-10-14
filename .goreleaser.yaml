@@ -1,0 +1,42 @@
+# Release builds for Bee. A pushed tag such as v0.1.0 runs this through
+# .github/workflows/release.yml and publishes a GitHub release.
+version: 2
+
+before:
+  hooks:
+    # The TEE client library is pinned outside the Go module proxy.
+    - bash scripts/prepare-tee.sh
+
+builds:
+  - id: bee
+    main: ./cmd/bee
+    binary: bee
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w -X main.version={{ .Tag }}
+
+archives:
+  - id: bee
+    formats: [tar.gz]
+    # No version in the name, so releases/latest/download/<name> always
+    # resolves; install.sh relies on it.
+    name_template: "bee_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+      - docs/errors.md
+
+checksum:
+  name_template: checksums.txt
+  algorithm: sha256
+
+changelog:
+  use: github-native
+
+release:
+  draft: false
+  prerelease: auto

@@ -10,31 +10,44 @@ import (
 // recorded instead.
 var Version = "dev"
 
+// buildVersion is Version, or for a source build "dev+<commit>", with
+// "-dirty" when the tree had local changes.
+func buildVersion() string {
+	// The commit is Bee's only when Bee is the main module; built through
+	// Hive's workspace, Go records Hive's.
+	info, ok := debug.ReadBuildInfo()
+	if Version != "dev" || !ok || info.Main.Path != "github.com/tokhive/bee" {
+		return Version
+	}
+	var revision, modified string
+	for _, setting := range info.Settings {
+		switch setting.Key {
+		case "vcs.revision":
+			revision = setting.Value
+		case "vcs.modified":
+			modified = setting.Value
+		}
+	}
+	if revision == "" {
+		return Version
+	}
+	if len(revision) > 12 {
+		revision = revision[:12]
+	}
+	if modified == "true" {
+		revision += "-dirty"
+	}
+	return Version + "+" + revision
+}
+
 // versionLine is what bee version prints and bee run logs first, so a
 // report from a provider says which build it came from.
 func versionLine() string {
-	line := "bee " + Version
-	// The commit is Bee's only when Bee is the main module; built through
-	// Hive's workspace, Go records Hive's.
-	if info, ok := debug.ReadBuildInfo(); ok && Version == "dev" && info.Main.Path == "github.com/tokhive/bee" {
-		var revision, modified string
-		for _, setting := range info.Settings {
-			switch setting.Key {
-			case "vcs.revision":
-				revision = setting.Value
-			case "vcs.modified":
-				modified = setting.Value
-			}
-		}
-		if len(revision) > 12 {
-			revision = revision[:12]
-		}
-		if revision != "" {
-			if modified == "true" {
-				revision += "-dirty"
-			}
-			line += " (" + revision + ")"
-		}
-	}
-	return line + " " + runtime.GOOS + "/" + runtime.GOARCH
+	return "bee " + buildVersion() + " " + runtime.GOOS + "/" + runtime.GOARCH
+}
+
+// userAgent identifies this build to Hive on every request and on the
+// connection, so the console can show which Bees run an old release.
+func userAgent() string {
+	return "tokhive-bee/" + buildVersion() + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"
 }

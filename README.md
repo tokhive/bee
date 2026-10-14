@@ -140,7 +140,7 @@ To contribute only one platform, remove the other platform's entry and its targe
 
 ## Running as a service
 
-`bee run` runs in the foreground. To keep it running, use a user-level service manager, run it as the user who paired the device, and give absolute paths. A systemd unit for Linux:
+`bee start` and `bee run` run in the foreground. To keep Bee running, set it up once with `bee start`, stop it, then hand `bee run` to a user-level service manager, running as the user who paired the device. A systemd unit for Linux:
 
 ```ini
 [Unit]
@@ -161,13 +161,13 @@ If the network drops, Bee reconnects with exponential backoff from 1 to 30 secon
 
 ## Troubleshooting
 
-If Bee is online but takes no work, or fails at startup, run:
+Start with `bee status`, which shows in a few lines whether each account is taking work and, if not, why. For the full picture, run:
 
 ```sh
-bee doctor --egress-config /absolute/path/egress.json
+bee doctor
 ```
 
-It checks the device configuration, the egress configuration, each platform's local login, the connection to Hive and the device identity, and finally each platform's account and supply state on the Hive side. Checks that need administrator action are marked `fix (administrator)`.
+It reads the same configuration `bee run` uses, and checks the device configuration, the egress configuration, each platform's local login, the connection to Hive and the device identity, and finally each platform's account and supply state on the Hive side. Checks that need administrator action are marked `fix (administrator)`.
 
 Errors that Bee reports have stable codes such as `BEE-CONFIG-TARGET-MISSING`. [docs/errors.md](docs/errors.md) explains every code and every reason Hive gives for not sending work, and how to fix each one.
 

@@ -120,6 +120,10 @@ Errors from `bee setup`, and from `bee run` when it has no egress configuration.
 
 `bee run` was given no `--egress-config`, and there is no `egress.json` next to the device configuration. Bee stays online but contributes no accounts. This is a warning, and `bee run` keeps running. Run `bee setup` to choose the accounts to contribute, then restart `bee run`.
 
+### BEE-START-HIVE
+
+This machine is not paired yet, and `bee start` doesn't know which Hive to pair it with. Copy the command from the Devices page of your Hive, which already contains its address, or run `bee start --hive https://your-hive`. The address is remembered, so later runs of `bee start` don't need it.
+
 ### BEE-SETUP-PLATFORM
 
 `--platform` names a platform that Bee doesn't support. Use `openai`, `claude`, or both separated by a comma.

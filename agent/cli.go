@@ -12,6 +12,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -25,10 +26,28 @@ import (
 
 func Run(ctx context.Context, args []string, out io.Writer) error {
 	logx.Setup("bee", "BEE_DEBUG")
-	if len(args) == 0 {
-		return errors.New("usage: bee version; bee login|run|status [--config PATH]; bee setup [--config PATH] [--platform openai,claude] [--yes]; bee doctor [--config PATH] [--egress-config PATH] [--json]; bee pause|resume|supply-status|account-status --platform openai|claude [--config PATH]; bee confirm-account --platform openai|claude --account-fingerprint FINGERPRINT; bee codex-status --codex-home PATH --store file|keyring|auto; bee claude-status [--verify]")
+	if len(args) == 0 || args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
+		fmt.Fprint(out, usage)
+		return nil
 	}
+	if (args[0] == "run" || args[0] == "start") && logx.Readable(os.Stderr) {
+		// A person is watching: only problems from the process log, and the
+		// operator lines in a form they can read. See newConsole.
+		slog.SetDefault(slog.New(logx.Friendly(os.Stderr, slog.LevelWarn)))
+	}
+	err := run(ctx, args, out)
+	if errors.Is(err, flag.ErrHelp) {
+		// The flag package has already printed the command's flags.
+		return nil
+	}
+	return err
+}
+
+func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
+	if command == "start" {
+		return start(ctx, args[1:], out)
+	}
 	if command == "version" || command == "--version" {
 		fmt.Fprintln(out, versionLine())
 		return nil
@@ -48,7 +67,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 	control := command == "pause" || command == "resume" || command == "supply-status"
 	accountCommand := command == "account-status" || command == "confirm-account"
 	if command != "login" && command != "run" && command != "status" && !control && !accountCommand {
-		return errors.New("unknown Bee command; supported commands: version, login, setup, run, status, doctor, codex-status, claude-status, pause, resume, supply-status, account-status, confirm-account")
+		return fmt.Errorf("unknown Bee command %q; run bee help to list the commands", command)
 	}
 	flags := flag.NewFlagSet("bee "+command, flag.ContinueOnError)
 	flags.SetOutput(out)
@@ -176,12 +195,7 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 		}
 		return runWithTelemetry(ctx, func(live context.Context) error { return connect(live, state, egress, console) })
 	}
-	var identity beewire.Identity
-	if err = call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity); err != nil {
-		return err
-	}
-	fmt.Fprintf(out, "Bound: %s\nDevice: %s\nUser: %s\nHive: %s\n", identity.Name, identity.ID, identity.OwnerEmail, state.Hive)
-	return nil
+	return status(ctx, client, *configPath, state, out)
 }
 
 func login(ctx context.Context, client *http.Client, path string, state localState, out io.Writer) error {
@@ -210,7 +224,8 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 		}
 		slog.Info("pairing started", "module", "identity", "hive", state.Hive)
 	}
-	fmt.Fprintf(out, "Hive: %s\nPairing page: %s\nPairing code: %s\nExpires at: %s\nWaiting for browser confirmation\n", state.Hive, state.Pairing.VerificationURI, state.Pairing.UserCode, state.Pairing.ExpiresAt.Local().Format(time.RFC3339))
+	link := state.Pairing.VerificationURI + "?code=" + url.QueryEscape(state.Pairing.UserCode)
+	fmt.Fprintf(out, "Open this link in a browser where you are signed in to Hive, check the device name and confirm:\n\n  %s\n\nPairing code: %s (expires %s)\nWaiting for confirmation...\n", link, state.Pairing.UserCode, state.Pairing.ExpiresAt.Local().Format("15:04"))
 	waitingReported := false
 	for {
 		if err = pause(ctx, 2*time.Second); err != nil {

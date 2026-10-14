@@ -45,3 +45,21 @@ func TestVersionNeedsNoConfiguration(t *testing.T) {
 		}
 	}
 }
+
+func TestHelpIsAnAnswerNotAnError(t *testing.T) {
+	for _, args := range [][]string{nil, {"help"}, {"--help"}, {"-h"}} {
+		var out bytes.Buffer
+		if err := bee.Run(context.Background(), args, &out); err != nil || !strings.Contains(out.String(), "bee start --hive URL") {
+			t.Fatalf("%v: %v %q", args, err, out.String())
+		}
+	}
+	for _, command := range []string{"start", "login", "run", "setup", "doctor"} {
+		var out bytes.Buffer
+		if err := bee.Run(context.Background(), []string{command, "-h"}, &out); err != nil || !strings.Contains(out.String(), "-config") {
+			t.Fatalf("%s -h: %v %q", command, err, out.String())
+		}
+	}
+	if err := bee.Run(context.Background(), []string{"strat"}, io.Discard); err == nil || !strings.Contains(err.Error(), "bee help") {
+		t.Fatalf("unknown command: %v", err)
+	}
+}

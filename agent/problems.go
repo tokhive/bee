@@ -176,6 +176,10 @@ var problems = map[string]problem{
 		"bee run has no egress configuration, so this Bee stays online but supplies no account",
 		"run bee setup to choose the accounts to supply, then restart bee run",
 	},
+	"BEE-START-HIVE": {
+		"bee start needs the Hive address to pair this machine",
+		"copy the bee start command from your Hive's Devices page, or run bee start --hive https://your-hive",
+	},
 }
 
 // The egress codes are also reported to Hive as supply events, so their text

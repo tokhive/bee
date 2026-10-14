@@ -47,6 +47,12 @@ func defaultEgressPath(configPath string) string {
 }
 
 func setup(ctx context.Context, args []string, out io.Writer) error {
+	return setupWith(ctx, args, out, true)
+}
+
+// setupWith is bee setup; standalone says whether to tell the provider what
+// to run next, which bee start does itself.
+func setupWith(ctx context.Context, args []string, out io.Writer, standalone bool) error {
 	flags := flag.NewFlagSet("bee setup", flag.ContinueOnError)
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file")
@@ -173,6 +179,9 @@ func setup(ctx context.Context, args []string, out io.Writer) error {
 		names = append(names, found.platform)
 	}
 	fmt.Fprintf(out, "Wrote %s supplying %s.\n", *egressPath, strings.Join(names, " and "))
+	if !standalone {
+		return nil
+	}
 	run := "bee run"
 	if *configPath != defaultConfigPath() {
 		run += " --config " + *configPath

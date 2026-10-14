@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/tokhive/bee/relay"
 )
 
 type apiFailure struct {
@@ -158,9 +159,10 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			var live context.Context
 			var end func()
 			var syncFailures <-chan error
+			var moved func() uint64
 			if egress != nil {
 				session := egress.start(beeSession(ctx), conn, out)
-				live, end = session.Context, session.Close
+				live, end, moved = session.Context, session.Close, session.Moved
 				go egress.failures.forward(live, state)
 				if egress.dynamicAuthorization() {
 					var wait func()
@@ -188,6 +190,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				live = conn.CloseRead(ctx)
 				end = func() {}
 			}
+			liveness := relay.NewLiveness(conn, moved)
 			for live.Err() == nil {
 				if egress != nil && !egress.dynamicAuthorization() && !rejectionReported {
 					statusCtx, stopStatus := context.WithTimeout(live, 5*time.Second)
@@ -201,11 +204,9 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 						rejectionReported = true
 					}
 				}
-				heartbeat, cancelHeartbeat := context.WithTimeout(live, 5*time.Second)
 				pingStart := time.Now()
-				err = conn.Ping(heartbeat)
+				err = liveness.Check(live)
 				metrics.ping(pingStart, err)
-				cancelHeartbeat()
 				if err != nil {
 					slog.Warn("Hive connection lost", "module", "connect", "error", err.Error())
 					break

@@ -12,7 +12,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -217,11 +216,12 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 		report.pass(name, platform, fmt.Sprintf("%s, expires %s", detail, credential.ExpiresAt.Local().Format(time.RFC3339)))
 		return
 	}
-	if runtime.GOOS != "darwin" {
-		report.problem(name, platform, "fail", fail("BEE-CLAUDE-UNSUPPORTED", runtime.GOOS))
+	store, err := resolveClaudeStore(cfg.Claude.Store, cfg.Claude.ConfigDir)
+	if err != nil {
+		report.problem(name, platform, "fail", err)
 		return
 	}
-	credential, err := resolveClaudeKeychain(cfg.Claude.ConfigDir).read(ctx)
+	credential, err := store.read(ctx)
 	switch {
 	case err != nil:
 		report.problem(name, platform, "fail", fail("BEE-CLAUDE-SOURCE", err.Error()))
@@ -232,7 +232,7 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 	case !credential.available(time.Now()):
 		report.problem(name, platform, "fail", failf("BEE-CLAUDE-EXPIRED", "expired %s", credential.expiresAt.Local().Format(time.RFC3339)))
 	default:
-		report.pass(name, platform, fmt.Sprintf("Claude Code Keychain sign-in, plan %s, expires %s", credential.plan, credential.expiresAt.Local().Format(time.RFC3339)))
+		report.pass(name, platform, fmt.Sprintf("Claude Code sign-in in %s, plan %s, expires %s", store.where, credential.plan, credential.expiresAt.Local().Format(time.RFC3339)))
 	}
 }
 

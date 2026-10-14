@@ -33,7 +33,7 @@ func TestEgressConfigurationErrorsNameCodeAndPlace(t *testing.T) {
 		{"static credential", `{"targets": ["upstream.example:443"], "inbox_key_id": "` + inboxKey + `", "credential": {"Header": "authorization"}}`, "BEE-CONFIG-STATIC-CREDENTIAL", ""},
 		{"static without inbox key", `{"targets": ["upstream.example:443"], "credential": {"Token": "t", "Header": "authorization", "Scheme": "Bearer"}}`, "BEE-CONFIG-INBOX-KEY", ""},
 		{"malformed inbox key", `{"targets": ["chatgpt.com:443"], "inbox_key_id": "abc", "codex": {"home": "/x", "store": "file"}}`, "BEE-CONFIG-INBOX-KEY", ""},
-		{"claude store", `{"targets": ["api.anthropic.com:443"], "claude": {"store": "file"}}`, "BEE-CONFIG-CLAUDE-STORE", `"file"`},
+		{"claude store", `{"targets": ["api.anthropic.com:443"], "claude": {"store": "plaintext"}}`, "BEE-CONFIG-CLAUDE-STORE", `"plaintext"`},
 		{"capabilities without codex", `{"targets": ["api.anthropic.com:443"], "claude": {"store": "keychain"}, "capabilities": {}}`, "BEE-CONFIG-CAPABILITIES-SOURCE", ""},
 		{"capabilities url", `{"targets": ["chatgpt.com:443"], "codex": {"home": "/x", "store": "file"}, "capabilities": {"local_url": "http://example.com"}}`, "BEE-CONFIG-CAPABILITIES-URL", ""},
 		{"codex target missing", `{"targets": ["api.anthropic.com:443"], "codex": {"home": "/x", "store": "file"}, "claude": {"store": "keychain"}}`, "BEE-CONFIG-TARGET-MISSING", "chatgpt.com:443"},

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -31,11 +30,12 @@ func codexHome(t *testing.T, expires time.Time) string {
 	return directory
 }
 
-// fakeClaude stands in for the Keychain: a sign-in, or an error.
+// fakeClaude stands in for Claude Code's credential store: a sign-in, or an
+// error.
 func fakeClaude(t *testing.T, err error) {
 	t.Helper()
-	previous := claudeKeychainReader
-	claudeKeychainReader = func(*string) func(context.Context) (claudeCredential, error) {
+	previous := claudeReader
+	claudeReader = func(string, *string) func(context.Context) (claudeCredential, error) {
 		return func(context.Context) (claudeCredential, error) {
 			if err != nil {
 				return claudeCredential{}, err
@@ -43,7 +43,7 @@ func fakeClaude(t *testing.T, err error) {
 			return claudeCredential{secret: tee.Secret{Token: "synthetic", Header: "authorization", Scheme: "Bearer"}, expiresAt: time.Now().Add(time.Hour), plan: "max", hasInferenceScope: true}, nil
 		}
 	}
-	t.Cleanup(func() { claudeKeychainReader = previous })
+	t.Cleanup(func() { claudeReader = previous })
 }
 
 func answer(t *testing.T, text string) {
@@ -143,9 +143,6 @@ func TestSetupExplainsAnAccountItCannotUse(t *testing.T) {
 }
 
 func TestSetupAsksBeforeSupplyingEachAccount(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Claude is detected only on macOS")
-	}
 	home := codexHome(t, time.Now().Add(time.Hour))
 	config := filepath.Join(t.TempDir(), "bee.json")
 	path := defaultEgressPath(config)
@@ -168,7 +165,7 @@ func TestSetupAsksBeforeSupplyingEachAccount(t *testing.T) {
 		t.Fatalf("%v\n%s", err, out)
 	}
 	cfg := writtenEgress(t, path)
-	if cfg["connect_proxy"] != "http://127.0.0.1:7890" || cfg["claude"].(map[string]any)["store"] != "keychain" || cfg["claude"].(map[string]any)["capabilities"] != true {
+	if cfg["connect_proxy"] != "http://127.0.0.1:7890" || cfg["claude"].(map[string]any)["store"] != defaultClaudeStore() || cfg["claude"].(map[string]any)["capabilities"] != true {
 		t.Fatalf("second run: %v", cfg)
 	}
 	if targets := cfg["targets"].([]any); len(targets) != 2 {
@@ -199,9 +196,6 @@ func TestSetupAsksBeforeSupplyingEachAccount(t *testing.T) {
 }
 
 func TestSetupSkipsAnUnusablePlatformUnlessAskedForIt(t *testing.T) {
-	if runtime.GOOS != "darwin" {
-		t.Skip("Claude is detected only on macOS")
-	}
 	home := codexHome(t, time.Now().Add(time.Hour))
 	config := filepath.Join(t.TempDir(), "bee.json")
 	fakeClaude(t, errClaudeKeychainMissing)

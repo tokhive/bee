@@ -186,7 +186,8 @@ func TestClaudeRuntimeConfigurationAndIndependentWorkers(t *testing.T) {
 		{"claude only", `{"store":"keychain"}`, false, true},
 		{"refresh enabled", `{"store":"keychain","refresh":true}`, false, true},
 		{"missing store", `{}`, false, false},
-		{"file fallback", `{"store":"file"}`, false, false},
+		{"file store", `{"store":"file"}`, false, true},
+		{"unknown store", `{"store":"plaintext"}`, false, false},
 		{"static mixed", `{"store":"keychain"}`, true, false},
 	} {
 		t.Run(test.name, func(t *testing.T) {

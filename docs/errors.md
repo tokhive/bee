@@ -110,7 +110,7 @@ The top-level `capabilities` only enables model and quota reports for Codex, so 
 
 ### BEE-CONFIG-CLAUDE-STORE
 
-`claude.store` is not `keychain`. Bee currently reads only the Claude Code login stored in the macOS Keychain, and the configuration must say so explicitly with `"store": "keychain"`.
+`claude.store` is neither `keychain` nor `file`. Use `"keychain"` on macOS, where Claude Code keeps its login in the Keychain, and `"file"` on Linux, where it keeps it in `.credentials.json` in its configuration directory. Running `bee setup` writes the right value.
 
 ## Setup
 
@@ -186,11 +186,11 @@ The Codex access token has expired. This is a warning, not a failure: while `bee
 
 ### BEE-CLAUDE-UNSUPPORTED
 
-Bee can read the Claude Code login only from the macOS Keychain, so this operating system is not supported. Contribute Claude from a Mac, or remove `claude` from this machine's egress configuration.
+The egress configuration says `"store": "keychain"`, but the Keychain exists only on macOS. On Linux, Claude Code keeps its login in `.credentials.json`: set `claude.store` to `"file"`, or run `bee setup` again.
 
 ### BEE-CLAUDE-SOURCE
 
-Bee can't read the Claude Code login from the Keychain. Sign in with Claude Code, unlock the Keychain and allow Bee to read it. If `claude.config_dir` is set, make sure it matches the directory Claude Code uses; see [README · Egress configuration](../README.md#egress-configuration).
+Bee can't read the Claude Code login. Sign in with Claude Code as the user that runs Bee. On macOS, unlock the Keychain and allow Bee to read it. On Linux, the login is `~/.claude/.credentials.json` (or `.credentials.json` under `$CLAUDE_CONFIG_DIR`); it must be a regular file, not a symbolic link, readable by that user. If `claude.config_dir` is set, make sure it matches the directory Claude Code uses; see [README · Egress configuration](../README.md#egress-configuration).
 
 ### BEE-CLAUDE-EXPIRED
 

@@ -89,15 +89,6 @@ func resolveClaudeKeychain(directory *string) claudeKeychain {
 	return claudeKeychain{service: claudeKeychainService(configDir, secureDir, secureSet), account: account, directory: norm.NFC.String(storageDir)}
 }
 
-func (source claudeKeychain) read(ctx context.Context) (claudeCredential, error) {
-	raw, err := source.readRaw(ctx)
-	defer clear(raw)
-	if err != nil {
-		return claudeCredential{}, err
-	}
-	return parseClaudeCredential(raw)
-}
-
 func (source claudeKeychain) readRaw(ctx context.Context) ([]byte, error) {
 	if runtime.GOOS != "darwin" {
 		return nil, errors.New("Claude Keychain authorization reading is supported only on macOS")
@@ -163,7 +154,7 @@ func parseClaudeCredential(raw []byte) (claudeCredential, error) {
 		} `json:"claudeAiOauth"`
 	}
 	if len(raw) > 65536 || json.Unmarshal(raw, &stored) != nil || stored.OAuth == nil {
-		return claudeCredential{}, errors.New("invalid Claude Code Keychain authorization structure")
+		return claudeCredential{}, errors.New("invalid Claude Code authorization structure")
 	}
 	auth := stored.OAuth
 	secret := tee.Secret{Token: auth.Access, Header: "authorization", Scheme: "Bearer"}
@@ -190,27 +181,30 @@ func claudeStatus(ctx context.Context, args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("bee claude-status", flag.ContinueOnError)
 	flags.SetOutput(out)
 	var directory *string
-	flags.Func("claude-config-dir", "explicitly select the official credential directory namespace, overriding the environment; empty selects the default Keychain entry", func(value string) error {
+	flags.Func("claude-config-dir", "explicitly select the official credential directory, overriding the environment; empty selects the default", func(value string) error {
 		directory = &value
 		return nil
 	})
-	store := flags.String("store", "keychain", "authorization source: keychain (macOS)")
+	store := flags.String("store", defaultClaudeStore(), "authorization source: keychain (macOS) or file (.credentials.json)")
 	verify := flags.Bool("verify", false, "read-only verification of official account identity using the current access token")
 	capabilities := flags.Bool("capabilities", false, "read-only verification of official identity and subscription capabilities")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
-	if flags.NArg() != 0 || *store != "keychain" {
-		return errors.New("claude-status supports only the keychain source and accepts no extra arguments")
+	if flags.NArg() != 0 {
+		return errors.New("claude-status accepts no extra arguments")
 	}
-	source := resolveClaudeKeychain(directory)
+	source, err := resolveClaudeStore(*store, directory)
+	if err != nil {
+		return err
+	}
 	if *capabilities {
 		return inspectClaudeCapabilities(ctx, source.read, nil, out)
 	}
-	return inspectClaude(ctx, source.read, *verify, nil, out)
+	return inspectClaude(ctx, source.kind, source.read, *verify, nil, out)
 }
 
-func inspectClaude(ctx context.Context, read func(context.Context) (claudeCredential, error), verify bool, transport http.RoundTripper, out io.Writer) error {
+func inspectClaude(ctx context.Context, store string, read func(context.Context) (claudeCredential, error), verify bool, transport http.RoundTripper, out io.Writer) error {
 	credential, err := read(ctx)
 	if err != nil {
 		return err
@@ -222,7 +216,7 @@ func inspectClaude(ctx context.Context, read func(context.Context) (claudeCreden
 		state = "missing_inference_scope"
 	}
 	status := map[string]any{
-		"source": "keychain", "status": state, "plan": credential.plan,
+		"source": store, "status": state, "plan": credential.plan,
 		"expires_at":            credential.expiresAt.UTC().Format(time.RFC3339),
 		"refresh_token_present": credential.hasRefreshToken,
 		"inference_scope":       credential.hasInferenceScope, "profile_scope": credential.hasProfileScope,

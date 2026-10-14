@@ -61,11 +61,13 @@ func (source *claudeSource) message(out io.Writer, state, message string) {
 
 func (source *claudeSource) authorization(ctx context.Context) (claudeCredential, beewire.Authorization, error) {
 	if source.read == nil {
-		keychain := resolveClaudeKeychain(source.ConfigDir)
-		source.read = keychain.read
+		store, err := resolveClaudeStore(source.Store, source.ConfigDir)
+		if err != nil {
+			return claudeCredential{}, beewire.Authorization{}, err
+		}
+		source.read = store.read
 		if source.Refresh {
-			source.maintenance = &claudeMaintenance{directory: keychain.directory, namespace: keychain.service + "\x00" + keychain.account, readRaw: keychain.readRaw, writeRaw: keychain.writeRaw, transport: source.transport}
-			source.maintenance.validateWrite = func(raw []byte) error { _, err := keychain.writeCommand(raw); return err }
+			source.maintenance = &claudeMaintenance{directory: store.directory, namespace: store.namespace, readRaw: store.readRaw, writeRaw: store.writeRaw, validateWrite: store.validateWrite, transport: source.transport}
 		}
 	}
 	credential, err := source.read(ctx)

@@ -21,10 +21,16 @@ import (
 // setupInput is where bee setup reads the provider's answers; tests replace it.
 var setupInput io.Reader = os.Stdin
 
-// claudeKeychainReader opens the Claude Code Keychain entry; tests replace it
+// claudeReader opens a Claude Code credential store; tests replace it
 // so they never read the developer's own sign-in.
-var claudeKeychainReader = func(directory *string) func(context.Context) (claudeCredential, error) {
-	return resolveClaudeKeychain(directory).read
+var claudeReader = func(store string, directory *string) func(context.Context) (claudeCredential, error) {
+	return func(ctx context.Context) (claudeCredential, error) {
+		source, err := resolveClaudeStore(store, directory)
+		if err != nil {
+			return claudeCredential{}, err
+		}
+		return source.read(ctx)
+	}
 }
 
 // detectedAccount is an official sign-in bee setup found on this machine.
@@ -254,22 +260,29 @@ func detectCodex(ctx context.Context, home string) detectedAccount {
 
 func detectClaude(ctx context.Context, directory *string, existing *egressConfig) detectedAccount {
 	found := detectedAccount{platform: "claude"}
-	if runtime.GOOS != "darwin" {
-		found.problem = fail("BEE-CLAUDE-UNSUPPORTED", runtime.GOOS)
-		return found
-	}
-	source := &claudeSource{Store: "keychain", Capabilities: true, ConfigDir: directory}
+	source := &claudeSource{Store: defaultClaudeStore(), Capabilities: true, ConfigDir: directory}
 	if existing != nil && existing.Claude != nil {
 		// Keep what the provider chose before; a flag given now wins.
 		source.Refresh = existing.Claude.Refresh
+		if existing.Claude.Store != "" {
+			source.Store = existing.Claude.Store
+		}
 		if directory == nil {
 			source.ConfigDir = existing.Claude.ConfigDir
 		}
 	}
-	credential, err := claudeKeychainReader(source.ConfigDir)(ctx)
+	where := "the macOS Keychain"
+	if source.Store == claudeStoreFile {
+		where = filepath.Join(resolveClaudeKeychain(source.ConfigDir).directory, ".credentials.json")
+	}
+	credential, err := claudeReader(source.Store, source.ConfigDir)(ctx)
 	switch {
 	case err != nil:
-		found.problem = fail("BEE-CLAUDE-SOURCE", err.Error())
+		if _, _, _, coded := Coded(err); coded {
+			found.problem = err
+		} else {
+			found.problem = fail("BEE-CLAUDE-SOURCE", err.Error())
+		}
 	case !credential.hasInferenceScope:
 		found.problem = fail("BEE-CLAUDE-SCOPE", "")
 	default:
@@ -278,7 +291,7 @@ func detectClaude(ctx context.Context, directory *string, existing *egressConfig
 		if !credential.available(time.Now()) {
 			state = "access token expired; open Claude Code to renew it"
 		}
-		found.summary = fmt.Sprintf("Claude Code sign-in in the macOS Keychain, plan %s, %s", credential.plan, state)
+		found.summary = fmt.Sprintf("Claude Code sign-in in %s, plan %s, %s", where, credential.plan, state)
 	}
 	return found
 }
@@ -319,7 +332,7 @@ func buildEgress(chosen []detectedAccount, existing *egressConfig, proxy *string
 			cfg.Capabilities = &struct{}{}
 		}
 		if found.claude != nil {
-			cfg.Claude = &claudeSetting{Store: "keychain", ConfigDir: found.claude.ConfigDir, Refresh: found.claude.Refresh, Capabilities: true}
+			cfg.Claude = &claudeSetting{Store: found.claude.Store, ConfigDir: found.claude.ConfigDir, Refresh: found.claude.Refresh, Capabilities: true}
 		}
 	}
 	return cfg

@@ -73,7 +73,7 @@ func doctor(ctx context.Context, args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("bee doctor", flag.ContinueOnError)
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file")
-	egressPath := flags.String("egress-config", "", "egress configuration file")
+	egressPath := flags.String("egress-config", "", "egress configuration file (default: the egress.json bee setup wrote, if any)")
 	asJSON := flags.Bool("json", false, "print the report as JSON")
 	if err := flags.Parse(args); err != nil {
 		return err
@@ -87,6 +87,10 @@ func doctor(ctx context.Context, args []string, out io.Writer) error {
 			return errors.New("failed to locate user configuration directory; use --config")
 		}
 		*configPath = filepath.Join(directory, "tokhive", "bee.json")
+	}
+	if *egressPath == "" && fileExists(defaultEgressPath(*configPath)) {
+		// The same file bee run uses when it is given none.
+		*egressPath = defaultEgressPath(*configPath)
 	}
 	if !logx.DebugOn() {
 		// Every failure is in the report; the request log would say it twice.
@@ -117,7 +121,7 @@ func diagnose(ctx context.Context, configPath, egressPath string) doctorReport {
 	var egress *egressConfig
 	switch {
 	case egressPath == "":
-		report.skip("egress", "", "no --egress-config given; account checks show only what Hive sees")
+		report.skip("egress", "", "no egress configuration; run bee start or bee setup to choose accounts. Account checks show only what Hive sees")
 	default:
 		cfg, err := readEgress(ctx, egressPath)
 		if err != nil {

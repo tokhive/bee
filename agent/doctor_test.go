@@ -273,10 +273,28 @@ func TestDoctorWarnsOnAnExpiredCodexToken(t *testing.T) {
 	}
 }
 
+// Like bee run, doctor uses the egress.json bee setup wrote when it is given
+// none, so a provider checks everything with plain bee doctor.
+func TestDoctorFindsTheEgressConfigurationSetupWrote(t *testing.T) {
+	hive := httptest.NewServer(readyHive())
+	defer hive.Close()
+	config, egress := doctorFixture(t, hive.URL, time.Now().Add(time.Hour))
+	if egress != filepath.Join(filepath.Dir(config), "egress.json") {
+		t.Fatal("fixture no longer writes egress.json beside the device configuration")
+	}
+	report, err := runDoctor(t, "--config", config)
+	if err != nil || !report.OK || status(report, "egress", "").Status != "pass" || status(report, "authorization", "openai").Status != "pass" {
+		t.Fatalf("%v %+v", err, report)
+	}
+}
+
 func TestDoctorWithoutEgressReportsOnlyWhatHiveSees(t *testing.T) {
 	hive := httptest.NewServer(readyHive())
 	defer hive.Close()
-	config, _ := doctorFixture(t, hive.URL, time.Now().Add(time.Hour))
+	config, egress := doctorFixture(t, hive.URL, time.Now().Add(time.Hour))
+	if err := os.Remove(egress); err != nil {
+		t.Fatal(err)
+	}
 	report, err := runDoctor(t, "--config", config)
 	if err != nil || !report.OK {
 		t.Fatalf("%v %+v", err, report)

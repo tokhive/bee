@@ -282,9 +282,15 @@ func parseClaudeQuota(usage map[string]json.RawMessage, now time.Time) ([]beewir
 		used := int(math.Floor(*value.Used))
 		windows = append(windows, beewire.QuotaWindow{Scope: field.scope, Seconds: field.seconds, UsedPercent: &used, ResetAt: *reset})
 	}
-	if !claudeQuotaLimitsMatch(usage["limits"], general) {
-		return nil, nil, "limits disagree with five_hour and seven_day"
+	higher, unread := claudeQuotaLimits(usage["limits"], general)
+	for i := range windows {
+		name := map[int]string{18000: "five_hour", 604800: "seven_day"}[windows[i].Seconds]
+		if percent, ok := higher[name]; ok && windows[i].Scope == "" {
+			used := int(math.Floor(percent))
+			windows[i].UsedPercent = &used
+		}
 	}
+	unrecognised = append(unrecognised, unread...)
 	sort.Strings(unrecognised)
 	return windows, unrecognised, ""
 }
@@ -347,61 +353,58 @@ func parseClaudeQuotaValue(raw json.RawMessage) (claudeQuotaValue, bool) {
 	return value, claudeQuotaNull(value.Limit) && claudeQuotaNull(value.Remaining) && claudeQuotaNull(value.Spent) && claudeQuotaNull(value.Locked)
 }
 
-func claudeQuotaLimitsMatch(raw json.RawMessage, general map[string]claudeQuotaValue) bool {
+// claudeQuotaLimits reads the newer limits list beside the five hour and
+// seven day windows. Those two windows decide; the list only ever makes them
+// more cautious: where a session or weekly limit reports more use than its
+// window, the higher figure is returned to be used instead.
+//
+// Nothing in the list stops supply. It used to have to match the windows
+// exactly — two entries, known fields, equal percentages and resets, severity
+// "normal" — and every variation took Claude out of supply although the
+// windows were sound: on 2026-10-15 the weekly entry turned "warning" at 83%
+// and the account stopped taking work with 17% of its week left. Severity,
+// is_active, resets and unknown fields are therefore ignored. Kinds this build
+// does not read, and a list it cannot read at all, are returned by name for
+// the operator, the same way unknown top-level buckets are: if one is a real
+// limit, the account runs into it as a 429, which cools it down and bills
+// nothing.
+func claudeQuotaLimits(raw json.RawMessage, general map[string]claudeQuotaValue) (map[string]float64, []string) {
 	if claudeQuotaNull(raw) {
-		return true
+		return nil, nil
 	}
 	var limits []struct {
-		Kind     string          `json:"kind"`
-		Group    string          `json:"group"`
-		Percent  *float64        `json:"percent"`
-		Reset    *time.Time      `json:"resets_at"`
-		Scope    json.RawMessage `json:"scope"`
-		Active   *bool           `json:"is_active"`
-		Severity string          `json:"severity"`
+		Kind    string          `json:"kind"`
+		Group   string          `json:"group"`
+		Percent *float64        `json:"percent"`
+		Scope   json.RawMessage `json:"scope"`
 	}
-	decoder := json.NewDecoder(bytes.NewReader(raw))
-	decoder.DisallowUnknownFields()
-	if decoder.Decode(&limits) != nil {
-		return false
+	if json.Unmarshal(raw, &limits) != nil {
+		return nil, []string{"limits"}
 	}
-	if len(limits) == 0 {
-		return true
-	}
-	if len(limits) != 2 {
-		return false
-	}
-	seen := map[string]bool{}
+	higher := map[string]float64{}
+	var unread []string
 	for _, limit := range limits {
 		name := ""
 		switch {
-		case limit.Kind == "session" && limit.Group == "session":
+		case limit.Kind == "session" && limit.Group == "session" && claudeQuotaNull(limit.Scope):
 			name = "five_hour"
-		case limit.Kind == "weekly_all" && limit.Group == "weekly":
+		case limit.Kind == "weekly_all" && limit.Group == "weekly" && claudeQuotaNull(limit.Scope):
 			name = "seven_day"
 		default:
-			return false
+			if limit.Percent != nil && *limit.Percent > 0 {
+				unread = append(unread, "limits:"+limit.Kind)
+			}
+			continue
 		}
 		window := general[name]
-		// is_active does not remove a quota; both representations must agree before rounding.
-		if seen[name] || limit.Active == nil || !claudeQuotaNull(limit.Scope) || limit.Percent == nil || window.Used == nil || *limit.Percent != *window.Used || !claudeSameReset(limit.Reset, window.Reset) {
-			return false
+		if limit.Percent == nil || math.IsNaN(*limit.Percent) || *limit.Percent < 0 || *limit.Percent > 10000 || window.Used == nil {
+			continue
 		}
-		if limit.Severity != "normal" && !(limit.Severity == "critical" && *limit.Percent >= 100) {
-			return false
+		if *limit.Percent > *window.Used && *limit.Percent > higher[name] {
+			higher[name] = *limit.Percent
 		}
-		seen[name] = true
 	}
-	return true
-}
-
-// claudeSameReset reports whether two reset times agree; an idle window has
-// none in either representation.
-func claudeSameReset(a, b *time.Time) bool {
-	if a == nil || b == nil {
-		return a == nil && b == nil
-	}
-	return a.Equal(*b)
+	return higher, unread
 }
 
 // Control queries use the local token only; they neither refresh nor inspect buyer traffic.

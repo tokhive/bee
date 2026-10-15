@@ -57,7 +57,7 @@ func claudeExpandedQuotaFixture() map[string]any {
 func TestClaudeExpandedQuotaResponse(t *testing.T) {
 	for _, scenario := range []string{
 		"ready", "exhausted_inactive_session", "exhausted_week", "scoped_exhaustion", "scoped_expiry",
-		"conflicting_percent", "conflicting_fraction", "conflicting_reset", "wrong_group", "unknown_kind", "unknown_scope", "missing_active", "unknown_severity", "early_critical", "duplicate_limit", "partial_limits", "extra_limit", "unknown_limit_field", "malformed_limits",
+		"conflicting_percent", "conflicting_fraction", "conflicting_reset", "wrong_group", "unknown_kind", "unknown_scope", "missing_active", "unknown_severity", "warning_severity", "early_critical", "duplicate_limit", "partial_limits", "extra_limit", "unknown_limit_field", "malformed_limits",
 		"locked_window", "monetary_window", "unknown_window_field", "activated_extension", "unknown_null_bucket", "unknown_populated_bucket", "dormant_used", "dormant_reset", "dormant_lock", "dormant_missing_usage", "enabled_spend", "missing_spend_state", "unknown_spend_field", "unknown_spend_amount_field", "invalid_spend_percent", "invalid_spend_amount", "invalid_spend_severity", "spend_auto_reload", "spend_balance", "invalid_dashboard", "idle_session", "idle_session_used", "idle_session_limit_reset",
 	} {
 		t.Run(scenario, func(t *testing.T) {
@@ -82,33 +82,53 @@ func TestClaudeExpandedQuotaResponse(t *testing.T) {
 				usage["seven_day_sonnet"].(map[string]any)["resets_at"] = time.Now().Add(-time.Second)
 				wantReady = true
 			case "conflicting_percent":
+				// The limits list reports more use than the window: the higher
+				// figure is the one kept.
 				session["percent"] = 99.0
+				wantReady = true
 			case "conflicting_fraction":
 				session["percent"] = 25.9
+				wantReady = true
 			case "conflicting_reset":
 				session["resets_at"] = time.Now().Add(2 * time.Hour)
+				wantReady = true
 			case "wrong_group":
 				session["group"] = "weekly"
+				wantReady = true
 			case "unknown_kind":
 				session["kind"] = "weekly_scoped"
+				wantReady = true
 			case "unknown_scope":
 				session["scope"] = map[string]any{"model": map[string]any{"display_name": "synthetic-model"}}
+				wantReady = true
 			case "missing_active":
 				delete(session, "is_active")
+				wantReady = true
 			case "unknown_severity":
 				session["severity"] = "future"
+				wantReady = true
+			case "warning_severity":
+				// What the upstream sent on 2026-10-15 at 83% of the week.
+				weekly["severity"] = "warning"
+				wantReady = true
 			case "early_critical":
 				session["severity"] = "critical"
+				wantReady = true
 			case "duplicate_limit":
 				limits[1] = session
+				wantReady = true
 			case "partial_limits":
 				usage["limits"] = limits[:1]
+				wantReady = true
 			case "extra_limit":
 				usage["limits"] = append(limits, session)
+				wantReady = true
 			case "unknown_limit_field":
 				session["future_lock"] = true
+				wantReady = true
 			case "malformed_limits":
 				usage["limits"] = map[string]any{}
+				wantReady = true
 			case "locked_window":
 				five["locked_reason"] = "synthetic-lock"
 			case "monetary_window":
@@ -172,6 +192,7 @@ func TestClaudeExpandedQuotaResponse(t *testing.T) {
 				five["resets_at"], session["resets_at"] = nil, nil
 			case "idle_session_limit_reset":
 				five["utilization"], five["resets_at"], session["percent"] = 0.0, nil, 0.0
+				wantReady = true
 			}
 			credential, _ := parseClaudeCredential(claudeSample(time.Now().Add(time.Hour)))
 			transport := claudeTransport(func(r *http.Request) (*http.Response, error) {
@@ -188,6 +209,9 @@ func TestClaudeExpandedQuotaResponse(t *testing.T) {
 			}
 			if wantReady && got.Reason(time.Now(), "claude-haiku-4-5-20251001") != wantReason {
 				t.Fatal("general quota enforcement changed")
+			}
+			if scenario == "conflicting_percent" && *got.Windows[0].UsedPercent != 99 {
+				t.Fatalf("five hour window kept the lower figure: %+v", got.Windows[0])
 			}
 			if scenario == "idle_session" && (got.Windows[0].Seconds != 18000 || *got.Windows[0].UsedPercent != 0 || got.Windows[0].ResetAt.Sub(time.Now()) < 4*time.Hour) {
 				t.Fatalf("idle session window = %+v", got.Windows[0])
@@ -267,7 +291,7 @@ func TestClaudeCapabilityQueryAndFailClosed(t *testing.T) {
 			// unknown_quota stays ready: a bucket nobody here reads does not
 			// decide anything, and the five hour and seven day windows in this
 			// fixture are healthy.
-			if scenario == "ready" || scenario == "scoped_reset_passed" || scenario == "unknown_quota" {
+			if scenario == "ready" || scenario == "scoped_reset_passed" || scenario == "unknown_quota" || scenario == "scoped_limits" {
 				want = "ready"
 			}
 			if scenario == "429" {

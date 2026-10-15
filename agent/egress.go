@@ -476,7 +476,12 @@ func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io
 	if cfg.failures == nil {
 		cfg.failures = newEgressFailures()
 	}
-	return relay.New(ctx, conn, tunnel.High, func(live context.Context, stream *tunnel.Stream, metadata []byte) {
+	return relay.New(ctx, conn, tunnel.High, cfg.serveStream(out), relay.Options{MaxStreams: relay.BeeStreams})
+}
+
+// serveStream bridges one stream Hive opened to its upstream target.
+func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunnel.Stream, []byte) {
+	return func(live context.Context, stream *tunnel.Stream, metadata []byte) {
 		var open struct {
 			Host string `json:"host"`
 		}
@@ -527,5 +532,5 @@ func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io
 			egressDebug("stream to %q closed after %s: sent %d bytes upstream, received %d bytes",
 				open.Host, time.Since(started).Round(time.Millisecond), counter.written.Load(), counter.read.Load())
 		}
-	})
+	}
 }

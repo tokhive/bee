@@ -250,7 +250,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 			return err
 		}
 		slog.Debug("claude capability report accepted", "module", "capabilities", "status", snapshot.Status, "models", len(snapshot.Models))
-		source.lastCapabilitySync = time.Now()
+		source.lastCapabilitySync = wallNow()
 		source.metadataReportedAt = snapshot.MetadataObservedAt
 		source.metadataGeneration, source.metadataLease = result.Account.Generation, lease
 		source.capabilityRevision = auth.CredentialRevision

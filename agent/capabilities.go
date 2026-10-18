@@ -95,7 +95,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 		retry := res.Header.Get("Retry-After")
 		at, _ := http.ParseTime(retry)
 		if seconds, err := strconv.ParseInt(retry, 10, 32); err == nil && seconds > 0 {
-			at = time.Now().Add(time.Duration(seconds) * time.Second)
+			at = wallNow().Add(time.Duration(seconds) * time.Second)
 		}
 		return reference.Path + " answered 429 without a usable Retry-After", at
 	}
@@ -185,8 +185,15 @@ func subscriptionSpendAvailable(raw json.RawMessage) bool {
 	return decoder.Decode(&spend) == nil && spend.Reached != nil && !*spend.Reached && (len(spend.Individual) == 0 || string(spend.Individual) == "null")
 }
 
+// wallNow reads the clock without its monotonic reading. The monotonic clock
+// stops while a Mac sleeps, so a time kept across a sleep and compared on it
+// lags the wall clock Hive judges every report by: after a long sleep, Bee
+// would keep sending model metadata it still thinks is fresh and Hive rejects
+// as expired. Times without the reading compare on the wall clock.
+func wallNow() time.Time { return time.Now().Round(0) }
+
 func (s *capabilitySource) observe(ctx context.Context, credential codexCredential, sequence int64) beewire.Capabilities {
-	now := time.Now()
+	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
 	s.failure = ""
 	fail := func(reason string) beewire.Capabilities {
@@ -347,7 +354,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 		return err
 	}
 	slog.Debug("openai capability report accepted", "module", "capabilities", "status", snapshot.Status, "models", len(snapshot.Models))
-	cfg.lastCapabilitySync = time.Now()
+	cfg.lastCapabilitySync = wallNow()
 	cfg.capabilityReportPending = false
 	cfg.capabilityRevision = report.CredentialRevision
 	cfg.metadataReportedAt = snapshot.MetadataObservedAt

@@ -139,6 +139,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 	defer metrics.disconnect()
 	attempted := false
 	delay := time.Second
+	conflicts := 0
 	rejectionReported := false
 	for {
 		if ctx.Err() != nil {
@@ -155,7 +156,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		cancel()
 		metrics.connect(connectStart, err)
 		if err == nil {
-			delay = time.Second
+			delay, conflicts = time.Second, 0
 			notify(out, slog.LevelInfo, "connect", "Bee connected to Hive", "endpoint", endpoint)
 			var live context.Context
 			var end func()
@@ -212,15 +213,15 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 					slog.Warn("Hive connection lost", "module", "connect", "error", err.Error())
 					break
 				}
-				// Waiting on the failure channel is what lets this match the
-				// ten second heartbeat Hive keeps from its own side. The
-				// cadence was two seconds so that a non-blocking check of the
-				// channel would notice a synchronization failure reasonably
-				// soon: it cost a ping every two seconds and still reported
-				// the failure up to two seconds late. A nil channel — every
-				// configuration without an official account source — simply
-				// never fires.
-				timer := time.NewTimer(10 * time.Second)
+				// Waiting on the failure channel lets a synchronization failure
+				// end the wait at once instead of being polled for. The
+				// heartbeat is what notices a link that silently stopped
+				// carrying anything, which a proxy in the path makes common:
+				// at five seconds plus the pong wait, a dead link is found
+				// within ten, and a reconnect replaces the stalled connection
+				// Hive still holds. A nil channel — every configuration
+				// without an official account source — simply never fires.
+				timer := time.NewTimer(heartbeatInterval)
 				select {
 				case syncErr := <-syncFailures:
 					timer.Stop()
@@ -257,6 +258,15 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		if pause(ctx, delay) != nil {
 			return nil
 		}
+		// Hive refuses a reconnect as a duplicate while it still holds a
+		// connection it has not yet found dead, and lets go within its own
+		// heartbeat. Backing off past that moment only adds downtime, so a
+		// run of refusals retries at a short steady interval first.
+		if response != nil && response.StatusCode == http.StatusConflict && conflicts < conflictRetries {
+			conflicts++
+			delay = conflictRetryDelay
+			continue
+		}
 		if delay < 30*time.Second {
 			delay *= 2
 			if delay > 30*time.Second {
@@ -265,6 +275,16 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		}
 	}
 }
+
+// heartbeatInterval is the pause between liveness checks of the connection.
+const heartbeatInterval = 5 * time.Second
+
+// conflictRetries refusals as a duplicate, conflictRetryDelay apart, outlast
+// the time Hive takes to give up on a dead connection.
+var (
+	conflictRetries    = 15
+	conflictRetryDelay = 2 * time.Second
+)
 
 func replacedDevice(err error, out io.Writer) bool {
 	var failure *apiFailure

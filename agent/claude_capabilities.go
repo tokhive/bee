@@ -63,7 +63,7 @@ func (s *claudeCapabilitySource) reusable(now time.Time) bool {
 }
 
 func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeCredential, fingerprint string, sequence int64, transport http.RoundTripper) (beewire.Capabilities, error) {
-	now := time.Now()
+	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
 	s.failure = ""
 	fail := func(reason string) beewire.Capabilities {
@@ -431,7 +431,7 @@ func queryClaudeCapability(ctx context.Context, credential claudeCredential, pat
 		return time.Time{}, errClaudeProfileRejected
 	}
 	if res.StatusCode == 429 {
-		now := time.Now()
+		now := wallNow()
 		at, _ := http.ParseTime(res.Header.Get("Retry-After"))
 		if seconds, err := strconv.ParseInt(res.Header.Get("Retry-After"), 10, 32); err == nil && seconds > 0 {
 			at = now.Add(time.Duration(seconds) * time.Second)

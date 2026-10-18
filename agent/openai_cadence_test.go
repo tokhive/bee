@@ -284,3 +284,37 @@ func TestOpenAIFreeSuppliesOnItsMonthlyWindow(t *testing.T) {
 		t.Fatalf("free authorization accepted plus usage: %+v %q", got, s.failure)
 	}
 }
+
+// TestCapabilityTimesSurviveSleep pins that the times a capability source keeps
+// carry no monotonic reading. macOS stops the monotonic clock while the machine
+// sleeps, so a kept time compared on it would call model metadata fresh after a
+// day asleep, and Hive, which reads the wall clock, would reject every report.
+func TestCapabilityTimesSurviveSleep(t *testing.T) {
+	monotonic := func(at time.Time) bool { return strings.Contains(at.String(), " m=") }
+	f := &openaiControlFixture{plan: "pro"}
+	s := capabilitySource{transport: f}
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" {
+		t.Fatalf("status=%s", got.Status)
+	}
+	if monotonic(s.cachedAt) || monotonic(s.metadataAt) {
+		t.Fatalf("OpenAI kept monotonic times: cached=%s metadata=%s", s.cachedAt, s.metadataAt)
+	}
+
+	credential, _ := parseClaudeCredential(claudeSample(time.Now().Add(time.Hour)))
+	usage := claudeExpandedQuotaFixture()
+	transport := claudeTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/models" {
+			return claudeProfileResponse(200, claudeModelsFixture), nil
+		}
+		raw, _ := json.Marshal(usage)
+		return claudeProfileResponse(200, string(raw)), nil
+	})
+	claude := claudeCapabilitySource{}
+	if got, err := claude.observe(context.Background(), credential, "account-1", 1, transport); err != nil || got.Status != "ready" {
+		t.Fatalf("status=%s err=%v", got.Status, err)
+	}
+	if monotonic(claude.cachedAt) || monotonic(claude.metadataAt) {
+		t.Fatalf("Claude kept monotonic times: cached=%s metadata=%s", claude.cachedAt, claude.metadataAt)
+	}
+}

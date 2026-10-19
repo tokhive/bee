@@ -14,9 +14,11 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/tokhive/bee/beewire"
@@ -73,31 +75,98 @@ func (s capabilitySource) valid() bool {
 	return u.Scheme == "http" && ip != nil && ip.IsLoopback() && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (u.Path == "" || u.Path == "/")
 }
 
-// defaultCodexClientVersion is the Codex release Bee speaks as when the
-// official Codex directory does not say which one it runs. Keep it equal to
+// defaultCodexClientVersion is the Codex release Bee speaks as when neither
+// the installed Codex nor its directory says which one runs. Keep it equal to
 // Hive's.
 const defaultCodexClientVersion = "0.161.0"
 
-// localCodexVersion is the release the official Codex last listed its models
-// as, from models_cache.json in its directory. The models endpoint lists only
-// the models a release knows, so an older one hides models the account can
-// use; and Hive sends this account's requests as the release Bee reports.
-func localCodexVersion(home string) string {
-	if home == "" {
+// installedCodexVersion reads the release of the codex on PATH; tests
+// replace it.
+var installedCodexVersion = codexOnPath
+
+// localCodexVersion is the newest release this machine runs with the account:
+// the codex on PATH, or the release the official Codex last listed its models
+// as (models_cache.json in its directory), which is also where a client that
+// is not on PATH, such as the desktop app, leaves its release. The models
+// endpoint lists only the models a release knows, so an older one hides models
+// the account can use; and Hive sends this account's requests as the release
+// Bee reports. Reading the installed codex means an upgrade counts at once,
+// not only after Codex next refreshes its cache.
+func localCodexVersion(ctx context.Context, home string) string {
+	version := ""
+	for _, candidate := range []string{installedCodexVersion(ctx), cachedCodexVersion(home)} {
+		if beewire.ValidClientVersion(candidate) && (version == "" || newerVersion(candidate, version)) {
+			version = candidate
+		}
+	}
+	if version == "" {
 		return defaultCodexClientVersion
+	}
+	return version
+}
+
+// codexOnPath asks the codex on PATH for its release, empty when it cannot.
+func codexOnPath(ctx context.Context) string {
+	path, err := exec.LookPath("codex")
+	if err != nil {
+		return ""
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	if err != nil {
+		return ""
+	}
+	// "codex-cli 0.163.0"
+	fields := strings.Fields(string(out))
+	if len(fields) != 2 || fields[0] != "codex-cli" {
+		return ""
+	}
+	return fields[1]
+}
+
+// cachedCodexVersion is the release recorded in models_cache.json, empty
+// when there is none to read.
+func cachedCodexVersion(home string) string {
+	if home == "" {
+		return ""
 	}
 	file, err := os.Open(filepath.Join(home, "models_cache.json"))
 	if err != nil {
-		return defaultCodexClientVersion
+		return ""
 	}
 	defer file.Close()
 	var cache struct {
 		ClientVersion string `json:"client_version"`
 	}
-	if json.NewDecoder(io.LimitReader(file, 16<<20)).Decode(&cache) != nil || !beewire.ValidCodexClientVersion(cache.ClientVersion) {
-		return defaultCodexClientVersion
+	if json.NewDecoder(io.LimitReader(file, 16<<20)).Decode(&cache) != nil {
+		return ""
 	}
 	return cache.ClientVersion
+}
+
+// newerVersion reports whether release a is later than release b, both valid
+// release numbers. A prerelease (0.163.0-alpha.2) comes before its release.
+func newerVersion(a, b string) bool {
+	coreA, preA, _ := strings.Cut(a, "-")
+	coreB, preB, _ := strings.Cut(b, "-")
+	partsA, partsB := strings.Split(coreA, "."), strings.Split(coreB, ".")
+	for i := range partsA {
+		x, _ := strconv.Atoi(partsA[i])
+		y, _ := strconv.Atoi(partsB[i])
+		if x != y {
+			return x > y
+		}
+	}
+	switch {
+	case preA == preB:
+		return false
+	case preA == "":
+		return true
+	case preB == "":
+		return false
+	}
+	return preA > preB
 }
 
 // query fetches one official endpoint into target. It returns why it failed,
@@ -239,7 +308,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		s.metadataModels, s.metadataPlan, s.metadataAt, s.metadataVersion = nil, "", time.Time{}, ""
 		s.account, s.user = credential.AccountID, credential.UserID
 	}
-	s.version = localCodexVersion(s.home)
+	s.version = localCodexVersion(ctx, s.home)
 	if s.retryAt.IsZero() && s.reusable(now) && s.metadataPlan == credential.Plan && s.metadataVersion == s.version {
 		result := s.cached
 		result.Sequence, result.ObservedAt = sequence, now

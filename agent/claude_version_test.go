@@ -9,9 +9,10 @@ import (
 	"time"
 )
 
-// Tests do not ask whatever claude happens to be installed here.
+// Tests do not ask whatever claude or codex happens to be installed here.
 func init() {
 	claudeVersion = func(context.Context) string { return defaultClaudeClientVersion }
+	installedCodexVersion = func(context.Context) string { return "" }
 }
 
 func TestLocalClaudeVersion(t *testing.T) {

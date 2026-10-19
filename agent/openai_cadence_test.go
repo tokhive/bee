@@ -23,6 +23,8 @@ type openaiControlFixture struct {
 	fail           bool
 	// primary overrides the length of the primary window when set.
 	primary int
+	// versions are the client_version and User-Agent each models query sent.
+	versions [][2]string
 }
 
 func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -31,6 +33,7 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	}
 	if r.URL.Path == "/backend-api/codex/models" {
 		f.models++
+		f.versions = append(f.versions, [2]string{r.URL.Query().Get("client_version"), r.Header.Get("User-Agent")})
 		return claudeProfileResponse(200, `{"models":[{"slug":"gpt-test-a"},{"slug":"gpt-test-b"}]}`), nil
 	}
 	f.usage++
@@ -317,4 +320,39 @@ func TestCapabilityTimesSurviveSleep(t *testing.T) {
 	if monotonic(claude.cachedAt) || monotonic(claude.metadataAt) {
 		t.Fatalf("Claude kept monotonic times: cached=%s metadata=%s", claude.cachedAt, claude.metadataAt)
 	}
+}
+
+func TestOpenAIReportsTheLocalCodexVersion(t *testing.T) {
+	home := t.TempDir()
+	f := &openaiControlFixture{plan: "pro"}
+	s := capabilitySource{transport: f, home: home}
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	observe := func(sequence int64, want string) {
+		t.Helper()
+		result := s.observe(context.Background(), c, sequence)
+		if result.Status != "ready" || result.ClientVersion != want {
+			t.Fatalf("observation %d = %s with version %q, want ready with %q (%s)", sequence, result.Status, result.ClientVersion, want, s.failure)
+		}
+		if last := f.versions[len(f.versions)-1]; last != [2]string{want, "codex_cli_rs/" + want} {
+			t.Fatalf("models were listed as %v, want %s", last, want)
+		}
+	}
+	// No cache: the official Codex has not said which release it runs.
+	observe(1, defaultCodexClientVersion)
+	if err := os.WriteFile(filepath.Join(home, "models_cache.json"), []byte(`{"client_version":"0.163.0","models":[]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	// A new release lists models again, though the old list is still fresh.
+	observe(2, "0.163.0")
+	if f.models != 2 {
+		t.Fatalf("models queried %d times, want 2", f.models)
+	}
+	observe(3, "0.163.0")
+	if f.models != 2 {
+		t.Fatalf("models queried %d times for an unchanged release, want 2", f.models)
+	}
+	if err := os.WriteFile(filepath.Join(home, "models_cache.json"), []byte(`{"client_version":"0.163.0\r\nX-Injected: 1"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	observe(4, defaultCodexClientVersion)
 }

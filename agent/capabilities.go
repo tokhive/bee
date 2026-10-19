@@ -13,6 +13,8 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"time"
@@ -30,6 +32,11 @@ type capabilitySource struct {
 	metadataPlan   string
 	metadataAt     time.Time
 	transport      http.RoundTripper
+	// home is the official Codex directory, read for the release it runs;
+	// version is the release the current queries speak as, and
+	// metadataVersion the one metadataModels were listed for.
+	home                     string
+	version, metadataVersion string
 	// failure is why the last observation came out unknown, empty when it
 	// did not; logged is the failure the operator was last told about.
 	failure, logged string
@@ -66,10 +73,32 @@ func (s capabilitySource) valid() bool {
 	return u.Scheme == "http" && ip != nil && ip.IsLoopback() && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (u.Path == "" || u.Path == "/")
 }
 
-// codexClientVersion is the Codex CLI release Bee speaks as. The models
-// endpoint lists only the models that release knows, so an old one hides
-// newer models the account can use. Keep it equal to Hive's.
-const codexClientVersion = "0.161.0"
+// defaultCodexClientVersion is the Codex release Bee speaks as when the
+// official Codex directory does not say which one it runs. Keep it equal to
+// Hive's.
+const defaultCodexClientVersion = "0.161.0"
+
+// localCodexVersion is the release the official Codex last listed its models
+// as, from models_cache.json in its directory. The models endpoint lists only
+// the models a release knows, so an older one hides models the account can
+// use; and Hive sends this account's requests as the release Bee reports.
+func localCodexVersion(home string) string {
+	if home == "" {
+		return defaultCodexClientVersion
+	}
+	file, err := os.Open(filepath.Join(home, "models_cache.json"))
+	if err != nil {
+		return defaultCodexClientVersion
+	}
+	defer file.Close()
+	var cache struct {
+		ClientVersion string `json:"client_version"`
+	}
+	if json.NewDecoder(io.LimitReader(file, 16<<20)).Decode(&cache) != nil || !beewire.ValidCodexClientVersion(cache.ClientVersion) {
+		return defaultCodexClientVersion
+	}
+	return cache.ClientVersion
+}
 
 // query fetches one official endpoint into target. It returns why it failed,
 // empty on success, and the time a 429 asked to be left alone until.
@@ -89,7 +118,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	}
 	req.Header.Set("Authorization", "Bearer "+credential.Secret.Token)
 	req.Header.Set("ChatGPT-Account-Id", credential.AccountID)
-	req.Header.Set("User-Agent", "codex_cli_rs/"+codexClientVersion)
+	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version)
 	client := &http.Client{Transport: s.transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
@@ -207,10 +236,11 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 	}
 	if s.account != credential.AccountID || s.user != credential.UserID {
 		s.retryAt, s.cached, s.cachedAt = time.Time{}, beewire.Capabilities{}, time.Time{}
-		s.metadataModels, s.metadataPlan, s.metadataAt = nil, "", time.Time{}
+		s.metadataModels, s.metadataPlan, s.metadataAt, s.metadataVersion = nil, "", time.Time{}, ""
 		s.account, s.user = credential.AccountID, credential.UserID
 	}
-	if s.retryAt.IsZero() && s.reusable(now) && s.metadataPlan == credential.Plan {
+	s.version = localCodexVersion(s.home)
+	if s.retryAt.IsZero() && s.reusable(now) && s.metadataPlan == credential.Plan && s.metadataVersion == s.version {
 		result := s.cached
 		result.Sequence, result.ObservedAt = sequence, now
 		result.Models = append([]string(nil), s.cached.Models...)
@@ -245,7 +275,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		Additional []json.RawMessage `json:"additional_rate_limits"`
 		Spend      json.RawMessage   `json:"spend_control"`
 	}
-	refreshMetadata := s.LocalURL != "" || s.metadataAt.IsZero() || !now.Before(s.metadataAt.Add(capabilityMetadataTTL)) || s.metadataPlan != credential.Plan
+	refreshMetadata := s.LocalURL != "" || s.metadataAt.IsZero() || !now.Before(s.metadataAt.Add(capabilityMetadataTTL)) || s.metadataPlan != credential.Plan || s.metadataVersion != s.version
 	queries := []struct {
 		path   string
 		target any
@@ -254,7 +284,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		queries = append(queries, struct {
 			path   string
 			target any
-		}{"/backend-api/codex/models?client_version=" + codexClientVersion, &models})
+		}{"/backend-api/codex/models?client_version=" + s.version, &models})
 	}
 	queries = append(queries, struct {
 		path   string
@@ -290,6 +320,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 	result := unknown
 	result.Status = "ready"
 	result.Plan = credential.Plan
+	result.ClientVersion = s.version
 	catalog := s.metadataModels
 	result.MetadataObservedAt = s.metadataAt
 	if refreshMetadata {
@@ -327,7 +358,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		return fail("capability snapshot failed validation")
 	}
 	if refreshMetadata {
-		s.metadataModels, s.metadataPlan, s.metadataAt = catalog, credential.Plan, now
+		s.metadataModels, s.metadataPlan, s.metadataAt, s.metadataVersion = catalog, credential.Plan, now, s.version
 	}
 	s.cached, s.cachedAt = result, now
 	return result
@@ -336,6 +367,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state localState, lease string, force bool) error {
 	credential := *cfg.authorization
 	cfg.capabilitySequence++
+	cfg.Capabilities.home = cfg.Codex.Home
 	snapshot := cfg.Capabilities.observe(ctx, credential, cfg.capabilitySequence)
 	logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure)
 	current, err := cfg.Codex.read(ctx)
@@ -349,7 +381,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 	report := beewire.CapabilityReport{Capabilities: snapshot, Lease: lease, AccountGeneration: cfg.accountGeneration, AccountFingerprint: hex.EncodeToString(fingerprint[:]), CredentialRevision: hex.EncodeToString(revision[:])}
 	if snapshot.Status == "ready" && !force && cfg.capabilityRevision == report.CredentialRevision && cfg.metadataGeneration == cfg.accountGeneration && cfg.metadataLease == lease && !cfg.metadataReportedAt.IsZero() && cfg.metadataReportedAt.Equal(snapshot.MetadataObservedAt) && slices.Equal(cfg.metadataModels, snapshot.Models) {
 		report.ReuseMetadata = true
-		report.Plan, report.Models, report.MetadataObservedAt = "", nil, time.Time{}
+		report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 	}
 	if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/capabilities", "POST", state.Credential, report, nil); err != nil {
 		var failure *apiFailure

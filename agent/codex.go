@@ -70,7 +70,7 @@ func codexStatus(ctx context.Context, args []string, out io.Writer) error {
 	hash := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
 	status := map[string]any{"source": credential.Source, "account_fingerprint": hex.EncodeToString(hash[:]), "plan": credential.Plan, "expires_at": credential.ExpiresAt.UTC().Format(time.RFC3339), "validation": "local_structure_only"}
 	if *queryCapabilities {
-		probe := &capabilitySource{}
+		probe := &capabilitySource{home: source.Home}
 		capabilities := probe.observe(ctx, credential, 1)
 		current, err := source.read(ctx)
 		if err != nil || !current.sameAuthorization(credential) {

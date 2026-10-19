@@ -355,4 +355,43 @@ func TestOpenAIReportsTheLocalCodexVersion(t *testing.T) {
 		t.Fatal(err)
 	}
 	observe(4, defaultCodexClientVersion)
+	// An upgraded codex on PATH counts before Codex refreshes its cache, and
+	// the newer of the two wins either way.
+	if err := os.WriteFile(filepath.Join(home, "models_cache.json"), []byte(`{"client_version":"0.163.0"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	installed := "0.165.0"
+	installedCodexVersion = func(context.Context) string { return installed }
+	t.Cleanup(func() { installedCodexVersion = func(context.Context) string { return "" } })
+	observe(5, "0.165.0")
+	installed = "0.160.0"
+	observe(6, "0.163.0")
+}
+
+func TestCodexOnPath(t *testing.T) {
+	directory := t.TempDir()
+	t.Setenv("PATH", directory)
+	if got := codexOnPath(context.Background()); got != "" {
+		t.Fatalf("no codex on PATH = %q", got)
+	}
+	for output, want := range map[string]string{"codex-cli 0.163.0": "0.163.0", "codex 1.0.0 something else": ""} {
+		script := "#!/bin/sh\nprintf '%s\\n' '" + output + "'\n"
+		if err := os.WriteFile(filepath.Join(directory, "codex"), []byte(script), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if got := codexOnPath(context.Background()); got != want {
+			t.Fatalf("%q read as %q, want %q", output, got, want)
+		}
+	}
+}
+
+func TestNewerVersion(t *testing.T) {
+	for _, pair := range [][2]string{{"0.163.0", "0.161.9"}, {"0.163.10", "0.163.9"}, {"1.0.0", "0.999.999"}, {"0.163.0", "0.163.0-alpha.2"}, {"0.163.0-beta.1", "0.163.0-alpha.2"}} {
+		if !newerVersion(pair[0], pair[1]) || newerVersion(pair[1], pair[0]) {
+			t.Fatalf("%s should be newer than %s", pair[0], pair[1])
+		}
+	}
+	if newerVersion("0.163.0", "0.163.0") {
+		t.Fatal("a release is not newer than itself")
+	}
 }

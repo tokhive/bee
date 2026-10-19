@@ -66,6 +66,11 @@ func (s capabilitySource) valid() bool {
 	return u.Scheme == "http" && ip != nil && ip.IsLoopback() && u.User == nil && u.RawQuery == "" && u.Fragment == "" && (u.Path == "" || u.Path == "/")
 }
 
+// codexClientVersion is the Codex CLI release Bee speaks as. The models
+// endpoint lists only the models that release knows, so an old one hides
+// newer models the account can use. Keep it equal to Hive's.
+const codexClientVersion = "0.161.0"
+
 // query fetches one official endpoint into target. It returns why it failed,
 // empty on success, and the time a 429 asked to be left alone until.
 func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (string, time.Time) {
@@ -84,7 +89,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	}
 	req.Header.Set("Authorization", "Bearer "+credential.Secret.Token)
 	req.Header.Set("ChatGPT-Account-Id", credential.AccountID)
-	req.Header.Set("User-Agent", "codex_cli_rs/0.153.4")
+	req.Header.Set("User-Agent", "codex_cli_rs/"+codexClientVersion)
 	client := &http.Client{Transport: s.transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
@@ -249,7 +254,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		queries = append(queries, struct {
 			path   string
 			target any
-		}{"/backend-api/codex/models?client_version=0.153.4", &models})
+		}{"/backend-api/codex/models?client_version=" + codexClientVersion, &models})
 	}
 	queries = append(queries, struct {
 		path   string

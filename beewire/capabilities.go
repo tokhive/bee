@@ -32,9 +32,10 @@ type Capabilities struct {
 	Windows            []QuotaWindow `json:"windows"`
 	RetryAt            *time.Time    `json:"retry_at,omitempty"`
 
-	// ClientVersion is the Codex release the models were listed for, and the
-	// one Hive sends this account's requests as. Only a ready OpenAI report
-	// carries it; it is metadata, reported and reused with the models.
+	// ClientVersion is the official client release the account runs (Codex
+	// for OpenAI, Claude Code for Claude), and the one Hive sends this
+	// account's requests as. Only a ready report carries it; it is metadata,
+	// reported and reused with the models.
 	ClientVersion string `json:"client_version,omitempty"`
 }
 
@@ -60,11 +61,15 @@ func (r CapabilityReport) MarshalJSON() ([]byte, error) {
 
 var capabilityModelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$`)
 
-var codexClientVersion = regexp.MustCompile(`^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,6}(-[0-9A-Za-z.]{1,32})?$`)
+var clientVersion = regexp.MustCompile(`^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,6}(-[0-9A-Za-z.]{1,32})?$`)
 
-// ValidCodexClientVersion reports whether version is a Codex release number,
-// such as 0.161.0 or 0.163.0-alpha.2, fit to send as a header.
-func ValidCodexClientVersion(version string) bool { return codexClientVersion.MatchString(version) }
+// ValidClientVersion reports whether version is an official client release
+// number, such as 0.161.0, 2.1.303 or 0.163.0-alpha.2, fit to send as a header.
+func ValidClientVersion(version string) bool { return clientVersion.MatchString(version) }
+
+// ValidCodexClientVersion is ValidClientVersion, kept for callers that
+// predate Claude reporting a release.
+func ValidCodexClientVersion(version string) bool { return ValidClientVersion(version) }
 
 var subscriptionPlans = map[string][]string{
 	"openai": {"free", "plus", "pro", "team", "business", "enterprise", "edu"},
@@ -107,7 +112,7 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 	if c.Sequence < 1 || c.ObservedAt.After(now.Add(5*time.Second)) || !now.Before(c.ObservedAt.Add(CapabilityLifetimeFor(platform))) || len(c.Models) > 32 {
 		return false
 	}
-	if c.ClientVersion != "" && (platform != "openai" || c.Status != "ready" || !ValidCodexClientVersion(c.ClientVersion)) {
+	if c.ClientVersion != "" && (c.Status != "ready" || !ValidClientVersion(c.ClientVersion)) {
 		return false
 	}
 	seen := map[string]bool{}

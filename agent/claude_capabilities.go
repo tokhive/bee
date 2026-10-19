@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"os/exec"
 	"sort"
 	"strconv"
 	"strings"
@@ -31,6 +32,35 @@ const capabilityMetadataTTL = beewire.CapabilityMetadataInterval
 // An explicit Retry-After is preferred, subject to the one-hour wire limit.
 const capabilityBackoff = 6 * time.Minute
 
+// defaultClaudeClientVersion is the Claude Code release Bee reports when the
+// official client cannot say which one it is. Keep it equal to Hive's.
+const defaultClaudeClientVersion = "2.1.303"
+
+// claudeVersion reads the installed Claude Code release; tests replace it.
+var claudeVersion = localClaudeVersion
+
+// localClaudeVersion asks the claude on PATH for its release. Hive sends this
+// account's requests as the release Bee reports, so they follow the client the
+// account is used with rather than one fixed when Hive was built.
+func localClaudeVersion(ctx context.Context) string {
+	path, err := exec.LookPath("claude")
+	if err != nil {
+		return defaultClaudeClientVersion
+	}
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	if err != nil {
+		return defaultClaudeClientVersion
+	}
+	// "2.1.303 (Claude Code)"
+	version, _, _ := strings.Cut(strings.TrimSpace(string(out)), " ")
+	if !beewire.ValidClientVersion(version) {
+		return defaultClaudeClientVersion
+	}
+	return version
+}
+
 type claudeCapabilitySource struct {
 	fingerprint    string
 	unrecognised   []string
@@ -43,6 +73,9 @@ type claudeCapabilitySource struct {
 	metadataAt     time.Time
 	cooldown       cooldownStore
 	restored       bool
+	// metadataVersion is the Claude Code release metadataModels were
+	// reported with.
+	metadataVersion string
 	// failure is why the last observation came out unknown, empty when it
 	// did not; logged is the failure the operator was last told about.
 	failure, logged string
@@ -72,7 +105,7 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 	}
 	if s.fingerprint != fingerprint {
 		s.fingerprint, s.retryAt, s.cached, s.cachedAt = fingerprint, time.Time{}, beewire.Capabilities{}, time.Time{}
-		s.metadataModels, s.metadataPlan, s.metadataAt, s.restored = nil, "", time.Time{}, false
+		s.metadataModels, s.metadataPlan, s.metadataAt, s.metadataVersion, s.restored = nil, "", time.Time{}, "", false
 	}
 	// A cooldown this account was already serving is adopted once, so a
 	// restart does not hand the endpoint a query it asked not to receive.
@@ -89,7 +122,8 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 	if now.Before(s.retryAt) {
 		return limited(), nil
 	}
-	if s.reusable(now) && s.metadataPlan == credential.plan {
+	version := claudeVersion(ctx)
+	if s.reusable(now) && s.metadataPlan == credential.plan && s.metadataVersion == version {
 		result := s.cached
 		result.Sequence, result.ObservedAt = sequence, now
 		result.Models = append([]string(nil), s.cached.Models...)
@@ -118,7 +152,7 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 		path   string
 		target any
 	}{{"/api/oauth/usage", &usage}}
-	metadataFresh := s.metadataAt.IsZero() || s.metadataPlan != credential.plan || !now.Before(s.metadataAt.Add(capabilityMetadataTTL))
+	metadataFresh := s.metadataAt.IsZero() || s.metadataPlan != credential.plan || s.metadataVersion != version || !now.Before(s.metadataAt.Add(capabilityMetadataTTL))
 	if metadataFresh {
 		queries = append([]struct {
 			path   string
@@ -152,7 +186,7 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 		}
 	}
 	result := unknown
-	result.Status, result.Plan = "ready", credential.plan
+	result.Status, result.Plan, result.ClientVersion = "ready", credential.plan, version
 	if metadataFresh {
 		seen := map[string]bool{}
 		for _, model := range models.Data {
@@ -183,7 +217,7 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 	}
 	if metadataFresh {
 		s.metadataModels = append([]string(nil), result.Models...)
-		s.metadataPlan, s.metadataAt = credential.plan, now
+		s.metadataPlan, s.metadataAt, s.metadataVersion = credential.plan, now, version
 	}
 	s.cached, s.cachedAt = result, now
 	return result, nil

@@ -240,7 +240,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		report := beewire.CapabilityReport{Capabilities: snapshot, Lease: lease, AccountGeneration: result.Account.Generation, AccountFingerprint: auth.AccountFingerprint, CredentialRevision: auth.CredentialRevision}
 		if snapshot.Status == "ready" && !force && source.capabilityRevision == auth.CredentialRevision && source.metadataGeneration == result.Account.Generation && source.metadataLease == lease && !source.metadataReportedAt.IsZero() && source.metadataReportedAt.Equal(snapshot.MetadataObservedAt) {
 			report.ReuseMetadata = true
-			report.Plan, report.Models, report.MetadataObservedAt = "", nil, time.Time{}
+			report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 		}
 		if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/claude/capabilities", "POST", state.Credential, report, nil); err != nil {
 			var failure *apiFailure

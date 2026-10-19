@@ -106,3 +106,30 @@ func TestOpenAISingleWindowPlans(t *testing.T) {
 		t.Fatal("OpenAI Free window accepted for Claude")
 	}
 }
+
+func TestCapabilityClientVersionOnlyOnReadyOpenAI(t *testing.T) {
+	now := time.Now()
+	used := 10
+	windows := []QuotaWindow{{Seconds: 18000, UsedPercent: &used, ResetAt: now.Add(time.Hour)}, {Seconds: 604800, UsedPercent: &used, ResetAt: now.Add(time.Hour)}}
+	c := Capabilities{Sequence: 1, Status: "ready", Plan: "plus", ObservedAt: now, Models: []string{}, Windows: windows}
+	for _, version := range []string{"0.161.0", "0.163.0-alpha.2"} {
+		c.ClientVersion = version
+		if !c.ValidFor("openai", now) {
+			t.Fatalf("version %q refused", version)
+		}
+	}
+	for _, version := range []string{"0.161", "v0.161.0", "0.161.0\r\nX: 1", "0.161.0 beta"} {
+		c.ClientVersion = version
+		if c.ValidFor("openai", now) {
+			t.Fatalf("version %q accepted", version)
+		}
+	}
+	c.ClientVersion, c.Plan = "0.161.0", "pro"
+	if c.ValidFor("claude", now) {
+		t.Fatal("a Claude report carried a Codex version")
+	}
+	unknown := Capabilities{Sequence: 1, Status: "unknown", ObservedAt: now, Models: []string{}, Windows: []QuotaWindow{}, ClientVersion: "0.161.0"}
+	if unknown.ValidFor("openai", now) {
+		t.Fatal("an unknown report carried a version")
+	}
+}

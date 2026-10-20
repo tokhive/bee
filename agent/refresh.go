@@ -147,7 +147,7 @@ func (source codexSource) executeMaintenance(ctx context.Context, task beewire.M
 	if err = saveRefreshJournal(journalPath, journal); err != nil {
 		return empty, err
 	}
-	updated, err := refreshCodex(ctx, current, source.transport)
+	updated, err := refreshCodex(ctx, current, source.transport, localCodexVersion(ctx, source.Home))
 	if err != nil {
 		latest, readErr := source.read(ctx)
 		if readErr == nil && latest.metadata().AccountFingerprint == task.AccountFingerprint && latest.metadata().CredentialRevision != meta.CredentialRevision {
@@ -174,7 +174,7 @@ func (source codexSource) executeMaintenance(ctx context.Context, task beewire.M
 	return latest, nil
 }
 
-func refreshCodex(ctx context.Context, current codexCredential, transport http.RoundTripper) (codexCredential, error) {
+func refreshCodex(ctx context.Context, current codexCredential, transport http.RoundTripper, version string) (codexCredential, error) {
 	var empty codexCredential
 	body, _ := json.Marshal(map[string]string{"client_id": "app_EMoamEEZ73f0CkXaXp7hrann", "grant_type": "refresh_token", "refresh_token": current.refreshToken})
 	req, err := http.NewRequestWithContext(ctx, "POST", "https://auth.openai.com/oauth/token", bytes.NewReader(body))
@@ -183,6 +183,16 @@ func refreshCodex(ctx context.Context, current codexCredential, transport http.R
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
+	// The token endpoint also reads the client identity, and a refresh sent
+	// with the Go default User-Agent and no originator is a combination no
+	// official Codex ever produces; speak the same identity the backend API
+	// requests use.
+	if version == "" {
+		version = defaultCodexClientVersion
+	}
+	req.Header.Set("Originator", "codex_cli_rs")
+	req.Header.Set("Version", version)
+	req.Header.Set("User-Agent", "codex_cli_rs/"+version+codexFallbackUserAgentSuffix)
 	client := httpClient()
 	client.Transport = transport
 	response, err := client.Do(req)

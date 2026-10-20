@@ -73,6 +73,9 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 		if r.TLS == nil || r.URL.Path != "/oauth/token" || json.NewDecoder(r.Body).Decode(&body) != nil || body["refresh_token"] != "synthetic-refresh-secret" || body["grant_type"] != "refresh_token" || body["client_id"] != "app_EMoamEEZ73f0CkXaXp7hrann" {
 			t.Error("invalid OAuth refresh request")
 		}
+		if version := r.Header.Get("Version"); r.Header.Get("Originator") != "codex_cli_rs" || version == "" || r.Header.Get("User-Agent") != "codex_cli_rs/"+version+" (Ubuntu 22.4.0; x86_64) xterm-256color" {
+			t.Error("OAuth refresh sent without the complete Codex client identity", r.Header.Get("Originator"), version, r.Header.Get("User-Agent"))
+		}
 		if scenario == "response_lost" {
 			conn, _, _ := w.(http.Hijacker).Hijack()
 			conn.Close()

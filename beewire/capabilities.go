@@ -72,7 +72,7 @@ func ValidClientVersion(version string) bool { return clientVersion.MatchString(
 func ValidCodexClientVersion(version string) bool { return ValidClientVersion(version) }
 
 var subscriptionPlans = map[string][]string{
-	"openai": {"free", "plus", "pro", "team", "business", "enterprise", "edu"},
+	"openai": {"free", "go", "plus", "pro", "prolite", "promax", "team", "business", "enterprise", "edu"},
 	"claude": {"pro", "max", "team", "enterprise"},
 }
 
@@ -83,9 +83,10 @@ func SubscriptionPlans(platform string) []string {
 }
 
 // openAISingleWindow is the one quota window an OpenAI plan may report alone:
-// Pro has only the weekly window, Free only a 30-day one. Every other plan
-// reports both the five-hour and the weekly window.
-var openAISingleWindow = map[string]int{"pro": 604800, "free": 2592000}
+// the Pro tiers (pro, prolite, promax) have only the weekly window, Free and Go
+// only a 30-day one. Every other plan reports both the five-hour and the weekly
+// window.
+var openAISingleWindow = map[string]int{"pro": 604800, "prolite": 604800, "promax": 604800, "free": 2592000, "go": 2592000}
 
 // OpenAISingleWindow returns the length in seconds of the only quota window an
 // OpenAI plan reports, or 0 when the plan reports two windows.

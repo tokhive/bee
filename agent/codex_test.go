@@ -188,3 +188,26 @@ func TestCodexCredentialInspectionRejectsUnsupportedOrExpiredAuthorization(t *te
 		})
 	}
 }
+
+func TestCodexCredentialInspectionAcceptsEveryKnownPlan(t *testing.T) {
+	for _, plan := range []string{"go", "prolite", "promax"} {
+		directory := t.TempDir()
+		sample := codexSample(time.Now().Add(time.Hour))
+		auth := map[string]any{"chatgpt_account_id": "synthetic-account", "chatgpt_user_id": "synthetic-user", "chatgpt_plan_type": plan}
+		tokens := sample["tokens"].(map[string]any)
+		tokens["id_token"] = codexJWT(map[string]any{"https://api.openai.com/auth": auth})
+		tokens["access_token"] = codexJWT(map[string]any{"exp": time.Now().Add(time.Hour).Unix(), "https://api.openai.com/auth": auth})
+		raw, _ := json.Marshal(sample)
+		if err := os.WriteFile(filepath.Join(directory, "auth.json"), raw, 0600); err != nil {
+			t.Fatal(err)
+		}
+		var output bytes.Buffer
+		if err := bee.Run(context.Background(), []string{"codex-status", "--codex-home", directory, "--store", "file"}, &output); err != nil {
+			t.Fatalf("plan %s rejected: %v", plan, err)
+		}
+		var status map[string]any
+		if json.Unmarshal(output.Bytes(), &status) != nil || status["plan"] != plan {
+			t.Fatalf("plan %s metadata: %s", plan, output.String())
+		}
+	}
+}

@@ -241,6 +241,10 @@ type usageWindow struct {
 	At      *int64 `json:"reset_at"`
 }
 
+// openAIProPlans are the Pro tiers ($100, $200, $500), the plans whose usage
+// report carries additional_rate_limits.
+var openAIProPlans = map[string]bool{"pro": true, "prolite": true, "promax": true}
+
 // Separately metered models cannot inherit the main subscription window.
 func excludedQuotaModels(scopes []json.RawMessage) (map[string]bool, bool) {
 	excluded := map[string]bool{"gpt-5.3-codex-spark": true, "gpt-reserve": true}
@@ -383,7 +387,7 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		return fail(fmt.Sprintf("usage plan %q does not match authorization plan %q", usage.Plan, credential.Plan))
 	}
 	excluded, known := excludedQuotaModels(usage.Additional)
-	if !known || len(usage.Additional) != 0 && credential.Plan != "pro" {
+	if !known || len(usage.Additional) != 0 && !openAIProPlans[credential.Plan] {
 		return fail("usage additional_rate_limits not recognised")
 	}
 	result := unknown

@@ -91,6 +91,12 @@ func TestOpenAISingleWindowPlans(t *testing.T) {
 		{"pro", []int{604800}, true},
 		{"pro", []int{2592000}, false},
 		{"plus", []int{2592000}, false},
+		{"go", []int{2592000}, true},
+		{"go", []int{18000, 604800}, true},
+		{"go", []int{604800}, false},
+		{"prolite", []int{604800}, true},
+		{"promax", []int{604800}, true},
+		{"promax", []int{2592000}, false},
 		{"", []int{2592000}, false},
 	} {
 		c := Capabilities{Sequence: 1, ObservedAt: now, Status: "ready", Plan: test.plan, Models: []string{}}

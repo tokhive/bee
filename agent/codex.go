@@ -250,9 +250,7 @@ func parseCodexCredential(raw []byte) (codexCredential, error) {
 	if identity.Auth.FedRAMP || access.Auth.FedRAMP {
 		return empty, errors.New("Codex FedRAMP upstream is not configured")
 	}
-	switch identity.Auth.Plan {
-	case "free", "plus", "pro", "team", "business", "enterprise", "edu":
-	default:
+	if !beewire.KnownPlan("openai", identity.Auth.Plan) {
 		return empty, errors.New("unknown Codex plan type; subscription supply cannot be confirmed")
 	}
 	secret := tee.Secret{Token: tokens.Access, Header: "authorization", Scheme: "Bearer"}

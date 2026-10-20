@@ -43,15 +43,16 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	window := func(seconds int) map[string]any {
 		return map[string]any{"limit_window_seconds": seconds, "used_percent": 20, "reset_after_seconds": 3600, "reset_at": time.Now().Add(time.Hour).Unix()}
 	}
+	single := beewire.OpenAISingleWindow(f.plan)
 	primary := 604800
-	if f.plan == "free" {
-		primary = 2592000
+	if single != 0 {
+		primary = single
 	}
 	if f.primary != 0 {
 		primary = f.primary
 	}
 	limit := map[string]any{"allowed": true, "limit_reached": false, "primary_window": window(primary)}
-	if f.plan != "pro" && f.plan != "free" {
+	if single == 0 {
 		limit["secondary_window"] = window(18000)
 	}
 	usage := map[string]any{"plan_type": f.plan, "rate_limit": limit}
@@ -285,6 +286,24 @@ func TestOpenAIFreeSuppliesOnItsMonthlyWindow(t *testing.T) {
 	s = capabilitySource{transport: &openaiControlFixture{plan: "plus", primary: 2592000}}
 	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.failure == "" {
 		t.Fatalf("free authorization accepted plus usage: %+v %q", got, s.failure)
+	}
+}
+
+// Go reports one 30-day window like Free, and the $100 and $500 Pro tiers
+// (prolite, promax) only the weekly window like pro.
+func TestOpenAISingleWindowPlansSupply(t *testing.T) {
+	for plan, seconds := range map[string]int{"go": 2592000, "prolite": 604800, "promax": 604800} {
+		c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: plan, ExpiresAt: time.Now().Add(time.Hour)}
+		s := capabilitySource{transport: &openaiControlFixture{plan: plan}}
+		got := s.observe(context.Background(), c, 1)
+		if got.Status != "ready" || got.Plan != plan || len(got.Windows) != 1 || got.Windows[0].Seconds != seconds {
+			t.Fatalf("%s account not ready on its %ds window: %+v %q", plan, seconds, got, s.failure)
+		}
+	}
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "promax", ExpiresAt: time.Now().Add(time.Hour)}
+	s := capabilitySource{transport: &openaiControlFixture{plan: "promax", excluded: "gpt-test-b"}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || len(got.Models) != 1 || got.Models[0] != "gpt-test-a" {
+		t.Fatalf("promax additional_rate_limits not honoured: %+v %q", got, s.failure)
 	}
 }
 

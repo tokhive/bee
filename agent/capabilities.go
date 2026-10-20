@@ -80,6 +80,14 @@ func (s capabilitySource) valid() bool {
 // Hive's.
 const defaultCodexClientVersion = "0.161.0"
 
+// codexFallbackUserAgentSuffix is the OS, architecture and terminal segment a
+// Codex client's User-Agent always carries after its release. Every request
+// Bee itself sends — capability queries and OAuth refreshes, not only the
+// responses Hive relays — speaks the same fixed tail, so the upstream never
+// sees a shape no real Codex produces. Keep it equal to Hive's
+// (codexFallbackUserAgentSuffix in hive/internal/service/codex_responses.go).
+const codexFallbackUserAgentSuffix = " (Ubuntu 22.4.0; x86_64) xterm-256color"
+
 // installedCodexVersion reads the release of the codex on PATH; tests
 // replace it.
 var installedCodexVersion = codexOnPath
@@ -187,7 +195,12 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	}
 	req.Header.Set("Authorization", "Bearer "+credential.Secret.Token)
 	req.Header.Set("ChatGPT-Account-Id", credential.AccountID)
-	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version)
+	// A real Codex pairs its originator with a User-Agent of the same release
+	// and terminal shape on every request to the backend API; a bare
+	// codex_cli_rs/<release> with no originator is a shape it never sends.
+	req.Header.Set("Originator", "codex_cli_rs")
+	req.Header.Set("Version", s.version)
+	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version+codexFallbackUserAgentSuffix)
 	client := &http.Client{Transport: s.transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {

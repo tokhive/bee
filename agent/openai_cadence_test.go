@@ -25,6 +25,9 @@ type openaiControlFixture struct {
 	primary int
 	// versions are the client_version and User-Agent each models query sent.
 	versions [][2]string
+	// identities are the originator, version header and User-Agent each models
+	// query sent: every request a real Codex makes carries the full triple.
+	identities [][3]string
 }
 
 func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error) {
@@ -34,6 +37,7 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	if r.URL.Path == "/backend-api/codex/models" {
 		f.models++
 		f.versions = append(f.versions, [2]string{r.URL.Query().Get("client_version"), r.Header.Get("User-Agent")})
+		f.identities = append(f.identities, [3]string{r.Header.Get("Originator"), r.Header.Get("Version"), r.Header.Get("User-Agent")})
 		return claudeProfileResponse(200, `{"models":[{"slug":"gpt-test-a"},{"slug":"gpt-test-b"}]}`), nil
 	}
 	f.usage++
@@ -352,8 +356,11 @@ func TestOpenAIReportsTheLocalCodexVersion(t *testing.T) {
 		if result.Status != "ready" || result.ClientVersion != want {
 			t.Fatalf("observation %d = %s with version %q, want ready with %q (%s)", sequence, result.Status, result.ClientVersion, want, s.failure)
 		}
-		if last := f.versions[len(f.versions)-1]; last != [2]string{want, "codex_cli_rs/" + want} {
+		if last := f.versions[len(f.versions)-1]; last != [2]string{want, "codex_cli_rs/" + want + codexFallbackUserAgentSuffix} {
 			t.Fatalf("models were listed as %v, want %s", last, want)
+		}
+		if identity := f.identities[len(f.identities)-1]; identity != [3]string{"codex_cli_rs", want, "codex_cli_rs/" + want + codexFallbackUserAgentSuffix} {
+			t.Fatalf("models were listed speaking %v, want the full codex_cli_rs identity of %s", identity, want)
 		}
 	}
 	// No cache: the official Codex has not said which release it runs.

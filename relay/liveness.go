@@ -11,8 +11,18 @@ import (
 // pongWait is how long Check waits for a pong before it looks at traffic.
 var pongWait = 5 * time.Second
 
-// ErrStalled means a heartbeat found the connection silent: no pong, and no
-// tunnel byte moved since the previous check.
+// stallLimit is how long a connection may stay silent — no pong, no tunnel
+// byte — before Check gives up on it. A proxy in the path can hold an idle
+// connection still for several seconds and then carry on: through the
+// cross-border proxy one dev provider runs Bee behind, a long-lived
+// connection to Hive stalled for ten seconds and recovered, where giving up
+// after one pong wait had ended such connections a few times an hour. A link
+// that stopped carrying anything is still found, only later: a reconnect
+// replaces it, and an attempt that was waiting on it is retried.
+var stallLimit = 15 * time.Second
+
+// ErrStalled means the connection stayed silent for stallLimit: no pong, and
+// no tunnel byte moved.
 var ErrStalled = errors.New("no pong and no tunnel traffic since the last heartbeat")
 
 // Liveness decides whether a WebSocket is still alive, one Check per
@@ -35,12 +45,15 @@ type Liveness struct {
 	moved func() uint64
 	pong  chan error
 	last  uint64
+	// heard is when the connection last showed it carries data: a pong
+	// arrived or the tunnel moved bytes.
+	heard time.Time
 }
 
 // NewLiveness checks conn. moved reports the tunnel's byte count, or is nil
 // for a connection that carries no tunnel, where only a pong counts.
 func NewLiveness(conn *websocket.Conn, moved func() uint64) *Liveness {
-	l := &Liveness{conn: conn, moved: moved}
+	l := &Liveness{conn: conn, moved: moved, heard: time.Now()}
 	l.last = l.traffic()
 	return l
 }
@@ -53,9 +66,10 @@ func (l *Liveness) traffic() uint64 {
 }
 
 // Check pings, unless a ping is still outstanding, and reports nil when the
-// pong arrives within pongWait or the tunnel moved bytes since the previous
-// check. ctx bounds the ping, so it should live as long as the connection;
-// the same ctx is expected on every call.
+// pong arrives within pongWait, the tunnel moved bytes since the previous
+// check, or the connection was last heard from less than stallLimit ago. A
+// pong that arrives late still counts. ctx bounds the ping, so it should live
+// as long as the connection; the same ctx is expected on every call.
 func (l *Liveness) Check(ctx context.Context) error {
 	if l.pong == nil {
 		pong := make(chan error, 1)
@@ -68,11 +82,18 @@ func (l *Liveness) Check(ctx context.Context) error {
 	case err := <-l.pong:
 		l.pong = nil
 		l.last = l.traffic()
+		if err == nil {
+			l.heard = time.Now()
+		}
 		return err
 	case <-timer.C:
 	}
 	if moved := l.traffic(); l.moved != nil && moved != l.last {
 		l.last = moved
+		l.heard = time.Now()
+		return nil
+	}
+	if time.Since(l.heard) < stallLimit {
 		return nil
 	}
 	return ErrStalled

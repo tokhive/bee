@@ -217,10 +217,10 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				// end the wait at once instead of being polled for. The
 				// heartbeat is what notices a link that silently stopped
 				// carrying anything, which a proxy in the path makes common:
-				// at five seconds plus the pong wait, a dead link is found
-				// within ten, and a reconnect replaces the stalled connection
-				// Hive still holds. A nil channel — every configuration
-				// without an official account source — simply never fires.
+				// once it has been silent for the relay's stall limit, a
+				// reconnect replaces the stalled connection Hive still holds.
+				// A nil channel — every configuration without an official
+				// account source — simply never fires.
 				timer := time.NewTimer(heartbeatInterval)
 				select {
 				case syncErr := <-syncFailures:

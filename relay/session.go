@@ -66,9 +66,8 @@ func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle
 		case slots <- struct{}{}:
 			defer func() { <-slots }()
 		default:
-			// Reset, not close: the peer must not take a refused connection
-			// for one the upstream ended.
-			_ = stream.Reset()
+			// Count before the reset, so a peer that sees the refusal also
+			// sees it counted.
 			total := refused.Add(1)
 			if options.Refused != nil {
 				options.Refused()
@@ -77,6 +76,9 @@ func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle
 			if last := lastLogged.Load(); now-last >= int64(refusedLogEvery) && lastLogged.CompareAndSwap(last, now) {
 				slog.Warn("relay stream refused: tunnel at its stream limit", "module", "relay", "limit", limit, "refused", total)
 			}
+			// Reset, not close: the peer must not take a refused connection
+			// for one the upstream ended.
+			_ = stream.Reset()
 			return
 		}
 		defer stream.Close()

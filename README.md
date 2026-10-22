@@ -36,10 +36,10 @@ Check the installed version with `bee version`.
 ```sh
 git clone https://github.com/tokhive/bee.git
 cd bee
-make build        # fetches the pinned TEE client library, then builds bin/bee
+make build        # builds bin/bee
 ```
 
-`make build` runs `scripts/prepare-tee.sh` first. The script downloads the TEE client library at the commit pinned in `TEE_REVISION` and places it in `.cache/reclaim-tee`. That library can't be fetched through the Go module proxy, so `go.mod` points to the local copy. After the first run you can also build with plain `go build -o bin/bee ./cmd/bee`.
+Bee depends on the TEE client library [`github.com/tokhive/tee`](https://github.com/tokhive/tee) as an ordinary Go module, pinned in `go.mod`. You can also build with plain `go build -o bin/bee ./cmd/bee`.
 
 The examples below call `bee`; with a source build, put `bin/bee` on your `PATH` or call it as `./bin/bee`.
 

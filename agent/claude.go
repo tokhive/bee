@@ -18,7 +18,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
+	"github.com/tokhive/tee/tee"
 	"golang.org/x/text/unicode/norm"
 )
 

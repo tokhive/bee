@@ -25,7 +25,17 @@ Prebuilt binaries are published on the [releases page](https://github.com/tokhiv
 curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
 ```
 
-Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place; restart `bee run` afterwards.
+On Linux, the script also registers and enables the system-level `tokhive-bee` service. It runs as the installing user at boot, even before an SSH login. Run the installer as the user who will pair Bee, without putting the whole command under `sudo`; the script requests administrator access only for service installation. It enables the service without starting or restarting Bee. Finish pairing, then start the service as described under [Running as a service](#running-as-a-service).
+
+Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place; afterwards use `sudo systemctl restart tokhive-bee` for a managed Linux service, or restart the foreground `bee run` process.
+
+For Linux without systemd or administrator access, or to keep an existing manually configured service, install only the binary:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_INSTALL_SERVICE=0 sh
+```
+
+macOS installation remains binary-only.
 
 **Manual download.** Download `bee_<os>_<arch>.tar.gz` and `checksums.txt` from the releases page, check the archive with `shasum -a 256 -c checksums.txt --ignore-missing`, then extract it and move `bee` onto your `PATH`. On macOS, a file downloaded through a browser is quarantined and Gatekeeper refuses to run the unsigned binary; clear the flag with `xattr -d com.apple.quarantine bee`. The install script downloads with `curl` and is not affected.
 
@@ -140,22 +150,37 @@ To contribute only one platform, remove the other platform's entry and its targe
 
 ## Running as a service
 
-`bee start` and `bee run` run in the foreground. To keep Bee running, set it up once with `bee start`, stop it, then hand `bee run` to a user-level service manager, running as the user who paired the device. A systemd unit for Linux:
+`bee start` and `bee run` run in the foreground. The Linux installer enables `/etc/systemd/system/tokhive-bee.service`, which runs `bee run` as the installing user. This is a **system-level** service: no `--user` commands or lingering are needed. It requires systemd 243 or newer for the configuration checks.
 
-```ini
-[Unit]
-Description=TokHive Bee
+After installation, sign in to the official clients and run `bee start --hive https://hive.example.com` as that same user. Once pairing and account setup are complete, stop the foreground process with Ctrl-C and start the service:
 
-[Service]
-ExecStart=%h/.local/bin/bee run
-Restart=on-failure
-RestartSec=10
-
-[Install]
-WantedBy=default.target
+```sh
+sudo systemctl start tokhive-bee
+sudo systemctl status tokhive-bee
+sudo journalctl -u tokhive-bee -f
 ```
 
-`%h` is your home directory; change the path if you installed Bee elsewhere, and add `--config` or `--egress-config` if you don't use the defaults. Save it as `~/.config/systemd/user/tokhive-bee.service`, then run `systemctl --user daemon-reload && systemctl --user enable --now tokhive-bee`. If the service must run while nobody is logged in, enable lingering for the user. On macOS, use a LaunchAgent with the same arguments, `RunAtLoad` and `KeepAlive`.
+Bee then runs in the background and starts automatically after a reboot. The service skips startup until both `bee.json` and `egress.json` exist. It restarts after failures, waiting ten seconds between attempts; a normal exit, including replacement by a new device, does not restart it. The installer leaves running processes alone during upgrades; restart the service when current work can be interrupted.
+
+The service records the installation's absolute binary path, `HOME`, `XDG_CONFIG_HOME`, `PATH`, and any explicitly set `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or `CLAUDE_SECURESTORAGE_CONFIG_DIR`. Use the same environment when installing and pairing. Non-default device or egress configuration paths, proxy settings and other required environment variables can be set with `sudo systemctl edit tokhive-bee`. Credentials must be readable without an interactive login; a login-locked keyring is not unlocked by starting the service.
+
+If you previously enabled the README's user-level service, stop and disable it before rerunning the installer:
+
+```sh
+systemctl --user disable --now tokhive-bee
+```
+
+The installer updates units marked as managed by Bee and refuses to overwrite a hand-written or linked system unit. Keep those units with `BEE_INSTALL_SERVICE=0`, or migrate them explicitly.
+
+To remove the installed service:
+
+```sh
+sudo systemctl disable --now tokhive-bee
+sudo rm /etc/systemd/system/tokhive-bee.service
+sudo systemctl daemon-reload
+```
+
+This keeps the binary and pairing configuration. On macOS, use a LaunchAgent with the `bee run` arguments, `RunAtLoad` and `KeepAlive`; it depends on the user's login session.
 
 If the network drops, Bee reconnects with exponential backoff from 1 to 30 seconds, so it can be started before Hive is reachable. When you pair a new machine to replace this one, the old Bee finishes the work it already has and then exits.
 

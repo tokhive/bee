@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 type openaiControlFixture struct {

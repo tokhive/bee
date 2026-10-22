@@ -2,13 +2,11 @@ module github.com/tokhive/bee
 
 go 1.27.3
 
-replace github.com/reclaimprotocol/reclaim-tee => ./.cache/reclaim-tee
-
 require (
 	github.com/coder/websocket v1.8.14
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/reclaimprotocol/reclaim-tee v0.0.0-20260923023852-a687f86d781e
+	github.com/tokhive/tee v0.0.0-20261022033800-8065bca7dc1f
 	golang.org/x/text v0.41.0
 )
 

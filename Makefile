@@ -1,11 +1,8 @@
-.PHONY: tee-deps build test
+.PHONY: build test
 
-tee-deps:
-	bash scripts/prepare-tee.sh
-
-build: tee-deps
+build:
 	go build -o bin/bee ./cmd/bee
 
-test: tee-deps
+test:
 	go vet ./...
 	go test -race -timeout=600s ./...

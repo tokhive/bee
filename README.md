@@ -12,7 +12,7 @@ Bee runs on your own machine and connects to a **Hive**, the marketplace service
 
 - macOS or Linux, including Linux machines without a desktop or browser.
 - OpenAI (Codex) and Claude (Claude Code) subscriptions are supported on both. Sign in to the official client as the same user that runs Bee.
-- To build from source only: Go 1.27 or newer, plus `git` and `bash`.
+- To build from source only: Go 1.27.3 or newer, plus `git` and `bash`.
 - An account on a Hive. You confirm pairing in that Hive's web console.
 
 ## Installation

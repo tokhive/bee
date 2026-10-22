@@ -1,6 +1,6 @@
 module github.com/tokhive/bee
 
-go 1.27.0
+go 1.27.3
 
 replace github.com/reclaimprotocol/reclaim-tee => ./.cache/reclaim-tee
 

@@ -256,6 +256,8 @@ RUSTUP_TOOLCHAIN=1.94 CARGO_HOME=$PWD/.cache/cargo-home cargo test --offline --l
 
 Windows Server2022专项[最终GREEN证据](evidence/2026-10-23-windows-hosted-green/README.md)：run39904695326/source3048766，真实Rust30/30含Go握手/ping/stop，NSIS开发包构建及下载后SHA核对通过；不代替Win10/11安装、GUI或官方登录来源。
 
-Linux首轮run39902824069在Ubuntu22/24×x64/arm64四行均完成Go7包、Chromium32/32、Rust35/35及AppImage构建。x64两行包内Bee精确SHA失败；arm64启动窗口观察成功但截图全黑，不能记为UI渲染或ready通过。调查绑定linuxdeploy07333c6/patchelf0.19.1，证实x64写RUNPATH修改二进制，arm64同操作失败却被上游吞错。1e1019d在Go链接阶段预设同一RUNPATH、保留精确SHA门禁，并补10秒观察末尾窗口/桌面图；53项工具/烟测通过，真实四行修补后CI尚待运行。
+Linux首轮run39902824069在Ubuntu22/24×x64/arm64四行均完成Go7包、Chromium32/32、Rust35/35及AppImage构建。x64两行包内Bee精确SHA失败；arm64启动窗口观察成功但截图全黑，不能记为UI渲染或ready通过。调查绑定linuxdeploy07333c6/patchelf0.19.1，证实x64写RUNPATH修改二进制，arm64同操作失败却被上游吞错。1e1019d在Go链接阶段预设同一RUNPATH、保留精确SHA门禁，并补10秒观察末尾窗口/桌面图；53项工具/烟测通过。
+
+Linux第二轮[原始证据归档](evidence/2026-10-23-linux-hosted-runpath/README.md)：run39905806798/source22c5f91，Ubuntu22.04 x64/arm64及24.04 arm64三行通过，24.04 x64仍在依赖准备。三行Go7包、Chromium53/53、Rust35/35及AppImage构建/提取/FUSE启动通过；包内Bee精确SHA与source一致。实际x64/arm64产物均观察到预设RUNPATH，初图黑而10秒末图正常显示未接入业务页；不能把窗口存活或Bee进程存在当作bridge ready、托盘或安装验收。
 
 本机当前CUA选择Finder返回cgWindowNotFound，未取得新GUI证据；这是观察工具实际错误，未归因沙箱。旧Mac845演示包证据保持版本边界。P1账号Task3已完成独立复核，继续收益Task4；P0/P1整体仍未完成。

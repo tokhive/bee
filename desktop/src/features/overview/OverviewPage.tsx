@@ -278,9 +278,12 @@ export function OverviewPage({
               <div>
                 {account?.quota && account.state === 'available' ? (
                   <>
-                    <span className="muted">{t(account.quota.window)}{t("剩余额度")}</span>
-                    <strong className="quota-value">{t(account.quota.remaining)}%</strong>
+                    <div className="quota-label">
+                      <span className="muted">{t(account.quota.window)}{' '}{t("剩余额度")}</span>
+                      <strong className="quota-value">{t(account.quota.remaining)}%</strong>
+                    </div>
                     <meter
+                      className="quota-meter"
                       min={0}
                       max={100}
                       value={account.quota.remaining}

@@ -108,8 +108,13 @@ dd { margin: 7px 0 0; overflow-wrap: anywhere; }
 .connection-summary .inline-actions { margin-left: auto; }
 .platform-actions { display: grid; gap: 8px; font-size: 11px; }
 .platform-actions label { display: flex; gap: 4px; align-items: center; color: var(--muted); }
-meter { display: block; width: 100%; height: 6px; margin: 5px 0; accent-color: var(--good); }
-.quota-value { float: right; font-size: 12px; }
+.quota-label { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 8px; }
+.quota-value { font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.quota-meter { appearance: none; display: block; width: 100%; height: 4px; margin: 5px 0; border: 0; border-radius: 3px; background: var(--faint); }
+.quota-meter::-webkit-meter-inner-element { display: block; }
+.quota-meter::-webkit-meter-bar { height: 4px; border: 0; border-radius: inherit; background: var(--faint); box-shadow: none; }
+.quota-meter::-webkit-meter-optimum-value { border-radius: inherit; background: var(--accent); opacity: .8; }
+.quota-meter::-moz-meter-bar { border-radius: inherit; background: var(--accent); opacity: .8; }
 .platform-feedback { max-width: 32ch; margin-top: 5px; }
 .settings-form { max-width: 550px; display: grid; gap: 20px; }
 .settings-form label { display: grid; gap: 8px; font-size: 12px; }

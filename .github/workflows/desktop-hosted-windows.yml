@@ -1,0 +1,217 @@
+name: Desktop hosted Windows Server 2022 build evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/bee-desktop-p0]
+    paths:
+      - .github/workflows/desktop-hosted-windows.yml
+      - desktop/**
+      - agent/**
+      - cmd/**
+      - beewire/**
+      - desktopbridge/**
+      - logx/**
+      - relay/**
+      - telemetry/**
+      - go.mod
+      - go.sum
+      - TEE_REVISION
+      - rust-toolchain.toml
+
+permissions:
+  contents: read
+
+jobs:
+  windows-build:
+    name: Server 2022 x64 Rust, native Bee and NSIS (development only)
+    runs-on: windows-2022
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      GOTOOLCHAIN: local
+      CGO_ENABLED: '0'
+      RUSTUP_TOOLCHAIN: 1.94.0
+      CARGO_TARGET_DIR: ${{ github.workspace }}/desktop/src-tauri/target
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          architecture: x64
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.3
+          architecture: x64
+          cache: false
+
+      - name: Prepare fixed Rust and export x64 MSVC environment
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force desktop-ci-evidence | Out-Null
+          Start-Transcript -Path desktop-ci-evidence/provision.log
+          try {
+            rustup toolchain install 1.94.0-x86_64-pc-windows-msvc --profile minimal --component rustfmt --component clippy
+            if ($LASTEXITCODE -ne 0) { throw "Rust 1.94.0 MSVC installation failed: exit=$LASTEXITCODE" }
+            $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+            $installation = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+            if ($LASTEXITCODE -ne 0) { throw "vswhere C++ tool lookup failed: exit=$LASTEXITCODE" }
+            if (!$installation) { throw 'Visual Studio C++ tools missing: vswhere returned no installationPath; required=x64 MSVC tools' }
+            $vsdev = Join-Path $installation 'Common7/Tools/VsDevCmd.bat'
+            $batch = Join-Path $env:RUNNER_TEMP 'bee-msvc-env.cmd'
+            @('@echo off', "call `"$vsdev`" -no_logo -arch=x64 -host_arch=x64", 'if errorlevel 1 exit /b %errorlevel%', 'set') | Set-Content $batch -Encoding ascii
+            $environment = & cmd.exe /d /c $batch
+            if ($LASTEXITCODE -ne 0) { throw "VsDevCmd x64 initialization failed: exit=$LASTEXITCODE; script=$vsdev; output=$($environment -join '; ')" }
+            $exportNames = @('PATH','INCLUDE','LIB','LIBPATH','WindowsSdkDir','WindowsSDKVersion','WindowsSDKLibVersion','UniversalCRTSdkDir','UCRTVersion','VCToolsInstallDir','VCINSTALLDIR','VSINSTALLDIR','VSCMD_ARG_TGT_ARCH','VSCMD_ARG_HOST_ARCH')
+            foreach ($line in $environment) {
+              if ($line -match '^([^=]+)=(.*)$' -and $exportNames -contains $Matches[1]) {
+                $name, $value = $Matches[1], $Matches[2]
+                [Environment]::SetEnvironmentVariable($name, $value, 'Process')
+                "$name=$value" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+              }
+            }
+            foreach ($name in @('INCLUDE','LIB','LIBPATH','VCToolsInstallDir','WindowsSdkDir','WindowsSDKVersion')) {
+              if (![Environment]::GetEnvironmentVariable($name, 'Process')) { throw "MSVC environment export missing: actual=$name empty; required=VsDevCmd x64 environment" }
+            }
+            if ($env:VSCMD_ARG_TGT_ARCH -ne 'x64' -or $env:VSCMD_ARG_HOST_ARCH -ne 'x64') {
+              throw "MSVC architecture mismatch: actual=$env:VSCMD_ARG_HOST_ARCH/$env:VSCMD_ARG_TGT_ARCH; required=x64/x64"
+            }
+            foreach ($name in @('cl.exe','link.exe','rc.exe')) {
+              $tool = Get-Command $name -CommandType Application
+              Write-Output "$name path=$($tool.Source); version=$((Get-Item $tool.Source).VersionInfo.FileVersion)"
+            }
+            Write-Output "MSVC=$env:VCToolsInstallDir; SDK=$env:WindowsSdkDir; SDKVersion=$env:WindowsSDKVersion"
+          } finally { Stop-Transcript }
+
+      - name: Verify actual WebView2 Runtime, installing official Evergreen only if missing
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Start-Transcript -Path desktop-ci-evidence/webview2.log
+          try {
+            function Get-WebViewRuntime {
+              $keys = @('HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\*','HKLM:\SOFTWARE\Microsoft\EdgeUpdate\Clients\*','HKCU:\SOFTWARE\Microsoft\EdgeUpdate\Clients\*')
+              Get-ItemProperty $keys -ErrorAction SilentlyContinue | Where-Object { $_.name -eq 'Microsoft Edge WebView2 Runtime' -and $_.pv -and $_.pv -ne '0.0.0.0' } | Select-Object name,pv
+            }
+            $runtime = @(Get-WebViewRuntime)
+            if ($runtime.Count -eq 0) {
+              $url = 'https://go.microsoft.com/fwlink/p/?LinkId=2124703'
+              $installer = Join-Path $env:RUNNER_TEMP 'MicrosoftEdgeWebview2Setup.exe'
+              Write-Output "WebView2 registry runtime absent; official Evergreen bootstrapper source=$url"
+              Invoke-WebRequest -Uri $url -OutFile $installer
+              $signature = Get-AuthenticodeSignature $installer
+              $digest = (Get-FileHash $installer -Algorithm SHA256).Hash
+              Write-Output "Bootstrapper SHA256=$digest; signature=$($signature.Status); publisher=$($signature.SignerCertificate.Subject)"
+              if ($signature.Status -ne 'Valid' -or $signature.SignerCertificate.Subject -notmatch 'Microsoft Corporation') {
+                throw "WebView2 bootstrapper signature invalid: actual=$($signature.Status)/$($signature.SignerCertificate.Subject); required=valid Microsoft publisher"
+              }
+              $install = Start-Process -FilePath $installer -ArgumentList '/silent','/install' -Wait -PassThru
+              Write-Output "Evergreen installation exit=$($install.ExitCode)"
+              if ($install.ExitCode -ne 0) { throw "WebView2 Evergreen installation failed: exit=$($install.ExitCode); source=$url" }
+              $runtime = @(Get-WebViewRuntime)
+            }
+            if ($runtime.Count -eq 0) { throw 'WebView2 Runtime registry entry still absent: actual=0 matching installed versions; required=installed Evergreen Runtime before preflight' }
+            $runtime | ConvertTo-Json -AsArray | Set-Content desktop-ci-evidence/webview2.json
+            $runtime | Format-Table
+          } finally { Stop-Transcript }
+
+      - name: Record Server 2022 identity and native build hosts
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Start-Transcript -Path desktop-ci-evidence/environment.log
+          try {
+            $os = Get-CimInstance Win32_OperatingSystem | Select-Object Caption,Version,BuildNumber,ProductType
+            $cpus = @(Get-CimInstance Win32_Processor | ForEach-Object { $_.Architecture })
+            $evidence = @{ scope='Windows Server 2022 hosted build only'; revision=$env:GITHUB_SHA; runId=$env:GITHUB_RUN_ID; imageOS=$env:ImageOS; imageVersion=$env:ImageVersion; os=$os; cpuArchitectures=$cpus; installedPackageRun='not tested'; win10And11='not tested'; gui='not tested'; productionSigning='not performed' }
+            $evidence | ConvertTo-Json -Depth 5 | Tee-Object -FilePath desktop-ci-evidence/environment.json
+            if ($os.Caption -notmatch 'Windows Server 2022' -or $os.BuildNumber -ne '20348' -or $os.ProductType -ne 3) {
+              throw "Hosted OS mismatch: actual=$($os | ConvertTo-Json -Compress); required=Windows Server 2022 server build20348 ProductType3"
+            }
+            if ($cpus.Count -eq 0 -or @($cpus | Where-Object { $_ -ne 9 }).Count -ne 0) { throw "Native CPU mismatch: actual=$($cpus -join ','); required=all Architecture9 x64" }
+            node -e 'console.log(JSON.stringify({os:process.platform,arch:process.arch,node:process.version})); if(process.platform!=="win32" || process.arch!=="x64" || process.version!=="v24.22.1") process.exit(1)'
+            if ($LASTEXITCODE -ne 0) { throw "Native Node check failed: exit=$LASTEXITCODE; required=win32/x64/v24.22.1" }
+            $rust = rustc -vV
+            if ($LASTEXITCODE -ne 0) { throw "rustc host lookup failed: exit=$LASTEXITCODE" }
+            $rust
+            if ($rust -notcontains 'host: x86_64-pc-windows-msvc') { throw "Native Rust host mismatch: actual=$($rust -join ';'); required=x86_64-pc-windows-msvc" }
+            $go = @(go env GOOS GOARCH GOHOSTOS GOHOSTARCH)
+            if ($LASTEXITCODE -ne 0) { throw "Go build/host lookup failed: exit=$LASTEXITCODE" }
+            $go
+            if (($go -join '/') -ne 'windows/amd64/windows/amd64') { throw "Native Go host mismatch: actual=$($go -join '/'); required=windows/amd64/windows/amd64" }
+            cargo --version
+            if ($LASTEXITCODE -ne 0) { throw "cargo version failed: exit=$LASTEXITCODE" }
+            git --version --build-options
+            if ($LASTEXITCODE -ne 0) { throw "Git version failed: exit=$LASTEXITCODE" }
+            foreach ($name in @('cl.exe','link.exe','rc.exe')) {
+              $tool = Get-Command $name -CommandType Application
+              Write-Output "Persisted tool $name path=$($tool.Source); version=$((Get-Item $tool.Source).VersionInfo.FileVersion)"
+            }
+            node desktop/scripts/preflight.mjs
+            if ($LASTEXITCODE -ne 0) { throw "Desktop preflight failed: exit=$LASTEXITCODE; see actual/required checks above" }
+          } finally { Stop-Transcript }
+
+      - name: Prepare canonical fixed TEE
+        run: |
+          set -euo pipefail
+          node desktop/scripts/prepare-tee.mjs 2>&1 | tee desktop-ci-evidence/tee.log
+      - name: Install locked frontend and check build
+        run: |
+          set -euo pipefail
+          npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
+          npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
+          npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
+      - name: Build source-verified native Windows Bee sidecar
+        run: |
+          set -euo pipefail
+          node desktop/scripts/build-bee.mjs --target x86_64-pc-windows-msvc 2>&1 | tee desktop-ci-evidence/sidecar.log
+      - name: Test locked native Rust including real Bee handshake, ping and stop
+        run: |
+          set -euo pipefail
+          echo 'Windows cfg applies; UNIX process and macOS signed-App tests are excluded; fixture tests are distinct from real Bee; GUI/installed package not tested.' | tee desktop-ci-evidence/test-boundaries.log
+          cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
+      - name: Build development NSIS using locked Tauri tooling
+        run: |
+          set -euo pipefail
+          npm --prefix desktop run tauri -- build --debug --ci --bundles nsis -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+      - name: Record source, sidecar and NSIS hashes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sidecar = 'desktop/src-tauri/binaries/bee-x86_64-pc-windows-msvc.exe'
+          $sourcePath = "$sidecar.source.json"
+          $source = Get-Content $sourcePath -Raw | ConvertFrom-Json
+          $sidecarHash = (Get-FileHash $sidecar -Algorithm SHA256).Hash.ToLowerInvariant()
+          $tee = (Get-Content TEE_REVISION -Raw).Trim()
+          if ($source.revision -ne $env:GITHUB_SHA -or $source.teeRevision -ne $tee -or $source.target -ne 'x86_64-pc-windows-msvc' -or $source.binarySha256 -ne $sidecarHash) {
+            throw "Sidecar provenance mismatch: actualRevision=$($source.revision); requiredRevision=$env:GITHUB_SHA; actualTEE=$($source.teeRevision); requiredTEE=$tee; actualTarget=$($source.target); requiredTarget=x86_64-pc-windows-msvc; actualHash=$sidecarHash; requiredHash=$($source.binarySha256)"
+          }
+          $packages = @(Get-ChildItem desktop/src-tauri/target/debug/bundle/nsis -Filter '*.exe' -File)
+          if ($packages.Count -eq 0) { throw 'NSIS package missing: actual=0 EXE files; required=desktop/src-tauri/target/debug/bundle/nsis/*.exe' }
+          $manifest = @{ scope='Server2022 x64 development build, not installed or launched'; revision=$env:GITHUB_SHA; teeRevision=$tee; sidecar=@{ path=$sidecar; bytes=(Get-Item $sidecar).Length; sha256=$sidecarHash; source=$source; sourceSha256=(Get-FileHash $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant() }; packages=@($packages | ForEach-Object { @{ path=$_.FullName; bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } }) }
+          $manifest | ConvertTo-Json -Depth 8 | Tee-Object -FilePath desktop-ci-evidence/packages.json
+
+      - name: Upload Server 2022 development test installer and sidecar provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-server2022-x64-test-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/src-tauri/target/debug/bundle/nsis/*.exe
+            desktop/src-tauri/binaries/bee-x86_64-pc-windows-msvc.exe.source.json
+            desktop-ci-evidence/packages.json
+      - name: Upload actual environment, stage logs and failures
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-server2022-x64-checks-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: desktop-ci-evidence/

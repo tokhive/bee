@@ -7,6 +7,7 @@ import type {
   TransferRecord,
 } from './types';
 import {
+  MAX_AMOUNT_UNITS,
   amountUnits,
   decimalUnits,
   validAmount,
@@ -343,6 +344,13 @@ export function demoFinance(scene: string, storage?: Storage) {
             'DEMO_TRANSFER_BALANCE',
             `划转金额 ${command.amount} 超过可用收益 ${balance}；未扣款。`,
           );
+        const targetUnits =
+          amountUnits(f.buyerBalance) + amountUnits(command.amount);
+        if (targetUnits > MAX_AMOUNT_UNITS)
+          return fail(
+            'DEMO_TRANSFER_TARGET_LIMIT',
+            `划转后买家余额 ${decimalUnits(targetUnits)} 超过上界 ${decimalUnits(MAX_AMOUNT_UNITS)}；当前买家余额=${f.buyerBalance}，划转额=${command.amount}；余额、流水和存储未修改。`,
+          );
         const record: TransferRecord = {
           hive: command.hive,
           user: command.user,
@@ -362,9 +370,7 @@ export function demoFinance(scene: string, storage?: Storage) {
           balance = decimalUnits(
             amountUnits(balance) - amountUnits(record.amount),
           );
-          f.buyerBalance = decimalUnits(
-            amountUnits(f.buyerBalance) + amountUnits(record.amount),
-          );
+          f.buyerBalance = decimalUnits(targetUnits);
         } else f.pendingTransfer = record;
         result = outcome(record);
       } else return undefined;

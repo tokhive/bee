@@ -26,6 +26,7 @@ test('金额按 Hive 的 15/9 位规则校验并以独立手算证明精度', as
       ),
       sum: String(m.amountUnits('0.1') + m.amountUnits('0.2')),
       zero: String(m.amountUnits('0')),
+      maximumUnits: String(m.MAX_AMOUNT_UNITS),
     };
   });
   expect(result, '金额工具必须存在').not.toBeNull();
@@ -36,4 +37,5 @@ test('金额按 Hive 的 15/9 位规则校验并以独立手算证明精度', as
   expect(result.units).toEqual(['10000000001', '999999999999999999999999']);
   expect(result.sum).toBe('300000000');
   expect(result.zero).toBe('0');
+  expect(result.maximumUnits).toBe('999999999999999999999999');
 });

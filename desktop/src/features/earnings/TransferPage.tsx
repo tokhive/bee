@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
-import type { Finance } from '../../client/types';
+import type { Finance, TransferInput } from '../../client/types';
 import { Dialog } from 'radix-ui';
+import { useTransferIntent } from './transferIntent';
 import { FinanceHeading, type FinanceAction } from './EarningsPage';
 import { amountUnits, displayAmount, validAmount } from './money';
 export function TransferPage({
@@ -17,11 +18,18 @@ export function TransferPage({
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
-  const [prepared, setPrepared] = useState<{
-    amount: string;
-    requestId: string;
-  } | null>(null);
-  const pending = finance.pendingTransfer;
+  const [prepared, setPrepared] = useState<TransferInput | null>(null);
+  const guard = useTransferIntent(finance.identity);
+  const pending = guard.intent
+    ? {
+        ...guard.intent,
+        status:
+          finance.pendingTransfer?.requestId === guard.intent.requestId
+            ? finance.pendingTransfer.status
+            : 'unknown',
+      }
+    : finance.pendingTransfer;
+  const blocked = !!pending || !!guard.error;
   const clear = () => {
     setError('');
     setMessage('');
@@ -41,11 +49,22 @@ export function TransferPage({
       );
       return;
     }
-    setPrepared({ amount, requestId: crypto.randomUUID() });
+    setPrepared({
+      ...finance.identity,
+      amount,
+      requestId: crypto.randomUUID(),
+    });
   }
   async function execute(check = false) {
     const op = check ? pending : prepared;
-    if (!op || lock.current) return;
+    if (!op || lock.current || guard.error) return;
+    const original = {
+      hive: op.hive,
+      user: op.user,
+      requestId: op.requestId,
+      amount: op.amount,
+    };
+    if (!guard.intent && !guard.begin(original)) return;
     lock.current = true;
     setBusy(true);
     setError('');
@@ -53,10 +72,9 @@ export function TransferPage({
     try {
       const r = await action({
         type: check ? 'checkTransfer' : 'transferEarnings',
-        ...finance.identity,
-        requestId: op.requestId,
-        amount: op.amount,
+        ...original,
       });
+      guard.settle(original, r, check ? 'check' : 'submit');
       if (r.kind === 'failed') setError(r.error.message);
       else setMessage(r.message);
       if (r.kind === 'confirmed') {
@@ -100,7 +118,7 @@ export function TransferPage({
             <label htmlFor="transfer-amount">划转金额</label>
             <button
               className="quiet"
-              disabled={busy || !!pending}
+              disabled={busy || blocked}
               onClick={() => {
                 clear();
                 setAmount(displayAmount(balance));
@@ -114,7 +132,7 @@ export function TransferPage({
             inputMode="decimal"
             aria-describedby="transfer-hint"
             value={pending?.amount ?? amount}
-            disabled={busy || !!pending}
+            disabled={busy || blocked}
             onChange={(e) => {
               clear();
               setAmount(e.target.value);
@@ -124,9 +142,9 @@ export function TransferPage({
             金额以 USD 计价，最多 9 位小数；完成后不可撤回。
           </small>
         </div>
-        {error && (
+        {(error || guard.error) && (
           <p role="alert" className="finance-error">
-            {error}
+            {[error, guard.error].filter(Boolean).join(' ')}
           </p>
         )}
         {message && (
@@ -142,13 +160,13 @@ export function TransferPage({
             </p>
             <div className="inline-actions finance-actions">
               <button
-                disabled={busy}
-                onClick={() => void action({ type: 'refresh' })}
+                disabled={busy || !!guard.error}
+                onClick={() => void execute(true)}
               >
                 刷新原操作
               </button>
               <button
-                disabled={busy}
+                disabled={busy || !!guard.error}
                 aria-busy={busy}
                 onClick={() => void execute(true)}
               >
@@ -158,7 +176,11 @@ export function TransferPage({
           </>
         ) : (
           <div className="finance-actions">
-            <button className="primary" disabled={busy} onClick={validate}>
+            <button
+              className="primary"
+              disabled={busy || blocked}
+              onClick={validate}
+            >
               核对划转
             </button>
           </div>
@@ -176,7 +198,7 @@ export function TransferPage({
                 <Dialog.Title>确认划转</Dialog.Title>
                 <Dialog.Description>
                   演示金额 {prepared.amount} USD 将转入同一 Hive 账号{' '}
-                  {finance.identity.user} 的买家余额，完成后不可撤回。
+                  {prepared.user} 的买家余额，完成后不可撤回。
                 </Dialog.Description>
                 <div className="dialog-actions">
                   <button disabled={busy} onClick={() => setPrepared(null)}>

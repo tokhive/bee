@@ -209,6 +209,7 @@ for (const scene of ['transfer-pending', 'transfer-unknown'])
       .getByRole('dialog')
       .getByRole('button', { name: '确认划转', exact: true })
       .click();
+    await expect(page.getByRole('dialog')).toHaveCount(0);
     await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
     const id = await page.getByTestId('pending-transfer').textContent();
     await page.getByRole('button', { name: '刷新原操作', exact: true }).click();
@@ -271,6 +272,7 @@ test('页面重载恢复原pending标识且演示session不保存登录或凭证
     .getByRole('dialog')
     .getByRole('button', { name: '确认划转', exact: true })
     .click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
   const original = await page.getByTestId('pending-transfer').textContent();
   const saved = await page.evaluate(() =>
     Object.entries(sessionStorage).filter(([k]) =>
@@ -375,4 +377,403 @@ test('主资金按钮悬停保留可读的深色底与浅色字', async ({ page 
   expect(
     await button.evaluate((el) => getComputedStyle(el).backgroundColor),
   ).toBe(normal);
+});
+
+test('dispatch reject且没有snapshot pending时，原提交守门跨重进和刷新保留，missing核对不能解除', async ({
+  page,
+}) => {
+  await page.route(
+    '**/src/features/earnings/EarningsPage.tsx',
+    async (route) => {
+      const response = await route.fetch();
+      const source = await response.text();
+      expect(source).toContain('client.dispatch(command)');
+      const body = source.replace(
+        'client.dispatch(command)',
+        '(window.task4Commands = [...(window.task4Commands || []), command], command.type === "transferEarnings" ? Promise.reject(new Error("injected dispatch rejection without snapshot pending")) : client.dispatch(command))',
+      );
+      await route.fulfill({ response, body });
+    },
+  );
+  await earnings(page);
+  await page
+    .getByRole('button', { name: '划转至买家余额', exact: true })
+    .click();
+  await page.getByLabel('划转金额', { exact: true }).fill('1.000000001');
+  await page.getByRole('button', { name: '核对划转', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '确认划转', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toContainText(
+    'injected dispatch rejection',
+  );
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: '全部收益', exact: true }),
+  ).toBeDisabled();
+  const original = await page.getByTestId('pending-transfer').textContent();
+  const commands = await page.evaluate(
+    () =>
+      (window as unknown as { task4Commands: Record<string, string>[] })
+        .task4Commands,
+  );
+  expect(commands).toHaveLength(1);
+  const originalCommand = commands[0];
+  await page.getByRole('button', { name: '返回收益' }).click();
+  await page
+    .getByRole('button', { name: '划转至买家余额', exact: true })
+    .click();
+  await expect(page.getByTestId('pending-transfer')).toHaveText(original!);
+  await page.getByRole('button', { name: '刷新原操作', exact: true }).click();
+  await page.getByRole('button', { name: '核对原操作', exact: true }).click();
+  await expect(page.getByRole('alert')).toContainText('record=missing');
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+  const checked = await page.evaluate(() =>
+    (
+      window as unknown as { task4Commands: Record<string, string>[] }
+    ).task4Commands.filter((c) => c.type === 'checkTransfer'),
+  );
+  expect(checked[0]).toEqual({ ...originalCommand, type: 'checkTransfer' });
+  await page.reload();
+  await page
+    .getByRole('navigation')
+    .getByRole('button', { name: '收益', exact: true })
+    .click();
+  await page
+    .getByRole('button', { name: '划转至买家余额', exact: true })
+    .click();
+  await expect(page.getByTestId('pending-transfer')).toHaveText(original!);
+  await expect(page.getByLabel('划转金额', { exact: true })).toHaveValue(
+    '1.000000001',
+  );
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+  await expect(
+    page.getByRole('button', { name: '核对划转', exact: true }),
+  ).toHaveCount(0);
+});
+
+test('目标余额恰好15/9上界可入账，超1最小单位拒绝且源目标流水存储均不变，重放不二次累加', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const r = await page.evaluate(async () => {
+    const { createDemoClient } = await import(
+      /* @vite-ignore */ String('/src/client/demo.ts')
+    );
+    const max = '999999999999999.999999999';
+    async function setup(buyer: string) {
+      const map = new Map<string, string>();
+      const storage = {
+        getItem: (k: string) => map.get(k) ?? null,
+        setItem: (k: string, v: string) => {
+          map.set(k, v);
+        },
+      } as Storage;
+      const seed = createDemoClient('ready', storage);
+      const identity = (await seed.snapshot()).finance.value.identity;
+      await seed.dispatch({
+        type: 'transferEarnings',
+        requestId: 'seed',
+        amount: '1',
+        ...identity,
+      });
+      const [key, raw] = [...map.entries()][0];
+      const saved = JSON.parse(raw);
+      saved.balance = max;
+      saved.finance.buyerBalance = buyer;
+      saved.finance.transfers = [];
+      delete saved.finance.pendingTransfer;
+      map.set(key, JSON.stringify(saved));
+      return { client: createDemoClient('ready', storage), map, identity };
+    }
+    const exact = await setup('999999999999999.999999998');
+    const command = {
+      type: 'transferEarnings',
+      requestId: 'boundary',
+      amount: '0.000000001',
+      ...exact.identity,
+    };
+    const accepted = await exact.client.dispatch(command);
+    const once = await exact.client.snapshot();
+    const replay = await exact.client.dispatch(command);
+    const twice = await exact.client.snapshot();
+    const overflow = await setup(max);
+    const before = await overflow.client.snapshot();
+    const rawBefore = [...overflow.map.entries()];
+    const rejected = await overflow.client.dispatch({
+      ...command,
+      ...overflow.identity,
+    });
+    const after = await overflow.client.snapshot();
+    const rawAfter = [...overflow.map.entries()];
+    const maximum = await setup('0');
+    const full = await maximum.client.dispatch({
+      ...command,
+      ...maximum.identity,
+      amount: max,
+    });
+    const fullState = await maximum.client.snapshot();
+    return {
+      accepted,
+      replay,
+      once,
+      twice,
+      rejected,
+      before,
+      after,
+      rawBefore,
+      rawAfter,
+      full,
+      fullState,
+    };
+  });
+  expect(r.accepted.kind).toBe('confirmed');
+  expect(r.replay).toEqual(r.accepted);
+  expect(r.once).toEqual(r.twice);
+  expect(r.once.finance.value.buyerBalance).toBe('999999999999999.999999999');
+  expect(r.rejected.kind).toBe('failed');
+  expect(r.rejected.error.message).toContain('1000000000000000');
+  expect(r.rejected.error.message).toContain('999999999999999.999999999');
+  expect(r.after).toEqual(r.before);
+  expect(r.rawAfter).toEqual(r.rawBefore);
+  expect(r.full.kind).toBe('confirmed');
+  expect(r.fullState.earnings.value.balance).toBe('0');
+  expect(r.fullState.finance.value.buyerBalance).toBe(
+    '999999999999999.999999999',
+  );
+});
+
+test('已入账但dispatch reject时保留原意图，核对明确confirmed才解除且不再扣款', async ({
+  page,
+}) => {
+  await page.route(
+    '**/src/features/earnings/EarningsPage.tsx',
+    async (route) => {
+      const response = await route.fetch();
+      const source = await response.text();
+      expect(source).toContain('client.dispatch(command)');
+      await route.fulfill({
+        response,
+        body: source.replace(
+          'client.dispatch(command)',
+          'client.dispatch(command).then(result => { if (command.type === "transferEarnings") throw new Error("lost accepted response"); return result; })',
+        ),
+      });
+    },
+  );
+  await earnings(page);
+  await page
+    .getByRole('button', { name: '划转至买家余额', exact: true })
+    .click();
+  await page.getByLabel('划转金额', { exact: true }).fill('1');
+  await page.getByRole('button', { name: '核对划转', exact: true }).click();
+  await page
+    .getByRole('dialog')
+    .getByRole('button', { name: '确认划转', exact: true })
+    .click();
+  await expect(page.getByRole('alert')).toContainText('lost accepted response');
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+  await expect(page.getByTestId('transfer-available')).toContainText('127.56');
+  await page.getByRole('button', { name: '返回收益' }).click();
+  await page
+    .getByRole('button', { name: '划转至买家余额', exact: true })
+    .click();
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+  await page.getByRole('button', { name: '核对原操作', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('演示划转已完成');
+  await expect(page.getByLabel('划转金额', { exact: true })).toBeEnabled();
+  await expect(page.getByTestId('transfer-available')).toContainText('127.56');
+  expect(
+    await page.evaluate(() =>
+      Object.keys(sessionStorage).filter((k) =>
+        k.startsWith('bee.demo.transfer-intent.'),
+      ),
+    ),
+  ).toEqual([]);
+});
+
+for (const fault of ['read', 'write', 'corrupt'])
+  test(`演示意图${fault}故障fail-closed且不调用划转`, async ({ page }) => {
+    await earnings(page);
+    await page.evaluate((fault) => {
+      const prefix = 'bee.demo.transfer-intent.';
+      if (fault === 'corrupt')
+        sessionStorage.setItem(
+          `${prefix}v1.ready.Hive%20%E6%BC%94%E7%A4%BA%E8%BF%9E%E6%8E%A5.demo-user`,
+          'not-json',
+        );
+      if (fault === 'read') {
+        const original = Storage.prototype.getItem;
+        Storage.prototype.getItem = function (k) {
+          if (k.startsWith(prefix))
+            throw new Error('injected intent read fault');
+          return original.call(this, k);
+        };
+      }
+      if (fault === 'write') {
+        const original = Storage.prototype.setItem;
+        Storage.prototype.setItem = function (k, v) {
+          if (k.startsWith(prefix))
+            throw new Error('injected intent write fault');
+          return original.call(this, k, v);
+        };
+      }
+    }, fault);
+    await page
+      .getByRole('button', { name: '划转至买家余额', exact: true })
+      .click();
+    if (fault === 'write') {
+      await page.getByLabel('划转金额', { exact: true }).fill('1');
+      await page.getByRole('button', { name: '核对划转', exact: true }).click();
+      await page
+        .getByRole('dialog')
+        .getByRole('button', { name: '确认划转', exact: true })
+        .click();
+    }
+    await expect(page.getByRole('alert')).toContainText(
+      fault === 'write' ? '意图保存失败' : '意图读取失败',
+    );
+    await expect(page.getByLabel('划转金额', { exact: true })).toBeDisabled();
+    await expect(page.getByTestId('transfer-available')).toContainText(
+      '128.56',
+    );
+    expect(
+      await page.evaluate(() =>
+        Object.keys(sessionStorage).filter((k) =>
+          k.startsWith('bee.demo.finance.'),
+        ),
+      ),
+    ).toEqual([]);
+  });
+
+test('意图模块只接受原完整身份与参数，missing/generic failed/unknown不清除，明确演示原子拒绝可解除', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const r = await page.evaluate(async () => {
+    const { createTransferIntentStore } = await import(
+      /* @vite-ignore */ String('/src/features/earnings/transferIntent.ts')
+    );
+    const map = new Map<string, string>();
+    const storage = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        map.set(k, v);
+      },
+      removeItem: (k: string) => {
+        map.delete(k);
+      },
+    } as Storage;
+    const identity = { hive: 'demo-hive', user: 'demo-user' };
+    const op = {
+      ...identity,
+      requestId: 'original-guard',
+      amount: '1.000000001',
+    };
+    const store = createTransferIntentStore(identity, storage, 'ready');
+    store.begin(op);
+    const retained = [];
+    for (const [phase, result] of [
+      [
+        'check',
+        {
+          kind: 'failed',
+          error: { code: 'DEMO_TRANSFER_NOT_FOUND', message: 'record=missing' },
+        },
+      ],
+      [
+        'submit',
+        { kind: 'failed', error: { code: 'GENERIC', message: 'unknown' } },
+      ],
+      [
+        'submit',
+        { kind: 'unknown', operationId: op.requestId, message: 'unknown' },
+      ],
+    ]) {
+      store.settle(op, result, phase);
+      retained.push(store.read());
+    }
+    const conflicts = [];
+    for (const changed of [
+      { ...op, requestId: 'new' },
+      { ...op, amount: '2' },
+      { ...op, user: 'other' },
+      { ...op, hive: 'other' },
+    ]) {
+      try {
+        store.begin(changed);
+        conflicts.push(false);
+      } catch {
+        conflicts.push(true);
+      }
+    }
+    store.settle(
+      op,
+      {
+        kind: 'failed',
+        error: {
+          code: 'DEMO_TRANSFER_BALANCE',
+          message: 'rejected before commit',
+        },
+      },
+      'submit',
+    );
+    return { retained, conflicts, after: store.read(), op };
+  });
+  expect(r.retained).toEqual([r.op, r.op, r.op]);
+  expect(r.conflicts).toEqual([true, true, true, true]);
+  expect(r.after).toBeUndefined();
+});
+
+test('明确confirmed但意图删除失败时继续守门，原记录完整保留供再次核对', async ({
+  page,
+}) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const { createTransferIntentStore } = await import(
+      /* @vite-ignore */ String('/src/features/earnings/transferIntent.ts')
+    );
+    const map = new Map<string, string>();
+    let failRemove = true;
+    const storage = {
+      getItem: (k: string) => map.get(k) ?? null,
+      setItem: (k: string, v: string) => {
+        map.set(k, v);
+      },
+      removeItem: (k: string) => {
+        if (failRemove) throw new Error('injected removal fault');
+        map.delete(k);
+      },
+    } as Storage;
+    const op = {
+      hive: 'hive',
+      user: 'user',
+      requestId: 'original',
+      amount: '1',
+    };
+    const store = createTransferIntentStore(op, storage, 'ready');
+    store.begin(op);
+    let error = '';
+    try {
+      store.settle(
+        op,
+        { kind: 'confirmed', demo: true, message: 'confirmed' },
+        'check',
+      );
+    } catch (cause) {
+      error = String(cause);
+    }
+    const retained = store.read();
+    failRemove = false;
+    store.settle(
+      op,
+      { kind: 'confirmed', demo: true, message: 'confirmed' },
+      'check',
+    );
+    return { error, retained, after: store.read(), op };
+  });
+  expect(result.error).toContain('injected removal fault');
+  expect(result.retained).toEqual(result.op);
+  expect(result.after).toBeUndefined();
 });

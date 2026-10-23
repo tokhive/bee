@@ -1,4 +1,5 @@
 /** Hive wallet amounts use 10^9 units, with at most 15 integer digits. */
+export const MAX_AMOUNT_UNITS = 999999999999999999999999n;
 const pattern = /^(0|[1-9][0-9]{0,14})(\.[0-9]{1,9})?$/;
 export function validAmount(value: string): boolean {
   return pattern.test(value) && /[1-9]/.test(value);

@@ -1,0 +1,180 @@
+name: Desktop hosted Linux native evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/bee-desktop-p0]
+    paths:
+      - .github/workflows/desktop-hosted-linux.yml
+      - desktop/**
+      - agent/**
+      - desktopbridge/**
+      - cmd/bee/**
+      - go.mod
+      - go.sum
+      - TEE_REVISION
+      - rust-toolchain.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-linux-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  linux:
+    # This supplemental probe is scoped to the existing personal fork.
+    if: ${{ github.repository == 'wangdayong228/bee' }}
+    name: ${{ matrix.runner }} / ${{ matrix.target }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            baseline: minimum
+            fusePackage: libfuse2
+          - runner: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            baseline: current
+            fusePackage: libfuse2t64
+          - runner: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
+            baseline: minimum
+            fusePackage: libfuse2
+          - runner: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-gnu
+            baseline: current
+            fusePackage: libfuse2t64
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      GOTOOLCHAIN: local
+      RUSTUP_TOOLCHAIN: 1.94.0
+      BEE_CI_TARGET: ${{ matrix.target }}
+      BEE_CI_BASELINE: ${{ matrix.baseline }}
+      BEE_CI_FUSE_PACKAGE: ${{ matrix.fusePackage }}
+      CARGO_TARGET_DIR: ${{ github.workspace }}/desktop/src-tauri/target
+      PLAYWRIGHT_HTML_OPEN: never
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.3
+          cache: false
+
+      - name: Prepare native Rust and Ubuntu desktop dependencies
+        run: |
+          mkdir -p desktop-ci-evidence
+          rustup toolchain install 1.94.0 --profile minimal --component rustfmt --component clippy 2>&1 | tee desktop-ci-evidence/rust-install.log
+          sudo apt-get update 2>&1 | tee desktop-ci-evidence/apt-update.log
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev pkg-config patchelf dbus-x11 xvfb xauth xdotool imagemagick fonts-noto-cjk "$BEE_CI_FUSE_PACKAGE" 2>&1 | tee desktop-ci-evidence/apt-install.log
+          dpkg-query -W > desktop-ci-evidence/system-packages.tsv
+          df -h > desktop-ci-evidence/disk-before.log
+
+      - name: Record actual native tools, OS and CPU
+        run: |
+          node --version 2>&1 | tee desktop-ci-evidence/tools.log
+          npm --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          go version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          rustc -vV 2>&1 | tee -a desktop-ci-evidence/tools.log
+          cargo --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          git --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          id 2>&1 | tee -a desktop-ci-evidence/tools.log
+          printf 'ImageOS=%s\nImageVersion=%s\n' "$ImageOS" "$ImageVersion" | tee desktop-ci-evidence/hosted-image.log
+          node desktop/scripts/ci-native-evidence.mjs 2>&1 | tee desktop-ci-evidence/native.log
+          node desktop/scripts/preflight.mjs 2>&1 | tee desktop-ci-evidence/preflight.log
+
+      - name: Prepare fixed TEE source
+        run: node desktop/scripts/prepare-tee.mjs 2>&1 | tee desktop-ci-evidence/tee.log
+      - name: Go vet and full native regression
+        run: |
+          go vet ./... 2>&1 | tee desktop-ci-evidence/go-vet.log
+          go test ./... -count=1 2>&1 | tee desktop-ci-evidence/go-test.log
+
+      - name: Locked frontend install, typecheck, build and tooling
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
+          npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
+          npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
+          npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
+          node --test desktop/tests/linux-appimage.test.mjs 2>&1 | tee desktop-ci-evidence/appimage-tooling.log
+          npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
+
+      - name: Locked Chromium browser E2E
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          npm --prefix desktop exec -- playwright install --with-deps chromium 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
+
+      - name: Build actual native Bee and test Rust bridge
+        run: |
+          node desktop/scripts/build-bee.mjs --target "$BEE_CI_TARGET" 2>&1 | tee desktop-ci-evidence/sidecar.log
+          dbus-run-session -- xvfb-run -a cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
+
+      - name: Build actual test AppImage
+        id: bundle
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          npm --prefix desktop run tauri -- build --debug --ci --bundles appimage -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+          mapfile -d '' packages < <(find desktop/src-tauri/target/debug/bundle -type f -name '*.AppImage' -print0)
+          if [ "${#packages[@]}" -ne 1 ]; then
+            printf 'AppImage count mismatch: actual=%s; required=1\n' "${#packages[@]}" >&2
+            exit 1
+          fi
+          printf 'BEE_CI_APPIMAGE=%s\n' "${packages[0]}" >> "$GITHUB_ENV"
+          sha256sum "${packages[0]}" | tee desktop-ci-evidence/appimage.sha256
+
+      - name: Extracted AppImage payload native startup under Xvfb
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          dbus-run-session -- xvfb-run -a node desktop/scripts/smoke-linux-appimage.mjs --appimage "$BEE_CI_APPIMAGE" --source "desktop/src-tauri/binaries/bee-$BEE_CI_TARGET.source.json" --mode extract --evidence desktop-ci-evidence/smoke-extract 2>&1 | tee desktop-ci-evidence/smoke-extract.log
+
+      - name: Record FUSE availability and independently test direct launch
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          if [ -c /dev/fuse ] && [ -r /dev/fuse ] && [ -w /dev/fuse ]; then
+            dbus-run-session -- xvfb-run -a node desktop/scripts/smoke-linux-appimage.mjs --appimage "$BEE_CI_APPIMAGE" --source "desktop/src-tauri/binaries/bee-$BEE_CI_TARGET.source.json" --mode fuse --evidence desktop-ci-evidence/smoke-fuse 2>&1 | tee desktop-ci-evidence/smoke-fuse.log
+          else
+            node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const report = { status: 'not-verified', mode: 'fuse', reason: '/dev/fuse is not a readable/writable character device for this runner; extracted startup does not verify FUSE' };
+          writeFileSync('desktop-ci-evidence/fuse.json', JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report));
+          NODE
+          fi
+
+      - name: Retain built test package even if startup or provenance fails
+        if: ${{ always() && steps.bundle.outcome == 'success' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-linux-test-${{ matrix.runner }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/src-tauri/target/debug/bundle/**/*.AppImage
+            desktop/src-tauri/binaries/bee-${{ matrix.target }}.source.json
+
+      - name: Retain checks, screenshots and failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-linux-checks-${{ matrix.runner }}-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            desktop-ci-evidence/
+            desktop/test-results/
+            desktop/playwright-report/

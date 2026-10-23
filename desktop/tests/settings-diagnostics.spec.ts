@@ -293,40 +293,47 @@ test('损坏偏好或不安全的已选Hive读取失败时不借用旧登录，�
   }
 });
 
-test('英文异步失败/未确认/空/加载场景及弹层无漏译', async ({ browser }) => {
-  const context = await browser.newContext({ locale: 'en-US' });
-  const page = await context.newPage();
-  const check = async () => { expect(await page.locator('body').innerText()).not.toMatch(/[\u4e00-\u9fff]/); };
+test.describe(() => {
+  test.use({ locale: 'en-US' });
+  const title = '英文异步失败/未确认/空/加载场景及弹层无漏译';
+  const check = async (page: Page) => { expect(await page.locator('body').innerText()).not.toMatch(/[\u4e00-\u9fff]/); };
   for (const scene of ['onboarding', 'configured', 'loading', 'empty', 'error', 'offline', 'unknown', 'tasks-error', 'earnings-error', 'earnings-loading']) {
-    await page.goto(`/?scene=${scene}`);
-    await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
-    await check();
-    if (scene === 'configured') { await page.getByRole('button', { name: 'Bind this device', exact: true }).click(); await check(); await page.keyboard.press('Escape'); }
-    if (['loading', 'error', 'empty'].includes(scene)) { await nav(page, 'AI accounts'); await check(); }
-    if (scene.startsWith('earnings-')) { await nav(page, 'Earnings'); await check(); }
+    test(`${title}：${scene}`, async ({ page }) => {
+      await page.goto(`/?scene=${scene}`);
+      await expect(page.getByRole('heading', { name: 'Overview', exact: true })).toBeVisible();
+      await check(page);
+      if (scene === 'configured') { await page.getByRole('button', { name: 'Bind this device', exact: true }).click(); await check(page); await page.keyboard.press('Escape'); }
+      if (['loading', 'error', 'empty'].includes(scene)) { await nav(page, 'AI accounts'); await check(page); }
+      if (scene.startsWith('earnings-')) { await nav(page, 'Earnings'); await check(page); }
+    });
   }
   for (const scene of ['pending', 'unknown-result', 'operation-error']) {
-    await page.goto(`/?scene=${scene}`);
-    await page.getByRole('button', { name: 'Simulate login to Hive', exact: true }).click();
-    await expect(page.getByRole('status')).not.toContainText('Processing demo action'); await check();
+    test(`${title}：${scene}`, async ({ page }) => {
+      await page.goto(`/?scene=${scene}`);
+      await page.getByRole('button', { name: 'Simulate login to Hive', exact: true }).click();
+      await expect(page.getByRole('status')).not.toContainText('Processing demo action'); await check(page);
+    });
   }
   for (const scene of ['quote-conflict', 'quote-unknown']) {
-    await page.goto(`/?scene=${scene}`); await nav(page, 'Earnings');
-    await page.getByRole('button', { name: 'Pricing settings', exact: true }).click();
-    await page.getByRole('button', { name: 'Save pricing', exact: true }).click();
-    await expect(page.getByRole('alert')).toBeVisible(); await check();
+    test(`${title}：${scene}`, async ({ page }) => {
+      await page.goto(`/?scene=${scene}`); await nav(page, 'Earnings');
+      await page.getByRole('button', { name: 'Pricing settings', exact: true }).click();
+      await page.getByRole('button', { name: 'Save pricing', exact: true }).click();
+      await expect(page.getByRole('alert')).toBeVisible(); await check(page);
+    });
   }
   for (const [scene, receipt] of [['transfer-pending', 'Transfer processing'], ['transfer-unknown', 'Transfer result unconfirmed']]) {
-    await page.goto(`/?scene=${scene}`); await nav(page, 'Earnings');
-    await page.getByRole('button', { name: 'Transfer to buyer balance', exact: true }).click();
-    await page.getByLabel('Transfer amount', { exact: true }).fill('1');
-    await page.getByRole('button', { name: 'Review transfer', exact: true }).click();
-    await page.getByRole('button', { name: 'Confirm transfer', exact: true }).click();
-    // Await the dispatch receipt, not the earlier pending badge emitted by the subscription.
-    await expect(page.getByRole('status')).toContainText(receipt); await check();
-    expect(await page.evaluate(async () => [...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+    test(`${title}：${scene}`, async ({ page }) => {
+      await page.goto(`/?scene=${scene}`); await nav(page, 'Earnings');
+      await page.getByRole('button', { name: 'Transfer to buyer balance', exact: true }).click();
+      await page.getByLabel('Transfer amount', { exact: true }).fill('1');
+      await page.getByRole('button', { name: 'Review transfer', exact: true }).click();
+      await page.getByRole('button', { name: 'Confirm transfer', exact: true }).click();
+      // Await the dispatch receipt, not the earlier pending badge emitted by the subscription.
+      await expect(page.getByRole('status')).toContainText(receipt); await check(page);
+      expect(await page.evaluate(async () => [...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+    });
   }
-  await context.close();
 });
 
 test('浅深主题正文/次要文字/金色标签与焦点均具有足够对比', async ({ page }) => {

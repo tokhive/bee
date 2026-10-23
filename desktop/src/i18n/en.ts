@@ -609,5 +609,8 @@ export const en: Record<string, string> = {
   "接入后保持暂停；选择平台后手动开始。": "Accounts remain paused after connection. Select platforms and start manually.",
   "请回到概览继续首次接入。": "Return to Overview to continue onboarding.",
   "请先完成 Hive 登录与设备绑定": "Complete Hive login and device binding first",
-  "仅暂停本地演示状态，不会改变真实 Bee 的供给状态。": "Pauses only the local demo. Real Bee supply is not changed."
+  "仅暂停本地演示状态，不会改变真实 Bee 的供给状态。": "Pauses only the local demo. Real Bee supply is not changed.",
+  "登录未确认": "Login is unconfirmed",
+  "请重试登录": "Please retry login",
+  "偏好检查失败": "Preference check failed",
 };

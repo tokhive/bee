@@ -347,3 +347,67 @@ test('浅深主题正文/次要文字/金色标签与焦点均具有足够对比
     expect(ratios.focus).toBeGreaterThanOrEqual(3);
   }
 });
+
+for (const fault of ['corrupt', 'read-error']) {
+  test(`审查I1：非默认Hive登录偏好${fault}失败不提交身份或跨scope写入，可原位重试`, async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async (fault) => {
+      const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+      const hive = 'https://scope-review.test';
+      const key = `bee.demo.preferences.v1.${encodeURIComponent(JSON.stringify([hive, 'demo-user']))}`;
+      const client = createDemoClient('ready');
+      await client.dispatch({ type: 'changeHive', address: hive });
+      localStorage.setItem(key, '{broken');
+      const beforeStorage = JSON.stringify({ ...localStorage });
+      const beforeSession = JSON.stringify({ ...sessionStorage });
+      const get = Storage.prototype.getItem;
+      Storage.prototype.getItem = function(k) { if (fault === 'read-error' && k === key) throw new Error('test user scope read unavailable'); return get.call(this, k); };
+      let login;
+      try { login = await client.dispatch({ type: 'loginHive' }); }
+      finally { Storage.prototype.getItem = get; }
+      const failed = await client.snapshot();
+      const theme = await client.dispatch({ type: 'setPreference', preferences: { theme: 'dark' } });
+      const proxy = await client.dispatch({ type: 'saveProxy', address: 'socks5://proxy.test' });
+      const afterStorage = JSON.stringify({ ...localStorage });
+      const afterSession = JSON.stringify({ ...sessionStorage });
+      localStorage.removeItem(key);
+      const retry = await client.dispatch({ type: 'loginHive' });
+      await client.dispatch({ type: 'setPreference', preferences: { theme: 'dark' } });
+      return { login, failed, theme, proxy, beforeStorage, afterStorage, beforeSession, afterSession, retry, restored: await client.snapshot(), saved: JSON.parse(localStorage.getItem(key)!) };
+    }, fault);
+    expect.soft(result.login.kind).toBe('failed');
+    expect.soft(result.failed.binding.value.loggedIn).toBe(false);
+    expect.soft(result.failed.preferences.value.hiveAddress).toBe('https://scope-review.test');
+    expect.soft(result.failed.finance.value.identity.hive).toBe('https://scope-review.test');
+    expect.soft(result.theme.kind).toBe('failed');
+    expect.soft(result.proxy.kind).toBe('failed');
+    expect.soft(result.afterStorage).toBe(result.beforeStorage);
+    expect.soft(result.afterSession).toBe(result.beforeSession);
+    expect(result.retry.kind).toBe('confirmed');
+    expect(result.restored.finance.value.identity).toEqual({ hive: 'https://scope-review.test', user: 'demo-user' });
+    expect(result.saved.theme).toBe('dark');
+  });
+}
+
+test('审查I2：英文公共弹层只翻译一次，保留匹配词典的中文业务值', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(async () => {
+    const { default: React } = await import(/* @vite-ignore */ String('/node_modules/.vite/deps/react.js'));
+    const { default: { createRoot } } = await import(/* @vite-ignore */ String('/node_modules/.vite/deps/react-dom_client.js'));
+    const { useLanguage } = await import(/* @vite-ignore */ String('/src/i18n/index.ts'));
+    const { AccountActions } = await import(/* @vite-ignore */ String('/src/features/accounts/AccountActions.tsx'));
+    const { AccountDetails } = await import(/* @vite-ignore */ String('/src/features/accounts/AccountDetails.tsx'));
+    const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+    const snapshot = await createDemoClient('ready').snapshot();
+    const account = { ...snapshot.accounts.value[0], label: '收益', identifier: '收益', pendingChange: { identifier: '账号' } };
+    function Harness() { useLanguage('en'); return React.createElement(React.Fragment, null, React.createElement(AccountActions, { platform: account.platform, account, busy: false, dispatch: async () => {} }), React.createElement(AccountDetails, { account })); }
+    createRoot(document.getElementById('root')!).render(React.createElement(Harness));
+  });
+  await page.getByRole('button', { name: 'Confirm account change', exact: true }).click();
+  await expect(page.getByRole('dialog')).toContainText('收益');
+  await expect(page.getByRole('dialog')).toContainText('账号');
+  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'View details', exact: true }).click();
+  await expect(page.getByRole('dialog').getByRole('heading', { level: 2 })).toContainText('收益');
+  await expect(page.getByRole('button', { name: 'Close', exact: true })).toBeVisible();
+});

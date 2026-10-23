@@ -8,6 +8,7 @@ export function DetailSheet({
   children,
 }: {
   trigger: ReactNode;
+  /** Already translated by the caller; interpolated business values stay literal. */
   title: string;
   description: string;
   children: ReactNode;
@@ -19,12 +20,12 @@ export function DetailSheet({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="detail-sheet">
           <header>
-            <Dialog.Title>{t(title)}</Dialog.Title>
+            <Dialog.Title>{title}</Dialog.Title>
             <Dialog.Close asChild>
               <button>{t("关闭")}</button>
             </Dialog.Close>
           </header>
-          <Dialog.Description>{t(description)}</Dialog.Description>
+          <Dialog.Description>{description}</Dialog.Description>
           {children}
         </Dialog.Content>
       </Dialog.Portal>

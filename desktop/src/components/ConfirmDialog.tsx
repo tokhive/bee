@@ -10,6 +10,7 @@ export function ConfirmDialog({
   onConfirm,
 }: {
   trigger: ReactNode;
+  /** Already translated by the caller; interpolated business values stay literal. */
   title: string;
   description: string;
   confirmLabel: string;
@@ -28,8 +29,8 @@ export function ConfirmDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content" aria-busy={busy}>
-          <Dialog.Title>{t(title)}</Dialog.Title>
-          <Dialog.Description>{t(description)}</Dialog.Description>
+          <Dialog.Title>{title}</Dialog.Title>
+          <Dialog.Description>{description}</Dialog.Description>
           <div className="dialog-actions">
             <Dialog.Close asChild>
               <button disabled={busy}>{t("取消")}</button>
@@ -41,7 +42,7 @@ export function ConfirmDialog({
                 void onConfirm().then(() => setOpen(false));
               }}
             >
-              {t(busy ? '处理中…' : confirmLabel)}
+              {busy ? t('处理中…') : confirmLabel}
             </button>
           </div>
         </Dialog.Content>

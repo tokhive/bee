@@ -201,7 +201,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
           message: '仅演示：已重新读取当前场景；主动暂停选择保持不变。',
         };
       }
-      if (preferenceFailure && command.type !== 'runDiagnostics' && command.type !== 'exportDiagnostics') return fail('DEMO_PREFERENCES_READ', preferenceFailure);
+      if (preferenceFailure && !(command.type === 'loginHive' && state.preferences.value?.hiveAddress) && command.type !== 'runDiagnostics' && command.type !== 'exportDiagnostics') return fail('DEMO_PREFERENCES_READ', preferenceFailure);
       const financeResult = finance.handle(state, command);
       if (financeResult) {
         publish();
@@ -269,22 +269,24 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
             'DEMO_LOGIN_FAILED',
             '登录失败：场景 operation-error 模拟 Hive 登录不可用；请重试。',
           );
-        state.binding = ready({
-          ...state.binding.value!,
-          loggedIn: true,
-          userId: 'demo-user',
-          label: 'Bee 演示账号',
-        });
-        const currentHive = state.preferences.value?.hiveAddress ?? defaultHive;
-        if (state.finance.value?.identity.hive !== currentHive || state.finance.value?.identity.user !== state.binding.value?.userId) {
-          state.finance = ready(initialFinance(currentHive, state.binding.value?.userId ?? ''));
-          finance.restore(state);
-        }
+        // Resolve the target user's preferences before committing any login/finance identity.
+        // On failure retain the verified anonymous Hive scope and permit login retry only.
+        const currentHive = state.preferences.value?.hiveAddress;
+        if (!currentHive) return fail('DEMO_PREFERENCES_READ', preferenceFailure ?? 'Hive 偏好检查失败：currentHiveKnown=false；请重新读取。');
+        const nextBinding = { ...state.binding.value!, loggedIn: true, userId: 'demo-user', label: 'Bee 演示账号' };
+        let userPreferences;
         try {
-          const hive = currentHive;
-          state.preferences = ready(preferenceStorage ? loadPreferences(preferenceStorage, preferenceScope(hive, state.binding.value)) : defaults(hive));
+          userPreferences = preferenceStorage ? loadPreferences(preferenceStorage, preferenceScope(currentHive, nextBinding)) : defaults(currentHive);
         } catch (cause) {
-          state.preferences = { status: 'error', updatedAt: null, error: { code: 'DEMO_PREFERENCES_READ', message: `用户偏好读取失败：${String(cause)}` } };
+          preferenceFailure = `用户偏好读取失败：${String(cause)}；登录未确认，请重试登录。`;
+          return fail('DEMO_PREFERENCES_READ', preferenceFailure);
+        }
+        preferenceFailure = undefined;
+        state.binding = ready(nextBinding);
+        state.preferences = ready(userPreferences);
+        if (state.finance.value?.identity.hive !== currentHive || state.finance.value?.identity.user !== nextBinding.userId) {
+          state.finance = ready(initialFinance(currentHive, nextBinding.userId));
+          finance.restore(state);
         }
       } else if (command.type === 'bindDevice') {
         if (state.binding.status !== 'ready' || !state.binding.value.loggedIn)

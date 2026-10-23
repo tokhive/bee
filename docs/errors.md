@@ -27,7 +27,7 @@ The path points to a directory or a symbolic link. Bee reads only regular files 
 
 ### BEE-CONFIG-PERMISSIONS
 
-Other users can read or write the egress configuration. The configuration may contain credentials, so run `chmod 600 <file>` so that only the user running Bee can access it. The error shows the current permissions.
+The egress configuration does not meet Bee's private-file protection requirements. The error includes the actual ownership or permission check that failed. On macOS/Linux, ensure the user running Bee owns the file, then run `chmod 600 <file>`. On Windows, open the file's **Properties → Security → Advanced**: set **Owner** to the account running Bee, disable inheritance, remove all permission entries except that account, and grant it **Full control**. Retry Bee after applying these changes; Bee does not automatically change an existing configuration's protection.
 
 ### BEE-CONFIG-UNREADABLE
 
@@ -154,7 +154,7 @@ Errors from `bee doctor` while it checks the device configuration and the connec
 
 ### BEE-DEVICE-CONFIG
 
-The device configuration (`bee.json`) can't be used. Its permissions are not `0600`, it is not a regular file, its contents are corrupted, or its Hive address or device credential is malformed. Check the `--config` path and the file permissions. Do not delete the configuration while troubleshooting: you would lose the only valid device credential. See [README · Configuration](../README.md#configuration).
+The device configuration (`bee.json`) can't be used. Its private-file protection check failed, it is not a regular file, its contents are corrupted, or its Hive address or device credential is malformed. Check the `--config` path and this run's error detail. For ownership or permission failures, follow [BEE-CONFIG-PERMISSIONS](#bee-config-permissions): macOS/Linux require current-user ownership and no group/other permissions; Windows requires current-user ownership and a protected DACL granting only that account access. Do not delete the configuration while troubleshooting: you would lose the only valid device credential. See [README · Configuration](../README.md#configuration).
 
 ### BEE-DEVICE-NOT-PAIRED
 

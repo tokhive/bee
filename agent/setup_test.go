@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -95,9 +96,23 @@ func TestSetupWritesWhatBeeRunAccepts(t *testing.T) {
 			t.Fatal("setup copied sign-in material")
 		}
 	}
-	if !strings.Contains(out, "plan pro") || !strings.Contains(out, "Wrote "+path) || !strings.Contains(out, "bee run --config "+config+"\"") {
+	assertSetupSummary(t, out, path, config)
+}
+
+func assertSetupSummary(t *testing.T, out, path, config string) {
+	t.Helper()
+	if !strings.Contains(out, "plan pro") || !strings.Contains(out, "Wrote "+path) || !strings.Contains(out, strconv.Quote("bee run --config "+config)) {
 		t.Fatalf("summary: %s", out)
 	}
+}
+
+func TestSetupSummaryAcceptsWindowsPathCharacters(t *testing.T) {
+	config := filepath.Join(t.TempDir(), `Windows\bee.json`)
+	out, err := runSetup(t, "--config", config, "--platform", "openai", "--codex-home", codexHome(t, time.Now().Add(time.Hour)), "--yes")
+	if err != nil {
+		t.Fatalf("setup Windows path fixture: %v", err)
+	}
+	assertSetupSummary(t, out, defaultEgressPath(config), config)
 }
 
 func TestSetupFindsCodexHomeFromTheEnvironment(t *testing.T) {

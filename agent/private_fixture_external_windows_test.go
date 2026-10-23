@@ -68,6 +68,50 @@ func assertPrivateFixture(t *testing.T, path string) {
 	}
 }
 
+// Query independently from Bee's private-file validation. SDDL includes owner,
+// every DACL ACE and the inheritance/protection flags, unlike os.FileMode.
+func officialFilePermissionSnapshot(t *testing.T, path string) string {
+	t.Helper()
+	sd, err := windows.GetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.OWNER_SECURITY_INFORMATION|windows.DACL_SECURITY_INFORMATION)
+	if err != nil {
+		t.Fatalf("snapshot official fixture owner/DACL for %q: %v", path, err)
+	}
+	if sd == nil {
+		t.Fatalf("official fixture %q has no security descriptor", path)
+	}
+	sddl := sd.String()
+	if sddl == "" {
+		t.Fatalf("official fixture %q owner/DACL could not be encoded as SDDL", path)
+	}
+	return sddl
+}
+
+func TestOfficialFilePermissionSnapshotDetectsWindowsDACLChanges(t *testing.T) {
+	path := t.TempDir() + `\auth.json`
+	if err := writePrivateFixture(path, []byte(`{}`)); err != nil {
+		t.Fatal(err)
+	}
+	before := officialFilePermissionSnapshot(t, path)
+	user, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		t.Fatal(err)
+	}
+	sd, err := windows.SecurityDescriptorFromString("D:P(A;;FA;;;" + user.User.Sid.String() + ")(A;;FR;;;WD)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dacl, _, err := sd.DACL()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := windows.SetNamedSecurityInfo(path, windows.SE_FILE_OBJECT, windows.DACL_SECURITY_INFORMATION|windows.PROTECTED_DACL_SECURITY_INFORMATION, nil, nil, dacl, nil); err != nil {
+		t.Fatal(err)
+	}
+	if after := officialFilePermissionSnapshot(t, path); after == before {
+		t.Fatal("official-file permission snapshot missed an added Everyone-read ACE")
+	}
+}
+
 func preventTestReplacement(t *testing.T, directory, path string) func() {
 	t.Helper()
 	name, err := windows.UTF16PtrFromString(path)

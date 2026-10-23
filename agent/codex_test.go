@@ -94,6 +94,7 @@ func TestCodexCredentialInspectionUsesOfficialFileWithoutCopyingSecrets(t *testi
 	if err := os.WriteFile(path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
+	permissionsBefore := officialFilePermissionSnapshot(t, path)
 	var output bytes.Buffer
 	err := bee.Run(context.Background(), []string{"codex-status", "--codex-home", directory, "--store", "file"}, &output)
 	if err != nil {
@@ -112,6 +113,9 @@ func TestCodexCredentialInspectionUsesOfficialFileWithoutCopyingSecrets(t *testi
 	if !bytes.Equal(raw, after) {
 		t.Fatal("credential inspection modified official auth file")
 	}
+	if permissionsAfter := officialFilePermissionSnapshot(t, path); permissionsAfter != permissionsBefore {
+		t.Fatalf("credential inspection changed official file protection: before=%s after=%s", permissionsBefore, permissionsAfter)
+	}
 }
 
 // The official client rewrites auth.json with group-readable permissions, so Bee reads
@@ -123,10 +127,7 @@ func TestCodexCredentialInspectionAcceptsGroupReadableOfficialFile(t *testing.T)
 	if err := os.WriteFile(path, raw, 0644); err != nil {
 		t.Fatal(err)
 	}
-	before, err := os.Lstat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
+	permissionsBefore := officialFilePermissionSnapshot(t, path)
 	var output bytes.Buffer
 	if err := bee.Run(context.Background(), []string{"codex-status", "--codex-home", directory, "--store", "file"}, &output); err != nil {
 		t.Fatal(err)
@@ -135,8 +136,8 @@ func TestCodexCredentialInspectionAcceptsGroupReadableOfficialFile(t *testing.T)
 	if json.Unmarshal(output.Bytes(), &status) != nil || status["plan"] != "plus" {
 		t.Fatalf("safe metadata: %s", output.String())
 	}
-	if info, err := os.Lstat(path); err != nil || info.Mode() != before.Mode() {
-		t.Fatal("credential inspection changed official file permissions")
+	if permissionsAfter := officialFilePermissionSnapshot(t, path); permissionsAfter != permissionsBefore {
+		t.Fatalf("credential inspection changed official file protection: before=%s after=%s", permissionsBefore, permissionsAfter)
 	}
 }
 

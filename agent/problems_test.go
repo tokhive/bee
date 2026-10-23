@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -112,10 +113,7 @@ func TestErrorCatalogIsCompleteAndDocumented(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	documented := map[string]bool{}
-	for _, match := range regexp.MustCompile("(?m)^### `?([a-z_]+|BEE[-A-Z]+)`?$").FindAllStringSubmatch(string(raw), -1) {
-		documented[match[1]] = true
-	}
+	documented := documentedErrorSections(string(raw))
 	for name := range problems {
 		if !documented[name] {
 			t.Errorf("docs/errors.md has no section for %s", name)
@@ -130,6 +128,51 @@ func TestErrorCatalogIsCompleteAndDocumented(t *testing.T) {
 	}
 	for name := range documented {
 		t.Errorf("docs/errors.md documents %s, which the catalog does not have", name)
+	}
+}
+
+func documentedErrorSections(raw string) map[string]bool {
+	documented := map[string]bool{}
+	for _, match := range regexp.MustCompile("(?m)^### `?([a-z_]+|BEE[-A-Z]+)`?\r?$").FindAllStringSubmatch(raw, -1) {
+		documented[match[1]] = true
+	}
+	return documented
+}
+
+func TestErrorDocumentationHeadingsAcceptWindowsLineEndings(t *testing.T) {
+	for _, lineEnding := range []string{"\n", "\r\n"} {
+		t.Run(strings.ReplaceAll(strings.ReplaceAll(lineEnding, "\r", "CR"), "\n", "LF"), func(t *testing.T) {
+			raw := strings.Join([]string{"### BEE-CONFIG-NOT-FOUND", "", "body", "### `manually_paused`", ""}, lineEnding)
+			documented := documentedErrorSections(raw)
+			if len(documented) != 2 || !documented["BEE-CONFIG-NOT-FOUND"] || !documented["manually_paused"] {
+				t.Fatalf("documentation headings for line ending %q: got=%v; required=both catalog and supply reason", lineEnding, documented)
+			}
+		})
+	}
+}
+
+func TestPrivateFileProtectionRemedyMatchesOperatingSystem(t *testing.T) {
+	for _, code := range []string{"BEE-CONFIG-PERMISSIONS", "BEE-DEVICE-CONFIG"} {
+		t.Run(code, func(t *testing.T) {
+			detail := `file "fixture.json" has owner SID=S-1-5-32-544; required current process SID=S-1-5-21-500`
+			err := fail(code, detail)
+			_, summary, fix, ok := Coded(err)
+			if !ok || !strings.Contains(summary, detail) || !strings.Contains(err.Error(), detail) {
+				t.Fatalf("protection remedy discarded this run's owner evidence: %v", err)
+			}
+			want := []string{"owns", "chmod 600"}
+			if runtime.GOOS == "windows" {
+				want = []string{"Properties", "Security", "Advanced", "Owner", "inheritance", "Full control"}
+				if strings.Contains(fix, "chmod") {
+					t.Fatalf("Windows protection remedy cannot use chmod: %s", fix)
+				}
+			}
+			for _, part := range want {
+				if !strings.Contains(fix, part) {
+					t.Errorf("%s protection remedy lacks %q: %s", runtime.GOOS, part, fix)
+				}
+			}
+		})
 	}
 }
 

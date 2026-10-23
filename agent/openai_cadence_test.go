@@ -401,10 +401,7 @@ func TestCodexOnPath(t *testing.T) {
 		t.Fatalf("no codex on PATH = %q", got)
 	}
 	for output, want := range map[string]string{"codex-cli 0.163.0": "0.163.0", "codex 1.0.0 something else": ""} {
-		script := "#!/bin/sh\nprintf '%s\\n' '" + output + "'\n"
-		if err := os.WriteFile(filepath.Join(directory, "codex"), []byte(script), 0o755); err != nil {
-			t.Fatal(err)
-		}
+		installVersionTestClient(t, directory, "codex", output)
 		if got := codexOnPath(context.Background()); got != want {
 			t.Fatalf("%q read as %q, want %q", output, got, want)
 		}

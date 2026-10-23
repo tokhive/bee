@@ -16,6 +16,11 @@ func TestPrivateFileWindowsUsesProtectedCurrentUserACL(t *testing.T) {
 	if err := writePrivateFile(path, []byte(`{}`), ".private-*"); err != nil {
 		t.Fatal(err)
 	}
+	assertPrivateTestFile(t, path)
+}
+
+func assertPrivateTestFile(t *testing.T, path string) {
+	t.Helper()
 	user, err := windows.GetCurrentProcessToken().GetTokenUser()
 	if err != nil {
 		t.Fatal(err)
@@ -46,6 +51,36 @@ func TestPrivateFileWindowsUsesProtectedCurrentUserACL(t *testing.T) {
 	}
 }
 
+func writeTestPrivateFile(path string, data []byte, mode os.FileMode) error {
+	user, err := windows.GetCurrentProcessToken().GetTokenUser()
+	if err != nil {
+		return err
+	}
+	dacl := "O:" + user.User.Sid.String() + "D:P(A;;FA;;;" + user.User.Sid.String() + ")"
+	if mode&0077 != 0 {
+		dacl += "(A;;FR;;;WD)"
+	}
+	sd, err := windows.SecurityDescriptorFromString(dacl)
+	if err != nil {
+		return err
+	}
+	name, err := windows.UTF16PtrFromString(path)
+	if err != nil {
+		return err
+	}
+	sa := windows.SecurityAttributes{Length: uint32(unsafe.Sizeof(windows.SecurityAttributes{})), SecurityDescriptor: sd}
+	handle, err := windows.CreateFile(name, windows.GENERIC_WRITE, windows.FILE_SHARE_READ, &sa, windows.CREATE_NEW, windows.FILE_ATTRIBUTE_NORMAL, 0)
+	if err != nil {
+		return err
+	}
+	file := os.NewFile(uintptr(handle), path)
+	defer file.Close()
+	if _, err := file.Write(data); err != nil {
+		return err
+	}
+	return file.Close()
+}
+
 func TestPrivateFileWindowsRejectsOtherUsersReadAccess(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bee.json")
 	user, err := windows.GetCurrentProcessToken().GetTokenUser()
@@ -73,8 +108,40 @@ func TestPrivateFileWindowsRejectsOtherUsersReadAccess(t *testing.T) {
 	if err := file.Close(); err != nil {
 		t.Fatal(err)
 	}
+	opened, err := openRegularNoFollow(path)
+	if err != nil {
+		t.Fatalf("Everyone-read fixture must remain a readable ordinary file: %v", err)
+	}
+	defer opened.Close()
+	if err := validatePrivateFile(opened); err == nil {
+		t.Fatal("opened configuration accepted an Everyone-read ACE")
+	}
 	if _, err := readState(path); err == nil {
 		t.Fatal("configuration accepted an Everyone-read ACE")
+	}
+}
+
+func TestStateLockWindowsUsesProtectedCurrentUserACL(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bee.json")
+	unlock, err := lockState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer unlock()
+	assertPrivateTestFile(t, path+".lock")
+}
+
+func TestStateLockWindowsRejectsOtherUsersReadAccess(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bee.json")
+	if err := writeTestPrivateFile(path+".lock", []byte("original"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if unlock, err := lockState(path); err == nil {
+		unlock()
+		t.Fatal("configuration lock accepted an Everyone-read ACE")
+	}
+	if raw, err := os.ReadFile(path + ".lock"); err != nil || string(raw) != "original" {
+		t.Fatalf("rejected insecure lock changed the original: error=%v", err)
 	}
 }
 

@@ -83,7 +83,7 @@ func doctorFixture(t *testing.T, hive string, expires time.Time) (config, egress
 	egress = filepath.Join(directory, "egress.json")
 	cfg, _ := json.Marshal(map[string]any{"targets": []string{"chatgpt.com:443"}, "codex": map[string]string{"home": directory, "store": "file"}})
 	for path, raw := range map[string][]byte{config: state, filepath.Join(directory, "auth.json"): auth, egress: cfg} {
-		if err := os.WriteFile(path, raw, 0600); err != nil {
+		if err := writePrivateFixture(path, raw); err != nil {
 			t.Fatal(err)
 		}
 	}

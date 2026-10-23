@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -35,7 +34,7 @@ func TestConnectProxyCarriesOfficialRequestsWithoutHTTPSProxy(t *testing.T) {
 		"capabilities":  map[string]any{},
 	})
 	path := filepath.Join(t.TempDir(), "egress.json")
-	if err := os.WriteFile(path, raw, 0600); err != nil {
+	if err := writeTestPrivateFile(path, raw, 0600); err != nil {
 		t.Fatal(err)
 	}
 	credential := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "plus", ExpiresAt: time.Now().Add(time.Hour)}

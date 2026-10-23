@@ -62,13 +62,7 @@ func runSetup(t *testing.T, args ...string) (string, error) {
 
 func writtenEgress(t *testing.T, path string) map[string]any {
 	t.Helper()
-	info, err := os.Stat(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if info.Mode().Perm() != 0600 {
-		t.Fatalf("egress configuration mode %04o", info.Mode().Perm())
-	}
+	assertPrivateTestFile(t, path)
 	raw, _ := os.ReadFile(path)
 	var cfg map[string]any
 	if err := json.Unmarshal(raw, &cfg); err != nil {
@@ -217,7 +211,7 @@ func TestSetupLeavesAHandWrittenStaticConfigurationAlone(t *testing.T) {
 	config := filepath.Join(t.TempDir(), "bee.json")
 	path := defaultEgressPath(config)
 	static := `{"targets": ["upstream.example:443"], "inbox_key_id": "` + strings.Repeat("0", 63) + `1", "credential": {"Token": "t", "Header": "authorization", "Scheme": "Bearer"}}`
-	if err := os.WriteFile(path, []byte(static), 0600); err != nil {
+	if err := writeTestPrivateFile(path, []byte(static), 0600); err != nil {
 		t.Fatal(err)
 	}
 	_, err := runSetup(t, "--config", config, "--platform", "openai", "--codex-home", codexHome(t, time.Now().Add(time.Hour)), "--yes")
@@ -233,7 +227,7 @@ func TestRunUsesTheConfigurationSetupWrote(t *testing.T) {
 	directory := t.TempDir()
 	config := filepath.Join(directory, "bee.json")
 	state, _ := json.Marshal(map[string]any{"hive": "http://127.0.0.1:1", "name": "setup", "credential": "bee_" + strings.Repeat("A", 43), "identity": map[string]string{"id": "device", "name": "setup", "owner_id": "owner", "owner_email": "provider@example.com"}})
-	if err := os.WriteFile(config, state, 0600); err != nil {
+	if err := writeTestPrivateFile(config, state, 0600); err != nil {
 		t.Fatal(err)
 	}
 	run := func() string {

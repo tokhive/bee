@@ -123,6 +123,10 @@ func TestCodexCredentialInspectionAcceptsGroupReadableOfficialFile(t *testing.T)
 	if err := os.WriteFile(path, raw, 0644); err != nil {
 		t.Fatal(err)
 	}
+	before, err := os.Lstat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var output bytes.Buffer
 	if err := bee.Run(context.Background(), []string{"codex-status", "--codex-home", directory, "--store", "file"}, &output); err != nil {
 		t.Fatal(err)
@@ -131,7 +135,7 @@ func TestCodexCredentialInspectionAcceptsGroupReadableOfficialFile(t *testing.T)
 	if json.Unmarshal(output.Bytes(), &status) != nil || status["plan"] != "plus" {
 		t.Fatalf("safe metadata: %s", output.String())
 	}
-	if info, err := os.Lstat(path); err != nil || info.Mode().Perm() != 0644 {
+	if info, err := os.Lstat(path); err != nil || info.Mode() != before.Mode() {
 		t.Fatal("credential inspection changed official file permissions")
 	}
 }

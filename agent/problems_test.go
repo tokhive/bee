@@ -136,10 +136,7 @@ func TestErrorCatalogIsCompleteAndDocumented(t *testing.T) {
 func writeEgress(t *testing.T, body string, mode os.FileMode) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "egress.json")
-	if err := os.WriteFile(path, []byte(body), mode); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(path, mode); err != nil {
+	if err := writeTestPrivateFile(path, []byte(body), mode); err != nil {
 		t.Fatal(err)
 	}
 	return path

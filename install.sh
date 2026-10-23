@@ -6,6 +6,7 @@
 # BEE_VERSION=v0.1.0 picks a release; BEE_INSTALL_DIR (default ~/.local/bin)
 # picks where bee goes. Linux also enables a systemd service for the installing
 # user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
+# Set BEE_INSTALL_INTERACTIVE=0 to skip the setup/start prompts.
 set -eu
 
 repository=tokhive/bee
@@ -35,6 +36,11 @@ case "$install_service" in
 0 | 1) ;;
 *) fail "BEE_INSTALL_SERVICE=$install_service; expected 0 or 1" ;;
 esac
+interactive=${BEE_INSTALL_INTERACTIVE:-1}
+case "$interactive" in
+0 | 1) ;;
+*) fail "BEE_INSTALL_INTERACTIVE=$interactive; expected 0 or 1" ;;
+esac
 
 service_path=/etc/systemd/system/tokhive-bee.service
 service_marker='# Managed by Bee install.sh.'
@@ -45,6 +51,91 @@ as_root() {
 	else
 		sudo "$@"
 	fi
+}
+
+shell_quote() {
+	printf "'"
+	printf '%s' "$1" | sed "s/'/'\\\\''/g"
+	printf "'"
+}
+
+service_help() {
+	printf 'Pair or validate: %s login --config %s' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
+	if [ ! -f "$config_path" ]; then
+		printf " --hive '<Hive URL>'"
+	fi
+	printf '\nSelect accounts: %s setup --config %s --egress-config %s\n' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")" "$(shell_quote "$egress_path")"
+	echo "Start the service: sudo systemctl start tokhive-bee"
+	echo "Check it: sudo systemctl status tokhive-bee"
+	echo "Logs: sudo journalctl -u tokhive-bee -f"
+	echo "Upgrades take effect after: sudo systemctl restart tokhive-bee"
+}
+
+# Keep the command's original diagnostics and exit status visible.
+wizard_command() {
+	operation=$1
+	shift
+	"$@" || {
+		status=$?
+		echo "install.sh: $operation failed (exit $status); Bee configuration: $config_path" >&2
+		exit "$status"
+	}
+}
+
+read_service_state() {
+	service_state=$(wizard_command 'systemctl show ActiveState for tokhive-bee' systemctl show --property=ActiveState --value tokhive-bee)
+}
+
+confirm() {
+	while :; do
+		printf '%s ' "$1"
+		IFS= read -r answer || return 1
+		case "$answer" in
+		[yY] | [yY][eE][sS]) return 0 ;;
+		[nN] | [nN][oO]) return 1 ;;
+		'') [ "$2" = yes ]; return ;;
+		*) echo "Please answer yes or no." ;;
+		esac
+	done
+}
+
+service_wizard() {
+	read_service_state
+	case "$service_state" in
+	active)
+		echo "Bee is already running. Restart to apply this installation."
+		confirm 'Restart Bee now? [y/N]' no || return 0
+		wizard_command 'systemctl restart tokhive-bee' as_root systemctl restart tokhive-bee
+		;;
+	inactive | failed)
+		confirm 'Set up and start Bee now? [Y/n]' yes || return 0
+		if [ -f "$config_path" ]; then
+			wizard_command 'bee login' "$directory/bee" login --config "$config_path"
+		else
+			while :; do
+				printf 'Hive address: '
+				IFS= read -r hive || return 0
+				[ -n "$hive" ] && break
+				echo "Hive address must not be empty."
+			done
+			wizard_command 'bee login' "$directory/bee" login --config "$config_path" --hive "$hive"
+		fi
+		[ -f "$config_path" ] || fail "bee login returned success but $config_path is missing; service was not started"
+		if [ ! -f "$egress_path" ]; then
+			wizard_command 'bee setup' "$directory/bee" setup --config "$config_path" --egress-config "$egress_path"
+		fi
+		[ -f "$egress_path" ] || fail "bee setup returned success but $egress_path is missing; service was not started"
+		wizard_command 'systemctl start tokhive-bee' as_root systemctl start tokhive-bee
+		;;
+	activating | reloading | deactivating)
+		echo "Bee service is $service_state; leaving the current process in place."
+		return 0
+		;;
+	*) fail "tokhive-bee ActiveState=$service_state; expected active, inactive, failed, activating, reloading, or deactivating" ;;
+	esac
+	read_service_state
+	[ "$service_state" = active ] || fail "tokhive-bee ActiveState=$service_state after service operation; expected active (check: sudo journalctl -u tokhive-bee)"
+	echo "Bee service is active."
 }
 
 # Environment= and ExecStart= have different dollar expansion rules. Both
@@ -188,9 +279,13 @@ EOF
 	as_root systemctl daemon-reload || fail "systemctl daemon-reload failed after installing $service_path"
 	as_root systemctl enable tokhive-bee || fail "systemctl enable tokhive-bee failed for $service_path"
 	echo "Enabled tokhive-bee at boot, running as $install_user without an SSH login."
-	echo "Complete pairing and account setup as $install_user with bee start, then stop the foreground process with Ctrl-C."
-	echo "Start the service: sudo systemctl start tokhive-bee"
-	echo "Check it: sudo systemctl status tokhive-bee"
-	echo "Logs: sudo journalctl -u tokhive-bee -f"
-	echo "Upgrades take effect after: sudo systemctl restart tokhive-bee"
+	# stdout alone does not imply a controlling terminal. Probe in a subshell so
+	# failure to open /dev/tty cannot abort unattended installation. Never read
+	# answers from the script's stdin: it may still contain curl's script body.
+	if [ "$interactive" = 1 ] && [ -t 1 ] && (exec 2>/dev/null; : <>/dev/tty); then
+		service_wizard </dev/tty
+	fi
+	service_help
+else
+	printf 'Start Bee and complete setup: %s start\n' "$(shell_quote "$directory/bee")"
 fi

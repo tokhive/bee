@@ -94,7 +94,7 @@ export function Metrics({ snapshot, onRetry }: { snapshot: DesktopSnapshot; onRe
             <div key={label}>
               <p>{t(label)}</p>
               <div className="amount">
-                <span>¥</span>
+                <span>$</span>
                 {formatAmount(amount)}
               </div>
               <small>{t(caption)}</small>

@@ -113,10 +113,10 @@ jobs:
           node --test desktop/tests/linux-appimage.test.mjs 2>&1 | tee desktop-ci-evidence/appimage-tooling.log
           npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
 
-      - name: Locked Chromium browser E2E
+      - name: Locked Chromium, Firefox and WebKit browser E2E
         run: |
           unset FORCE_COLOR NO_COLOR
-          npm --prefix desktop exec -- playwright install --with-deps chromium 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop exec -- playwright install --with-deps chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
           npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
 
       - name: Build actual native Bee and test Rust bridge

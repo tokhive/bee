@@ -20,7 +20,7 @@ for (const [amount, expected] of cases) {
     await page.route('**/src/client/demo.ts', async (route) => {
       const response = await route.fetch();
       let body = await response.text();
-      for (const fixture of ['128.560000000', '6.820000000', '382.140000000']) {
+      for (const fixture of ['128.560000000', '12.400000000', '382.140000000']) {
         expect(body).toContain(fixture);
         body = body.replaceAll(fixture, amount);
       }
@@ -28,9 +28,9 @@ for (const [amount, expected] of cases) {
     });
     await page.goto('/');
     await expect(page.getByRole('region', { name: '收益摘要' }).locator('.amount')).toHaveText([
-      `¥${expected}`,
-      `¥${expected}`,
-      `¥${expected}`,
+      `$${expected}`,
+      `$${expected}`,
+      `$${expected}`,
     ]);
   });
 }

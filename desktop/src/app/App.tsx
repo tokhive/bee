@@ -1,3 +1,4 @@
+import { LifecycleControls } from '../features/lifecycle/LifecycleControls';
 import { preferenceScope, defaultHive } from '../features/settings/preferences';
 import { t, useLanguage } from '../i18n/index';
 import { SettingsPage } from '../features/settings/SettingsPage';
@@ -186,6 +187,7 @@ export function App({
           </>
         )
       )}
+      {snapshot?.mode === 'demo' && <LifecycleControls client={client} snapshot={snapshot} />}
       {message && (
         <p className="operation-message" role="status">
           {t(message)}

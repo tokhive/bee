@@ -46,6 +46,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
   });
   let state: DesktopSnapshot = {
     mode: 'demo',
+    lifecycle: { dispatchStopped: false },
     binding: ready({
       state: fresh || selected === 'configured' ? 'unbound' : 'bound',
       loggedIn: !fresh,
@@ -70,7 +71,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
     ),
     earnings: ready({
       balance: '128.560000000',
-      today: '6.820000000',
+      today: '12.400000000',
       total: '382.140000000',
     }),
     finance: ready(initialFinance(undefined, undefined, selected === 'earnings-empty')),
@@ -193,6 +194,38 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
     async dispatch(command) {
       // A local delay exposes operation progress without contacting any business service.
       await new Promise((resolve) => setTimeout(resolve, 120));
+      if (command.type === 'lifecycle.wait' || command.type === 'lifecycle.check' || command.type === 'lifecycle.finish' || command.type === 'lifecycle.cancel') {
+        const prior = state.lifecycle!;
+        if (prior.requestId && prior.requestId !== command.requestId && !prior.finished)
+          return fail('DEMO_LIFECYCLE_STALE', `生命周期意图检查失败：requestId=${command.requestId}，active=${prior.requestId}；不修改当前临时派发状态。`);
+        if (prior.requestId === command.requestId && prior.purpose !== command.purpose)
+          return fail('DEMO_LIFECYCLE_PURPOSE', `生命周期用途检查失败：purpose=${command.purpose}，active=${prior.purpose}。`);
+        if (selected === 'lifecycle-failed' && command.type !== 'lifecycle.cancel')
+          return fail('DEMO_LIFECYCLE_FAILED', `演示生命周期检查失败：scene=${selected}，action=${command.type}；未完成。`);
+        if (command.type === 'lifecycle.cancel') {
+          state.lifecycle = { dispatchStopped: false };
+        } else {
+          if (command.type === 'lifecycle.check' && !['tasks-loading', 'tasks-error', 'lifecycle-unknown', 'lifecycle-pending'].includes(selected))
+            state.tasks = ready({ kind: 'known', count: 0 });
+          if (command.type === 'lifecycle.wait')
+            state.lifecycle = { dispatchStopped: true, requestId: command.requestId, purpose: command.purpose };
+          if (selected === 'lifecycle-unknown' || selected === 'lifecycle-pending') {
+            publish();
+            return { kind: selected === 'lifecycle-pending' ? 'pending' : 'unknown', operationId: command.requestId, message: '演示生命周期结果未确认；请核对任务状态。' };
+          }
+          if (command.type === 'lifecycle.finish') {
+            const task = state.tasks;
+            if (!command.immediate && (task.status !== 'ready' || task.value.kind !== 'known' || task.value.count !== 0))
+              return fail('DEMO_LIFECYCLE_TASKS', `任务收尾检查失败：读取=${task.status}，任务=${task.value?.kind ?? 'unknown'}，count=${task.value?.kind === 'known' ? task.value.count : 'unknown'}；必须确认零任务。`);
+            // Immediate is offered only for a currently known positive count, never unknown.
+            if (command.immediate && (task.status !== 'ready' || task.value.kind !== 'known' || task.value.count <= 0))
+              return fail('DEMO_LIFECYCLE_IMMEDIATE', `立即操作检查失败：读取=${task.status}，任务=${task.value?.kind ?? 'unknown'}，count=${task.value?.kind === 'known' ? task.value.count : 'unknown'}；必须已知有任务。`);
+            state.lifecycle = { dispatchStopped: true, requestId: command.requestId, purpose: command.purpose, finished: true };
+          }
+        }
+        publish();
+        return { kind: 'confirmed', demo: true, message: '仅演示：生命周期操作已确认；未退出 App 或安装更新。' };
+      }
       if (command.type === 'refresh' || command.type === 'snapshot.refresh') {
         publish();
         return {
@@ -241,7 +274,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
             state.tasks = ready({ kind: 'known', count: 0 });
             state.preferences = ready(target);
             state.finance = ready(initialFinance(hive, ''));
-            state.earnings = ready({ balance: '128.560000000', today: '6.820000000', total: '382.140000000' });
+            state.earnings = ready({ balance: '128.560000000', today: '12.400000000', total: '382.140000000' });
             explicitlyRemoved.clear();
             finance.restore(state);
           } else {

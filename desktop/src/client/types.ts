@@ -114,10 +114,12 @@ export interface DesktopSnapshot {
   finance: ReadState<Finance>;
   tasks: ReadState<TaskState>;
   preferences: ReadState<Preferences>;
+  lifecycle?: { dispatchStopped: boolean; requestId?: string; purpose?: 'exit' | 'update'; finished?: boolean };
   diagnostics?: ReadState<import('../features/diagnostics/report').SanitizedDiagnostics>;
 }
 // Later feature tasks extend this union alongside their implementation.
 export type DesktopCommand =
+  | { type: 'lifecycle.wait' | 'lifecycle.check' | 'lifecycle.finish' | 'lifecycle.cancel'; requestId: string; purpose: 'exit' | 'update'; immediate?: boolean }
   | { type: 'runDiagnostics' | 'exportDiagnostics' }
   | { type: 'changeHive'; address: string }
   | { type: 'saveProxy'; address: string }

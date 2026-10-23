@@ -1,4 +1,7 @@
 export const scenes = [
+  'lifecycle-failed',
+  'lifecycle-unknown',
+  'lifecycle-pending',
   'ready',
   'diagnostics-partial',
   'diagnostics-export-error',

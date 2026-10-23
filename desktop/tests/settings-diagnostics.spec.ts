@@ -316,13 +316,16 @@ test('英文异步失败/未确认/空/加载场景及弹层无漏译', async ({
     await page.getByRole('button', { name: 'Save pricing', exact: true }).click();
     await expect(page.getByRole('alert')).toBeVisible(); await check();
   }
-  await page.goto('/?scene=transfer-unknown'); await nav(page, 'Earnings');
-  await page.getByRole('button', { name: 'Transfer to buyer balance', exact: true }).click();
-  await page.getByLabel('Transfer amount', { exact: true }).fill('1');
-  await page.getByRole('button', { name: 'Review transfer', exact: true }).click();
-  await page.getByRole('button', { name: 'Confirm transfer', exact: true }).click();
-  await expect(page.getByText('Result unconfirmed', { exact: false }).first()).toBeVisible(); await check();
-  expect(await page.evaluate(async () => [...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+  for (const [scene, receipt] of [['transfer-pending', 'Transfer processing'], ['transfer-unknown', 'Transfer result unconfirmed']]) {
+    await page.goto(`/?scene=${scene}`); await nav(page, 'Earnings');
+    await page.getByRole('button', { name: 'Transfer to buyer balance', exact: true }).click();
+    await page.getByLabel('Transfer amount', { exact: true }).fill('1');
+    await page.getByRole('button', { name: 'Review transfer', exact: true }).click();
+    await page.getByRole('button', { name: 'Confirm transfer', exact: true }).click();
+    // Await the dispatch receipt, not the earlier pending badge emitted by the subscription.
+    await expect(page.getByRole('status')).toContainText(receipt); await check();
+    expect(await page.evaluate(async () => [...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+  }
   await context.close();
 });
 

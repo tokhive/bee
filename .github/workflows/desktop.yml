@@ -96,9 +96,9 @@ jobs:
           npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
           npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
 
-      - name: Install locked Playwright Chromium and run browser E2E
+      - name: Install locked Playwright Chromium, Firefox and WebKit and run browser E2E
         run: |
-          npm --prefix desktop exec -- playwright install chromium 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop exec -- playwright install chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
           npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
 
       - name: Build and verify native Bee sidecar

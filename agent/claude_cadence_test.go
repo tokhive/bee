@@ -73,7 +73,7 @@ func TestClaudeIndependentReportIntervals(t *testing.T) {
 		_, plan := reports[count-1]["plan"]
 		_, model := reports[count-1]["models"]
 		if plan != metadata || model != metadata {
-			t.Fatalf("metadata presence plan=%v models=%v want=%v", plan, model, metadata)
+			t.Fatalf("report=%d metadata presence plan=%v models=%v want=%v; metadata_at=%s reported_at=%s", count, plan, model, metadata, source.capabilities.metadataAt.Format(time.RFC3339Nano), source.metadataReportedAt.Format(time.RFC3339Nano))
 		}
 	}
 	if err := sync(true); err != nil {
@@ -95,7 +95,11 @@ func TestClaudeIndependentReportIntervals(t *testing.T) {
 		t.Fatalf("models=%d usage=%d", models, usage)
 	}
 	due()
-	source.capabilities.metadataAt = time.Now().Add(-5 * time.Hour)
+	// The cached metadata and the last report describe the same observation.
+	// Age both so a refresh cannot alias the previous report on a coarse clock.
+	expiredMetadata := wallNow().Add(-beewire.CapabilityMetadataInterval - time.Second)
+	source.capabilities.metadataAt = expiredMetadata
+	source.metadataReportedAt = expiredMetadata
 	if err := sync(false); err != nil {
 		t.Fatal(err)
 	}

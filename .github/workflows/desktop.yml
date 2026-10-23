@@ -1,0 +1,160 @@
+name: Bee native desktop test packages
+
+# Deliberately manual: these jobs require provisioned, trusted native runners.
+'on':
+  workflow_dispatch:
+    inputs:
+      target:
+        description: Native target (all also covers both Windows and Ubuntu baselines)
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - aarch64-apple-darwin
+          - x86_64-apple-darwin
+          - x86_64-pc-windows-msvc
+          - x86_64-unknown-linux-gnu
+          - aarch64-unknown-linux-gnu
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}-${{ inputs.target }}
+  cancel-in-progress: false
+
+jobs:
+  native:
+    name: ${{ matrix.target }} / ${{ matrix.baseline }}
+    # Custom labels, NOT GitHub-hosted images. See desktop/README.md for the
+    # eight required OS/CPU combinations and provisioning requirements.
+    runs-on:
+      - self-hosted
+      - bee-${{ matrix.target }}-${{ matrix.baseline }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.target == 'all' && '["aarch64-apple-darwin","x86_64-apple-darwin","x86_64-pc-windows-msvc","x86_64-unknown-linux-gnu","aarch64-unknown-linux-gnu"]' || format('["{0}"]', inputs.target)) }}
+        baseline: [minimum, current]
+        exclude:
+          - target: aarch64-apple-darwin
+            baseline: current
+          - target: x86_64-apple-darwin
+            baseline: current
+    defaults:
+      run:
+        # Windows runners also need Git Bash and the x64 MSVC environment.
+        shell: bash
+    env:
+      CI: 'true'
+      BEE_CI_TARGET: ${{ matrix.target }}
+      BEE_CI_BASELINE: ${{ matrix.baseline }}
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      APPLE_SIGNING_IDENTITY: '-'
+      PLAYWRIGHT_HTML_OPEN: never
+      GOTOOLCHAIN: local
+      CARGO_TARGET_DIR: ${{ github.workspace }}/desktop/src-tauri/target
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Record native tool versions and check actual OS / CPU / host
+        run: |
+          mkdir -p desktop-ci-evidence
+          node --version 2>&1 | tee desktop-ci-evidence/tools.log
+          npm --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          go version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          rustc -vV 2>&1 | tee -a desktop-ci-evidence/tools.log
+          cargo --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          git --version 2>&1 | tee -a desktop-ci-evidence/tools.log
+          node desktop/scripts/ci-native-evidence.mjs 2>&1 | tee desktop-ci-evidence/native.log
+          node desktop/scripts/preflight.mjs 2>&1 | tee desktop-ci-evidence/preflight.log
+
+      - name: Prepare and verify pinned TEE source
+        run: node desktop/scripts/prepare-tee.mjs 2>&1 | tee desktop-ci-evidence/tee.log
+
+      - name: Go vet
+        run: go vet ./... 2>&1 | tee desktop-ci-evidence/go-vet.log
+
+      - name: Go tests
+        run: go test ./... -count=1 2>&1 | tee desktop-ci-evidence/go-test.log
+
+      - name: Install locked frontend dependencies
+        run: npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
+
+      - name: Frontend typecheck and build
+        run: |
+          npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
+          npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
+
+      - name: Tooling and bridge tests
+        run: |
+          npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
+          npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
+
+      - name: Install locked Playwright Chromium and run browser E2E
+        run: |
+          npm --prefix desktop exec -- playwright install chromium 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
+
+      - name: Build and verify native Bee sidecar
+        run: node desktop/scripts/build-bee.mjs --target "$BEE_CI_TARGET" 2>&1 | tee desktop-ci-evidence/sidecar.log
+
+      - name: Locked Rust tests using the native Bee
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
+
+      - name: Build development installer (ad-hoc on macOS; no production signing)
+        env:
+          BEE_CI_BUNDLE: ${{ contains(matrix.target, 'apple') && 'dmg' || contains(matrix.target, 'windows') && 'nsis' || 'appimage' }}
+        run: npm --prefix desktop run tauri -- build --debug --ci --bundles "$BEE_CI_BUNDLE" -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+
+      - name: Verify signed macOS App seal and bundled Bee after packaging
+        if: ${{ contains(matrix.target, 'apple') }}
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml signed -- --ignored 2>&1 | tee desktop-ci-evidence/signed-app.log
+
+      - name: Record test installer hashes
+        run: |
+          node --input-type=module <<'NODE'
+          import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { createHash } from 'node:crypto';
+          const root = 'desktop/src-tauri/target/debug/bundle';
+          const target = process.env.BEE_CI_TARGET;
+          const suffix = target.includes('apple') ? '.dmg' : target.includes('windows') ? '.exe' : '.AppImage';
+          function files(dir) {
+            return readdirSync(dir, { withFileTypes: true }).flatMap(e => e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)]);
+          }
+          const packages = files(root).filter(path => path.endsWith(suffix));
+          if (packages.length === 0) throw new Error(`test installer missing: directory=${root}; actual matching files=0; required suffix=${suffix}; target=${target}`);
+          const manifest = packages.map(path => ({ path, bytes: statSync(path).size, sha256: createHash('sha256').update(readFileSync(path)).digest('hex') }));
+          writeFileSync('desktop-ci-evidence/packages.json', JSON.stringify(manifest, null, 2) + '\n');
+          console.log(JSON.stringify(manifest, null, 2));
+          NODE
+
+      - name: Upload native test package and sidecar provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-test-${{ matrix.target }}-${{ matrix.baseline }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/src-tauri/target/debug/bundle/**/*.dmg
+            desktop/src-tauri/target/debug/bundle/**/*.exe
+            desktop/src-tauri/target/debug/bundle/**/*.AppImage
+            desktop/src-tauri/binaries/bee-${{ matrix.target }}*.source.json
+
+      - name: Upload checks and failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-checks-${{ matrix.target }}-${{ matrix.baseline }}-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop-ci-evidence/
+            desktop/test-results/
+            desktop/playwright-report/

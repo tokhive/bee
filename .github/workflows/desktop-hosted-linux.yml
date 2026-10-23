@@ -124,11 +124,12 @@ jobs:
           node desktop/scripts/build-bee.mjs --target "$BEE_CI_TARGET" 2>&1 | tee desktop-ci-evidence/sidecar.log
           dbus-run-session -- xvfb-run -a cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
 
-      - name: Build actual test AppImage
+      - name: Build P1 demo development AppImage
         id: bundle
         run: |
           unset FORCE_COLOR NO_COLOR
-          npm --prefix desktop run tauri -- build --debug --ci --bundles appimage -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+          printf '%s\n' 'P1 demo development package; tauri.demo.conf.json; no live business integration or production signing.' | tee desktop-ci-evidence/package-scope.log
+          npm --prefix desktop run tauri -- build --debug --ci --config src-tauri/tauri.demo.conf.json --bundles appimage -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
           mapfile -d '' packages < <(find desktop/src-tauri/target/debug/bundle -type f -name '*.AppImage' -print0)
           if [ "${#packages[@]}" -ne 1 ]; then
             printf 'AppImage count mismatch: actual=%s; required=1\n' "${#packages[@]}" >&2

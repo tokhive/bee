@@ -184,7 +184,7 @@ jobs:
           'Windows cfg applies; UNIX process and macOS signed-App tests are excluded; fixture tests are distinct from real Bee; GUI/installed package not tested.' | Tee-Object -FilePath desktop-ci-evidence/test-boundaries.log
           cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | Tee-Object -FilePath desktop-ci-evidence/cargo-test.log
           if ($LASTEXITCODE -ne 0) { throw "Native Cargo tests failed: exit=$LASTEXITCODE; linker=$actualLinker; see original cargo-test.log output above" }
-      - name: Build development NSIS using locked Tauri tooling
+      - name: Build P1 demo development NSIS using locked Tauri tooling
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -194,8 +194,9 @@ jobs:
           "Tauri linker actual=$actualLinker; required=$expectedLinker" | Tee-Object -FilePath desktop-ci-evidence/tauri-linker.log
           if ($actualLinker -ine $expectedLinker) { throw "Tauri linker mismatch: actual=$actualLinker; required=$expectedLinker" }
           "Linker version=$((Get-Item $actualLinker).VersionInfo.FileVersion)" | Tee-Object -FilePath desktop-ci-evidence/tauri-linker.log -Append
-          npm.cmd --prefix desktop run tauri -- build --debug --ci --bundles nsis -- --locked 2>&1 | Tee-Object -FilePath desktop-ci-evidence/tauri-build.log
-          if ($LASTEXITCODE -ne 0) { throw "Development NSIS build failed: exit=$LASTEXITCODE; linker=$actualLinker; see original tauri-build.log output above" }
+          'P1 demo development package; tauri.demo.conf.json; no live business integration or production signing.' | Tee-Object -FilePath desktop-ci-evidence/package-scope.log
+          npm.cmd --prefix desktop run tauri -- build --debug --ci --config src-tauri/tauri.demo.conf.json --bundles nsis -- --locked 2>&1 | Tee-Object -FilePath desktop-ci-evidence/tauri-build.log
+          if ($LASTEXITCODE -ne 0) { throw "P1 demo development NSIS build failed: exit=$LASTEXITCODE; linker=$actualLinker; see original tauri-build.log output above" }
       - name: Record source, sidecar and NSIS hashes
         shell: pwsh
         run: |
@@ -210,7 +211,7 @@ jobs:
           }
           $packages = @(Get-ChildItem desktop/src-tauri/target/debug/bundle/nsis -Filter '*.exe' -File)
           if ($packages.Count -eq 0) { throw 'NSIS package missing: actual=0 EXE files; required=desktop/src-tauri/target/debug/bundle/nsis/*.exe' }
-          $manifest = @{ scope='Server2022 x64 development build, not installed or launched'; revision=$env:GITHUB_SHA; teeRevision=$tee; sidecar=@{ path=$sidecar; bytes=(Get-Item $sidecar).Length; sha256=$sidecarHash; source=$source; sourceSha256=(Get-FileHash $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant() }; packages=@($packages | ForEach-Object { @{ path=$_.FullName; bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } }) }
+          $manifest = @{ scope='Server2022 x64 P1 demo development build, not installed or launched'; revision=$env:GITHUB_SHA; teeRevision=$tee; sidecar=@{ path=$sidecar; bytes=(Get-Item $sidecar).Length; sha256=$sidecarHash; source=$source; sourceSha256=(Get-FileHash $sourcePath -Algorithm SHA256).Hash.ToLowerInvariant() }; packages=@($packages | ForEach-Object { @{ path=$_.FullName; bytes=$_.Length; sha256=(Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant() } }) }
           $manifest | ConvertTo-Json -Depth 8 | Tee-Object -FilePath desktop-ci-evidence/packages.json
 
       - name: Upload Server 2022 development test installer and sidecar provenance

@@ -1,0 +1,225 @@
+name: Desktop hosted macOS 15 Intel supplemental evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/bee-desktop-p0]
+    paths:
+      - .github/workflows/desktop-hosted-macos.yml
+      - desktop/**
+      - agent/**
+      - cmd/**
+      - beewire/**
+      - desktopbridge/**
+      - logx/**
+      - relay/**
+      - telemetry/**
+      - go.mod
+      - go.sum
+      - TEE_REVISION
+      - rust-toolchain.toml
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosted-macos-intel-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  macos-intel:
+    # Supplemental current-OS evidence; the strict macOS 13 matrix stays separate.
+    if: ${{ github.repository == 'wangdayong228/bee' && github.ref == 'refs/heads/feat/bee-desktop-p0' }}
+    name: macOS 15 Intel native Bee, Rust bridge and P1 demo DMG
+    runs-on: macos-15-intel
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+    env:
+      CI: 'true'
+      GOTOOLCHAIN: local
+      RUSTUP_TOOLCHAIN: 1.94.0-x86_64-apple-darwin
+      BEE_CI_TARGET: x86_64-apple-darwin
+      CARGO_TARGET_DIR: ${{ github.workspace }}/desktop/src-tauri/target
+      MACOSX_DEPLOYMENT_TARGET: '13.0'
+      APPLE_SIGNING_IDENTITY: '-'
+      PLAYWRIGHT_HTML_OPEN: never
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          architecture: x64
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.3
+          architecture: x64
+          cache: false
+
+      - name: Select fixed Xcode and native Rust
+        run: |
+          mkdir -p desktop-ci-evidence
+          sudo xcode-select --switch /Applications/Xcode_16.4.app 2>&1 | tee desktop-ci-evidence/xcode-select.log
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --component rustfmt --component clippy 2>&1 | tee desktop-ci-evidence/rust-install.log
+
+      - name: Check actual macOS 15 Intel hosts and SDK without claiming macOS 13
+        run: |
+          node --input-type=module <<'NODE' 2>&1 | tee desktop-ci-evidence/native.log
+          import { execFileSync } from 'node:child_process';
+          import { writeFileSync } from 'node:fs';
+          const evidence = {
+            scope: 'macOS 15 Intel supplemental native evidence; not macOS 13 minimum',
+            revision: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID,
+            imageOS: process.env.ImageOS, imageVersion: process.env.ImageVersion,
+            target: process.env.BEE_CI_TARGET, checks: [],
+            gui: 'not tested', tray: 'not tested', cleanUserInstall: 'not tested', productionSigning: 'not performed',
+          };
+          const save = () => writeFileSync('desktop-ci-evidence/native.json', JSON.stringify(evidence, null, 2) + '\n');
+          const run = (file, args) => execFileSync(file, args, { encoding: 'utf8' }).trim();
+          function check(name, actual, expected, ok = actual === expected) {
+            evidence.checks.push({ name, actual, expected, ok });
+            save();
+            console.log(`${ok ? 'OK' : 'FAIL'} ${name}: actual=${JSON.stringify(actual)}; required=${JSON.stringify(expected)}`);
+            if (!ok) throw new Error(`${name} mismatch: actual=${JSON.stringify(actual)}; required=${JSON.stringify(expected)}`);
+          }
+          try {
+            check('Source HEAD', run('git', ['rev-parse', 'HEAD']), evidence.revision);
+            check('Node platform/arch/version', `${process.platform}/${process.arch}/${process.version}`, 'darwin/x64/v24.22.1');
+            check('Kernel architecture', run('uname', ['-m']), 'x86_64');
+            const translated = run('sysctl', ['-in', 'sysctl.proc_translated']);
+            check('No Rosetta', translated, '0 or empty', ['', '0'].includes(translated));
+            const os = run('sw_vers', ['-productVersion']);
+            check('Hosted OS', os, 'macOS 15.x', /^15\./.test(os));
+            console.log(run('sw_vers', []));
+            check('Selected Xcode', run('xcode-select', ['-p']), '/Applications/Xcode_16.4.app/Contents/Developer');
+            const xcode = run('xcodebuild', ['-version']);
+            check('Xcode version', xcode, 'Xcode 16.4 / Build 16F6', xcode === 'Xcode 16.4\nBuild version 16F6');
+            check('macOS SDK', run('xcrun', ['--show-sdk-version']), '15.5');
+            console.log(run('xcrun', ['clang', '--version']));
+            check('Go version', run('go', ['version']), 'go version go1.27.3 darwin/amd64');
+            check('Go build/host', run('go', ['env', 'GOOS', 'GOARCH', 'GOHOSTOS', 'GOHOSTARCH']), 'darwin\namd64\ndarwin\namd64');
+            const rust = run('rustc', ['-vV']);
+            check('Rust version', rust.split('\n')[0], 'rustc 1.94.0', /^rustc 1\.94\.0\s/.test(rust));
+            check('Rust host', /^host: (.+)$/m.exec(rust)?.[1], 'x86_64-apple-darwin');
+            console.log(rust);
+            const cargo = run('cargo', ['--version']);
+            check('Cargo version', cargo, 'cargo 1.94.0', /^cargo 1\.94\.0\s/.test(cargo));
+            console.log(run('npm', ['--version']));
+            console.log(run('git', ['--version']));
+            evidence.ok = true;
+            save();
+          } catch (error) {
+            evidence.ok = false;
+            evidence.error = { message: error.message, status: error.status, stdout: error.stdout?.toString(), stderr: error.stderr?.toString() };
+            save();
+            console.error(evidence.error);
+            throw error;
+          }
+          NODE
+          node desktop/scripts/preflight.mjs 2>&1 | tee desktop-ci-evidence/preflight.log
+
+      - name: Prepare and verify canonical fixed TEE
+        run: |
+          node desktop/scripts/prepare-tee.mjs 2>&1 | tee desktop-ci-evidence/tee.log
+          tee_archive=$(cut -d ' ' -f1 .cache/reclaim-tee/.archive-sha256)
+          tee_revision=$(cat TEE_REVISION)
+          printf 'TEE revision=%s; archiveSHA256=%s\n' "$tee_revision" "$tee_archive" | tee desktop-ci-evidence/tee-source.log
+          if [ "$tee_revision" != a687f86d781e825c04c1d84d75b41bba5d862254 ] || [ "$tee_archive" != 4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38 ]; then
+            printf 'Pinned TEE mismatch: actualRevision=%s; requiredRevision=a687f86d781e825c04c1d84d75b41bba5d862254; actualArchiveSHA256=%s; requiredArchiveSHA256=4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38\n' "$tee_revision" "$tee_archive" >&2
+            exit 1
+          fi
+
+      - name: Go vet and full native regression
+        run: |
+          go vet ./... 2>&1 | tee desktop-ci-evidence/go-vet.log
+          go test ./... -count=1 2>&1 | tee desktop-ci-evidence/go-test.log
+
+      - name: Locked frontend install, builds, tooling and bridge tests
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
+          npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
+          npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
+          npm --prefix desktop run build:demo 2>&1 | tee desktop-ci-evidence/frontend-demo-build.log
+          npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
+          npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
+
+      - name: Locked Chromium, Firefox and WebKit browser E2E
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          npm --prefix desktop exec -- playwright install chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
+
+      - name: Build actual native Bee and test locked Rust bridge
+        run: |
+          node desktop/scripts/build-bee.mjs --target "$BEE_CI_TARGET" 2>&1 | tee desktop-ci-evidence/sidecar.log
+          cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
+
+      - name: Build ad-hoc signed P1 demo development App and DMG
+        run: |
+          unset FORCE_COLOR NO_COLOR
+          printf '%s\n' 'P1 demo development package; tauri.demo.conf.json; no live business integration, GUI acceptance, production signing or notarization.' | tee desktop-ci-evidence/package-scope.log
+          npm --prefix desktop run tauri -- build --debug --ci --config src-tauri/tauri.demo.conf.json --bundles dmg -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+
+      - name: Verify packaged App seal and real bundled Bee without GUI
+        run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml signed -- --ignored 2>&1 | tee desktop-ci-evidence/signed-app.log
+
+      - name: Record actual Mach-O metadata, source and DMG hashes
+        run: |
+          for binary in "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/"*; do
+            file "$binary" | tee -a desktop-ci-evidence/macho.log
+            otool -l "$binary" | tee -a desktop-ci-evidence/macho.log
+          done
+          node --input-type=module <<'NODE' 2>&1 | tee desktop-ci-evidence/packages.log
+          import { readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+          import { createHash } from 'node:crypto';
+          import { join } from 'node:path';
+          const sha = path => createHash('sha256').update(readFileSync(path)).digest('hex');
+          const sidecar = `desktop/src-tauri/binaries/bee-${process.env.BEE_CI_TARGET}`;
+          const sourcePath = `${sidecar}.source.json`;
+          const source = JSON.parse(readFileSync(sourcePath, 'utf8'));
+          const teeRevision = readFileSync('TEE_REVISION', 'utf8').trim();
+          for (const [key, expected] of Object.entries({ revision: process.env.GITHUB_SHA, teeRevision, target: process.env.BEE_CI_TARGET, goos: 'darwin', goarch: 'amd64', go: 'go version go1.27.3 darwin/amd64', binarySha256: sha(sidecar) })) {
+            if (source[key] !== expected) throw new Error(`Sidecar ${key} mismatch: actual=${JSON.stringify(source[key])}; required=${JSON.stringify(expected)}`);
+          }
+          const dir = 'desktop/src-tauri/target/debug/bundle/dmg';
+          const packages = readdirSync(dir).filter(name => name.endsWith('.dmg')).map(name => join(dir, name));
+          if (packages.length !== 1) throw new Error(`DMG count mismatch: actual=${packages.length}; files=${JSON.stringify(packages)}; required=1; directory=${dir}`);
+          const describe = path => ({ path, bytes: statSync(path).size, sha256: sha(path) });
+          const report = {
+            scope: 'macOS 15 Intel P1 demo development build; no GUI, tray, clean-user installation or macOS 13 verification',
+            revision: process.env.GITHUB_SHA, runId: process.env.GITHUB_RUN_ID, teeRevision,
+            source, sourceFile: describe(sourcePath), originalBee: describe(sidecar),
+            signedBundledBee: describe('desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/bee'),
+            packages: packages.map(describe),
+          };
+          writeFileSync('desktop-ci-evidence/packages.json', JSON.stringify(report, null, 2) + '\n');
+          console.log(JSON.stringify(report, null, 2));
+          NODE
+
+      - name: Upload P1 demo development DMG and sidecar provenance
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-macos15-intel-test-${{ github.sha }}
+          if-no-files-found: error
+          retention-days: 14
+          path: |
+            desktop/src-tauri/target/debug/bundle/dmg/*.dmg
+            desktop/src-tauri/binaries/bee-x86_64-apple-darwin.source.json
+            desktop-ci-evidence/packages.json
+
+      - name: Retain actual environment, checks and failure evidence
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bee-macos15-intel-checks-${{ github.sha }}
+          if-no-files-found: warn
+          retention-days: 14
+          path: |
+            desktop-ci-evidence/
+            desktop/test-results/
+            desktop/playwright-report/

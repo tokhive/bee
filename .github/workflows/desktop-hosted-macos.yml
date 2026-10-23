@@ -163,7 +163,7 @@ jobs:
         run: |
           unset FORCE_COLOR NO_COLOR
           printf '%s\n' 'P1 demo development package; tauri.demo.conf.json; no live business integration, GUI acceptance, production signing or notarization.' | tee desktop-ci-evidence/package-scope.log
-          npm --prefix desktop run tauri -- build --debug --ci --config src-tauri/tauri.demo.conf.json --bundles dmg -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+          npm --prefix desktop run tauri -- build --debug --ci --config src-tauri/tauri.demo.conf.json --bundles app,dmg -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
 
       - name: Verify packaged App seal and real bundled Bee without GUI
         run: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml signed -- --ignored 2>&1 | tee desktop-ci-evidence/signed-app.log

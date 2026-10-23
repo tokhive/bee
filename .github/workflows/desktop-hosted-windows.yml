@@ -172,14 +172,30 @@ jobs:
           set -euo pipefail
           node desktop/scripts/build-bee.mjs --target x86_64-pc-windows-msvc 2>&1 | tee desktop-ci-evidence/sidecar.log
       - name: Test locked native Rust including real Bee handshake, ping and stop
+        shell: pwsh
         run: |
-          set -euo pipefail
-          echo 'Windows cfg applies; UNIX process and macOS signed-App tests are excluded; fixture tests are distinct from real Bee; GUI/installed package not tested.' | tee desktop-ci-evidence/test-boundaries.log
-          cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | tee desktop-ci-evidence/cargo-test.log
+          $ErrorActionPreference = 'Stop'
+          $expectedLinker = [IO.Path]::GetFullPath((Join-Path $env:VCToolsInstallDir 'bin/Hostx64/x64/link.exe'))
+          $linker = Get-Command link.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+          $actualLinker = if ($linker) { [IO.Path]::GetFullPath($linker.Source) } else { '<missing>' }
+          "Cargo linker actual=$actualLinker; required=$expectedLinker" | Tee-Object -FilePath desktop-ci-evidence/cargo-linker.log
+          if ($actualLinker -ine $expectedLinker) { throw "Cargo linker mismatch: actual=$actualLinker; required=$expectedLinker" }
+          "Linker version=$((Get-Item $actualLinker).VersionInfo.FileVersion)" | Tee-Object -FilePath desktop-ci-evidence/cargo-linker.log -Append
+          'Windows cfg applies; UNIX process and macOS signed-App tests are excluded; fixture tests are distinct from real Bee; GUI/installed package not tested.' | Tee-Object -FilePath desktop-ci-evidence/test-boundaries.log
+          cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml 2>&1 | Tee-Object -FilePath desktop-ci-evidence/cargo-test.log
+          if ($LASTEXITCODE -ne 0) { throw "Native Cargo tests failed: exit=$LASTEXITCODE; linker=$actualLinker; see original cargo-test.log output above" }
       - name: Build development NSIS using locked Tauri tooling
+        shell: pwsh
         run: |
-          set -euo pipefail
-          npm --prefix desktop run tauri -- build --debug --ci --bundles nsis -- --locked 2>&1 | tee desktop-ci-evidence/tauri-build.log
+          $ErrorActionPreference = 'Stop'
+          $expectedLinker = [IO.Path]::GetFullPath((Join-Path $env:VCToolsInstallDir 'bin/Hostx64/x64/link.exe'))
+          $linker = Get-Command link.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+          $actualLinker = if ($linker) { [IO.Path]::GetFullPath($linker.Source) } else { '<missing>' }
+          "Tauri linker actual=$actualLinker; required=$expectedLinker" | Tee-Object -FilePath desktop-ci-evidence/tauri-linker.log
+          if ($actualLinker -ine $expectedLinker) { throw "Tauri linker mismatch: actual=$actualLinker; required=$expectedLinker" }
+          "Linker version=$((Get-Item $actualLinker).VersionInfo.FileVersion)" | Tee-Object -FilePath desktop-ci-evidence/tauri-linker.log -Append
+          npm.cmd --prefix desktop run tauri -- build --debug --ci --bundles nsis -- --locked 2>&1 | Tee-Object -FilePath desktop-ci-evidence/tauri-build.log
+          if ($LASTEXITCODE -ne 0) { throw "Development NSIS build failed: exit=$LASTEXITCODE; linker=$actualLinker; see original tauri-build.log output above" }
       - name: Record source, sidecar and NSIS hashes
         shell: pwsh
         run: |

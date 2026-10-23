@@ -8,6 +8,8 @@ const platforms: Platform[] = ['openai', 'claude'];
 const names = { openai: 'OpenAI', claude: 'Claude' };
 export function createDemoClient(scene: string, storage?: Storage): BeeClient {
   const selected = parseScene(scene);
+  // Client-lifetime history prevents retired IDs from becoming new intents again.
+  const lifecycleRequests = new Map<string, { purpose: 'exit' | 'update'; terminal?: 'cancelled' | 'finished' }>();
   const now = new Date().toISOString();
   const ready = <T>(value: T): ReadState<T> => ({
     status: 'ready',
@@ -196,13 +198,25 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
       await new Promise((resolve) => setTimeout(resolve, 120));
       if (command.type === 'lifecycle.wait' || command.type === 'lifecycle.check' || command.type === 'lifecycle.finish' || command.type === 'lifecycle.cancel') {
         const prior = state.lifecycle!;
+        const request = lifecycleRequests.get(command.requestId);
+        if (request && request.purpose !== command.purpose)
+          return fail('DEMO_LIFECYCLE_PURPOSE', `生命周期用途检查失败：requestId=${command.requestId}，purpose=${command.purpose}，bound=${request.purpose}。`);
+        if (request?.terminal) {
+          // Only the current completed finish can replay its receipt, without mutation/publication.
+          if (request.terminal === 'finished' && prior.requestId === command.requestId && command.type === 'lifecycle.finish')
+            return { kind: 'confirmed', demo: true, message: '仅演示：生命周期操作已确认；未退出 App 或安装更新。' };
+          return fail('DEMO_LIFECYCLE_STALE', `生命周期终态检查失败：requestId=${command.requestId}，terminal=${request.terminal}，action=${command.type}，active=${prior.requestId ?? 'none'}；不修改当前状态。`);
+        }
         if (prior.requestId && prior.requestId !== command.requestId && !prior.finished)
           return fail('DEMO_LIFECYCLE_STALE', `生命周期意图检查失败：requestId=${command.requestId}，active=${prior.requestId}；不修改当前临时派发状态。`);
-        if (prior.requestId === command.requestId && prior.purpose !== command.purpose)
-          return fail('DEMO_LIFECYCLE_PURPOSE', `生命周期用途检查失败：purpose=${command.purpose}，active=${prior.purpose}。`);
+        if (!request) {
+          lifecycleRequests.set(command.requestId, { purpose: command.purpose });
+          state.lifecycle = { dispatchStopped: prior.dispatchStopped, requestId: command.requestId, purpose: command.purpose };
+        }
         if (selected === 'lifecycle-failed' && command.type !== 'lifecycle.cancel')
           return fail('DEMO_LIFECYCLE_FAILED', `演示生命周期检查失败：scene=${selected}，action=${command.type}；未完成。`);
         if (command.type === 'lifecycle.cancel') {
+          lifecycleRequests.get(command.requestId)!.terminal = 'cancelled';
           state.lifecycle = { dispatchStopped: false };
         } else {
           if (command.type === 'lifecycle.check' && !['tasks-loading', 'tasks-error', 'lifecycle-unknown', 'lifecycle-pending'].includes(selected))
@@ -220,6 +234,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
             // Immediate is offered only for a currently known positive count, never unknown.
             if (command.immediate && (task.status !== 'ready' || task.value.kind !== 'known' || task.value.count <= 0))
               return fail('DEMO_LIFECYCLE_IMMEDIATE', `立即操作检查失败：读取=${task.status}，任务=${task.value?.kind ?? 'unknown'}，count=${task.value?.kind === 'known' ? task.value.count : 'unknown'}；必须已知有任务。`);
+            lifecycleRequests.get(command.requestId)!.terminal = 'finished';
             state.lifecycle = { dispatchStopped: true, requestId: command.requestId, purpose: command.purpose, finished: true };
           }
         }

@@ -145,3 +145,77 @@ test('核对零任务后等待完成回执期间保持处理中，不暴露无�
   await expect(page.getByRole('dialog').getByRole('button', { name: '取消', exact: true })).toBeDisabled();
   await expect(page.getByTestId('lifecycle-status')).toContainText('流程已完成');
 });
+
+for (const oldAction of ['cancel', 'check', 'wait', 'finish'] as const) {
+  test(`完成态拒绝旧请求 ${oldAction} 且不改任务或主动暂停`, async ({ page }) => {
+    await page.goto('/');
+    const r = await page.evaluate(async (action) => {
+      const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+      const c = createDemoClient('active-tasks');
+      await c.dispatch({ type: 'lifecycle.wait', requestId: 'old', purpose: 'exit' });
+      await c.dispatch({ type: 'lifecycle.cancel', requestId: 'old', purpose: 'exit' });
+      await c.dispatch({ type: 'lifecycle.wait', requestId: 'new', purpose: 'update' });
+      await c.dispatch({ type: 'lifecycle.check', requestId: 'new', purpose: 'update' });
+      await c.dispatch({ type: 'lifecycle.finish', requestId: 'new', purpose: 'update' });
+      const before = await c.snapshot();
+      const receipt = await c.dispatch({ type: `lifecycle.${action}`, requestId: 'old', purpose: 'exit' });
+      return { before, receipt, after: await c.snapshot() };
+    }, oldAction);
+    expect(r.receipt.kind).toBe('failed');
+    expect(r.after).toEqual(r.before);
+  });
+}
+
+test('完成请求不可重放撤销或改用途，重复finish无副作用，旧完成请求也不能影响新意图', async ({ page }) => {
+  await page.goto('/');
+  const results = await page.evaluate(async () => {
+    const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+    const c = createDemoClient('ready');
+    await c.dispatch({ type: 'lifecycle.finish', requestId: 'done', purpose: 'exit' });
+    const before = await c.snapshot();
+    const attempts = [];
+    for (const action of ['cancel', 'check', 'wait', 'finish']) {
+      const receipt = await c.dispatch({ type: `lifecycle.${action}`, requestId: 'done', purpose: 'exit' });
+      attempts.push({ action, receipt, snapshot: await c.snapshot() });
+    }
+    const changedPurpose = await c.dispatch({ type: 'lifecycle.finish', requestId: 'done', purpose: 'update' });
+    await c.dispatch({ type: 'lifecycle.wait', requestId: 'next', purpose: 'update' });
+    const next = await c.snapshot();
+    const stale = [];
+    for (const action of ['cancel', 'check', 'wait', 'finish']) stale.push(await c.dispatch({ type: `lifecycle.${action}`, requestId: 'done', purpose: 'exit' }));
+    return { before, attempts, changedPurpose, next, stale, final: await c.snapshot() };
+  });
+  for (const attempt of results.attempts) {
+    expect(attempt.receipt.kind).toBe(attempt.action === 'finish' ? 'confirmed' : 'failed');
+    expect(attempt.snapshot).toEqual(results.before);
+  }
+  expect(results.changedPurpose.kind).toBe('failed');
+  expect(results.stale.every(r => r.kind === 'failed')).toBe(true);
+  expect(results.final).toEqual(results.next);
+});
+
+for (const entry of ['zero', 'wait', 'immediate', 'unknown'] as const) {
+  test(`完成态允许合法新意图入口 ${entry} 并绑定用途`, async ({ page }) => {
+    await page.goto('/');
+    const r = await page.evaluate(async (entry) => {
+      const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+      const c = createDemoClient(entry === 'unknown' ? 'unknown-tasks' : entry === 'zero' ? 'ready' : 'active-tasks');
+      if (entry === 'unknown') await c.dispatch({ type: 'lifecycle.check', requestId: 'first', purpose: 'exit' });
+      await c.dispatch({ type: 'lifecycle.finish', requestId: 'first', purpose: 'exit', immediate: entry === 'wait' || entry === 'immediate' });
+      const before = await c.snapshot();
+      const action = entry === 'zero' ? 'finish' : entry === 'unknown' ? 'check' : entry === 'immediate' ? 'finish' : 'wait';
+      const receipt = await c.dispatch({ type: `lifecycle.${action}`, requestId: 'next', purpose: 'update', immediate: entry === 'immediate' });
+      const next = await c.snapshot();
+      const changedPurpose = await c.dispatch({ type: 'lifecycle.cancel', requestId: 'next', purpose: 'exit' });
+      const after = await c.snapshot();
+      return { before, receipt, next, changedPurpose, after };
+    }, entry);
+    expect(r.before.lifecycle.finished).toBe(true);
+    expect(r.receipt.kind).toBe('confirmed');
+    expect(r.next.lifecycle.requestId).toBe('next');
+    expect(r.next.lifecycle.purpose).toBe('update');
+    expect(r.next.accounts).toEqual(r.before.accounts);
+    expect(r.changedPurpose.kind).toBe('failed');
+    expect(r.after).toEqual(r.next);
+  });
+}

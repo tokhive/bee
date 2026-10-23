@@ -250,3 +250,12 @@ RUSTUP_TOOLCHAIN=1.94 CARGO_HOME=$PWD/.cache/cargo-home cargo test --offline --l
 
 
 最终Windows补证：d09d0ce的[run39900097321](https://github.com/wangdayong228/bee/actions/runs/39900097321)已全部成功：focused26PASS/2其他OS专项SKIP/0FAIL、go vet0、全量7包通过（agent53.982s）、cmd/bee真实Windows构建0。原cadence失败是测试构造的cached/reported观察时间不一致，已通过固定同tick RED/GREEN及独立窄复核修正；未改生产逻辑。详见[最终GREEN证据](evidence/2026-10-23-windows-protected-green/README.md)。此结果仍不替代Windows10/11官方账号来源、WebView2、NSIS或干净安装。
+
+
+## hosted 三端补证进度（2026-10-23，持续执行）
+
+Windows Server2022专项[最终GREEN证据](evidence/2026-10-23-windows-hosted-green/README.md)：run39904695326/source3048766，真实Rust30/30含Go握手/ping/stop，NSIS开发包构建及下载后SHA核对通过；不代替Win10/11安装、GUI或官方登录来源。
+
+Linux首轮run39902824069在Ubuntu22/24×x64/arm64四行均完成Go7包、Chromium32/32、Rust35/35及AppImage构建。x64两行包内Bee精确SHA失败；arm64启动窗口观察成功但截图全黑，不能记为UI渲染或ready通过。调查绑定linuxdeploy07333c6/patchelf0.19.1，证实x64写RUNPATH修改二进制，arm64同操作失败却被上游吞错。1e1019d在Go链接阶段预设同一RUNPATH、保留精确SHA门禁，并补10秒观察末尾窗口/桌面图；53项工具/烟测通过，真实四行修补后CI尚待运行。
+
+本机当前CUA选择Finder返回cgWindowNotFound，未取得新GUI证据；这是观察工具实际错误，未归因沙箱。旧Mac845演示包证据保持版本边界。P1账号Task3已完成独立复核，继续收益Task4；P0/P1整体仍未完成。

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { OverviewPage, Metrics } from '../features/overview/OverviewPage';
+import { OverviewPage } from '../features/overview/OverviewPage';
+import { EarningsPage } from '../features/earnings/EarningsPage';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import type { BeeClient, DesktopCommand, Page, Preferences } from '../client/types';
@@ -74,9 +75,6 @@ export function App({
       dispatching.current = false;
       setBusy(false);
     }
-  };
-  const refresh = () => {
-    void dispatch({ type: 'refresh' });
   };
   const snapshot = data.status === 'ready' ? data.snapshot : undefined;
   useEffect(() => {
@@ -180,14 +178,7 @@ export function App({
             {page === 'accounts' && bound && (
               <AccountsPage snapshot={snapshot} busy={busy} dispatch={dispatch} />
             )}
-            {page === 'earnings' && bound && (
-              <>
-                <Metrics snapshot={snapshot} onRetry={refresh} />
-                <StatusView kind="empty" title="收益明细将在后续开放">
-                  当前金额为演示数据；报价、划转与提现尚未接入。
-                </StatusView>
-              </>
-            )}
+            {page === 'earnings' && bound && <EarningsPage snapshot={snapshot} client={client} />}
             {page === 'diagnostics' && (
               <>
                 <section className="settings-list">

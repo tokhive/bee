@@ -1,0 +1,300 @@
+import { useState } from 'react';
+import type {
+  BeeClient,
+  DesktopSnapshot,
+  OperationResult,
+  Platform,
+} from '../../client/types';
+import { StatusView } from '../../components/StatusView';
+import { PricingPage } from './PricingPage';
+import { TransferPage } from './TransferPage';
+import { WithdrawalPage } from './WithdrawalPage';
+import { amountUnits, decimalUnits, displayAmount } from './money';
+
+export type FinanceAction = (
+  command: Parameters<BeeClient['dispatch']>[0],
+) => Promise<OperationResult>;
+export function EarningsPage({
+  snapshot,
+  client,
+}: {
+  snapshot: DesktopSnapshot;
+  client: BeeClient;
+}) {
+  const [sub, setSub] = useState('summary');
+  const [range, setRange] = useState<7 | 30>(7);
+  const [platform, setPlatform] = useState<'all' | Platform>('all');
+  const [ledger, setLedger] = useState('settlement');
+  const [page, setPage] = useState(1);
+  const refresh = () => {
+    void client.dispatch({ type: 'refresh' });
+  };
+  const state = snapshot.finance;
+  if (state.status === 'loading')
+    return <StatusView kind="loading" title="正在读取收益" />;
+  if (state.status === 'error')
+    return (
+      <StatusView kind="error" title="收益读取失败" onRetry={refresh}>
+        {state.error.message}
+      </StatusView>
+    );
+  if (snapshot.earnings.status !== 'ready')
+    return (
+      <StatusView
+        kind={snapshot.earnings.status === 'loading' ? 'loading' : 'error'}
+        title="收益余额尚未确认"
+        onRetry={refresh}
+      >
+        {snapshot.earnings.status === 'error'
+          ? snapshot.earnings.error.message
+          : '等待当前余额读取。'}
+      </StatusView>
+    );
+  const f = state.value,
+    earnings = snapshot.earnings.value;
+  const action: FinanceAction = (command) => client.dispatch(command);
+  const back = () => setSub('summary');
+  if (sub !== 'summary')
+    return (
+      <div className="earnings-page">
+        <button className="quiet finance-back" onClick={back}>
+          返回收益
+        </button>
+        {sub === 'pricing' ? (
+          <PricingPage finance={f} action={action} />
+        ) : sub === 'transfer' ? (
+          <TransferPage
+            finance={f}
+            balance={earnings.balance}
+            action={action}
+          />
+        ) : (
+          <WithdrawalPage balance={earnings.balance} />
+        )}
+      </div>
+    );
+  const included = f.settlements.filter((s) => s.daysAgo < range);
+  const selected = included.filter(
+    (s) => platform === 'all' || s.platform === platform,
+  );
+  const sum = (rows: typeof selected) =>
+    rows.reduce((n, s) => n + amountUnits(s.amount), 0n);
+  const rows = ledger === 'transfer' ? f.transfers : f.settlements;
+  const pages = Math.max(1, Math.ceil(rows.length / 3));
+  const current = Math.min(page, pages);
+  const bars = Array.from({ length: range }, (_, daysAgo) =>
+    sum(selected.filter((s) => s.daysAgo === daysAgo)),
+  ).reverse();
+  const maximum = bars.reduce((max, n) => (n > max ? n : max), 1n);
+  return (
+    <div className="earnings-page">
+      <header className="finance-heading">
+        <div>
+          <h2>收益与结算</h2>
+          <p>金额以 USD 计价 · 演示数据</p>
+        </div>
+        <div className="inline-actions">
+          <button onClick={() => setSub('pricing')}>报价设置</button>
+          <button onClick={() => setSub('withdraw')}>提现</button>
+          <button className="primary" onClick={() => setSub('transfer')}>
+            划转至买家余额
+          </button>
+        </div>
+      </header>
+      <section className="finance earnings-summary" aria-label="钱包与收益">
+        {[
+          ['收益余额', earnings.balance, '全部平台，可用于划转'],
+          ['今日收益', earnings.today, '全部平台'],
+          ['累计收益', earnings.total, '全部已结算收益'],
+        ].map(([label, value, note], i) => (
+          <div key={label}>
+            <p>{label}</p>
+            <div
+              className="amount"
+              data-testid={i === 0 ? 'earnings-balance' : undefined}
+            >
+              <span>$</span>
+              {displayAmount(value)}
+            </div>
+            <small>{note}</small>
+          </div>
+        ))}
+      </section>
+      <div className="finance-filters">
+        <label>
+          平台筛选{' '}
+          <select
+            aria-label="平台筛选"
+            value={platform}
+            onChange={(e) => setPlatform(e.target.value as typeof platform)}
+          >
+            <option value="all">全部平台</option>
+            <option value="openai">OpenAI</option>
+            <option value="claude">Claude</option>
+          </select>
+        </label>
+        <div className="inline-actions">
+          {([7, 30] as const).map((days) => (
+            <button
+              key={days}
+              aria-pressed={range === days}
+              onClick={() => setRange(days)}
+            >
+              近 {days} 天
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="earnings-panels">
+        <section className="earnings-panel" aria-label="收益趋势">
+          <h3>收益趋势</h3>
+          <p className="chart-total" data-testid="range-total">
+            ${decimalUnits(sum(selected))}{' '}
+            <small>
+              近 {range} 天 ·{' '}
+              {platform === 'all'
+                ? '全部平台'
+                : platform === 'openai'
+                  ? 'OpenAI'
+                  : 'Claude'}
+            </small>
+          </p>
+          <div
+            className="earnings-chart"
+            role="img"
+            aria-label={`近${range}天已结算收益${decimalUnits(sum(selected))}美元`}
+          >
+            {bars.map((n, i) => (
+              <div key={i} title={`${range - 1 - i}天前：$${decimalUnits(n)}`}>
+                <span style={{ height: `${Number((n * 100n) / maximum)}%` }} />
+              </div>
+            ))}
+          </div>
+          <div className="chart-axis">
+            <span>{range - 1} 天前</span>
+            <span>今天</span>
+          </div>
+        </section>
+        <section
+          className="earnings-panel"
+          aria-label="平台收益汇总"
+          data-testid="platform-totals"
+        >
+          <h3>平台收益汇总</h3>
+          <small>同为近 {range} 天 · 全部平台</small>
+          {(['openai', 'claude'] as Platform[]).map((p) => (
+            <div className="finance-row" key={p}>
+              <span>{p === 'openai' ? 'OpenAI' : 'Claude'}</span>
+              <strong>
+                ${decimalUnits(sum(included.filter((s) => s.platform === p)))}
+              </strong>
+            </div>
+          ))}
+          <small>移除账号后，平台历史收益继续保留。</small>
+        </section>
+      </div>
+      <section aria-label="钱包流水">
+        <div className="finance-tabs">
+          <button
+            aria-pressed={ledger === 'settlement'}
+            onClick={() => {
+              setLedger('settlement');
+              setPage(1);
+            }}
+          >
+            结算记录
+          </button>
+          <button
+            aria-pressed={ledger === 'transfer'}
+            onClick={() => {
+              setLedger('transfer');
+              setPage(1);
+            }}
+          >
+            划转记录
+          </button>
+        </div>
+        <p className="finance-note">
+          全部平台 · 仅展示结算与划转，不包含买家身份或请求内容
+        </p>
+        {rows.length ? (
+          <>
+            <div className="finance-table">
+              <table>
+                <thead>
+                  <tr>
+                    <th>流水号</th>
+                    <th>时间</th>
+                    <th>类型</th>
+                    <th>金额 / USD</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rows.slice((current - 1) * 3, current * 3).map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.id}</td>
+                      <td>{r.date}</td>
+                      <td>
+                        {'status' in r
+                          ? r.status === 'confirmed'
+                            ? '演示划转'
+                            : '划转未确认'
+                          : '收益结算'}
+                      </td>
+                      <td>
+                        {'status' in r ? '-' : '+'}
+                        {displayAmount(r.amount)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="finance-pagination">
+              <button
+                aria-label="上一页流水"
+                disabled={current === 1}
+                onClick={() => setPage(current - 1)}
+              >
+                上一页
+              </button>
+              <span data-testid="ledger-page">
+                {current} / {pages}
+              </span>
+              <button
+                aria-label="下一页流水"
+                disabled={current === pages}
+                onClick={() => setPage(current + 1)}
+              >
+                下一页
+              </button>
+            </div>
+          </>
+        ) : (
+          <StatusView
+            kind="empty"
+            title={ledger === 'transfer' ? '暂无划转记录' : '暂无结算记录'}
+          >
+            完成演示{ledger === 'transfer' ? '划转' : '结算'}后会显示在这里。
+          </StatusView>
+        )}
+      </section>
+    </div>
+  );
+}
+export function FinanceHeading({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
+  return (
+    <header className="finance-heading">
+      <div>
+        <h2>{title}</h2>
+        <p>{description}</p>
+      </div>
+    </header>
+  );
+}

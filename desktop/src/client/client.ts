@@ -3,7 +3,7 @@ import type { BeeClient, DesktopSnapshot } from './types';
 
 /** Business data is independent of the native SystemBridge. No adapter is wired yet. */
 export function createBusinessClient(mode: string | undefined, scene = 'ready'): BeeClient {
-  if (mode === 'demo') return createDemoClient(scene);
+  if (mode === 'demo') return createDemoClient(scene, typeof sessionStorage === 'undefined' ? undefined : sessionStorage);
   const error = {
     code: 'BUSINESS_ADAPTER_UNAVAILABLE',
     message: '业务服务未接通：当前构建尚未配置真实 Bee/Hive 业务适配器。',
@@ -16,6 +16,7 @@ export function createBusinessClient(mode: string | undefined, scene = 'ready'):
     connection: unavailable,
     accounts: unavailable,
     earnings: unavailable,
+    finance: unavailable,
     tasks: unavailable,
     preferences: unavailable,
   };

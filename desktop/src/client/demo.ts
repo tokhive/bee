@@ -1,9 +1,10 @@
+import { initialFinance, demoFinance } from './demoFinance';
 import { parseScene } from './scenes';
 import type { Account, BeeClient, DesktopSnapshot, Platform, ReadState } from './types';
 
 const platforms: Platform[] = ['openai', 'claude'];
 const names = { openai: 'OpenAI', claude: 'Claude' };
-export function createDemoClient(scene: string): BeeClient {
+export function createDemoClient(scene: string, storage?: Storage): BeeClient {
   const selected = parseScene(scene);
   const now = new Date().toISOString();
   const ready = <T>(value: T): ReadState<T> => ({
@@ -46,6 +47,7 @@ export function createDemoClient(scene: string): BeeClient {
     binding: ready({
       state: fresh || selected === 'configured' ? 'unbound' : 'bound',
       loggedIn: !fresh,
+      userId: fresh ? undefined : 'demo-user',
       onboardingComplete: !fresh && selected !== 'configured',
       label: fresh ? undefined : 'Bee 演示账号',
       source: selected === 'configured' ? 'existing' : 'new',
@@ -68,6 +70,7 @@ export function createDemoClient(scene: string): BeeClient {
       today: '6.820000000',
       total: '382.140000000',
     }),
+    finance: ready(initialFinance(undefined, undefined, selected === 'earnings-empty')),
     tasks: ready(
       selected === 'unknown-tasks'
         ? { kind: 'unknown' }
@@ -80,6 +83,19 @@ export function createDemoClient(scene: string): BeeClient {
       proxyAddress: '',
     }),
   };
+  const finance = demoFinance(selected, storage);
+  finance.restore(state);
+  if (selected === 'earnings-loading')
+    state.finance = { status: 'loading', updatedAt: null };
+  if (selected === 'earnings-error')
+    state.finance = {
+      status: 'error',
+      updatedAt: null,
+      error: {
+        code: 'DEMO_EARNINGS_UNAVAILABLE',
+        message: '收益读取失败：场景 earnings-error 模拟结算源不可用。',
+      },
+    };
   // Controlled read states include an old zero to exercise the freshness guard.
   if (selected === 'tasks-loading')
     state.tasks = { status: 'loading', updatedAt: now, value: { kind: 'known', count: 0 } };
@@ -158,6 +174,11 @@ export function createDemoClient(scene: string): BeeClient {
           message: '仅演示：已重新读取当前场景；主动暂停选择保持不变。',
         };
       }
+      const financeResult = finance.handle(state, command);
+      if (financeResult) {
+        publish();
+        return financeResult;
+      }
       if (command.type === 'savePreferences') {
         const { hiveAddress = '', proxyAddress = '' } = command.preferences;
         for (const [label, value] of [
@@ -206,6 +227,13 @@ export function createDemoClient(scene: string): BeeClient {
             endpointLabel: hiveAddress,
           });
           state.accounts = ready([]);
+          state.finance = ready(initialFinance(hiveAddress));
+          state.earnings = ready({
+            balance: '128.560000000',
+            today: '6.820000000',
+            total: '382.140000000',
+          });
+          finance.restore(state);
           state.process = ready({
             state: 'paused',
             owner: state.process.value?.owner,
@@ -240,6 +268,7 @@ export function createDemoClient(scene: string): BeeClient {
         state.binding = ready({
           ...state.binding.value!,
           loggedIn: true,
+          userId: 'demo-user',
           label: 'Bee 演示账号',
         });
       } else if (command.type === 'bindDevice') {

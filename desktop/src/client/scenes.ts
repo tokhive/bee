@@ -1,5 +1,12 @@
 export const scenes = [
   'ready',
+  'earnings-loading',
+  'earnings-error',
+  'earnings-empty',
+  'quote-conflict',
+  'quote-unknown',
+  'transfer-pending',
+  'transfer-unknown',
   'authorization-expired',
   'account-change',
   'quota-unknown',

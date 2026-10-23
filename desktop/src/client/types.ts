@@ -1,5 +1,10 @@
 export type Platform = 'openai' | 'claude';
-export type Page = 'overview' | 'accounts' | 'earnings' | 'diagnostics' | 'settings';
+export type Page =
+  | 'overview'
+  | 'accounts'
+  | 'earnings'
+  | 'diagnostics'
+  | 'settings';
 export type TaskState = { kind: 'known'; count: number } | { kind: 'unknown' };
 export interface ClientError {
   code: string;
@@ -18,6 +23,7 @@ export interface Binding {
   state: 'unbound' | 'bound';
   label?: string;
   loggedIn?: boolean;
+  userId?: string;
   onboardingComplete?: boolean;
   replaceDevice?: string;
   source?: 'new' | 'existing';
@@ -54,6 +60,41 @@ export interface Earnings {
   today: DecimalAmount;
   total: DecimalAmount;
 }
+export interface FinanceIdentity {
+  hive: string;
+  user: string;
+}
+export interface TransferInput extends FinanceIdentity {
+  requestId: string;
+  amount: DecimalAmount;
+}
+export interface TransferRecord extends TransferInput {
+  id: string;
+  date: string;
+  status: 'pending' | 'unknown' | 'confirmed';
+}
+export interface Quote {
+  mode: 'default' | 'custom';
+  factor: string;
+  version: number;
+}
+export interface Settlement {
+  id: string;
+  date: string;
+  platform: Platform;
+  amount: string;
+  daysAgo: number;
+}
+export interface Finance {
+  identity: FinanceIdentity;
+  buyerBalance: DecimalAmount;
+  quote: Quote;
+  acceptedQuote: Quote;
+  settlements: Settlement[];
+  transfers: TransferRecord[];
+  pendingTransfer?: TransferRecord;
+  quoteUnknown?: boolean;
+}
 export interface Preferences {
   language: 'system' | 'zh' | 'en';
   theme: 'system' | 'light' | 'dark';
@@ -67,11 +108,19 @@ export interface DesktopSnapshot {
   connection: ReadState<Connection>;
   accounts: ReadState<Account[]>;
   earnings: ReadState<Earnings>;
+  finance: ReadState<Finance>;
   tasks: ReadState<TaskState>;
   preferences: ReadState<Preferences>;
 }
 // Later feature tasks extend this union alongside their implementation.
 export type DesktopCommand =
+  | {
+      type: 'saveQuote';
+      mode: Quote['mode'];
+      factor: string;
+      originalVersion: number;
+    }
+  | ({ type: 'transferEarnings' | 'checkTransfer' } & TransferInput)
   | { type: 'contribution.start' }
   | { type: 'contribution.pause' }
   | { type: 'snapshot.refresh' | 'refresh' }

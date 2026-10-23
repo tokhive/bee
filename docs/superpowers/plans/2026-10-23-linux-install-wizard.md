@@ -35,7 +35,7 @@
 - [x] 更新首次安装向导、已配对/运行状态、拒绝或无终端的手动路径、交互开关、升级默认不重启和失败恢复说明；清除旧的必需前台 Ctrl-C 步骤。
 - [x] 运行 `doc-site` 的 `npm run build` 和两个仓库的差异检查；检查完整 diff 与 spec 一致。
 - [x] 按 requesting-code-review 做针对本次安装向导的审查，核实并修复有效问题；完成最终验证、一致性和计划复选项核对。
-- [ ] 提交并推送到已有 fork 分支，重写 Bee #20 和文档 #1 的 PR 说明，使其描述最终行为；检查 Linux CI，记录结果与真实未验证边界。
+- [x] 提交并推送到已有 fork 分支，重写 Bee #20 和文档 #1 的 PR 说明，使其描述最终行为；检查 Linux CI，记录结果与真实未验证边界。
 
 ## 验证记录
 
@@ -43,4 +43,7 @@
 - `make test-install`：40 项测试，38 项通过；macOS 上跳过 2 项 Linux 原生检查，交由 Linux CI 执行。
 - ShellCheck、`sh -n install.sh`、两个仓库的 `git diff --check` 和文档站 `npm run build` 通过。
 - 针对向导的只读审查无阻断项，审查者独立执行 5 项定向测试和 shell 语法检查通过。
-- 代码、设计、配置开关和安装文档已逐项核对；未进行真实云服务器重启实测。PR 推送与新版 Linux CI 结果待下一项记录。
+- 代码、设计、配置开关、安装文档和最终 PR 说明已逐项核对；未进行真实云服务器重启实测。
+- Bee 实现提交 `7a30076` 与文档提交 `a6bf14e` 已推送至原有 fork 分支；[Bee #20](https://github.com/tokhive/bee/pull/20) 和[文档 #1](https://github.com/tokhive/doc-site/pull/1) 的标题与说明均已更新。
+- [Bee Linux CI](https://github.com/tokhive/bee/actions/runs/39895057984) 通过：40 项安装测试全部通过，包含 native unit 校验和开机启动链接检查，`go vet` 与 `go test -race` 通过；[文档站 CI](https://github.com/tokhive/doc-site/actions/runs/39895069111) 通过。
+- 最终复核共 9 项复选框：全部完成，0 项遗留。

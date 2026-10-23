@@ -31,10 +31,13 @@ test('未登录能修改 Hive/代理/外观，账号与收益受接入门槛保�
   }
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByLabel('Hive 地址').fill('https://demo.example');
+  await page.getByRole('button', { name: '切换 Hive', exact: true }).click();
+  await page.getByRole('button', { name: '确认切换 Hive', exact: true }).click();
+  await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByLabel('代理地址').fill('http://127.0.0.1:7890');
-  await page.getByLabel('外观', { exact: true }).selectOption('dark');
-  await page.getByRole('button', { name: '保存演示设置' }).click();
+  await page.getByRole('button', { name: '保存代理', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('仅演示');
+  await page.getByLabel('外观', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.getByRole('button', { name: '概览', exact: true }).click();
   await expect(page.getByText('https://demo.example', { exact: true })).toBeVisible();
@@ -170,7 +173,8 @@ test('切换 Hive 不会把外部 Bee 归属改为 App，也不把未知归属�
   await page.goto('/?scene=external');
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByLabel('Hive 地址').fill('https://demo.example');
-  await page.getByRole('button', { name: '保存演示设置' }).click();
+  await page.getByRole('button', { name: '切换 Hive', exact: true }).click();
+  await page.getByRole('button', { name: '确认切换 Hive', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('仅演示');
   await page.getByRole('button', { name: '概览', exact: true }).click();
   await expect(page.getByText('外部管理的 Bee', { exact: true })).toBeVisible();
@@ -190,7 +194,8 @@ test('无效设置保留输入和当前绑定，不泄露地址中的凭证', as
   await page.goto('/');
   await page.getByRole('button', { name: '设置', exact: true }).click();
   await page.getByLabel('Hive 地址').fill('https://user:secret@example.com');
-  await page.getByRole('button', { name: '保存演示设置' }).click();
+  await page.getByRole('button', { name: '切换 Hive', exact: true }).click();
+  await page.getByRole('button', { name: '确认切换 Hive', exact: true }).click();
   await expect(page.getByRole('status')).toContainText('DEMO_INVALID_ADDRESS');
   await expect(page.getByRole('status')).not.toContainText('secret');
   await expect(page.getByLabel('Hive 地址')).toHaveValue('https://user:secret@example.com');
@@ -251,7 +256,8 @@ test('审查 M2：地址失败区分协议凭证查询片段与解析，不回�
     ['secret invalid address', 'parse=failed'],
   ]) {
     await page.getByLabel('Hive 地址').fill(input);
-    await page.getByRole('button', { name: '保存演示设置' }).click();
+    await page.getByRole('button', { name: '切换 Hive', exact: true }).click();
+    await page.getByRole('button', { name: '确认切换 Hive', exact: true }).click();
     await expect(page.getByRole('status')).toContainText(evidence);
     await expect(page.getByRole('status')).not.toContainText('secret');
     await expect(page.getByLabel('Hive 地址')).toHaveValue(input);

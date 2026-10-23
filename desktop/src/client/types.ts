@@ -35,6 +35,7 @@ export interface Process {
 export interface Connection {
   state: 'connected' | 'disconnected';
   endpointLabel: string;
+  persistentOffline?: boolean;
 }
 export interface Account {
   id: string;
@@ -98,6 +99,8 @@ export interface Finance {
 export interface Preferences {
   language: 'system' | 'zh' | 'en';
   theme: 'system' | 'light' | 'dark';
+  autoStart?: boolean;
+  notifications?: boolean;
   hiveAddress?: string;
   proxyAddress?: string;
 }
@@ -111,9 +114,14 @@ export interface DesktopSnapshot {
   finance: ReadState<Finance>;
   tasks: ReadState<TaskState>;
   preferences: ReadState<Preferences>;
+  diagnostics?: ReadState<import('../features/diagnostics/report').SanitizedDiagnostics>;
 }
 // Later feature tasks extend this union alongside their implementation.
 export type DesktopCommand =
+  | { type: 'runDiagnostics' | 'exportDiagnostics' }
+  | { type: 'changeHive'; address: string }
+  | { type: 'saveProxy'; address: string }
+  | { type: 'setPreference'; preferences: Partial<Preferences> }
   | {
       type: 'saveQuote';
       mode: Quote['mode'];

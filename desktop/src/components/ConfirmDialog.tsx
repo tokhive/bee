@@ -1,3 +1,4 @@
+import { t } from '../i18n/index';
 import { Dialog } from 'radix-ui';
 import { useState, type ReactNode } from 'react';
 export function ConfirmDialog({
@@ -27,11 +28,11 @@ export function ConfirmDialog({
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="dialog-content" aria-busy={busy}>
-          <Dialog.Title>{title}</Dialog.Title>
-          <Dialog.Description>{description}</Dialog.Description>
+          <Dialog.Title>{t(title)}</Dialog.Title>
+          <Dialog.Description>{t(description)}</Dialog.Description>
           <div className="dialog-actions">
             <Dialog.Close asChild>
-              <button disabled={busy}>取消</button>
+              <button disabled={busy}>{t("取消")}</button>
             </Dialog.Close>
             <button
               className="primary"
@@ -40,7 +41,7 @@ export function ConfirmDialog({
                 void onConfirm().then(() => setOpen(false));
               }}
             >
-              {busy ? '处理中…' : confirmLabel}
+              {t(busy ? '处理中…' : confirmLabel)}
             </button>
           </div>
         </Dialog.Content>

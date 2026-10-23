@@ -1,3 +1,4 @@
+import { t } from '../i18n/index';
 import type { ReactNode } from 'react';
 export function StatusView({
   kind,
@@ -16,9 +17,9 @@ export function StatusView({
       aria-busy={kind === 'loading'}
       role={kind === 'error' || kind === 'unavailable' ? 'alert' : undefined}
     >
-      <h3>{title}</h3>
+      <h3>{t(title)}</h3>
       {children && <p>{children}</p>}
-      {onRetry && <button onClick={onRetry}>重新读取</button>}
+      {onRetry && <button onClick={onRetry}>{t("重新读取")}</button>}
     </section>
   );
 }

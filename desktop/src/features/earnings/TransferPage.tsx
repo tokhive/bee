@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index';
 import { useRef, useState } from 'react';
 import type { Finance, TransferInput } from '../../client/types';
 import { Dialog } from 'radix-ui';
@@ -39,7 +40,7 @@ export function TransferPage({
     clear();
     if (!validAmount(amount)) {
       setError(
-        `划转金额“${amount}”无效：必须大于 0，最多 15 位整数、9 位小数，无前导零或科学计数法。`,
+        '划转金额“{amount}”无效：必须大于 0，最多 15 位整数、9 位小数，无前导零或科学计数法。',
       );
       return;
     }
@@ -93,29 +94,29 @@ export function TransferPage({
   return (
     <>
       <FinanceHeading
-        title="划转至买家余额"
-        description="同一 Hive 账号内的余额划转 · 演示数据"
+        title={t("划转至买家余额")}
+        description={t("同一 Hive 账号内的余额划转 · 演示数据")}
       />
       <div className="finance-form">
         <div className="finance-summary-box">
           <div className="finance-row">
-            <span>可划转收益</span>
+            <span>{t("可划转收益")}</span>
             <strong data-testid="transfer-available">
               ${displayAmount(balance)}
             </strong>
           </div>
           <div className="finance-row">
-            <span>买家余额</span>
+            <span>{t("买家余额")}</span>
             <strong>${displayAmount(finance.buyerBalance)}</strong>
           </div>
           <div className="finance-row">
-            <span>转入账号</span>
-            <strong>{finance.identity.user} · 当前账号</strong>
+            <span>{t("转入账号")}</span>
+            <strong>{finance.identity.user}{t(" · 当前账号")}</strong>
           </div>
         </div>
         <div className="finance-field">
           <div className="finance-row">
-            <label htmlFor="transfer-amount">划转金额</label>
+            <label htmlFor="transfer-amount">{t("划转金额")}</label>
             <button
               className="quiet"
               disabled={busy || blocked}
@@ -123,9 +124,7 @@ export function TransferPage({
                 clear();
                 setAmount(displayAmount(balance));
               }}
-            >
-              全部收益
-            </button>
+            >{t("全部收益")}</button>
           </div>
           <input
             id="transfer-amount"
@@ -138,40 +137,34 @@ export function TransferPage({
               setAmount(e.target.value);
             }}
           />
-          <small id="transfer-hint">
-            金额以 USD 计价，最多 9 位小数；完成后不可撤回。
-          </small>
+          <small id="transfer-hint">{t("金额以 USD 计价，最多 9 位小数；完成后不可撤回。")}</small>
         </div>
         {(error || guard.error) && (
           <p role="alert" className="finance-error">
-            {[error, guard.error].filter(Boolean).join(' ')}
+            {t(error, { amount })} {t(guard.error)}
           </p>
         )}
         {message && (
           <p role="status" className="finance-note">
-            {message}
+            {t(message)}
           </p>
         )}
         {pending ? (
           <>
             <p className="finance-note" data-testid="pending-transfer">
-              {pending.status === 'pending' ? '处理中' : '结果未确认'} ·
-              requestId={pending.requestId} · 原金额 {pending.amount}
+              {t(pending.status === 'pending' ? '处理中' : '结果未确认')} ·
+              requestId={pending.requestId}{t(" · 原金额 ")}{pending.amount}
             </p>
             <div className="inline-actions finance-actions">
               <button
                 disabled={busy || !!guard.error}
                 onClick={() => void execute(true)}
-              >
-                刷新原操作
-              </button>
+              >{t("刷新原操作")}</button>
               <button
                 disabled={busy || !!guard.error}
                 aria-busy={busy}
                 onClick={() => void execute(true)}
-              >
-                核对原操作
-              </button>
+              >{t("核对原操作")}</button>
             </div>
           </>
         ) : (
@@ -180,9 +173,7 @@ export function TransferPage({
               className="primary"
               disabled={busy || blocked}
               onClick={validate}
-            >
-              核对划转
-            </button>
+            >{t("核对划转")}</button>
           </div>
         )}
         {prepared && (
@@ -195,21 +186,17 @@ export function TransferPage({
             <Dialog.Portal>
               <Dialog.Overlay className="dialog-overlay" />
               <Dialog.Content className="dialog-content" aria-busy={busy}>
-                <Dialog.Title>确认划转</Dialog.Title>
-                <Dialog.Description>
-                  演示金额 {prepared.amount} USD 将转入同一 Hive 账号{' '}
-                  {prepared.user} 的买家余额，完成后不可撤回。
-                </Dialog.Description>
+                <Dialog.Title>{t("确认划转")}</Dialog.Title>
+                <Dialog.Description>{t("演示金额 ")}{prepared.amount}{t(" USD 将转入同一 Hive 账号")}{t(' ')}
+                  {prepared.user}{t(" 的买家余额，完成后不可撤回。")}</Dialog.Description>
                 <div className="dialog-actions">
-                  <button disabled={busy} onClick={() => setPrepared(null)}>
-                    取消
-                  </button>
+                  <button disabled={busy} onClick={() => setPrepared(null)}>{t("取消")}</button>
                   <button
                     className="primary"
                     disabled={busy}
                     onClick={() => void execute().then(() => setPrepared(null))}
                   >
-                    {busy ? '处理中…' : '确认划转'}
+                    {t(busy ? '处理中…' : '确认划转')}
                   </button>
                 </div>
               </Dialog.Content>

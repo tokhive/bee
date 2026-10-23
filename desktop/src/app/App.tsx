@@ -1,9 +1,14 @@
+import { preferenceScope, defaultHive } from '../features/settings/preferences';
+import { t, useLanguage } from '../i18n/index';
+import { SettingsPage } from '../features/settings/SettingsPage';
+import { DiagnosticsPage } from '../features/diagnostics/DiagnosticsPage';
+import { useDemoNotifications } from '../features/settings/notifications';
 import { useEffect, useRef, useState } from 'react';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { EarningsPage } from '../features/earnings/EarningsPage';
 import { AccountsPage } from '../features/accounts/AccountsPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
-import type { BeeClient, DesktopCommand, Page, Preferences } from '../client/types';
+import type { BeeClient, DesktopCommand, Page } from '../client/types';
 import { useBee } from '../client/useBee';
 import { debugToolsEnabled, scenes } from '../client/scenes';
 import type { BridgeStatus, SystemBridge } from '../system/bridge';
@@ -23,6 +28,7 @@ export function App({
   demoMode?: boolean;
 }) {
   const data = useBee(client);
+  const notifications = useDemoNotifications(data.status === 'ready' ? data.snapshot : undefined);
   const [page, setPage] = useState<Page>('overview');
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
@@ -66,6 +72,7 @@ export function App({
     setMessage('正在处理演示操作…');
     try {
       const result = await client.dispatch(command);
+      if (command.type === 'changeHive' && result.kind === 'confirmed') setPage('overview');
       setMessage(
         result.kind === 'failed' ? `${result.error.code}：${result.error.message}` : result.message,
       );
@@ -77,16 +84,15 @@ export function App({
     }
   };
   const snapshot = data.status === 'ready' ? data.snapshot : undefined;
+  useLanguage(snapshot?.preferences.value?.language ?? 'system');
   useEffect(() => {
     document.documentElement.dataset.theme = snapshot?.preferences.value?.theme ?? 'system';
   }, [snapshot?.preferences.value?.theme]);
   const bound = snapshot?.binding.status === 'ready' && snapshot.binding.value.state === 'bound';
   const debug =
     debugToolsEnabled && snapshot?.mode === 'demo' ? (
-      <label className="scene-control">
-        演示场景
-        <select
-          aria-label="演示场景"
+      <label className="scene-control">{t("演示场景")}<select
+          aria-label={t("演示场景")}
           value={new URLSearchParams(location.search).get('scene') || 'ready'}
           onChange={(event) => {
             const url = new URL(location.href);
@@ -95,7 +101,7 @@ export function App({
           }}
         >
           {scenes.map((scene) => (
-            <option key={scene}>{scene}</option>
+            <option key={scene}>{t(scene)}</option>
           ))}
         </select>
       </label>
@@ -108,20 +114,20 @@ export function App({
       debug={debug}
     >
       {initialError ? (
-        <StatusView kind="error" title="无法载入演示场景">
-          {initialError}
+        <StatusView kind="error" title={t("无法载入演示场景")}>
+          {t(initialError)}
         </StatusView>
       ) : data.status === 'loading' ? (
-        <StatusView kind="loading" title="正在读取 Bee…" />
+        <StatusView kind="loading" title={t("正在读取 Bee…")} />
       ) : data.status === 'error' ? (
-        <StatusView kind="error" title="读取失败">
-          {data.message}
+        <StatusView kind="error" title={t("读取失败")}>
+          {t(data.message)}
         </StatusView>
       ) : snapshot?.mode === 'unavailable' ? (
-        <StatusView kind="unavailable" title="业务服务未接通">
-          {snapshot.connection.status === 'error'
+        <StatusView kind="unavailable" title={t("业务服务未接通")}>
+          {t(snapshot.connection.status === 'error'
             ? snapshot.connection.error.message
-            : '等待真实业务适配器接入。'}
+            : '等待真实业务适配器接入。')}
         </StatusView>
       ) : (
         snapshot && (
@@ -139,145 +145,52 @@ export function App({
                   onAccounts={() => setPage('accounts')}
                 />
                 <div className="bottomline">
-                  <span>
-                    当前任务：
-                    {snapshot.tasks.status === 'ready' && snapshot.tasks.value.kind === 'known'
+                  <span>{t("当前任务：")}{t(snapshot.tasks.status === 'ready' && snapshot.tasks.value.kind === 'known'
                       ? snapshot.tasks.value.count
-                      : '未知'}
+                      : '未知')}
                   </span>
                   <DetailSheet
-                    trigger={<button className="quiet">查看连接详情</button>}
-                    title="连接详情"
-                    description="业务演示与原生管理进程独立。"
+                    trigger={<button className="quiet">{t("查看连接详情")}</button>}
+                    title={t("连接详情")}
+                    description={t("业务演示与原生管理进程独立。")}
                   >
                     <dl>
-                      <dt>业务连接</dt>
-                      <dd>{snapshot.connection.value?.endpointLabel ?? '未知'}</dd>
-                      <dt>原生管理进程</dt>
+                      <dt>{t("业务连接")}</dt>
+                      <dd>{snapshot.connection.value?.endpointLabel === 'Hive 演示连接' ? t('Hive 演示连接') : snapshot.connection.value?.endpointLabel ?? t('未知')}</dd>
+                      <dt>{t("原生管理进程")}</dt>
                       <dd>{native.state}</dd>
                       {native.error && (
                         <>
-                          <dt>原生检查结果</dt>
+                          <dt>{t("原生检查结果")}</dt>
                           <dd>
-                            {native.error.code}：{native.error.message}
+                            {t(native.error.code)}：{t(native.error.message)}
                           </dd>
                         </>
                       )}
-                      <dt>真实贡献</dt>
-                      <dd>未由演示操作启动</dd>
+                      <dt>{t("真实贡献")}</dt>
+                      <dd>{t("未由演示操作启动")}</dd>
                     </dl>
                   </DetailSheet>
                 </div>
               </>
             )}
             {(page === 'accounts' || page === 'earnings') && !bound && (
-              <StatusView kind="empty" title="请先完成 Hive 登录与设备绑定">
-                请回到概览继续首次接入。
-              </StatusView>
+              <StatusView kind="empty" title={t("请先完成 Hive 登录与设备绑定")}>{t("请回到概览继续首次接入。")}</StatusView>
             )}
             {page === 'accounts' && bound && (
               <AccountsPage snapshot={snapshot} busy={busy} dispatch={dispatch} />
             )}
             {page === 'earnings' && bound && <EarningsPage snapshot={snapshot} client={client} />}
-            {page === 'diagnostics' && (
-              <>
-                <section className="settings-list">
-                  <div>
-                    <strong>原生管理进程</strong>
-                    <span>{native.state}</span>
-                  </div>
-                  <div>
-                    <strong>业务连接</strong>
-                    <span>{snapshot.connection.value?.endpointLabel ?? '未知'}</span>
-                  </div>
-                  <div>
-                    <strong>进行中任务</strong>
-                    <span>
-                      {snapshot.tasks.value?.kind === 'known' ? snapshot.tasks.value.count : '未知'}
-                    </span>
-                  </div>
-                </section>
-                <p className="feature-note">自检、日志与脱敏报告将在后续开放。</p>
-              </>
-            )}
-            {page === 'settings' && (
-              <DemoSettings
-                key={snapshot.preferences.updatedAt}
-                preferences={snapshot.preferences.value}
-                busy={busy}
-                save={(preferences) => dispatch({ type: 'savePreferences', preferences })}
-              />
-            )}
+            {page === 'diagnostics' && <DiagnosticsPage snapshot={snapshot} client={client} />}
+            {page === 'settings' && <SettingsPage key={JSON.stringify(preferenceScope(snapshot.preferences.value?.hiveAddress ?? defaultHive, snapshot.binding.status === 'ready' ? snapshot.binding.value : undefined))} snapshot={snapshot} busy={busy} dispatch={dispatch} checkNotifications={notifications.check} notifications={notifications.messages} />}
           </>
         )
       )}
       {message && (
         <p className="operation-message" role="status">
-          {message}
+          {t(message)}
         </p>
       )}
     </AppShell>
-  );
-}
-
-function DemoSettings({
-  preferences,
-  busy,
-  save,
-}: {
-  preferences?: Preferences;
-  busy: boolean;
-  save: (preferences: Preferences) => Promise<void>;
-}) {
-  const [draft, setDraft] = useState<Preferences>(
-    preferences ?? { theme: 'system', language: 'system' },
-  );
-  return (
-    <form
-      className="settings-form"
-      onSubmit={(event) => {
-        event.preventDefault();
-        void save(draft);
-      }}
-    >
-      <label>
-        Hive 地址
-        <input
-          value={draft.hiveAddress ?? ''}
-          onChange={(e) => setDraft({ ...draft, hiveAddress: e.target.value })}
-        />
-      </label>
-      <label>
-        代理地址
-        <input
-          placeholder="关闭（留空）"
-          value={draft.proxyAddress ?? ''}
-          onChange={(e) => setDraft({ ...draft, proxyAddress: e.target.value })}
-        />
-      </label>
-      <label>
-        外观
-        <select
-          aria-label="外观"
-          value={draft.theme}
-          onChange={(e) =>
-            setDraft({
-              ...draft,
-              theme: e.target.value as Preferences['theme'],
-            })
-          }
-        >
-          <option value="system">跟随系统</option>
-          <option value="light">浅色</option>
-          <option value="dark">深色</option>
-        </select>
-      </label>
-      <button disabled={busy} aria-busy={busy} type="submit">
-        保存演示设置
-      </button>
-      <p className="feature-note">
-        仅修改本地演示；切换 Hive 会清除演示登录和绑定。完整偏好持久化将在后续开放。
-      </p>
-    </form>
   );
 }

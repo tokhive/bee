@@ -1,5 +1,7 @@
 export const scenes = [
   'ready',
+  'diagnostics-partial',
+  'diagnostics-export-error',
   'earnings-loading',
   'earnings-error',
   'earnings-empty',

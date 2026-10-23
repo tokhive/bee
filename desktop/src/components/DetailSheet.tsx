@@ -1,3 +1,4 @@
+import { t } from '../i18n/index';
 import { Dialog } from 'radix-ui';
 import type { ReactNode } from 'react';
 export function DetailSheet({
@@ -18,12 +19,12 @@ export function DetailSheet({
         <Dialog.Overlay className="dialog-overlay" />
         <Dialog.Content className="detail-sheet">
           <header>
-            <Dialog.Title>{title}</Dialog.Title>
+            <Dialog.Title>{t(title)}</Dialog.Title>
             <Dialog.Close asChild>
-              <button>关闭</button>
+              <button>{t("关闭")}</button>
             </Dialog.Close>
           </header>
-          <Dialog.Description>{description}</Dialog.Description>
+          <Dialog.Description>{t(description)}</Dialog.Description>
           {children}
         </Dialog.Content>
       </Dialog.Portal>

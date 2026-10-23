@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index';
 import { useState } from 'react';
 import type {
   BeeClient,
@@ -31,23 +32,23 @@ export function EarningsPage({
   };
   const state = snapshot.finance;
   if (state.status === 'loading')
-    return <StatusView kind="loading" title="正在读取收益" />;
+    return <StatusView kind="loading" title={t("正在读取收益")} />;
   if (state.status === 'error')
     return (
-      <StatusView kind="error" title="收益读取失败" onRetry={refresh}>
-        {state.error.message}
+      <StatusView kind="error" title={t("收益读取失败")} onRetry={refresh}>
+        {t(state.error.message)}
       </StatusView>
     );
   if (snapshot.earnings.status !== 'ready')
     return (
       <StatusView
         kind={snapshot.earnings.status === 'loading' ? 'loading' : 'error'}
-        title="收益余额尚未确认"
+        title={t("收益余额尚未确认")}
         onRetry={refresh}
       >
-        {snapshot.earnings.status === 'error'
+        {t(snapshot.earnings.status === 'error'
           ? snapshot.earnings.error.message
-          : '等待当前余额读取。'}
+          : '等待当前余额读取。')}
       </StatusView>
     );
   const f = state.value,
@@ -57,9 +58,7 @@ export function EarningsPage({
   if (sub !== 'summary')
     return (
       <div className="earnings-page">
-        <button className="quiet finance-back" onClick={back}>
-          返回收益
-        </button>
+        <button className="quiet finance-back" onClick={back}>{t("返回收益")}</button>
         {sub === 'pricing' ? (
           <PricingPage finance={f} action={action} />
         ) : sub === 'transfer' ? (
@@ -90,25 +89,23 @@ export function EarningsPage({
     <div className="earnings-page">
       <header className="finance-heading">
         <div>
-          <h2>收益与结算</h2>
-          <p>金额以 USD 计价 · 演示数据</p>
+          <h2>{t("收益与结算")}</h2>
+          <p>{t("金额以 USD 计价 · 演示数据")}</p>
         </div>
         <div className="inline-actions">
-          <button onClick={() => setSub('pricing')}>报价设置</button>
-          <button onClick={() => setSub('withdraw')}>提现</button>
-          <button className="primary" onClick={() => setSub('transfer')}>
-            划转至买家余额
-          </button>
+          <button onClick={() => setSub('pricing')}>{t("报价设置")}</button>
+          <button onClick={() => setSub('withdraw')}>{t("提现")}</button>
+          <button className="primary" onClick={() => setSub('transfer')}>{t("划转至买家余额")}</button>
         </div>
       </header>
-      <section className="finance earnings-summary" aria-label="钱包与收益">
+      <section className="finance earnings-summary" aria-label={t("钱包与收益")}>
         {[
           ['收益余额', earnings.balance, '全部平台，可用于划转'],
           ['今日收益', earnings.today, '全部平台'],
           ['累计收益', earnings.total, '全部已结算收益'],
         ].map(([label, value, note], i) => (
           <div key={label}>
-            <p>{label}</p>
+            <p>{t(label)}</p>
             <div
               className="amount"
               data-testid={i === 0 ? 'earnings-balance' : undefined}
@@ -116,19 +113,18 @@ export function EarningsPage({
               <span>$</span>
               {displayAmount(value)}
             </div>
-            <small>{note}</small>
+            <small>{t(note)}</small>
           </div>
         ))}
       </section>
       <div className="finance-filters">
-        <label>
-          平台筛选{' '}
+        <label>{t("平台筛选")}{t(' ')}
           <select
-            aria-label="平台筛选"
+            aria-label={t("平台筛选")}
             value={platform}
             onChange={(e) => setPlatform(e.target.value as typeof platform)}
           >
-            <option value="all">全部平台</option>
+            <option value="all">{t("全部平台")}</option>
             <option value="openai">OpenAI</option>
             <option value="claude">Claude</option>
           </select>
@@ -139,61 +135,58 @@ export function EarningsPage({
               key={days}
               aria-pressed={range === days}
               onClick={() => setRange(days)}
-            >
-              近 {days} 天
-            </button>
+            >{t("近 ")}{t(days)}{t(" 天")}</button>
           ))}
         </div>
       </div>
       <div className="earnings-panels">
-        <section className="earnings-panel" aria-label="收益趋势">
-          <h3>收益趋势</h3>
+        <section className="earnings-panel" aria-label={t("收益趋势")}>
+          <h3>{t("收益趋势")}</h3>
           <p className="chart-total" data-testid="range-total">
-            ${decimalUnits(sum(selected))}{' '}
-            <small>
-              近 {range} 天 ·{' '}
-              {platform === 'all'
+            ${decimalUnits(sum(selected))}{t(' ')}
+            <small>{t("近 ")}{t(range)}{t(" 天 ·")}{t(' ')}
+              {t(platform === 'all'
                 ? '全部平台'
                 : platform === 'openai'
                   ? 'OpenAI'
-                  : 'Claude'}
+                  : 'Claude')}
             </small>
           </p>
           <div
             className="earnings-chart"
             role="img"
-            aria-label={`近${range}天已结算收益${decimalUnits(sum(selected))}美元`}
+            aria-label={t(`近${range}天已结算收益${decimalUnits(sum(selected))}美元`)}
           >
             {bars.map((n, i) => (
-              <div key={i} title={`${range - 1 - i}天前：$${decimalUnits(n)}`}>
+              <div key={i} title={t(`${range - 1 - i}天前：$${decimalUnits(n)}`)}>
                 <span style={{ height: `${Number((n * 100n) / maximum)}%` }} />
               </div>
             ))}
           </div>
           <div className="chart-axis">
-            <span>{range - 1} 天前</span>
-            <span>今天</span>
+            <span>{t(range - 1)}{t(" 天前")}</span>
+            <span>{t("今天")}</span>
           </div>
         </section>
         <section
           className="earnings-panel"
-          aria-label="平台收益汇总"
+          aria-label={t("平台收益汇总")}
           data-testid="platform-totals"
         >
-          <h3>平台收益汇总</h3>
-          <small>同为近 {range} 天 · 全部平台</small>
+          <h3>{t("平台收益汇总")}</h3>
+          <small>{t("同为近 ")}{t(range)}{t(" 天 · 全部平台")}</small>
           {(['openai', 'claude'] as Platform[]).map((p) => (
             <div className="finance-row" key={p}>
-              <span>{p === 'openai' ? 'OpenAI' : 'Claude'}</span>
+              <span>{t(p === 'openai' ? 'OpenAI' : 'Claude')}</span>
               <strong>
                 ${decimalUnits(sum(included.filter((s) => s.platform === p)))}
               </strong>
             </div>
           ))}
-          <small>移除账号后，平台历史收益继续保留。</small>
+          <small>{t("移除账号后，平台历史收益继续保留。")}</small>
         </section>
       </div>
-      <section aria-label="钱包流水">
+      <section aria-label={t("钱包流水")}>
         <div className="finance-tabs">
           <button
             aria-pressed={ledger === 'settlement'}
@@ -201,32 +194,26 @@ export function EarningsPage({
               setLedger('settlement');
               setPage(1);
             }}
-          >
-            结算记录
-          </button>
+          >{t("结算记录")}</button>
           <button
             aria-pressed={ledger === 'transfer'}
             onClick={() => {
               setLedger('transfer');
               setPage(1);
             }}
-          >
-            划转记录
-          </button>
+          >{t("划转记录")}</button>
         </div>
-        <p className="finance-note">
-          全部平台 · 仅展示结算与划转，不包含买家身份或请求内容
-        </p>
+        <p className="finance-note">{t("全部平台 · 仅展示结算与划转，不包含买家身份或请求内容")}</p>
         {rows.length ? (
           <>
             <div className="finance-table">
               <table>
                 <thead>
                   <tr>
-                    <th>流水号</th>
-                    <th>时间</th>
-                    <th>类型</th>
-                    <th>金额 / USD</th>
+                    <th>{t("流水号")}</th>
+                    <th>{t("时间")}</th>
+                    <th>{t("类型")}</th>
+                    <th>{t("金额 / USD")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -235,14 +222,14 @@ export function EarningsPage({
                       <td>{r.id}</td>
                       <td>{r.date}</td>
                       <td>
-                        {'status' in r
+                        {t('status' in r
                           ? r.status === 'confirmed'
                             ? '演示划转'
                             : '划转未确认'
-                          : '收益结算'}
+                          : '收益结算')}
                       </td>
                       <td>
-                        {'status' in r ? '-' : '+'}
+                        {t('status' in r ? '-' : '+')}
                         {displayAmount(r.amount)}
                       </td>
                     </tr>
@@ -252,31 +239,25 @@ export function EarningsPage({
             </div>
             <div className="finance-pagination">
               <button
-                aria-label="上一页流水"
+                aria-label={t("上一页流水")}
                 disabled={current === 1}
                 onClick={() => setPage(current - 1)}
-              >
-                上一页
-              </button>
+              >{t("上一页")}</button>
               <span data-testid="ledger-page">
-                {current} / {pages}
+                {t(current)} / {t(pages)}
               </span>
               <button
-                aria-label="下一页流水"
+                aria-label={t("下一页流水")}
                 disabled={current === pages}
                 onClick={() => setPage(current + 1)}
-              >
-                下一页
-              </button>
+              >{t("下一页")}</button>
             </div>
           </>
         ) : (
           <StatusView
             kind="empty"
-            title={ledger === 'transfer' ? '暂无划转记录' : '暂无结算记录'}
-          >
-            完成演示{ledger === 'transfer' ? '划转' : '结算'}后会显示在这里。
-          </StatusView>
+            title={t(ledger === 'transfer' ? '暂无划转记录' : '暂无结算记录')}
+          >{t("完成演示")}{t(ledger === 'transfer' ? '划转' : '结算')}{t("后会显示在这里。")}</StatusView>
         )}
       </section>
     </div>
@@ -292,8 +273,8 @@ export function FinanceHeading({
   return (
     <header className="finance-heading">
       <div>
-        <h2>{title}</h2>
-        <p>{description}</p>
+        <h2>{t(title)}</h2>
+        <p>{t(description)}</p>
       </div>
     </header>
   );

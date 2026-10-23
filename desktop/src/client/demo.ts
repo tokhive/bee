@@ -1,3 +1,5 @@
+import { AddressValidationError, defaultHive, defaults, loadPreferences, savePreferences, selectedHive, selectHive, preferenceScope, validateAddress } from '../features/settings/preferences';
+import { sanitizedDiagnostics } from '../features/diagnostics/report';
 import { initialFinance, demoFinance } from './demoFinance';
 import { parseScene } from './scenes';
 import type { Account, BeeClient, DesktopSnapshot, Platform, ReadState } from './types';
@@ -61,6 +63,7 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
       state:
         fresh || selected === 'configured' || selected === 'offline' ? 'disconnected' : 'connected',
       endpointLabel: 'Hive 演示连接',
+      persistentOffline: selected === 'offline',
     }),
     accounts: ready(
       fresh || selected === 'empty' || selected === 'configured' ? [] : platforms.map(account),
@@ -83,6 +86,30 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
       proxyAddress: '',
     }),
   };
+  let preferenceStorage: Storage | undefined;
+  let preferenceFailure: string | undefined;
+  try {
+    preferenceStorage = typeof localStorage === 'undefined' ? undefined : localStorage;
+    const hive = preferenceStorage ? selectedHive(preferenceStorage) : defaultHive;
+    // An endpoint choice never restores a login. Fixture login exists only for the initial Hive.
+    if (preferenceStorage && preferenceStorage.getItem('bee.demo.selected-hive.v1') !== null) {
+      state.binding = ready({ state: 'unbound', loggedIn: false, source: 'new' });
+      state.accounts = ready([]);
+      state.connection = ready({ state: 'disconnected', endpointLabel: hive });
+    }
+    state.preferences = ready(preferenceStorage ? loadPreferences(preferenceStorage, preferenceScope(hive, state.binding.value)) : defaults(hive));
+  } catch (cause) {
+    preferenceFailure = `普通偏好读取失败：${String(cause)}；未恢复任何登录状态。`;
+    state.preferences = { status: 'error', updatedAt: null, error: { code: 'DEMO_PREFERENCES_READ', message: preferenceFailure } };
+    state.binding = ready({ state: 'unbound', loggedIn: false, source: 'new' });
+    state.accounts = ready([]);
+    state.connection = { status: 'error', updatedAt: null, error: { code: 'DEMO_PREFERENCES_READ', message: preferenceFailure } };
+    state.process = ready({ state: 'paused', owner: state.process.value?.owner });
+    state.tasks = ready({ kind: 'unknown' });
+  }
+  state.diagnostics = ready(sanitizedDiagnostics([], []));
+  let diagnosisAttempts = 0;
+  state.finance = ready(initialFinance(state.preferences.value?.hiveAddress ?? defaultHive, state.binding.value?.loggedIn ? state.binding.value.userId ?? '' : '', selected === 'earnings-empty'));
   const finance = demoFinance(selected, storage);
   finance.restore(state);
   if (selected === 'earnings-loading')
@@ -174,78 +201,55 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
           message: '仅演示：已重新读取当前场景；主动暂停选择保持不变。',
         };
       }
+      if (preferenceFailure && command.type !== 'runDiagnostics' && command.type !== 'exportDiagnostics') return fail('DEMO_PREFERENCES_READ', preferenceFailure);
       const financeResult = finance.handle(state, command);
       if (financeResult) {
         publish();
         return financeResult;
       }
-      if (command.type === 'savePreferences') {
-        const { hiveAddress = '', proxyAddress = '' } = command.preferences;
-        for (const [label, value] of [
-          ['Hive', hiveAddress],
-          ['代理', proxyAddress],
-        ]) {
-          if (!value || value === 'Hive 演示连接') continue;
-          let url: URL;
-          try {
-            url = new URL(value);
-          } catch {
-            return fail(
-              'DEMO_INVALID_ADDRESS',
-              `${label} 地址解析失败：parse=failed，inputLength=${value.length}；请输入有效 HTTP(S) 地址。`,
-            );
+      if (command.type === 'runDiagnostics') {
+        diagnosisAttempts++;
+        const passed = selected !== 'diagnostics-partial' || diagnosisAttempts > 1;
+        state.diagnostics = ready(sanitizedDiagnostics([
+          { id: 'process', passed: true }, { id: 'connection', passed: true }, { id: 'proxy', passed },
+        ], [{ level: 'info', code: 'CHECK_STARTED' }, { level: passed ? 'info' : 'error', code: passed ? 'CHECK_PASSED' : 'PROXY_UNREACHABLE' }]));
+        publish(); return { kind: 'confirmed', demo: true, message: passed ? '仅演示：所有检查通过。' : '代理连通检查失败：scene=diagnostics-partial，reachable=false；请检查代理后重试。' };
+      }
+      if (command.type === 'exportDiagnostics') {
+        if (selected === 'diagnostics-export-error') return fail('DEMO_REPORT_CREATE', '报告文件创建失败：scene=diagnostics-export-error，fileCreated=false；请重试。');
+        return { kind: 'confirmed', demo: true, message: '脱敏报告已准备。' };
+      }
+      if (['savePreferences', 'setPreference', 'saveProxy', 'changeHive'].includes(command.type)) {
+        if (preferenceFailure) return fail('DEMO_PREFERENCES_READ', preferenceFailure);
+        try {
+          const previous = state.preferences.value ?? defaults();
+          const draft = command.type === 'savePreferences' || command.type === 'setPreference'
+            ? { ...previous, ...command.preferences }
+            : command.type === 'saveProxy' ? { ...previous, proxyAddress: command.address }
+            : { ...previous, hiveAddress: 'address' in command ? command.address : previous.hiveAddress };
+          const hive = draft.hiveAddress ?? defaultHive;
+          validateAddress(hive, 'Hive'); validateAddress(draft.proxyAddress ?? '', '代理');
+          const changed = hive !== previous.hiveAddress;
+          if (changed) {
+            // Read target anonymous preferences before committing the selected endpoint.
+            const target = preferenceStorage ? loadPreferences(preferenceStorage, { hive, user: null }) : defaults(hive);
+            if (preferenceStorage) selectHive(preferenceStorage, hive);
+            state.binding = ready({ state: 'unbound', loggedIn: false, source: 'new' });
+            state.connection = ready({ state: 'disconnected', endpointLabel: hive });
+            state.accounts = ready([]);
+            state.process = ready({ state: 'paused', owner: state.process.value?.owner });
+            state.tasks = ready({ kind: 'known', count: 0 });
+            state.preferences = ready(target);
+            state.finance = ready(initialFinance(hive, ''));
+            state.earnings = ready({ balance: '128.560000000', today: '6.820000000', total: '382.140000000' });
+            explicitlyRemoved.clear();
+            finance.restore(state);
+          } else {
+            state.preferences = ready(preferenceStorage ? savePreferences(preferenceStorage, preferenceScope(hive, state.binding.value), draft) : draft);
           }
-          if (!['http:', 'https:'].includes(url.protocol))
-            return fail(
-              'DEMO_INVALID_ADDRESS',
-              `${label} 地址协议检查失败：protocol=${url.protocol}；允许 http:、https:。`,
-            );
-          if (url.username || url.password)
-            return fail(
-              'DEMO_INVALID_ADDRESS',
-              `${label} 地址凭证检查失败：hasCredentials=true；请移除账号与密码。`,
-            );
-          if (url.search)
-            return fail(
-              'DEMO_INVALID_ADDRESS',
-              `${label} 地址查询检查失败：hasQuery=true；请移除查询参数。`,
-            );
-          if (url.hash)
-            return fail(
-              'DEMO_INVALID_ADDRESS',
-              `${label} 地址片段检查失败：hasFragment=true；请移除片段。`,
-            );
-        }
-        if (state.preferences.value?.hiveAddress !== hiveAddress) {
-          state.binding = ready({
-            state: 'unbound',
-            loggedIn: false,
-            source: 'new',
-          });
-          state.connection = ready({
-            state: 'disconnected',
-            endpointLabel: hiveAddress,
-          });
-          state.accounts = ready([]);
-          state.finance = ready(initialFinance(hiveAddress));
-          state.earnings = ready({
-            balance: '128.560000000',
-            today: '6.820000000',
-            total: '382.140000000',
-          });
-          finance.restore(state);
-          state.process = ready({
-            state: 'paused',
-            owner: state.process.value?.owner,
-          });
-        }
-        state.preferences = ready(command.preferences);
-        publish();
-        return {
-          kind: 'confirmed',
-          demo: true,
-          message: '仅演示：已保存设置；切换 Hive 后需重新登录和绑定。未修改系统代理。',
-        };
+          publish();
+          return { kind: 'confirmed', demo: true, message: '仅演示：已保存设置；切换 Hive 后需重新登录和绑定。未修改系统代理、开机启动或系统通知权限。' };
+        } catch (cause) { return fail(cause instanceof AddressValidationError ? 'DEMO_INVALID_ADDRESS' : 'DEMO_PREFERENCES_WRITE', `普通偏好保存失败：${String(cause)}；设置未确认。`); }
       }
       if (command.type === 'loginHive') {
         if (selected === 'pending')
@@ -271,6 +275,17 @@ export function createDemoClient(scene: string, storage?: Storage): BeeClient {
           userId: 'demo-user',
           label: 'Bee 演示账号',
         });
+        const currentHive = state.preferences.value?.hiveAddress ?? defaultHive;
+        if (state.finance.value?.identity.hive !== currentHive || state.finance.value?.identity.user !== state.binding.value?.userId) {
+          state.finance = ready(initialFinance(currentHive, state.binding.value?.userId ?? ''));
+          finance.restore(state);
+        }
+        try {
+          const hive = currentHive;
+          state.preferences = ready(preferenceStorage ? loadPreferences(preferenceStorage, preferenceScope(hive, state.binding.value)) : defaults(hive));
+        } catch (cause) {
+          state.preferences = { status: 'error', updatedAt: null, error: { code: 'DEMO_PREFERENCES_READ', message: `用户偏好读取失败：${String(cause)}` } };
+        }
       } else if (command.type === 'bindDevice') {
         if (state.binding.status !== 'ready' || !state.binding.value.loggedIn)
           return fail(

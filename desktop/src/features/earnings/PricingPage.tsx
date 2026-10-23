@@ -1,3 +1,4 @@
+import { t } from '../../i18n/index';
 import { useRef, useState } from 'react';
 import type { Finance, Quote } from '../../client/types';
 import { FinanceHeading, type FinanceAction } from './EarningsPage';
@@ -25,7 +26,7 @@ export function PricingPage({
     clear();
     if (mode === 'custom' && !validFactor(factor)) {
       setError(
-        `报价系数“${factor}”无效，要求大于 0、小于 10，且最多 9 位小数。`,
+        '报价系数“{factor}”无效，要求大于 0、小于 10，且最多 9 位小数。',
       );
       return;
     }
@@ -52,36 +53,34 @@ export function PricingPage({
   return (
     <>
       <FinanceHeading
-        title="报价设置"
-        description="选择平台默认报价，或统一设置自己的报价系数"
+        title={t("报价设置")}
+        description={t("选择平台默认报价，或统一设置自己的报价系数")}
       />
       <div className="quote-current" data-testid="active-quote">
-        <span>当前已生效</span>
+        <span>{t("当前已生效")}</span>
         <strong>
-          {finance.quote.mode === 'default'
+          {t(finance.quote.mode === 'default'
             ? '平台默认报价'
-            : `自定义系数 × ${displayAmount(finance.quote.factor)}`}
+            : `自定义系数 × ${displayAmount(finance.quote.factor)}`)}
         </strong>
-        <small>版本 {finance.quote.version}</small>
+        <small>{t("版本 ")}{t(finance.quote.version)}</small>
       </div>
       <div className="finance-form">
         <fieldset disabled={busy || finance.quoteUnknown}>
-          <legend className="sr-only">报价模式</legend>
+          <legend className="sr-only">{t("报价模式")}</legend>
           <label className="quote-choice">
             <span>
               <input
                 type="radio"
-                aria-label="使用平台默认"
+                aria-label={t("使用平台默认")}
                 name="quote-mode"
                 checked={mode === 'default'}
                 onChange={() => {
                   setMode('default');
                   clear();
                 }}
-              />{' '}
-              使用平台默认
-            </span>
-            <small>采用平台默认系数。</small>
+              />{t(' ')}{t("使用平台默认")}</span>
+            <small>{t("采用平台默认系数。")}</small>
           </label>
           <div className="quote-choice">
             <label>
@@ -93,15 +92,11 @@ export function PricingPage({
                   setMode('custom');
                   clear();
                 }}
-              />{' '}
-              自定义报价系数
-            </label>
-            <small>一个系数统一应用于全部平台、模型及计费项。</small>
+              />{t(' ')}{t("自定义报价系数")}</label>
+            <small>{t("一个系数统一应用于全部平台、模型及计费项。")}</small>
             {mode === 'custom' && (
-              <label className="finance-field">
-                报价系数
-                <input
-                  aria-label="报价系数"
+              <label className="finance-field">{t("报价系数")}<input
+                  aria-label={t("报价系数")}
                   inputMode="decimal"
                   value={factor}
                   onChange={(e) => {
@@ -109,7 +104,7 @@ export function PricingPage({
                     clear();
                   }}
                 />
-                <small>大于 0、小于 10，最多 9 位小数。</small>
+                <small>{t("大于 0、小于 10，最多 9 位小数。")}</small>
               </label>
             )}
           </div>
@@ -117,16 +112,16 @@ export function PricingPage({
       </div>
       <section className="earnings-panel quote-preview">
         <div className="section-heading">
-          <h3>报价预览</h3>
-          <small>当前草稿 · 保存后生效</small>
+          <h3>{t("报价预览")}</h3>
+          <small>{t("当前草稿 · 保存后生效")}</small>
         </div>
         <div className="finance-table">
           <table>
             <thead>
               <tr>
-                <th>模型 / 输入</th>
-                <th>示例基准价 / 百万 Token</th>
-                <th>你的实收 / 百万 Token</th>
+                <th>{t("模型 / 输入")}</th>
+                <th>{t("示例基准价 / 百万 Token")}</th>
+                <th>{t("你的实收 / 百万 Token")}</th>
               </tr>
             </thead>
             <tbody>
@@ -136,37 +131,31 @@ export function PricingPage({
               ].map(([name, base]) => (
                 <tr key={name}>
                   <td>{name}</td>
-                  <td>${base}.00</td>
+                  <td>${t(base)}.00</td>
                   <td>
-                    {validFactor(mode === 'default' ? '0.1' : factor)
+                    {t(validFactor(mode === 'default' ? '0.1' : factor)
                       ? `$${decimalUnits((amountUnits(base) * amountUnits(mode === 'default' ? '0.1' : factor)) / 1000000000n)}`
-                      : '待填写有效系数'}
+                      : '待填写有效系数')}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        <p className="finance-note">
-          实收单价 = 示例基准价 × 有效系数。正式价格待 Hive
-          接入；保存不会修改已接收任务的结算价格。
-        </p>
-        <p className="finance-note" data-testid="accepted-quote">
-          已接收演示任务快照：系数 {finance.acceptedQuote.factor} · 版本{' '}
-          {finance.acceptedQuote.version}
+        <p className="finance-note">{t("实收单价 = 示例基准价 × 有效系数。正式价格待 Hive 接入；保存不会修改已接收任务的结算价格。")}</p>
+        <p className="finance-note" data-testid="accepted-quote">{t("已接收演示任务快照：系数 ")}{finance.acceptedQuote.factor}{t(" · 版本")}{t(' ')}
+          {t(finance.acceptedQuote.version)}
         </p>
       </section>
       {error && (
         <p role="alert" className="finance-error">
-          {error}
+          {t(error, { factor })}
         </p>
       )}
       {finance.quoteUnknown && !error && (
-        <p role="alert" className="finance-error">
-          报价结果未确认；不允许覆盖保存，请核实原操作。
-        </p>
+        <p role="alert" className="finance-error">{t("报价结果未确认；不允许覆盖保存，请核实原操作。")}</p>
       )}
-      {message && <p role="status">{message}</p>}
+      {message && <p role="status">{t(message)}</p>}
       <div className="inline-actions finance-actions">
         <button
           disabled={busy || finance.quoteUnknown}
@@ -176,16 +165,14 @@ export function PricingPage({
             setVersion(finance.quote.version);
             clear();
           }}
-        >
-          重新读取 / 放弃修改
-        </button>
+        >{t("重新读取 / 放弃修改")}</button>
         <button
           className="primary"
           disabled={busy || finance.quoteUnknown}
           aria-busy={busy}
           onClick={() => void save()}
         >
-          {busy ? '保存中…' : '保存报价'}
+          {t(busy ? '保存中…' : '保存报价')}
         </button>
       </div>
     </>

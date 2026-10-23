@@ -1,14 +1,14 @@
 # P0 桌面底座验证记录
 
-日期：2026-10-23 更新。状态：**P0 未通过。Mac 原生窗口、860×600、管理桥、退出、系统回跳、真实第二实例与 DMG 复制安装已有证据，Chrome E2E 6/6；Windows 原生固定 TEE 已通过，受保护文件操作已取得行为 RED、正在实现；Linux arm64 Go vet/全量测试/构建通过。托盘和完整三端桌面/干净安装矩阵仍缺。** 用户已授权自动继续，重要方案变更集中确认。
+日期：2026-10-23 更新。状态：**P0 未通过。任务1底座已提交29240a0并关闭任务审查；P1 Task1已提交845af2b/35873d5并复核通过，当前继续首次引导和概览。Mac 原生窗口、860×600、管理桥、退出、系统回跳、真实第二实例、DMG复制安装和P1五页实窗有证据；默认Chromium页面20/20。Windows固定TEE、安全专项和vet通过，全量Go仍1项Claude上报测试失败待调查；Linux arm64 Go vet/全量7包/CLI构建及后续窄回归通过。托盘和完整三端桌面/干净安装矩阵仍缺。** 用户已授权自动继续，重要方案变更集中确认。
 
 ## 来源和隔离
 
 - 原 Bee 检出：`/Users/dayong/myspace/mywork/tokenhive/bee`，`main`，起点 `0fea1c71a1181b9b0257a5b0e15721f74d2395f0`；实施前工作树干净。
 - 隔离检出：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0`，分支 `feat/bee-desktop-p0`。原生 worktree 工具因工作区顶层不是 Git 仓库失败，随后使用 Git 创建此检出。
-- Hive 的既存 ` M bee` 子模块修改保留，未暂存或提交；原 Bee 主分支未改源码。任务 1/2/4/5/6 的桌面、平台适配及 CI 改动尚未提交，任务 3 已单独提交。
+- Hive 的既存 ` M bee` 子模块修改保留，未暂存或提交；原 Bee 主分支未改源码。主体/双锁与已集成任务4/5提交29240a0，Windows适配6881845及回归修补bcd619b、CI准备08505af、P1壳845af2b与金额修补35873d5均已提交；任务3为f4374af。完整平台验收仍未完成。
 - 已阅读工作区的计划评审、技术设计、技术/需求决策记录、布局、UI 核对、固定视觉基线及 P0/P1 计划。三份视觉资产和指定 SVG 品牌源哈希均与 manifest 一致。
-- 任务 3 已单独提交为 `f4374af`：`feat(bee): add private desktop management protocol`。任务 1/2 的未完成工作仍留在原实施检出中，未推送或修改 Hive 子模块。
+- 任务 3 已单独提交为 `f4374af`：`feat(bee): add private desktop management protocol`。后续实现沿用同一隔离检出；CI仅推送已有个人fork的专用feature分支，未修改Hive子模块。
 
 ## 当前实现
 
@@ -18,7 +18,7 @@
 
 Tauri 2.12.5、tauri-build 2.7.4、npm API/CLI 2.12.4 和 Rust 1.94.0 已写入配置；Cargo.lock 已由 Cargo 生成，当前 macOS arm64 的完整 Rust 编译/测试和 App 打包通过，2026-10-23 原生窗口运行及部分交互自动验收通过。与批准栈的唯一前端版本调整为 Vite 8.2.2 → 8.2.4 安全兼容补丁：官方 npm 审计列出 8.2.0–8.2.3 的多项公告，其中 GHSA-587h-7wmj-h5pm 为 high；8.2.4 安装审计为 0 漏洞。架构、框架类别、通信、权限、资金规则和平台目标均沿用设计。
 
-文件保护实现已拆出带 `darwin || linux` 编译约束的 Unix 文件，私有读取验证已打开句柄的普通文件、权限和当前用户所有权；官方来源使用 no-follow 打开，但不强制它们具有 Bee 私有配置的 0600 权限。锁回调可重复调用而不会释放后来的新锁，私有替换拒绝链接和非普通文件；刷新及 egress 复用此边界。Windows ACL 测试已写，尚无原生红灯及运行证据，Windows 生产实现未添加，不能勾选任务 2 完成。
+文件保护实现已拆出带 `darwin || linux` 编译约束的 Unix 文件，私有读取验证已打开句柄的普通文件、权限和当前用户所有权；官方来源使用 no-follow 打开，但不强制它们具有 Bee 私有配置的 0600 权限。锁回调可重复调用而不会释放后来的新锁，私有替换拒绝链接和非普通文件；刷新及 egress 复用此边界。Windows句柄no-reparse、owner/protected DACL、原子替换与LockFileEx生产实现已提交6881845；真实原生RED及focused GREEN、vet已有证据，bcd619b全量仍1FAIL，不能勾选任务2完成。
 
 新增 `bee desktop`、独立 `desktopbridge` 协议包和[协议说明](bridge-protocol.md)。仅有 hello/ping/shutdown，输入输出帧均限制 1 MiB；未知字段、重复 JSON 字段、未完成 ID 重用及错误版本均拒绝。管理入口不进入账号、配置或贡献路径；CLI 与握手共享构建版本。通用 Run 的调用方负责解除阻塞 I/O；命令入口管理自有管道，Unix 使用非阻塞副本注册 runtime poller。原生退出测试确实发现并修复了直接关闭继承 stdin 不能唤醒读取的问题。
 
@@ -238,3 +238,12 @@ RUSTUP_TOOLCHAIN=1.94 CARGO_HOME=$PWD/.cache/cargo-home cargo test --offline --l
 - 此次工程提交包括已审查的任务 4/5 集成代码和锁文件，不宣称任务 4/5/6 全部平台验收闭合。完整 CI 配置准备与后续真实八环境验收仍分开记录。
 
 证据：[Windows/Linux](evidence/2026-10-23-native-ci/README.md)、[Mac DMG/第二实例](evidence/2026-10-23-mac-dmg/README.md)。此前旧沙箱和下载失败记录是历史，不再作为当前阻塞。默认 Chromium 下载继续进行，本机 Chrome 已通过的入口保持可用。
+
+
+## 本轮继续验收（29240a0至35873d5）
+
+- [29240a0 Mac包复验](evidence/2026-10-23-mac-29240a0/README.md)：Rust41/41、真实hello/ping、签名完整性及菜单退出，App/owned Bee均已消失。
+- [845af2b Mac演示壳实窗](evidence/2026-10-23-mac-p1-845af2b/README.md)：五页、常驻演示标识、真实原生管理ready、抽屉Escape焦点恢复及退出；不外推后续358金额修补包。
+- Windows原生39897565679、39898961038均focused/vet GREEN，但full FAIL；后者已解决原3类失败，只剩ClaudeIndependentReportIntervals，正在调查，不能写作全量通过。日志本地.cache/qa保留；CLIbuild因为前置失败尚未运行。
+- Linux最终fixtures全量7包及vet通过；bcd619b指定8组窄回归0.037s与agent vet退出0，10个目标文件及4锁文件前后hash一致；容器已回收，不外推Ubuntu桌面。
+- 默认Chromium1243、FFmpeg1011、headless_shell1243安装完整；P1金额+导航+P0页面20/20通过，普通/demo build和typecheck通过。任务审查I1金额整数末尾零已关闭，原Minor错误证据/环境警告保留后续任务。

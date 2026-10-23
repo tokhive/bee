@@ -1,8 +1,18 @@
 # Bee 桌面客户端
 
-当前 **P0 未通过**。当前 Mac arm64 已自动验证真实原生窗口、860×600 操作、握手/ping、菜单退出、owned child 回收及冷启动/后台回跳；本机 Chrome 页面 E2E 6/6 通过。真实第二实例与 DMG 复制安装/启动已补证；托盘、Windows 受保护文件适配及完整三端安装/操作验收仍有缺口。此页始终显示“尚未开始贡献”，不登录账号、不连接 Hive、不操作资金。
+当前 **P0 未通过，P1 Task1 页面壳已完成**。当前 Mac arm64 已自动验证原生窗口、860×600 操作、握手/ping、菜单退出、owned child 回收、冷启动/后台回跳、真实第二实例和 DMG 复制安装；新银白五页壳、连接抽屉和焦点恢复也有实窗证据。Windows 安全专项/vet 已通过，全量 Go 回归仍有 1 项 Claude 上报测试待修；托盘及完整三端安装矩阵仍缺。P1 业务处于明确标识的演示模式，不连接 Hive、不控制真实贡献、不操作真实资金。
 
-## 直接验收开发包
+## 页面验收入口
+
+从 Bee 仓库根执行 `npm --prefix desktop run dev:demo`，打开 `http://127.0.0.1:1420` 查看五页演示。普通 `npm --prefix desktop run dev` 显示业务未接通；开发/e2e 的 `?p0=1` 才进入原 P0 验证页。首次引导、账号、收益、诊断和设置功能按 P1 后续任务逐项补齐。
+
+默认锁定 Chromium 已完整安装。P1 Task1 金额、导航与 P0 三组页面用例共 **20/20 通过**，typecheck、普通 build 和 build:demo 均通过；金额修补已独立复核。Mac 原生五页证据对应 `845af2b`，后续金额修补 `35873d5` 的证据为浏览器测试与构建，不混用包版本。
+
+```sh
+npm --prefix desktop run test:e2e -- tests/amount-display.spec.ts tests/navigation.spec.ts tests/p0-shell.spec.ts tests/bridge.spec.ts tests/lifecycle.spec.ts
+```
+
+## 直接验收 P0 开发页
 
 当前 Mac arm64 开发包位于：
 
@@ -16,7 +26,7 @@
 open "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app"
 ```
 
-1. 窗口应有指定 Logo、Bee 标题和“尚未开始贡献”；缩到 860×600 后操作和文字仍可见。
+1. 本节是 P0 开发页的验收步骤；当前 App 已使用五页演示壳，P0 页通过上述开发入口验收。窗口应有指定 Logo、Bee 标题和“尚未开始贡献”；缩到 860×600 后操作和文字仍可见。
 2. 管理进程应从启动中变为“管理协议已就绪”，显示内置 Bee 的真实版本及系统；点击“检查存活”后显示“管理进程响应正常”。这只代表管理管道可用。
 3. 检查失败应显示具体错误码和证据，保留“重新检查”；不会自动开始贡献或模拟成功。失败的管理进程不会自动重启，修复安装内容后须重新打开 App。
 4. 关闭主窗口后，从菜单栏/托盘的“打开 Bee”或 macOS Dock 找回；窗口和原有管理进程应保留。再用 `open -n` 打开同一个 App，应找回原窗口，活动监视器中不应多出第二个 App 管理进程。
@@ -25,7 +35,7 @@ open "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/s
 
 如原生单实例注册失败，App 应报告具体启动错误并停止，不应继续创建第二个管理进程。上述预期中，当前 Mac 窗口、存活检查、菜单找回/退出、外部 Bee 保留和两类系统回跳已有自动操作证据；真实第二实例已验证仅保留一个 owned Bee；托盘仍未验收。
 
-本机开发包使用 ad-hoc 签名，未做 Developer ID 签名或公证。2026-10-23 解除旧执行限制后，当前包已成功启动并通过上述 Mac 自动操作；昨日启动异常不再是当前阻塞。查看[原生截图与 AX 证据](../docs/desktop/evidence/2026-10-23-mac-native/README.md)及 [P0 验证记录](../docs/desktop/p0-validation.md)。另见 [DMG 与真实第二实例证据](../docs/desktop/evidence/2026-10-23-mac-dmg/README.md)和 [Windows/Linux 原生测试证据](../docs/desktop/evidence/2026-10-23-native-ci/README.md)。正式 P1 五页界面尚未开始。
+本机开发包使用 ad-hoc 签名，未做 Developer ID 签名或公证。2026-10-23 解除旧执行限制后，当前包已成功启动并通过上述 Mac 自动操作；昨日启动异常不再是当前阻塞。查看[原生截图与 AX 证据](../docs/desktop/evidence/2026-10-23-mac-native/README.md)及 [P0 验证记录](../docs/desktop/p0-validation.md)。另见 [DMG 与真实第二实例证据](../docs/desktop/evidence/2026-10-23-mac-dmg/README.md)和 [Windows/Linux 原生测试证据](../docs/desktop/evidence/2026-10-23-native-ci/README.md)。P1 Task1 已完成；另见[Mac 新壳实窗证据](../docs/desktop/evidence/2026-10-23-mac-p1-845af2b/README.md)。
 
 ## 可重复的开发检查
 
@@ -55,7 +65,7 @@ npm --prefix desktop run test:e2e -- --config playwright.chrome.config.ts --repo
 
 2026-10-23 此命令 **6/6 通过（5.3s）**，Chrome 实际版本为 156.0.8078.48，配置已纳入 `typecheck`。
 
-Vite 限定 `127.0.0.1:1420`。普通浏览器明确显示 `NATIVE_UNAVAILABLE`，不会伪造握手成功。2026-10-23 已成功监听并用上面的本机 Chrome 配置执行全部 6 项 E2E；锁定 Playwright Chromium 的默认命令另行记录，不能混写。缺少浏览器或服务启动失败不算断言通过。
+Vite 限定 `127.0.0.1:1420`。普通浏览器明确显示 `NATIVE_UNAVAILABLE`，不会伪造握手成功。2026-10-23 已成功监听并用上面的本机 Chrome 配置执行全部 6 项 E2E；锁定 Playwright Chromium 的默认命令现已通过，P0 6 项及 P1 Task1 共 20 项均已验证。缺少浏览器或服务启动失败不算断言通过。
 
 本机隔离工具链和官方离线缓存的复现环境为：
 

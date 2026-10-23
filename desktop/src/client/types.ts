@@ -37,6 +37,13 @@ export interface Account {
   plan: string;
   state: 'available' | 'unavailable';
   paused?: boolean;
+  identifier?: string;
+  authorization?: 'valid' | 'expired';
+  source?: 'existing-login' | 'official';
+  updatedAt?: string;
+  models?: { name: string; supported: boolean; marketOpen: boolean }[];
+  pendingChange?: { identifier: string };
+  removal?: 'pending' | 'unknown';
   quota?: { remaining: number; window: string; resetsAt: string };
   feedback?: string;
 }
@@ -70,7 +77,15 @@ export type DesktopCommand =
   | { type: 'snapshot.refresh' | 'refresh' }
   | { type: 'loginHive' }
   | { type: 'bindDevice'; replaceConfirmed?: boolean }
-  | { type: 'detectAccount'; platform: Platform }
+  | {
+      type:
+        | 'detectAccount'
+        | 'connectAccount'
+        | 'authorizeAccount'
+        | 'confirmAccountChange'
+        | 'removeAccount';
+      platform: Platform;
+    }
   | { type: 'startContribution'; platforms: Platform[] }
   | { type: 'setPlatformPaused'; platform: Platform; paused: boolean }
   | { type: 'setAllPaused'; paused: boolean }

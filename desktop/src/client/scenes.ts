@@ -1,5 +1,10 @@
 export const scenes = [
   'ready',
+  'authorization-expired',
+  'account-change',
+  'quota-unknown',
+  'removal-pending',
+  'removal-unknown',
   'loading',
   'empty',
   'error',

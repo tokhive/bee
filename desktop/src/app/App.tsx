@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { OverviewPage, AccountList, Metrics } from '../features/overview/OverviewPage';
+import { OverviewPage, Metrics } from '../features/overview/OverviewPage';
+import { AccountsPage } from '../features/accounts/AccountsPage';
 import { OnboardingPage } from '../features/onboarding/OnboardingPage';
 import type { BeeClient, DesktopCommand, Page, Preferences } from '../client/types';
 import { useBee } from '../client/useBee';
@@ -177,10 +178,7 @@ export function App({
               </StatusView>
             )}
             {page === 'accounts' && bound && (
-              <>
-                <AccountList snapshot={snapshot} onRetry={refresh} />
-                <p className="feature-note">授权、换号与移除将在后续开放；账号检测可在概览操作。</p>
-              </>
+              <AccountsPage snapshot={snapshot} busy={busy} dispatch={dispatch} />
             )}
             {page === 'earnings' && bound && (
               <>

@@ -17,13 +17,29 @@ export function createDemoClient(scene: string): BeeClient {
     platform,
     label: names[platform],
     plan: platform === 'openai' ? 'Plus' : 'Pro',
-    state: 'available',
+    state: selected === 'authorization-expired' ? 'unavailable' : 'available',
     paused: true,
-    quota: {
-      remaining: platform === 'openai' ? 82 : 46,
-      window: '5 小时',
-      resetsAt: platform === 'openai' ? '2 小时后重置' : '48 分钟后重置',
-    },
+    identifier: 'dayong@example.com',
+    authorization: selected === 'authorization-expired' ? 'expired' : 'valid',
+    source: 'existing-login',
+    updatedAt: now,
+    models: (platform === 'openai' ? ['GPT-5', 'GPT-4.1'] : ['Claude Sonnet', 'Claude Opus']).map(
+      (name, index) => ({
+        name,
+        supported: selected !== 'authorization-expired',
+        marketOpen: index === 0,
+      }),
+    ),
+    pendingChange:
+      selected === 'account-change' ? { identifier: 'another@example.com' } : undefined,
+    quota:
+      selected === 'quota-unknown'
+        ? undefined
+        : {
+            remaining: platform === 'openai' ? 82 : 46,
+            window: '5 小时',
+            resetsAt: platform === 'openai' ? '2 小时后重置' : '48 分钟后重置',
+          },
   });
   let state: DesktopSnapshot = {
     mode: 'demo',
@@ -40,7 +56,8 @@ export function createDemoClient(scene: string): BeeClient {
       owner: selected === 'external' ? 'external' : 'app',
     }),
     connection: ready({
-      state: fresh || selected === 'configured' || selected === 'offline' ? 'disconnected' : 'connected',
+      state:
+        fresh || selected === 'configured' || selected === 'offline' ? 'disconnected' : 'connected',
       endpointLabel: 'Hive 演示连接',
     }),
     accounts: ready(
@@ -79,6 +96,7 @@ export function createDemoClient(scene: string): BeeClient {
         message: '收益刷新失败：演示 Hive 连接=disconnected；保留上次读取值。',
       },
     };
+  const explicitlyRemoved = new Set<Platform>();
   const listeners = new Set<(snapshot: DesktopSnapshot) => void>();
   const publish = () => {
     for (const listener of listeners) listener(structuredClone(state));
@@ -98,7 +116,8 @@ export function createDemoClient(scene: string): BeeClient {
       return `进程归属检查失败：读取=${state.process.status}，归属=${state.process.value?.owner ?? 'unknown'}，进程=${state.process.value?.state ?? 'unknown'}。`;
     if (state.connection.status !== 'ready' || state.connection.value.state !== 'connected')
       return `Hive 连接检查失败：读取=${state.connection.status}，连接=${state.connection.value?.state ?? 'unknown'}。`;
-    if (state.accounts.status !== 'ready') return `AI 账号检查失败：读取=${state.accounts.status}。`;
+    if (state.accounts.status !== 'ready')
+      return `AI 账号检查失败：读取=${state.accounts.status}。`;
     return undefined;
   };
   const updateProcess = () => {
@@ -170,7 +189,10 @@ export function createDemoClient(scene: string): BeeClient {
             endpointLabel: hiveAddress,
           });
           state.accounts = ready([]);
-          state.process = ready({ state: 'paused', owner: state.process.value?.owner });
+          state.process = ready({
+            state: 'paused',
+            owner: state.process.value?.owner,
+          });
         }
         state.preferences = ready(command.preferences);
         publish();
@@ -223,13 +245,90 @@ export function createDemoClient(scene: string): BeeClient {
           state: 'connected',
           endpointLabel: state.preferences.value?.hiveAddress ?? 'Hive 演示连接',
         });
-      } else if (command.type === 'detectAccount') {
+      } else if (
+        [
+          'detectAccount',
+          'connectAccount',
+          'authorizeAccount',
+          'confirmAccountChange',
+          'removeAccount',
+        ].includes(command.type) &&
+        'platform' in command
+      ) {
         const invalid = prerequisites();
         if (invalid) return fail('DEMO_PREREQUISITE_MISSING', invalid);
-        const existing = state.accounts.value!.find((a) => a.platform === command.platform);
-        state.accounts = ready(
-          existing ? state.accounts.value! : [...state.accounts.value!, account(command.platform)],
-        );
+        const platform = command.platform;
+        const existing = state.accounts.value!.find((a) => a.platform === platform);
+        if (command.type === 'authorizeAccount')
+          return {
+            kind: 'unsupported',
+            message: '官方授权尚未接通：仅演示入口，未打开官方客户端或写入授权。',
+          };
+        if (command.type === 'removeAccount') {
+          if (!existing)
+            return fail(
+              'DEMO_ACCOUNT_MISSING',
+              `移除检查失败：platform=${platform}，account=missing。`,
+            );
+          explicitlyRemoved.add(platform);
+          if (selected === 'removal-pending' || selected === 'removal-unknown') {
+            const removal = selected === 'removal-pending' ? 'pending' : 'unknown';
+            state.accounts = ready(
+              state.accounts.value!.map((a) =>
+                a.platform === platform ? { ...a, paused: true, state: 'unavailable', removal } : a,
+              ),
+            );
+            updateProcess();
+            publish();
+            return {
+              kind: removal,
+              message:
+                removal === 'pending'
+                  ? '仅演示：移除处理中，已停止新任务，等待收尾；卡片保留。'
+                  : '仅演示：移除结果未确认，已停止新任务；请刷新状态，卡片保留。',
+              operationId: `demo-remove-${platform}`,
+            };
+          }
+          state.accounts = ready(state.accounts.value!.filter((a) => a.platform !== platform));
+          updateProcess();
+        } else if (command.type === 'confirmAccountChange') {
+          if (!existing?.pendingChange)
+            return fail(
+              'DEMO_CHANGE_MISSING',
+              `换号检查失败：platform=${platform}，pendingChange=missing。`,
+            );
+          if (existing.removal)
+            return fail(
+              'DEMO_REMOVAL_UNRESOLVED',
+              `换号检查失败：platform=${platform}，removal=${existing.removal}。`,
+            );
+          state.accounts = ready(
+            state.accounts.value!.map((a) =>
+              a.platform === platform
+                ? {
+                    ...account(platform),
+                    identifier: existing.pendingChange!.identifier,
+                    pendingChange: undefined,
+                    paused: true,
+                  }
+                : a,
+            ),
+          );
+          updateProcess();
+        } else {
+          if (existing) {
+            // Detection never repairs an expired authorization or resolves an uncertain removal.
+          } else if (command.type === 'connectAccount' || !explicitlyRemoved.has(platform)) {
+            explicitlyRemoved.delete(platform);
+            state.accounts = ready([...state.accounts.value!, account(platform)]);
+          } else {
+            return {
+              kind: 'confirmed',
+              demo: true,
+              message: '仅演示：检测到官方登录；已记住移除选择，请明确接入账号。',
+            };
+          }
+        }
       } else {
         const invalid = prerequisites();
         if (invalid) return fail('DEMO_PREREQUISITE_MISSING', invalid);
@@ -239,7 +338,8 @@ export function createDemoClient(scene: string): BeeClient {
           start &&
           (!chosen.length ||
             chosen.some(
-              (p) => !state.accounts.value!.some((a) => a.platform === p && a.state === 'available'),
+              (p) =>
+                !state.accounts.value!.some((a) => a.platform === p && a.state === 'available'),
             ))
         )
           return fail(

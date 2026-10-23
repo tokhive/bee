@@ -184,6 +184,7 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
         await requireOwnedWindow('after final capture');
         report.finalGeometry = { window, ...(await inspectWindow(window)) };
         requireMinimumSize(report.finalGeometry, 'after final capture');
+        await requireOwnedWindow('after final geometry');
         report.observedMs = Date.now() - visibleSince;
         report.ok = true;
         break;

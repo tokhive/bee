@@ -255,6 +255,45 @@ test('window ownership lost during final capture cannot pass observation', async
   assert.equal(report.ok, false);
   assert.deepEqual(report.cleanup.liveRemaining, []);
 });
+for (const loss of ['child exit', 'ownership reassignment']) {
+  test(`final geometry ${loss} cannot pass with valid minimum dimensions`, async t => {
+    let captured = false, owned = true, childPid;
+    const options = observeOptions(t, {
+      findWindows: async pid => { childPid = pid; return [{ id: '42', pid: owned ? pid : process.pid }]; },
+      captureDesktop: async path => { writeFileSync(path, png); captured = true; },
+      inspectWindow: async () => {
+        if (captured) {
+          if (loss === 'child exit') {
+            writeFileSync(join(options.evidenceDir, 'exit-request'), 'exit');
+            const deadline = Date.now() + 3000;
+            while (true) {
+              try { process.kill(childPid, 0); }
+              catch (error) { if (error.code === 'ESRCH') break; throw error; }
+              assert.ok(Date.now() < deadline, `fixture child exit wait expired: actual pid=${childPid} still exists at ${Date.now()}; required=exit during final geometry read by ${deadline}`);
+              await delay(10);
+            }
+          } else owned = false;
+        }
+        return { geometry: 'WIDTH=860\nHEIGHT=600' };
+      },
+    });
+    if (loss === 'child exit') options.args = ['-e', `setInterval(() => {
+      if (require('node:fs').existsSync(${JSON.stringify(join(options.evidenceDir, 'exit-request'))})) {
+        console.error('fixture final geometry exit E47'); process.exit(7);
+      }
+    }, 10);`];
+    const report = await rejectAndCheckCleanup(options, loss === 'child exit'
+      ? /native app early exit: code=7; signal=null; stderr=.*E47/s
+      : /observed window disappeared.*actual=.*required=/s);
+    assert.deepEqual(report.finalGeometry.actual, { width: 860, height: 600 });
+    assert.equal(report.observedMs, undefined);
+    assert.ok(existsSync(join(options.evidenceDir, 'root.png')));
+    if (loss === 'child exit') {
+      assert.equal(report.exit.code, 7);
+      assert.match(readFileSync(join(options.evidenceDir, 'stderr.log'), 'utf8'), /E47/);
+    } else assert.deepEqual(report.lastWindows, [{ id: '42', pid: process.pid }]);
+  });
+}
 test('spawn failure is nonzero evidence rather than an observation success', async t => {
   const options = observeOptions(t, { program: '/bee-test-nonexistent-executable' });
   await assert.rejects(subject('observeOwnedProcess')(options), /spawn.*ENOENT/);

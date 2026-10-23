@@ -1,80 +1,286 @@
 import { parseScene } from './scenes';
-import type { BeeClient, DesktopSnapshot, ReadState } from './types';
+import type { Account, BeeClient, DesktopSnapshot, Platform, ReadState } from './types';
 
+const platforms: Platform[] = ['openai', 'claude'];
+const names = { openai: 'OpenAI', claude: 'Claude' };
 export function createDemoClient(scene: string): BeeClient {
   const selected = parseScene(scene);
   const now = new Date().toISOString();
-  const ready = <T>(value: T): ReadState<T> => ({ status: 'ready', value, updatedAt: now });
+  const ready = <T>(value: T): ReadState<T> => ({
+    status: 'ready',
+    value,
+    updatedAt: new Date().toISOString(),
+  });
+  const fresh = ['onboarding', 'pending', 'unknown-result', 'operation-error'].includes(selected);
+  const account = (platform: Platform): Account => ({
+    id: `demo-${platform}`,
+    platform,
+    label: names[platform],
+    plan: platform === 'openai' ? 'Plus' : 'Pro',
+    state: 'available',
+    paused: true,
+    quota: {
+      remaining: platform === 'openai' ? 82 : 46,
+      window: '5 小时',
+      resetsAt: platform === 'openai' ? '2 小时后重置' : '48 分钟后重置',
+    },
+  });
   let state: DesktopSnapshot = {
     mode: 'demo',
-    binding: ready({ state: selected === 'onboarding' ? 'unbound' : 'bound', label: 'Bee 演示账号' }),
-    process: ready({ state: 'paused' }),
-    connection: ready({ state: 'connected', endpointLabel: 'Hive 演示连接' }),
+    binding: ready({
+      state: fresh || selected === 'configured' ? 'unbound' : 'bound',
+      loggedIn: !fresh,
+      onboardingComplete: !fresh && selected !== 'configured',
+      label: fresh ? undefined : 'Bee 演示账号',
+      source: selected === 'configured' ? 'existing' : 'new',
+      replaceDevice: selected === 'configured' ? '旧演示设备' : undefined,
+    }),
+    process: ready({
+      state: 'paused',
+      owner: selected === 'external' ? 'external' : 'app',
+    }),
+    connection: ready({
+      state: fresh || selected === 'configured' || selected === 'offline' ? 'disconnected' : 'connected',
+      endpointLabel: 'Hive 演示连接',
+    }),
     accounts: ready(
-      selected === 'empty' || selected === 'onboarding'
-        ? []
-        : [
-            { id: 'demo-openai', platform: 'openai', label: 'OpenAI', plan: 'Plus', state: 'available' },
-            { id: 'demo-claude', platform: 'claude', label: 'Claude', plan: 'Pro', state: 'available' },
-          ],
+      fresh || selected === 'empty' || selected === 'configured' ? [] : platforms.map(account),
     ),
-    earnings: ready({ balance: '128.560000000', today: '6.820000000', total: '382.140000000' }),
+    earnings: ready({
+      balance: '128.560000000',
+      today: '6.820000000',
+      total: '382.140000000',
+    }),
     tasks: ready(selected === 'unknown-tasks' ? { kind: 'unknown' } : { kind: 'known', count: 0 }),
-    preferences: ready({ theme: 'system', language: 'system' }),
+    preferences: ready({
+      theme: 'system',
+      language: 'system',
+      hiveAddress: 'Hive 演示连接',
+      proxyAddress: '',
+    }),
   };
-  if (selected === 'loading') state = { ...state, accounts: { status: 'loading', updatedAt: null } };
+  if (selected === 'loading') state.accounts = { status: 'loading', updatedAt: null };
+  if (selected === 'unknown') state.connection = { status: 'loading', updatedAt: null };
   if (selected === 'error')
-    state = {
-      ...state,
-      accounts: {
-        status: 'error',
-        updatedAt: now,
-        error: {
-          code: 'DEMO_ACCOUNTS_UNAVAILABLE',
-          message: '演示账号读取失败：场景 error 模拟账号源不可用。',
-        },
+    state.accounts = {
+      status: 'error',
+      updatedAt: now,
+      error: {
+        code: 'DEMO_ACCOUNTS_UNAVAILABLE',
+        message: '演示账号读取失败：场景 error 模拟账号源不可用。',
+      },
+    };
+  if (selected === 'offline')
+    state.earnings = {
+      ...state.earnings,
+      status: 'error',
+      error: {
+        code: 'DEMO_HIVE_OFFLINE',
+        message: '收益刷新失败：演示 Hive 连接=disconnected；保留上次读取值。',
       },
     };
   const listeners = new Set<(snapshot: DesktopSnapshot) => void>();
+  const publish = () => {
+    for (const listener of listeners) listener(structuredClone(state));
+  };
+  const fail = (code: string, message: string) => ({
+    kind: 'failed' as const,
+    error: { code, message },
+  });
+  const prerequisites = () => {
+    if (state.binding.status !== 'ready' || state.binding.value.state !== 'bound')
+      return `绑定检查失败：读取=${state.binding.status}，绑定=${state.binding.value?.state ?? 'unknown'}。`;
+    if (
+      state.process.status !== 'ready' ||
+      state.process.value.owner !== 'app' ||
+      state.process.value.state === 'stopped'
+    )
+      return `进程归属检查失败：读取=${state.process.status}，归属=${state.process.value?.owner ?? 'unknown'}，进程=${state.process.value?.state ?? 'unknown'}。`;
+    if (state.connection.status !== 'ready' || state.connection.value.state !== 'connected')
+      return `Hive 连接检查失败：读取=${state.connection.status}，连接=${state.connection.value?.state ?? 'unknown'}。`;
+    if (state.accounts.status !== 'ready') return `AI 账号检查失败：读取=${state.accounts.status}。`;
+    return undefined;
+  };
+  const updateProcess = () => {
+    state.process = ready({
+      ...state.process.value!,
+      state: state.accounts.value?.some((a) => !a.paused) ? 'contributing' : 'paused',
+    });
+  };
   return {
     async snapshot() {
       return structuredClone(state);
     },
     async dispatch(command) {
-      if (command.type === 'snapshot.refresh') {
-        // Refresh is deliberately local and does not simulate an upstream success.
-        for (const listener of listeners) listener(structuredClone(state));
-        return { kind: 'confirmed', demo: true, message: '仅演示：已重新读取当前场景。' };
-      }
-      if (
-        state.binding.status !== 'ready' ||
-        state.binding.value.state !== 'bound' ||
-        !state.accounts.value?.length
-      ) {
+      // A local delay exposes operation progress without contacting any business service.
+      await new Promise((resolve) => setTimeout(resolve, 120));
+      if (command.type === 'refresh' || command.type === 'snapshot.refresh') {
+        publish();
         return {
-          kind: 'failed',
-          error: {
-            code: 'DEMO_PREREQUISITE_MISSING',
-            message: '演示贡献条件未满足：需要演示绑定与至少一个演示 AI 账号。',
-          },
+          kind: 'confirmed',
+          demo: true,
+          message: '仅演示：已重新读取当前场景；主动暂停选择保持不变。',
         };
       }
-      state = {
-        ...state,
-        process: {
-          status: 'ready',
-          updatedAt: new Date().toISOString(),
-          value: { state: command.type === 'contribution.start' ? 'contributing' : 'paused' },
-        },
-      };
-      for (const listener of listeners) listener(structuredClone(state));
+      if (command.type === 'savePreferences') {
+        const { hiveAddress = '', proxyAddress = '' } = command.preferences;
+        for (const [label, value] of [
+          ['Hive', hiveAddress],
+          ['代理', proxyAddress],
+        ]) {
+          if (!value || value === 'Hive 演示连接') continue;
+          try {
+            const url = new URL(value);
+            if (
+              !['http:', 'https:'].includes(url.protocol) ||
+              url.username ||
+              url.password ||
+              url.search ||
+              url.hash
+            )
+              throw new Error();
+          } catch {
+            return fail(
+              'DEMO_INVALID_ADDRESS',
+              `${label} 地址校验失败：要求不含凭证、查询或片段的 HTTP(S) 地址；请检查输入。`,
+            );
+          }
+        }
+        if (state.preferences.value?.hiveAddress !== hiveAddress) {
+          state.binding = ready({
+            state: 'unbound',
+            loggedIn: false,
+            source: 'new',
+          });
+          state.connection = ready({
+            state: 'disconnected',
+            endpointLabel: hiveAddress,
+          });
+          state.accounts = ready([]);
+          state.process = ready({ state: 'paused', owner: state.process.value?.owner });
+        }
+        state.preferences = ready(command.preferences);
+        publish();
+        return {
+          kind: 'confirmed',
+          demo: true,
+          message: '仅演示：已保存设置；切换 Hive 后需重新登录和绑定。未修改系统代理。',
+        };
+      }
+      if (command.type === 'loginHive') {
+        if (selected === 'pending')
+          return {
+            kind: 'pending',
+            message: '仅演示：登录处理中，请刷新状态；尚未确认登录。',
+            operationId: 'demo-login',
+          };
+        if (selected === 'unknown-result')
+          return {
+            kind: 'unknown',
+            message: '仅演示：登录结果未确认，请刷新状态；不会推断登录成功。',
+            operationId: 'demo-login',
+          };
+        if (selected === 'operation-error')
+          return fail(
+            'DEMO_LOGIN_FAILED',
+            '登录失败：场景 operation-error 模拟 Hive 登录不可用；请重试。',
+          );
+        state.binding = ready({
+          ...state.binding.value!,
+          loggedIn: true,
+          label: 'Bee 演示账号',
+        });
+      } else if (command.type === 'bindDevice') {
+        if (state.binding.status !== 'ready' || !state.binding.value.loggedIn)
+          return fail(
+            'DEMO_LOGIN_REQUIRED',
+            `绑定检查失败：读取=${state.binding.status}，已登录=${state.binding.value?.loggedIn ?? false}。`,
+          );
+        if (state.binding.value.replaceDevice && !command.replaceConfirmed)
+          return fail(
+            'DEMO_REPLACEMENT_CONFIRMATION_REQUIRED',
+            `设备替换未确认：当前绑定=${state.binding.value.replaceDevice}。`,
+          );
+        state.binding = ready({
+          ...state.binding.value,
+          state: 'bound',
+          replaceDevice: undefined,
+        });
+        state.connection = ready({
+          state: 'connected',
+          endpointLabel: state.preferences.value?.hiveAddress ?? 'Hive 演示连接',
+        });
+      } else if (command.type === 'detectAccount') {
+        const invalid = prerequisites();
+        if (invalid) return fail('DEMO_PREREQUISITE_MISSING', invalid);
+        const existing = state.accounts.value!.find((a) => a.platform === command.platform);
+        state.accounts = ready(
+          existing ? state.accounts.value! : [...state.accounts.value!, account(command.platform)],
+        );
+      } else {
+        const invalid = prerequisites();
+        if (invalid) return fail('DEMO_PREREQUISITE_MISSING', invalid);
+        const start = command.type === 'startContribution' || command.type === 'contribution.start';
+        const chosen = command.type === 'startContribution' ? command.platforms : platforms;
+        if (
+          start &&
+          (!chosen.length ||
+            chosen.some(
+              (p) => !state.accounts.value!.some((a) => a.platform === p && a.state === 'available'),
+            ))
+        )
+          return fail(
+            'DEMO_ACCOUNT_NOT_READY',
+            `平台选择检查失败：选择=${chosen.join(',') || 'none'}，可用=${
+              state.accounts
+                .value!.filter((a) => a.state === 'available')
+                .map((a) => a.platform)
+                .join(',') || 'none'
+            }。`,
+          );
+        const paused = start
+          ? false
+          : command.type === 'contribution.pause'
+            ? true
+            : 'paused' in command
+              ? command.paused
+              : true;
+        state.accounts = ready(
+          state.accounts.value!.map((a) => {
+            const target =
+              command.type === 'setPlatformPaused'
+                ? a.platform === command.platform
+                : chosen.includes(a.platform);
+            if (!target) return a;
+            if (!paused && a.state !== 'available')
+              return {
+                ...a,
+                feedback: `${names[a.platform]} 恢复失败：账号=${a.state}；请重新检测。`,
+              };
+            if (selected === 'partial' && paused && a.platform === 'claude')
+              return {
+                ...a,
+                feedback: 'Claude 暂停失败：场景 partial 模拟平台拒绝；当前仍贡献中，请重试。',
+              };
+            return {
+              ...a,
+              paused,
+              feedback: `${names[a.platform]} ${paused ? '已暂停' : '贡献中'}（仅演示）`,
+            };
+          }),
+        );
+        if (start)
+          state.binding = ready({
+            ...state.binding.value!,
+            onboardingComplete: true,
+          });
+        updateProcess();
+      }
+      publish();
       return {
         kind: 'confirmed',
         demo: true,
-        message:
-          command.type === 'contribution.start'
-            ? '仅演示：已开始演示贡献，不控制真实供给。'
-            : '仅演示：已暂停演示贡献，不控制真实供给。',
+        message: '仅演示：操作已完成，请查看每个平台的结果；不会控制真实供给。',
       };
     },
     subscribe(listener) {

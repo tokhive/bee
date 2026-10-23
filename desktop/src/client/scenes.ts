@@ -1,4 +1,19 @@
-export const scenes = ['ready', 'loading', 'empty', 'error', 'unknown-tasks', 'onboarding'] as const;
+export const scenes = [
+  'ready',
+  'loading',
+  'empty',
+  'error',
+  'unknown-tasks',
+  'onboarding',
+  'configured',
+  'external',
+  'offline',
+  'unknown',
+  'partial',
+  'pending',
+  'unknown-result',
+  'operation-error',
+] as const;
 export type DemoScene = (typeof scenes)[number];
 export function parseScene(scene: string): DemoScene {
   if ((scenes as readonly string[]).includes(scene)) return scene as DemoScene;

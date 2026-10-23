@@ -99,3 +99,19 @@ dd { margin: 7px 0 0; overflow-wrap: anywhere; }
   .page-heading { align-items: flex-start; flex-direction: column; }.scene-control { display: flex; align-items: center; }
   footer { padding-inline: 18px; flex-wrap: wrap; }.side-note { font-size: 10px; }
 }
+.onboarding { border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 25px; background: var(--canvas); }
+.guide-steps { padding-left: 20px; margin-bottom: 0; }
+.guide-steps li { padding: 12px 0 12px 5px; border-top: 1px solid var(--line); }
+.guide-steps li > span { display: block; margin: 4px 0 10px; font-size: 12px; color: var(--muted); }
+.inline-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.connection-summary { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 0 0 22px; color: var(--muted); font-size: 12px; }
+.connection-summary .inline-actions { margin-left: auto; }
+.platform-actions { display: grid; gap: 8px; font-size: 11px; }
+.platform-actions label { display: flex; gap: 4px; align-items: center; color: var(--muted); }
+meter { display: block; width: 100%; height: 6px; margin: 5px 0; accent-color: var(--good); }
+.quota-value { float: right; font-size: 12px; }
+.platform-feedback { max-width: 32ch; margin-top: 5px; }
+.settings-form { max-width: 550px; display: grid; gap: 20px; }
+.settings-form label { display: grid; gap: 8px; font-size: 12px; }
+.settings-form input { background: var(--paper); color: var(--ink); border: 1px solid var(--line); border-radius: 7px; padding: 9px; font: inherit; }
+.settings-form button { justify-self: start; }

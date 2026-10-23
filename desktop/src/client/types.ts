@@ -8,13 +8,23 @@ export interface ClientError {
 export type ReadState<T> =
   | { status: 'loading'; updatedAt: string | null; value?: T }
   | { status: 'ready'; updatedAt: string; value: T }
-  | { status: 'error'; updatedAt: string | null; error: ClientError; value?: T };
+  | {
+      status: 'error';
+      updatedAt: string | null;
+      error: ClientError;
+      value?: T;
+    };
 export interface Binding {
   state: 'unbound' | 'bound';
   label?: string;
+  loggedIn?: boolean;
+  onboardingComplete?: boolean;
+  replaceDevice?: string;
+  source?: 'new' | 'existing';
 }
 export interface Process {
   state: 'paused' | 'contributing' | 'stopped';
+  owner?: 'app' | 'external';
 }
 export interface Connection {
   state: 'connected' | 'disconnected';
@@ -26,6 +36,9 @@ export interface Account {
   label: string;
   plan: string;
   state: 'available' | 'unavailable';
+  paused?: boolean;
+  quota?: { remaining: number; window: string; resetsAt: string };
+  feedback?: string;
 }
 /** All amounts stay decimal strings; never coerce them to Number. */
 export type DecimalAmount = string;
@@ -37,6 +50,8 @@ export interface Earnings {
 export interface Preferences {
   language: 'system' | 'zh' | 'en';
   theme: 'system' | 'light' | 'dark';
+  hiveAddress?: string;
+  proxyAddress?: string;
 }
 export interface DesktopSnapshot {
   mode: 'demo' | 'unavailable';
@@ -52,10 +67,18 @@ export interface DesktopSnapshot {
 export type DesktopCommand =
   | { type: 'contribution.start' }
   | { type: 'contribution.pause' }
-  | { type: 'snapshot.refresh' };
+  | { type: 'snapshot.refresh' | 'refresh' }
+  | { type: 'loginHive' }
+  | { type: 'bindDevice'; replaceConfirmed?: boolean }
+  | { type: 'detectAccount'; platform: Platform }
+  | { type: 'startContribution'; platforms: Platform[] }
+  | { type: 'setPlatformPaused'; platform: Platform; paused: boolean }
+  | { type: 'setAllPaused'; paused: boolean }
+  | { type: 'savePreferences'; preferences: Preferences };
 export type OperationResult =
   | { kind: 'confirmed'; message: string; demo: boolean }
   | { kind: 'pending'; message: string; operationId: string }
+  | { kind: 'unknown'; message: string; operationId: string }
   | { kind: 'failed'; error: ClientError }
   | { kind: 'unsupported'; message: string };
 export interface BeeClient {

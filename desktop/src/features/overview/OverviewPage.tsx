@@ -134,6 +134,8 @@ export function OverviewPage({
     snapshot.process.value.owner === 'app' &&
     snapshot.process.value.state !== 'stopped' &&
     snapshot.accounts.status === 'ready';
+  const started =
+    snapshot.binding.status === 'ready' && snapshot.binding.value.onboardingComplete === true;
   const running = snapshot.process.status === 'ready' && snapshot.process.value.state === 'contributing';
   const external = snapshot.process.value?.owner === 'external';
   const chosen = selection.filter((p) =>
@@ -327,7 +329,7 @@ export function OverviewPage({
                 </label>
                 {account ? (
                   <button
-                    disabled={busy || !eligible}
+                    disabled={busy || !eligible || (account.paused && !started)}
                     onClick={() =>
                       void dispatch({
                         type: 'setPlatformPaused',
@@ -355,7 +357,7 @@ export function OverviewPage({
       </div>
       <button
         className="quiet"
-        disabled={busy || !eligible}
+        disabled={busy || !eligible || !started}
         onClick={() => void dispatch({ type: 'setAllPaused', paused: false })}
       >
         恢复全部就绪平台

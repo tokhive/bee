@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import type { Account } from '../src/client/types';
 
 test('首次接入可中断继续，只接入所选平台，绑定检测不会自动贡献', async ({ page }) => {
   const requests: string[] = [];
@@ -195,4 +196,87 @@ test('无效设置保留输入和当前绑定，不泄露地址中的凭证', as
   await expect(page.getByLabel('Hive 地址')).toHaveValue('https://user:secret@example.com');
   await page.getByRole('button', { name: '概览', exact: true }).click();
   await expect(page.getByRole('button', { name: '开始贡献', exact: true })).toBeEnabled();
+});
+
+test('审查 I1：首次开始前恢复不可绕过选择，明确开始后引导结束并允许正常恢复', async ({ page }) => {
+  await page.goto('/?scene=onboarding');
+  await page.getByRole('button', { name: '模拟登录 Hive', exact: true }).click();
+  await page.getByRole('button', { name: '绑定本机设备', exact: true }).click();
+  await page.getByRole('button', { name: '检测 OpenAI', exact: true }).click();
+  await page.getByLabel('选择 OpenAI').uncheck();
+  await expect(page.getByRole('button', { name: '恢复 OpenAI', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '恢复全部就绪平台', exact: true })).toBeDisabled();
+  await expect(page.getByRole('button', { name: '开始贡献', exact: true })).toBeDisabled();
+  await page.getByLabel('选择 OpenAI').check();
+  await page.getByRole('button', { name: '开始贡献', exact: true }).click();
+  await expect(page.getByRole('heading', { name: '首次接入' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'OpenAI 供给' })).toContainText('贡献中');
+  await page.getByRole('button', { name: '暂停 OpenAI', exact: true }).click();
+  await page.getByRole('button', { name: '刷新状态', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'OpenAI 供给' })).toContainText('已暂停');
+  await page.getByRole('button', { name: '恢复 OpenAI', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'OpenAI 供给' })).toContainText('贡献中');
+  await page.getByRole('button', { name: '暂停 OpenAI', exact: true }).click();
+  await page.getByRole('button', { name: '恢复全部就绪平台', exact: true }).click();
+  await expect(page.getByRole('region', { name: 'OpenAI 供给' })).toContainText('贡献中');
+});
+
+test('审查 M1：partial 暂停失败反馈保留的实际暂停状态', async ({ page }) => {
+  await page.goto('/');
+  const result = await page.evaluate(async () => {
+    const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+    const client = createDemoClient('partial');
+    await client.dispatch({ type: 'setPlatformPaused', platform: 'claude', paused: true });
+    const paused = (await client.snapshot()).accounts.value?.find((a: Account) => a.platform === 'claude');
+    await client.dispatch({ type: 'startContribution', platforms: ['claude'] });
+    await client.dispatch({ type: 'setAllPaused', paused: true });
+    const active = (await client.snapshot()).accounts.value?.find((a: Account) => a.platform === 'claude');
+    return { paused, active };
+  });
+  expect(result.paused?.paused).toBe(true);
+  expect(result.paused?.feedback).toContain('当前已暂停');
+  expect(result.paused?.feedback).not.toContain('仍贡献中');
+  expect(result.active?.paused).toBe(false);
+  expect(result.active?.feedback).toContain('当前仍贡献中');
+});
+
+test('审查 M2：地址失败区分协议凭证查询片段与解析，不回显秘密并保留输入', async ({ page }) => {
+  await page.goto('/');
+  await page.getByRole('button', { name: '设置', exact: true }).click();
+  for (const [input, evidence] of [
+    ['ftp://example.com', 'protocol=ftp:'],
+    ['https://user:secret@example.com', 'hasCredentials=true'],
+    ['https://example.com?token=secret', 'hasQuery=true'],
+    ['https://example.com#secret', 'hasFragment=true'],
+    ['secret invalid address', 'parse=failed'],
+  ]) {
+    await page.getByLabel('Hive 地址').fill(input);
+    await page.getByRole('button', { name: '保存演示设置' }).click();
+    await expect(page.getByRole('status')).toContainText(evidence);
+    await expect(page.getByRole('status')).not.toContainText('secret');
+    await expect(page.getByLabel('Hive 地址')).toHaveValue(input);
+  }
+});
+
+test('审查 I1：客户端拒绝首次开始前的单平台及全部恢复', async ({ page }) => {
+  await page.goto('/');
+  const guarded = await page.evaluate(async () => {
+    const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+    const client = createDemoClient('onboarding');
+    await client.dispatch({ type: 'loginHive' });
+    await client.dispatch({ type: 'bindDevice' });
+    await client.dispatch({ type: 'detectAccount', platform: 'openai' });
+    const single = await client.dispatch({
+      type: 'setPlatformPaused',
+      platform: 'openai',
+      paused: false,
+    });
+    const all = await client.dispatch({ type: 'setAllPaused', paused: false });
+    return { single, all, state: await client.snapshot() };
+  });
+  expect(guarded.single.kind).toBe('failed');
+  expect(guarded.all.kind).toBe('failed');
+  expect(JSON.stringify(guarded.single)).toContain('onboardingComplete=false');
+  expect(guarded.state.accounts.value?.[0].paused).toBe(true);
+  expect(guarded.state.binding.value?.onboardingComplete).toBe(false);
 });

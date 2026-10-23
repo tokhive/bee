@@ -129,22 +129,35 @@ export function createDemoClient(scene: string): BeeClient {
           ['代理', proxyAddress],
         ]) {
           if (!value || value === 'Hive 演示连接') continue;
+          let url: URL;
           try {
-            const url = new URL(value);
-            if (
-              !['http:', 'https:'].includes(url.protocol) ||
-              url.username ||
-              url.password ||
-              url.search ||
-              url.hash
-            )
-              throw new Error();
+            url = new URL(value);
           } catch {
             return fail(
               'DEMO_INVALID_ADDRESS',
-              `${label} 地址校验失败：要求不含凭证、查询或片段的 HTTP(S) 地址；请检查输入。`,
+              `${label} 地址解析失败：parse=failed，inputLength=${value.length}；请输入有效 HTTP(S) 地址。`,
             );
           }
+          if (!['http:', 'https:'].includes(url.protocol))
+            return fail(
+              'DEMO_INVALID_ADDRESS',
+              `${label} 地址协议检查失败：protocol=${url.protocol}；允许 http:、https:。`,
+            );
+          if (url.username || url.password)
+            return fail(
+              'DEMO_INVALID_ADDRESS',
+              `${label} 地址凭证检查失败：hasCredentials=true；请移除账号与密码。`,
+            );
+          if (url.search)
+            return fail(
+              'DEMO_INVALID_ADDRESS',
+              `${label} 地址查询检查失败：hasQuery=true；请移除查询参数。`,
+            );
+          if (url.hash)
+            return fail(
+              'DEMO_INVALID_ADDRESS',
+              `${label} 地址片段检查失败：hasFragment=true；请移除片段。`,
+            );
         }
         if (state.preferences.value?.hiveAddress !== hiveAddress) {
           state.binding = ready({
@@ -245,6 +258,11 @@ export function createDemoClient(scene: string): BeeClient {
             : 'paused' in command
               ? command.paused
               : true;
+        if (!start && !paused && state.binding.value?.onboardingComplete !== true)
+          return fail(
+            'DEMO_FIRST_START_REQUIRED',
+            `首次开始检查失败：onboardingComplete=${state.binding.value?.onboardingComplete ?? 'unknown'}；请先选择平台并使用“开始贡献”。`,
+          );
         state.accounts = ready(
           state.accounts.value!.map((a) => {
             const target =
@@ -260,7 +278,7 @@ export function createDemoClient(scene: string): BeeClient {
             if (selected === 'partial' && paused && a.platform === 'claude')
               return {
                 ...a,
-                feedback: 'Claude 暂停失败：场景 partial 模拟平台拒绝；当前仍贡献中，请重试。',
+                feedback: `Claude 暂停失败：场景 partial 模拟平台拒绝；${a.paused === true ? '当前已暂停' : a.paused === false ? '当前仍贡献中' : '当前暂停状态未知'}，请重试。`,
               };
             return {
               ...a,

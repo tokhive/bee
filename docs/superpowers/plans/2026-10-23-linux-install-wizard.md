@@ -46,4 +46,14 @@
 - 代码、设计、配置开关、安装文档和最终 PR 说明已逐项核对；未进行真实云服务器重启实测。
 - Bee 实现提交 `7a30076` 与文档提交 `a6bf14e` 已推送至原有 fork 分支；[Bee #20](https://github.com/tokhive/bee/pull/20) 和[文档 #1](https://github.com/tokhive/doc-site/pull/1) 的标题与说明均已更新。
 - [Bee Linux CI](https://github.com/tokhive/bee/actions/runs/39895057984) 通过：40 项安装测试全部通过，包含 native unit 校验和开机启动链接检查，`go vet` 与 `go test -race` 通过；[文档站 CI](https://github.com/tokhive/doc-site/actions/runs/39895069111) 通过。
-- 最终复核共 9 项复选框：全部完成，0 项遗留。
+- 初版向导复核共 9 项复选框：全部完成，0 项遗留；后续实测修复另记如下。
+
+## 云服务器实测补充：sudo 免密预检查
+
+用户提供的实际规则同时包含普通授权与 `NOPASSWD: ALL`，`sudo ls` 成功但 `sudo -n -v` 报 `a password is required`。sudo 手册确认默认 `verifypw=all` 会检查所有匹配规则；这是原预检查与普通命令授权语义不同导致的兼容问题。
+
+- [x] 回归夹具模拟普通命令免密而 `sudo -v` 需要密码，先确认现有安装脚本因此失败。
+- [x] 将预检查改为无副作用的 `sudo true`，保留拒绝提权时在安装二进制前失败的行为；同步 spec。
+- [ ] 运行安装测试、ShellCheck 与差异检查，针对性审查后提交并推送 Bee #20，检查 Linux CI，提供新的测试地址。
+
+本机 `make test-install` 共 41 项，39 项通过，2 项 Linux 原生检查在 macOS 跳过；ShellCheck、语法和差异检查通过。审查无阻断项，审查者独立运行免密兼容和拒绝提权的两项测试通过。错误、实现、spec 与实际 sudo 规则逐项核对一致；新版 Linux CI 待推送后检查。

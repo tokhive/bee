@@ -71,6 +71,9 @@ if os.environ.get('INSTALL_TEST_SUDO_FAIL'):
     print('sudo: dayong is not allowed to execute this command', file=sys.stderr)
     sys.exit(1)
 if args == ['-v']:
+    if os.environ.get('INSTALL_TEST_SUDO_VALIDATE_FAIL'):
+        print('sudo: a password is required', file=sys.stderr)
+        sys.exit(1)
     sys.exit(0)
 args = [str(root / 'systemd' / 'tokhive-bee.service') if arg == {UNIT!r} else arg for arg in args]
 if args[0] == 'install':
@@ -443,6 +446,13 @@ else:
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("dayong is not allowed", result.stderr)
         self.assertFalse((self.home / ".local/bin/bee").exists())
+
+    def test_passwordless_commands_work_when_sudo_validate_requires_password(self):
+        result = self.run_install(INSTALL_TEST_SUDO_VALIDATE_FAIL="1")
+        self.assert_success(result)
+        self.assertTrue(self.unit.exists())
+        self.assertIn(['systemctl', 'enable', 'tokhive-bee'], self.commands())
+        self.assertNotIn(['sudo', '-v'], self.commands())
 
     def test_sudo_of_the_whole_installer_does_not_register_root_by_mistake(self):
         result = self.run_install(INSTALL_TEST_UID="0", INSTALL_TEST_USER="root", SUDO_USER="dayong")

@@ -193,7 +193,9 @@ if [ "$install_service" = 1 ]; then
 	systemctl show-environment >/dev/null || fail "systemctl show-environment failed; a running system systemd manager is required (set BEE_INSTALL_SERVICE=0 for binary-only installation)"
 	if [ "$install_uid" != 0 ]; then
 		command -v sudo >/dev/null 2>&1 || fail "sudo was not found on PATH for user $install_user; system service installation needs administrator access (set BEE_INSTALL_SERVICE=0 for binary-only installation)"
-		sudo -v || fail "sudo authorization failed for $install_user while preparing $service_path"
+		# Validate a regular command: sudo -v can require a password even when
+		# NOPASSWD permits every command, due to other matching sudoers entries.
+		sudo true || fail "sudo true failed for $install_user while preparing $service_path"
 	fi
 	if as_root test -L "$service_path"; then
 		fail "$service_path is a symbolic link; remove or migrate the existing service before installing Bee's managed service"

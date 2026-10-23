@@ -22,6 +22,7 @@
 
 - Linux 默认写入并启用 `/etc/systemd/system/tokhive-bee.service`，`User=` 为安装用户；`HOME`、配置目录、PATH 及显式设置的官方客户端目录沿用安装环境。
 - 仅管理员操作使用 sudo；拒绝以 sudo 运行整个安装脚本而误用 root 的配置。
+- sudo 预检查执行无副作用的 `sudo true`，遵循普通命令的授权规则。不能使用 `sudo -v`：用户实际云服务器同时匹配 `(ALL : ALL) ALL` 与 `(ALL) NOPASSWD: ALL`，普通命令可免密，但默认 `verifypw=all` 仍要求 `sudo -v` 验证密码。安装器兼容该配置，不修改系统的 sudo 策略。
 - 保留下载校验、原子替换、自定义安装路径、托管 unit 标记、用户手写或链接 unit 保护、旧用户级服务迁移检查。
 - `BEE_INSTALL_SERVICE=0` 仅安装二进制；macOS 继续仅安装二进制。
 - 服务仍执行 `bee run`，缺少设备或出口配置时跳过，异常退出等待 10 秒再重试，正常退出不重启。

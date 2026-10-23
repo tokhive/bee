@@ -54,6 +54,8 @@
 
 - [x] 回归夹具模拟普通命令免密而 `sudo -v` 需要密码，先确认现有安装脚本因此失败。
 - [x] 将预检查改为无副作用的 `sudo true`，保留拒绝提权时在安装二进制前失败的行为；同步 spec。
-- [ ] 运行安装测试、ShellCheck 与差异检查，针对性审查后提交并推送 Bee #20，检查 Linux CI，提供新的测试地址。
+- [x] 运行安装测试、ShellCheck 与差异检查，针对性审查后提交并推送 Bee #20，检查 Linux CI，提供新的测试地址。
 
-本机 `make test-install` 共 41 项，39 项通过，2 项 Linux 原生检查在 macOS 跳过；ShellCheck、语法和差异检查通过。审查无阻断项，审查者独立运行免密兼容和拒绝提权的两项测试通过。错误、实现、spec 与实际 sudo 规则逐项核对一致；新版 Linux CI 待推送后检查。
+本机 `make test-install` 共 41 项，39 项通过，2 项 Linux 原生检查在 macOS 跳过；ShellCheck、语法和差异检查通过。审查无阻断项，审查者独立运行免密兼容和拒绝提权的两项测试通过。错误、实现、spec 与实际 sudo 规则逐项核对一致。
+
+修复提交 `350ffd2` 已推送 Bee #20，[Linux CI](https://github.com/tokhive/bee/actions/runs/39934064206) 通过：41 项安装测试全部通过，包含 sudo 兼容回归、native systemd 校验和开机启动链接检查，`go vet` 与 `go test -race` 通过。已核对并提供 fork 的 `feat/linux-autostart/install.sh` 测试地址，说明原 `a36347c` 固定地址仍是旧版本。复核共 12 项复选框（初版 9 项、补充 3 项），全部完成。

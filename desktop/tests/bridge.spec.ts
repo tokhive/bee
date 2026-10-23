@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 
 test('普通浏览器明确显示没有原生能力并保留重新检查', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('/?p0=1');
   await expect(page.getByRole('alert')).toContainText('NATIVE_UNAVAILABLE');
   await page.getByRole('button', { name: '重新检查' }).click();
   await expect(page.getByRole('alert')).toContainText('NATIVE_UNAVAILABLE');
@@ -33,7 +33,7 @@ for (const failed of [false, true]) {
         __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener(_event: string, id: number) { callbacks.delete(id); } },
       });
     }, { failed });
-    await page.goto('/');
+    await page.goto('/?p0=1');
     if (failed) {
       await expect(page.getByRole('alert')).toContainText('status=9');
       await expect(page.getByRole('button', { name: '重新检查' })).toBeEnabled();

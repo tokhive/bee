@@ -1,0 +1,10 @@
+{
+  "name": "Bee 银白精工中文视觉基线",
+  "source": "docs/ui/bee-silver-2026-10-22/",
+  "locked_on": "2026-10-22",
+  "files": {
+    "bee-silver.html": "92ce8a45828e38dbe149556ed000f139d0d8f880cae24017c2bbb5b04273a9c5",
+    "bee-silver-source.html": "621cf0b3ab19fe857049640ceae1238db49c1e41f499f86071278ea0d573edf9",
+    "../../src/assets/app-icon-dark.svg": "198cad802e7dcaa73978e35327416852f60c371849163080e7b5de64236a3488"
+  }
+}

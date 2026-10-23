@@ -23,7 +23,7 @@ for (const cold of [true, false]) {
         __TAURI_EVENT_PLUGIN_INTERNALS__: { unregisterListener(_event: string, id: number) { callbacks.delete(id); } },
       });
     }, { cold });
-    await page.goto('/');
+    await page.goto('/?p0=1');
     if (!cold) {
       await expect(page.getByText('已收到登录返回', { exact: true })).toHaveCount(0);
       await expect.poll(() => page.evaluate(() => (window as unknown as { __beeLoginReturn(): boolean }).__beeLoginReturn())).toBe(true);

@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": "24.x" },
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
@@ -11,12 +13,18 @@
     "test:e2e": "playwright test",
     "test:tooling": "node --test tests/tooling.test.mjs",
     "test:bridge": "node --test tests/bridge.test.ts tests/bridgeMonitor.test.ts tests/lifecycle.test.ts",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "dev:demo": "vite --mode demo --host 127.0.0.1 --port 1420 --strictPort",
+    "dev:e2e": "vite --mode e2e --host 127.0.0.1 --port 1420 --strictPort",
+    "build:demo": "tsc --noEmit && vite build --mode demo"
   },
   "dependencies": {
     "@tauri-apps/api": "2.12.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "radix-ui": "1.8.1",
+    "lucide-react": "1.43.0",
+    "tailwindcss": "4.3.3"
   },
   "devDependencies": {
     "@playwright/test": "1.63.0",

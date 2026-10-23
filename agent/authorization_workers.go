@@ -61,6 +61,7 @@ func (cfg *egressConfig) startSynchronization(ctx context.Context, state localSt
 		start(cfg.synchronize, cfg.accountMessage, "OpenAI", "openai")
 	}
 	if cfg.Claude != nil {
+		cfg.Claude.capabilityWanted = &cfg.claudeCapabilityWanted
 		start(cfg.Claude.synchronize, cfg.Claude.message, "Claude", "claude")
 	}
 	return failures, workers.Wait

@@ -122,6 +122,7 @@ While running, `login` and `run` hold a lock file next to the configuration, so 
 
 - `targets` is the allowlist of upstream hosts Bee will open connections to for the TEE.
 - `codex` selects the Codex login. `store` is `file`, `keyring` or `auto`. The top-level `capabilities` enables model and quota reports for OpenAI.
+- Model and quota reports go to Hive every five minutes, and sooner when Hive asks: after an upstream quota refusal's cooldown, or while a request waits on the account, Hive opens a control stream on the connection and Bee reports within a few seconds, at most once every ten. Bee announces this in its `X-Bee-Controls` connection header, and Hive asks no Bee that did not.
 - `claude` selects the Claude Code login. `store` is `keychain` (macOS) or `file`, which reads `.credentials.json` in the Claude Code configuration directory; `bee setup` picks the one Claude Code uses on your system, and Bee never falls back from one to the other. `capabilities` enables model and quota reports, which are required for taking work. With `refresh: true`, Hive may also schedule token refreshes, and Bee writes the refreshed token back to the official store. The default `false` only re-seals tokens that the official client has refreshed. `config_dir` selects a non-default Claude Code configuration.
 - `connect_proxy` (optional, for example `http://127.0.0.1:7890`) sends Bee's outbound connections through a local HTTP proxy.
 

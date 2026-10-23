@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	"github.com/tokhive/bee/beewire"
@@ -31,11 +32,14 @@ type claudeSource struct {
 	capabilityRevision    string
 	lastCapabilitySync    time.Time
 	lastCapabilityAttempt time.Time
-	metadataReportedAt    time.Time
-	metadataGeneration    int64
-	metadataLease         string
-	pacer                 syncPacer
-	reportedAuth          beewire.Authorization
+	// capabilityWanted is Hive asking for a Claude capability report now; it
+	// lives on the egress configuration, which control streams reach.
+	capabilityWanted   *atomic.Bool
+	metadataReportedAt time.Time
+	metadataGeneration int64
+	metadataLease      string
+	pacer              syncPacer
+	reportedAuth       beewire.Authorization
 }
 
 // capabilityWorkAt is when this platform next owes a capability report, so the
@@ -114,7 +118,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	// the window. Only the Hive round trip below is paced, because that is the
 	// part that costs a write transaction.
 	credential, auth, err := source.authorization(ctx)
-	if !force && err == nil && auth == source.reportedAuth && source.pacer.skip(time.Now()) {
+	if !force && err == nil && auth == source.reportedAuth && !capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) && source.pacer.skip(time.Now()) {
 		return nil
 	}
 	path := "/api/bee/platforms/claude/account"
@@ -222,8 +226,11 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		slog.Debug("claude credential registered", "module", "maintenance", "task", task.ID, "generation", registered.Generation)
 	}
 	source.message(out, "ready", "Claude authorization synchronized and account confirmed")
-	if source.Capabilities && (force || time.Since(source.lastCapabilityAttempt) >= 10*time.Second && (source.capabilityRevision != auth.CredentialRevision || time.Since(source.lastCapabilitySync) >= beewire.CapabilityUsageInterval)) {
+	if source.Capabilities && (force || capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) || time.Since(source.lastCapabilityAttempt) >= 10*time.Second && (source.capabilityRevision != auth.CredentialRevision || time.Since(source.lastCapabilitySync) >= beewire.CapabilityUsageInterval)) {
 		source.lastCapabilityAttempt = time.Now()
+		if source.capabilityWanted != nil {
+			source.capabilityWanted.Store(false)
+		}
 		source.capabilitySequence++
 		snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, source.capabilitySequence, source.transport)
 		source.capabilities.announce(out)

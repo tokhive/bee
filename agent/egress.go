@@ -51,8 +51,12 @@ type egressConfig struct {
 	metadataLease           string
 	metadataModels          []string
 	capabilityReportPending bool
-	pacer                   syncPacer
-	failures                *egressFailures
+	// capabilityWanted and claudeCapabilityWanted are Hive asking for a
+	// capability report now.
+	capabilityWanted       atomic.Bool
+	claudeCapabilityWanted atomic.Bool
+	pacer                  syncPacer
+	failures               *egressFailures
 }
 
 // useStateDirectory points the sources at a Bee-owned directory for the small
@@ -270,7 +274,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	// part that costs a write transaction.
 	credential, sourceErr := cfg.Codex.readForMaintenance(ctx)
 	changed := sourceErr == nil && (cfg.authorization == nil || !cfg.authorization.sameAuthorization(credential))
-	if !force && sourceErr == nil && !changed && cfg.pacer.skip(time.Now()) {
+	if !force && sourceErr == nil && !changed && !capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) && cfg.pacer.skip(time.Now()) {
 		return nil
 	}
 	// The previous cycle's response already carried the account version this
@@ -343,6 +347,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	cfg.accountMessage(out, "ready", "OpenAI authorization synchronized and account confirmed")
 	if cfg.Capabilities != nil && cfg.capabilitiesDue(force, changed, credential) {
 		cfg.lastCapabilityAttempt = time.Now()
+		cfg.capabilityWanted.Store(false)
 		cfg.capabilityReportPending = true
 		if err := cfg.synchronizeCapabilities(ctx, state, lease, force); err != nil {
 			return err
@@ -365,8 +370,30 @@ func (cfg *egressConfig) capabilityInterval() time.Duration {
 	return beewire.CapabilityUsageInterval
 }
 
+// control acts on a control stream Hive opened. A platform this Bee does not
+// observe is ignored.
+func (cfg *egressConfig) control(control beewire.Control) {
+	if control.Control != beewire.ControlCapabilities {
+		egressDebug("control stream ignored: unknown control %q", control.Control)
+		return
+	}
+	slog.Info("capability report requested by Hive", "module", "sync", "platform", control.Platform)
+	switch {
+	case control.Platform == "openai" && cfg.Capabilities != nil:
+		cfg.capabilityWanted.Store(true)
+	case control.Platform == "claude" && cfg.Claude != nil:
+		cfg.claudeCapabilityWanted.Store(true)
+	}
+}
+
+// capabilityRequestDue reports whether Hive asked for a report and the last
+// attempt is far enough back to make another; until then the request waits.
+func capabilityRequestDue(wanted *atomic.Bool, lastAttempt time.Time) bool {
+	return wanted != nil && wanted.Load() && time.Since(lastAttempt) >= 10*time.Second
+}
+
 func (cfg *egressConfig) capabilitiesDue(force, changed bool, credential codexCredential) bool {
-	if force || changed || !cfg.Capabilities.retryAt.IsZero() && !time.Now().Before(cfg.Capabilities.retryAt) {
+	if force || changed || capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) || !cfg.Capabilities.retryAt.IsZero() && !time.Now().Before(cfg.Capabilities.retryAt) {
 		return true
 	}
 	return time.Since(cfg.lastCapabilityAttempt) >= 10*time.Second && (cfg.capabilityReportPending || cfg.capabilityRevision != credential.metadata().CredentialRevision || time.Since(cfg.lastCapabilitySync) >= cfg.capabilityInterval())
@@ -484,10 +511,15 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 	return func(live context.Context, stream *tunnel.Stream, metadata []byte) {
 		var open struct {
 			Host string `json:"host"`
+			beewire.Control
 		}
 		if len(metadata) > 1024 || json.Unmarshal(metadata, &open) != nil {
 			egressDebug("stream rejected: unreadable open metadata (%d bytes)", len(metadata))
 			cfg.failures.report(out, failf("BEE-EGRESS-METADATA", "%d bytes", len(metadata)), "")
+			return
+		}
+		if open.Control.Control != "" {
+			cfg.control(open.Control)
 			return
 		}
 		egressDebug("stream opened for %q", open.Host)

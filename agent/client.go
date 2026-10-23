@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/relay"
 )
 
@@ -152,7 +153,11 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
-		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}}})
+		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}}
+		if egress != nil {
+			header.Set(beewire.ControlsHeader, beewire.ControlCapabilities)
+		}
+		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: header})
 		cancel()
 		metrics.connect(connectStart, err)
 		if err == nil {

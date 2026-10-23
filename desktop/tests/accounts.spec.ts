@@ -126,3 +126,63 @@ test('过期授权和未确认移除不能通过检测或恢复绕过，其他�
     false,
   );
 });
+
+test('任务未知时移除保留卡片和未确认提示', async ({ page }) => {
+  await accounts(page, 'unknown-tasks');
+  const openai = page.getByRole('region', { name: 'OpenAI 账号' });
+  await openai.getByRole('button', { name: '移除账号' }).click();
+  await page.getByRole('button', { name: '确认移除', exact: true }).click();
+  await expect(openai).toContainText('移除结果未确认');
+  await expect(openai).toContainText('dayong@example.com');
+  await expect(openai).toContainText('已暂停');
+});
+
+for (const [scene, expected] of [
+  ['ready', 'confirmed'],
+  ['active-tasks', 'pending'],
+  ['unknown-tasks', 'unknown'],
+  ['tasks-loading', 'unknown'],
+  ['tasks-error', 'unknown'],
+  ['removal-pending', 'pending'],
+  ['removal-unknown', 'unknown'],
+] as const) {
+  test(`移除收尾守门 ${scene} 返回 ${expected}，重试不能越过未决状态`, async ({ page }) => {
+    await page.goto('/');
+    const result = await page.evaluate(async (scene) => {
+      const { createDemoClient } = await import(/* @vite-ignore */ String('/src/client/demo.ts'));
+      const client = createDemoClient(scene);
+      const before = await client.snapshot();
+      await client.dispatch({ type: 'startContribution', platforms: ['openai'] });
+      const removed = await client.dispatch({ type: 'removeAccount', platform: 'openai' });
+      const after = await client.snapshot();
+      if (after.accounts.value?.some((a: Account) => a.platform === 'openai')) {
+        for (const type of [
+          'refresh',
+          'detectAccount',
+          'connectAccount',
+          'removeAccount',
+        ] as const) {
+          await client.dispatch(type === 'refresh' ? { type } : { type, platform: 'openai' });
+        }
+        await client.dispatch({ type: 'setPlatformPaused', platform: 'openai', paused: false });
+      }
+      return { before, removed, after, retried: await client.snapshot() };
+    }, scene);
+    expect(result.removed.kind).toBe(expected);
+    expect(result.after.earnings).toEqual(result.before.earnings);
+    if (expected === 'confirmed') {
+      expect(
+        result.after.accounts.value?.find((a: Account) => a.platform === 'openai'),
+      ).toBeUndefined();
+    } else {
+      const retained = { paused: true, state: 'unavailable', removal: expected };
+      expect(
+        result.after.accounts.value?.find((a: Account) => a.platform === 'openai'),
+      ).toMatchObject(retained);
+      expect(
+        result.retried.accounts.value?.find((a: Account) => a.platform === 'openai'),
+      ).toMatchObject(retained);
+      expect(result.retried.earnings).toEqual(result.before.earnings);
+    }
+  });
+}

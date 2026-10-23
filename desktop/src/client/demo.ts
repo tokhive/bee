@@ -68,7 +68,11 @@ export function createDemoClient(scene: string): BeeClient {
       today: '6.820000000',
       total: '382.140000000',
     }),
-    tasks: ready(selected === 'unknown-tasks' ? { kind: 'unknown' } : { kind: 'known', count: 0 }),
+    tasks: ready(
+      selected === 'unknown-tasks'
+        ? { kind: 'unknown' }
+        : { kind: 'known', count: selected === 'active-tasks' ? 2 : 0 },
+    ),
     preferences: ready({
       theme: 'system',
       language: 'system',
@@ -76,6 +80,19 @@ export function createDemoClient(scene: string): BeeClient {
       proxyAddress: '',
     }),
   };
+  // Controlled read states include an old zero to exercise the freshness guard.
+  if (selected === 'tasks-loading')
+    state.tasks = { status: 'loading', updatedAt: now, value: { kind: 'known', count: 0 } };
+  if (selected === 'tasks-error')
+    state.tasks = {
+      status: 'error',
+      updatedAt: now,
+      value: { kind: 'known', count: 0 },
+      error: {
+        code: 'DEMO_TASKS_UNAVAILABLE',
+        message: '任务读取失败：场景 tasks-error 模拟当前任务源不可用；旧值 count=0 不代表已收尾。',
+      },
+    };
   if (selected === 'loading') state.accounts = { status: 'loading', updatedAt: null };
   if (selected === 'unknown') state.connection = { status: 'loading', updatedAt: null };
   if (selected === 'error')
@@ -271,8 +288,22 @@ export function createDemoClient(scene: string): BeeClient {
               `移除检查失败：platform=${platform}，account=missing。`,
             );
           explicitlyRemoved.add(platform);
-          if (selected === 'removal-pending' || selected === 'removal-unknown') {
-            const removal = selected === 'removal-pending' ? 'pending' : 'unknown';
+          // TaskState is global: only a fresh, known zero proves every platform has drained.
+          // Preserve an unresolved upstream result across retries; refresh cannot confirm it.
+          const removal =
+            existing.removal ??
+            (selected === 'removal-unknown'
+              ? 'unknown'
+              : selected === 'removal-pending'
+                ? 'pending'
+                : state.tasks.status !== 'ready' || state.tasks.value.kind !== 'known'
+                  ? 'unknown'
+                  : state.tasks.value.count > 0
+                    ? 'pending'
+                    : state.tasks.value.count === 0
+                      ? undefined
+                      : 'unknown');
+          if (removal) {
             state.accounts = ready(
               state.accounts.value!.map((a) =>
                 a.platform === platform ? { ...a, paused: true, state: 'unavailable', removal } : a,

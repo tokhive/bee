@@ -5,6 +5,7 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
+import { setTimeout as delay } from 'node:timers/promises';
 
 let implementation = {};
 try { implementation = await import('../scripts/smoke-linux-appimage.mjs'); }
@@ -34,13 +35,15 @@ function fixture(t) {
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jfE0AAAAASUVORK5CYII=', 'base64');
 function observeOptions(t, extra = {}) {
   const { root } = fixture(t);
+  let width = 1000, height = 700;
   return {
     program: process.execPath, args: ['-e', 'setInterval(() => {}, 1000)'],
     evidenceDir: join(root, 'observation'), startupMs: 800, observeMs: 150, pollMs: 20,
     findWindows: async pid => [{ id: '42', pid, title: 'fixture window' }],
     screenshot: async (_window, path) => writeFileSync(path, png),
     captureDesktop: async path => writeFileSync(path, png),
-    inspectWindow: async () => ({ geometry: 'fixture X=0 Y=0 WIDTH=1000 HEIGHT=700', tree: 'fixture window tree' }),
+    resizeWindow: async (_window, requestedWidth, requestedHeight) => { width = requestedWidth; height = requestedHeight; },
+    inspectWindow: async () => ({ geometry: `WINDOW=42\nX=0\nY=0\nWIDTH=${width}\nHEIGHT=${height}\nSCREEN=0`, tree: 'fixture window tree' }),
     ...extra,
   };
 }
@@ -106,7 +109,7 @@ test('captures initial and final owned window plus desktop after the actual obse
   for (const sample of report.samples) {
     assert.ok(Date.parse(sample.completedAt) >= Date.parse(sample.startedAt));
     assert.ok(sample.processes.some(row => row.pid === report.pid));
-    assert.match(sample.geometry, /WIDTH=1000 HEIGHT=700/);
+    assert.match(sample.geometry, sample.phase === 'initial' ? /WIDTH=1000\nHEIGHT=700/ : /WIDTH=860\nHEIGHT=600/);
     assert.equal(sample.tree, 'fixture window tree');
   }
   assert.ok(existsSync(join(options.evidenceDir, 'root.png')));
@@ -120,6 +123,127 @@ test('final desktop capture failure retains first screenshot and cleans the owne
   assert.ok(existsSync(join(options.evidenceDir, 'window.initial.png')));
   assert.deepEqual(report.cleanup.liveRemaining, []);
 });
+test('minimum client resize targets only the same owned window and starts observation after resize', async t => {
+  let resizedAt;
+  let size = [1000, 700];
+  const captures = [];
+  const requests = [];
+  const options = observeOptions(t, {
+    findWindows: async pid => [{ id: '8', pid: process.pid }, { id: '42', pid }],
+    resizeWindow: async (window, width, height) => {
+      requests.push({ ...window, width, height });
+      await delay(180);
+      size = [width, height];
+      resizedAt = Date.now();
+    },
+    inspectWindow: async () => ({ geometry: `WIDTH=${size[0]}\nHEIGHT=${size[1]}`, tree: 'fixture tree' }),
+    screenshot: async (_window, path) => { captures.push(Date.now()); writeFileSync(path, png); },
+  });
+  const report = await subject('observeOwnedProcess')(options);
+  assert.deepEqual(requests, [{ id: '42', pid: report.pid, width: 860, height: 600 }]);
+  assert.ok(captures[1] - resizedAt >= options.observeMs, 'resize latency must not count toward observation');
+  assert.ok(report.observedMs >= options.observeMs);
+  assert.deepEqual(report.resize.requested, { width: 860, height: 600 });
+  assert.deepEqual(report.resize.actual, { width: 860, height: 600 });
+  assert.equal(report.resize.geometry, 'WIDTH=860\nHEIGHT=600');
+  assert.ok(Date.parse(report.resize.completedAt) >= Date.parse(report.resize.startedAt));
+  assert.deepEqual(report.samples[1].actual, { width: 860, height: 600 });
+  assert.deepEqual(report.finalGeometry.actual, { width: 860, height: 600 });
+  assert.match(report.scope, /client.*size.*startup/);
+  assert.match(report.scope, /no.*readiness/);
+});
+
+async function rejectAndCheckCleanup(options, expected) {
+  await assert.rejects(subject('observeOwnedProcess')(options), expected);
+  const report = JSON.parse(readFileSync(join(options.evidenceDir, 'observation.json')));
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.cleanup.liveRemaining, []);
+  assert.equal(report.cleanup.parentClosed, true);
+  return report;
+}
+
+test('resize exit success cannot replace actual minimum geometry', async t => {
+  const options = observeOptions(t, { resizeWindow: async () => {} });
+  const report = await rejectAndCheckCleanup(options, /client size mismatch.*actual=.*1000.*700.*required=.*860.*600/s);
+  assert.match(report.resize.geometry, /WIDTH=1000/);
+  assert.equal(existsSync(join(options.evidenceDir, 'window.png')), false);
+});
+
+for (const [label, geometry] of [
+  ['missing', 'HEIGHT=600'], ['inline', 'WIDTH=860 HEIGHT=600'],
+  ['illegal', 'WIDTH=860px\nHEIGHT=600'], ['negative', 'WIDTH=-860\nHEIGHT=600'],
+  ['duplicate', 'WIDTH=860\nWIDTH=860\nHEIGHT=600'],
+  ['conflicting', 'WIDTH=860\nHEIGHT=600\nHEIGHT=700'],
+]) {
+  test(`minimum geometry rejects ${label} fields with raw evidence and cleanup`, async t => {
+    let resized = false;
+    const options = observeOptions(t, {
+      resizeWindow: async () => { resized = true; },
+      inspectWindow: async () => ({ geometry: resized ? geometry : 'WIDTH=1000\nHEIGHT=700' }),
+    });
+    const report = await rejectAndCheckCleanup(options, /invalid client geometry.*actual=.*required=/);
+    assert.equal(report.resize.geometry, geometry);
+    assert.ok(report.error.includes(JSON.stringify(geometry)));
+  });
+}
+
+for (const phase of ['before final capture', 'after final capture']) {
+  test(`minimum geometry rebound ${phase} fails and cleans the child`, async t => {
+    let reads = 0, captured = false;
+    const options = observeOptions(t, {
+      inspectWindow: async () => ({ geometry: ++reads === 1 || (phase === 'before final capture' ? reads >= 3 : captured)
+        ? 'WIDTH=1000\nHEIGHT=700' : 'WIDTH=860\nHEIGHT=600' }),
+      captureDesktop: async path => { writeFileSync(path, png); captured = true; },
+    });
+    await rejectAndCheckCleanup(options, /client size mismatch.*actual=.*1000.*700.*required=.*860.*600/s);
+    assert.equal(existsSync(join(options.evidenceDir, 'window.png')), phase === 'after final capture');
+  });
+}
+
+for (const reason of ['fixture resize refused exit=19 stderr=E45', 'spawnSync xdotool ETIMEDOUT']) {
+  test(`resize failure preserves ${reason} and cleans the child`, async t => {
+    const options = observeOptions(t, { resizeWindow: async () => { throw new Error(reason); } });
+    const report = await rejectAndCheckCleanup(options, /client resize failed.*actual=.*required=.*860.*600/s);
+    assert.ok(report.error.includes(reason));
+    assert.equal(report.observedMs, undefined);
+  });
+}
+
+for (const phase of ['before resize', 'during resize']) {
+  test(`ownership loss ${phase} refuses success and cleans the child`, async t => {
+    let owned = true, resized = false;
+    const options = observeOptions(t, {
+      findWindows: async pid => [{ id: '42', pid: owned ? pid : process.pid }],
+      screenshot: async (_window, path) => { writeFileSync(path, png); if (phase === 'before resize') owned = false; },
+      resizeWindow: async () => { resized = true; owned = false; },
+      inspectWindow: async () => ({ geometry: resized ? 'WIDTH=860\nHEIGHT=600' : 'WIDTH=1000\nHEIGHT=700' }),
+    });
+    await rejectAndCheckCleanup(options, /observed window disappeared.*actual=.*required=/s);
+    assert.equal(resized, phase === 'during resize');
+  });
+}
+
+for (const timeout of [false, true]) {
+  test(`default resize command ${timeout ? 'has a hard timeout' : 'preserves nonzero command evidence'} without X11`, async t => {
+    const options = observeOptions(t, { resizeWindow: undefined });
+    const bin = join(options.evidenceDir, '..', 'bin');
+    mkdirSync(bin);
+    const calls = join(bin, 'calls.json');
+    writeFileSync(join(bin, 'xdotool'), `#!${process.execPath}\nrequire('node:fs').writeFileSync(${JSON.stringify(calls)}, JSON.stringify(process.argv.slice(2)));\n${timeout ? 'setInterval(() => {}, 1000);' : 'console.error("fixture xdotool E46"); process.exit(19);'}\n`, { mode: 0o755 });
+    const previousPath = process.env.PATH;
+    process.env.PATH = `${bin}:${previousPath}`;
+    try {
+      const report = await rejectAndCheckCleanup(options, timeout ? /client resize failed.*ETIMEDOUT/s : /client resize failed.*exit=19.*E46/s);
+      assert.deepEqual(JSON.parse(readFileSync(calls)), ['windowsize', '--sync', '42', '860', '600']);
+      assert.equal(report.resize.timeoutMs, 5000);
+      assert.match(report.error, /required=860x600 client window within 5000ms/);
+      assert.equal(report.observedMs, undefined);
+    } finally {
+      if (previousPath === undefined) delete process.env.PATH;
+      else process.env.PATH = previousPath;
+    }
+  });
+}
 test('window ownership lost during final capture cannot pass observation', async t => {
   let disappeared = false;
   const options = observeOptions(t, {

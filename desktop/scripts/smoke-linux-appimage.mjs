@@ -83,6 +83,7 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
   findWindows = () => findNativeWindows('Bee · 开发验证'),
   screenshot = (window, path) => command('import', ['-window', window.id, path], { timeout: 10_000 }),
   captureDesktop = path => command('import', ['-window', 'root', path], { timeout: 10_000 }),
+  resizeWindow = (window, width, height) => command('xdotool', ['windowsize', '--sync', window.id, String(width), String(height)], { timeout: 5000 }),
   inspectWindow = window => ({
     geometry: command('xdotool', ['getwindowgeometry', '--shell', window.id], { timeout: 5000 }),
     tree: command('xwininfo', ['-id', window.id, '-tree'], { timeout: 5000 }),
@@ -93,7 +94,7 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
   const stderr = join(evidenceDir, 'stderr.log');
   const out = openSync(stdout, 'wx');
   const err = openSync(stderr, 'wx');
-  const report = { ok: false, program, args, scope: 'native window startup only; no UI interaction or readiness assertion', processes: [], samples: [] };
+  const report = { ok: false, program, args, scope: 'native client window size and startup only; no readiness, content visibility or desktop decoration assertion', processes: [], samples: [] };
   let child, closed, failure;
   try {
     child = spawn(program, args, { cwd, env: childEnvironment(env), detached: true, stdio: ['ignore', out, err] });
@@ -103,6 +104,34 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
     if (!Number.isInteger(child.pid) || child.pid <= 1 || child.pid === process.pid) throw new Error(`unsafe owned process group: actual=${child.pid}; required=dedicated spawned child PID >1`);
     const started = Date.now();
     let visibleSince, window;
+    async function requireOwnedWindow(phase) {
+      // Blocking X11 commands can outlast a child exit or window reassignment.
+      await delay(0);
+      if (child.exitCode !== null || child.signalCode !== null) throw new Error(`native app early exit: code=${child.exitCode}; signal=${child.signalCode}; stderr=${readFileSync(stderr, 'utf8').slice(-4096)}`);
+      report.processes = groupProcesses(child.pid);
+      report.lastWindows = await findWindows(child.pid);
+      if (!report.lastWindows.some(candidate => candidate.id === window.id && report.processes.some(row => row.pid === candidate.pid && !row.state.startsWith('Z')))) {
+        throw new Error(`observed window disappeared ${phase}: actual=${JSON.stringify({ windows: report.lastWindows, processes: report.processes, exitCode: child.exitCode, signalCode: child.signalCode })}; required=live owned window ${JSON.stringify(window)}`);
+      }
+    }
+    function requireMinimumSize(entry, phase) {
+      const actual = {};
+      for (const [field, name] of [['WIDTH', 'width'], ['HEIGHT', 'height']]) {
+        const lines = typeof entry.geometry === 'string' ? entry.geometry.split(/\r?\n/).filter(line => line.startsWith(field)) : [];
+        let reason;
+        if (lines.length === 0) reason = 'missing field';
+        else if (lines.length > 1) reason = 'duplicate field';
+        else if (!new RegExp(`^${field}=\\d+$`).test(lines[0])) reason = 'invalid integer line';
+        else if (!Number.isSafeInteger(Number(lines[0].slice(field.length + 1)))) reason = 'unsafe integer';
+        if (reason) {
+          throw new Error(`invalid client geometry ${phase}: reason=${reason}; actual=${JSON.stringify(entry.geometry)}; field=${field}; matchingLines=${JSON.stringify(lines)}; required=one independent ${field}=<safe integer> line; client size=860x600`);
+        }
+        actual[name] = Number(lines[0].slice(field.length + 1));
+      }
+      entry.actual = actual;
+      entry.checkedAt = new Date().toISOString();
+      if (actual.width !== 860 || actual.height !== 600) throw new Error(`client size mismatch ${phase}: actual=${JSON.stringify(actual)}; geometry=${JSON.stringify(entry.geometry)}; required=860x600 client window ${window.id}`);
+    }
     async function capturePng(path, capture) {
       const timing = { path, startedAt: new Date().toISOString() };
       await capture(path);
@@ -116,6 +145,7 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
         window, windows: report.lastWindows, processes: groupProcesses(child.pid) };
       report.samples.push(entry);
       Object.assign(entry, await inspectWindow(window));
+      if (phase === 'final') requireMinimumSize(entry, 'before final capture');
       entry.windowCapture = await capturePng(join(evidenceDir, phase === 'initial' ? 'window.initial.png' : 'window.png'), path => screenshot(window, path));
       if (phase === 'final') entry.desktopCapture = await capturePng(join(evidenceDir, 'root.png'), captureDesktop);
       entry.completedAt = new Date().toISOString();
@@ -131,7 +161,18 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
         window = owned[0];
         report.window = window;
         await sample('initial');
+        await requireOwnedWindow('before resize');
+        report.resize = { window, requested: { width: 860, height: 600 }, startedAt: new Date().toISOString(), timeoutMs: 5000 };
+        try { await resizeWindow(window, 860, 600); }
+        catch (error) {
+          throw new Error(`client resize failed: actual=${error.stack ?? String(error)}; window=${JSON.stringify(window)}; required=860x600 client window within 5000ms`, { cause: error });
+        }
+        Object.assign(report.resize, await inspectWindow(window));
+        requireMinimumSize(report.resize, 'after resize');
+        await requireOwnedWindow('after resize');
+        report.resize.completedAt = new Date().toISOString();
         visibleSince = Date.now();
+        report.observationStartedAt = new Date(visibleSince).toISOString();
       } else if (window && !owned.some(candidate => candidate.id === window.id)) {
         throw new Error(`observed window disappeared: actual=${JSON.stringify(windows)}; required window=${JSON.stringify(window)}`);
       }
@@ -140,11 +181,9 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
         // Drain exit events and recheck ownership after blocking X11 captures.
         await delay(0);
         if (child.exitCode !== null || child.signalCode !== null) continue;
-        report.processes = groupProcesses(child.pid);
-        report.lastWindows = await findWindows(child.pid);
-        if (!report.lastWindows.some(candidate => candidate.id === window.id && report.processes.some(row => row.pid === candidate.pid && !row.state.startsWith('Z')))) {
-          throw new Error(`observed window disappeared after final capture: actual=${JSON.stringify(report.lastWindows)}; required live owned window=${JSON.stringify(window)}`);
-        }
+        await requireOwnedWindow('after final capture');
+        report.finalGeometry = { window, ...(await inspectWindow(window)) };
+        requireMinimumSize(report.finalGeometry, 'after final capture');
         report.observedMs = Date.now() - visibleSince;
         report.ok = true;
         break;

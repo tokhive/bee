@@ -1,6 +1,6 @@
 # Bee P1 页面验收与接入交接
 
-本记录覆盖 P1 演示网页层；不代表 P2–P5 真实业务、资金、系统退出或发布能力已接通。演示页面持续显示“演示数据”。
+本记录覆盖 P1 演示页面及已取得的原生证据。任务1–5已完成并独立复核；任务6原生矩阵仍有缺口，整体P1尚未通过。演示页面持续显示“演示数据”，真实业务、资金和发布能力按末尾交接表继续落实。
 
 ## 生命周期边界
 
@@ -32,11 +32,26 @@
 
 ## 原生验收状态
 
-以下由主控在最终 Task6 提交上统一执行并追加证据，目前待主控：
+| 来源 | 实际验收 | 边界 |
+| --- | --- | --- |
+| [b94 Mac15 arm64](../../docs/desktop/evidence/2026-10-23-p1-native-mac-b94/README.md) | App/DMG、签名、Rust41/41；860×600中英浅深五页、抽屉焦点、演示划转/提现、真实管理ready及菜单退出 | 导出当时RED，保留原始记录；不是其它系统验收 |
+| [2681 Mac15 arm64](../../docs/desktop/evidence/2026-10-23-p1-native-mac-2681edc/README.md) | 英文完整回执/Off placeholder原图独立复验、signed2/2、两份脱敏文件实际交付、DMG复制副本启动退出 | 首次授权来源未证明，拒绝/取消未测；旧用户Bee70292缺失原因未知，不能声称全程保留 |
+| [87 Mac15 arm64](../../docs/desktop/evidence/2026-10-23-p1-native-mac-87b28a2/README.md) | 新source App/DMG、签名/minos、Rust42/42、最小窗native ready；真实菜单退出保留独立空闲Bee管理夹具 | 托盘工具超时，隐藏可见转换未证；开发ad-hoc包，非Mac13/公证/生产签名 |
+| [2681 hosted三端](../../docs/desktop/evidence/2026-10-23-p1-native-remote-2681edc/README.md) | WinServer2022 Rust30/NSIS；Ubuntu22x64/22arm/24arm各browser489、Rust35和AppImage窗口观测及来源核对 | MacIntel模拟时钟fixture失败；24x64 Firefox通道关闭488/489、原因未知；ARM extract各1 zombie |
 
-- macOS 演示 `tauri dev` / `tauri build`，真实标题栏、最小窗口、App/DMG、Rust 与 CUA。
-- Windows WebView2 / Linux WebKitGTK 对应当前 Task6 包的最小窗口与安装/关窗找回，不能以 Playwright WebKit 替代。
-- 历史 Mac 845 包与 hosted Linux 22c5f91 不能作为当前 Task6 包的证据。
+87已把模拟窗口发现测试改为可控时钟，生产预算未放宽，独立审查Approved；新三端CI单独收证。Mac演示dev入口曾实际编译/启动，但CUA不能绑定未打包binary；已用打包App完成真实WebView操作，不写成dev窗口图形通过。网页CSS缩放和Playwright WebKit仍不能替代系统WebView/显示缩放。
+
+未验收项目：Mac13双架构、Win10/11官方来源/GUI、干净用户与Applications拖拽安装、托盘/无托盘及关窗找回可见状态、原生125%/150%显示、Downloads拒绝/取消与下载原生完成/失败反馈。当前有文件交付证据，UI“已发起下载”不能当作原生Finished事件反馈。
+
+## 本机查看与快速验收
+
+从实施检出根目录执行 `open "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app"`。当前本机包绑定87b28a2；DMG留在 `.cache/qa/p1-native-local-87b28a2/packages/`。它是开发演示包，不会开始真实贡献或划转真实资金。
+
+1. 五页能切换，860×600下内容可滚动、主要操作可达；连接详情显示真实native manager ready，同时保留“演示数据/真实供给未启动”。
+2. AI账号打开详情，Tab/Shift-Tab不越出抽屉，Escape关闭并恢复触发器焦点；英文设置保存回执完整、代理空值为Off (leave blank)。
+3. 演示划转1.234567891后余额128.56→127.325432109、24.6→25.834567891；提现只显示暂不支持，不扣款。它们均是演示状态。
+4. 诊断运行后导出报告，检查JSON仅有product/mode/checks/logs白名单；首次系统授权、拒绝/取消与真实失败反馈仍按上述缺口单列，不靠提示判断文件交付。
+5. 页面“退出演示/更新演示”仅完成预览；真实系统菜单“退出”才结束App及其owned管理进程。托盘和关窗找回仍需独立证明。
 
 ## P2–P5 接入交接
 

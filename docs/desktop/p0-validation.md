@@ -1,6 +1,21 @@
 # P0 桌面底座验证记录
 
-日期：2026-10-23 更新。状态：**P0 未通过。任务1底座已提交29240a0并关闭任务审查；P1 Task1已提交845af2b/35873d5并复核通过，当前继续首次引导和概览。Mac 原生窗口、860×600、管理桥、退出、系统回跳、真实第二实例、DMG复制安装和P1五页实窗有证据；默认Chromium页面20/20。Windows固定TEE、安全专项、vet、全量Go7包及真实CLI构建全部通过（d09d0ce/run39900097321）；Linux arm64 Go vet/全量7包/CLI构建及后续窄回归通过。托盘和完整三端桌面/干净安装矩阵仍缺。** 用户已授权自动继续，重要方案变更集中确认。
+日期：2026-10-23 更新。状态：**P0 与整体 P1 均未完成。P0 任务1、P1任务1–5已提交并独立复核；P1任务6页面/生命周期/视觉已复核，当前补三端原生矩阵。** Mac原生窗口与自动操作已实际可用，不再把旧沙箱限制作为当前阻塞。用户已授权自动继续，常规验证/修补不等待再次确认。
+
+## 最新验收汇总（按源码分开）
+
+| 来源 | 实际结果 | 不能由此推出 |
+| --- | --- | --- |
+| [b94 Mac原生](evidence/2026-10-23-p1-native-mac-b94/README.md) | App/DMG、签名、完整Rust41/41；860×600中英浅深页面、抽屉键盘/焦点、精确演示划转/提现、真实管理ready与菜单退出 | 导出当时挂起RED；关窗隐藏/托盘未证明，不代表其它系统 |
+| [2681 Mac修补](evidence/2026-10-23-p1-native-mac-2681edc/README.md) | 英文回执与placeholder原生原图独立Approved；Info.plist用途合并、signed2/2；两份377字节脱敏报告实际交付并核对；DMG复制副本启动ready/退出 | 首次Downloads授权操作来源未证明，拒绝/取消未测；旧用户Bee70292在本轮后缺失，原因未知、保留断言未通过 |
+| [87 Mac回归](evidence/2026-10-23-p1-native-mac-87b28a2/README.md) | 新App/DMG、签名/minos、完整Rust42/42；860×600真实native ready；菜单退出回收owned，独立空闲Bee夹具仍可ping后正常shutdown | 只是Mac15 arm64开发包，不是Mac13；不重复冒充2681导出或全页矩阵；托盘工具timeoutReached |
+| [2681 hosted三端](evidence/2026-10-23-p1-native-remote-2681edc/README.md) | WindowsServer2022 Rust30/30与NSIS；Ubuntu22x64/22arm/24arm各三浏览器489、Rust35、AppImage及extract/FUSE窗口观测通过，下载包/source/hash核对 | MacIntel浏览器489通过后模拟测试受真实时钟调度失败；Ubuntu24x64 Firefox通道关闭原因未知，488/489；两行ARM extract各1 zombie，不能说无任何残留 |
+
+窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved；新source三端CI：Mac39936378073、Windows39936377992、Linux39936378139，正在独立收证，不沿用2681包。旧b94 Ubuntu24x64到job90分钟上限被取消、停在Playwright依赖安装；没有执行页面/原生测试，不能归为产品断言失败。
+
+**真实剩余缺口：** Mac13双架构、Win10/11真实官方客户端来源及GUI、干净用户/Applications拖拽安装、全部托盘/无托盘和关窗找回可见状态、原生125%/150%显示矩阵、Downloads拒绝/取消与原生完成/失败反馈。hosted构建、CSS zoom、进程存活都不能替代这些。当前仅开发ad-hoc包，无生产签名/公证/真实更新。
+
+下文为逐阶段历史记录；其中“当前”“待执行”“未提交”仅指对应记录时点，最新状态以上表及各版本证据README为准。历史失败不改写为通过。
 
 ## 来源和隔离
 
@@ -175,7 +190,7 @@ Mac/Linux 主实例持有生命周期文件锁，listener/bus 失效不会放行
 
 本机 Ruby/Psych 解析、Bash/JS 语法与错误 host 拒绝烟测通过；任务范围只读复核未发现配置级阻塞问题。2026-10-23 已补 actionlint 1.7.12 + ShellCheck 0.11.0，退出 0；未完成远程 Actions/服务端运行验证。**八行均未运行，无 run URL、DMG/NSIS/AppImage 交付或干净用户验收证据**。不能把配置、artifact 上传或绿色构建等同于托盘、关窗找回、回跳、安装和 GUI 通过。
 
-## 继续位置
+## 历史继续位置（当时状态）
 
 任务 1 的当前 Mac 原生窗口和本机 Chrome E2E 缺口已补，锁定 Chromium 默认运行及任务 1 整体验收/提交仍待收束。任务 2 Windows 安全行为红灯及生产实现、任务 5 托盘/实际 GUI 重复实例/三端原生矩阵、任务 6 安装与八行 runner 仍需推进。P1 继续遵守“P0 任务 1 后可开始页面”的原条件；不扩大为必须等待全部 P0。任务 1/2/4/5/6 尚未提交；用户自动继续授权有效，不以协议 ready 冒充可贡献。
 
@@ -260,4 +275,4 @@ Linux首轮run39902824069在Ubuntu22/24×x64/arm64四行均完成Go7包、Chromi
 
 Linux第二轮[原始证据归档](evidence/2026-10-23-linux-hosted-runpath/README.md)：run39905806798/source22c5f91，Ubuntu22.04 x64/arm64及24.04 arm64三行通过，24.04 x64最终在AppImage工具测试15/16失败。该行依赖实际成功（apt下载125 MB耗时33分17秒），Go7包/vet、typecheck/build、tooling37通过；产品构建、Rust/页面及原生烟测均未运行。提前退出观察仍被拒绝，仅测试错误优先级断言不完整；单测试修补aceef515已本机16/16并独立复核，尚待新source原生CI验证。最终run、完整job日志及第四行18文件已追加归档，旧run失败状态保持。三行Go7包、Chromium53/53、Rust35/35及AppImage构建/提取/FUSE启动通过；包内Bee精确SHA与source一致。实际x64/arm64产物均观察到预设RUNPATH，初图黑而10秒末图正常显示未接入业务页；不能把窗口存活或Bee进程存在当作bridge ready、托盘或安装验收。
 
-本机当前CUA选择Finder返回cgWindowNotFound，未取得新GUI证据；这是观察工具实际错误，未归因沙箱。旧Mac845演示包证据保持版本边界。P1账号Task3已完成独立复核，继续收益Task4；P0/P1整体仍未完成。
+该阶段CUA选择Finder曾返回cgWindowNotFound，未取得当轮新GUI证据，未归因沙箱。后续b94/2681/87真实GUI已可用，见本文最新汇总；旧Mac845包及当时Task3/4进度仅为历史，P0/P1整体仍未完成。

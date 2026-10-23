@@ -161,7 +161,15 @@ test('early nonzero exit retains stderr and actual exit code', async t => {
 });
 test('exit zero before completing the visible observation still fails', async t => {
   const options = observeOptions(t, { args: ['-e', 'setTimeout(() => process.exit(0), 200)'], observeMs: 450 });
-  await assert.rejects(subject('observeOwnedProcess')(options), /early exit.*code=0/);
+  // The process snapshot can lose ownership before Node delivers the exit event.
+  await assert.rejects(subject('observeOwnedProcess')(options), /native app early exit: code=0; signal=null; stderr=|observed window disappeared: actual=/);
+  const report = JSON.parse(readFileSync(join(options.evidenceDir, 'observation.json')));
+  assert.equal(report.ok, false);
+  assert.equal(report.exit.code, 0);
+  assert.equal(report.exit.signal, null);
+  assert.equal(report.cleanup.parentClosed, true);
+  assert.deepEqual(report.cleanup.liveRemaining, []);
+  assert.equal(report.observedMs, undefined);
 });
 test('a window that disappears during observation is not considered a startup pass', async t => {
   let reads = 0;

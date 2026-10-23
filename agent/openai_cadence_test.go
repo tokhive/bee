@@ -237,6 +237,29 @@ func TestOpenAIIndependentReportIntervals(t *testing.T) {
 	if err := sync(false); err != nil {
 		t.Fatal(err)
 	}
+	// Hive asks for a report through a control stream when it holds the
+	// account out until a newer observation arrives. The next cycle makes one
+	// however recent the last, once ten seconds separate the attempts, and
+	// making it clears the request.
+	cfg.lastCapabilityAttempt, cfg.lastCapabilitySync = time.Now(), time.Now()
+	if cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("report due without being asked")
+	}
+	cfg.serveStream(io.Discard)(context.Background(), nil, []byte(`{"control":"capabilities","platform":"openai"}`))
+	if cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("an asked report skipped the ten seconds between attempts")
+	}
+	cfg.lastCapabilityAttempt = time.Now().Add(-11 * time.Second)
+	if !cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("asked report not due")
+	}
+	asked := len(reports)
+	if err := sync(false); err != nil {
+		t.Fatal(err)
+	}
+	if len(reports) != asked+1 || cfg.capabilityWanted.Load() {
+		t.Fatalf("asked report not made, or the request kept: reports %d after %d", len(reports), asked)
+	}
 }
 
 type failingTransport struct{}

@@ -79,7 +79,7 @@ jobs:
           mkdir -p desktop-ci-evidence
           rustup toolchain install 1.94.0 --profile minimal --component rustfmt --component clippy 2>&1 | tee desktop-ci-evidence/rust-install.log
           sudo apt-get update 2>&1 | tee desktop-ci-evidence/apt-update.log
-          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev pkg-config patchelf dbus-x11 xvfb xauth xdotool imagemagick fonts-noto-cjk "$BEE_CI_FUSE_PACKAGE" 2>&1 | tee desktop-ci-evidence/apt-install.log
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev libgtk-3-dev pkg-config patchelf dbus-x11 xvfb xauth xdotool x11-utils imagemagick fonts-noto-cjk "$BEE_CI_FUSE_PACKAGE" 2>&1 | tee desktop-ci-evidence/apt-install.log
           dpkg-query -W > desktop-ci-evidence/system-packages.tsv
           df -h > desktop-ci-evidence/disk-before.log
 

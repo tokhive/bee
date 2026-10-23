@@ -39,6 +39,8 @@ function observeOptions(t, extra = {}) {
     evidenceDir: join(root, 'observation'), startupMs: 800, observeMs: 150, pollMs: 20,
     findWindows: async pid => [{ id: '42', pid, title: 'fixture window' }],
     screenshot: async (_window, path) => writeFileSync(path, png),
+    captureDesktop: async path => writeFileSync(path, png),
+    inspectWindow: async () => ({ geometry: 'fixture X=0 Y=0 WIDTH=1000 HEIGHT=700', tree: 'fixture window tree' }),
     ...extra,
   };
 }
@@ -89,6 +91,45 @@ test('real launch clears inherited extraction and color overrides only in its ch
   for (const name of names) assert.equal(childEnv[name], undefined, `${name} must not alter the recorded launch mode or child output`);
   assert.equal(childEnv.BEE_SMOKE_ENV_FIXTURE, 'preserved');
   assert.deepEqual(env, before, 'caller environment must remain unchanged');
+});
+test('captures initial and final owned window plus desktop after the actual observation interval', async t => {
+  const captures = [];
+  const options = observeOptions(t, {
+    screenshot: async (_window, path) => { captures.push({ path, at: Date.now() }); writeFileSync(path, png); },
+  });
+  const report = await subject('observeOwnedProcess')(options);
+  assert.equal(captures.length, 2);
+  assert.ok(captures[0].path.endsWith('window.initial.png'));
+  assert.ok(captures[1].path.endsWith('window.png'));
+  assert.ok(captures[1].at - captures[0].at >= options.observeMs);
+  assert.deepEqual(report.samples.map(sample => sample.phase), ['initial', 'final']);
+  for (const sample of report.samples) {
+    assert.ok(Date.parse(sample.completedAt) >= Date.parse(sample.startedAt));
+    assert.ok(sample.processes.some(row => row.pid === report.pid));
+    assert.match(sample.geometry, /WIDTH=1000 HEIGHT=700/);
+    assert.equal(sample.tree, 'fixture window tree');
+  }
+  assert.ok(existsSync(join(options.evidenceDir, 'root.png')));
+  assert.ok(report.samples[1].elapsedMs >= options.observeMs);
+});
+test('final desktop capture failure retains first screenshot and cleans the owned child', async t => {
+  const options = observeOptions(t, { captureDesktop: async () => { throw new Error('fixture desktop capture failed E44'); } });
+  await assert.rejects(subject('observeOwnedProcess')(options), /desktop capture failed E44/);
+  const report = JSON.parse(readFileSync(join(options.evidenceDir, 'observation.json')));
+  assert.equal(report.ok, false);
+  assert.ok(existsSync(join(options.evidenceDir, 'window.initial.png')));
+  assert.deepEqual(report.cleanup.liveRemaining, []);
+});
+test('window ownership lost during final capture cannot pass observation', async t => {
+  let disappeared = false;
+  const options = observeOptions(t, {
+    findWindows: async pid => disappeared ? [] : [{ id: '42', pid, title: 'fixture window' }],
+    captureDesktop: async path => { writeFileSync(path, png); disappeared = true; },
+  });
+  await assert.rejects(subject('observeOwnedProcess')(options), /observed window disappeared/);
+  const report = JSON.parse(readFileSync(join(options.evidenceDir, 'observation.json')));
+  assert.equal(report.ok, false);
+  assert.deepEqual(report.cleanup.liveRemaining, []);
 });
 test('spawn failure is nonzero evidence rather than an observation success', async t => {
   const options = observeOptions(t, { program: '/bee-test-nonexistent-executable' });

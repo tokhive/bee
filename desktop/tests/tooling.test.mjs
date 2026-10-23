@@ -270,6 +270,32 @@ test('sidecar build records the actual binary version, target and SHA256', t => 
   assert.equal(source.revision, f.revision);
 });
 
+for (const target of ['x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu', 'aarch64-apple-darwin', 'x86_64-apple-darwin', 'x86_64-pc-windows-msvc']) {
+  test(`sidecar build presets AppImage RUNPATH only for Linux: ${target}`, t => {
+    const f = fixture(t);
+    const { goos, goarch } = beeTarget(target);
+    let buildArgs, buildEnvironment;
+    const output = buildBee({ root: f.root, target, run: (command, args, options) => {
+      if (command === 'rustc') return `host: ${target}\n`;
+      if (command === 'git') return f.revision;
+      if (command === 'go' && args[0] === 'version') return `go version go1.27.3 ${goos}/${goarch}`;
+      if (command === 'go' && args[0] === 'build') {
+        buildArgs = args;
+        buildEnvironment = options.env;
+        writeFileSync(args[args.indexOf('-o') + 1], 'final linked fixture bytes');
+        return '';
+      }
+      if (command === '/usr/bin/otool') return 'cmd LC_BUILD_VERSION\n minos 13.0\n';
+      return `bee dev+fixture ${goos}/${goarch}\n`;
+    } });
+    const linkerArgs = buildArgs.filter(arg => arg.startsWith('-ldflags'));
+    assert.deepEqual(linkerArgs, goos === 'linux' ? ['-ldflags=-r=$ORIGIN/../lib'] : []);
+    assert.equal(buildEnvironment.CGO_ENABLED, process.env.CGO_ENABLED, 'preserve existing CGO selection');
+    assert.equal(JSON.parse(readFileSync(output + '.source.json')).binarySha256,
+      createHash('sha256').update(readFileSync(output)).digest('hex'));
+  });
+}
+
 test('macOS sidecar enforces deployment target 13 and rejects a newer actual minimum', t => {
   const f = fixture(t);
   let buildEnvironment;

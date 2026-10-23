@@ -79,16 +79,21 @@ function childEnvironment(env) {
 // The observation can run on Unix without an X server when window probes are
 // supplied by focused tests. The CLI below always requires real Linux/X11.
 export async function observeOwnedProcess({ program, args = [], cwd, env = process.env, evidenceDir,
-  startupMs = 20_000, observeMs = 2000, pollMs = 100,
+  startupMs = 20_000, observeMs = 10_000, pollMs = 100,
   findWindows = () => findNativeWindows('Bee · 开发验证'),
   screenshot = (window, path) => command('import', ['-window', window.id, path], { timeout: 10_000 }),
+  captureDesktop = path => command('import', ['-window', 'root', path], { timeout: 10_000 }),
+  inspectWindow = window => ({
+    geometry: command('xdotool', ['getwindowgeometry', '--shell', window.id], { timeout: 5000 }),
+    tree: command('xwininfo', ['-id', window.id, '-tree'], { timeout: 5000 }),
+  }),
 }) {
   mkdirSync(evidenceDir, { recursive: true });
   const stdout = join(evidenceDir, 'stdout.log');
   const stderr = join(evidenceDir, 'stderr.log');
   const out = openSync(stdout, 'wx');
   const err = openSync(stderr, 'wx');
-  const report = { ok: false, program, args, scope: 'native window startup only; no UI interaction or readiness assertion', processes: [] };
+  const report = { ok: false, program, args, scope: 'native window startup only; no UI interaction or readiness assertion', processes: [], samples: [] };
   let child, closed, failure;
   try {
     child = spawn(program, args, { cwd, env: childEnvironment(env), detached: true, stdio: ['ignore', out, err] });
@@ -98,6 +103,23 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
     if (!Number.isInteger(child.pid) || child.pid <= 1 || child.pid === process.pid) throw new Error(`unsafe owned process group: actual=${child.pid}; required=dedicated spawned child PID >1`);
     const started = Date.now();
     let visibleSince, window;
+    async function capturePng(path, capture) {
+      const timing = { path, startedAt: new Date().toISOString() };
+      await capture(path);
+      const image = readFileSync(path);
+      if (!image.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw new Error(`native screenshot invalid: actual path=${path}; bytes=${image.length}; required=PNG signature`);
+      timing.completedAt = new Date().toISOString();
+      return timing;
+    }
+    async function sample(phase) {
+      const entry = { phase, startedAt: new Date().toISOString(), elapsedMs: Date.now() - started,
+        window, windows: report.lastWindows, processes: groupProcesses(child.pid) };
+      report.samples.push(entry);
+      Object.assign(entry, await inspectWindow(window));
+      entry.windowCapture = await capturePng(join(evidenceDir, phase === 'initial' ? 'window.initial.png' : 'window.png'), path => screenshot(window, path));
+      if (phase === 'final') entry.desktopCapture = await capturePng(join(evidenceDir, 'root.png'), captureDesktop);
+      entry.completedAt = new Date().toISOString();
+    }
     while (true) {
       if (child.exitCode !== null || child.signalCode !== null) throw new Error(`native app early exit: code=${child.exitCode}; signal=${child.signalCode}; stderr=${readFileSync(stderr, 'utf8').slice(-4096)}`);
       const processes = groupProcesses(child.pid);
@@ -108,16 +130,21 @@ export async function observeOwnedProcess({ program, args = [], cwd, env = proce
       if (!window && owned.length) {
         window = owned[0];
         report.window = window;
-        await screenshot(window, join(evidenceDir, 'window.png'));
-        const image = readFileSync(join(evidenceDir, 'window.png'));
-        if (!image.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) throw new Error(`native screenshot invalid: actual bytes=${image.length}; required=PNG signature`);
+        await sample('initial');
         visibleSince = Date.now();
       } else if (window && !owned.some(candidate => candidate.id === window.id)) {
         throw new Error(`observed window disappeared: actual=${JSON.stringify(windows)}; required window=${JSON.stringify(window)}`);
       }
       if (window && Date.now() - visibleSince >= observeMs) {
-        // Recheck after the last potentially blocking X11/PNG operation.
+        await sample('final');
+        // Drain exit events and recheck ownership after blocking X11 captures.
+        await delay(0);
         if (child.exitCode !== null || child.signalCode !== null) continue;
+        report.processes = groupProcesses(child.pid);
+        report.lastWindows = await findWindows(child.pid);
+        if (!report.lastWindows.some(candidate => candidate.id === window.id && report.processes.some(row => row.pid === candidate.pid && !row.state.startsWith('Z')))) {
+          throw new Error(`observed window disappeared after final capture: actual=${JSON.stringify(report.lastWindows)}; required live owned window=${JSON.stringify(window)}`);
+        }
         report.observedMs = Date.now() - visibleSince;
         report.ok = true;
         break;

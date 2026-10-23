@@ -30,7 +30,9 @@ export function buildBee({ root = beeRoot, target, run = runProcess } = {}) {
   const output = join(outputDir, `bee-${target}${suffix}`);
   const buildEnv = { ...process.env, GOOS: goos, GOARCH: goarch };
   if (goos === 'darwin') buildEnv.MACOSX_DEPLOYMENT_TARGET = '13.0';
-  run('go', ['build', '-trimpath', '-o', output, './cmd/bee'], { cwd: root, env: buildEnv });
+  // Match linuxdeploy's final RUNPATH before provenance hashes these bytes.
+  const linkerArgs = goos === 'linux' ? ['-ldflags=-r=$ORIGIN/../lib'] : [];
+  run('go', ['build', '-trimpath', ...linkerArgs, '-o', output, './cmd/bee'], { cwd: root, env: buildEnv });
   if (goos === 'darwin') {
     const loadCommands = run('/usr/bin/otool', ['-l', output], { cwd: root });
     const minimum = /^\s*minos\s+(\S+)\s*$/m.exec(loadCommands)?.[1];

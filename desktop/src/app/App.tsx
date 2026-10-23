@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, CirclePause, ShieldCheck, Zap } from 'lucide-react';
-import type { BeeClient, DesktopCommand, DesktopSnapshot, Page, ReadState } from '../client/types';
+import type { BeeClient, DecimalAmount, DesktopCommand, DesktopSnapshot, Page, ReadState } from '../client/types';
 import { useBee } from '../client/useBee';
 import { debugToolsEnabled, scenes } from '../client/scenes';
 import type { BridgeStatus, SystemBridge } from '../system/bridge';
@@ -74,6 +74,12 @@ function AccountList({ snapshot, onRetry }: { snapshot: DesktopSnapshot; onRetry
     </DomainView>
   );
 }
+function formatAmount(amount: DecimalAmount): string {
+  const [integer, fraction] = amount.split('.');
+  const significantFraction = fraction?.replace(/0+$/, '');
+  return significantFraction ? `${integer}.${significantFraction}` : integer;
+}
+
 function Metrics({ snapshot, onRetry }: { snapshot: DesktopSnapshot; onRetry: () => void }) {
   return (
     <DomainView state={snapshot.earnings} onRetry={onRetry}>
@@ -88,7 +94,7 @@ function Metrics({ snapshot, onRetry }: { snapshot: DesktopSnapshot; onRetry: ()
               <p>{label}</p>
               <div className="amount">
                 <span>¥</span>
-                {amount.replace(/0+$/, '').replace(/\.$/, '')}
+                {formatAmount(amount)}
               </div>
               <small>{caption}</small>
             </div>

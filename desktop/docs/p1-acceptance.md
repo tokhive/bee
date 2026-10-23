@@ -8,6 +8,7 @@
 - 只有 ready + known + 非负安全整数任务数可信。loading/error 携带旧零、unknown 和未确认收据均不能宣称完成；异步结果须匹配当前意图 ID。
 - `BeeClient` 演示命令 `lifecycle.wait/check/finish/cancel` 独立于 P0 SystemBridge。等待改变 `snapshot.lifecycle.dispatchStopped`，不改账号 `paused`；取消仅解除临时停止。立即操作必须已知有任务并明确提醒可能中断。
 - “完成”明确为演示流程完成；App 不退出，不安装更新。关窗后台、托盘和真实管理进程沿用 P0，不能用页面模拟结果替代。
+- 演示客户端在实例内记住请求用途与终态；已取消/完成的旧请求不能覆盖新的意图。当前完成请求只允许无副作用地重放 finish；新的合法意图仍可从零任务、等待、立即或核对入口建立。
 
 ## 网页验收矩阵
 
@@ -16,6 +17,8 @@
 - 860×600 额外覆盖浅深主题与 125% / 150% 内容缩放。每页检查整窗无横向裁切、金额不拆行、返回/主操作可滚动到达；弹层检查 Tab、Shift-Tab、Escape、关闭后焦点恢复。CSS zoom 是网页布局压力检查，不冒充原生显示缩放/WebView 验收。
 - loading / empty / error 和收益对应读状态另存截图；英文逐页和弹层检查无可见中文漏译。动态时间戳属于本地演示当前时间，不用于逐像素基线匹配。
 - 截图通过 Playwright `testInfo.outputPath()` 按 browser + viewport + language + theme + zoom 隔离；旧 Task4 固定 `/tmp` 文件不作为跨浏览器证据。最终保存位置与 SHA256 清单见实施报告。
+
+已归档[三浏览器日志、完整清单与48张代表图](../../docs/desktop/evidence/2026-10-23-p1-browser/README.md)。完整页面回归414项通过后，仅错误实际count文案变动由三浏览器3项专项覆盖；随后 I1 请求终态修补的三浏览器生命周期专项96项通过，typecheck及普通/demo构建通过。保留原始失败，不把这些不同源码范围的结果合成一次最终全套通过。
 
 ## 人工视觉比对
 

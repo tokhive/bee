@@ -1,6 +1,6 @@
 # P0 桌面底座验证记录
 
-日期：2026-10-23 更新。状态：**P0 未通过。任务1底座已提交29240a0并关闭任务审查；P1 Task1已提交845af2b/35873d5并复核通过，当前继续首次引导和概览。Mac 原生窗口、860×600、管理桥、退出、系统回跳、真实第二实例、DMG复制安装和P1五页实窗有证据；默认Chromium页面20/20。Windows固定TEE、安全专项和vet通过，全量Go仍1项Claude上报测试失败待调查；Linux arm64 Go vet/全量7包/CLI构建及后续窄回归通过。托盘和完整三端桌面/干净安装矩阵仍缺。** 用户已授权自动继续，重要方案变更集中确认。
+日期：2026-10-23 更新。状态：**P0 未通过。任务1底座已提交29240a0并关闭任务审查；P1 Task1已提交845af2b/35873d5并复核通过，当前继续首次引导和概览。Mac 原生窗口、860×600、管理桥、退出、系统回跳、真实第二实例、DMG复制安装和P1五页实窗有证据；默认Chromium页面20/20。Windows固定TEE、安全专项、vet、全量Go7包及真实CLI构建全部通过（d09d0ce/run39900097321）；Linux arm64 Go vet/全量7包/CLI构建及后续窄回归通过。托盘和完整三端桌面/干净安装矩阵仍缺。** 用户已授权自动继续，重要方案变更集中确认。
 
 ## 来源和隔离
 
@@ -18,7 +18,7 @@
 
 Tauri 2.12.5、tauri-build 2.7.4、npm API/CLI 2.12.4 和 Rust 1.94.0 已写入配置；Cargo.lock 已由 Cargo 生成，当前 macOS arm64 的完整 Rust 编译/测试和 App 打包通过，2026-10-23 原生窗口运行及部分交互自动验收通过。与批准栈的唯一前端版本调整为 Vite 8.2.2 → 8.2.4 安全兼容补丁：官方 npm 审计列出 8.2.0–8.2.3 的多项公告，其中 GHSA-587h-7wmj-h5pm 为 high；8.2.4 安装审计为 0 漏洞。架构、框架类别、通信、权限、资金规则和平台目标均沿用设计。
 
-文件保护实现已拆出带 `darwin || linux` 编译约束的 Unix 文件，私有读取验证已打开句柄的普通文件、权限和当前用户所有权；官方来源使用 no-follow 打开，但不强制它们具有 Bee 私有配置的 0600 权限。锁回调可重复调用而不会释放后来的新锁，私有替换拒绝链接和非普通文件；刷新及 egress 复用此边界。Windows句柄no-reparse、owner/protected DACL、原子替换与LockFileEx生产实现已提交6881845；真实原生RED及focused GREEN、vet已有证据，bcd619b全量仍1FAIL，不能勾选任务2完成。
+文件保护实现已拆出带 `darwin || linux` 编译约束的 Unix 文件，私有读取验证已打开句柄的普通文件、权限和当前用户所有权；官方来源使用 no-follow 打开，但不强制它们具有 Bee 私有配置的 0600 权限。锁回调可重复调用而不会释放后来的新锁，私有替换拒绝链接和非普通文件；刷新及 egress 复用此边界。Windows句柄no-reparse、owner/protected DACL、原子替换与LockFileEx生产实现已提交6881845；真实原生RED及最终focused/vet/full/CLIbuild GREEN已有证据，d09d0ce/run39900097321全部通过；实际Windows官方登录来源未验收，任务2整体保持未完成。
 
 新增 `bee desktop`、独立 `desktopbridge` 协议包和[协议说明](bridge-protocol.md)。仅有 hello/ping/shutdown，输入输出帧均限制 1 MiB；未知字段、重复 JSON 字段、未完成 ID 重用及错误版本均拒绝。管理入口不进入账号、配置或贡献路径；CLI 与握手共享构建版本。通用 Run 的调用方负责解除阻塞 I/O；命令入口管理自有管道，Unix 使用非阻塞副本注册 runtime poller。原生退出测试确实发现并修复了直接关闭继承 stdin 不能唤醒读取的问题。
 
@@ -247,3 +247,6 @@ RUSTUP_TOOLCHAIN=1.94 CARGO_HOME=$PWD/.cache/cargo-home cargo test --offline --l
 - Windows原生39897565679、39898961038均focused/vet GREEN，但full FAIL；后者已解决原3类失败，只剩ClaudeIndependentReportIntervals，正在调查，不能写作全量通过。日志本地.cache/qa保留；CLIbuild因为前置失败尚未运行。
 - Linux最终fixtures全量7包及vet通过；bcd619b指定8组窄回归0.037s与agent vet退出0，10个目标文件及4锁文件前后hash一致；容器已回收，不外推Ubuntu桌面。
 - 默认Chromium1243、FFmpeg1011、headless_shell1243安装完整；P1金额+导航+P0页面20/20通过，普通/demo build和typecheck通过。任务审查I1金额整数末尾零已关闭，原Minor错误证据/环境警告保留后续任务。
+
+
+最终Windows补证：d09d0ce的[run39900097321](https://github.com/wangdayong228/bee/actions/runs/39900097321)已全部成功：focused26PASS/2其他OS专项SKIP/0FAIL、go vet0、全量7包通过（agent53.982s）、cmd/bee真实Windows构建0。原cadence失败是测试构造的cached/reported观察时间不一致，已通过固定同tick RED/GREEN及独立窄复核修正；未改生产逻辑。详见[最终GREEN证据](evidence/2026-10-23-windows-protected-green/README.md)。此结果仍不替代Windows10/11官方账号来源、WebView2、NSIS或干净安装。

@@ -1,6 +1,6 @@
 # Bee 桌面客户端
 
-当前 **P0 未通过，P1 Task1 页面壳已完成**。当前 Mac arm64 已自动验证原生窗口、860×600 操作、握手/ping、菜单退出、owned child 回收、冷启动/后台回跳、真实第二实例和 DMG 复制安装；新银白五页壳、连接抽屉和焦点恢复也有实窗证据。Windows 安全专项/vet 已通过，全量 Go 回归仍有 1 项 Claude 上报测试待修；托盘及完整三端安装矩阵仍缺。P1 业务处于明确标识的演示模式，不连接 Hive、不控制真实贡献、不操作真实资金。
+当前 **P0 未通过，P1 Task1 页面壳已完成**。当前 Mac arm64 已自动验证原生窗口、860×600 操作、握手/ping、菜单退出、owned child 回收、冷启动/后台回跳、真实第二实例和 DMG 复制安装；新银白五页壳、连接抽屉和焦点恢复也有实窗证据。Windows 原生安全专项、vet、全量 Go 7 包与 Bee 可执行文件构建已在 d09d0ce 全部通过；托盘及完整三端安装矩阵仍缺。P1 业务处于明确标识的演示模式，不连接 Hive、不控制真实贡献、不操作真实资金。
 
 ## 页面验收入口
 
@@ -35,7 +35,7 @@ open "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/s
 
 如原生单实例注册失败，App 应报告具体启动错误并停止，不应继续创建第二个管理进程。上述预期中，当前 Mac 窗口、存活检查、菜单找回/退出、外部 Bee 保留和两类系统回跳已有自动操作证据；真实第二实例已验证仅保留一个 owned Bee；托盘仍未验收。
 
-本机开发包使用 ad-hoc 签名，未做 Developer ID 签名或公证。2026-10-23 解除旧执行限制后，当前包已成功启动并通过上述 Mac 自动操作；昨日启动异常不再是当前阻塞。查看[原生截图与 AX 证据](../docs/desktop/evidence/2026-10-23-mac-native/README.md)及 [P0 验证记录](../docs/desktop/p0-validation.md)。另见 [DMG 与真实第二实例证据](../docs/desktop/evidence/2026-10-23-mac-dmg/README.md)和 [Windows/Linux 原生测试证据](../docs/desktop/evidence/2026-10-23-native-ci/README.md)。P1 Task1 已完成；另见[Mac 新壳实窗证据](../docs/desktop/evidence/2026-10-23-mac-p1-845af2b/README.md)。
+本机开发包使用 ad-hoc 签名，未做 Developer ID 签名或公证。2026-10-23 解除旧执行限制后，当前包已成功启动并通过上述 Mac 自动操作；昨日启动异常不再是当前阻塞。查看[原生截图与 AX 证据](../docs/desktop/evidence/2026-10-23-mac-native/README.md)及 [P0 验证记录](../docs/desktop/p0-validation.md)。另见 [Windows 最终 GREEN](../docs/desktop/evidence/2026-10-23-windows-protected-green/README.md)、[DMG 与真实第二实例证据](../docs/desktop/evidence/2026-10-23-mac-dmg/README.md)和 [Windows/Linux 原生测试证据](../docs/desktop/evidence/2026-10-23-native-ci/README.md)。P1 Task1 已完成；另见[Mac 新壳实窗证据](../docs/desktop/evidence/2026-10-23-mac-p1-845af2b/README.md)。
 
 ## 可重复的开发检查
 

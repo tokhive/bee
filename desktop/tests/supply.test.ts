@@ -39,3 +39,11 @@ test('clients serialize even across replacement bindings and validate before IPC
 test('decoder independently enforces the platform whitelist',()=>{
  assert.throws(()=>decodeSupplyReply(reply({...good,platform:'invalid'}),binding,'invalid' as 'openai',undefined,now),/platform.*required=openai,claude/);
 });
+
+for(const [value,actualType] of [[undefined,'undefined'],[null,'null'],['false','string']] as const){
+ test(`invalid paused ${actualType} reports its actual type before IPC`,async()=>{
+  let calls=0;const client=createSupplyClient(async()=>{calls++;return reply(good);},binding);
+  await assert.rejects(client.setPaused('openai',value as unknown as boolean),new RegExp(`request paused actual_type=${actualType}; required=boolean`));
+  assert.equal(calls,0);
+ });
+}

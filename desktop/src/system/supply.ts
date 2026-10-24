@@ -69,7 +69,7 @@ const queues = new WeakMap<DeviceInvoke, Promise<unknown>>();
 export function createSupplyClient(invoke: DeviceInvoke, binding: SupplyBinding): SupplyClient {
  async function request(platform: SupplyPlatform, paused?: boolean) {
   if (platform !== 'openai' && platform !== 'claude') return invalid('request platform rejected; required=openai,claude');
-  if (paused !== undefined && typeof paused !== 'boolean') return invalid('request paused wrong type; required=boolean');
+  if (paused !== undefined && typeof paused !== 'boolean') return invalid(`request paused actual_type=${kind(paused)}; required=boolean`);
   const operation = (queues.get(invoke) ?? Promise.resolve()).then(async () => {
    const reply = paused === undefined ? await invoke('supply_status', {platform}) : await invoke('supply_set_paused', {platform,paused});
    return decodeSupplyReply(reply, binding, platform, paused);
@@ -78,7 +78,7 @@ export function createSupplyClient(invoke: DeviceInvoke, binding: SupplyBinding)
   return operation;
  }
  return {status: platform => request(platform), setPaused: async (platform,paused) => {
-  if(typeof paused !== 'boolean') return invalid('request paused wrong type; required=boolean');
+  if(typeof paused !== 'boolean') return invalid(`request paused actual_type=${kind(paused)}; required=boolean`);
   return request(platform,paused);
  }};
 }

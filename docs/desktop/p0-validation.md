@@ -1,6 +1,6 @@
 # P0 桌面底座验证记录
 
-日期：2026-10-23 更新。状态：**P0 与整体 P1 均未完成。P0 任务1、P1任务1–5已提交并独立复核；P1任务6页面/生命周期/视觉已复核，当前补三端原生矩阵。** Mac原生窗口与自动操作已实际可用，不再把旧沙箱限制作为当前阻塞。用户已授权自动继续，常规验证/修补不等待再次确认。
+日期：2026-10-24 更新。状态：**P0 与整体 P1 均未完成。P0 任务1、P1任务1–5已提交并独立复核；P1任务6页面/生命周期/视觉已复核，当前补三端原生矩阵。** Mac原生窗口与自动操作已实际可用，不再把旧沙箱限制作为当前阻塞。用户已授权自动继续，常规验证/修补不等待再次确认。
 
 ## 最新验收汇总（按源码分开）
 
@@ -10,8 +10,13 @@
 | [2681 Mac修补](evidence/2026-10-23-p1-native-mac-2681edc/README.md) | 英文回执与placeholder原生原图独立Approved；Info.plist用途合并、signed2/2；两份377字节脱敏报告实际交付并核对；DMG复制副本启动ready/退出 | 首次Downloads授权操作来源未证明，拒绝/取消未测；旧用户Bee70292在本轮后缺失，原因未知、保留断言未通过 |
 | [87 Mac回归](evidence/2026-10-23-p1-native-mac-87b28a2/README.md) | 新App/DMG、签名/minos、完整Rust42/42；860×600真实native ready；菜单退出回收owned，独立空闲Bee夹具仍可ping后正常shutdown | 只是Mac15 arm64开发包，不是Mac13；不重复冒充2681导出或全页矩阵；托盘工具timeoutReached |
 | [2681 hosted三端](evidence/2026-10-23-p1-native-remote-2681edc/README.md) | WindowsServer2022 Rust30/30与NSIS；Ubuntu22x64/22arm/24arm各三浏览器489、Rust35、AppImage及extract/FUSE窗口观测通过，下载包/source/hash核对 | MacIntel浏览器489通过后模拟测试受真实时钟调度失败；Ubuntu24x64 Firefox通道关闭原因未知，488/489；两行ARM extract各1 zombie，不能说无任何残留 |
+| [87 hosted最终结果](evidence/2026-10-23-p1-native-remote-87b28a2/README.md) | Server2022 Rust31/31、NSIS及来源字节已核；Ubuntu22x64/22arm/24arm各browser489、Rust36、AppImage与extract/FUSE通过，六末图1000×700 | MacIntel WebKit账号4例30s超时，485/489，后续Rust/App/DMG跳过、根因未知；24x64在Playwright依赖下载达到job90分钟上限而取消；两行extract各1 zombie |
+| [Linux最小客户端窗补证](evidence/2026-10-23-p1-linux-minimum-window/README.md) | 工具9分别运行真实2681/87 Ubuntu24 ARM包；1000×700→860×600，resize后10190/10212ms，最终前后尺寸及owned存活核对、非空末图；工具34/34和独立Approved | 双来源明确分开；Docker Xvfb无WM/无FUSE，只证明几何与启动；UTF-8环境及ZIP执行mode失败保留，不代表native ready、真实标题栏/托盘/安装 |
+| [Mac WebKit休眠调查](evidence/2026-10-24-p1-mac-webkit-diagnostic/INDEX.md) | 本机两轮长停顿与Idle/Clamshell Sleep直接重叠；保持30s/retries0/断言，防Idle Sleep包装下同5例/5workers通过，3.7s，期间无Sleep记录 | 单次本机arm64样本不证明Intel根因、全套稳定性或原生验收；原失败和未捕获caffeinate自有assertion的限制保留 |
+| [9 Linux四环境](evidence/2026-10-24-p1-native-remote-9ca837d/README.md) | Ubuntu22/24 x64/arm64四行success，各Go7/browser489/Rust36；八artifact、四包/source/provenance字节已核；extract/FUSE八次均860×600、观察≥10s，末图非空 | Xvfb客户端尺寸/启动，不证明WM标题栏、业务ready、托盘/安装；22ARM FUSE、24ARM两模式各1条PID1 WebKit zombie；9重复Mac/Win主动取消不算通过 |
+| [10月24日关窗找回尝试](evidence/2026-10-24-p1-mac-close-reopen-attempt/README.md) | 原87包签名/字节一致；本轮App及owned管理子启动，测试后精确回收两进程 | CUA对Bee/Finder返回cgWindowNotFound，Dock超时；未取得窗口、未执行关窗找回，原因未定，不冒充GUI或菜单退出通过 |
 
-窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved；新source三端CI：Mac39936378073、Windows39936377992、Linux39936378139，正在独立收证，不沿用2681包。旧b94 Ubuntu24x64到job90分钟上限被取消、停在Playwright依赖安装；没有执行页面/原生测试，不能归为产品断言失败。
+窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved。Linux最小窗工具9ca837d补齐末次geometry后的存活复核，34/34及独立审查Approved；[39941148651](https://github.com/wangdayong228/bee/actions/runs/39941148651) 四行最终结果与全部下载字节已独立核对归档。87与9按完整source分开，新source重复Mac/Windows由代理主动取消，实际终态和取消请求均保留。旧b94及87 Ubuntu24x64的90分钟取消均停在Playwright依赖安装，不归为产品断言失败。
 
 **真实剩余缺口：** Mac13双架构、Win10/11真实官方客户端来源及GUI、干净用户/Applications拖拽安装、全部托盘/无托盘和关窗找回可见状态、原生125%/150%显示矩阵、Downloads拒绝/取消与原生完成/失败反馈。hosted构建、CSS zoom、进程存活都不能替代这些。当前仅开发ad-hoc包，无生产签名/公证/真实更新。
 

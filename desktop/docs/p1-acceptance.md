@@ -38,8 +38,13 @@
 | [2681 Mac15 arm64](../../docs/desktop/evidence/2026-10-23-p1-native-mac-2681edc/README.md) | 英文完整回执/Off placeholder原图独立复验、signed2/2、两份脱敏文件实际交付、DMG复制副本启动退出 | 首次授权来源未证明，拒绝/取消未测；旧用户Bee70292缺失原因未知，不能声称全程保留 |
 | [87 Mac15 arm64](../../docs/desktop/evidence/2026-10-23-p1-native-mac-87b28a2/README.md) | 新source App/DMG、签名/minos、Rust42/42、最小窗native ready；真实菜单退出保留独立空闲Bee管理夹具 | 托盘工具超时，隐藏可见转换未证；开发ad-hoc包，非Mac13/公证/生产签名 |
 | [2681 hosted三端](../../docs/desktop/evidence/2026-10-23-p1-native-remote-2681edc/README.md) | WinServer2022 Rust30/NSIS；Ubuntu22x64/22arm/24arm各browser489、Rust35和AppImage窗口观测及来源核对 | MacIntel模拟时钟fixture失败；24x64 Firefox通道关闭488/489、原因未知；ARM extract各1 zombie |
+| [87 hosted最终证据](../../docs/desktop/evidence/2026-10-23-p1-native-remote-87b28a2/README.md) | Server2022 Rust31/NSIS字节及来源已核；Ubuntu22x64/22arm/24arm各browser489/Rust36、AppImage及六模式1000×700末图 | MacIntel WebKit账号485/489、四例30s超时，原生后续全跳过、根因未知；24x64依赖下载达90分钟取消；22x64/24arm extract各1 zombie |
+| [Linux860×600补证](../../docs/desktop/evidence/2026-10-23-p1-linux-minimum-window/README.md) | 审好9工具分别运行2681/87 Ubuntu24 ARM包，resize后完整十秒、最终尺寸/owned存活核对及非空末图；工具34/34 | 保留UTF-8与mode0644失败；双来源Docker Xvfb，无WM/FUSE，不证明真实标题栏、native ready、托盘或安装 |
+| [本机WebKit休眠调查](../../docs/desktop/evidence/2026-10-24-p1-mac-webkit-diagnostic/INDEX.md) | 两次长停顿与系统睡眠直接重叠；原30s/retries0/断言不变，同5例/5workers在无Sleep记录的复测中5/5、3.7s | 原失败仍保留；仅本机arm64单次样本，不能关闭Intel原因或代替原生验收 |
+| [9 Linux四环境](../../docs/desktop/evidence/2026-10-24-p1-native-remote-9ca837d/README.md) | Ubuntu22/24 x64/arm64各Go7/browser489/Rust36；八artifact与四包来源已核，extract/FUSE八次860×600、≥10s及非空末图 | 22ARM FUSE及24ARM两模式各1 PID1 WebKit zombie；仅客户端几何/启动，非WM标题栏、ready、托盘或安装；9主动取消的Mac/Win不算通过 |
+| [关窗找回补验尝试](../../docs/desktop/evidence/2026-10-24-p1-mac-close-reopen-attempt/README.md) | 87包签名/字节一致，本次测试父子进程已精确回收 | CUA无法取得Bee/Finder窗口，Dock超时；关窗找回未执行，当前工具失败原因未定 |
 
-87已把模拟窗口发现测试改为可控时钟，生产预算未放宽，独立审查Approved；新三端CI单独收证。Mac演示dev入口曾实际编译/启动，但CUA不能绑定未打包binary；已用打包App完成真实WebView操作，不写成dev窗口图形通过。网页CSS缩放和Playwright WebKit仍不能替代系统WebView/显示缩放。
+87模拟窗口发现测试已改为可控时钟、独立审查Approved，生产预算未放宽。9ca837d最小窗工具34/34并独立Approved，Linux run39941148651四行与八次smoke已完成包/source/provenance/geometry及下载字节核对。Mac演示dev入口曾实际编译/启动，但CUA不能绑定未打包binary；已用打包App完成的真实WebView操作按原时点保留。10月24日新尝试未取得窗口，不将它写成dev或关窗找回通过。网页CSS缩放和Playwright WebKit仍不能替代系统WebView/显示缩放。
 
 未验收项目：Mac13双架构、Win10/11官方来源/GUI、干净用户与Applications拖拽安装、托盘/无托盘及关窗找回可见状态、原生125%/150%显示、Downloads拒绝/取消与下载原生完成/失败反馈。当前有文件交付证据，UI“已发起下载”不能当作原生Finished事件反馈。
 

@@ -245,6 +245,36 @@ func TestDesktopSupplyRejectsPlatformBeforeNetwork(t *testing.T) {
 	}
 }
 
+func TestDesktopSupplyTypeErrorsIncludeSafeActualType(t *testing.T) {
+	for _, tc := range []struct {
+		field, value, actual string
+	}{
+		{"platform", `50000003`, "number"},
+		{"platform", `true`, "boolean"},
+		{"paused", `"secret-marker"`, "string"},
+		{"paused", `50000003`, "number"},
+		{"ready", `[]`, "array"},
+		{"reasons", `{}`, "object"},
+		{"reasons", `[50000003]`, "number"},
+	} {
+		t.Run(tc.field+"_"+tc.actual, func(t *testing.T) {
+			fields := map[string]json.RawMessage{"platform": json.RawMessage(`"openai"`), "paused": json.RawMessage(`false`), "ready": json.RawMessage(`true`), "reasons": json.RawMessage(`[]`)}
+			fields[tc.field] = json.RawMessage(tc.value)
+			payload, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = decodeDesktopSupply(payload, "openai")
+			if err == nil || !strings.Contains(err.Error(), "field="+tc.field) || !strings.Contains(err.Error(), "actual_type="+tc.actual) || !strings.Contains(err.Error(), "byte=") {
+				t.Fatalf("missing safe type evidence: %v", err)
+			}
+			if strings.Contains(err.Error(), "secret-marker") || strings.Contains(err.Error(), "50000003") {
+				t.Fatalf("type error leaked raw value: %v", err)
+			}
+		})
+	}
+}
+
 func TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations(t *testing.T) {
 	cases := map[string]string{
 		"missing_platform":           `{"paused":false,"ready":true,"reasons":[]}`,

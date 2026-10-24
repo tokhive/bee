@@ -206,7 +206,16 @@ func decodeDesktopSupply(data []byte, platform string) (beewire.PlatformSupply, 
 		{"platform", &result.Platform, "string"}, {"paused", &result.Paused, "boolean"}, {"ready", &result.Ready, "boolean"}, {"reasons", &result.Reasons, "string array"},
 	} {
 		if err = json.Unmarshal(fields[field.name], field.value); err != nil {
-			return result, fmt.Errorf("supply field type rejected: field=%s, required=%s", field.name, field.kind)
+			var typeErr *json.UnmarshalTypeError
+			if errors.As(err, &typeErr) {
+				// Value may include the numeric literal; retain only its JSON kind.
+				actualType, _, _ := strings.Cut(typeErr.Value, " ")
+				if actualType == "bool" {
+					actualType = "boolean"
+				}
+				return result, fmt.Errorf("supply field type rejected: field=%s, actual_type=%s, byte=%d, required=%s", field.name, actualType, typeErr.Offset, field.kind)
+			}
+			return result, fmt.Errorf("supply field JSON rejected: field=%s, bytes=%d, required=%s", field.name, len(fields[field.name]), field.kind)
 		}
 	}
 	if result.Platform != platform {

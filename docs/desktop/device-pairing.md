@@ -32,6 +32,17 @@ npm --prefix desktop run build:demo
 cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
 ```
 
-当前已验证 Go 7 包、vet、设备 race；TS 设备/桥测试 13 项；配对页面 Chromium 6 项、原页面相关回归 56 项；Rust 45 项。Rust 另有 2 项要求新签名包，须打包后补跑。页面测试使用 Tauri 调用替身；Go 使用本地 HTTP 服务核对现有 Hive 合同和兑换恢复，不能代替原生 WebView 或线上账号确认。最终包与图形验收结果记录于本节后续交付记录。
+当前已验证 Go 7 包、vet、12 项设备测试及 race（最终 agent 全量回归 53.319 秒）；TS 设备/桥测试 13 项；配对页面 Chromium 6 项（含 860×600 操作和横向溢出检查）、原页面相关回归 56 项；工具测试 37 项；Rust 45 项，加新包构建后补跑的签名包 2 项。普通和 demo 构建通过，新设备测试已接入 CI 配置，尚未运行本提交的远端 CI。页面测试使用 Tauri 调用替身；Go 使用本地 HTTP 服务核对现有 Hive 合同和兑换恢复，不能代替原生 WebView 或线上账号确认。
 
 本次不扩大旧 P0/P1 的三端验收结论；Windows/Linux 新设备配对原生界面尚未验收。协议和秘密边界见[私有管理协议](bridge-protocol.md)，实施范围见[设备配对计划](../superpowers/plans/2026-10-24-desktop-device-pairing.md)。
+
+## 本次交付记录
+
+- 源码提交：`70518b43393c82cf15ecc78d9c0b0d66e11307bb`（`dev+70518b43393c`）；后续验证文档提交不改变包内源码版本。
+- Mac arm64 开发包：`desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app`。压缩包：`.cache/device-pairing/Bee-Dev-macos-arm64-70518b4.zip`，22,957,834 字节；SHA256 为 `6976f82673b301d3f4796f53ca8ca5686f806b192d187f2ffea49f9c60b70e70`，ZIP CRC 检查通过。
+- `codesign --verify --deep --strict` 通过；2 项签名包测试验证完整性、篡改拒绝及包内 Bee 握手/ping/回收。仅 ad-hoc 开发签名，未作生产发布或公证。
+- 实际包内 Bee 子进程完成 hello → device_status → ping → shutdown，返回 unbound、退出 0、stderr 0 字节，没有创建凭证或联网。真实配对 HTTP 各状态和恢复由 Go 本地服务测试验证；未自动确认线上设备。
+- **Mac 原生图形仍未验收。** 通过 CUA 用精确包路径打开后，App 和其 owned Bee 进程存在；两次窗口读取均报 `Computer Use server error -10005: cgWindowNotFound`，没有截图或 AX 证据。无法据此判断原因，也不将进程存在当作页面通过。
+- 独立代码复核已通过；Hive 仍只有原有 ` M bee`，本次没有修改 Hive 源码、数据库、子模块或 CLI 配置。
+
+包来源和验证摘要见[本次交付清单](evidence/2026-10-24-device-pairing/manifest.json)。原生 App 已启动；实际网页绑定仍按上面的三步由用户核对和确认。

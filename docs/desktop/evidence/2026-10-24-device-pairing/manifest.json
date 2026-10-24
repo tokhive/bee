@@ -1,0 +1,44 @@
+{
+  "source": {
+    "revision": "70518b43393c82cf15ecc78d9c0b0d66e11307bb",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+70518b43393c",
+    "binarySha256": "4dcd2ea9d7d7b5fed4ba1b3b0b6efc5b5dfa6ddce8048ae1946c2e187864c19b"
+  },
+  "archive": ".cache/device-pairing/Bee-Dev-macos-arm64-70518b4.zip",
+  "archive_sha256": "6976f82673b301d3f4796f53ca8ca5686f806b192d187f2ffea49f9c60b70e70",
+  "archive_bytes": 22957834,
+  "signed_bee_sha256": "7e801031cd6f92054c0fa482a3b695090e47499911eb05df1c5cb900d73db599",
+  "app_executable_sha256": "86d9b85fe7d99d4532c69ea726438094a57cd2b0e84d468eae737fd0b04f2a53",
+  "signature_verify": "PASS: codesign --verify --deep --strict",
+  "signed_tests": {
+    "passed": 2,
+    "failed": 0
+  },
+  "actual_bundled_device_smoke": {
+    "methods": [
+      "hello",
+      "device_status",
+      "ping",
+      "shutdown"
+    ],
+    "device_state": "unbound",
+    "exit_code": 0,
+    "stderr_bytes": 0,
+    "config_created": false,
+    "network_used": false
+  },
+  "native_gui": {
+    "state": "unverified",
+    "tool": "cua.getApp(exact bundle path)",
+    "error": "Computer Use server error -10005: cgWindowNotFound",
+    "attempts": 2,
+    "app_process_launched": true,
+    "screenshot_or_ax_obtained": false
+  },
+  "production_release": false
+}

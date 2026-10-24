@@ -217,3 +217,74 @@ fn supply_platform_is_a_closed_enum_without_echoing_rejected_input() {
         assert!(!cause.contains("credential-path") && !cause.contains("secret"));
     }
 }
+
+#[test]
+fn rejected_capabilities_report_first_difference_without_unknown_payload() {
+    for (capabilities, expected) in [
+        (
+            json!(["shutdown", "ping"]),
+            vec!["index=0", "expected=ping", "actual=shutdown"],
+        ),
+        (
+            json!(["ping", "shutdown", "device_begin", "device_status"]),
+            vec!["index=2", "expected=device_status", "actual=device_begin"],
+        ),
+        (
+            json!([
+                "ping",
+                "shutdown",
+                "device_status",
+                "device_begin",
+                "supply_status",
+                "supply_status"
+            ]),
+            vec![
+                "index=5",
+                "expected=supply_set_paused",
+                "actual=supply_status",
+            ],
+        ),
+        (
+            json!(["ping", "private-secret"]),
+            vec!["index=1", "expected=shutdown", "unknown member bytes=14"],
+        ),
+        (
+            json!(["ping", "shutdown", "device_status", "private-secret"]),
+            vec![
+                "index=3",
+                "expected=device_begin",
+                "unknown member bytes=14",
+            ],
+        ),
+        (
+            json!([
+                "ping",
+                "shutdown",
+                "device_status",
+                "device_begin",
+                "supply_status",
+                "private-secret"
+            ]),
+            vec![
+                "index=5",
+                "expected=supply_set_paused",
+                "unknown member bytes=14",
+            ],
+        ),
+        (
+            json!(["ping", "shutdown", "private-secret"]),
+            vec!["actual count=3", "required counts=2,4,6"],
+        ),
+    ] {
+        let cause = hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":capabilities}),"fixture","darwin","arm64").unwrap_err();
+        assert_eq!(cause.code, "CAPABILITY_MISMATCH");
+        for evidence in expected {
+            assert!(
+                cause.message.contains(evidence),
+                "missing {evidence}: {}",
+                cause.message
+            );
+        }
+        assert!(!cause.message.contains("private-secret"));
+    }
+}

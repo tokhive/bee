@@ -14,7 +14,13 @@ export function DiagnosticsPage({ snapshot, client }: { snapshot: DesktopSnapsho
     try {
       const result = await client.dispatch({ type });
       if (result.kind !== 'confirmed') { setMessage(result.kind === 'failed' ? `${result.error.code}：${result.error.message}` : result.message); return; }
-      if (type === 'exportDiagnostics') { downloadReport(data ?? { checks: [], logs: [] }); setMessage('已发起报告文件下载；请在下载列表核对。'); }
+      if (type === 'exportDiagnostics') {
+        setMessage('正在等待报告下载结果…');
+        const downloaded = await downloadReport(data ?? { checks: [], logs: [] });
+        setMessage(downloaded === 'completed' ? '脱敏报告已下载。' : downloaded === 'unconfirmed'
+          ? '报告下载结果未确认：waitedMs=30000；请先核对下载文件夹，避免重复导出。'
+          : '已发起报告文件下载；请在下载列表核对。');
+      }
       else setMessage(result.message);
     } catch (cause) { setMessage(`诊断操作失败：operation=${type}，${String(cause)}；未确认完成。`); }
     finally { setBusy(false); }

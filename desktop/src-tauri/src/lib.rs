@@ -51,6 +51,20 @@ pub fn run() {
                     )
                 })
                 .on_new_window(|_, _| tauri::webview::NewWindowResponse::Deny)
+                .on_download(|webview, event| {
+                    if let tauri::webview::DownloadEvent::Finished { url, success, .. } = event {
+                        // macOS always reports path=None, including successful downloads.
+                        // The opaque Blob URL correlates the receipt with this export only.
+                        if let Err(cause) = webview.emit_to(
+                            "main",
+                            "bee://download-finished",
+                            serde_json::json!({ "url": url.as_str(), "success": success }),
+                        ) {
+                            eprintln!("deliver report download result to main window: success={success}: {cause}");
+                        }
+                    }
+                    true
+                })
                 .build()?;
             lifecycle::install_menu_and_tray(app)?;
             for argument in std::env::args().skip(1) {

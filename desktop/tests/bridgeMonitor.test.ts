@@ -21,6 +21,7 @@ function fixture() {
     async status() { return ready; },
     async ping() { return reply; },
     async onStatus(callback) { listener = callback; return () => { removed++; }; },
+    async onDownload() { throw new Error('download is outside bridge monitor fixture'); },
   };
   const monitor = createBridgeMonitor(bridge, view => views.push(view));
   return { bridge, monitor, views, event: (status: BridgeStatus) => listener(status), removed: () => removed };

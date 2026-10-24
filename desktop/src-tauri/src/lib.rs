@@ -32,6 +32,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bridge_request,
             commands::bridge_status,
+            commands::device_status,
+            commands::device_begin,
+            commands::device_open,
             lifecycle::login_return_received
         ])
         .setup(|app| {

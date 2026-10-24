@@ -216,17 +216,15 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
             return Err(BridgeError::new("BUILD_MISMATCH", format!("hello {field} differs from bundled build; actual bytes={}, required={expected}; comparison=different", actual.len())));
         }
     }
-    if metadata.capabilities.len() != 2
-        || !metadata.capabilities.iter().any(|c| c == "ping")
-        || !metadata.capabilities.iter().any(|c| c == "shutdown")
-    {
-        return Err(BridgeError::new(
-            "CAPABILITY_MISMATCH",
-            format!(
-                "hello capability set differs from P0; actual entries={}; required=ping,shutdown",
-                metadata.capabilities.len()
-            ),
-        ));
+    let basic = vec!["ping".to_string(), "shutdown".to_string()];
+    let devices = vec![
+        "ping".to_string(),
+        "shutdown".to_string(),
+        "device_status".to_string(),
+        "device_begin".to_string(),
+    ];
+    if metadata.capabilities != basic && metadata.capabilities != devices {
+        return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability set rejected; actual entries={}; required=ping,shutdown with optional device_status,device_begin", metadata.capabilities.len())));
     }
     Ok(metadata)
 }

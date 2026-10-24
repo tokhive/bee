@@ -12,13 +12,26 @@ import (
 	"io"
 	"runtime"
 	"sync"
+
+	bee "github.com/tokhive/bee/agent"
 )
+
+// Devices exposes only the two structured device operations to the transport.
+type Devices interface {
+	Status(context.Context) (bee.DeviceView, error)
+	Begin(context.Context, string, string) (bee.DeviceView, error)
+}
 
 // Run serves a single management session without starting Bee's contribution
 // runtime or accessing its configuration. It never closes caller-owned streams.
 // The owner must unblock any pending Read/Write on cancellation. Run joins its
 // response writer before returning, so no transport goroutine outlives the call.
-func Run(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string) (runErr error) {
+func Run(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string) error {
+	return RunWithDevices(ctx, in, out, diagnostics, version, nil)
+}
+
+// Device operations are opt-in. Hello and ping never access device state.
+func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices) (runErr error) {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -120,16 +133,37 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer
 				problem = rejected("ALREADY_READY", "hello handshake has already succeeded for this instance")
 			case req.Method == "hello":
 				ready = true
+				capabilities := []string{"ping", "shutdown"}
+				if devices != nil {
+					capabilities = append(capabilities, "device_status", "device_begin")
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
 					Arch         string   `json:"arch"`
 					Capabilities []string `json:"capabilities"`
-				}{version, runtime.GOOS, runtime.GOARCH, []string{"ping", "shutdown"}}
+				}{version, runtime.GOOS, runtime.GOARCH, capabilities}
 			case req.Method == "ping":
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case devices != nil && (req.Method == "device_status" || req.Method == "device_begin"):
+				var view bee.DeviceView
+				var operationErr error
+				if req.Method == "device_status" {
+					view, operationErr = devices.Status(ctx)
+				} else {
+					view, operationErr = devices.Begin(ctx, req.Hive, req.Name)
+				}
+				if operationErr != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("DEVICE_OPERATION_FAILED", "%s", operationErr)}
+				} else {
+					answer.Result = struct {
+						Device bee.DeviceView `json:"device"`
+					}{view}
+				}
 			case req.Method == "shutdown":
 				answer.Result = struct {
 					Stopped bool `json:"stopped"`

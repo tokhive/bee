@@ -1,3 +1,6 @@
+import { invoke, isTauri } from '@tauri-apps/api/core';
+import { NativeApp } from './app/NativeApp';
+import { createDeviceClient } from './system/device';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
@@ -17,6 +20,10 @@ async function mount() {
         <P0Page />
       </React.StrictMode>,
     );
+    return;
+  }
+  if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
+    root.render(<React.StrictMode><NativeApp client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

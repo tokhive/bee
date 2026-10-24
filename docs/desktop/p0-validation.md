@@ -16,8 +16,11 @@
 | [9 Linux四环境](evidence/2026-10-24-p1-native-remote-9ca837d/README.md) | Ubuntu22/24 x64/arm64四行success，各Go7/browser489/Rust36；八artifact、四包/source/provenance字节已核；extract/FUSE八次均860×600、观察≥10s，末图非空 | Xvfb客户端尺寸/启动，不证明WM标题栏、业务ready、托盘/安装；22ARM FUSE、24ARM两模式各1条PID1 WebKit zombie；9重复Mac/Win主动取消不算通过 |
 | [10月24日关窗找回尝试](evidence/2026-10-24-p1-mac-close-reopen-attempt/README.md) | 原87包签名/字节一致；本轮App及owned管理子启动，测试后精确回收两进程 | CUA对Bee/Finder返回cgWindowNotFound，Dock超时；未取得窗口、未执行关窗找回，原因未定，不冒充GUI或菜单退出通过 |
 | [窗口显示后的Mac补验](evidence/2026-10-24-p1-mac-visible-lifecycle/README.md) | 用户打开87包后CUA成功取窗；真实native ready；菜单退出原父96946/owned子96975均回收；Finder精确路径重启5669/5787后再次ready，保留概览供查看；两份二进制字节及签名复核一致 | 关闭后仍返回窗口内容，隐藏可见转换未证、原因未定；Dock仍timeout，原生App菜单不算托盘；新实例保留，不能说全部测试进程已清空 |
+| [Mac关窗观察副作用调查](evidence/2026-10-24-p1-mac-lifecycle-diagnostic/README.md) | eb3临时诊断副本三次CloseRequested后visible=false；两次AX/一次截图随后均产生Reopen并恢复true；延后对照13.894s；正式src与87相同，原包字节/签名未变，恢复37620/37628及ready | 仅临时插桩直接证据，不冒充原87包非侵入式画面或托盘点击；创建托盘成功不等于托盘可用；不外推旧取窗超时或其它系统 |
 
 窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved。Linux最小窗工具9ca837d补齐末次geometry后的存活复核，34/34及独立审查Approved；[39941148651](https://github.com/wangdayong228/bee/actions/runs/39941148651) 四行最终结果与全部下载字节已独立核对归档。87与9按完整source分开，新source重复Mac/Windows由代理主动取消，实际终态和取消请求均保留。旧b94及87 Ubuntu24x64的90分钟取消均停在Playwright依赖安装，不归为产品断言失败。
+
+最新Mac隐藏调查已定位到本轮工具读取的观察副作用：隐藏实际成功，随后读取AX/截图产生Reopen，详见上表诊断证据；正式产品未修补，原包已恢复。原包非侵入式画面与托盘点击仍不以诊断副本代替。
 
 **真实剩余缺口：** Mac13双架构、Win10/11真实官方客户端来源及GUI、干净用户/Applications拖拽安装、全部托盘/无托盘和关窗找回可见状态、原生125%/150%显示矩阵、Downloads拒绝/取消与原生完成/失败反馈。hosted构建、CSS zoom、进程存活都不能替代这些。当前仅开发ad-hoc包，无生产签名/公证/真实更新。
 

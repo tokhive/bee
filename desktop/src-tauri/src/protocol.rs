@@ -3,6 +3,25 @@ use serde_json::Value;
 
 pub const MAX_FRAME_BYTES: usize = 1 << 20;
 
+#[derive(Clone, Copy, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(try_from = "String", rename_all = "lowercase")]
+pub enum SupplyPlatform {
+    Openai,
+    Claude,
+}
+
+impl TryFrom<String> for SupplyPlatform {
+    type Error = String;
+
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        match value.as_str() {
+            "openai" => Ok(Self::Openai),
+            "claude" => Ok(Self::Claude),
+            _ => Err(format!("supply platform is outside the allowed enum: actual bytes={}; required=openai,claude", value.len())),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BridgeError {
@@ -223,8 +242,13 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         "device_status".to_string(),
         "device_begin".to_string(),
     ];
-    if metadata.capabilities != basic && metadata.capabilities != devices {
-        return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability set rejected; actual entries={}; required=ping,shutdown with optional device_status,device_begin", metadata.capabilities.len())));
+    let mut supplies = devices.clone();
+    supplies.extend(["supply_status".to_string(), "supply_set_paused".to_string()]);
+    if metadata.capabilities != basic
+        && metadata.capabilities != devices
+        && metadata.capabilities != supplies
+    {
+        return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability set rejected; actual entries={}; required=exact ordered group ping,shutdown; optionally device_status,device_begin; then optionally supply_status,supply_set_paused", metadata.capabilities.len())));
     }
     Ok(metadata)
 }

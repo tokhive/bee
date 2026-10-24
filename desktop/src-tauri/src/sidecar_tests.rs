@@ -372,3 +372,103 @@ async fn unsent_queue_timeout_does_not_kill_a_healthy_device_session() {
     bridge.ping().await.unwrap();
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test]
+async fn supply_commands_use_fixed_methods_and_params_on_a_six_capability_child() {
+    use crate::protocol::SupplyPlatform;
+    let bridge = Bridge::start(fixture("supply"));
+    wait(&bridge, BridgePhase::Ready).await;
+    for platform in [SupplyPlatform::Openai, SupplyPlatform::Claude] {
+        let read = bridge.supply_status(platform).await.unwrap();
+        assert_eq!(
+            read.result["supply"]["platform"],
+            serde_json::to_value(platform).unwrap()
+        );
+        for paused in [false, true] {
+            let write = bridge.supply_set_paused(platform, paused).await.unwrap();
+            assert_eq!(write.result["supply"]["paused"], paused);
+            assert_eq!(
+                write.result["supply"]["platform"],
+                serde_json::to_value(platform).unwrap()
+            );
+        }
+    }
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn supply_business_failure_keeps_the_owned_session_ready() {
+    let bridge = Bridge::start(fixture("supply-error"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let reply = bridge
+        .supply_status(crate::protocol::SupplyPlatform::Openai)
+        .await
+        .unwrap();
+    assert_eq!(reply.result["error"]["code"], "SUPPLY_OPERATION_FAILED");
+    assert!(reply.result["error"]["message"]
+        .as_str()
+        .unwrap()
+        .contains("503"));
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn supply_native_commands_require_platform_and_an_explicit_boolean() {
+    let bridge = Bridge::start(fixture("supply"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let app = tauri::test::mock_builder()
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::supply_status,
+            crate::commands::supply_set_paused,
+            crate::commands::bridge_request
+        ])
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let invoke = |cmd: &str, body: Value| {
+        tauri::test::get_ipc_response(
+            &view,
+            tauri::webview::InvokeRequest {
+                cmd: cmd.into(),
+                callback: tauri::ipc::CallbackFn(0),
+                error: tauri::ipc::CallbackFn(1),
+                url: "tauri://localhost".parse().unwrap(),
+                body: tauri::ipc::InvokeBody::Json(body),
+                headers: Default::default(),
+                invoke_key: tauri::test::INVOKE_KEY.into(),
+            },
+        )
+    };
+    for body in [
+        serde_json::json!({"paused":false}),
+        serde_json::json!({"platform":null,"paused":false}),
+        serde_json::json!({"platform":"/private/credential-path","paused":false}),
+        serde_json::json!({"platform":"openai"}),
+        serde_json::json!({"platform":"openai","paused":null}),
+        serde_json::json!({"platform":"openai","paused":"false"}),
+    ] {
+        let cause = invoke("supply_set_paused", body)
+            .err()
+            .expect("unsafe native arguments accepted");
+        assert!(!cause.to_string().contains("credential-path"));
+    }
+    let reply: Value = invoke(
+        "supply_set_paused",
+        serde_json::json!({"platform":"openai","paused":false}),
+    )
+    .unwrap()
+    .deserialize()
+    .unwrap();
+    assert_eq!(reply["result"]["supply"]["paused"], false);
+    for method in ["supply_status", "supply_set_paused"] {
+        assert!(invoke("bridge_request", serde_json::json!({"method":method})).is_err());
+    }
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}

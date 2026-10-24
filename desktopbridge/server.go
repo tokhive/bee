@@ -22,6 +22,13 @@ type Devices interface {
 	Begin(context.Context, string, string) (bee.DeviceView, error)
 }
 
+// Supplies is detected optionally so existing device-only implementations keep
+// their original capabilities and RunWithDevices signature.
+type Supplies interface {
+	SupplyStatus(context.Context, string) (bee.DesktopSupply, error)
+	SetPaused(context.Context, string, bool) (bee.DesktopSupply, error)
+}
+
 // Run serves a single management session without starting Bee's contribution
 // runtime or accessing its configuration. It never closes caller-owned streams.
 // The owner must unblock any pending Read/Write on cancellation. Run joins its
@@ -32,6 +39,7 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer
 
 // Device operations are opt-in. Hello and ping never access device state.
 func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices) (runErr error) {
+	supplies, hasSupplies := devices.(Supplies)
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -137,6 +145,9 @@ func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 				if devices != nil {
 					capabilities = append(capabilities, "device_status", "device_begin")
 				}
+				if hasSupplies {
+					capabilities = append(capabilities, "supply_status", "supply_set_paused")
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -163,6 +174,23 @@ func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 					answer.Result = struct {
 						Device bee.DeviceView `json:"device"`
 					}{view}
+				}
+			case hasSupplies && (req.Method == "supply_status" || req.Method == "supply_set_paused"):
+				var supply bee.DesktopSupply
+				var operationErr error
+				if req.Method == "supply_status" {
+					supply, operationErr = supplies.SupplyStatus(ctx, req.Platform)
+				} else {
+					supply, operationErr = supplies.SetPaused(ctx, req.Platform, req.Paused)
+				}
+				if operationErr != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("SUPPLY_OPERATION_FAILED", "%s", operationErr)}
+				} else {
+					answer.Result = struct {
+						Supply bee.DesktopSupply `json:"supply"`
+					}{supply}
 				}
 			case req.Method == "shutdown":
 				answer.Result = struct {

@@ -1,5 +1,5 @@
 use crate::build_source::BuildSource;
-use crate::protocol::{self, BridgeError, Envelope, FrameDecoder};
+use crate::protocol::{self, BridgeError, Envelope, FrameDecoder, SupplyPlatform};
 use serde::Serialize;
 use serde_json::Value;
 use std::{collections::VecDeque, path::PathBuf, process::Stdio, sync::Arc, time::Duration};
@@ -218,6 +218,31 @@ impl Bridge {
         self.request(
             "device_begin",
             serde_json::json!({"hive":hive,"name":name}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+
+    pub async fn supply_status(
+        &self,
+        platform: SupplyPlatform,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "supply_status",
+            serde_json::json!({"platform":platform}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+
+    pub async fn supply_set_paused(
+        &self,
+        platform: SupplyPlatform,
+        paused: bool,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "supply_set_paused",
+            serde_json::json!({"platform":platform,"paused":paused}),
             Duration::from_secs(15),
         )
         .await

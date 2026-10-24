@@ -135,3 +135,85 @@ fn error_response_does_not_become_success() {
         "NOT_READY"
     );
 }
+
+#[test]
+fn supply_handshake_accepts_only_three_exact_capability_groups() {
+    let groups = [
+        json!(["ping", "shutdown"]),
+        json!(["ping", "shutdown", "device_status", "device_begin"]),
+        json!([
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "supply_status",
+            "supply_set_paused"
+        ]),
+    ];
+    for capabilities in groups {
+        hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":capabilities}), "fixture","darwin","arm64").unwrap();
+    }
+    for capabilities in [
+        json!(["ping", "shutdown", "supply_status", "supply_set_paused"]),
+        json!([
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "supply_status"
+        ]),
+        json!([
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "supply_set_paused",
+            "supply_status"
+        ]),
+        json!([
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "supply_status",
+            "supply_status"
+        ]),
+        json!([
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "supply_status",
+            "supply_set_paused",
+            "extra"
+        ]),
+    ] {
+        assert_eq!(hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":capabilities}), "fixture","darwin","arm64").unwrap_err().code,"CAPABILITY_MISMATCH");
+    }
+}
+
+#[test]
+fn supply_platform_is_a_closed_enum_without_echoing_rejected_input() {
+    for (input, platform) in [
+        (json!("openai"), SupplyPlatform::Openai),
+        (json!("claude"), SupplyPlatform::Claude),
+    ] {
+        assert_eq!(
+            serde_json::from_value::<SupplyPlatform>(input.clone()).unwrap(),
+            platform
+        );
+        assert_eq!(serde_json::to_value(platform).unwrap(), input);
+    }
+    for input in [
+        Value::Null,
+        json!(false),
+        json!("/private/credential-path"),
+        json!("OPENAI"),
+        json!({"url":"secret"}),
+    ] {
+        let cause = serde_json::from_value::<SupplyPlatform>(input)
+            .unwrap_err()
+            .to_string();
+        assert!(!cause.contains("credential-path") && !cause.contains("secret"));
+    }
+}

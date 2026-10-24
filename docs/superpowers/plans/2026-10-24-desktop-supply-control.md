@@ -18,9 +18,9 @@
 
 接口：`(*DesktopDevice).SupplyStatus(context.Context,string)(DesktopSupply,error)`、`SetPaused(context.Context,string,bool)(DesktopSupply,error)`；结构字段精确为 `hive/device_id/platform/paused/ready/reasons/checked_at`。`paused/ready` 均 bool，`reasons` 非 null 字符串数组，`checked_at` UTC RFC3339 时间。平台只允许 openai/claude。
 
-- [ ] 写并运行风险矩阵红灯测试：身份和撤销、原配置字节保护、真实 GET/PUT URL/Header/body、两平台隔离、显式 false、所有响应 schema/不变量拒绝、写响应丢失及回读失败或相反值均不重试 PUT。
-- [ ] 在固定配置锁和 12 秒 context 内完成绑定/身份校验；GET 读取，PUT 校验后 GET 回读。响应错误带 HTTP/检查项等证据，不回显未知数据或秘密。不保存供给控制到本地或重放写操作。
-- [ ] 运行 `go test -race ./agent -run 'TestDesktop(Device|Supply)' -count=1` 通过，自检并提交本任务；写实现/测试报告后做任务级复核。
+- [x] 写并运行风险矩阵红灯测试：身份和撤销、原配置字节保护、真实 GET/PUT URL/Header/body、两平台隔离、显式 false、所有响应 schema/不变量拒绝、写响应丢失及回读失败或相反值均不重试 PUT。
+- [x] 在固定配置锁和 12 秒 context 内完成绑定/身份校验；GET 读取，PUT 校验后 GET 回读。响应错误带 HTTP/检查项等证据，不回显未知数据或秘密。不保存供给控制到本地或重放写操作。
+- [x] 运行 `go test -race ./agent -run 'TestDesktop(Device|Supply)' -count=1` 通过，自检并提交本任务；写实现/测试报告后做任务级复核。
 
 ## Task 2: 白名单桥与 Rust 命令
 

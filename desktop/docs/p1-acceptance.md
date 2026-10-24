@@ -46,21 +46,22 @@
 | [窗口显示后的Mac补验](../../docs/desktop/evidence/2026-10-24-p1-mac-visible-lifecycle/README.md) | 用户打开87包后已成功取窗/native ready；菜单退出原父96946/owned子96975均回收；Finder精确路径重启5669/5787后再次ready，概览保留供查看 | 关闭后仍返回窗口内容，隐藏可见转换未证、原因未定；Dock仍timeout；App菜单不算托盘，不声称全部测试进程已清空 |
 | [Mac关窗观察副作用调查](../../docs/desktop/evidence/2026-10-24-p1-mac-lifecycle-diagnostic/README.md) | eb3临时诊断副本隐藏3/3；随后两次AX/一次截图各产生Reopen，false→true；正式src与87相同、原包字节/签名不变，已恢复原包37620/37628及ready | 临时诊断不能代替原87包非侵入式隐藏画面或托盘点击；不改原计划checkbox，不外推其它环境 |
 | [87 Intel第二次运行](../../docs/desktop/evidence/2026-10-24-p1-mac-intel-attempt-2/README.md) | run39936378073 attempt2成功；Mac15.7.9 Intel、Go7/browser489/普通Rust40及包后signed2、demo DMG；两ZIP/来源字节及只读镜像签名核对通过，镜像已卸载 | 首次4例30s超时保留、根因未知；debug无CPU/内存采样；不代表Mac13、GUI/托盘/安装或生产签名 |
+| [2fc 原生下载反馈](../../docs/desktop/evidence/2026-10-24-p1-native-download-feedback/README.md) | 新包实际导出377字节白名单JSON，收到原生回执才显示已下载；进程写拒绝两次均显示失败并可重试、无新文件；最终下载三浏览器15/15、bridge10/10、普通Rust40及包后signed2；App签名/来源与DMG完整性/哈希已核 | 写拒绝注入不等于TCC用户拒绝/取消；三端新source CI运行中；托盘、目标OS、干净安装和原生缩放仍缺 |
 
 87模拟窗口发现测试已改为可控时钟、独立审查Approved，生产预算未放宽。9ca837d最小窗工具34/34并独立Approved，Linux run39941148651四行与八次smoke已完成包/source/provenance/geometry及下载字节核对。Mac演示dev入口曾实际编译/启动，但CUA不能绑定未打包binary；已用打包App完成的真实WebView操作按原时点保留。10月24日早先尝试未取得窗口；随后用户打开同一87包，已补取窗、ready、菜单退出和Finder重启证据，当时关闭后仍返回窗口内容。后续临时诊断已证实三次隐藏成功，接着AX/截图读取各产生Reopen；原包非侵入式隐藏画面与托盘点击仍未验收，不能用临时包填格。网页CSS缩放和Playwright WebKit仍不能替代系统WebView/显示缩放。
 
-未验收项目：Mac13双架构、Win10/11官方来源/GUI、干净用户与Applications拖拽安装、托盘/无托盘及关窗找回可见状态、原生125%/150%显示、Downloads拒绝/取消与下载原生完成/失败反馈。当前有文件交付证据，UI“已发起下载”不能当作原生Finished事件反馈。
+未验收项目：Mac13双架构、Win10/11官方来源/GUI、干净用户与Applications拖拽安装、托盘/无托盘及关窗找回可见状态、原生125%/150%显示、真实用户Downloads拒绝/取消，以及其它OS的原生下载反馈。2fc已补本机原生完成与写拒绝失败反馈，不用注入替代TCC用户选择。
 
 87 hosted首次结果与Intel第二次运行按attempt分别保留：后者489/489及开发DMG通过，不覆盖前者失败，也不证明旧超时已修复。此轮仅收证，未改产品、配置、测试预算或计划checkbox。
 
 ## 本机查看与快速验收
 
-从实施检出根目录执行 `open "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app"`。当前本机包绑定87b28a2；DMG留在 `.cache/qa/p1-native-local-87b28a2/packages/`。它是开发演示包，不会开始真实贡献或划转真实资金。
+从实施检出根目录执行 `open "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app"`。当前本机包绑定2fcaa40；DMG在 `desktop/src-tauri/target/debug/bundle/dmg/`，包元数据见原生下载反馈归档。它是开发演示包，不会开始真实贡献或划转真实资金。
 
 1. 五页能切换，860×600下内容可滚动、主要操作可达；连接详情显示真实native manager ready，同时保留“演示数据/真实供给未启动”。
 2. AI账号打开详情，Tab/Shift-Tab不越出抽屉，Escape关闭并恢复触发器焦点；英文设置保存回执完整、代理空值为Off (leave blank)。
 3. 演示划转1.234567891后余额128.56→127.325432109、24.6→25.834567891；提现只显示暂不支持，不扣款。它们均是演示状态。
-4. 诊断运行后导出报告，检查JSON仅有product/mode/checks/logs白名单；首次系统授权、拒绝/取消与真实失败反馈仍按上述缺口单列，不靠提示判断文件交付。
+4. 诊断运行后导出报告，检查JSON仅有product/mode/checks/logs白名单；本机原生成功回执及进程写拒绝下的失败/重试已验证；真实首次系统授权、用户拒绝/取消仍未验证，文件交付以实际文件核对。
 5. 页面“退出演示/更新演示”仅完成预览；真实系统菜单“退出”才结束App及其owned管理进程。托盘和关窗找回仍需独立证明。
 
 ## P2–P5 接入交接

@@ -18,6 +18,7 @@
 | [窗口显示后的Mac补验](evidence/2026-10-24-p1-mac-visible-lifecycle/README.md) | 用户打开87包后CUA成功取窗；真实native ready；菜单退出原父96946/owned子96975均回收；Finder精确路径重启5669/5787后再次ready，保留概览供查看；两份二进制字节及签名复核一致 | 关闭后仍返回窗口内容，隐藏可见转换未证、原因未定；Dock仍timeout，原生App菜单不算托盘；新实例保留，不能说全部测试进程已清空 |
 | [Mac关窗观察副作用调查](evidence/2026-10-24-p1-mac-lifecycle-diagnostic/README.md) | eb3临时诊断副本三次CloseRequested后visible=false；两次AX/一次截图随后均产生Reopen并恢复true；延后对照13.894s；正式src与87相同，原包字节/签名未变，恢复37620/37628及ready | 仅临时插桩直接证据，不冒充原87包非侵入式画面或托盘点击；创建托盘成功不等于托盘可用；不外推旧取窗超时或其它系统 |
 | [87 Intel第二次运行](evidence/2026-10-24-p1-mac-intel-attempt-2/README.md) | run39936378073 attempt2成功；Mac15.7.9 Intel、Go7包/browser489/普通Rust40及打包后signed2；DMG、两ZIP及来源字节核对，主控只读镜像/签名检查18项通过并卸载 | 首次485/489失败保留，旧超时根因仍未知；debug无CPU/内存采样；非Mac13、GUI/托盘/干净安装或生产签名 |
+| [2fc 原生下载反馈](evidence/2026-10-24-p1-native-download-feedback/README.md) | 新包实际导出377字节白名单JSON，收到原生回执才显示已下载；进程写拒绝两次均显示失败并可重试、无新文件；最终下载三浏览器15/15、bridge10/10、普通Rust40及包后signed2；App签名/来源与DMG完整性/哈希已核 | 写拒绝注入不等于TCC用户拒绝/取消；三端新source CI运行中；托盘、目标OS、干净安装和原生缩放仍缺 |
 
 窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved。Linux最小窗工具9ca837d补齐末次geometry后的存活复核，34/34及独立审查Approved；[39941148651](https://github.com/wangdayong228/bee/actions/runs/39941148651) 四行最终结果与全部下载字节已独立核对归档。87与9按完整source分开，新source重复Mac/Windows由代理主动取消，实际终态和取消请求均保留。旧b94及87 Ubuntu24x64的90分钟取消均停在Playwright依赖安装，不归为产品断言失败。
 

@@ -15,10 +15,12 @@ input.on('line', line => {
   if (mode === 'timeout') return;
   if (mode === 'utf8') { process.stdout.write(Buffer.from([255, 10])); return; }
   const result = request.method === 'hello'
-    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: ['ping', 'shutdown'] }
-    : { alive: true };
+    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
+    : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'fixture-instance', result }) + '\n';
-  if (mode === 'split') {
+  if (mode === 'slow-device' && request.method === 'device_status') {
+    setTimeout(() => process.stdout.write(reply), 800);
+  } else if (mode === 'split') {
     process.stdout.write(reply.slice(0, 7));
     setTimeout(() => process.stdout.write(reply.slice(7)), 15);
   } else process.stdout.write(reply);

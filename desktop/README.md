@@ -1,10 +1,12 @@
 # Bee 桌面客户端
 
+2026-10-24 增量：普通原生客户端接入现有 Hive 设备配对与重启核验，Hive 源码保持不动。打开当前开发包后，从“概览”连接本机设备；网页确认后手动回到 Bee。使用步骤、自动测试与限制见[设备配对说明](../docs/desktop/device-pairing.md)。账号、收益及真实贡献仍未接通；下面的 P0/P1 演示和历史证据按各自版本保留。
+
 当前 **P0 未通过，P1 Task1 页面壳已完成**。当前 Mac arm64 已自动验证原生窗口、860×600 操作、握手/ping、菜单退出、owned child 回收、冷启动/后台回跳、真实第二实例和 DMG 复制安装；新银白五页壳、连接抽屉和焦点恢复也有实窗证据。Windows 原生安全专项、vet、全量 Go 7 包与 Bee 可执行文件构建已在 d09d0ce 全部通过；托盘及完整三端安装矩阵仍缺。P1 业务处于明确标识的演示模式，不连接 Hive、不控制真实贡献、不操作真实资金。
 
 ## 页面验收入口
 
-从 Bee 仓库根执行 `npm --prefix desktop run dev:demo`，打开 `http://127.0.0.1:1420` 查看五页演示。普通 `npm --prefix desktop run dev` 显示业务未接通；开发/e2e 的 `?p0=1` 才进入原 P0 验证页。首次引导、账号、收益、诊断和设置功能按 P1 后续任务逐项补齐。
+从 Bee 仓库根执行 `npm --prefix desktop run dev:demo`，打开 `http://127.0.0.1:1420` 查看五页演示。普通 `npm --prefix desktop run dev` 在网页中显示业务未接通；普通 Tauri 运行使用真实设备配对页。开发/e2e 的 `?p0=1` 才进入原 P0 验证页。首次引导、账号、收益、诊断和设置演示功能按 P1 计划保留。
 
 默认锁定 Chromium 已完整安装。P1 Task1 金额、导航与 P0 三组页面用例共 **20/20 通过**，typecheck、普通 build 和 build:demo 均通过；金额修补已独立复核。Mac 原生五页证据对应 `845af2b`，后续金额修补 `35873d5` 的证据为浏览器测试与构建，不混用包版本。
 
@@ -26,7 +28,7 @@ npm --prefix desktop run test:e2e -- tests/amount-display.spec.ts tests/navigati
 open "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app"
 ```
 
-1. 本节是 P0 开发页的验收步骤；当前 App 已使用五页演示壳，P0 页通过上述开发入口验收。窗口应有指定 Logo、Bee 标题和“尚未开始贡献”；缩到 860×600 后操作和文字仍可见。
+1. 本节是 P0 开发页的验收步骤；当前普通 App 使用真实设备配对壳，P0 页通过上述开发入口验收。窗口应有指定 Logo、Bee 标题和“尚未开始贡献”；缩到 860×600 后操作和文字仍可见。
 2. 管理进程应从启动中变为“管理协议已就绪”，显示内置 Bee 的真实版本及系统；点击“检查存活”后显示“管理进程响应正常”。这只代表管理管道可用。
 3. 检查失败应显示具体错误码和证据，保留“重新检查”；不会自动开始贡献或模拟成功。失败的管理进程不会自动重启，修复安装内容后须重新打开 App。
 4. 关闭主窗口后，从菜单栏/托盘的“打开 Bee”或 macOS Dock 找回；窗口和原有管理进程应保留。再用 `open -n` 打开同一个 App，应找回原窗口，活动监视器中不应多出第二个 App 管理进程。
@@ -47,6 +49,7 @@ node desktop/scripts/prepare-tee.mjs
 npm --prefix desktop ci
 npm --prefix desktop run test:tooling
 npm --prefix desktop run test:bridge
+npm --prefix desktop run test:device
 npm --prefix desktop run build
 node desktop/scripts/build-bee.mjs
 cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
@@ -91,7 +94,7 @@ Tauri 2.12.5、tauri-build 2.7.4、npm API/CLI 2.12.4、React 19.2.8、TypeScrip
 
 Rust 构建时再次核对来源和原始二进制 SHA256；运行签名 `.app` 时检查整个包的签名 seal，再核对 Bee 的版本/系统/能力握手，因为重签名会改变 Mach-O 字节。未签名的开发目录保持精确 SHA256 校验；ad-hoc 完整性校验不等于生产发布身份认证。
 
-内置 Bee 总是从 App 可执行文件同目录启动，不查找 PATH。前端只有管理状态查询、ping 和 boolean 回跳收据；没有 Shell、凭证文件或任意路径权限。stdout 仅协议，stderr 持续消费并最多保留 4 KiB 当前无凭证管理模式的诊断，失败时附实际退出状态。停止只关闭本次管道、回收本次 Child，不按名字查杀其他 Bee。帧格式见[管理协议说明](../docs/desktop/bridge-protocol.md)。
+内置 Bee 总是从 App 可执行文件同目录启动，不查找 PATH。前端提供管理状态查询、ping、boolean 回跳收据及 typed 设备状态/开始配对/打开确认网页命令；没有 Shell、凭证文件或任意路径权限。设备凭证和配对令牌只在 Go，React 仅接收白名单公开状态；独立配置不覆盖 CLI。stdout 仅协议，stderr 持续消费并最多保留 4 KiB 诊断，失败时附实际退出状态，不写入设备秘密。停止只关闭本次管道、回收本次 Child，不按名字查杀其他 Bee。帧格式见[管理协议说明](../docs/desktop/bridge-protocol.md)。
 
 ## 单实例与回跳边界
 

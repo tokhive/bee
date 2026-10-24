@@ -8,12 +8,14 @@ export function AppShell({
   page,
   onNavigate,
   demo,
+  deviceMode = false,
   children,
   debug,
 }: {
   page: Page;
   onNavigate: (page: Page) => void;
   demo: boolean;
+  deviceMode?: boolean;
   children: ReactNode;
   debug?: ReactNode;
 }) {
@@ -39,7 +41,7 @@ export function AppShell({
           </div>
           <div className="identity">
             <span className="avatar">B</span>
-            <div>{t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : '等待业务接入')}</small>
+            <div>{t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : deviceMode ? '本机设备配对' : '等待业务接入')}</small>
             </div>
           </div>
         </div>
@@ -67,7 +69,7 @@ export function AppShell({
           </div>
           {children}
         </main>
-        <footer>{t("Bee · 开发版本")}<span>{t(demo ? '演示操作不会影响真实账号或资金' : '真实业务未接通')}</span>
+        <footer>{t("Bee · 开发版本")}<span>{t(demo ? '演示操作不会影响真实账号或资金' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
         </footer>
       </div>
     </div>

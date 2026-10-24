@@ -1,5 +1,5 @@
 use crate::{
-    protocol::BridgeError,
+    protocol::{BridgeError, SupplyPlatform},
     sidecar::{Bridge, BridgeReply, BridgeStatus},
 };
 
@@ -42,6 +42,23 @@ pub async fn device_begin(
     name: String,
 ) -> Result<BridgeReply, BridgeError> {
     bridge.device_begin(hive, name).await
+}
+
+#[tauri::command]
+pub async fn supply_status(
+    bridge: tauri::State<'_, Bridge>,
+    platform: SupplyPlatform,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.supply_status(platform).await
+}
+
+#[tauri::command]
+pub async fn supply_set_paused(
+    bridge: tauri::State<'_, Bridge>,
+    platform: SupplyPlatform,
+    paused: bool,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.supply_set_paused(platform, paused).await
 }
 
 fn pairing_url(value: &serde_json::Value) -> Result<tauri::Url, BridgeError> {
@@ -185,6 +202,8 @@ mod tests {
             "bee desktop",
             "/bin/sh",
             "ping --help",
+            "supply_status",
+            "supply_set_paused",
             "",
         ] {
             let error = check_method(method).unwrap_err();

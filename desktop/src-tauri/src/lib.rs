@@ -35,6 +35,8 @@ pub fn run() {
             commands::device_status,
             commands::device_begin,
             commands::device_open,
+            commands::supply_status,
+            commands::supply_set_paused,
             lifecycle::login_return_received
         ])
         .setup(|app| {

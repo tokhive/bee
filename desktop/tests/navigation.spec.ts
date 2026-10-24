@@ -93,3 +93,22 @@ test('客户端拒绝未知场景、清理订阅，非演示模式保持未接�
   expect(result.mode).toBe('unavailable');
   expect(result.result.kind).toBe('unsupported');
 });
+
+test('demo stays isolated from real device and supply commands even inside a native shell', async ({ page }) => {
+ await page.addInitScript(()=>{
+  const runtime=window as unknown as {isTauri:boolean;__TAURI_INTERNALS__:unknown;__TAURI_EVENT_PLUGIN_INTERNALS__:unknown;nativeCalls:string[]};
+  runtime.isTauri=true;runtime.nativeCalls=[];
+  runtime.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
+  runtime.__TAURI_INTERNALS__={transformCallback:()=>1,unregisterCallback:()=>{},invoke:async(command:string)=>{
+   runtime.nativeCalls.push(command);
+   if(command==='bridge_status')return {state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance:'fixture'}};
+   if(command==='plugin:event|listen')return 1;
+   if(command==='plugin:event|unlisten')return;
+   throw new Error('Unexpected demo native command: '+command);
+  }};
+ });
+ await page.goto('/');await expect(page.getByText('演示数据',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByText('演示贡献中',{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>(window as unknown as {nativeCalls:string[]}).nativeCalls.filter(command=>/^(supply_|device_)/.test(command)))).toEqual([]);
+ await expect(page.getByRole('region',{name:'平台供给',exact:true})).toHaveCount(0);
+});

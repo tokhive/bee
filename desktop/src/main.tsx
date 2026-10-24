@@ -1,5 +1,6 @@
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { NativeApp } from './app/NativeApp';
+import { createSupplyClient, type SupplyBinding } from './system/supply';
 import { createDeviceClient } from './system/device';
 import React from 'react';
 import { createRoot } from 'react-dom/client';
@@ -10,6 +11,7 @@ import { createSystemBridge } from './system/bridge';
 import './styles/tokens.css';
 import './styles/app.css';
 
+const supply = (binding:SupplyBinding) => createSupplyClient(invoke,binding);
 async function mount() {
   const root = createRoot(document.getElementById('root')!);
   const params = new URLSearchParams(location.search);
@@ -23,7 +25,7 @@ async function mount() {
     return;
   }
   if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
-    root.render(<React.StrictMode><NativeApp client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
+    root.render(<React.StrictMode><NativeApp supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

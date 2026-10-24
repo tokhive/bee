@@ -208,3 +208,12 @@ dd { margin: 7px 0 0; overflow-wrap: anywhere; }
 .device-url, .device-error, .device-pairing dd { overflow-wrap: anywhere; }
 .device-url { color: var(--muted); font-size: 12px; user-select: text; }
 .device-error { padding: 12px; border: 1px solid var(--line); border-radius: 7px; }
+
+.supply-panel { max-width: 820px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--line); }
+.supply-panel .section-heading { gap: 12px; flex-wrap: wrap; }
+.supply-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 16px; margin-top: 18px; }
+.supply-card { min-width: 0; padding: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--paper); }
+.supply-card h3 { margin: 0 0 14px; }
+.supply-state { font-weight: 600; }
+.supply-reasons { padding-left: 18px; font-size: 13px; line-height: 1.6; }
+.supply-time { font-size: 12px; overflow-wrap: anywhere; }

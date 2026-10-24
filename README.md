@@ -190,3 +190,5 @@ docs/        error code reference
 ## License
 
 [MIT](LICENSE)
+
+The desktop development client supports verified device pairing and per-platform Hive supply status and pause/resume controls. Resume does not start contribution. See the [desktop supply guide](docs/desktop/supply-control.md) for behavior and pending package verification.

@@ -1,6 +1,8 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import { StatusView } from '../components/StatusView';
+import { SupplyPanel } from '../features/supply/SupplyPanel';
+import type { SupplyFactory } from '../system/supply';
 import { DevicePairingPage } from '../features/device/DevicePairingPage';
 import type { DeviceClient, DeviceView } from '../system/device';
 import type { BridgeStatus, SystemBridge } from '../system/bridge';
@@ -11,11 +13,11 @@ function failure(cause:unknown):string {
  if(typeof cause==='object'&&cause!==null&&'message' in cause)return `${'code' in cause?String(cause.code)+': ':''}${String(cause.message)}`;
  return String(cause);
 }
-export function NativeApp({client,systemBridge}:{client:DeviceClient;systemBridge:SystemBridge}) {
- const [page,setPage]=useState<Page>('overview');
- const [native,setNative]=useState<BridgeStatus>({state:'starting'});
+interface NativeUi {page:Page;language:Preferences['language'];theme:Preferences['theme']}
+function NativeWorkspace({client,supply,native,ui,updateUi}:{client:DeviceClient;supply:SupplyFactory;native:BridgeStatus;ui:NativeUi;updateUi:(next:Partial<NativeUi>)=>void}) {
+ const {page,language,theme}=ui;
+ const setPage=(page:Page)=>updateUi({page});
  const [view,setView]=useState<DeviceView>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);
- const [language,setLanguage]=useState<Preferences['language']>('system');const [theme,setTheme]=useState<Preferences['theme']>('system');
  useLanguage(language);
  useEffect(()=>{document.documentElement.dataset.theme=theme;},[theme]);
  const working=useRef(false);const mounted=useRef(true);
@@ -27,6 +29,36 @@ export function NativeApp({client,systemBridge}:{client:DeviceClient;systemBridg
   finally{working.current=false;if(mounted.current)setBusy(false);}
  },[]);
  const refresh=useCallback(()=>run(()=>client.status()),[client,run]);
+ useEffect(()=>{if(native.state==='ready')void refresh();},[native.state,refresh]);
+ useEffect(()=>{
+  if(native.state!=='ready'||busy||error||!(view?.state==='pending'||view?.state==='draining'))return;
+  const timer=setTimeout(()=>void refresh(),(view.poll_interval_seconds??2)*1000);
+  return()=>clearTimeout(timer);
+ },[native.state,busy,error,view,refresh]);
+ const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?supply({hive:view.hive,deviceId:view.identity.id}):undefined,[supply,view?.state,view?.hive,view?.identity?.id]);
+ return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
+  {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>
+   {native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}
+  </StatusView>:<>
+   {page==='overview'&&<><DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/>{!busy&&!error&&supplyClient&&<SupplyPanel client={supplyClient}/>}</>}
+   {page==='accounts'&&<StatusView kind="unavailable" title={t('账号')}>{t('真实平台账号接入尚未开放。')}</StatusView>}
+   {page==='earnings'&&<StatusView kind="unavailable" title={t('收益')}>{t('真实收益尚未接通。')}</StatusView>}
+   {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{t('尚未开始贡献')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div></section>}
+   {page==='settings'&&<div className="settings-page"><section className="settings-form">
+    <label>{t('语言')}<select aria-label={t('语言')} value={language} onChange={e=>updateUi({language:e.target.value as Preferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></label>
+    <label>{t('外观')}<select aria-label={t('外观')} value={theme} onChange={e=>updateUi({theme:e.target.value as Preferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></label>
+    <p className="feature-note">{t('外观和语言仅用于本次运行。设备绑定保存在独立的受保护配置中。')}</p>
+    <p>{t('Hive 地址')}: {view?.hive||t('尚未设置')}</p>
+    <p className="feature-note">{t('已保存设备配置时禁止直接切换 Hive；原配置将保留。')}</p>
+   </section></div>}
+  </>}
+ </AppShell>;
+}
+
+export function NativeApp({client,supply,systemBridge}:{client:DeviceClient;supply:SupplyFactory;systemBridge:SystemBridge}) {
+ const [native,setNative]=useState<BridgeStatus>({state:'starting'});
+ const [ui,setUi]=useState<NativeUi>({page:'overview',language:'system',theme:'system'});
+ const updateUi=useCallback((next:Partial<NativeUi>)=>setUi(current=>({...current,...next})),[]);
  useEffect(()=>{
   let active=true,updated=false;let off:(()=>void)|undefined;
   const failed=(cause:unknown)=>{if(active&&!updated)setNative({state:'failed',error:{code:'NATIVE_STATUS_FAILED',message:failure(cause)}});};
@@ -34,27 +66,5 @@ export function NativeApp({client,systemBridge}:{client:DeviceClient;systemBridg
   void systemBridge.status().then(status=>{if(active&&!updated)setNative(status);},failed);
   return()=>{active=false;off?.();};
  },[systemBridge]);
- useEffect(()=>{if(native.state==='ready')void refresh();},[native.state,refresh]);
- useEffect(()=>{
-  if(native.state!=='ready'||busy||error||!(view?.state==='pending'||view?.state==='draining'))return;
-  const timer=setTimeout(()=>void refresh(),(view.poll_interval_seconds??2)*1000);
-  return()=>clearTimeout(timer);
- },[native.state,busy,error,view,refresh]);
- return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
-  {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>
-   {native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}
-  </StatusView>:<>
-   {page==='overview'&&<DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/>}
-   {page==='accounts'&&<StatusView kind="unavailable" title={t('账号')}>{t('真实平台账号接入尚未开放。')}</StatusView>}
-   {page==='earnings'&&<StatusView kind="unavailable" title={t('收益')}>{t('真实收益尚未接通。')}</StatusView>}
-   {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{t('尚未开始贡献')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div></section>}
-   {page==='settings'&&<div className="settings-page"><section className="settings-form">
-    <label>{t('语言')}<select aria-label={t('语言')} value={language} onChange={e=>setLanguage(e.target.value as Preferences['language'])}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></label>
-    <label>{t('外观')}<select aria-label={t('外观')} value={theme} onChange={e=>setTheme(e.target.value as Preferences['theme'])}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></label>
-    <p className="feature-note">{t('外观和语言仅用于本次运行。设备绑定保存在独立的受保护配置中。')}</p>
-    <p>{t('Hive 地址')}: {view?.hive||t('尚未设置')}</p>
-    <p className="feature-note">{t('已保存设备配置时禁止直接切换 Hive；原配置将保留。')}</p>
-   </section></div>}
-  </>}
- </AppShell>;
+ return <NativeWorkspace key={`${native.state}:${native.metadata?.instance??''}`} client={client} supply={supply} native={native} ui={ui} updateUi={updateUi}/>;
 }

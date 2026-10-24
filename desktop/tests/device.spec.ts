@@ -12,6 +12,7 @@ test.beforeEach(async({page})=>{
    if(command==='plugin:event|unlisten')return;
    if(command==='bridge_status'&&location.search.includes('stale-status'))return new Promise((_,reject)=>setTimeout(()=>{(window as unknown as {initialRejected:boolean}).initialRejected=true;reject(new Error('old status read failed'));},100));
    if(command==='bridge_status')return {state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance:'fixture'}};
+   if(command==='supply_status'||command==='supply_set_paused')return {result:{supply:{hive:'https://hive.example',device_id:'device-1',platform:(args as unknown as {platform:string}).platform,paused:false,ready:false,reasons:['offline'],checked_at:new Date().toISOString()}}};
    if(command==='device_begin')runtime.deviceStage='pending';
    if(command==='device_status'||command==='device_begin'||command==='device_open'){
     const delay=(window as unknown as {deviceDelay?:number}).deviceDelay;if(delay)await new Promise(resolve=>setTimeout(resolve,delay));
@@ -38,7 +39,7 @@ test('normal native build pairs and verifies without demo balances or starting s
  await expect(page.getByText('设备已绑定，尚未开始贡献。')).toBeVisible();
  await page.getByRole('button',{name:'收益',exact:true}).click();
  await expect(page.getByText('真实收益尚未接通。')).toBeVisible();
- expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply|run/.test(c)))).toBe(false);
+ expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply_set_paused|run/.test(c)))).toBe(false);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
 test('failed verification blocks success and remains retryable',async({page})=>{

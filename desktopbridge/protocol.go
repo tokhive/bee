@@ -150,12 +150,37 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 			seen[name] = true
 			var value json.RawMessage
 			_ = decoder.Decode(&value)
+			// The full frame is valid JSON. Classify only its leading token;
+			// never include an unknown value in a parameter rejection.
+			actualType := "number"
+			switch bytes.TrimSpace(value)[0] {
+			case 'n':
+				actualType = "null"
+			case '"':
+				actualType = "string"
+			case 't', 'f':
+				actualType = "boolean"
+			case '{':
+				actualType = "object"
+			case '[':
+				actualType = "array"
+			}
 			if name == "platform" {
-				if json.Unmarshal(value, &req.Platform) != nil || (req.Platform != "openai" && req.Platform != "claude") {
-					return req, rejected("INVALID_REQUEST", "supply platform is not an allowed string enum; required=openai,claude")
+				if actualType == "null" {
+					return req, rejected("INVALID_REQUEST", "supply platform is null; actual type=null; required=string enum openai,claude")
 				}
-			} else if bytes.Equal(bytes.TrimSpace(value), []byte("null")) || json.Unmarshal(value, &req.Paused) != nil {
-				return req, rejected("INVALID_REQUEST", "supply paused has a non-boolean JSON type; required=explicit boolean")
+				if actualType != "string" {
+					return req, rejected("INVALID_REQUEST", "supply platform JSON type rejected; actual type=%s; required=string", actualType)
+				}
+				_ = json.Unmarshal(value, &req.Platform)
+				if req.Platform != "openai" && req.Platform != "claude" {
+					return req, rejected("INVALID_REQUEST", "supply platform enum rejected; actual type=string, string bytes=%d; required=openai,claude", len(req.Platform))
+				}
+			} else {
+				if actualType != "boolean" {
+					return req, rejected("INVALID_REQUEST", "supply paused JSON type rejected; actual type=%s; required=explicit boolean", actualType)
+				}
+				_ = json.Unmarshal(value, &req.Paused)
 			}
 		}
 		if !seen["platform"] {

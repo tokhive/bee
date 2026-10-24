@@ -129,3 +129,43 @@ func TestSupplyBusinessFailureDoesNotBreakManagement(t *testing.T) {
 		t.Fatalf("results=%s", out.String())
 	}
 }
+
+func TestSupplyParameterErrorsIdentifyTheObservedJSONTypeWithoutPayload(t *testing.T) {
+	for _, tc := range []struct {
+		name, method, params string
+		want                 []string
+	}{
+		{"platform-null", "supply_status", `{"platform":null}`, []string{"platform is null", "actual type=null"}},
+		{"platform-number", "supply_status", `{"platform":42}`, []string{"platform JSON type rejected", "actual type=number", "required=string"}},
+		{"platform-bool", "supply_status", `{"platform":false}`, []string{"platform JSON type rejected", "actual type=boolean"}},
+		{"platform-object", "supply_status", `{"platform":{}}`, []string{"platform JSON type rejected", "actual type=object"}},
+		{"platform-array", "supply_status", `{"platform":[]}`, []string{"platform JSON type rejected", "actual type=array"}},
+		{"platform-enum", "supply_status", `{"platform":"/private/诊断-secret"}`, []string{"platform enum rejected", "actual type=string", "string bytes=22"}},
+		{"paused-null", "supply_set_paused", `{"platform":"openai","paused":null}`, []string{"paused JSON type rejected", "actual type=null"}},
+		{"paused-string", "supply_set_paused", `{"platform":"openai","paused":"private-secret"}`, []string{"paused JSON type rejected", "actual type=string"}},
+		{"paused-number", "supply_set_paused", `{"platform":"openai","paused":0}`, []string{"paused JSON type rejected", "actual type=number"}},
+		{"paused-object", "supply_set_paused", `{"platform":"openai","paused":{}}`, []string{"paused JSON type rejected", "actual type=object"}},
+		{"paused-array", "supply_set_paused", `{"platform":"openai","paused":[]}`, []string{"paused JSON type rejected", "actual type=array"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := &fakeSupply{}
+			var out bytes.Buffer
+			if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("e", tc.method, tc.params)+request("p", "ping")), &out, io.Discard, "test", d); err != nil {
+				t.Fatal(err)
+			}
+			frames := replies(t, out.String())
+			if frames[1].Error == nil {
+				t.Fatalf("request accepted: %s", out.String())
+			}
+			message := frames[1].Error.Message
+			for _, want := range tc.want {
+				if !strings.Contains(message, want) {
+					t.Errorf("message=%q; missing=%q", message, want)
+				}
+			}
+			if strings.Contains(message, "private") || strings.Contains(message, "secret") || strings.Contains(message, "诊断") || len(d.calls) != 0 || frames[2].Error != nil {
+				t.Fatalf("unsafe error or dispatch: %s", out.String())
+			}
+		})
+	}
+}

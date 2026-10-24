@@ -233,15 +233,8 @@ func desktopPairingView(state localState, status string) DeviceView {
 	return DeviceView{State: status, Hive: state.Hive, Name: state.Name, UserCode: pair.UserCode, VerificationURL: pair.VerificationURI + "?code=" + url.QueryEscape(pair.UserCode), ExpiresAt: &pair.ExpiresAt, PollInterval: pair.PollInterval}
 }
 func finishDesktopDevice(path string, state localState, identity beewire.Identity) (DeviceView, error) {
-	if !publicIDPattern.MatchString(identity.ID) || !publicIDPattern.MatchString(identity.OwnerID) || strings.TrimSpace(identity.Name) == "" || identity.OwnerEmail == "" || len(identity.OwnerEmail) > 320 || utf8.RuneCountInString(identity.Name) > 80 || strings.IndexFunc(identity.Name+identity.OwnerEmail, unicode.IsControl) >= 0 {
-		return DeviceView{}, errors.New("Hive identity fields rejected; nonempty device ID, owner ID, name and owner email are required")
-	}
-	public, _ := json.Marshal(identity)
-	if bytes.Contains(public, []byte(state.Credential)) || (state.Pairing != nil && bytes.Contains(public, []byte(state.Pairing.PairingToken))) {
-		return DeviceView{}, errors.New("Hive identity contains secret material; public result blocked")
-	}
-	if previous := state.Identity; previous != nil && (previous.ID != identity.ID || previous.OwnerID != identity.OwnerID) {
-		return DeviceView{}, errors.New("Hive identity changed device ID or owner ID; saved identity preserved and binding blocked")
+	if err := validateDesktopIdentity(state, identity); err != nil {
+		return DeviceView{}, err
 	}
 	state.Identity = &identity
 	state.Pairing = nil
@@ -249,6 +242,22 @@ func finishDesktopDevice(path string, state localState, identity beewire.Identit
 		return DeviceView{}, err
 	}
 	return DeviceView{State: "bound", Hive: state.Hive, Name: identity.Name, Identity: &identity}, nil
+}
+
+// validateDesktopIdentity is deliberately pure: supply checks must not rewrite
+// the saved binding or complete an outstanding pairing transaction.
+func validateDesktopIdentity(state localState, identity beewire.Identity) error {
+	if !publicIDPattern.MatchString(identity.ID) || !publicIDPattern.MatchString(identity.OwnerID) || strings.TrimSpace(identity.Name) == "" || identity.OwnerEmail == "" || len(identity.OwnerEmail) > 320 || utf8.RuneCountInString(identity.Name) > 80 || strings.IndexFunc(identity.Name+identity.OwnerEmail, unicode.IsControl) >= 0 {
+		return errors.New("Hive identity fields rejected; nonempty device ID, owner ID, name and owner email are required")
+	}
+	public, _ := json.Marshal(identity)
+	if bytes.Contains(public, []byte(state.Credential)) || (state.Pairing != nil && bytes.Contains(public, []byte(state.Pairing.PairingToken))) {
+		return errors.New("Hive identity contains secret material; public result blocked")
+	}
+	if previous := state.Identity; previous != nil && (previous.ID != identity.ID || previous.OwnerID != identity.OwnerID) {
+		return errors.New("Hive identity changed device ID or owner ID; saved identity preserved and binding blocked")
+	}
+	return nil
 }
 
 // Keep HTTP failure evidence without echoing response bodies, which can contain

@@ -18,6 +18,8 @@ type request struct {
 	Protocol int
 	ID       string
 	Method   string
+	Hive     string
+	Name     string
 }
 
 type protocolError struct {
@@ -129,6 +131,37 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if req.Method == "device_begin" {
+		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))
+		_, _ = decoder.Token()
+		seen := map[string]bool{}
+		for decoder.More() {
+			key, _ := decoder.Token()
+			name := key.(string)
+			if seen[name] {
+				return req, rejected("INVALID_REQUEST", "device params has a repeated field; required=unique hive,name")
+			}
+			seen[name] = true
+			var value json.RawMessage
+			_ = decoder.Decode(&value)
+			if name != "hive" && name != "name" {
+				return req, rejected("INVALID_REQUEST", "device params has an unknown field; allowed=hive,name")
+			}
+			var text string
+			if bytes.Equal(value, []byte("null")) || json.Unmarshal(value, &text) != nil || text == "" {
+				return req, rejected("INVALID_REQUEST", "device params field is not a nonempty string; required=hive,name")
+			}
+			if name == "hive" {
+				req.Hive = text
+			} else {
+				req.Name = text
+			}
+		}
+		if len(seen) != 2 {
+			return req, rejected("INVALID_REQUEST", "device params fields=%d; required=hive,name", len(seen))
+		}
+		return req, nil
 	}
 	if len(params) != 0 {
 		return req, rejected("INVALID_REQUEST", "params contains fields=%d; required=0 fields", len(params))

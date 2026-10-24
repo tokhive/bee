@@ -341,3 +341,34 @@ async fn owned_process_is_reaped_before_singleton_release() {
         "singleton endpoint released before owned management Child stop/reap completed"
     );
 }
+
+#[tokio::test]
+async fn device_business_failure_keeps_owned_bridge_ready() {
+    let bridge = Bridge::start(fixture("device"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let reply = bridge.device_status().await.unwrap();
+    assert_eq!(reply.result["error"]["code"], "DEVICE_OPERATION_FAILED");
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    assert_eq!(
+        bridge.ping().await.unwrap().result,
+        serde_json::json!({"alive":true})
+    );
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn unsent_queue_timeout_does_not_kill_a_healthy_device_session() {
+    let mut spec = fixture("slow-device");
+    spec.timeout = Duration::from_millis(500);
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    let slow = bridge.clone();
+    let pending = tokio::spawn(async move { slow.device_status().await });
+    sleep(Duration::from_millis(50)).await;
+    let cause = bridge.ping().await.unwrap_err();
+    assert_eq!(cause.code, "REQUEST_QUEUE_TIMEOUT");
+    pending.await.unwrap().unwrap();
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}

@@ -53,6 +53,8 @@ pub(crate) struct LaunchSpec {
 }
 
 struct Request {
+    method: &'static str,
+    params: Value,
     deadline: Instant,
     reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
 }
@@ -195,6 +197,38 @@ impl Bridge {
     }
 
     pub async fn ping(&self) -> Result<BridgeReply, BridgeError> {
+        self.request("ping", serde_json::json!({}), self.0.timeout)
+            .await
+    }
+
+    pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "device_status",
+            serde_json::json!({}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+
+    pub async fn device_begin(
+        &self,
+        hive: String,
+        name: String,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "device_begin",
+            serde_json::json!({"hive":hive,"name":name}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+
+    async fn request(
+        &self,
+        method: &'static str,
+        params: Value,
+        duration: Duration,
+    ) -> Result<BridgeReply, BridgeError> {
         let current = self.status();
         if current.state != BridgePhase::Ready || *self.0.stop.borrow() {
             return Err(current.error.unwrap_or_else(|| {
@@ -208,11 +242,16 @@ impl Bridge {
                 )
             }));
         }
-        let deadline = Instant::now() + self.0.timeout;
+        let deadline = Instant::now() + duration;
         let (reply, receive) = oneshot::channel();
         self.0
             .requests
-            .try_send(Request { deadline, reply })
+            .try_send(Request {
+                method,
+                params,
+                deadline,
+                reply,
+            })
             .map_err(|cause| {
                 error(
                     "REQUEST_NOT_QUEUED",
@@ -286,10 +325,11 @@ async fn exchange(
     replies: &mut Replies,
     method: &str,
     id: &str,
+    params: &Value,
     deadline: Instant,
 ) -> Result<Envelope, BridgeError> {
     timeout_at(deadline, async {
-        let mut bytes = serde_json::to_vec(&serde_json::json!({"protocol":1,"id":id,"method":method,"params":{}})).map_err(|cause| error("REQUEST_ENCODING_FAILED", format!("encode {method} request: {cause}")))?;
+        let mut bytes = serde_json::to_vec(&serde_json::json!({"protocol":1,"id":id,"method":method,"params":params})).map_err(|cause| error("REQUEST_ENCODING_FAILED", format!("encode {method} request: {cause}")))?;
         bytes.push(b'\n');
         stdin.write_all(&bytes).await.map_err(|cause| error("PIPE_WRITE_FAILED", format!("write owned Bee {method} request bytes={}: {cause}", bytes.len())))?;
         stdin.flush().await.map_err(|cause| error("PIPE_WRITE_FAILED", format!("flush owned Bee {method} request: {cause}")))?;
@@ -313,11 +353,13 @@ async fn session(
     stop: &mut watch::Receiver<bool>,
     requests: &mut mpsc::Receiver<Request>,
 ) -> Result<(), BridgeError> {
+    let hello_params = serde_json::json!({});
     let handshake = exchange(
         stdin,
         replies,
         "hello",
         "shell-1",
+        &hello_params,
         Instant::now() + spec.timeout,
     );
     let frame = tokio::select! {
@@ -351,15 +393,20 @@ async fn session(
             result = replies.next() => return Err(match result { Ok(frame) => error("UNEXPECTED_REPLY", format!("owned Bee sent a response with no pending request; id bytes={}", frame.id.len())), Err(cause) => cause }),
             request = requests.recv() => {
                 let Some(request) = request else { return Ok(()); };
+                if Instant::now() >= request.deadline {
+                    // No bytes were sent: only this queued request failed.
+                    let _ = request.reply.send(Err(error("REQUEST_QUEUE_TIMEOUT", format!("{} expired in the request queue before any bytes were sent; bridge session preserved", request.method))));
+                    continue;
+                }
                 counter = counter.checked_add(1).ok_or_else(|| error("REQUEST_ID_EXHAUSTED", "shell request counter reached u64 maximum"))?;
                 let id = format!("shell-{counter}");
                 let response = tokio::select! {
                     biased;
                     _ = stopped(stop) => { let _ = request.reply.send(Err(error("BRIDGE_STOPPED", "ping cancelled because owned Bee is stopping"))); return Ok(()); },
-                    result = exchange(stdin, replies, "ping", &id, request.deadline) => result,
+                    result = exchange(stdin, replies, request.method, &id, &request.params, request.deadline) => result,
                 }.and_then(|frame| frame.success(&id, Some(&instance)))
                     .and_then(|result| {
-                        if result != serde_json::json!({"alive":true}) { return Err(error("INVALID_PING", "ping result differs from required alive=true object")); }
+                        if request.method == "ping" && result != serde_json::json!({"alive":true}) { return Err(error("INVALID_PING", "ping result differs from required alive=true object")); }
                         Ok(BridgeReply { protocol: 1, id, instance: instance.clone(), result })
                     });
                 let failure = response.as_ref().err().cloned();
@@ -453,8 +500,8 @@ async fn supervise(
                 "spawned owned Bee has no stderr despite Stdio::piped",
             )
         })?;
-        // This verified P0 entry point never reads credentials or logs request
-        // payloads. Drain continuously and retain only its bounded diagnostic tail.
+        // Device credentials stay in Go and are never logged by this entry point.
+        // Drain continuously and retain only its bounded diagnostic tail.
         let mut diagnostics =
             tokio::spawn(async move { crate::diagnostics::drain(&mut stderr).await });
         let mut replies = Replies {

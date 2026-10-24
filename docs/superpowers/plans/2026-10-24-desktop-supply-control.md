@@ -28,9 +28,9 @@
 
 接口：保持 Devices 和 RunWithDevices 兼容；通过可选 `Supplies` 接口检测 Task 1 两个方法。新增 method/command 为 `supply_status` 和 `supply_set_paused`，成功 `result.supply`，业务失败 `result.error`（`SUPPLY_OPERATION_FAILED`）。六项能力顺序为 ping,shutdown,device_status,device_begin,supply_status,supply_set_paused，Rust 也保留精确原两组。
 
-- [ ] 红灯覆盖 platform 缺失/null/路径串入、paused false/missing/null/string、未知/重复参数、业务失败后 ping；Rust 用真实 fixture 验证六项握手及固定 method/params。
-- [ ] Go 和 Rust 仅允许平台枚举和显式 bool，Rust 命令不接受任意 method、配置/命令/URL/身份参数。沿用 15 秒请求期限、队列超时与 fail-closed 来源/实例规则，不扩大 generic bridge_request。
-- [ ] 运行 `go test ./desktopbridge ./cmd/bee`；正确本机环境下重建 native Bee，运行 `cargo test --locked --offline --manifest-path desktop/src-tauri/Cargo.toml`（签名包专项留收尾），自检、提交并任务级复核。
+- [x] 红灯覆盖 platform 缺失/null/路径串入、paused false/missing/null/string、未知/重复参数、业务失败后 ping；Rust 用真实 fixture 验证六项握手及固定 method/params。
+- [x] Go 和 Rust 仅允许平台枚举和显式 bool，Rust 命令不接受任意 method、配置/命令/URL/身份参数。沿用 15 秒请求期限、队列超时与 fail-closed 来源/实例规则，不扩大 generic bridge_request。
+- [x] 运行 `go test ./desktopbridge ./cmd/bee`；正确本机环境下重建 native Bee，运行 `cargo test --locked --offline --manifest-path desktop/src-tauri/Cargo.toml`（签名包专项留收尾），自检、提交并任务级复核。
 
 ## Task 3: 概览真实平台卡与交付
 

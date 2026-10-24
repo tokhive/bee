@@ -244,11 +244,27 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
     ];
     let mut supplies = devices.clone();
     supplies.extend(["supply_status".to_string(), "supply_set_paused".to_string()]);
-    if metadata.capabilities != basic
-        && metadata.capabilities != devices
-        && metadata.capabilities != supplies
-    {
-        return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability set rejected; actual entries={}; required=exact ordered group ping,shutdown; optionally device_status,device_begin; then optionally supply_status,supply_set_paused", metadata.capabilities.len())));
+    let expected =
+        match metadata.capabilities.len() {
+            2 => &basic,
+            4 => &devices,
+            6 => &supplies,
+            count => return Err(BridgeError::new(
+                "CAPABILITY_MISMATCH",
+                format!(
+                    "hello capability count rejected; actual count={count}; required counts=2,4,6"
+                ),
+            )),
+        };
+    for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
+        if actual != expected {
+            let observed = if supplies.contains(actual) {
+                actual.clone()
+            } else {
+                format!("unknown member bytes={}", actual.len())
+            };
+            return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability order rejected at index={index} (zero-based); expected={expected}; actual={observed}")));
+        }
     }
     Ok(metadata)
 }

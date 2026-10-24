@@ -35,4 +35,15 @@ cd desktop
 npx playwright test navigation.spec.ts onboarding-overview.spec.ts settings-diagnostics.spec.ts lifecycle-ui.spec.ts --project chromium
 ```
 
-本文件随 Task3 客户端源码提交。最终匹配源码 Mac 包、来源提交/hash、旧包备份、签名及签名包专项、包内真实只读协议与供给冒烟、CUA 原生图形验收由主控收尾，当前尚待记录，不能将此前设备配对包视为本增量交付证据。Windows/Linux 原生矩阵及已有 P0/P1 缺口继续保留；本批不发布生产版本。
+本批源码与自动化验收已完成，完整行为路径独立复核 C/I/M 为 0/0/0。最终 Mac 包绑定源码 `24aca16f37e9fa17f843d1c300786056a2b083a1`，版本 `dev+24aca16f37e9`；后续文档提交不改变包内版本。
+
+- App：`desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app`。旧包已正常退出，完整备份保留在 `.cache/supply-control/previous/Bee Dev.app`，没有复制或覆盖设备配置。
+- ZIP：`.cache/supply-control/Bee-Dev-macos-arm64-24aca16.zip`，23,021,577 字节；SHA256 `6464759e020c95ab1983e79f1cec24e9388bead1aa0ce643239871180dfec024`。CRC、全部 App 文件字节和两程序可执行权限均已核对。
+- `codesign --verify --deep --strict` 通过；2 项签名包专项通过，涵盖包内 Bee 握手/ping/回收与篡改拒绝。仅 ad-hoc 开发签名，未公证或生产发布。
+- 最终包内 Bee 真实执行 hello → OpenAI GET → Claude GET → ping → shutdown，两个平台均通过严格校验，exit0、stderr0、设备配置字节未改。OpenAI 未就绪原因是 offline、codex_source_unavailable、authorization_unavailable；Claude 是 offline、authorization_unavailable。没有发送 PUT，也未启动贡献。
+- 自动测试：Go 全量7包及 vet；设备/供给 race；最终供给定向回归；Rust普通51项和上述签名包2项；工具37项；前端初次设备/供给单元8项（后续供给单测8项）、页面17项、桥10项及相关旧页面89项；typecheck、普通/demo build 通过。各轮源码和后续窄修覆盖见[验收记录](evidence/2026-10-24-supply-control/README.md)，不把旧轮结果冒充最终源码全量重跑。
+- **新版 Mac 原生图形尚未通过。** CUA 已启动精确路径新包，父进程62426/owned Bee62470存在，但读取 Bee 和 Finder 都报 `cgWindowNotFound`，没有新版窗口 AX/截图。原因未确定，不能认定为沙箱限制或产品窗口故障。已请用户解锁屏幕、从 Dock 显示 Bee 主窗口后继续只读图形检查；不需重新配对或操作暂停/恢复。此前曾读到旧包的真实绑定状态，不替代新版平台卡验收。
+
+现在查看只需：解锁 Mac → 从 Dock 点开 Bee Dev → 进入“概览”，向下滚动查看 OpenAI/Claude 卡片。设备已绑定，不需再配对。图形自动验收仅点“重新核对平台”和切换导航/语言；真实暂停/恢复仍留给用户主动操作。
+
+Windows/Linux 本增量原生界面、已有 P0/P1 环境矩阵和其它缺口继续保留。来源、签名、只读证据及未验收项见[交付清单](evidence/2026-10-24-supply-control/manifest.json)。

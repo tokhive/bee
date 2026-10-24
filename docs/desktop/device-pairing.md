@@ -36,7 +36,9 @@ cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
 
 本次不扩大旧 P0/P1 的三端验收结论；Windows/Linux 新设备配对原生界面尚未验收。协议和秘密边界见[私有管理协议](bridge-protocol.md)，实施范围见[设备配对计划](../superpowers/plans/2026-10-24-desktop-device-pairing.md)。
 
-## 本次交付记录
+## 设备配对批次交付记录
+
+以下为 `70518b4` 的历史证据。当前同路径 App 已更新为 `24aca16` 平台状态与暂停/恢复版本，用户已完成真实绑定，不需重新配对；最新包和验收边界见[平台供给说明](supply-control.md)。旧图形工具失败仍保留为历史记录。
 
 - 源码提交：`70518b43393c82cf15ecc78d9c0b0d66e11307bb`（`dev+70518b43393c`）；后续验证文档提交不改变包内源码版本。
 - Mac arm64 开发包：`desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app`。压缩包：`.cache/device-pairing/Bee-Dev-macos-arm64-70518b4.zip`，22,957,834 字节；SHA256 为 `6976f82673b301d3f4796f53ca8ca5686f806b192d187f2ffea49f9c60b70e70`，ZIP CRC 检查通过。

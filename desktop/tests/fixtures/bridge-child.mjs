@@ -11,11 +11,27 @@ if (mode === 'diagnostic-exit') {
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
+  const supplyMode = ['supply', 'supply-error'].includes(mode);
+  if (supplyMode && request.method.startsWith('supply_')) {
+    const keys = Object.keys(request.params).sort().join(',');
+    const valid = ['openai', 'claude'].includes(request.params.platform)
+      && (request.method === 'supply_status' && keys === 'platform'
+        || request.method === 'supply_set_paused' && keys === 'paused,platform' && typeof request.params.paused === 'boolean');
+    if (!valid) {
+      process.stdout.write(JSON.stringify({ protocol: 1, id: request.id, instance: 'fixture-instance', error: { code: 'FIXTURE_PARAMS_REJECTED', message: 'supply method or params differ from the fixed whitelist' } }) + '\n');
+      return;
+    }
+    const result = mode === 'supply-error'
+      ? { error: { code: 'SUPPLY_OPERATION_FAILED', message: 'GET /api/bee/platforms/openai: HTTP 503' } }
+      : { supply: { hive: 'https://hive.example', device_id: 'fixture-device', platform: request.params.platform, paused: request.params.paused ?? false, ready: false, reasons: request.params.paused ? ['manually_paused'] : ['offline'], checked_at: '2026-10-24T00:00:00Z' } };
+    process.stdout.write(JSON.stringify({ protocol: 1, id: request.id, instance: 'fixture-instance', result }) + '\n');
+    return;
+  }
   if (request.method === 'ping' && mode === 'ping-timeout') return;
   if (mode === 'timeout') return;
   if (mode === 'utf8') { process.stdout.write(Buffer.from([255, 10])); return; }
   const result = request.method === 'hello'
-    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
+    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
     : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'fixture-instance', result }) + '\n';
   if (mode === 'slow-device' && request.method === 'device_status') {

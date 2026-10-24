@@ -20,6 +20,8 @@ type request struct {
 	Method   string
 	Hive     string
 	Name     string
+	Platform string
+	Paused   bool
 }
 
 type protocolError struct {
@@ -131,6 +133,38 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if req.Method == "supply_status" || req.Method == "supply_set_paused" {
+		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))
+		_, _ = decoder.Token()
+		seen := map[string]bool{}
+		for decoder.More() {
+			key, _ := decoder.Token()
+			name := key.(string)
+			if name != "platform" && !(name == "paused" && req.Method == "supply_set_paused") {
+				return req, rejected("INVALID_REQUEST", "supply params field at index=%d is unknown; allowed=platform and paused only for supply_set_paused", len(seen)+1)
+			}
+			if seen[name] {
+				return req, rejected("INVALID_REQUEST", "supply params field=%s is repeated; required=unique fields", name)
+			}
+			seen[name] = true
+			var value json.RawMessage
+			_ = decoder.Decode(&value)
+			if name == "platform" {
+				if json.Unmarshal(value, &req.Platform) != nil || (req.Platform != "openai" && req.Platform != "claude") {
+					return req, rejected("INVALID_REQUEST", "supply platform is not an allowed string enum; required=openai,claude")
+				}
+			} else if bytes.Equal(bytes.TrimSpace(value), []byte("null")) || json.Unmarshal(value, &req.Paused) != nil {
+				return req, rejected("INVALID_REQUEST", "supply paused has a non-boolean JSON type; required=explicit boolean")
+			}
+		}
+		if !seen["platform"] {
+			return req, rejected("INVALID_REQUEST", "supply platform field is missing; required=openai,claude")
+		}
+		if req.Method == "supply_set_paused" && !seen["paused"] {
+			return req, rejected("INVALID_REQUEST", "supply paused field is missing; required=explicit boolean")
+		}
+		return req, nil
 	}
 	if req.Method == "device_begin" {
 		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))

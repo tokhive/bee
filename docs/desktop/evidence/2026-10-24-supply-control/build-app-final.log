@@ -1,0 +1,60 @@
+
+> bee-desktop@0.1.0 tauri
+> tauri build --debug --bundles app --ci -- --locked --offline
+
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build`
+
+> bee-desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v8.2.4 building client environment for production...
+transforming...
+✓ 2003 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.44 kB │ gzip:   0.28 kB
+dist/assets/app-icon-dark-BCJApSyC.svg    8.13 kB │ gzip:   2.28 kB
+dist/assets/p0-Dfkx2H8f.css               1.16 kB │ gzip:   0.62 kB
+dist/assets/index-CR60Leue.css           18.40 kB │ gzip:   4.33 kB
+dist/assets/P0Page-BKoG105d.js            3.59 kB │ gzip:   1.67 kB
+dist/assets/index-BEGnD3OM.js           378.02 kB │ gzip: 119.14 kB
+
+✓ built in 191ms
+   Compiling objc2-exception-helper v0.1.1
+   Compiling objc2 v0.6.5
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+   Compiling objc2-foundation v0.3.2
+   Compiling wry v0.57.0
+   Compiling block2 v0.6.2
+   Compiling objc2-core-foundation v0.3.2
+   Compiling dispatch2 v0.3.1
+   Compiling objc2-core-graphics v0.3.2
+   Compiling objc2-quartz-core v0.3.2
+   Compiling objc2-app-kit v0.3.2
+   Compiling objc2-web-kit v0.3.2
+   Compiling tao v0.37.1
+   Compiling muda v0.20.0
+   Compiling window-vibrancy v0.8.1
+   Compiling tauri-runtime v2.12.2
+   Compiling tray-icon v0.25.1
+   Compiling tauri-runtime-wry v2.12.3
+   Compiling tauri v2.12.5
+   Compiling tauri-plugin-single-instance v2.5.4 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/vendor/tauri-plugin-single-instance)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 25.38s
+       Built application at: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bee-desktop
+    Bundling Bee Dev.app (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app)
+     Signing with identity "-"
+Signing with identity "-"
+Signing /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/bee
+/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/bee: replacing existing signature
+Signing with identity "-"
+Signing /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/bee-desktop
+/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app/Contents/MacOS/bee-desktop: replacing existing signature
+Signing with identity "-"
+Signing /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app
+/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app: replacing existing signature
+        Warn skipping app notarization, no APPLE_ID & APPLE_PASSWORD & APPLE_TEAM_ID or APPLE_API_KEY & APPLE_API_ISSUER & APPLE_API_KEY_PATH environment variables found
+    Finished 1 bundle at:
+        /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app (55.95 MiB)
+

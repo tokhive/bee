@@ -1,0 +1,73 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.56s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-2fae8002f353f7d7)
+
+running 53 tests
+test build_source::tests::macos_signed_bundle_seal_accepts_signing_changes_and_rejects_tampering ... ignored, requires a freshly built and ad-hoc signed Bee Dev.app; run explicitly after tauri build
+test lifecycle::tests::native_close_hides_instead_of_quitting_the_management_process ... ok
+test lifecycle::tests::callback_receipt_retains_only_a_boolean_and_rejects_other_protocols ... ok
+test commands::tests::frontend_can_only_send_ping_without_paths_or_arguments ... ok
+test lifecycle::tests::second_launch_and_reopen_recover_the_existing_window_without_a_tray ... ok
+test lifecycle::tests::tray_and_native_menu_share_the_same_window_intents ... ok
+test commands::browser_action_tests::completed_or_expired_pairing_returns_without_opening_a_stale_url ... ok
+test navigation::tests::development_permits_only_the_declared_vite_origin ... ok
+test navigation::tests::permits_only_the_bundled_app_in_release ... ok
+test protocol::tests::error_response_does_not_become_success ... ok
+test protocol::tests::malformed_session_cannot_be_reused_for_a_later_hello ... ok
+test commands::device_tests::browser_url_is_limited_to_saved_pairing ... ok
+test build_source::tests::source_must_match_target_commit_tee_and_toolchain ... ok
+test protocol::tests::fragmented_utf8_and_combined_frames_preserve_correlation ... ok
+test protocol::tests::invalid_envelopes_are_rejected_without_echoing_payload ... ok
+test protocol::tests::stale_response_cannot_complete_a_new_request ... ok
+test protocol::tests::rejected_capabilities_report_first_difference_without_unknown_payload ... ok
+test protocol::tests::handshake_requires_matching_build_and_platform_and_p0_capabilities ... ok
+test diagnostics::tests::large_stderr_is_fully_drained_with_only_a_bounded_tail_retained ... ok
+test protocol::tests::supply_handshake_accepts_only_three_exact_capability_groups ... ok
+test protocol::tests::supply_platform_is_a_closed_enum_without_echoing_rejected_input ... ok
+test sidecar::tests::bundled_program_is_always_next_to_the_app_executable ... ok
+test sidecar::tests::cleanup_failure_preserves_the_original_protocol_error ... ok
+test build_source::tests::actual_bundled_bytes_must_match_recorded_sha256 ... ok
+test protocol::tests::validates_frame_boundaries_and_eof ... ok
+test commands::browser_action_tests::browser_launcher_wait_is_bounded ... ok
+test sidecar::tests::signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup ... ignored, requires a freshly built signed Bee Dev.app; run explicitly after tauri build
+test lifecycle::tests::unexpected_parent_death_closes_stdin_and_native_management_process_exits ... ok
+test sidecar::tests::native_go_management_binary_can_handshake_ping_and_stop ... ok
+test sidecar::tests::missing_and_changed_binaries_fail_before_handshake ... ok
+test sidecar::tests::child_failure_retains_exit_status_and_bounded_management_diagnostic ... ok
+test singleton_tests::invalid_dbus_session_never_reaches_sidecar_setup ... ok
+test singleton_tests::linux_adapter::startup_lock::tests::registration_gate_holds_an_exclusive_os_lock_until_registration_finishes ... ok
+test singleton_tests::linux_adapter::startup_lock::tests::registration_gate_refuses_symlink_and_public_lock_file ... ok
+test sidecar::tests::supply_native_commands_require_platform_and_an_explicit_boolean ... ok
+test singleton_tests::registration_lock::tests::registration_gate_holds_an_exclusive_os_lock_until_registration_finishes ... ok
+test singleton_tests::registration_lock::tests::registration_gate_refuses_symlink_and_public_lock_file ... ok
+test singleton_tests::singleton_registration_failure_aborts_before_sidecar_setup ... ok
+test singleton_tests::windows_registration::tests::absent_primary_window_times_out_instead_of_starting_another_instance ... ok
+test singleton_tests::windows_registration::tests::existing_instance_waits_for_its_window_and_forwards_exactly_once ... ok
+test singleton_tests::windows_registration::tests::null_mutex_and_window_handles_fail_with_the_native_error ... ok
+test singleton_tests::windows_registration::tests::rejected_or_uncertain_delivery_is_returned_without_retrying ... ok
+test singleton_tests::windows_registration::tests::window_found_at_or_after_deadline_is_not_forwarded ... ok
+test sidecar::tests::supply_business_failure_keeps_the_owned_session_ready ... ok
+test sidecar::tests::fragmented_child_responses_and_concurrent_requests_are_correlated ... ok
+test sidecar::tests::device_business_failure_keeps_owned_bridge_ready ... ok
+test sidecar::tests::supply_commands_use_fixed_methods_and_params_on_a_six_capability_child ... ok
+test sidecar::tests::concurrent_stop_reaps_stubborn_owned_child_and_preserves_external_process ... ok
+test sidecar::tests::owned_process_is_reaped_before_singleton_release ... ok
+test sidecar::tests::failed_ping_revokes_ready_before_returning_and_stop_waits_for_reaping ... ok
+test singleton_tests::macos_ipc::primary_accepts_forwarding_and_reacquires_after_exit ... ok
+test sidecar::tests::unsent_queue_timeout_does_not_kill_a_healthy_device_session ... ok
+test sidecar::tests::invalid_utf8_version_exit_and_timeout_never_become_ready ... ok
+
+test result: ok. 51 passed; 0 failed; 2 ignored; 0 measured; 0 filtered out; finished in 35.62s
+
+     Running unittests src/main.rs (desktop/src-tauri/target/debug/deps/bee_desktop-be95409fde965973)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests bee_desktop_lib
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

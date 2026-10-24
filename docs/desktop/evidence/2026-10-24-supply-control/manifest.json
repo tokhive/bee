@@ -1,0 +1,91 @@
+{
+  "source": {
+    "revision": "24aca16f37e9fa17f843d1c300786056a2b083a1",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+24aca16f37e9",
+    "binarySha256": "ca1b4cc6b7757012de05cff68d7cabe4b97ea76339ad3dc2c7b39f050228bb90"
+  },
+  "app": "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app",
+  "archive": ".cache/supply-control/Bee-Dev-macos-arm64-24aca16.zip",
+  "archive_sha256": "6464759e020c95ab1983e79f1cec24e9388bead1aa0ce643239871180dfec024",
+  "archive_bytes": 23021577,
+  "archive_crc_and_app_files_match": true,
+  "signed_bee_sha256": "c5b4007c0fe4e8b8c7db2f40800681bc403f9b80adb535ce054f13d26a19b2bc",
+  "app_executable_sha256": "cda0b05c74f753422f64274e6eb592e665b8016fbb03e665c2ade14663a788b3",
+  "signature": "ad-hoc development; codesign --verify --deep --strict PASS; not notarized",
+  "rust_tests": {
+    "passed": 51,
+    "failed": 0,
+    "signed_tests_run_separately": 2,
+    "signed_tests_failed": 0
+  },
+  "actual_bundled_read_only_smoke": {
+    "observed_at": "2026-10-24T14:53:51.837371+00:00",
+    "writes_requested": false,
+    "methods": [
+      "hello",
+      "supply_status",
+      "supply_status",
+      "ping",
+      "shutdown"
+    ],
+    "source_version": "dev+24aca16f37e9",
+    "capabilities": [
+      "ping",
+      "shutdown",
+      "device_status",
+      "device_begin",
+      "supply_status",
+      "supply_set_paused"
+    ],
+    "platforms": {
+      "openai": {
+        "state": "verified",
+        "paused": false,
+        "ready": false,
+        "reasons": [
+          "offline",
+          "codex_source_unavailable",
+          "authorization_unavailable"
+        ],
+        "checked_at": "2026-10-24T14:53:53Z"
+      },
+      "claude": {
+        "state": "verified",
+        "paused": false,
+        "ready": false,
+        "reasons": [
+          "offline",
+          "authorization_unavailable"
+        ],
+        "checked_at": "2026-10-24T14:53:54Z"
+      }
+    },
+    "ping_alive": true,
+    "stopped": true,
+    "exit_code": 0,
+    "stderr_bytes": 0,
+    "config_bytes_unchanged": true
+  },
+  "config_unchanged_since_before_update": true,
+  "old_app_backup": ".cache/supply-control/previous/Bee Dev.app",
+  "old_app_parent_pid": 67414,
+  "old_app_child_pid": 67433,
+  "old_app_gui_quit_and_both_pids_gone": true,
+  "native_gui": {
+    "state": "unverified",
+    "tool_error": "Computer Use server error -10005: cgWindowNotFound",
+    "bee_and_finder_read_failed": true,
+    "new_app_parent_pid": 62426,
+    "new_app_child_pid": 62470,
+    "user_requested_to_show_window": true
+  },
+  "production_release": false,
+  "real_supply_writes": false,
+  "contribution_started": false,
+  "hive_modified": false
+}

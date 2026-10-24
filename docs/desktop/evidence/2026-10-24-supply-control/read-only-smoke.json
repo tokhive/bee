@@ -1,0 +1,48 @@
+{
+  "observed_at": "2026-10-24T14:53:51.837371+00:00",
+  "writes_requested": false,
+  "methods": [
+    "hello",
+    "supply_status",
+    "supply_status",
+    "ping",
+    "shutdown"
+  ],
+  "source_version": "dev+24aca16f37e9",
+  "capabilities": [
+    "ping",
+    "shutdown",
+    "device_status",
+    "device_begin",
+    "supply_status",
+    "supply_set_paused"
+  ],
+  "platforms": {
+    "openai": {
+      "state": "verified",
+      "paused": false,
+      "ready": false,
+      "reasons": [
+        "offline",
+        "codex_source_unavailable",
+        "authorization_unavailable"
+      ],
+      "checked_at": "2026-10-24T14:53:53Z"
+    },
+    "claude": {
+      "state": "verified",
+      "paused": false,
+      "ready": false,
+      "reasons": [
+        "offline",
+        "authorization_unavailable"
+      ],
+      "checked_at": "2026-10-24T14:53:54Z"
+    }
+  },
+  "ping_alive": true,
+  "stopped": true,
+  "exit_code": 0,
+  "stderr_bytes": 0,
+  "config_bytes_unchanged": true
+}

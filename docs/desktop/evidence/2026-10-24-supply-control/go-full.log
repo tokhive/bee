@@ -1,0 +1,7 @@
+ok  	github.com/tokhive/bee/agent	54.225s
+ok  	github.com/tokhive/bee/beewire	(cached)
+ok  	github.com/tokhive/bee/cmd/bee	(cached)
+ok  	github.com/tokhive/bee/desktopbridge	(cached)
+ok  	github.com/tokhive/bee/logx	(cached)
+ok  	github.com/tokhive/bee/relay	(cached)
+ok  	github.com/tokhive/bee/telemetry	(cached)

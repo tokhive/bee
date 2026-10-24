@@ -45,10 +45,13 @@
 | [关窗找回补验尝试](../../docs/desktop/evidence/2026-10-24-p1-mac-close-reopen-attempt/README.md) | 87包签名/字节一致，本次测试父子进程已精确回收 | CUA无法取得Bee/Finder窗口，Dock超时；关窗找回未执行，当前工具失败原因未定 |
 | [窗口显示后的Mac补验](../../docs/desktop/evidence/2026-10-24-p1-mac-visible-lifecycle/README.md) | 用户打开87包后已成功取窗/native ready；菜单退出原父96946/owned子96975均回收；Finder精确路径重启5669/5787后再次ready，概览保留供查看 | 关闭后仍返回窗口内容，隐藏可见转换未证、原因未定；Dock仍timeout；App菜单不算托盘，不声称全部测试进程已清空 |
 | [Mac关窗观察副作用调查](../../docs/desktop/evidence/2026-10-24-p1-mac-lifecycle-diagnostic/README.md) | eb3临时诊断副本隐藏3/3；随后两次AX/一次截图各产生Reopen，false→true；正式src与87相同、原包字节/签名不变，已恢复原包37620/37628及ready | 临时诊断不能代替原87包非侵入式隐藏画面或托盘点击；不改原计划checkbox，不外推其它环境 |
+| [87 Intel第二次运行](../../docs/desktop/evidence/2026-10-24-p1-mac-intel-attempt-2/README.md) | run39936378073 attempt2成功；Mac15.7.9 Intel、Go7/browser489/普通Rust40及包后signed2、demo DMG；两ZIP/来源字节及只读镜像签名核对通过，镜像已卸载 | 首次4例30s超时保留、根因未知；debug无CPU/内存采样；不代表Mac13、GUI/托盘/安装或生产签名 |
 
 87模拟窗口发现测试已改为可控时钟、独立审查Approved，生产预算未放宽。9ca837d最小窗工具34/34并独立Approved，Linux run39941148651四行与八次smoke已完成包/source/provenance/geometry及下载字节核对。Mac演示dev入口曾实际编译/启动，但CUA不能绑定未打包binary；已用打包App完成的真实WebView操作按原时点保留。10月24日早先尝试未取得窗口；随后用户打开同一87包，已补取窗、ready、菜单退出和Finder重启证据，当时关闭后仍返回窗口内容。后续临时诊断已证实三次隐藏成功，接着AX/截图读取各产生Reopen；原包非侵入式隐藏画面与托盘点击仍未验收，不能用临时包填格。网页CSS缩放和Playwright WebKit仍不能替代系统WebView/显示缩放。
 
 未验收项目：Mac13双架构、Win10/11官方来源/GUI、干净用户与Applications拖拽安装、托盘/无托盘及关窗找回可见状态、原生125%/150%显示、Downloads拒绝/取消与下载原生完成/失败反馈。当前有文件交付证据，UI“已发起下载”不能当作原生Finished事件反馈。
+
+87 hosted首次结果与Intel第二次运行按attempt分别保留：后者489/489及开发DMG通过，不覆盖前者失败，也不证明旧超时已修复。此轮仅收证，未改产品、配置、测试预算或计划checkbox。
 
 ## 本机查看与快速验收
 

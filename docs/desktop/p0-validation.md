@@ -15,6 +15,7 @@
 | [Mac WebKit休眠调查](evidence/2026-10-24-p1-mac-webkit-diagnostic/INDEX.md) | 本机两轮长停顿与Idle/Clamshell Sleep直接重叠；保持30s/retries0/断言，防Idle Sleep包装下同5例/5workers通过，3.7s，期间无Sleep记录 | 单次本机arm64样本不证明Intel根因、全套稳定性或原生验收；原失败和未捕获caffeinate自有assertion的限制保留 |
 | [9 Linux四环境](evidence/2026-10-24-p1-native-remote-9ca837d/README.md) | Ubuntu22/24 x64/arm64四行success，各Go7/browser489/Rust36；八artifact、四包/source/provenance字节已核；extract/FUSE八次均860×600、观察≥10s，末图非空 | Xvfb客户端尺寸/启动，不证明WM标题栏、业务ready、托盘/安装；22ARM FUSE、24ARM两模式各1条PID1 WebKit zombie；9重复Mac/Win主动取消不算通过 |
 | [10月24日关窗找回尝试](evidence/2026-10-24-p1-mac-close-reopen-attempt/README.md) | 原87包签名/字节一致；本轮App及owned管理子启动，测试后精确回收两进程 | CUA对Bee/Finder返回cgWindowNotFound，Dock超时；未取得窗口、未执行关窗找回，原因未定，不冒充GUI或菜单退出通过 |
+| [窗口显示后的Mac补验](evidence/2026-10-24-p1-mac-visible-lifecycle/README.md) | 用户打开87包后CUA成功取窗；真实native ready；菜单退出原父96946/owned子96975均回收；Finder精确路径重启5669/5787后再次ready，保留概览供查看；两份二进制字节及签名复核一致 | 关闭后仍返回窗口内容，隐藏可见转换未证、原因未定；Dock仍timeout，原生App菜单不算托盘；新实例保留，不能说全部测试进程已清空 |
 
 窗口发现测试已在87b28a2改为可控时钟，生产真实时钟wrapper/deadline和不确定发送不重试保持，专项5/5及独立审查Approved。Linux最小窗工具9ca837d补齐末次geometry后的存活复核，34/34及独立审查Approved；[39941148651](https://github.com/wangdayong228/bee/actions/runs/39941148651) 四行最终结果与全部下载字节已独立核对归档。87与9按完整source分开，新source重复Mac/Windows由代理主动取消，实际终态和取消请求均保留。旧b94及87 Ubuntu24x64的90分钟取消均停在Playwright依赖安装，不归为产品断言失败。
 

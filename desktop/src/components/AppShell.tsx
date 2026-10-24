@@ -37,11 +37,11 @@ export function AppShell({
         </nav>
         <div className="sidebar-bottom">
           <div className="side-note">
-            <span className="dot muted-dot" />{t("尚未接通真实供给")}<p>{t("关窗后可从托盘找回")}</p>
+            <span className="dot muted-dot" />{t(deviceMode ? '平台状态由 Hive 核对' : '尚未接通真实供给')}<p>{t("关窗后可从托盘找回")}</p>
           </div>
           <div className="identity">
             <span className="avatar">B</span>
-            <div>{t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : deviceMode ? '本机设备配对' : '等待业务接入')}</small>
+            <div>{t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : deviceMode ? '设备与平台控制' : '等待业务接入')}</small>
             </div>
           </div>
         </div>

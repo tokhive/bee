@@ -96,6 +96,14 @@ var problems = map[string]problem{
 		"capabilities.local_url is not an HTTP address at a loopback IP",
 		"remove local_url; it exists only for local test fixtures",
 	},
+	"BEE-CONFIG-RESELLER": {
+		"reseller names an API reseller Bee does not know",
+		"set reseller.reseller to a supported reseller, such as wokey",
+	},
+	"BEE-CONFIG-RESELLER-KEY": {
+		"the reseller key file is missing, unreadable, open to other users or does not hold a single key",
+		"set reseller.key_file to an absolute path of a file holding only the key, and run chmod 600 on it",
+	},
 	"BEE-CONFIG-CLAUDE-STORE": {
 		`claude.store is neither "keychain" nor "file"`,
 		`set claude.store to "keychain" on macOS or "file" on Linux, or run bee setup to write it`,

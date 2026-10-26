@@ -36,6 +36,7 @@ type egressConfig struct {
 	Credential              tee.Secret        `json:"credential"`
 	Codex                   *codexSource      `json:"codex,omitempty"`
 	Claude                  *claudeSource     `json:"claude,omitempty"`
+	Reseller                *resellerSource   `json:"reseller,omitempty"`
 	Capabilities            *capabilitySource `json:"capabilities,omitempty"`
 	capabilitySequence      int64
 	accountGeneration       int64
@@ -210,6 +211,11 @@ func (cfg *egressConfig) validate() error {
 	if cfg.Claude != nil && cfg.Claude.Store != claudeStoreKeychain && cfg.Claude.Store != claudeStoreFile {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
+	if cfg.Reseller != nil {
+		if err := cfg.Reseller.validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Capabilities != nil && cfg.Codex == nil {
 		return fail("BEE-CONFIG-CAPABILITIES-SOURCE", "")
 	}
@@ -221,6 +227,11 @@ func (cfg *egressConfig) validate() error {
 			configured := platform.field == "codex" && cfg.Codex != nil || platform.field == "claude" && cfg.Claude != nil
 			if configured && !slices.Contains(cfg.Targets, platform.target) {
 				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", platform.field, platform.target)
+			}
+		}
+		if cfg.Reseller != nil {
+			if target := resellerEndpoints[cfg.Reseller.Reseller].target; !slices.Contains(cfg.Targets, target) {
+				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", "reseller", target)
 			}
 		}
 	}
@@ -240,6 +251,9 @@ func (cfg *egressConfig) validate() error {
 		if cfg.Claude != nil {
 			cfg.Claude.transport = official
 		}
+		if cfg.Reseller != nil {
+			cfg.Reseller.transport = official
+		}
 	}
 	return nil
 }
@@ -257,7 +271,9 @@ func (cfg *egressConfig) loopbackTargets() bool {
 	return true
 }
 
-func (cfg *egressConfig) dynamicAuthorization() bool { return cfg.Codex != nil || cfg.Claude != nil }
+func (cfg *egressConfig) dynamicAuthorization() bool {
+	return cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil
+}
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {
 	if cfg.lastAccountState != state {

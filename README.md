@@ -158,6 +158,19 @@ While running, `login` and `run` hold a lock file next to the configuration, so 
 
 To contribute only one platform, remove the other platform's entry and its target. Pass the file with `bee run --egress-config PATH`. Without the flag, Bee uses the `egress.json` that `setup` wrote. If neither exists, Bee stays online but serves nothing and prints `BEE-SETUP-NEEDED`.
 
+### API resellers
+
+The market falls back to a third-party API reseller, such as wokey, when no subscription account can serve a request ([Hive ADR 0030](https://github.com/tokhive/hive/blob/main/docs/adr/0030-api-relay-fallback-supply.md)). This is the platform's own supply: Hive accepts a reseller key only from a Bee signed in to the platform's administrator account. To supply one, put the key alone in a file with mode `0600` and add:
+
+```json
+{
+  "targets": ["api.wokey.ai:443"],
+  "reseller": {"reseller": "wokey", "key_file": "/absolute/path/to/wokey.key"}
+}
+```
+
+Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. Replacing the key in the file takes effect on the next synchronization.
+
 ### Environment variables
 
 | Variable | Effect |

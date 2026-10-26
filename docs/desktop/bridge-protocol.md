@@ -6,7 +6,7 @@
 
 - stdin 接收请求，stdout 只输出响应；诊断写入 stderr，父进程须持续消费两个输出管道。
 - 每个输入和输出帧是一个 UTF-8 JSON 对象，以 `\n` 结束；换行前最多 1,048,576 字节。分段读取和多个帧合并写入均支持。编码后的输出同样检查上限，防止 JSON 字符串转义扩大响应。
-- 请求字段必须恰好为 `protocol`（整数 1）、`id`（非空字符串）、`method`（字符串）和 `params`（对象）。`device_begin` 的 params 必须恰好包含非空字符串 `hive`、`name`；`supply_status` 恰好含枚举 `platform`（openai/claude），`supply_set_paused` 恰好含该 `platform` 和显式 boolean `paused`。其余方法 params 必须为空。未知字段、重复 JSON 字段、缺失字段和不合法的 JSON 类型均拒绝。
+- 请求字段必须恰好为 `protocol`（整数 1）、`id`（非空字符串）、`method`（字符串）和 `params`（对象）。`device_begin` 的 params 必须恰好包含非空字符串 `hive`、`name`；`supply_status` 恰好含枚举 `platform`（openai/claude），`supply_set_paused` 恰好含该 `platform` 和显式 boolean `paused`。账号四项参数见下表；除以上方法外 params 必须为空。未知字段、重复 JSON 字段、缺失字段和不合法的 JSON 类型均拒绝。
 - 每次 `Run` 创建新的随机 128 位 `instance`；一次会话内保持一致。父进程用 `id` 关联请求，用 `instance` 区分重新启动的管理实例。
 - 相同 ID 的前一响应尚未完整写入时，返回 `DUPLICATE_ID`，不执行重复操作。父进程应为每次请求生成新 ID。
 - ID 及版本号属于公开元数据，不能放入凭证。协议错误不回显完整请求、未知字段名、未知方法值或 JSON 解析器引用的载荷字节；JSON 语法错误报告字节位置和帧长度。
@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 CLI 入口提供六项能力；无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这三组精确的能力集合。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 CLI 入口提供上述十项能力。旧供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这四组精确且有序的能力集合，不接受任意子集或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -37,19 +37,30 @@
 | `supply_set_paused` | `{"supply":DesktopSupply}` | 明确设置目标 paused，并 GET 回读核对；失败不重试 PUT |
 | `device_begin` | `{"device":DeviceView}` | 使用 `{"hive":"https://hive.example","name":"Bee Desktop"}` 开始或继续配对；禁止改换已保存的 Hive |
 
+账号命令参数必须精确匹配以下字段；同样拒绝未知、重复、缺失、null 错用或错误类型：
+
+| 请求 method | params | result／边界 |
+| --- | --- | --- |
+| `account_defaults` | `{}` | `{"defaults":DesktopAccountDefaults}`；不打开官方凭证或连接 Hive |
+| `account_detect` | `platform,directory,store,mode` | `{"account":DesktopAccountSnapshot}`；平台 openai/claude；directory 必须显式 null 或非空绝对路径（≤4096 UTF-8 字节，无控制字符）；OpenAI store 为 auto/file/keyring，Claude 为 file/keychain；mode 为 local/official |
+| `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 只刷新 Hive |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝，本批全部动作在副作用前报告缺失依赖 |
+
+Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
+
 不存在贡献 `start`、独立账号授权、资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
 
 ```json
 {"protocol":1,"id":"ping-1","instance":"0d957c72d63b4c06ae544c10f4c549799","error":{"code":"NOT_READY","message":"hello handshake has not succeeded; required=hello before other methods"}}
 ```
 
-设备与供给业务失败返回 `result.error`；供给代码为 `SUPPLY_OPERATION_FAILED`，如设备错误 `{"error":{"code":"DEVICE_OPERATION_FAILED","message":"…"}}`，保留 HTTP 方法、路径、状态码等诊断证据，不回显响应体或秘密；失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
+设备、供给和账号业务失败返回 `result.error`；账号代码为 `ACCOUNT_OPERATION_FAILED`，供给代码为 `SUPPLY_OPERATION_FAILED`，如设备错误 `{"error":{"code":"DEVICE_OPERATION_FAILED","message":"…"}}`，保留 HTTP 方法、路径、状态码等诊断证据，不回显响应体或秘密；失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
 
 `DeviceView` 只含 `state`（unbound/pending/draining/expired/bound）及适用的 `hive`、`name`、`verification_url`、`user_code`、`expires_at`、`poll_interval_seconds`、公开 `identity`。身份字段为 `id/name/owner_id/owner_email`。凭证和配对令牌只留在 Go；配置路径固定为 `UserConfigDir()/tokhive/bee-desktop.json`，不接受前端传入路径。兑换结果未知时保留原事务和凭证，先重新核验身份，禁止用新事务覆盖。
 
 Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只在 pending/draining 时打开同 Hive 的 `/devices/pair?code=…`；若恰好已绑定或过期，直接返回最新状态。系统启动器最长等待 5 秒，超时回收自有启动器并报告打开结果未确认。浏览器确认后须手动回到 Bee，没有账号自动回跳。
 
-Go 一次设备操作最长 12 秒、单次 HTTP 最长 10 秒；Rust 设备和供给请求期限 15 秒，原 hello/ping 为 5 秒。排队时期限已过且尚未发送的请求单独返回 `REQUEST_QUEUE_TIMEOUT`，保留健康会话。
+Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 秒；Rust 这些请求从进入队列起共 15 秒，原 hello/ping 为 5 秒。排队时期限已过且尚未发送的请求单独返回 `REQUEST_QUEUE_TIMEOUT`，取消后不会迟发，保留健康会话。已发送请求超时先撤销 ready，再返回 `RESPONSE_TIMEOUT`；子进程回收不延迟调用方超时。会话拒绝迟到成功及后续排队写，不能因 supervisor 暂时未被调度而恢复 ready。
 
 请求含有唯一有效 ID 时，未知字段或重复非 ID 字段的错误仍关联原 ID。无法可靠解码请求信封、重复 ID 字段有歧义，或编码后的响应超过上限时，错误响应的 `id` 为空字符串。输出超长只发送小型 `FRAME_TOO_LARGE` 错误帧并终止会话；父进程应将这种响应作为协议错误处理，不能据此完成某个正常请求。
 
@@ -61,7 +72,7 @@ Go 一次设备操作最长 12 秒、单次 HTTP 最长 10 秒；Rust 设备和�
 
 命令入口拥有其标准管道：Unix 将继承的管道复制为 close-on-exec、非阻塞描述符，并注册 Go runtime poller；取消时关闭自有输入和输出，唤醒空闲读取和堵塞写入。普通文件不修改描述符标志。Windows 保留 Go 标准管道关闭行为，其既有原生验收进度以 P0 验证记录为准；本次设备增量未新增 Windows 原生证据。输出失败也会触发命令入口取消并回收本次资源。
 
-关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。此处管理协议与设备配对；真实贡献运行及任务收尾属于后续阶段。
+关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。此处只管理桌面通信、设备、供给和账号观察；真实贡献运行及任务收尾属于后续阶段。
 
 ## 验证
 

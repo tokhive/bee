@@ -191,4 +191,4 @@ docs/        error code reference
 
 [MIT](LICENSE)
 
-The desktop development client supports verified device pairing and per-platform Hive supply status and pause/resume controls. Resume does not start contribution. See the [desktop supply guide](docs/desktop/supply-control.md) for behavior, verified Mac development package evidence, and remaining native GUI checks.
+The desktop development client supports verified device pairing, read-only OpenAI/Claude login and account observations, and shared per-platform Hive pause/resume controls. Login detection is explicit; resume does not start contribution. Account selection, account changes and removal await runtime ownership and drain/detach support. See the [account guide](docs/desktop/ai-accounts.md) and [supply guide](docs/desktop/supply-control.md) for behavior, local Mac package evidence and remaining native checks.

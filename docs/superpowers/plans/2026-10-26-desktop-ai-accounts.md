@@ -1,6 +1,6 @@
 # Bee 桌面 AI 账号管理实施计划
 
-> **状态：用户已明确要求继续实施，并选择 `executing-plans`。** 当前会话逐任务执行；旧自动确认授权仍取消，本次授权只适用于当前 plan。步骤用复选框跟踪；新选型、扩大权限或 Hive 改造仍先更新 spec 并集中确认。
+> **状态：本批六个 Task 已完成，28/28 项已核对。** 用户明确选择 `executing-plans`，由当前会话逐任务执行；旧自动确认授权仍取消，本次授权只适用于当前 plan。新选型、扩大权限或 Hive 改造仍先更新 spec 并集中确认。[验收与缺口](../../desktop/evidence/2026-10-26-ai-accounts/README.md)。
 
 **目标：** 将原生账号页接通真实、只读的官方来源与 Hive 账号观察，准确显示身份、授权、额度、模型和功能依赖；为后续接入与运行管理保留完整验收边界。
 
@@ -35,7 +35,7 @@
 | A05 | 本地与官方身份、Hive 授权状态和恢复提示 | 运行期间续期、同步结果、官方客户端并发写回验证 |
 | A06 | 官方候选／Hive 观测分别显示、完整额度与时效 | 真实账号与三端专项验收 |
 | A07 | 账号模型、市场未知、当前接单条件独立显示 | 可信设备鉴权市场接口或获批桌面会话 |
-| A08 | 与概览共用平台供给快照及控制，逐平台／全部反馈 | 账号变更未决和未来运行约束接入同一控制门禁 |
+| A08 | 与概览共用平台供给快照及控制，逐平台／全部反馈 | 未来运行约束接入同一控制门禁（账号变更未决门禁已接入） |
 | A09 | Hive 当前／候选状态只读展示，拒绝虚构或接管确认 | owned 运行报告候选与同步、来源切换屏障、持久确认恢复；完成后仍暂停 |
 | A10 | 完整移除能力未满足时拒绝且零副作用 | 实际停止新任务、在途收尾、凭证解除；本地撤销也须证明从未使用 |
 | A11 | 应用内问题提醒与去重、恢复后再次提醒 | 全局系统通知及 OS 权限接入 |
@@ -71,9 +71,10 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 ```
 
 - `DesktopAccountDetectRequest`：`platform`（openai/claude）、`directory`（显式 null 或绝对路径）、`store`（OpenAI auto/file/keyring；Claude file/keychain）、`mode`（local/official）。official 为用户明确“检查账号”；local 绝不发官方网络请求。
-- `DesktopAccountActionRequest`：`platform`、`revision`（非负安全整数）、`candidate_ref`（当前 Go 返回的随机引用）、`action`（select/confirm_change/remove/clear_selection）、`confirmed`（必须显式 true）。本批全部返回具体依赖错误；不提供后台已实现的假象。
+- `DesktopAccountActionRequest`：`platform`、`revision`（非负安全整数）、`candidate_ref`（当前 Go 返回的随机引用）、`action`（select/confirm_change/remove/clear_selection）、`confirmed`（显式 boolean；false 参数合法但业务拒绝，授权动作要求 true）。本批全部返回具体依赖错误；不提供后台已实现的假象。
 - `DesktopAccountDefaults`：`platforms` 两项，每项 `platform/directory/default_store/stores`，存储能力逐项含支持布尔与原因；返回不打开凭证。
 - `DesktopAccountSnapshot`：`platform/revision/candidate/selection/hive/authorization/capabilities/features/issues/checked_at`。各子域带 `state/observed_at/error`；未观察时间为 null；未知数据为 null，列表为数组。Go 定义 JSON tags 后 TS 精确对应，不使用 demo `Account` 强制转换。
+- Hive 额外公开 `pending_fingerprint/generation`，未确认时为 null，不公开 confirmation_id；selection/authorization 不增加这两字段。
 - 候选：`reference/source/fingerprint/plan/expires_at/identity_verified/observed_at`；Claude local 无可信指纹时为 null，不能显示已核验。选择本批为未选择；Hive 的现有注册账号仍能独立显示，不自动归入本地选择。
 - 能力：`origin`（official/hive）、`status/observed_at/metadata_observed_at/valid_until/retry_at/plan/windows/models`。模型为 `id/account_supported/market_open/accepting`，后两项没有证据时为 null。
 - 错误：受控 `code/check/platform/message` 及公开 `evidence`，包含本次系统退出码／HTTP 状态／字段实际类型；未知正文、未知套餐／状态字符串不回显，保持原因链的安全证据。
@@ -141,11 +142,11 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 **文件：** 新 `docs/desktop/ai-accounts.md`；同步 `docs/desktop/bridge-protocol.md`、`README.md`、本 plan；证据写 `docs/desktop/evidence/2026-10-26-ai-accounts/`。不把功能依赖勾成完成。
 
-- [ ] 运行 Go 全量及 vet、TS 类型／构建／相关原生与 demo 页面、Rust 相关与既有桥回归；记录实际工具版本、源码和测试命令。验证使用已准备的 TEE 缓存；缺工具先处理，不能把未运行记为通过。
-- [ ] 执行完整行为路径 final review（`affected-path-review`）；修复发现的问题并只补跑受影响验证，再走 `verification-before-completion`、`consistency-check`、`post-verification-check`。任务审查不代替本轮完整路径审查。
-- [ ] 构建匹配当前源码的本机包并校验来源、签名、包内只读 defaults/snapshot；真实来源读取须用户点击，自动冒烟不读用户凭证。原生手工验证和其他 OS 可用环境分别记录；未取得证据明确未验收，不沿用旧包截图冒充。
-- [ ] 写白话步骤：打开账号页→选择平台和来源→点击检测→按需检查账号→阅读本地／官方／Hive 三种事实；列明不能接入／贡献／换号／移除的具体依赖及下一步。保留现有分支和 worktree，不发布。
-- [ ] 对照 A01–A12 更新本批覆盖矩阵和阻塞项，提交本批代码与证据，说明下一项是运行管理 spec 与其所需事实调查；只有本批 Task 全通过才勾完本 plan。
+- [x] 运行 Go 全量及 vet、TS 类型／构建／相关原生与 demo 页面、Rust 相关与既有桥回归；记录实际工具版本、源码和测试命令。验证使用已准备的 TEE 缓存；缺工具先处理，不能把未运行记为通过。
+- [x] 执行完整行为路径 final review（`affected-path-review`）；修复发现的问题并只补跑受影响验证，再走 `verification-before-completion`、`consistency-check`、`post-verification-check`。任务审查不代替本轮完整路径审查。
+- [x] 构建匹配当前源码的本机包并校验来源、签名、包内只读 defaults/snapshot；真实来源读取须用户点击，自动冒烟不读用户凭证。原生手工验证和其他 OS 可用环境分别记录；未取得证据明确未验收，不沿用旧包截图冒充。
+- [x] 写白话步骤：打开账号页→选择平台和来源→点击检测→按需检查账号→阅读本地／官方／Hive 三种事实；列明不能接入／贡献／换号／移除的具体依赖及下一步。保留现有分支和 worktree，不发布。
+- [x] 对照 A01–A12 更新本批覆盖矩阵和阻塞项，提交本批代码与证据，说明下一项是运行管理 spec 与其所需事实调查；只有本批 Task 全通过才勾完本 plan。
 
 ## 后续批次的进入条件（非本批执行任务）
 
@@ -157,18 +158,22 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 ## 计划自检
 
-本 plan 以任务、接口、风险矩阵和验证命令落实已批准设计，不预写实现代码。任务之间的 DTO 只在共享契约定义一次；全部 A01–A12 均映射到本批或明确依赖，不通过砍需求宣称完整交付。Task 1 已完成合成来源检测、过期和副作用门禁回归；其余任务继续执行。
+本 plan 以任务、接口、风险矩阵和验证命令落实已批准设计，不预写实现代码。任务之间的 DTO 只在共享契约定义一次；全部 A01–A12 均映射到本批或明确依赖，不通过砍需求宣称完整交付。Task 1–6 已完成；完整回归、独立行为路径审查、包验证、文档与逐项核对见[本批证据](../../desktop/evidence/2026-10-26-ai-accounts/README.md)。最终审查另修复既有版本辅助读取的 FIFO／符号链接和后代管道阻塞，回归已红绿验证。
 
 计划文档一致性检查（2026-10-26）：
 
 | 维度 | 结果 |
 | --- | --- |
-| 对话 | ✅ 已批准 spec、不改 Hive、D1/D2 均沿用。原先将自动推进约定解释为本 plan 已获实施授权的结论已撤回；plan 审阅和执行模式选择仍未完成。 |
+| 对话 | ✅ 已批准 spec、不改 Hive、D1/D2 均沿用。原先援引自动推进的授权已撤回；后来用户明确要求继续实施当前 plan 并选择 executing-plans，依据是本次授权。 |
 | 文内 | ✅ 六任务与共享契约一致；本批完成与 A01–A12 完整交付分开；所有依赖保留。 |
-| 跨文档 | ✅ spec、相邻 trace、外层备忘同步批准状态；无产品实现、PR 或接口调用方修改，实施传播检查留任务验证。 |
+| 跨文档 | ✅ spec、相邻 trace、外层备忘同步批准状态；已同步 spec、trace、协议、使用指南及实际 Go/Rust/TS 调用契约；不新增 PR 或 Hive 修改。 |
 | 配置 | ✅ 版本与 go.mod/package.json/Cargo.toml 相符；Node 24.22.1 已安装，可显式选择；无新增环境变量、依赖或权限。 |
-| 文档／源码 | ✅ 核对实际读取器、profile、额度、Hive 夹读接口、桥与原生页面；23 个 spec/plan 本地链接存在，无占位文本。 |
+| 文档／源码 | ✅ 核对实际读取器、profile、额度、Hive 夹读接口、桥与原生页面；本轮账号相关文档本地链接核对通过，无占位文本。 |
 
-结论：计划文档已写完，待用户审阅与选择执行模式；完整账号功能仍有表列依赖，产品及三端验收均未据此宣称通过。
+结论：本 plan 已获得用户本次明确实施授权，采用 executing-plans；本批交付与完整账号功能分开验收，表列依赖和三端验收缺口继续保留。
 
 2026-10-26 流程纠正：代理曾未经本 plan 确认及执行模式选择便派发 Task 1 实施子代理；用户指出后已停止。检查时无产品代码改动、无任务完成。已有文档提交 `a5660c3` 的标题包含 approve implementation plan，不能作为用户已批准 plan 的证据；用户仅批准 spec。
+
+当前授权纠正后的执行记录：用户随后明确要求“继续实施，使用 executing-plans 即可”，本会话据此逐任务推进。前述违规派发和错误提交标题仅保留为历史纠错，不能用于未来 plan 自动确认。
+
+完成后核对：28 个复选项，原已勾选 23 项，本轮依据证据补勾 Task 6 的 5 项，未完成 0 项。仅本批范围完成，A01–A12 的表列依赖不计为完成；保留分支与 worktree，不发布。

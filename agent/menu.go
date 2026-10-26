@@ -25,6 +25,7 @@ type managementMenu struct {
 	serviceErr             error
 	configure              func() error
 	pair                   func() error
+	depth, navigation      int
 }
 
 func (m *managementMenu) text(en, zh string) string { return m.ui.text(en, zh) }
@@ -75,36 +76,35 @@ func (m *managementMenu) confirm(summary string) (bool, error) {
 		case "1":
 			return true, nil
 		case "", "0":
-			return false, nil
+			return false, m.back()
 		default:
 			fmt.Fprintln(m.out, m.text("Enter 1 or 0.", "请输入 1 或 0。"))
 		}
 	}
 }
-func (m *managementMenu) rule(major bool) {
-	line := "----------------------------------------"
-	if m.ui.terminal {
-		line = "────────────────────────────────────────"
-		if major {
-			line = "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-		}
-	}
-	fmt.Fprintln(m.out, "\n"+line)
-}
 func (m *managementMenu) loop(title string, actions []menuAction) error {
+	m.navigation++
+	m.depth++
+	defer func() { m.depth-- }()
 	for {
 		if e := m.ctx.Err(); e != nil {
 			return e
 		}
-		m.rule(true)
-		fmt.Fprintln(m.out, title)
-		m.rule(false)
-		for i, a := range actions {
-			fmt.Fprintf(m.out, "  %d) %s\n", i+1, m.text(a.en, a.zh))
+		if m.depth == 1 {
+			m.page("")
+		} else {
+			m.page(title)
 		}
-		fmt.Fprintln(m.out, m.text("  0) Back / Exit", "  0) 返回 / 退出"))
-		m.rule(false)
-		n, e := m.choose(m.text("Select: ", "请输入选项："), len(actions))
+		for i, a := range actions {
+			m.option(i+1, m.text(a.en, a.zh))
+		}
+		fmt.Fprintln(m.out)
+		back := m.text("Back", "返回上级")
+		if m.depth == 1 {
+			back = m.text("Exit", "退出")
+		}
+		m.option(0, back)
+		n, e := m.choose(fmt.Sprintf(m.text("\nSelect [0–%d]: ", "\n请选择 [0–%d]："), len(actions)), len(actions))
 		if errors.Is(e, io.EOF) {
 			return nil
 		}
@@ -114,6 +114,7 @@ func (m *managementMenu) loop(title string, actions []menuAction) error {
 		if n == 0 {
 			return nil
 		}
+		navigation := m.navigation
 		e = actions[n-1].run()
 		if errors.Is(e, io.EOF) {
 			return io.EOF
@@ -122,7 +123,10 @@ func (m *managementMenu) loop(title string, actions []menuAction) error {
 			return e
 		}
 		if e != nil {
-			m.ui.status(m.out, "❌", "31", fmt.Sprintf("Operation failed: %v", e), fmt.Sprintf("操作失败：%v", e))
+			m.reportError(e)
+		}
+		if e == nil && navigation != m.navigation {
+			continue
 		}
 		if _, e = m.line(m.text("\nPress Enter to return...", "\n按回车返回…")); errors.Is(e, io.EOF) {
 			return nil
@@ -132,7 +136,10 @@ func (m *managementMenu) loop(title string, actions []menuAction) error {
 	}
 }
 func (m *managementMenu) language() error {
-	fmt.Fprintln(m.out, "  1) 简体中文\n  2) English\n  0) 返回 / Back")
+	m.page(m.text("Language", "语言"))
+	m.option(1, "简体中文")
+	m.option(2, "English")
+	m.option(0, m.text("Back", "返回上级"))
 	n, e := m.choose("请选择语言 / Choose language: ", 2)
 	if e != nil {
 		return e
@@ -142,7 +149,7 @@ func (m *managementMenu) language() error {
 	} else if n == 2 {
 		m.ui.lang = "en"
 	}
-	return nil
+	return m.back()
 }
 func (m *managementMenu) readDevice() (localState, error) {
 	state, err := readState(m.configPath)
@@ -150,7 +157,7 @@ func (m *managementMenu) readDevice() (localState, error) {
 		return state, err
 	}
 	if state.Credential == "" {
-		return state, errors.New(m.text("Not paired; choose Pair with Hive.", "尚未配对，请选择设备配对。"))
+		return state, fail("BEE-DEVICE-NOT-PAIRED", m.configPath)
 	}
 	origin, err := hiveOrigin(state.Hive)
 	if err != nil {
@@ -192,17 +199,13 @@ func runManagement(ctx context.Context, out io.Writer) error {
 			return e
 		}
 	}
-	title := "Bee · " + buildVersion()
-	if ui.terminal {
-		title = "🐝 " + title
-	}
-	e = m.loop(title, []menuAction{
-		{"View status", "查看运行状态", m.status},
-		{"Pair / re-pair with Hive", "配对 / 重新配对 Hive", m.pairing},
-		{"Manage supplied accounts", "管理供给账号", m.accounts},
-		{"Manage background service", "管理后台服务", m.services},
-		{"Logs and diagnostics", "查看日志与诊断", m.logsAndDoctor},
-		{"Change language / 语言", "切换语言 / Language", m.language},
+	e = m.loop("", []menuAction{
+		{"Status", "运行状态", m.status},
+		{"Device pairing", "设备配对", m.pairing},
+		{"Supplied accounts", "供给账号", m.accounts},
+		{"Background service", "后台服务", m.services},
+		{"Logs and diagnostics", "日志与诊断", m.logsAndDoctor},
+		{"Change language", "切换语言", m.language},
 	})
 	if errors.Is(e, io.EOF) {
 		return nil

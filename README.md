@@ -85,7 +85,9 @@ In a terminal, run `bee` with no arguments to open the numbered management menu:
 bee
 ```
 
-Choose **简体中文 / English**, then use the menu to view status, pair or re-pair with Hive, select supplied accounts, pause/resume new work, confirm an account change, manage the background service, or inspect logs and diagnostics. Use `0` to return or exit. Exiting the menu leaves the background Bee running. `BEE_LANG=zh` or `BEE_LANG=en` skips the initial language question; the menu can change language for the current session.
+Choose **简体中文 / English**, then use the menu to view status, pair or re-pair with Hive, select supplied accounts, pause/resume new work, confirm an account change, manage the background service, or inspect logs and diagnostics. Use `0` to return directly from a submenu, or to exit from the main menu. Exiting the menu leaves the background Bee running. `BEE_LANG=zh` or `BEE_LANG=en` skips the initial language question; the menu can change language for the current session.
+
+The menu uses compact pages, status icons and colors. `NO_COLOR=1` disables colors; `TERM=dumb` uses plain text. Known errors and recovery steps follow the selected language. Error codes and HTTP statuses remain visible; unfamiliar external errors and service logs appear as clearly labeled original technical details.
 
 Linux service controls require the installer-managed system service for the same user, executable and configuration. Custom units, drop-ins and other installation paths require manual management. **Start/stop** changes the current process; **enable/disable boot startup** changes what happens after reboot. Saving an account selection does not apply it to a running process until you confirm a restart. Service activity and account readiness are shown separately.
 

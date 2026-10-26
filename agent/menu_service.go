@@ -11,17 +11,26 @@ func (m *managementMenu) printServiceState(s serviceState) {
 	active, boot := s.ActiveState, s.UnitFileState
 	if m.ui.lang == "zh" {
 		if label := map[string]string{"active": "运行中", "inactive": "已停止", "failed": "运行失败", "activating": "正在启动", "deactivating": "正在停止", "reloading": "正在重新加载"}[active]; label != "" {
-			active = label + "（" + active + "）"
+			active = label
 		}
 		if label := map[string]string{"enabled": "已开启", "disabled": "已关闭", "masked": "已屏蔽", "enabled-runtime": "仅本次运行启用"}[boot]; label != "" {
-			boot = label + "（" + boot + "）"
+			boot = label
 		}
 	}
-	fmt.Fprintf(m.out, m.text("Service: %s\nBoot startup: %s\n", "后台服务：%s\n开机自启：%s\n"), active, boot)
+	color := "33"
+	if s.ActiveState == "active" {
+		color = "32"
+	} else if s.ActiveState == "failed" {
+		color = "31"
+	}
+	m.field("Service", "后台服务", m.styled(color, active))
+	m.field("Boot startup", "开机自启", boot)
 }
 func (m *managementMenu) services() error {
 	if _, e := m.serviceState(); e != nil {
-		return e
+		m.page(m.text("Background service", "后台服务"))
+		m.serviceNotice(e)
+		return nil
 	}
 	actions := []menuAction{}
 	for _, a := range []struct{ op, en, zh string }{{"start", "Start Bee", "启动 Bee"}, {"stop", "Stop Bee", "停止 Bee"}, {"restart", "Restart Bee", "重启 Bee"}, {"enable", "Enable boot startup", "开启开机自启"}, {"disable", "Disable boot startup", "关闭开机自启"}} {
@@ -37,7 +46,7 @@ func (m *managementMenu) serviceAction(op string) error {
 	}
 	if op == "start" || op == "restart" {
 		if e = m.requirePairing(); e != nil {
-			fmt.Fprintln(m.out, e)
+			m.reportError(e)
 			if m.pair == nil {
 				return e
 			}
@@ -77,7 +86,7 @@ func (m *managementMenu) serviceAction(op string) error {
 	label := op
 	if m.ui.lang == "zh" {
 		if zh := map[string]string{"start": "启动 Bee", "stop": "停止 Bee", "restart": "重启 Bee", "enable": "开启开机自启", "disable": "关闭开机自启"}[op]; zh != "" {
-			label = zh + "（" + op + "）"
+			label = zh
 		}
 	}
 	summary := fmt.Sprintf(m.text("Target: tokhive-bee (%s), configuration %s\nAction: %s", "目标：tokhive-bee（%s），配置 %s\n操作：%s"), m.service.username, m.configPath, label)
@@ -103,18 +112,21 @@ func (m *managementMenu) logsAndDoctor() error {
 	return m.loop(m.text("Logs and diagnostics", "日志与诊断"), []menuAction{{"Recent 50 service log lines", "最近 50 行服务日志", m.logs}, {"Run diagnostics", "运行诊断", m.diagnostics}})
 }
 func (m *managementMenu) logs() error {
+	m.page(m.text("Service logs", "服务日志"))
 	if _, e := m.serviceState(); e != nil {
-		return e
+		m.serviceNotice(e)
+		return nil
 	}
+	m.note("Service logs below are shown in their original language.", "以下服务日志保留原始语言。")
 	e := m.service.logs(m.ctx, false)
 	if e == nil {
 		return nil
 	}
-	fmt.Fprintln(m.out, e)
 	lower := strings.ToLower(e.Error())
 	if !errors.Is(e, errJournalPermission) && !strings.Contains(lower, "permission") && !strings.Contains(lower, "access denied") {
 		return e
 	}
+	m.reportError(e)
 	ok, err := m.confirm(m.text("Read these logs once with administrator access?", "是否仅本次使用管理员权限读取日志？"))
 	if err != nil || !ok {
 		return err

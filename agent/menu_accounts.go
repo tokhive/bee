@@ -10,10 +10,15 @@ import (
 )
 
 func (m *managementMenu) platform() (string, error) {
-	fmt.Fprintln(m.out, "  1) OpenAI (Codex)\n  2) Claude\n  0) "+m.text("Back", "返回"))
+	m.option(1, "OpenAI (Codex)")
+	m.option(2, "Claude Code")
+	m.option(0, m.text("Back", "返回上级"))
 	n, e := m.choose(m.text("Platform: ", "请选择平台："), 2)
-	if n == 0 || e != nil {
+	if e != nil {
 		return "", e
+	}
+	if n == 0 {
+		return "", m.back()
 	}
 	return []string{"openai", "claude"}[n-1], nil
 }
@@ -32,9 +37,15 @@ func (m *managementMenu) printAccount(a beewire.PlatformAccount) {
 	if label == "" {
 		label = a.Status
 	}
-	fmt.Fprintf(m.out, m.text("Platform: %s\nAccount: %s\nConfirmed fingerprint: %s\nPending fingerprint: %s\n", "平台：%s\n账号状态：%s\n当前账号指纹：%s\n待确认账号指纹：%s\n"), a.Platform, label, a.AccountFingerprint, a.PendingFingerprint)
+	m.field("Platform", "供给平台", platformName(a.Platform))
+	m.field("Authorization", "账号状态", label)
+	m.field("Confirmed fingerprint", "当前账号指纹", a.AccountFingerprint)
+	if a.PendingFingerprint != "" {
+		m.field("Pending fingerprint", "待确认账号指纹", a.PendingFingerprint)
+	}
 }
 func (m *managementMenu) accountStatus() error {
+	m.page(m.text("Accounts and supply", "账号与接单状态"))
 	p, e := m.platform()
 	if e != nil || p == "" {
 		return e
@@ -51,6 +62,11 @@ func (m *managementMenu) accountStatus() error {
 	return m.showPlatform(state, p)
 }
 func (m *managementMenu) changeSupply(paused bool) error {
+	title := m.text("Resume new work", "恢复接单")
+	if paused {
+		title = m.text("Pause new work", "暂停接单")
+	}
+	m.page(title)
 	p, e := m.platform()
 	if e != nil || p == "" {
 		return e
@@ -59,9 +75,9 @@ func (m *managementMenu) changeSupply(paused bool) error {
 	if e != nil {
 		return e
 	}
-	summary := fmt.Sprintf(m.text("Resume new work for %s? Other readiness requirements still apply.", "恢复 %s 的新任务接单？仍需满足其他接单条件。"), p)
+	summary := fmt.Sprintf(m.text("Resume new work for %s? Other readiness requirements still apply.", "恢复 %s 的新任务接单？仍需满足其他接单条件。"), platformName(p))
 	if paused {
-		summary = fmt.Sprintf(m.text("Pause new work for %s? This does not stop Bee or other platforms.", "暂停 %s 接收新任务？这不会停止 Bee 或其他平台。"), p)
+		summary = fmt.Sprintf(m.text("Pause new work for %s? This does not stop Bee or other platforms.", "暂停 %s 接收新任务？这不会停止 Bee 或其他平台。"), platformName(p))
 	}
 	summary += "\nHive: " + state.Hive
 	ok, e := m.confirm(summary)
@@ -72,11 +88,12 @@ func (m *managementMenu) changeSupply(paused bool) error {
 	if e != nil {
 		return e
 	}
-	fmt.Fprintf(m.out, m.text("Hive confirmed manual pause=%t for %s.\n", "Hive 已确认手动暂停状态：%t，平台：%s。\n"), result.Paused, p)
+	fmt.Fprintf(m.out, m.text("Hive confirmed manual pause: %s (%s).\n", "Hive 已确认手动暂停状态：%s（%s）。\n"), m.yesNo(result.Paused), platformName(p))
 	// Query the final state separately; clearing pause alone does not imply ready.
 	return m.showPlatform(state, p)
 }
 func (m *managementMenu) confirmAccount() error {
+	m.page(m.text("Confirm account change", "确认账号变更"))
 	p, e := m.platform()
 	if e != nil || p == "" {
 		return e

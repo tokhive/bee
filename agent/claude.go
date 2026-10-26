@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -153,14 +154,35 @@ func parseClaudeCredential(raw []byte) (claudeCredential, error) {
 			Plan    string   `json:"subscriptionType"`
 		} `json:"claudeAiOauth"`
 	}
-	if len(raw) > 65536 || json.Unmarshal(raw, &stored) != nil || stored.OAuth == nil {
-		return claudeCredential{}, errors.New("invalid Claude Code authorization structure")
+	if len(raw) > 65536 {
+		return claudeCredential{}, &credentialError{kind: "size", detail: fmt.Sprintf("bytes=%d", len(raw))}
+	}
+	if err := json.Unmarshal(raw, &stored); err != nil {
+		var syntax *json.SyntaxError
+		var field *json.UnmarshalTypeError
+		if errors.As(err, &syntax) {
+			return claudeCredential{}, &credentialError{kind: "json", detail: fmt.Sprintf("offset=%d", syntax.Offset)}
+		}
+		if errors.As(err, &field) {
+			return claudeCredential{}, &credentialError{kind: "json_type", detail: fmt.Sprintf("offset=%d; expected=%s", field.Offset, field.Type)}
+		}
+		return claudeCredential{}, &credentialError{kind: "json"}
+	}
+	if stored.OAuth == nil {
+		return claudeCredential{}, &credentialError{kind: "oauth"}
 	}
 	auth := stored.OAuth
 	secret := tee.Secret{Token: auth.Access, Header: "authorization", Scheme: "Bearer"}
-	if auth.Access == "" || secret.Validate() != nil || auth.Expires <= 0 || auth.Expires > 253402300799999 {
-		return claudeCredential{}, errors.New("invalid Claude Code access token or millisecond expiration")
+	if auth.Access == "" {
+		return claudeCredential{}, &credentialError{kind: "token_missing"}
 	}
+	if secret.Validate() != nil {
+		return claudeCredential{}, &credentialError{kind: "token_format"}
+	}
+	if auth.Expires <= 0 || auth.Expires > 253402300799999 {
+		return claudeCredential{}, &credentialError{kind: "expiry", detail: fmt.Sprintf("expiresAt=%d", auth.Expires)}
+	}
+
 	credential := claudeCredential{secret: secret, expiresAt: time.UnixMilli(auth.Expires), plan: "unknown", hasRefreshToken: auth.Refresh != ""}
 	switch auth.Plan {
 	case "free", "pro", "max", "team", "enterprise":

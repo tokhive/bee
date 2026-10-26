@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"flag"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -141,22 +142,34 @@ func (source codexSource) readForMaintenance(ctx context.Context) (codexCredenti
 
 func readCodexFile(path string) ([]byte, error) {
 	info, err := os.Lstat(path)
-	if err != nil || !info.Mode().IsRegular() {
-		return nil, errors.New("official auth.json does not exist or is not a regular file; verify the authorization directory")
+	if os.IsNotExist(err) {
+		return nil, &credentialError{kind: "missing", detail: path}
+	}
+	if err != nil {
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
+	}
+	if !info.Mode().IsRegular() {
+		return nil, &credentialError{kind: "regular", detail: fmt.Sprintf("%s; mode=%s", path, info.Mode())}
 	}
 	fd, err := syscall.Open(path, syscall.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
-		return nil, errors.New("failed to read official auth.json; sign in with official Codex and verify --codex-home and the storage mode")
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
 	}
 	file := os.NewFile(uintptr(fd), path)
 	defer file.Close()
 	info, err = file.Stat()
-	if err != nil || !info.Mode().IsRegular() {
-		return nil, errors.New("official auth.json must be a regular file")
+	if err != nil {
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
+	}
+	if !info.Mode().IsRegular() {
+		return nil, &credentialError{kind: "regular", detail: fmt.Sprintf("%s; mode=%s", path, info.Mode())}
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
-	if err != nil || len(raw) > 65536 {
-		return nil, errors.New("failed to read official auth.json or file exceeds 64 KiB")
+	if err != nil {
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
+	}
+	if len(raw) > 65536 {
+		return nil, &credentialError{kind: "size", detail: fmt.Sprintf("%s; bytes_read=%d", path, len(raw))}
 	}
 	return raw, nil
 }

@@ -14,6 +14,7 @@ func (m *managementMenu) configureAccounts() error {
 }
 
 func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
+	m.page(m.text("Select supplied accounts", "选择供给账号"))
 	fmt.Fprintf(m.out, m.text("Target configuration: %s\n", "目标配置：%s\n"), m.egressPath)
 	before, e := configurationSnapshot(m.egressPath)
 	if e != nil {
@@ -30,17 +31,23 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 	detected := []detectedAccount{detectCodexWithUI(m.ctx, home, m.ui), detectClaudeWithUI(m.ctx, nil, existing, m.ui)}
 	chosen := []detectedAccount{}
 	names := []string{}
+	available := 0
 	for _, found := range detected {
-		fmt.Fprintln(m.out, found.platform+": "+found.summary)
+		fmt.Fprintln(m.out, "\n"+m.styled("1;36", platformName(found.platform)))
 		if found.problem != nil {
-			fmt.Fprintln(m.out, found.problem)
-			fmt.Fprintln(m.out, m.text("Sign in with codex login or claude, then detect accounts again.", "请运行 codex login 或 claude 完成官方登录，然后重新检测。"))
+			m.reportError(found.problem)
 			continue
 		}
+		available++
+		m.ui.status(m.out, "✅", "32", "Official sign-in detected", "已检测到官方登录")
+		m.note(found.summary, found.summary)
 		fmt.Fprintln(m.out, m.text("  1) Supply this account  2) Skip  0) Cancel selection", "  1) 供给此账号  2) 跳过  0) 取消本次选择"))
-		n, e := m.choose(m.text("Select: ", "请输入选项："), 2)
-		if e != nil || n == 0 {
+		n, e := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
+		if e != nil {
 			return e
+		}
+		if n == 0 {
+			return m.back()
 		}
 		if n == 1 {
 			chosen = append(chosen, found)
@@ -48,6 +55,10 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 		}
 	}
 	if len(chosen) == 0 {
+		if available == 0 {
+			m.ui.status(m.out, "⚠️", "33", "No usable accounts detected. Existing configuration kept.", "未检测到可用账号，已有配置保持不变。")
+			return nil
+		}
 		fmt.Fprintln(m.out, m.text("No accounts selected; existing configuration kept. Use pause to stop new work.", "没有选择账号，已有配置保持不变。需要停止接单时可使用暂停功能。"))
 		return nil
 	}

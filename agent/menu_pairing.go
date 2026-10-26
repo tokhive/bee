@@ -17,6 +17,7 @@ func (m *managementMenu) pairing() error {
 
 // Service actions own their next step; direct pairing can offer account setup.
 func (m *managementMenu) pairingWithNext(offerNext bool) error {
+	m.page(m.text("Device pairing", "设备配对"))
 	state, err := readState(m.configPath)
 	if err != nil {
 		return fmt.Errorf("read device %s: %w", m.configPath, err)
@@ -24,9 +25,12 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 	reset := false
 	if state.Credential != "" {
 		fmt.Fprintf(m.out, m.text("Current Hive: %s\nDevice: %s\n  1) Validate / continue pairing\n  2) Pair again\n  0) Back\n", "当前 Hive：%s\n设备：%s\n  1) 验证 / 继续配对\n  2) 重新配对\n  0) 返回\n"), state.Hive, state.Name)
-		n, e := m.choose(m.text("Select: ", "请输入选项："), 2)
-		if e != nil || n == 0 {
+		n, e := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
+		if e != nil {
 			return e
+		}
+		if n == 0 {
+			return m.back()
 		}
 		reset = n == 2
 		if !reset && state.Identity != nil {
@@ -36,7 +40,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 			}
 			var identity beewire.Identity
 			if e = call(m.ctx, httpClient(), device.Hive, "/api/bee/identity", "GET", device.Credential, nil, &identity); e != nil {
-				return fmt.Errorf("verify identity (configuration kept): %w", e)
+				return fmt.Errorf(m.text("Verify device (configuration kept): %w", "验证设备（已保留配置）：%w"), e)
 			}
 			fmt.Fprintf(m.out, m.text("Pairing valid: %s (%s)\n", "配对有效：%s（%s）\n"), identity.Name, identity.OwnerEmail)
 			return nil
@@ -61,14 +65,14 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 				return e
 			}
 			if a == "0" {
-				return nil
+				return m.back()
 			}
 			if a == "" {
 				a = hive
 			}
 			origin, e := hiveOrigin(a)
 			if e != nil {
-				fmt.Fprintln(m.out, e)
+				m.reportError(e)
 				continue
 			}
 			hive = origin

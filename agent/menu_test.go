@@ -61,6 +61,32 @@ func TestMenuEOFNeverRunsAction(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestMenuNestedReturnDoesNotConsumeNextAction(t *testing.T) {
+	m, out := menuFixture(t, "1\n0\n2\n\n0\n")
+	called := 0
+	err := m.loop("管理", []menuAction{
+		{"Accounts", "账号", m.accounts},
+		{"Action", "动作", func() error { called++; return nil }},
+	})
+	if err != nil || called != 1 {
+		t.Fatalf("action calls=%d error=%v\n%s", called, err, out)
+	}
+	if strings.Count(out.String(), "按回车返回") != 1 || strings.Contains(out.String(), "返回 / 退出") {
+		t.Fatal(out.String())
+	}
+}
+
+func TestMenuUnknownFailurePreservesEvidenceOutsideSummary(t *testing.T) {
+	m, out := menuFixture(t, "1\n\n0\n")
+	evidence := "custom failure: expected User=alice; got User=bob\nexit=7"
+	if err := m.loop("管理", []menuAction{{"Action", "动作", func() error { return errors.New(evidence) }}}); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "技术详情") || !strings.Contains(out.String(), "User=bob") || !strings.Contains(out.String(), "exit=7") {
+		t.Fatal(out.String())
+	}
+}
 func TestMenuServiceCancellationNeverMutates(t *testing.T) {
 	m, _ := menuFixture(t, "4\n0\n0\n")
 	s, calls := managedFixture(t)
@@ -95,7 +121,7 @@ func TestMenuStatusRetainsLocalEvidenceWhenUnpaired(t *testing.T) {
 	s, _ := managedFixture(t)
 	m.service = s
 	e := m.status()
-	if e == nil || !strings.Contains(out.String(), "inactive") || !strings.Contains(out.String(), "enabled") {
+	if e == nil || !strings.Contains(out.String(), "已停止") || !strings.Contains(out.String(), "已开启") {
 		t.Fatalf("%v %s", e, out.String())
 	}
 }

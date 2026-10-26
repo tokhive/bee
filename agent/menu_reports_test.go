@@ -2,9 +2,11 @@ package bee
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -59,5 +61,50 @@ func TestMenuStartRejectsInvalidSupplyBeforeChangingService(t *testing.T) {
 		if strings.HasPrefix(c, "sudo ") {
 			t.Fatalf("invalid configuration caused service mutation: %s", c)
 		}
+	}
+}
+
+func TestMenuReplacedDeviceHasLocalizedRecoveryAndEvidence(t *testing.T) {
+	requests := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		w.WriteHeader(401)
+		fmt.Fprint(w, `{"error":{"code":"device_replaced"}}`)
+	}))
+	defer server.Close()
+	m, out := pairedMenu(t, "1\n\n0\n")
+	state, _ := readState(m.configPath)
+	state.Hive = server.URL
+	if err := saveState(m.configPath, state); err != nil {
+		t.Fatal(err)
+	}
+	s, _ := managedFixture(t)
+	s.platform = "darwin"
+	m.service = s
+	if err := m.loop("管理", []menuAction{{"Status", "运行状态", m.status}}); err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"替换", "凭证已撤销", "重新配对", "HTTP 401", "device_replaced", "macOS 暂不支持"} {
+		if !strings.Contains(out.String(), want) {
+			t.Fatalf("missing %q\n%s", want, out)
+		}
+	}
+	if requests != 1 || strings.Contains(out.String(), "old device credential") || strings.Contains(out.String(), "managed system service unavailable") {
+		t.Fatalf("requests=%d\n%s", requests, out)
+	}
+}
+
+func TestMenuDiagnosticsDoesNotTreatUnreadablePathAsAbsent(t *testing.T) {
+	m, out := menuFixture(t, "")
+	blocker := filepath.Join(t.TempDir(), "not-a-directory")
+	if err := os.WriteFile(blocker, []byte("fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	m.egressPath = filepath.Join(blocker, "egress.json")
+	if err := m.diagnostics(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "BEE-CONFIG-UNREADABLE") || !strings.Contains(out.String(), m.egressPath) {
+		t.Fatal(out.String())
 	}
 }

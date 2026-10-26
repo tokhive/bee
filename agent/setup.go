@@ -288,7 +288,7 @@ func detectCodexWithUI(ctx context.Context, home string, ui installUI) detectedA
 		found.summary = fmt.Sprintf(ui.text("Codex sign-in in %s (%s), account %s, plan %s, %s", "Codex 登录位置 %s（%s），账号 %s，方案 %s，%s"), home, store, hex.EncodeToString(hash[:6]), credential.Plan, state)
 		return found
 	}
-	found.problem = fail("BEE-CODEX-SOURCE", first.Error())
+	found.problem = failCause("BEE-CODEX-SOURCE", first)
 	return found
 }
 
@@ -319,7 +319,7 @@ func detectClaudeWithUI(ctx context.Context, directory *string, existing *egress
 		if _, _, _, coded := Coded(err); coded {
 			found.problem = err
 		} else {
-			found.problem = fail("BEE-CLAUDE-SOURCE", err.Error())
+			found.problem = failCause("BEE-CLAUDE-SOURCE", err)
 		}
 	case !credential.hasInferenceScope:
 		found.problem = fail("BEE-CLAUDE-SCOPE", "")

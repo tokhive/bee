@@ -196,6 +196,7 @@ func init() {
 type codedError struct {
 	code   string
 	detail string
+	cause  error
 }
 
 func fail(code, detail string) error {
@@ -204,6 +205,18 @@ func fail(code, detail string) error {
 	}
 	return &codedError{code: code, detail: detail}
 }
+
+// failCause preserves the typed cause for menu presentation while keeping the
+// established English CLI/JSON format and including the response evidence.
+func failCause(code string, cause error) error {
+	e := fail(code, cause.Error()).(*codedError)
+	e.cause = cause
+	if api, ok := cause.(*apiFailure); ok {
+		e.detail += fmt.Sprintf(" (HTTP %d; code=%s)", api.Status, api.Code)
+	}
+	return e
+}
+func (e *codedError) Unwrap() error { return e.cause }
 
 func failf(code, format string, args ...any) error {
 	return fail(code, fmt.Sprintf(format, args...))

@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Exercise the real Bee binary through a controlling terminal."""
 import errno
+import json
+import http.server
+import sys
+import threading
 import os
 from pathlib import Path
 import pty
@@ -29,13 +33,15 @@ class MenuTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.env = dict(os.environ, HOME=self.temp.name, XDG_CONFIG_HOME=self.temp.name + '/config',
                         CODEX_HOME=self.temp.name + '/codex', CLAUDE_CONFIG_DIR=self.temp.name + '/claude',
-                        BEE_LANG='zh', TERM='xterm-256color')
+                        BEE_LANG='zh', TERM='xterm-256color', NO_COLOR='')
 
-    def terminal(self, answers, args=(), **env):
+    def terminal(self, answers, args=(), after_fork=None, **env):
         child_env = dict(self.env, **env)
         pid, fd = pty.fork()
         if pid == 0:
             os.execve(self.binary, [self.binary, *args], child_env)
+        if after_fork:
+            after_fork()
         output = bytearray()
         status = None
         eof = False
@@ -75,43 +81,89 @@ class MenuTest(unittest.TestCase):
         return os.waitstatus_to_exitcode(status), output.decode(errors='replace')
 
     def test_bare_bee_opens_chinese_management_menu(self):
-        code, out = self.terminal([('请输入选项', '0\n')])
+        code, out = self.terminal([('请选择 [', '0\n')])
         self.assertEqual(code, 0, out)
-        for label in ('查看运行状态', '配对 / 重新配对', '管理供给账号', '管理后台服务', '日志与诊断', 'Language'):
+        for label in ('运行状态', '设备配对', '供给账号', '后台服务', '日志与诊断', '切换语言'):
             self.assertIn(label, out)
 
     def test_language_choice_and_nested_return_keep_fast_input(self):
-        code, out = self.terminal([('Choose language', '2\n3\n0\n\n0\n')], BEE_LANG='')
+        code, out = self.terminal([('Choose language', '2\n3\n0\n0\n')], BEE_LANG='')
         self.assertEqual(code, 0, out)
-        self.assertIn('Manage supplied accounts', out)
+        self.assertIn('Supplied accounts', out)
+        self.assertNotIn('Press Enter', out)
+        self.assertNotIn('Back / Exit', out)
         self.assertIn('Confirm account change', out)
 
+    def test_switch_language_updates_next_page_without_pause(self):
+        code, out = self.terminal([('请选择 [', '6\n2\n1\n\n0\n')])
+        self.assertEqual(code, 0, out)
+        english = out.split('Bee management', 1)[1]
+        self.assertIn('Device pairing', english)
+        self.assertIn('Bee › Status', english)
+        self.assertIn('BEE-DEVICE-NOT-PAIRED', english)
+        self.assertNotIn('设备配对', english)
+        self.assertEqual(english.count('Press Enter'), 1)
+
+    def test_replaced_pairing_keeps_http_evidence_and_localized_recovery(self):
+        requests = []
+        class Hive(http.server.BaseHTTPRequestHandler):
+            def do_GET(self):
+                requests.append(self.path)
+                self.send_response(401)
+                self.end_headers()
+                self.wfile.write(b'{"error":{"code":"device_replaced"}}')
+            def log_message(self, *args):
+                pass
+        with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Hive) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            try:
+                config_root = Path(self.temp.name) / ('Library/Application Support' if sys.platform == 'darwin' else 'config')
+                config = config_root / 'tokhive/bee.json'
+                config.parent.mkdir(parents=True)
+                config.write_text(json.dumps({'hive': f'http://127.0.0.1:{server.server_port}',
+                                              'credential': 'bee_' + 'a' * 43, 'name': 'synthetic'}))
+                config.chmod(0o600)
+                code, out = self.terminal([('请选择 [', '1\n\n0\n')], after_fork=worker.start)
+                self.assertEqual(code, 0, out)
+                for label in ('凭证已撤销', '重新配对', 'HTTP 401', 'device_replaced'):
+                    self.assertIn(label, out)
+                self.assertNotIn('old device credential', out)
+                self.assertEqual(requests, ['/api/bee/identity'])
+                if sys.platform == 'darwin':
+                    self.assertIn('macOS 暂不支持', out)
+                    self.assertNotIn('managed system service unavailable', out)
+                self.assertIn('\x1b[1;36m', out)
+                self.assertIn('\x1b[31m', out)
+            finally:
+                server.shutdown()
+                worker.join()
+
     def test_pairing_cancel_never_creates_device_configuration(self):
-        code, out = self.terminal([('请输入选项', '2\nhttps://hive.example\n0\n\n0\n')])
+        code, out = self.terminal([('请选择 [', '2\nhttps://hive.example\n0\n0\n')])
         self.assertEqual(code, 0, out)
         self.assertIn('确认', out)
         self.assertFalse(list(Path(self.temp.name).rglob('bee.json')))
 
     def test_ctrl_c_and_eof_exit_menu(self):
         for answer in ('\x03', '\x04'):
-            code, out = self.terminal([('请输入选项', answer)])
+            code, out = self.terminal([('请选择 [', answer)])
             self.assertEqual(code, 0, out)
 
     def test_dumb_terminal_uses_plain_text(self):
-        code, out = self.terminal([('请输入选项', '0\n')], TERM='dumb')
+        code, out = self.terminal([('请选择 [', '0\n')], TERM='dumb')
         self.assertEqual(code, 0, out)
         self.assertNotIn('\x1b', out)
         self.assertNotIn('🐝', out)
 
     def test_no_color_and_explicit_help_in_terminal(self):
-        code, out = self.terminal([('请输入选项', '0\n')], NO_COLOR='1')
+        code, out = self.terminal([('请选择 [', '0\n')], NO_COLOR='1')
         self.assertEqual(code, 0, out)
         self.assertNotIn('\x1b', out)
         self.assertIn('🐝', out)
         code, out = self.terminal([], args=['help'])
         self.assertEqual(code, 0, out)
         self.assertIn('bee start --hive URL', out)
-        self.assertNotIn('请输入选项', out)
+        self.assertNotIn('请选择 [', out)
 
     def test_menu_requires_both_input_and_output_terminals(self):
         master, slave = pty.openpty()

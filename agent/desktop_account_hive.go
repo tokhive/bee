@@ -26,30 +26,21 @@ func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAcco
 	if a.device == nil {
 		return
 	}
-	path, err := a.device.configPath()
+	session, release, err := a.device.acquireSession(ctx)
 	if err != nil {
-		setAccountHiveFailure(p, platform, "configuration", err)
+		setAccountHiveFailure(p, platform, "device_lock", err)
 		return
 	}
+	defer release()
+	path := session.path
 	// An unbound read never creates an account state file or new device config.
-	state, err := readState(path)
+	state, err := session.read()
 	if err != nil {
 		setAccountHiveFailure(p, platform, "configuration", err)
 		return
 	}
 	if state.Identity == nil || state.Credential == "" {
 		p.binding = nil
-		return
-	}
-	unlock, err := lockState(path)
-	if err != nil {
-		setAccountHiveFailure(p, platform, "device_lock", err)
-		return
-	}
-	defer unlock()
-	state, err = readState(path)
-	if err != nil {
-		setAccountHiveFailure(p, platform, "configuration", err)
 		return
 	}
 	if state.Identity == nil || !deviceCredentialPattern.MatchString(state.Credential) {

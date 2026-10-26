@@ -136,19 +136,10 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 			return errors.New("this configuration belongs to another Hive; use a separate --config path")
 		}
 		if state.Credential == "" {
-			if name == "" {
-				name, _ = os.Hostname()
+			state, err = newDeviceState(origin, name)
+			if err != nil {
+				return err
 			}
-			if strings.TrimSpace(name) == "" {
-				name = "Bee"
-			}
-			name = strings.TrimSpace(name)
-			if utf8.RuneCountInString(name) > 80 || strings.IndexFunc(name, unicode.IsControl) >= 0 {
-				return errors.New("device name must not exceed 80 characters or contain control characters")
-			}
-			raw := make([]byte, 32)
-			_, _ = rand.Read(raw)
-			state = localState{Hive: origin, Name: name, Credential: "bee_" + base64.RawURLEncoding.EncodeToString(raw)}
 			if err = saveState(*configPath, state); err != nil {
 				return err
 			}
@@ -208,10 +199,14 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 	if err != nil {
 		return err
 	}
+	return loginWithUI(ctx, client, path, state, out, ui)
+}
+
+func loginWithUI(ctx context.Context, client *http.Client, path string, state localState, out io.Writer, ui installUI) error {
 	var identity beewire.Identity
-	err = call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
 	if err == nil {
-		return finishLogin(path, state, identity, out)
+		return finishLoginWithUI(path, state, identity, out, ui)
 	}
 	var failure *apiFailure
 	if !errors.As(err, &failure) || failure.Status != 401 {
@@ -261,7 +256,7 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 		if pair.Status == "approved" {
 			err = call(ctx, client, state.Hive, "/api/bee/pairings/redeem", "POST", state.Pairing.PairingToken, struct{}{}, &identity)
 			if err == nil {
-				return finishLogin(path, state, identity, out)
+				return finishLoginWithUI(path, state, identity, out, ui)
 			}
 			var pending *apiFailure
 			if errors.As(err, &pending) && pending.Code == "device_draining" {
@@ -270,7 +265,7 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 		}
 		// The credential was persisted before exchange, so an uncertain response is recoverable.
 		if identityErr := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity); identityErr == nil {
-			return finishLogin(path, state, identity, out)
+			return finishLoginWithUI(path, state, identity, out, ui)
 		}
 		if err != nil {
 			return err
@@ -284,6 +279,10 @@ func finishLogin(path string, state localState, identity beewire.Identity, out i
 	if err != nil {
 		return err
 	}
+	return finishLoginWithUI(path, state, identity, out, ui)
+}
+
+func finishLoginWithUI(path string, state localState, identity beewire.Identity, out io.Writer, ui installUI) error {
 	state.Identity = &identity
 	state.Pairing = nil
 	if err := saveState(path, state); err != nil {
@@ -294,4 +293,22 @@ func finishLogin(path string, state localState, identity beewire.Identity, out i
 	}
 	ui.status(out, "✅", "32", fmt.Sprintf("Pairing complete: %s\nDevice: %s", identity.OwnerEmail, identity.ID), fmt.Sprintf("设备配对完成：%s\n设备：%s", identity.OwnerEmail, identity.ID))
 	return nil
+}
+
+func newDeviceState(origin, name string) (localState, error) {
+	if name == "" {
+		name, _ = os.Hostname()
+	}
+	if strings.TrimSpace(name) == "" {
+		name = "Bee"
+	}
+	name = strings.TrimSpace(name)
+	if utf8.RuneCountInString(name) > 80 || strings.IndexFunc(name, unicode.IsControl) >= 0 {
+		return localState{}, errors.New("device name must not exceed 80 characters or contain control characters")
+	}
+	raw := make([]byte, 32)
+	if _, err := rand.Read(raw); err != nil {
+		return localState{}, fmt.Errorf("generate device credential: %w", err)
+	}
+	return localState{Hive: origin, Name: name, Credential: "bee_" + base64.RawURLEncoding.EncodeToString(raw)}, nil
 }

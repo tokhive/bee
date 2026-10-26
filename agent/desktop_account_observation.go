@@ -256,6 +256,12 @@ func publicAccountCapabilities(origin, platform string, c beewire.Capabilities) 
 	return result
 }
 func expireOfficialCapabilities(c *DesktopAccountCapabilities, now time.Time) {
+	// Hive read statuses can describe a live server-side cooldown while their
+	// attached quota observation is old. Preserve that independent conclusion;
+	// valid_until still tells the UI that the window values are historical.
+	if c.Origin == "hive" && c.Status != "ready" {
+		return
+	}
 	if c.ValidUntil == nil {
 		return
 	}

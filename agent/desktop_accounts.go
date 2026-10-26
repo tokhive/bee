@@ -28,6 +28,7 @@ type desktopAccountPlatform struct {
 	source             *DesktopAccountSource
 	credentialRevision string
 	official           *desktopOfficialObservation
+	binding            *desktopAccountBinding
 }
 
 type DesktopAccountError struct {
@@ -211,6 +212,9 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	}
 	defer release()
 	a.expireCandidate(p, platform)
+	if refresh {
+		a.refreshAccountHive(ctx, p, platform)
+	}
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
 	}

@@ -221,6 +221,77 @@ confirm() {
 	done
 }
 
+# Match Bee's flock on bee.json.lock before moving the rejected credential.
+# Run in a subshell so fd 9 is released before the next bee login takes its lock.
+backup_pairing() (
+	umask 077
+	[ ! -L "$config_path.lock" ] || fail "$(message '%s is a symbolic link; configuration was not moved' '%s 是符号链接；未移动设备配置' "$config_path.lock")"
+	exec 9>>"$config_path.lock"
+	flock -n 9 || fail "$(message 'could not acquire configuration lock %s; stop other Bee processes and retry' '无法获得配置锁 %s；请停止其他 Bee 进程后重试' "$config_path.lock")"
+	[ -f "$config_path" ] && [ ! -L "$config_path" ] || fail "$(message '%s is no longer a regular configuration file; refusing to move it' '%s 已不是常规配置文件；拒绝移动' "$config_path")"
+	if cmp "$config_path" "$work/previous-bee.json" >/dev/null; then
+		:
+	else
+		compare_status=$?
+		if [ "$compare_status" = 1 ]; then
+			fail "$(message '%s changed since pairing validation; configuration was not moved, run the installer again' '%s 在配对验证后发生变化；未移动配置，请重新运行安装器' "$config_path")"
+		fi
+		failure "$compare_status" "$(message 'could not compare %s with its validated snapshot (exit %s); configuration was not moved' '无法比较 %s 与验证前快照（退出码 %s）；未移动配置' "$config_path" "$compare_status")"
+	fi
+	backup_directory=$(mktemp -d "$config_path.backup.XXXXXX") || fail "$(message 'could not create a private backup directory beside %s' '无法在 %s 旁创建私有备份目录' "$config_path")"
+	wizard_command "$(message 'back up device configuration' '备份设备配置')" mv "$config_path" "$backup_directory/bee.json"
+	line success "$(message 'Previous device configuration backed up to %s' '旧设备配置已备份至 %s' "$backup_directory/bee.json")"
+)
+
+pairing_cancelled() {
+	line warn "$(message 'Installation and existing configuration kept. Bee was not started.' '已保留安装和已有配置，尚未启动 Bee。')"
+	message 'Run the installer again to resume setup or choose re-pairing.\n' '重新运行安装器可继续配置或选择重新配对。\n'
+}
+
+# Returns false only when the user cancels; command failures exit the installer.
+pair_device() {
+	repair_pairing=0
+	if [ -f "$config_path" ]; then
+		wizard_command "$(message 'snapshot device configuration' '保存设备配置快照')" cp "$config_path" "$work/previous-bee.json"
+		line wait "$(message 'Validating the existing device pairing...' '正在验证已有设备配对…')"
+		# Keep stdout live for unfinished web pairing. Replay stderr verbatim,
+		# retaining the exact legacy diagnostic without parsing configuration JSON.
+		if run_bee login --config "$config_path" 2>"$work/login-error"; then
+			cat "$work/login-error" >&2
+			return 0
+		else
+			login_status=$?
+		fi
+		cat "$work/login-error" >&2
+		if ! grep -Fxq 'bound device credential is invalid; silent pairing is not allowed' "$work/login-error"; then
+			failure "$login_status" "$(message '%s failed (exit %s); Bee configuration: %s' '%s 失败（退出码 %s）；Bee 配置：%s' 'bee login' "$login_status" "$config_path")"
+		fi
+		line warn "$(message 'Hive rejected the previous device pairing; the device may have been deleted or replaced.' 'Hive 已拒绝旧设备配对，设备可能已被删除或替换。')"
+		message 'Re-pairing stops this Bee service and backs up the old device configuration. Your supplied accounts are kept.\nApproving a replacement in Hive may deactivate another Bee.\n' '重新配对会停止本机 Bee 服务并备份旧设备配置，保留供给账号选择。\n如果 Hive 已有另一台 Bee，在网页确认替换会停用那台设备。\n'
+		if ! confirm "$(message 'Pair this device again? [y/N]:' '是否重新配对？[y/N]:')" no; then
+			pairing_cancelled
+			return 1
+		fi
+		repair_pairing=1
+	fi
+	while :; do
+		message 'Hive address: ' '请输入 Hive 地址：'
+		if ! IFS= read -r hive; then
+			pairing_cancelled
+			if [ "$repair_pairing" = 0 ]; then service_help; fi
+			return 1
+		fi
+		[ -n "$hive" ] && break
+		message 'Hive address must not be empty.\n' 'Hive 地址不能为空。\n'
+	done
+	if [ "$repair_pairing" = 1 ]; then
+		command -v flock >/dev/null 2>&1 || fail "$(message 'flock was not found on PATH; install util-linux before re-pairing. Configuration was not moved.' 'PATH 中未找到 flock；请安装 util-linux 后重新配对。未移动配置。')"
+		wizard_command 'systemctl stop tokhive-bee' as_root systemctl stop tokhive-bee
+		backup_pairing || exit "$?"
+	fi
+	wizard_command 'bee login' run_bee login --config "$config_path" --hive "$hive"
+}
+
 service_wizard() {
 	read_service_state
 	case "$service_state" in
@@ -244,22 +315,7 @@ service_wizard() {
 			return 0
 		fi
 		step 1 "$(message 'Pair with Hive' '设备配对')"
-		if [ -f "$config_path" ]; then
-			line wait "$(message 'Validating the existing device pairing...' '正在验证已有设备配对…')"
-			wizard_command 'bee login' run_bee login --config "$config_path"
-		else
-			while :; do
-				message 'Hive address: ' '请输入 Hive 地址：'
-				if ! IFS= read -r hive; then
-					line warn "$(message 'Installation kept. Bee was not started by this wizard.' '安装已保留，本次向导尚未启动 Bee。')"
-					service_help
-					return 0
-				fi
-				[ -n "$hive" ] && break
-				message 'Hive address must not be empty.\n' 'Hive 地址不能为空。\n'
-			done
-			wizard_command 'bee login' run_bee login --config "$config_path" --hive "$hive"
-		fi
+		if ! pair_device; then return 0; fi
 		[ -f "$config_path" ] || fail "$(message 'bee login returned success but %s is missing; service was not started' 'bee login 返回成功，但配置 %s 不存在；尚未启动服务' "$config_path")"
 		step 2 "$(message 'Configure supplied accounts' '配置供给账号')"
 		if [ ! -f "$egress_path" ]; then

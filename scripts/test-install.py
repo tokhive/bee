@@ -102,6 +102,16 @@ if args and args[0] == 'show':
 if args and args[0] in ('start', 'restart'):
     (root / 'service-state').write_text(os.environ.get('INSTALL_TEST_STARTED_STATE', 'active'))
 """)
+        if not shutil.which("flock", path="/usr/bin:/bin:/usr/sbin:/sbin"):
+            # macOS lacks the CLI; use the same flock syscall on inherited fd 9.
+            self.executable("flock", """
+import fcntl, sys
+try:
+    fcntl.flock(int(sys.argv[-1]), fcntl.LOCK_EX | fcntl.LOCK_NB)
+except OSError as error:
+    print('flock: ' + str(error), file=sys.stderr)
+    sys.exit(1)
+""")
         self.archive("linux")
 
     def executable(self, name, body):
@@ -125,6 +135,14 @@ elif args and args[0] in ('login', 'setup'):
         print('bee: injected ' + args[0] + ' failure', file=sys.stderr)
         sys.exit(7)
     config = pathlib.Path(args[args.index('--config') + 1])
+    if args[0] == 'login' and os.environ.get('INSTALL_TEST_REVOKED'):
+        if config.exists() and config.read_text() == 'revoked-device-config':
+            print('bound device credential is invalid; silent pairing is not allowed', file=sys.stderr)
+            sys.exit(1)
+        if os.environ.get('INSTALL_TEST_REPAIR_FAIL'):
+            config.write_text('pending-new-pairing')
+            print('bee: injected re-pairing failure', file=sys.stderr)
+            sys.exit(9)
     if args[0] == 'setup':
         print('Supply this account? [Y/n] ', end='', flush=True)
         if sys.stdin.readline().strip().lower() in ('n', 'no'):
@@ -196,7 +214,8 @@ else:
                         break
                     output.extend(chunk)
                     if answer is not None and answer[0].encode() in output[answered_through:]:
-                        os.write(master, answer[1].encode())
+                        response = answer[1]() if callable(answer[1]) else answer[1]
+                        os.write(master, response.encode())
                         answered_through = len(output)
                         answer = next(pending, None)
                 elif process.poll() is not None:
@@ -345,6 +364,162 @@ else:
         self.assertIn('当前 Bee 继续运行', result.stdout)
         self.assertNotIn('[1/3]', result.stdout)
         self.assertNotIn(['systemctl', 'restart', 'tokhive-bee'], self.commands())
+
+    def revoked_configuration(self):
+        self.existing_configuration()
+        config = self.home / '.config/tokhive/bee.json'
+        config.write_text('revoked-device-config')
+        config.chmod(0o600)
+        (config.parent / 'egress.json').write_text('saved-supply-selection')
+        return config
+
+    def repair_answers(self, consent='y\n', hive='https://hive.example.com\n'):
+        return [('Set up and start Bee now?', '\n'),
+                ('Pair this device again?', consent), ('Hive address:', hive)]
+
+    def assert_repair_succeeds(self, lang):
+        config = self.revoked_configuration()
+        answers = self.repair_answers()
+        if lang == 'zh':
+            answers = [('现在配置并启动 Bee？', '\n'), ('是否重新配对？', 'y\n'),
+                       ('请输入 Hive 地址：', 'https://hive.example.com\n')]
+        result = self.run_terminal_install(answers, BEE_LANG=lang, INSTALL_TEST_REVOKED='1')
+        self.assert_success(result)
+        backups = list(config.parent.glob('bee.json.backup.*/bee.json'))
+        self.assertEqual(len(backups), 1, result.stdout)
+        self.assertEqual(backups[0].read_text(), 'revoked-device-config')
+        self.assertEqual(backups[0].stat().st_mode & 0o777, 0o600)
+        self.assertEqual(backups[0].parent.stat().st_mode & 0o777, 0o700)
+        self.assertIn(str(backups[0]), result.stdout)
+        self.assertEqual(config.read_text(), '{}')
+        self.assertEqual((config.parent / 'egress.json').read_text(), 'saved-supply-selection')
+        commands = self.commands()
+        self.assertFalse(any(c[:2] == ['bee', 'setup'] for c in commands))
+        self.assertEqual(len([c for c in commands if c[:2] == ['bee', 'login']]), 2)
+        self.assertLess(commands.index(['systemctl', 'stop', 'tokhive-bee']),
+                        commands.index(['systemctl', 'start', 'tokhive-bee']))
+        for step in ('[1/3]', '[2/3]', '[3/3]'):
+            self.assertIn(step, result.stdout)
+        self.assertIn('Bee 已在后台运行' if lang == 'zh' else 'Bee is running in the background', result.stdout)
+        self.assertIn('bound device credential is invalid', result.stdout)
+
+    def test_revoked_pairing_can_be_recovered_in_english(self):
+        self.assert_repair_succeeds('en')
+
+    def test_revoked_pairing_can_be_recovered_in_chinese(self):
+        self.assert_repair_succeeds('zh')
+
+    def test_repair_decline_default_and_eof_keep_both_configurations(self):
+        config = self.revoked_configuration()
+        for answer in ('n\n', '\n', '\x04'):
+            with self.subTest(answer=answer):
+                self.log.unlink(missing_ok=True)
+                result = self.run_terminal_install(self.repair_answers(answer), INSTALL_TEST_REVOKED='1')
+                self.assert_success(result)
+                self.assertIn('Pair this device again? [y/N]', result.stdout)
+                self.assertEqual(config.read_text(), 'revoked-device-config')
+                self.assertEqual((config.parent / 'egress.json').read_text(), 'saved-supply-selection')
+                self.assertFalse(list(config.parent.glob('bee.json.backup.*')))
+                for operation in ('stop', 'start'):
+                    self.assertNotIn(['systemctl', operation, 'tokhive-bee'], self.commands())
+                self.assertNotIn('Bee is running in the background', result.stdout)
+
+    def test_repair_hive_eof_preserves_old_pairing(self):
+        config = self.revoked_configuration()
+        result = self.run_terminal_install(self.repair_answers(hive='\x04'), INSTALL_TEST_REVOKED='1')
+        self.assert_success(result)
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+        self.assertNotIn(['systemctl', 'stop', 'tokhive-bee'], self.commands())
+
+    def test_repair_keeps_backup_and_pending_pairing_after_login_failure(self):
+        config = self.revoked_configuration()
+        result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1', INSTALL_TEST_REPAIR_FAIL='1')
+        self.assertEqual(result.returncode, 9, result.stdout)
+        self.assertIn('bee: injected re-pairing failure', result.stdout)
+        self.assertEqual(config.read_text(), 'pending-new-pairing')
+        backups = list(config.parent.glob('bee.json.backup.*/bee.json'))
+        self.assertEqual(len(backups), 1)
+        self.assertEqual(backups[0].read_text(), 'revoked-device-config')
+        self.assertNotIn(['systemctl', 'start', 'tokhive-bee'], self.commands())
+
+    def test_repair_stop_failure_keeps_old_configuration(self):
+        config = self.revoked_configuration()
+        result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1', INSTALL_TEST_SYSTEMCTL_FAIL='stop')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('injected stop failure', result.stdout)
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+        self.assertFalse(list(config.parent.glob('bee.json.backup.*')))
+
+    def test_repair_refuses_a_configuration_changed_during_confirmation(self):
+        config = self.revoked_configuration()
+        def change_config():
+            config.write_text('changed-by-another-login')
+            return 'y\n'
+        result = self.run_terminal_install(self.repair_answers(change_config), INSTALL_TEST_REVOKED='1')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('changed since', result.stdout)
+        self.assertEqual(config.read_text(), 'changed-by-another-login')
+        self.assertFalse(list(config.parent.glob('bee.json.backup.*')))
+
+    def test_repair_respects_bees_existing_configuration_lock(self):
+        config = self.revoked_configuration()
+        lock = open(str(config) + '.lock', 'w')
+        self.addCleanup(lock.close)
+        def acquire_lock():
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            return 'y\n'
+        result = self.run_terminal_install(self.repair_answers(acquire_lock), INSTALL_TEST_REVOKED='1')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('configuration lock', result.stdout)
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+        self.assertFalse(list(config.parent.glob('bee.json.backup.*')))
+
+    def test_repair_rejects_linked_lock_without_touching_target(self):
+        config = self.revoked_configuration()
+        target = self.root / 'untouched'
+        target.write_text('do not change')
+        Path(str(config) + '.lock').symlink_to(target)
+        result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('symbolic link', result.stdout)
+        self.assertEqual(target.read_text(), 'do not change')
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+
+    def test_repair_requires_flock_before_stopping_or_moving_configuration(self):
+        config = self.revoked_configuration()
+        (self.bin / 'flock').unlink(missing_ok=True)
+        checksum_tool = 'sha256sum' if shutil.which('sha256sum') else 'shasum'
+        for command in ('awk', 'cat', 'chmod', 'cmp', 'cp', 'cut', 'grep', 'mkdir',
+                        'mktemp', 'mv', 'rm', 'sed', checksum_tool, 'tar', 'test', 'true'):
+            (self.bin / command).symlink_to(shutil.which(command))
+        result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1', PATH=str(self.bin))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('flock was not found', result.stdout)
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+        self.assertNotIn(['systemctl', 'stop', 'tokhive-bee'], self.commands())
+
+    def test_repair_preserves_paths_with_shell_metacharacters(self):
+        special = self.root / "home ' $literal; space"
+        self.home.rename(special)
+        self.home = special
+        self.env['HOME'] = str(special)
+        self.assert_repair_succeeds('en')
+
+    def test_repair_backup_failure_preserves_old_configuration(self):
+        config = self.revoked_configuration()
+        native_mv = shutil.which('mv')
+        self.executable('mv', f"""
+import os, sys
+if sys.argv[1].endswith('/bee.json'):
+    print('mv: injected backup failure', file=sys.stderr)
+    sys.exit(8)
+os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
+""")
+        result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1')
+        self.assertEqual(result.returncode, 8, result.stdout)
+        self.assertIn('mv: injected backup failure', result.stdout)
+        self.assertEqual(config.read_text(), 'revoked-device-config')
+        self.assertNotIn(['systemctl', 'start', 'tokhive-bee'], self.commands())
 
     def test_existing_identity_is_validated_without_reselecting_accounts(self):
         self.existing_configuration()

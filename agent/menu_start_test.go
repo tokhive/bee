@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tokhive/bee/beewire"
 )
@@ -114,5 +115,23 @@ func TestMenuGuidedSetupCannotRedirectSupplyFile(t *testing.T) {
 	}
 	if err := m.guidedStart(); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
+	}
+}
+
+func TestMenuGuidedBackgroundOnMacOSOffersForeground(t *testing.T) {
+	t.Setenv("CODEX_HOME", codexHome(t, time.Now().Add(time.Hour)))
+	m, out := pairedMenu(t, "1\n")
+	m.setup = menuSetupOptions{platform: "openai", all: true}
+	if err := m.configureAccountsWithNext(false); err != nil {
+		t.Fatal(err)
+	}
+	m.service = &managedService{platform: "darwin"}
+	m.in.Reset(strings.NewReader("2\n"))
+	out.Reset()
+	if err := m.guidedStart(); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out.String(), "macOS 暂不支持") || !strings.Contains(out.String(), "按现有配置前台运行") {
+		t.Fatal(out.String())
 	}
 }

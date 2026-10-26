@@ -12,15 +12,17 @@ func (m *managementMenu) starts() error {
 	return m.loop(m.text("Start Bee", "启动 Bee"), []menuAction{
 		{"Guided setup and start", "引导配置并启动", m.guidedStart},
 		{"Run existing configuration in foreground", "按现有配置前台运行", m.foreground},
-		{"Start background service", "启动后台服务", func() error {
-			if _, err := m.serviceState(); err != nil {
-				m.serviceNotice(err)
-				m.next(m.text("Choose Start Bee → Run existing configuration in foreground.", "选择「启动 Bee → 按现有配置前台运行」。"))
-				return nil
-			}
-			return m.serviceAction("start")
-		}},
+		{"Start background service", "启动后台服务", m.backgroundStart},
 	})
+}
+
+func (m *managementMenu) backgroundStart() error {
+	if _, err := m.serviceState(); err != nil {
+		m.serviceNotice(err)
+		m.next(m.text("Choose Start Bee → Run existing configuration in foreground.", "选择「启动 Bee → 按现有配置前台运行」。"))
+		return nil
+	}
+	return m.serviceAction("start")
 }
 
 func (m *managementMenu) guidedStart() error {
@@ -90,7 +92,7 @@ func (m *managementMenu) guidedStart() error {
 	case 1:
 		return m.foreground()
 	case 2:
-		return m.serviceAction("start")
+		return m.backgroundStart()
 	default:
 		return m.back()
 	}

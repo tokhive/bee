@@ -61,4 +61,4 @@
 - [x] 运行 `make test`、`shellcheck install.sh`、`git diff --check`、`make build` 和 doc-site `npm run build`；修复真实失败。
 - [x] 按 spec 命令/参数覆盖表逐项核验实现，更新 README、配套文档和完成报告。
 - [x] 使用 verification-before-completion 和 consistency-check 核对结果，勾选全部已完成步骤；不调用子代理审查。
-- [ ] 提交并推送现有分支，更新 PR #22 英文说明及文档 PR；检查 Linux CI 通过，重建本地二进制，提供手动测试入口。
+- [x] 提交并推送现有分支，更新 PR #22 英文说明及文档 PR；检查 Linux CI 通过，重建本地二进制，提供手动测试入口。

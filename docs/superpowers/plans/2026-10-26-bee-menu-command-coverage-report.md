@@ -51,7 +51,7 @@
 - 合成 Codex/Claude 本地检查、身份验证、模型额度查询、未知状态原始原因；保留既有授权复读及 CLI JSON 测试。
 - 无配对帮助/版本、全部子命令参数帮助、诊断 JSON、中英文切换、NO_COLOR、TERM=dumb、EOF。
 
-完整安装器测试已执行 64 项，macOS 通过 62 项，2 项原生 systemd 测试交由 Linux CI。最终目录原文修复后重新执行 Go vet/race 与 PTY，全部通过（13 项 PTY）；ShellCheck、make build、两仓库 git diff --check 及文档站 npm run build 通过。Linux CI 在推送后核验。
+完整安装器测试已执行 64 项，macOS 通过 62 项，2 项原生 systemd 测试交由 Linux CI。最终目录原文修复后重新执行 Go vet/race 与 PTY，全部通过（13 项 PTY）；ShellCheck、make build、两仓库 git diff --check 及文档站 npm run build 通过。Linux CI 已在 74ab6a6 上通过（run 40308322705），包含全部 64 项安装器测试、13 项 PTY 和 Go vet/race；文档 CI run 40308328440 通过。收尾补充了 macOS 引导后台启动的能力提示，全部菜单 race 回归、go vet 和构建再次通过；PR checks 提供后续提交的完整 CI 结果。
 
 本次增量不修改 Makefile 或 CI workflow；现有 make test 已包含安装器、PTY、Go vet/race，Linux CI 调用同一目标并运行 ShellCheck。
 
@@ -70,3 +70,5 @@ Linux 后台功能只控制用户、可执行文件和配置都匹配的安装�
 - ✅ 实现与计划：全部实现任务有对应代码和测试；CLI 检查函数的调用方同步更新；PR 描述按最终范围更新。
 - ✅ 配置：不新增环境变量、持久化偏好或依赖；平台限制和现有配置默认值一致；服务匹配检查未放宽。
 - ✅ 文档与代码：README、配套安装页和菜单实际入口一致，明确未发布 release 和 macOS 服务限制。
+
+计划复核：21 项步骤均已完成。保留工作树用于手动测试和 PR 后续修改；没有合并或发布 release。

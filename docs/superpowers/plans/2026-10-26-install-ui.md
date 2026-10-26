@@ -42,8 +42,8 @@
 **文件：** `doc-site/docs/provider/install.mdx`，本 spec/plan/trace。
 
 - [x] 同步安装指南；运行 `npm run build`、`make test`、ShellCheck、差异检查；检查实际伪终端输出及 Go 配对/账号输出衔接。
-- [ ] 针对本次双语安装交互做审查，修复有效问题，完成一致性和计划复核。
-- [ ] 提交并推送已有 fork 分支，更新 Bee #20 和文档 #1 的标题/说明，检查最新 Linux CI；记录旧 release 不能提供完整新文案的边界。
+- [x] 针对本次双语安装交互做审查，修复有效问题，完成一致性和计划复核。
+- [x] 提交并推送已有 fork 分支，更新 Bee #20 和文档 #1 的标题/说明，检查最新 Linux CI；记录旧 release 不能提供完整新文案的边界。
 
 ## 本地验证记录
 
@@ -52,3 +52,15 @@
 - 真实伪终端转录已核对英文首次配置、中文已有配置、拒绝重启、启动失败；菜单、三步顺序、最终结果、NO_COLOR/纯文本降级有回归覆盖。Go 使用本地测试服务和合成凭证验证双语配对及逐账号选择；安装器断言给 login/setup 传递所选语言。
 - Task 1 和 Task 2 的规格/质量审查通过。审查发现的旧测试英文断言受环境语言影响已修复，`BEE_LANG=zh go test ./agent -run '^TestSetupWritesWhatBeeRunAccepts$' -count=1` 通过。
 - 尚未进行真实云服务器重启实测。旧 release 能运行但不具备新的 Go 文案；完整双语需要包含本次修改的新二进制，未发布 release。
+
+## 远程验证与一致性复核
+
+- Bee 实现提交 `0e11383` 的 [Linux CI](https://github.com/tokhive/bee/actions/runs/40264897322) 通过：52 项安装测试全部通过，包含 systemd unit 校验和开机目标链接检查；ShellCheck、Go vet、race 测试通过。
+- 文档提交 `f42fbd1` 的 [构建 CI](https://github.com/tokhive/doc-site/actions/runs/40264900175) 通过。
+- 已推送 fork 分支，并更新 [Bee #20](https://github.com/tokhive/bee/pull/20) 与 [文档 #1](https://github.com/tokhive/doc-site/pull/1) 的标题及说明。
+- 会话一致性：沿用已确认的双语、三步、默认确认和服务语义，没有恢复被否决方案。
+- 文档内部一致性：spec/plan 的步骤、语言和发布边界一致；中英文等义文案与实际输出相符。
+- 跨产物一致性：代码、调用方、README、指南、PR 描述与计划一致；语言环境只传给 login/setup。
+- 配置一致性：没有新增持久配置；BEE_LANG、NO_COLOR 的用法和默认值已记录，内部 BEE_INSTALL_UI 不写入 unit。
+- 文档与行为一致性：服务 active 与 Hive/账号状态分别检查，旧 release 不能提供新 Go 文案的限制已明确。
+- 计划复核：共 9 项，复核前已勾选 7 项，本次确认并勾选 2 项，未完成 0 项。

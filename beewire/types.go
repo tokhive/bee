@@ -116,7 +116,10 @@ type CredentialRegistration struct {
 	Envelope tee.Envelope   `json:"envelope"`
 	Codex    *Authorization `json:"codex,omitempty"`
 	Claude   *Authorization `json:"claude,omitempty"`
-	TaskID   string         `json:"task_id,omitempty"`
+	// Reseller registers an API reseller key instead of a subscription
+	// account; it carries no authorization and no maintenance task.
+	Reseller *ResellerKey `json:"reseller,omitempty"`
+	TaskID   string       `json:"task_id,omitempty"`
 }
 
 type MaintenanceResponse struct {

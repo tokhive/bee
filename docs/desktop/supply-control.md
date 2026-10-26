@@ -42,8 +42,8 @@ npx playwright test navigation.spec.ts onboarding-overview.spec.ts settings-diag
 - `codesign --verify --deep --strict` 通过；2 项签名包专项通过，涵盖包内 Bee 握手/ping/回收与篡改拒绝。仅 ad-hoc 开发签名，未公证或生产发布。
 - 最终包内 Bee 真实执行 hello → OpenAI GET → Claude GET → ping → shutdown，两个平台均通过严格校验，exit0、stderr0、设备配置字节未改。OpenAI 未就绪原因是 offline、codex_source_unavailable、authorization_unavailable；Claude 是 offline、authorization_unavailable。没有发送 PUT，也未启动贡献。
 - 自动测试：Go 全量7包及 vet；设备/供给 race；最终供给定向回归；Rust普通51项和上述签名包2项；工具37项；前端初次设备/供给单元8项（后续供给单测8项）、页面17项、桥10项及相关旧页面89项；typecheck、普通/demo build 通过。各轮源码和后续窄修覆盖见[验收记录](evidence/2026-10-24-supply-control/README.md)，不把旧轮结果冒充最终源码全量重跑。
-- **新版 Mac 原生图形尚未通过。** CUA 已启动精确路径新包，父进程62426/owned Bee62470存在，但读取 Bee 和 Finder 都报 `cgWindowNotFound`，没有新版窗口 AX/截图。原因未确定，不能认定为沙箱限制或产品窗口故障。已请用户解锁屏幕、从 Dock 显示 Bee 主窗口后继续只读图形检查；不需重新配对或操作暂停/恢复。此前曾读到旧包的真实绑定状态，不替代新版平台卡验收。
+- **2026-10-26 已补验新版 Mac 界面。** 用户显示窗口后，核对了已绑定设备、两张真实平台卡、手动刷新时的核对中/禁用状态、成功时间更新、失败时隐藏旧成功与禁写、诊断版本、导航及中英切换。语言已恢复为原来的“跟随系统”，界面已交还用户正常使用。完整证据见[原生补验记录](evidence/2026-10-26-supply-native/README.md)。连续联网稳定性未通过：成功查询后出现HTTP409，再有EOF；独立Go只读诊断也报TLS握手失败，具体根因尚未确定，不能据此断言是Hive或客户端故障。
 
-现在查看只需：解锁 Mac → 从 Dock 点开 Bee Dev → 进入“概览”，向下滚动查看 OpenAI/Claude 卡片。设备已绑定，不需再配对。图形自动验收仅点“重新核对平台”和切换导航/语言；真实暂停/恢复仍留给用户主动操作。
+现在可以正常操作电脑和 Bee，不需保持窗口或等待测试。查看状态时进入“概览”向下滚动到平台卡；如果显示未确认，可点“重新核对平台”只读查询，不需重新配对。真实暂停/恢复未在本轮点击。以后只有明确收到“请暂停操作”的通知才需停手，测试结束会明确交还。
 
 Windows/Linux 本增量原生界面、已有 P0/P1 环境矩阵和其它缺口继续保留。来源、签名、只读证据及未验收项见[交付清单](evidence/2026-10-24-supply-control/manifest.json)。

@@ -53,6 +53,10 @@ func setup(ctx context.Context, args []string, out io.Writer) error {
 // setupWith is bee setup; standalone says whether to tell the provider what
 // to run next, which bee start does itself.
 func setupWith(ctx context.Context, args []string, out io.Writer, standalone bool) error {
+	ui, err := newInstallUI(out)
+	if err != nil {
+		return err
+	}
 	flags := flag.NewFlagSet("bee setup", flag.ContinueOnError)
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file")
@@ -111,7 +115,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 		}
 	}
 
-	fmt.Fprintln(out, "Looking for official sign-ins on this machine:")
+	fmt.Fprintln(out, ui.text("Looking for official sign-ins on this machine:", "正在查找本机的官方登录账号："))
 	var detected []detectedAccount
 	for _, platform := range []string{"openai", "claude"} {
 		if wanted != nil && !slices.Contains(wanted, platform) {
@@ -126,7 +130,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 		detected = append(detected, found)
 		if found.problem != nil {
 			_, summary, fix, _ := Coded(found.problem)
-			fmt.Fprintf(out, "  %-7s not found: %s\n          fix: %s\n", platform, summary, fix)
+			fmt.Fprintf(out, ui.text("  %-7s not found: %s\n          fix: %s\n", "  %-7s 未找到：%s\n          修复建议：%s\n"), platform, summary, fix)
 		} else {
 			fmt.Fprintf(out, "  %-7s %s\n", platform, found.summary)
 		}
@@ -134,6 +138,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 
 	reader := bufio.NewReader(setupInput)
 	var chosen []detectedAccount
+	var skipped []string
 	for _, found := range detected {
 		if found.problem != nil {
 			if wanted != nil {
@@ -144,12 +149,25 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 			continue
 		}
 		if !*yes {
-			fmt.Fprintf(out, "Supply this %s account to the market? [Y/n] ", found.platform)
-			answer, err := reader.ReadString('\n')
-			if err != nil && answer == "" {
-				return fail("BEE-SETUP-NO-ANSWER", "")
+			consent := false
+			for {
+				fmt.Fprintf(out, ui.text("Supply this %s account to the market? [Y/n] ", "允许 Bee 使用此 %s 账号接单？[Y/n]: "), found.platform)
+				answer, err := reader.ReadString('\n')
+				if err != nil {
+					return fail("BEE-SETUP-NO-ANSWER", err.Error())
+				}
+				switch strings.ToLower(strings.TrimSpace(answer)) {
+				case "", "y", "yes":
+					consent = true
+				case "n", "no":
+				default:
+					fmt.Fprintln(out, ui.text("Please answer yes or no [Y/n].", "请输入 yes 或 no [Y/n]。"))
+					continue
+				}
+				break
 			}
-			if answer = strings.ToLower(strings.TrimSpace(answer)); answer == "n" || answer == "no" {
+			if !consent {
+				skipped = append(skipped, found.platform)
 				continue
 			}
 		}
@@ -178,8 +196,11 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 	for _, found := range chosen {
 		names = append(names, found.platform)
 	}
-	fmt.Fprintf(out, "Wrote %s supplying %s.\n", *egressPath, strings.Join(names, " and "))
-	if !standalone {
+	ui.status(out, "✅", "32", fmt.Sprintf("Wrote %s supplying %s.", *egressPath, strings.Join(names, " and ")), fmt.Sprintf("供给配置已保存：%s\n  供给：%s", *egressPath, strings.Join(names, "、")))
+	if len(skipped) > 0 {
+		fmt.Fprintf(out, ui.text("  Skipped: %s\n", "  跳过：%s\n"), strings.Join(skipped, ", "))
+	}
+	if !standalone || ui.installer {
 		return nil
 	}
 	run := "bee run"
@@ -189,7 +210,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 	if *egressPath != defaultEgressPath(*configPath) {
 		run += " --egress-config " + *egressPath
 	}
-	fmt.Fprintf(out, "Next: start %q; it reports whether each platform takes work. bee doctor checks the whole setup.\n", run)
+	fmt.Fprintf(out, ui.text("Next: start %q; it reports whether each platform takes work. bee doctor checks the whole setup.\n", "接下来运行 %q，查看各平台是否开始接单。使用 bee doctor 检查完整配置。\n"), run)
 	return nil
 }
 
@@ -256,11 +277,12 @@ func detectCodex(ctx context.Context, home string) detectedAccount {
 		}
 		found.codex = source
 		hash := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
-		state := "expires " + credential.ExpiresAt.Local().Format(time.RFC3339)
+		ui, _ := newInstallUI(io.Discard)
+		state := ui.text("expires ", "有效期至 ") + credential.ExpiresAt.Local().Format(time.RFC3339)
 		if !time.Now().Add(30 * time.Second).Before(credential.ExpiresAt) {
-			state = "access token expired; Hive refreshes it once bee run is connected"
+			state = ui.text("access token expired; Hive refreshes it once bee run is connected", "访问令牌已过期；bee run 连接后由 Hive 刷新")
 		}
-		found.summary = fmt.Sprintf("Codex sign-in in %s (%s), account %s, plan %s, %s", home, store, hex.EncodeToString(hash[:6]), credential.Plan, state)
+		found.summary = fmt.Sprintf(ui.text("Codex sign-in in %s (%s), account %s, plan %s, %s", "Codex 登录位置 %s（%s），账号 %s，方案 %s，%s"), home, store, hex.EncodeToString(hash[:6]), credential.Plan, state)
 		return found
 	}
 	found.problem = fail("BEE-CODEX-SOURCE", first.Error())
@@ -280,7 +302,8 @@ func detectClaude(ctx context.Context, directory *string, existing *egressConfig
 			source.ConfigDir = existing.Claude.ConfigDir
 		}
 	}
-	where := "the macOS Keychain"
+	ui, _ := newInstallUI(io.Discard)
+	where := ui.text("the macOS Keychain", "macOS 钥匙串")
 	if source.Store == claudeStoreFile {
 		where = filepath.Join(resolveClaudeKeychain(source.ConfigDir).directory, ".credentials.json")
 	}
@@ -296,11 +319,11 @@ func detectClaude(ctx context.Context, directory *string, existing *egressConfig
 		found.problem = fail("BEE-CLAUDE-SCOPE", "")
 	default:
 		found.claude = source
-		state := "expires " + credential.expiresAt.Local().Format(time.RFC3339)
+		state := ui.text("expires ", "有效期至 ") + credential.expiresAt.Local().Format(time.RFC3339)
 		if !credential.available(time.Now()) {
-			state = "access token expired; open Claude Code to renew it"
+			state = ui.text("access token expired; open Claude Code to renew it", "访问令牌已过期；请打开 Claude Code 续期")
 		}
-		found.summary = fmt.Sprintf("Claude Code sign-in in %s, plan %s, %s", where, credential.plan, state)
+		found.summary = fmt.Sprintf(ui.text("Claude Code sign-in in %s, plan %s, %s", "Claude Code 登录位置 %s，方案 %s，%s"), where, credential.plan, state)
 	}
 	return found
 }

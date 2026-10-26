@@ -45,6 +45,11 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 
 func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
+	if command == "login" {
+		if _, err := newInstallUI(out); err != nil {
+			return err
+		}
+	}
 	if command == "start" {
 		return start(ctx, args[1:], out)
 	}
@@ -199,8 +204,12 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 }
 
 func login(ctx context.Context, client *http.Client, path string, state localState, out io.Writer) error {
+	ui, err := newInstallUI(out)
+	if err != nil {
+		return err
+	}
 	var identity beewire.Identity
-	err := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err = call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
 	if err == nil {
 		return finishLogin(path, state, identity, out)
 	}
@@ -222,10 +231,13 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 		if err = saveState(path, state); err != nil {
 			return err
 		}
-		slog.Info("pairing started", "module", "identity", "hive", state.Hive)
+		if !ui.installer {
+			slog.Info("pairing started", "module", "identity", "hive", state.Hive)
+		}
 	}
 	link := state.Pairing.VerificationURI + "?code=" + url.QueryEscape(state.Pairing.UserCode)
-	fmt.Fprintf(out, "Open this link in a browser where you are signed in to Hive, check the device name and confirm:\n\n  %s\n\nPairing code: %s (expires %s)\nWaiting for confirmation...\n", link, state.Pairing.UserCode, state.Pairing.ExpiresAt.Local().Format("15:04"))
+	fmt.Fprintf(out, ui.text("Open this link in a browser where you are signed in to Hive, check the device name and confirm:\n\n  %s\n\nPairing code: %s (expires %s)\n", "请在浏览器中打开以下链接，登录 Hive，核对设备名称并确认绑定：\n\n  %s\n\n配对码：%s（有效期至 %s）\n"), link, state.Pairing.UserCode, state.Pairing.ExpiresAt.Local().Format("15:04"))
+	ui.status(out, "⏳", "33", "Waiting for confirmation...", "等待你在网页确认…")
 	waitingReported := false
 	for {
 		if err = pause(ctx, 2*time.Second); err != nil {
@@ -241,7 +253,7 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 		}
 		if pair.Status == "draining" {
 			if !waitingReported {
-				fmt.Fprintln(out, "waiting for the old Bee to finish execution and settlement")
+				fmt.Fprintln(out, ui.text("waiting for the old Bee to finish execution and settlement", "等待旧 Bee 完成执行与结算"))
 				waitingReported = true
 			}
 			continue
@@ -268,12 +280,18 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 }
 
 func finishLogin(path string, state localState, identity beewire.Identity, out io.Writer) error {
+	ui, err := newInstallUI(out)
+	if err != nil {
+		return err
+	}
 	state.Identity = &identity
 	state.Pairing = nil
 	if err := saveState(path, state); err != nil {
 		return err
 	}
-	slog.Info("device paired", "module", "identity", "device", identity.ID, "owner", identity.OwnerEmail)
-	fmt.Fprintf(out, "Pairing complete: %s\nDevice: %s\n", identity.OwnerEmail, identity.ID)
+	if !ui.installer {
+		slog.Info("device paired", "module", "identity", "device", identity.ID, "owner", identity.OwnerEmail)
+	}
+	ui.status(out, "✅", "32", fmt.Sprintf("Pairing complete: %s\nDevice: %s", identity.OwnerEmail, identity.ID), fmt.Sprintf("设备配对完成：%s\n设备：%s", identity.OwnerEmail, identity.ID))
 	return nil
 }

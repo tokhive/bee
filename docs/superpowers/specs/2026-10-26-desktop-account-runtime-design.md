@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行
 
-日期：2026-10-26。状态：**整体送审稿，尚未批准本 spec 或实施 plan**。本文为三份后续 spec 的第一份，代号 S1；[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)、[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)随本文整体审阅。本轮仅设计。
+日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 待审阅和选择执行模式**。本文为三份后续 spec 的第一份，代号 S1；[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)、[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)已随本文整体获批。[对应实施计划](../plans/2026-10-26-desktop-account-runtime.md)已写成，待整体审阅。
 
 ## 1. 用户最终得到什么
 
@@ -36,7 +36,7 @@ Hive 用户登录、资金和独立市场列表不进入 Bee；完整移除已�
 | 官方授权 | 已安装官方 Codex／Claude 客户端，固定登录动作 | 方式 A 已确认；实现时记录实际支持版本与平台，不引入 Bee OAuth 库 |
 | 验证 | Go／Rust 测试、Node 24、Playwright 1.63.0、原生实测 | 沿用；平台发布证明由 S3 汇总 |
 
-运行集成比较：推荐在现有 `bee desktop` 子进程内托管现有 Go 运行循环；完整覆盖运行与状态，进程和配置归属集中。另起 `bee run` 子进程同样能贡献，但增加二次进程监督、配置交接和机器状态通道。推荐前者，作为本稿待审实现选择；不会把独立 Go Bee 合并进 Rust 壳。
+运行集成比较：推荐在现有 `bee desktop` 子进程内托管现有 Go 运行循环；完整覆盖运行与状态，进程和配置归属集中。另起 `bee run` 子进程同样能贡献，但增加二次进程监督、配置交接和机器状态通道。推荐前者，已随本稿获批的实现选择；不会把独立 Go Bee 合并进 Rust 壳。
 
 ## 4. 运行归属、配置与状态
 

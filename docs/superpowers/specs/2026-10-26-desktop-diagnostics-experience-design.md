@@ -1,6 +1,6 @@
 # Bee 桌面：诊断、网络与日常桌面体验
 
-日期：2026-10-26。状态：**整体送审稿，尚未批准本 spec 或实施 plan**。本文为 S2，依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)的真实状态和运行控制；[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)验证原生平台行为。本轮仅设计。
+日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 待审阅和选择执行模式**。本文为 S2，依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)的真实状态和运行控制；[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)验证原生平台行为。[对应实施计划](../plans/2026-10-26-desktop-diagnostics-experience.md)已写成，待整体审阅。
 
 ## 1. 用户最终得到什么
 
@@ -24,8 +24,8 @@
 | 用途 | 技术与版本 | 状态及理由 |
 | --- | --- | --- |
 | 核心、桥、页面与测试 | 沿用 S1 的 Go 1.27.3、Tauri 2.12.5、Rust 1.94、React 19.2.8、TS 7.0.2、Vite 8.2.4、Node 24、Playwright 1.63.0 | 已确认技术栈；普通偏好复用受保护文件和原子写入 |
-| 系统通知 | Tauri 官方 notification 插件 2 稳定线 | 新依赖，随本 spec 审阅；复用三端系统适配，避免自建三套通知实现 |
-| 登录电脑后启动 | Tauri 官方 autostart 插件 2 稳定线 | 新依赖，随本 spec 审阅；仅当前系统用户、默认关闭，不安装系统服务 |
+| 系统通知 | Tauri 官方 notification 插件 2 稳定线 | 新增依赖，已随本 spec 获批；复用三端系统适配，避免自建三套通知实现 |
+| 登录电脑后启动 | Tauri 官方 autostart 插件 2 稳定线 | 新增依赖，已随本 spec 获批；仅当前系统用户、默认关闭，不安装系统服务 |
 | 导出 | 现有下载及真实完成／失败回执 | 沿用；不为报告授予前端任意文件系统或 Shell 权限 |
 | 代理 | 现有本机 HTTP CONNECT 与官方 transport | 用户已选择 A，不新增 SOCKS5 或认证代理 |
 

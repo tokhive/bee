@@ -47,3 +47,18 @@ for(const [value,actualType] of [[undefined,'undefined'],[null,'null'],['false',
   assert.equal(calls,0);
  });
 }
+
+test('shared supply model preserves per-platform failures and never repeats an uncertain write',async()=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ const writes:string[]=[];let failRead=false;
+ const model=createSupplyModel({status:async platform=>{if(failRead&&platform==='openai')throw new Error('GET HTTP 503');return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async(platform,paused)=>{writes.push(platform);if(platform==='openai')throw new Error('PUT HTTP 503 uncertain');return {...good,platform,paused,reasons:paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()};}});
+ model.start();await model.read();assert.equal(model.getSnapshot().views.claude?.platform,'claude');
+ await model.writeAll(true);assert.deepEqual(writes,['openai','claude']);assert.match(model.getSnapshot().errors.openai??'',/PUT HTTP 503/);assert.equal(model.getSnapshot().views.claude?.paused,true);
+ await model.write('openai',true);assert.deepEqual(writes,['openai','claude']);
+ failRead=true;await model.read();assert.match(model.getSnapshot().errors.openai??'',/GET HTTP 503/);assert.equal(model.getSnapshot().views.claude?.platform,'claude');model.stop();
+});
+test('pending account confirmation blocks writes in the shared supply model',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0;
+ const model=createSupplyModel({status:async platform=>({...good,platform,reasons:['codex_confirmation_required'],checked_at:new Date().toISOString()}),setPaused:async()=>{writes++;return good as any;}});
+ t.after(()=>model.stop());model.start();await model.read();await model.write('openai',false);assert.equal(writes,0);await model.write('openai',true);assert.equal(writes,1);model.stop();
+});

@@ -217,3 +217,7 @@ dd { margin: 7px 0 0; overflow-wrap: anywhere; }
 .supply-state { font-weight: 600; }
 .supply-reasons { padding-left: 18px; font-size: 13px; line-height: 1.6; }
 .supply-time { font-size: 12px; overflow-wrap: anywhere; }
+
+.native-account{min-width:0}.native-account details{border-top:1px solid var(--line);padding:12px 0}.native-account details label{display:flex;flex-direction:column;gap:6px;margin:8px 0}.native-account input,.native-account select{width:100%;min-width:0}.native-account .device-error,.native-account .account-identifier,.detail-sheet dd{overflow-wrap:anywhere}.native-quota{margin:14px 0}.native-quota progress{width:100%;accent-color:var(--accent)}.account-observation{border-top:1px solid var(--line);margin-top:20px;padding-top:12px}
+
+.native-account input{border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--paper);color:var(--ink);font:inherit}.native-account-dependencies{margin:16px 0;max-width:75ch}.native-account-dependencies p{margin:5px 0}

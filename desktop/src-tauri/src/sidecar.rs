@@ -68,6 +68,7 @@ struct Request {
     method: &'static str,
     params: Value,
     deadline: Instant,
+    // 0=queued, 1=sent/being sent, 2=canceled before sending. CAS owns the boundary.
     phase: Arc<AtomicU8>,
     reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
 }
@@ -482,6 +483,9 @@ async fn session(
     ));
     let mut counter = 1u64;
     loop {
+        if let Some(cause) = statuses.borrow().error.clone() {
+            return Err(cause);
+        }
         tokio::select! {
             biased;
             _ = stopped(stop) => return Ok(()),
@@ -507,6 +511,9 @@ async fn session(
                         if request.method == "ping" && result != serde_json::json!({"alive":true}) { return Err(error("INVALID_PING", "ping result differs from required alive=true object")); }
                         Ok(BridgeReply { protocol: 1, id, instance: instance.clone(), result })
                     });
+                // A caller deadline can revoke the session before exchange gets polled
+                // again. Never accept its late success or send another queued write.
+                let response=if let Some(cause)=statuses.borrow().error.clone() { Err(cause) } else { response };
                 let failure = response.as_ref().err().cloned();
                 if let Some(cause) = &failure {
                     statuses.send_replace(status(BridgePhase::Failed, None, Some(cause.clone())));

@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2 已验证，当前执行 S1-T3。
+> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证，当前执行 S1-T4。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -85,15 +85,17 @@ T2 验证：Go 账号/桥相关 race 与 vet、13 项 Rust 协议测试、19 项
 
 **输入／输出：** 实现公共 Runtime 接口，复用 `connect`、`buildEgress`、实际 relay 和每平台维护循环。从真实连接／同步分支产生结构化状态；CLI 保持原日志和重连行为，桌面首次 409 单独阻断。管理 ready 不代表 runtime running。
 
-- [ ] 建本地 HTTP/WS Hive 与上游替身：开始前零注册；明确开始后实际握手、同步、转发受控请求；只有身份/代次/credential revision/run_id 匹配才能按 resume_platforms 恢复；一个平台失败另一个可运行；停止等待 worker 结束；首次409不抢占，已有会话短断网退避重连、持续冲突转需处理。
-- [ ] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopRuntime' -count=1`，确认真实请求账本及生命周期断言失败。
-- [ ] 将已有循环提取为可观测受控入口，不嵌套调用 CLI setup/run；构造仅包含已选择来源的 egress；实现每平台 worker 取消/等待/修订屏障，接通 T2 的追加和来源切换。开始前持久写 active 标记；Stop 即使意图写失败也取消 worker；父管道断开同样回收。
-- [ ] 三语言接线和 fixture 校验后运行上述测试、`go test -race ./agent ./desktopbridge`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml runtime`、`node --test desktop/tests/runtime.test.ts`；CLI 回归不得改变。握手能力只在真实服务实现后公布。
-- [ ] 提交本任务路径：`feat(desktop): run owned contribution loop with structured state`。
+- [x] 建本地 HTTP/WS Hive 与上游替身：开始前零注册；明确开始后实际握手、同步、转发受控请求；只有身份/代次/credential revision/run_id 匹配才能按 resume_platforms 恢复；一个平台失败另一个可运行；停止等待 worker 结束；首次409不抢占，已有会话短断网退避重连、持续冲突转需处理。
+- [x] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopRuntime' -count=1`，确认真实请求账本及生命周期断言失败。
+- [x] 将已有循环提取为可观测受控入口，不嵌套调用 CLI setup/run；构造仅包含已选择来源的 egress；实现每平台 worker 取消/等待/修订屏障，接通 T2 的追加和来源切换。开始前持久写 active 标记；Stop 即使意图写失败也取消 worker；父管道断开同样回收。
+- [x] 三语言接线和 fixture 校验后运行上述测试、`go test -race ./agent ./desktopbridge`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml runtime`、`node --test desktop/tests/runtime.test.ts`；CLI 回归不得改变。握手能力只在真实服务实现后公布。
+- [x] 提交本任务路径：`feat(desktop): run owned contribution loop with structured state`。
+
+T3 验证：真实本机 HTTP／WS／TEE／CONNECT 替身覆盖同步、加密上传、转发、慢暂停重连、持续409、来源切换、平台部分失败及停止。完整 `go test -race ./agent ./desktopbridge ./relay`、Go vet、Node 24.22.1 下 TS 测试及 typecheck 通过。Rust 全量61项通过、2项签名包专用项按原约定另验；唯一沙箱套接字失败获准在沙箱外重跑后通过，新增运行协议/原生命令5项通过。两轮运行时审阅及协议审阅的缺陷均有失败回归和修复复核。此阶段不声称完成真实官方账号登录或真实流量验收。
 
 ## Task 4（S1-T4）：两平台官方登录入口
 
-**依赖：** T1；专用适配器可与 T2/T3 并行，注册共享文件由集成负责人处理。**文件：** 新建文件职责表列出的三份 `desktop_authorize` Go文件、`agent/desktop_authorize_test.go`、`desktopbridge/authorize.go`、`authorize_test.go`、`desktop/src/system/authorize.ts`、`desktop/tests/authorize.test.ts`；修改 `agent/desktop_account_sources.go` 与共享命令注册点。
+**依赖：** T1；按用户已确认的顺序在 T3 后实施，注册共享文件由当前执行者统一处理。**文件：** 新建文件职责表列出的三份 `desktop_authorize` Go文件、`agent/desktop_authorize_test.go`、`desktopbridge/authorize.go`、`authorize_test.go`、`desktop/src/system/authorize.ts`、`desktop/tests/authorize.test.ts`；修改 `agent/desktop_account_sources.go` 与共享命令注册点。
 
 **输入／输出：** 实现上述 authorize 三动作；固定 `codex login`、`claude auth login --claudeai`，支持的安装路径、客户端版本和官方命名空间记录到 `docs/desktop/ai-accounts.md`。需要官方交互界面的版本由适配器打开可操作界面；不让用户自行输入命令来冒充完成。
 

@@ -65,6 +65,15 @@ func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform st
 	if clearSelection && p.selected != nil {
 		expectedSelectionRevision = p.selected.Revision
 	}
+	if a.runtime != nil {
+		a.runtime.mu.Lock()
+		busy := a.runtime.snapshot.Local == "starting" || a.runtime.snapshot.Local == "stopping"
+		a.runtime.mu.Unlock()
+		if busy {
+			return false
+		}
+	}
+	a.activeActions[platform] = true
 	p.working = true
 	kind := "select"
 	if clearSelection {
@@ -75,6 +84,7 @@ func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform st
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
+		defer func() { a.lifecycleMu.Lock(); delete(a.activeActions, platform); a.lifecycleMu.Unlock() }()
 		ctx, cancel := context.WithTimeout(a.ctx, 12*time.Second)
 		defer cancel()
 		selection, pending, err := a.performSelection(ctx, platform, op, reconcile, clearSelection, expectedSelectionRevision)
@@ -226,6 +236,20 @@ func selectionHiveAccount(ctx context.Context, state localState, platform string
 }
 
 func (a *DesktopAccounts) performSelection(ctx context.Context, platform string, op desktopPendingOperation, reconcile, clearSelection bool, expectedSelectionRevision int64) (*desktopAccountSelection, *desktopPendingOperation, error) {
+	owned := false
+	finish := func(*desktopAccountSelection, bool) {}
+	if a.runtime != nil {
+		var err error
+		owned, finish, err = a.runtime.selectionBarrier(ctx, platform)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+	selection, pending, err := a.performSelectionOwned(ctx, platform, op, reconcile, clearSelection, expectedSelectionRevision, owned)
+	finish(selection, err == nil)
+	return selection, pending, err
+}
+func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform string, op desktopPendingOperation, reconcile, clearSelection bool, expectedSelectionRevision int64, ownedBarrier bool) (*desktopAccountSelection, *desktopPendingOperation, error) {
 	var pending *desktopPendingOperation
 	if reconcile {
 		pending = &op
@@ -250,7 +274,7 @@ func (a *DesktopAccounts) performSelection(ctx context.Context, platform string,
 		op = saved
 		pending = &op
 	}
-	if scope.Session.Active {
+	if scope.Session.Active && !ownedBarrier {
 		return nil, pending, fmt.Errorf("source selection blocked: session active=true; owned platform worker barrier required")
 	}
 	if _, ok := scope.PendingOperations[platform]; reconcile && !ok {

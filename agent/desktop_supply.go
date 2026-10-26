@@ -41,16 +41,12 @@ func (d *DesktopDevice) operateSupply(ctx context.Context, platform string, paus
 	}
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	path, err := d.configPath()
+	session, release, err := d.acquireSession(ctx)
 	if err != nil {
 		return DesktopSupply{}, err
 	}
-	unlock, err := lockState(path)
-	if err != nil {
-		return DesktopSupply{}, err
-	}
-	defer unlock()
-	state, err := readState(path)
+	defer release()
+	state, err := session.read()
 	if err != nil {
 		return DesktopSupply{}, err
 	}

@@ -66,6 +66,8 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 ## 取消与资源所有权
 
+首次设备业务访问由共享桌面会话获取 `bee-desktop.json` 的跨进程锁，持有至管理进程结束。配对、供给、账号查询复用该会话；配置互斥只保护本地读写，网络等待不持有它。配对事务单独串行，不阻塞另一平台供给查询。管理入口关闭会话前等待现有操作退出；关闭后不得重新打开。CLI 的配置文件及锁生命周期不变。
+
 `desktopbridge.Run(ctx, in, out, diagnostics, version)` 不关闭外部传入的流；返回前会等待自己创建的响应写入 goroutine 结束。输入 EOF 正常结束，context 取消保留 `context.Canceled` / `context.DeadlineExceeded`，底层读写错误保留错误链。响应队列有界，只允许一个输出写入者，避免响应交错和无界积压。
 
 通用 `io.Reader` / `io.Writer` 没有中断方法。**调用方必须在取消时解除正在阻塞的 Read / Write**；单独取消 context 不能保证唤醒任意外部流。这里不通过遗留读取 goroutine 假装已经退出。
@@ -74,7 +76,29 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。此处只管理桌面通信、设备、供给和账号观察；真实贡献运行及任务收尾属于后续阶段。
 
-## 验证
+## S1 运行交接契约（T1 已定义，命令在接通服务后开放）
+
+公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。当前仍不公布尚未接通的运行／登录能力。下面是后续 Task 必须一致实现的契约，不能据类型存在声称可贡献。
+
+| 数据／动作 | 固定字段及语义 |
+| --- | --- |
+| `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
+| `DesktopOperation` | id、kind（select/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled）、revision、error；id是本机动作引用，不是Hive confirmation_id |
+| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、platforms、operation、stop_receipt。桥envelope的instance仍为管理进程实例 |
+| platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
+| `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
+| `runtime_stop` | expected_revision、reason（user_stop/app_exit/update/network_change）；reason由固定Rust入口生成；网页只可明确停止 |
+| `runtime_snapshot` | 无参数；长操作的operation和receipt通过快照核对，不能持续占用普通请求 |
+| `runtime_configure_network` / `runtime_restore` | 仅Rust内部使用，generic bridge_request继续只允许ping；恢复必须核对保存意图和新鲜暂停状态 |
+| `DesktopStopReceipt` | workers_stopped、intent_saved、session_clean；仅证明Go本机运行，还需Rust证明管理进程已wait/reap与配置锁释放 |
+| `authorize_start` | platform、source（directory/store）、expected_revision；不接收程序或命令参数 |
+| `authorize_status` / `authorize_cancel` | operation_id；返回DesktopOperation，取消不能撤销已完成的官方登录 |
+
+新数值修订使用非负JS安全整数，时间为UTC RFC3339，状态枚举封闭；旧instance/run_id/revision不能覆盖新结果。未知值和结果未确认时保持不可恢复。
+
+账号文件v2保留提醒entries，新增scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent及session；不保存token。旧v1在首次写入升级前原样保存到受保护`.v1.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。未来运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
+
+## 验证命令
 
 从 Bee 实施检出运行：
 

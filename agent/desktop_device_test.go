@@ -72,7 +72,7 @@ func TestDesktopDevicePairingAndRestart(t *testing.T) {
 	}))
 	defer server.Close()
 	origin = server.URL
-	device := &DesktopDevice{path: path}
+	device := newDesktopTestDevice(t, path)
 	empty, err := device.Status(context.Background())
 	if err != nil || empty.State != "unbound" {
 		t.Fatalf("empty: %+v %v", empty, err)
@@ -86,7 +86,8 @@ func TestDesktopDevicePairingAndRestart(t *testing.T) {
 		t.Fatal("secret leaked")
 	}
 	// Reloading the service uses the same transaction, without another creation.
-	device = &DesktopDevice{path: path}
+	closeDesktopTestDevice(t, device)
+	device = newDesktopTestDevice(t, path)
 	waiting, err := device.Status(context.Background())
 	if err != nil || waiting.State != "pending" {
 		t.Fatalf("waiting: %+v %v", waiting, err)
@@ -100,7 +101,8 @@ func TestDesktopDevicePairingAndRestart(t *testing.T) {
 	if state.Pairing != nil || state.Credential != credential || creates != 1 {
 		t.Fatal("transaction was replaced or not finalized")
 	}
-	result, err = (&DesktopDevice{path: path}).Status(context.Background())
+	closeDesktopTestDevice(t, device)
+	result, err = (newDesktopTestDevice(t, path)).Status(context.Background())
 	if err != nil || result.State != "bound" {
 		t.Fatalf("restart: %+v %v", result, err)
 	}
@@ -112,7 +114,7 @@ func TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin(t *testing.T) {
 	if err := saveState(path, original); err != nil {
 		t.Fatal(err)
 	}
-	d := &DesktopDevice{path: path}
+	d := newDesktopTestDevice(t, path)
 	for _, origin := range []string{"https://other.example", "http://remote.example", "https://hive.example/devices", "https://user:password@hive.example"} {
 		if _, err := d.Begin(context.Background(), origin, "Mac"); err == nil {
 			t.Fatalf("accepted %s", origin)
@@ -136,7 +138,7 @@ func TestDesktopDeviceBoundCredentialNeverRebinds(t *testing.T) {
 	defer server.Close()
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: server.URL, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Identity: &beewire.Identity{ID: "original", OwnerID: "owner", OwnerEmail: "a@b.test", Name: "Mac"}})
-	d := &DesktopDevice{path: path}
+	d := newDesktopTestDevice(t, path)
 	if _, err := d.Status(context.Background()); err == nil || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("missing failure evidence: %v", err)
 	}
@@ -155,7 +157,7 @@ func TestDesktopDeviceRejectsChangedIdentity(t *testing.T) {
 	defer server.Close()
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: server.URL, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Identity: &beewire.Identity{ID: "original", OwnerID: "owner", OwnerEmail: "a@b.test", Name: "Mac"}})
-	if _, err := (&DesktopDevice{path: path}).Status(context.Background()); err == nil {
+	if _, err := (newDesktopTestDevice(t, path)).Status(context.Background()); err == nil {
 		t.Fatal("accepted changed device ID")
 	}
 	state, _ := readState(path)
@@ -176,7 +178,7 @@ func TestDesktopDeviceRejectsUnsafePairingURL(t *testing.T) {
 			}))
 			defer server.Close()
 			path := filepath.Join(t.TempDir(), "desktop.json")
-			if _, err := (&DesktopDevice{path: path}).Begin(context.Background(), server.URL, "Mac"); err == nil {
+			if _, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), server.URL, "Mac"); err == nil {
 				t.Fatal("accepted untrusted verification URL")
 			}
 			state, _ := readState(path)
@@ -194,7 +196,7 @@ func TestDesktopDeviceLockConflict(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer unlock()
-	if _, err := (&DesktopDevice{path: path}).Status(context.Background()); err == nil {
+	if _, err := (newDesktopTestDevice(t, path)).Status(context.Background()); err == nil {
 		t.Fatal("ignored existing owner")
 	}
 }
@@ -221,7 +223,7 @@ func TestDesktopDeviceHiveExpiryAllowsExplicitNewCode(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	credential := "bee_" + strings.Repeat("b", 43)
 	saveState(path, localState{Hive: origin, Name: "Mac", Credential: credential, Pairing: &beewire.Pairing{PairingToken: "beep_" + strings.Repeat("a", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}})
-	device := &DesktopDevice{path: path}
+	device := newDesktopTestDevice(t, path)
 	expired, err := device.Status(context.Background())
 	if err != nil || expired.State != "expired" || creates != 0 {
 		t.Fatalf("expiry: %+v %v", expired, err)
@@ -255,7 +257,7 @@ func TestDesktopDeviceUncertainRedeemKeepsTransaction(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	original := localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: "beep_" + strings.Repeat("a", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}}
 	saveState(path, original)
-	_, err := (&DesktopDevice{path: path}).Status(context.Background())
+	_, err := (newDesktopTestDevice(t, path)).Status(context.Background())
 	if err == nil || !strings.Contains(err.Error(), "unconfirmed") || !strings.Contains(err.Error(), "503") || !strings.Contains(err.Error(), "401") {
 		t.Fatalf("lost failure evidence: %v", err)
 	}
@@ -295,7 +297,7 @@ func TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry(t *testing.T) {
 	origin = server.URL
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: "beep_" + strings.Repeat("a", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}})
-	device := &DesktopDevice{path: path}
+	device := newDesktopTestDevice(t, path)
 	if _, err := device.Status(context.Background()); err == nil {
 		t.Fatal("unexpected confirmed exchange")
 	}
@@ -303,7 +305,8 @@ func TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry(t *testing.T) {
 	state.Pairing.ExpiresAt = time.Now().Add(-time.Minute)
 	saveState(path, state)
 	expired = true
-	_, err := (&DesktopDevice{path: path}).Begin(context.Background(), origin, "Mac")
+	closeDesktopTestDevice(t, device)
+	_, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac")
 	if err == nil || creates != 0 {
 		t.Fatalf("replaced unknown transaction: creates=%d error=%v", creates, err)
 	}
@@ -342,7 +345,9 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 			if err := saveState(path, localState{Hive: origin, Name: "Mac", Credential: credential, Pairing: &beewire.Pairing{PairingToken: token, UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: previous}}); err != nil {
 				t.Fatal(err)
 			}
-			view, err := (&DesktopDevice{path: path}).Status(context.Background())
+			device := newDesktopTestDevice(t, path)
+			view, err := device.Status(context.Background())
+			closeDesktopTestDevice(t, device)
 			if previous == "pending" {
 				if err != nil || view.State != "expired" {
 					t.Fatalf("explicit first-attempt expiry became unknown: view=%+v error=%v", view, err)
@@ -351,7 +356,7 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 				if state.Pairing.Status != "pending" || !state.Pairing.ExpiresAt.IsZero() || creates != 0 {
 					t.Fatal("first-attempt expiry not persisted without automatic creation")
 				}
-				restarted := &DesktopDevice{path: path}
+				restarted := newDesktopTestDevice(t, path)
 				view, err = restarted.Status(context.Background())
 				if err != nil || view.State != "expired" {
 					t.Fatalf("restart lost known expiry: %+v %v", view, err)
@@ -364,7 +369,7 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 				if err == nil || !strings.Contains(err.Error(), "unconfirmed") {
 					t.Fatalf("prior unknown exchange cleared by later expiry: %+v %v", view, err)
 				}
-				if _, err = (&DesktopDevice{path: path}).Begin(context.Background(), origin, "Mac"); err == nil || creates != 0 {
+				if _, err = (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac"); err == nil || creates != 0 {
 					t.Fatalf("prior unknown exchange replaced: creates=%d error=%v", creates, err)
 				}
 				state, _ := readState(path)
@@ -392,7 +397,7 @@ func TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind(t *test
 	defer server.Close()
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: server.URL, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43)})
-	_, err := (&DesktopDevice{path: path}).Begin(context.Background(), server.URL, "Mac")
+	_, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), server.URL, "Mac")
 	if err == nil || creates != 0 {
 		t.Fatalf("attempted rebind of revoked device: creates=%d error=%v", creates, err)
 	}
@@ -413,7 +418,7 @@ func TestDesktopDeviceRemoteErrorCannotEchoPairingToken(t *testing.T) {
 	origin = server.URL
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: secret, UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}})
-	_, err := (&DesktopDevice{path: path}).Status(context.Background())
+	_, err := (newDesktopTestDevice(t, path)).Status(context.Background())
 	if err == nil || strings.Contains(err.Error(), secret) || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("unsafe remote error: %v", err)
 	}

@@ -1,12 +1,182 @@
 package bee
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 )
+
+func TestDesktopAccountStateMigrationPreservesPrivateBackup(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-accounts.json")
+	raw := []byte(`{"version":1,"revision":7,"entries":{"` + strings.Repeat("a", 64) + `":{"first_seen":"2026-10-26T00:00:00Z","notified":true}}}`)
+	if err := os.WriteFile(path, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	s, err := readDesktopAccountState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = saveDesktopAccountState(path, s, 7); err != nil {
+		t.Fatal(err)
+	}
+	s, err = readDesktopAccountState(path)
+	if err != nil || s.Version != 2 || s.Revision != 8 || !s.Entries[strings.Repeat("a", 64)].Notified {
+		t.Fatalf("migration did not retain notices in v2: version=%d revision=%d err=%v", s.Version, s.Revision, err)
+	}
+	backup, err := os.ReadFile(path + ".v1.bak")
+	if err != nil || !bytes.Equal(backup, raw) {
+		t.Fatalf("original migration backup not preserved: %v", err)
+	}
+	f, err := openRegularNoFollow(path + ".v1.bak")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer f.Close()
+	if err := validatePrivateFile(f); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestDesktopAccountStateBackupFailurePreservesOriginal(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-accounts.json")
+	raw := []byte(`{"version":1,"revision":0,"entries":{}}`)
+	if err := os.WriteFile(path, raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(path+".v1.bak", 0700); err != nil {
+		t.Fatal(err)
+	}
+	s, err := readDesktopAccountState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := saveDesktopAccountState(path, s, 0); err == nil {
+		t.Fatal("migration proceeded without protected backup")
+	}
+	after, err := os.ReadFile(path)
+	if err != nil || !bytes.Equal(after, raw) {
+		t.Fatal("failed migration modified original")
+	}
+}
+
+func TestDesktopAccountStateV2ScopeValidation(t *testing.T) {
+	for _, scenario := range []string{"valid", "wrong_scope", "null_selections", "missing_clean", "active_and_clean", "unknown_field", "case_alias"} {
+		t.Run(scenario, func(t *testing.T) {
+			session := map[string]any{"run_id": "", "active": false, "clean": true}
+			scope := map[string]any{"hive": "https://hive.example", "owner_id": "owner", "device_id": "device", "selections": map[string]any{}, "pending_operations": map[string]any{}, "runtime_intent": map[string]any{"running": false, "resume_platforms": []string{}}, "session": session}
+			identity, _ := json.Marshal([]string{"https://hive.example", "owner", "device"})
+			hash := sha256.Sum256(identity)
+			key := hex.EncodeToString(hash[:])
+			switch scenario {
+			case "wrong_scope":
+				scope["owner_id"] = "different"
+			case "null_selections":
+				scope["selections"] = nil
+			case "missing_clean":
+				delete(session, "clean")
+			case "active_and_clean":
+				session["active"] = true
+				session["run_id"] = strings.Repeat("a", 32)
+			case "unknown_field":
+				scope["token"] = "synthetic-SECRET"
+			case "case_alias":
+				session["active"], session["clean"], session["run_id"] = true, false, strings.Repeat("a", 32)
+			}
+			raw, _ := json.Marshal(map[string]any{"version": 2, "revision": 1, "entries": map[string]any{}, "scopes": map[string]any{key: scope}})
+			if scenario == "case_alias" {
+				raw = bytes.Replace(raw, []byte(`"clean":false`), []byte(`"clean":false,"Active":false,"Clean":true`), 1)
+			}
+			path := filepath.Join(t.TempDir(), "ai-accounts.json")
+			if err := os.WriteFile(path, raw, 0600); err != nil {
+				t.Fatal(err)
+			}
+			_, err := readDesktopAccountState(path)
+			if scenario == "valid" && err != nil {
+				t.Fatalf("valid scoped v2 state rejected: %v", err)
+			}
+			if scenario != "valid" && err == nil {
+				t.Fatal("unsafe scoped state accepted")
+			}
+			if err != nil && strings.Contains(err.Error(), "synthetic-SECRET") {
+				t.Fatal("invalid state leaked secret")
+			}
+			after, _ := os.ReadFile(path)
+			if !bytes.Equal(after, raw) {
+				t.Fatal("read rewrote stored state")
+			}
+		})
+	}
+}
+
+func TestDesktopAccountStateSelectionAndIntentRoundTrip(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "ai-accounts.json")
+	state, err := readDesktopAccountState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	identity := desktopSupplyIdentity()
+	scope := newDesktopAccountScope(localState{Hive: "https://hive.example", Identity: &identity})
+	dir := t.TempDir()
+	scope.Selections["openai"] = desktopAccountSelection{Source: DesktopAccountSource{Directory: &dir, Store: "file"}, Fingerprint: strings.Repeat("a", 64), CredentialRevision: strings.Repeat("b", 64), Revision: 1}
+	scope.RuntimeIntent = desktopRuntimeIntent{Running: true, ResumePlatforms: []string{"openai"}}
+	scope.Session = desktopSessionMarker{RunID: strings.Repeat("c", 32), Active: true, Clean: false}
+	scope.PendingOperations["openai"] = desktopPendingOperation{ID: strings.Repeat("d", 48), Kind: "confirm_change", Stage: "submitted", Source: scope.Selections["openai"].Source, FromFingerprint: strings.Repeat("a", 64), FromGeneration: 1, ToFingerprint: strings.Repeat("e", 64), CredentialRevision: strings.Repeat("f", 64), ConfirmationID: "synthetic-confirmation-private", StartedAt: time.Now().UTC()}
+	key := desktopScopeKey(scope.Hive, scope.OwnerID, scope.DeviceID)
+	state.Scopes[key] = scope
+	if err := saveDesktopAccountState(path, state, 0); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := readDesktopAccountState(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := loaded.Scopes[key]
+	if !got.RuntimeIntent.Running || !got.Session.Active || got.Session.Clean || got.Selections["openai"].Fingerprint != strings.Repeat("a", 64) {
+		t.Fatal("selection or crash marker lost across reload")
+	}
+	if pending := got.PendingOperations["openai"]; pending.Stage != "submitted" || pending.ConfirmationID != "synthetic-confirmation-private" || pending.FromGeneration != 1 || pending.ToFingerprint != strings.Repeat("e", 64) {
+		t.Fatal("pending confirmation provenance lost across reload")
+	}
+	original, _ := os.ReadFile(path)
+	for _, scenario := range []string{"missing_selection", "ambiguous_source", "stale_revision", "unsafe_revision"} {
+		t.Run(scenario, func(t *testing.T) {
+			next, err := readDesktopAccountState(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			s := next.Scopes[key]
+			expected := next.Revision
+			switch scenario {
+			case "missing_selection":
+				s.RuntimeIntent.ResumePlatforms = []string{"claude"}
+			case "ambiguous_source":
+				selection := s.Selections["openai"]
+				selection.Source.Store = "auto"
+				s.Selections["openai"] = selection
+			case "stale_revision":
+				expected--
+			case "unsafe_revision":
+				selection := s.Selections["openai"]
+				selection.Revision = desktopMaxRevision + 1
+				s.Selections["openai"] = selection
+			}
+			next.Scopes[key] = s
+			if err := saveDesktopAccountState(path, next, expected); err == nil {
+				t.Fatal("unsafe replacement accepted")
+			}
+			after, _ := os.ReadFile(path)
+			if !bytes.Equal(after, original) {
+				t.Fatal("rejected replacement changed original state")
+			}
+		})
+	}
+}
 
 func TestDesktopAccountsState(t *testing.T) {
 	for _, scenario := range []string{"absent", "private", "permission", "symlink", "version", "duplicate", "corrupt", "missing", "null"} {

@@ -1,0 +1,26 @@
+{
+  "network": {"revision": 0, "connect_proxy": ""},
+  "start": {"expected_revision": 0, "resume_platforms": ["openai"]},
+  "stop": {"expected_revision": 1, "reason": "user_stop"},
+  "snapshot": {
+    "run_id": null,
+    "revision": 0,
+    "network_revision": 0,
+    "observed_at": "2026-10-26T00:00:00Z",
+    "local": "stopped",
+    "connection": "disconnected",
+    "platforms": {},
+    "operation": null,
+    "stop_receipt": null
+  },
+  "operation": {
+    "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "kind": "start",
+    "platform": null,
+    "state": "pending",
+    "revision": 1,
+    "error": null
+  },
+  "stop_receipt": {"workers_stopped": true, "intent_saved": true, "session_clean": true},
+  "authorize": {"platform": "claude", "source": {"directory": null, "store": "file"}, "expected_revision": 0}
+}

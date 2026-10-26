@@ -26,7 +26,10 @@ import (
 
 // DesktopDevice owns a separate device configuration. It never starts supply or
 // reads the CLI configuration. The path is deliberately not a frontend input.
-type DesktopDevice struct{ path string }
+type DesktopDevice struct {
+	path    string
+	session desktopDeviceSession
+}
 
 func NewDesktopDevice() *DesktopDevice { return &DesktopDevice{} }
 
@@ -69,16 +72,17 @@ func (d *DesktopDevice) Begin(ctx context.Context, hive, name string) (DeviceVie
 func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (DeviceView, error) {
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	path, err := d.configPath()
+	session, release, err := d.acquireSession(ctx)
 	if err != nil {
 		return DeviceView{}, err
 	}
-	unlock, err := lockState(path)
+	defer release()
+	endPairing, err := session.beginPairing(ctx)
 	if err != nil {
 		return DeviceView{}, err
 	}
-	defer unlock()
-	state, err := readState(path)
+	defer endPairing()
+	state, err := session.read()
 	if err != nil {
 		return DeviceView{}, err
 	}
@@ -97,7 +101,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 			return DeviceView{}, fmt.Errorf("generate desktop device credential: %w", err)
 		}
 		state = localState{Hive: origin, Name: name, Credential: "bee_" + base64.RawURLEncoding.EncodeToString(raw)}
-		if err = saveState(path, state); err != nil {
+		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
 	}
@@ -114,7 +118,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	var identity beewire.Identity
 	err = desktopCall(ctx, state, "/api/bee/identity", "GET", state.Credential, nil, &identity)
 	if err == nil {
-		return finishDesktopDevice(path, state, identity)
+		return finishDesktopDevice(session, state, identity)
 	}
 	var failure *apiFailure
 	if !errors.As(err, &failure) || failure.Status != 401 {
@@ -137,7 +141,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 			return DeviceView{}, err
 		}
 		state.Pairing = &pair
-		if err = saveState(path, state); err != nil {
+		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
 		return desktopPairingView(state, "pending"), nil
@@ -153,7 +157,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 			}
 			// Persist the authoritative Hive expiry even if the local clock differs.
 			state.Pairing.ExpiresAt = time.Time{}
-			if saveErr := saveState(path, state); saveErr != nil {
+			if saveErr := session.save(state); saveErr != nil {
 				return DeviceView{}, saveErr
 			}
 			return DeviceView{State: "expired", Hive: state.Hive, Name: state.Name}, nil
@@ -167,33 +171,33 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 		// Persist intent before the external exchange. A missing response must
 		// never become an apparently fresh, replaceable pairing after restart.
 		state.Pairing.Status = "redeeming"
-		if err = saveState(path, state); err != nil {
+		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
 		err = desktopCall(ctx, state, "/api/bee/pairings/redeem", "POST", state.Pairing.PairingToken, struct{}{}, &identity)
 		if err == nil {
-			return finishDesktopDevice(path, state, identity)
+			return finishDesktopDevice(session, state, identity)
 		}
 		if !uncertain && errors.As(err, &failure) && failure.Status == 410 && failure.Code == "pairing_expired" {
 			// Hive rolls back an expired first exchange. A later expiry cannot
 			// disprove an earlier unknown commit, so only clear a fresh intent.
 			state.Pairing.Status = "pending"
 			state.Pairing.ExpiresAt = time.Time{}
-			if saveErr := saveState(path, state); saveErr != nil {
+			if saveErr := session.save(state); saveErr != nil {
 				return DeviceView{}, saveErr
 			}
 			return DeviceView{State: "expired", Hive: state.Hive, Name: state.Name}, nil
 		}
 		if errors.As(err, &failure) && failure.Code == "device_draining" {
 			state.Pairing.Status = "pending"
-			if saveErr := saveState(path, state); saveErr != nil {
+			if saveErr := session.save(state); saveErr != nil {
 				return DeviceView{}, saveErr
 			}
 			return desktopPairingView(state, "draining"), nil
 		}
 	case "redeemed":
 		state.Pairing.Status = "redeeming"
-		if err = saveState(path, state); err != nil {
+		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
 		err = errors.New("pairing reports redeemed but device identity is not yet confirmed")
@@ -202,7 +206,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	}
 	// Never replace the credential after an uncertain remote write.
 	if recovery := desktopCall(ctx, state, "/api/bee/identity", "GET", state.Credential, nil, &identity); recovery == nil {
-		return finishDesktopDevice(path, state, identity)
+		return finishDesktopDevice(session, state, identity)
 	} else {
 		return DeviceView{}, fmt.Errorf("pairing result unconfirmed; original transaction preserved: %w; identity recovery: %w", err, recovery)
 	}
@@ -232,13 +236,13 @@ func desktopPairingView(state localState, status string) DeviceView {
 	pair := state.Pairing
 	return DeviceView{State: status, Hive: state.Hive, Name: state.Name, UserCode: pair.UserCode, VerificationURL: pair.VerificationURI + "?code=" + url.QueryEscape(pair.UserCode), ExpiresAt: &pair.ExpiresAt, PollInterval: pair.PollInterval}
 }
-func finishDesktopDevice(path string, state localState, identity beewire.Identity) (DeviceView, error) {
+func finishDesktopDevice(session *desktopDeviceSession, state localState, identity beewire.Identity) (DeviceView, error) {
 	if err := validateDesktopIdentity(state, identity); err != nil {
 		return DeviceView{}, err
 	}
 	state.Identity = &identity
 	state.Pairing = nil
-	if err := saveState(path, state); err != nil {
+	if err := session.save(state); err != nil {
 		return DeviceView{}, err
 	}
 	return DeviceView{State: "bound", Hive: state.Hive, Name: identity.Name, Identity: &identity}, nil

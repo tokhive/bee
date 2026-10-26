@@ -52,7 +52,11 @@ func executeService(ctx context.Context, name string, args []string, in io.Reade
 	}
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return stdout.String(), fmt.Errorf("%s %q: %w; stderr: %s", name, args, err, strings.TrimSpace(stderr.String()))
+		failure := fmt.Errorf("%s %q: %w; stderr: %s", name, args, err, strings.TrimSpace(stderr.String()))
+		if name == "systemctl" && len(args) > 0 && args[0] == "show" && strings.Contains(stderr.String(), "System has not been booted with systemd as init system (PID 1). Can't operate.") {
+			return stdout.String(), fmt.Errorf("%w: %w", errServiceUnavailable, failure)
+		}
+		return stdout.String(), failure
 	}
 	if out != nil {
 		fmt.Fprint(out, stderr.String())
@@ -72,7 +76,10 @@ func (s *managedService) inspect(ctx context.Context) (serviceState, error) {
 	}
 	raw, err := s.execute(ctx, "systemctl", []string{"show", "tokhive-bee", "--property=LoadState,ActiveState,UnitFileState,User,FragmentPath,DropInPaths,NeedDaemonReload"}, nil, nil)
 	if err != nil {
-		return state, fmt.Errorf("inspect tokhive-bee (use bee start for foreground operation): %w", err)
+		if errors.Is(err, exec.ErrNotFound) {
+			return state, fmt.Errorf("%w: %w", errServiceUnavailable, err)
+		}
+		return state, fmt.Errorf("inspect tokhive-bee: %w", err)
 	}
 	props := map[string]string{}
 	for _, line := range strings.Split(strings.TrimSpace(raw), "\n") {

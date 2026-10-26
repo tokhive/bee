@@ -1,6 +1,7 @@
 package bee
 
 import (
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -9,39 +10,75 @@ import (
 )
 
 func (m *managementMenu) starts() error {
-	return m.loop(m.text("Start Bee", "启动 Bee"), []menuAction{
-		{"Guided setup and start", "引导配置并启动", m.guidedStart},
-		{"Run existing configuration in foreground", "按现有配置前台运行", m.foreground},
-		{"Start background service", "启动后台服务", m.backgroundStart},
-	})
-}
-
-func (m *managementMenu) backgroundStart() error {
-	if _, err := m.serviceState(); err != nil {
-		m.serviceNotice(err)
-		m.next(m.text("Choose Start Bee → Run existing configuration in foreground.", "选择「启动 Bee → 按现有配置前台运行」。"))
-		return nil
-	}
-	return m.serviceAction("start")
-}
-
-func (m *managementMenu) guidedStart() error {
-	// bee start always uses egress.json beside the selected device file.
-	egress, explicit, service, fixed := m.egressPath, m.egressExplicit, m.service, m.setupTargetFixed
+	// Like bee start, the ordinary start action uses the adjacent egress.json.
+	egress, explicit, service, serviceErr, fixed := m.egressPath, m.egressExplicit, m.service, m.serviceErr, m.setupTargetFixed
 	defer func() {
-		m.egressPath, m.egressExplicit, m.service, m.setupTargetFixed = egress, explicit, service, fixed
+		m.egressPath, m.egressExplicit, m.service, m.serviceErr, m.setupTargetFixed = egress, explicit, service, serviceErr, fixed
 	}()
 	m.egressPath, m.egressExplicit = defaultEgressPath(m.configPath), false
 	m.setupTargetFixed = true
 	m.refreshServiceTarget()
-	m.page(m.text("Guided setup and start", "引导配置并启动"))
+	m.page(m.text("Start Bee", "启动 Bee"))
 	m.configurationPaths()
-	state, err := readState(m.configPath)
+	state, err := m.serviceState()
+	if err != nil && !errors.Is(err, errServiceUnavailable) {
+		return err
+	}
+	background := err == nil
+	if background {
+		if state.ActiveState == "active" {
+			m.ui.status(m.out, "✅", "32", "Bee is already running in the background.", "Bee 已在后台运行。")
+			return m.back()
+		}
+		if state.ActiveState != "inactive" && state.ActiveState != "failed" {
+			return fmt.Errorf("tokhive-bee ActiveState=%q; wait for a stable service state before start", state.ActiveState)
+		}
+		m.note("Bee will run in the background; closing this terminal will not stop it.", "将自动在后台运行；关闭终端后 Bee 仍会运行。")
+	} else {
+		m.note("No supported background service is available. Bee will run in this terminal; closing it or pressing Ctrl+C stops Bee.", "当前没有可用的后台服务，将在本终端运行；关闭终端或按 Ctrl+C 会停止 Bee。")
+	}
+	m.note("Would you like guidance before starting? Existing configuration will be kept.", "启动前是否需要引导配置？已有配置会保留。")
+	m.option(1, m.text("Yes, complete missing configuration", "需要，引导补齐配置"))
+	m.option(2, m.text("No, start with existing configuration", "不需要，使用已有配置启动"))
+	m.option(0, m.text("Back", "返回上级"))
+	choice, err := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
 	if err != nil {
 		return err
 	}
+	if choice == 0 {
+		return m.back()
+	}
+	if choice == 1 {
+		ready, err := m.prepareStart()
+		if err != nil || !ready {
+			return err
+		}
+	}
+	if !background {
+		return m.runForeground(false)
+	}
+	if err := m.requirePairing(); err != nil {
+		return err
+	}
+	if _, err := readEgress(m.ctx, m.egressPath); err != nil {
+		return err
+	}
+	state, err = m.service.apply(m.ctx, "start")
+	if err != nil {
+		return err
+	}
+	m.printServiceState(state)
+	m.ui.status(m.out, "✅", "32", "Bee is running in the background. You can close this terminal.", "Bee 已在后台运行，可以关闭终端。")
+	return m.back()
+}
+
+func (m *managementMenu) prepareStart() (bool, error) {
+	state, err := readState(m.configPath)
+	if err != nil {
+		return false, err
+	}
 	if state.Identity == nil {
-		m.note("[1/3] Pair this device", "[1/3] 设备配对")
+		m.note("Pair this device", "设备配对")
 		navigation := m.navigation
 		if m.pair != nil {
 			err = m.pair()
@@ -49,56 +86,45 @@ func (m *managementMenu) guidedStart() error {
 			err = m.pairingWithNext(false)
 		}
 		if err != nil {
-			return err
+			return false, err
 		}
 		if m.navigation != navigation {
-			return nil
+			return false, nil
 		}
 		if err = m.requirePairing(); err != nil {
-			return err
+			return false, err
 		}
 	}
 	if _, err = os.Lstat(m.egressPath); os.IsNotExist(err) {
-		m.note("[2/3] Select supplied accounts", "[2/3] 选择供给账号")
+		m.note("Select supplied accounts", "选择供给账号")
 		if m.configure != nil {
 			err = m.configure()
 		} else {
 			err = m.accountSetup(false)
 		}
 		if err != nil {
-			return err
+			return false, err
 		}
 		if _, err = os.Lstat(m.egressPath); os.IsNotExist(err) {
 			m.note("No supply configuration saved; Bee has not started.", "尚未保存供给配置，Bee 未启动。")
-			return m.back()
+			return false, m.back()
 		} else if err != nil {
-			return err
+			return false, err
 		}
 	} else if err != nil {
-		return err
+		return false, err
 	}
 	if _, err = readEgress(m.ctx, m.egressPath); err != nil {
-		return err
+		return false, err
 	}
-	m.note("[3/3] Choose how to run Bee", "[3/3] 选择运行方式")
-	m.option(1, m.text("Foreground · Ctrl+C stops this Bee and exits", "前台运行 · Ctrl+C 停止本次 Bee 并退出"))
-	m.option(2, m.text("Background service · returns to menu after starting", "后台服务 · 启动后返回菜单"))
-	m.option(0, m.text("Back", "返回上级"))
-	choice, err := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
-	if err != nil {
-		return err
-	}
-	switch choice {
-	case 1:
-		return m.foreground()
-	case 2:
-		return m.backgroundStart()
-	default:
-		return m.back()
-	}
+	return true, nil
 }
 
 func (m *managementMenu) foreground() error {
+	return m.runForeground(true)
+}
+
+func (m *managementMenu) runForeground(confirm bool) error {
 	m.page(m.text("Foreground run", "前台运行"))
 	if err := m.requirePairing(); err != nil {
 		return err
@@ -122,9 +148,11 @@ func (m *managementMenu) foreground() error {
 		m.note("No supply configuration: Bee stays online without supplying accounts.", "没有供给配置：Bee 仅保持在线，不供给账号。")
 	}
 	m.note("This terminal stays occupied. Ctrl+C stops this foreground Bee and exits; run bee again to reopen the menu.", "本终端将持续运行 Bee。Ctrl+C 停止本次前台 Bee 并退出；再次输入 bee 可重新打开菜单。")
-	ok, err := m.confirm(m.text("Start foreground Bee now?", "现在启动前台 Bee？"))
-	if err != nil || !ok {
-		return err
+	if confirm {
+		ok, err := m.confirm(m.text("Start foreground Bee now?", "现在启动前台 Bee？"))
+		if err != nil || !ok {
+			return err
+		}
 	}
 	m.note("Runtime logs (original):", "运行日志（原文）：")
 	previous := slog.Default()

@@ -222,3 +222,28 @@ func TestManagedJournalPermissionWarningIsVisibleAndActionable(t *testing.T) {
 		t.Fatalf("error=%v output=%q", e, out.String())
 	}
 }
+
+func TestManagedMissingSystemctlIsUnavailable(t *testing.T) {
+	s, _ := managedFixture(t)
+	s.execute = executeService
+	t.Setenv("PATH", t.TempDir())
+	if _, err := s.inspect(context.Background()); !errors.Is(err, errServiceUnavailable) {
+		t.Fatal(err)
+	}
+}
+
+func TestManagedNonSystemdInitIsUnavailable(t *testing.T) {
+	directory := t.TempDir()
+	program := filepath.Join(directory, "systemctl")
+	message := "System has not been booted with systemd as init system (PID 1). Can't operate."
+	if err := os.WriteFile(program, []byte("#!/bin/sh\ncat >&2 <<'MSG'\n"+message+"\nMSG\nexit 1\n"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
+	s, _ := managedFixture(t)
+	s.execute = executeService
+	_, err := s.inspect(context.Background())
+	if !errors.Is(err, errServiceUnavailable) || !strings.Contains(err.Error(), message) {
+		t.Fatal(err)
+	}
+}

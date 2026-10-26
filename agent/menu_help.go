@@ -10,11 +10,11 @@ func (m *managementMenu) help() error {
 	return m.loop(m.text("Help and version", "帮助与版本"), []menuAction{
 		{"How to use Bee", "使用说明", func() error {
 			m.page(m.text("How to use Bee", "使用说明"))
-			m.note("Start Bee → Guided setup pairs the device, selects accounts and chooses foreground or background operation.", "启动 Bee → 引导配置并启动：完成设备配对、选择供给账号，再选择前台或后台运行。")
-			m.note("Direct foreground run uses existing configuration; without a supply file, Bee connects without supplying accounts.", "按现有配置前台运行：使用已有配置；没有供给配置时，仅保持在线，不供给账号。")
+			m.note("Start Bee asks whether to complete missing configuration, then uses an available managed background service or runs in the foreground.", "启动 Bee：询问是否引导补齐配置；有可用的受管理后台服务就自动后台运行，否则前台运行。")
+			m.note("Advanced options → Run existing configuration in foreground uses existing configuration; without a supply file, Bee connects without supplying accounts.", "高级选项 → 按现有配置前台运行：使用已有配置；没有供给配置时，仅保持在线，不供给账号。")
 			m.note("Ctrl+C stops this foreground Bee and exits. Run bee again to reopen the menu.", "Ctrl+C 停止本次前台 Bee 并退出程序；再次输入 bee 可重新打开菜单。")
 			m.note("A background service keeps running after you exit this menu. Boot startup requires the Linux installer service.", "后台服务在退出菜单后继续运行。开机自启需要 Linux 安装脚本配置的服务。")
-			m.note("Session options select paths without saving preferences. Every write asks for confirmation; 0 goes back or cancels.", "高级选项只选择本次会话的路径，不保存偏好。写操作会先确认；0 返回或取消。")
+			m.note("Advanced options select session paths and allow explicit foreground operation. Pairing and account changes ask for confirmation; 0 goes back or cancels.", "高级选项可选择本次会话的路径或手动前台运行。配对与账号变更会先确认；0 返回或取消。")
 			m.note("CLI aliases: help / -h / --help; version / --version. All subcommands keep their existing options.", "命令别名：help / -h / --help；version / --version。各子命令保留原有参数。")
 			return nil
 		}},

@@ -149,7 +149,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 		}
 		return nil
 	}
-	fmt.Fprintln(m.out, m.text("Pairing complete. Choose Start Bee to run in foreground or background.", "配对完成。请选择「启动 Bee」，使用前台或后台运行。"))
+	fmt.Fprintln(m.out, m.text("Pairing complete. Choose Start Bee; the run mode is selected automatically.", "配对完成。请选择「启动 Bee」，系统会自动选择运行方式。"))
 	return nil
 }
 

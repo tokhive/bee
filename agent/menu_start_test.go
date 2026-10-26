@@ -49,7 +49,7 @@ func TestMenuForegroundUsesExplicitEgress(t *testing.T) {
 }
 
 func TestMenuGuidedStartUsesDefaultSupplyAndRestoresSession(t *testing.T) {
-	m, _ := pairedMenu(t, "")
+	m, _ := pairedMenu(t, "1\n")
 	custom := m.egressPath + ".custom"
 	m.egressPath, m.egressExplicit = custom, true
 	m.configure = func() error {
@@ -58,7 +58,8 @@ func TestMenuGuidedStartUsesDefaultSupplyAndRestoresSession(t *testing.T) {
 		}
 		return context.Canceled
 	}
-	if err := m.guidedStart(); !errors.Is(err, context.Canceled) {
+	m.service = &managedService{platform: "darwin"}
+	if err := m.starts(); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 	if m.egressPath != custom || !m.egressExplicit {
@@ -82,8 +83,9 @@ func TestMenuPairingUsesRequestedDeviceName(t *testing.T) {
 }
 
 func TestMenuGuidedCancelPairingReturnsWithoutError(t *testing.T) {
-	m, _ := menuFixture(t, "0\n")
-	if err := m.guidedStart(); err != nil {
+	m, _ := menuFixture(t, "1\n0\n")
+	m.service = &managedService{platform: "darwin"}
+	if err := m.starts(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(m.configPath); !os.IsNotExist(err) {
@@ -92,9 +94,10 @@ func TestMenuGuidedCancelPairingReturnsWithoutError(t *testing.T) {
 }
 
 func TestMenuGuidedCancelAccountSetupReturnsWithoutError(t *testing.T) {
-	m, _ := pairedMenu(t, "0\n")
+	m, _ := pairedMenu(t, "1\n0\n")
 	m.configure = func() error { return m.accountSetup(false) }
-	if err := m.guidedStart(); err != nil {
+	m.service = &managedService{platform: "darwin"}
+	if err := m.starts(); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := os.Stat(m.egressPath); !os.IsNotExist(err) {
@@ -103,7 +106,7 @@ func TestMenuGuidedCancelAccountSetupReturnsWithoutError(t *testing.T) {
 }
 
 func TestMenuGuidedSetupCannotRedirectSupplyFile(t *testing.T) {
-	m, _ := pairedMenu(t, "/tmp/another-bee-egress.json\n")
+	m, _ := pairedMenu(t, "1\n/tmp/another-bee-egress.json\n")
 	m.configure = func() error {
 		if err := m.selectEgress(); err != nil {
 			return err
@@ -113,12 +116,13 @@ func TestMenuGuidedSetupCannotRedirectSupplyFile(t *testing.T) {
 		}
 		return context.Canceled
 	}
-	if err := m.guidedStart(); !errors.Is(err, context.Canceled) {
+	m.service = &managedService{platform: "darwin"}
+	if err := m.starts(); !errors.Is(err, context.Canceled) {
 		t.Fatal(err)
 	}
 }
 
-func TestMenuGuidedBackgroundOnMacOSOffersForeground(t *testing.T) {
+func TestMenuGuidedStartOnMacOSRunsForeground(t *testing.T) {
 	t.Setenv("CODEX_HOME", codexHome(t, time.Now().Add(time.Hour)))
 	m, out := pairedMenu(t, "1\n")
 	m.setup = menuSetupOptions{platform: "openai", all: true}
@@ -126,12 +130,15 @@ func TestMenuGuidedBackgroundOnMacOSOffersForeground(t *testing.T) {
 		t.Fatal(err)
 	}
 	m.service = &managedService{platform: "darwin"}
-	m.in.Reset(strings.NewReader("2\n"))
+	m.in.Reset(strings.NewReader("1\n"))
 	out.Reset()
-	if err := m.guidedStart(); err != nil {
+	unlock, err := lockState(m.configPath)
+	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(out.String(), "macOS 暂不支持") || !strings.Contains(out.String(), "按现有配置前台运行") {
-		t.Fatal(out.String())
+	defer unlock()
+	m.service = &managedService{platform: "darwin"}
+	if err := m.starts(); err == nil || !strings.Contains(out.String(), "运行日志（原文）") {
+		t.Fatalf("foreground not attempted: %v\n%s", err, out)
 	}
 }

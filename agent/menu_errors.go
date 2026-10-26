@@ -180,11 +180,11 @@ func (m *managementMenu) serviceNotice(err error) {
 			platform = "macOS"
 		}
 		m.field("Background service", "后台管理", fmt.Sprintf(m.text("%s is not supported", "%s 暂不支持"), platform))
-		m.note("Choose Start Bee → Run existing configuration in foreground.", "请选择「启动 Bee → 按现有配置前台运行」。")
+		m.note("Choose Start Bee to run automatically in the foreground.", "请选择「启动 Bee」，将自动前台运行。")
 		return
 	}
 	if errors.Is(err, errServiceUnavailable) {
-		m.ui.status(m.out, "ℹ️", "36", "The managed system service is not installed.", "尚未安装受管理的系统服务。")
+		m.ui.status(m.out, "ℹ️", "36", "No supported managed system service is available.", "当前没有可用的受管理系统服务。")
 		m.next(m.text("Run install.sh on Linux, or choose Start Bee for foreground operation.", "在 Linux 上运行安装脚本配置服务，或选择「启动 Bee」使用前台运行。"))
 		m.details(err.Error())
 		return

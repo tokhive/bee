@@ -155,7 +155,21 @@ class MenuTest(unittest.TestCase):
     def test_guided_start_pairs_selects_and_connects(self):
         self.foreground_scenario(guided=True)
 
-    def foreground_scenario(self, guided):
+    def test_start_asks_only_about_configuration_in_both_languages(self):
+        for lang, question in [('zh', '启动前是否需要引导配置？'),
+                               ('en', 'Would you like guidance before starting?')]:
+            prompt = '请选择 [' if lang == 'zh' else 'Select ['
+            code, out = self.terminal([(prompt, '1\n0\n0\n')], BEE_LANG=lang)
+            self.assertEqual(code, 0, out)
+            self.assertIn(question, out)
+            self.assertNotIn('按回车返回', out)
+            self.assertNotIn('Press Enter to return', out)
+            self.assertFalse(list(Path(self.temp.name).rglob('bee.json')))
+
+    def test_advanced_foreground_remains_available(self):
+        self.foreground_scenario(guided=False, advanced=True)
+
+    def foreground_scenario(self, guided, advanced=False):
         requests = []
         identity = {'id': 'synthetic-device', 'name': 'PTY worker', 'owner_email': 'synthetic@example.test'}
         class Hive(http.server.BaseHTTPRequestHandler):
@@ -246,14 +260,14 @@ class MenuTest(unittest.TestCase):
                     'id_token': token, 'account_id': 'synthetic-account', 'refresh_token': 'synthetic-refresh'}}))
                 # Account options: restrict detection to Codex, then choose all.
                 answers = [('请选择 [', f'1\n1\n{url}\nPTY worker\n1\n'),
-                           ('逐个选择账号', '3\n1\n1\n0\n2\n1\n1\n1\n'),
+                           ('逐个选择账号', '3\n1\n1\n0\n2\n1\n'),
                            ('Bee connected to Hive', '\x03')]
             else:
                 config.parent.mkdir(parents=True)
                 config.write_text(json.dumps({'hive': url, 'credential': 'bee_' + 'a' * 43,
                                                'name': 'PTY worker', 'identity': identity}))
                 config.chmod(0o600)
-                answers = [('请选择 [', '1\n2\n1\n'), ('Bee connected to Hive', '\x03')]
+                answers = [('请选择 [', '7\n4\n1\n' if advanced else '1\n2\n'), ('Bee connected to Hive', '\x03')]
             try:
                 code, out = self.terminal(answers, after_fork=worker.start)
                 self.assertEqual(code, 0, out)
@@ -261,6 +275,10 @@ class MenuTest(unittest.TestCase):
                 self.assertIn('运行日志（原文）', out)
                 self.assertNotIn('按回车返回', out)
                 self.assertEqual(out.count('Bee 管理'), 1, out)
+                if not advanced:
+                    self.assertNotIn('现在启动前台 Bee？', out)
+                    self.assertNotIn('选择运行方式', out)
+                    self.assertEqual(out.count('启动前是否需要引导配置？'), 1, out)
                 self.assertIn(('GET', '/api/bee/agent' if guided else '/api/bee/connect'), requests)
                 if guided:
                     self.assertIn(('POST', '/api/bee/pairings/redeem'), requests)

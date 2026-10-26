@@ -8,8 +8,8 @@
 
 | 命令 | 菜单入口 | 实现 |
 | --- | --- | --- |
-| start | 启动 Bee → 引导配置并启动 | menu_start.go：缺失配对与账号选择，再选择前台/后台 |
-| run | 启动 Bee → 按现有配置前台运行 | menu_start.go：复用 cli.go 的 run，配置锁及信号退出保持一致 |
+| start | 启动 Bee → 引导补齐配置 | menu_start.go：补齐缺失配置，按实际服务能力自动后台或前台启动 |
+| run | 高级选项 → 按现有配置前台运行 | menu_start.go：复用 cli.go 的 run，配置锁及信号退出保持一致 |
 | login | 设备配对 | menu_pairing.go：Hive、设备名称、配对继续/重配对及备份 |
 | setup | 供给账号 → 选择供给账号 | menu_account_setup.go、menu_setup_options.go |
 | status | 运行状态 | menu_reports.go，固定读取设备文件旁的 egress.json |
@@ -41,6 +41,8 @@
 | --json | 输出 diagnose 的完整原始 JSON |
 | --yes | 一次选择全部可用账号，最终仍展示完整供给选择并确认；CLI 参数保持原义 |
 
+本轮自动启动调整与最新验证见 [自动启动报告](2026-10-26-bee-automatic-start-report.md)。
+
 ## 关键验证
 
 - 配置切换与服务目标同步、取消无落盘、默认与显式供给路径、配置锁冲突。
@@ -51,13 +53,13 @@
 - 合成 Codex/Claude 本地检查、身份验证、模型额度查询、未知状态原始原因；保留既有授权复读及 CLI JSON 测试。
 - 无配对帮助/版本、全部子命令参数帮助、诊断 JSON、中英文切换、NO_COLOR、TERM=dumb、EOF。
 
-完整安装器测试已执行 64 项，macOS 通过 62 项，2 项原生 systemd 测试交由 Linux CI。最终目录原文修复后重新执行 Go vet/race 与 PTY，全部通过（13 项 PTY）；ShellCheck、make build、两仓库 git diff --check 及文档站 npm run build 通过。Linux CI 已在 74ab6a6 上通过（run 40308322705），包含全部 64 项安装器测试、13 项 PTY 和 Go vet/race；文档 CI run 40308328440 通过。收尾补充了 macOS 引导后台启动的能力提示，全部菜单 race 回归、go vet 和构建再次通过；PR checks 提供后续提交的完整 CI 结果。
+上一阶段验证：完整安装器测试已执行 64 项，macOS 通过 62 项，2 项原生 systemd 测试交由 Linux CI。最终目录原文修复后重新执行 Go vet/race 与 PTY，全部通过（13 项 PTY）；ShellCheck、make build、两仓库 git diff --check 及文档站 npm run build 通过。Linux CI 已在 74ab6a6 上通过（run 40308322705），包含全部 64 项安装器测试、13 项 PTY 和 Go vet/race；文档 CI run 40308328440 通过。收尾补充了 macOS 引导后台启动的能力提示，全部菜单 race 回归、go vet 和构建再次通过；PR checks 提供后续提交的完整 CI 结果。
 
 本次增量不修改 Makefile 或 CI workflow；现有 make test 已包含安装器、PTY、Go vet/race，Linux CI 调用同一目标并运行 ShellCheck。
 
 ## 手动测试
 
-在此工作树执行 `make build`，然后在终端运行 `./bin/bee`。先检查九项入口，再测试「启动 Bee → 引导配置并启动」和「按现有配置前台运行」。前台 Ctrl+C 退出整个 Bee；重新输入命令打开菜单。
+在此工作树执行 `make build`，然后在终端运行 `./bin/bee`。先检查九项入口，再测试「启动 Bee」的引导与已有配置两种选择，以及「高级选项 → 按现有配置前台运行」。前台 Ctrl+C 退出整个 Bee；重新输入命令打开菜单。
 
 高级选项可选择临时设备配置测试首次配置，或选择已有设备文件测试直接运行。默认无供给文件时仅保持在线；明确指定不存在的供给文件则报错。检查账号选项的全选、代理三态、目录三态，以及帮助和诊断 JSON。
 

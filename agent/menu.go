@@ -218,7 +218,7 @@ func runManagement(ctx context.Context, out io.Writer) error {
 		{"Supplied accounts", "供给账号", m.accounts},
 		{"Background service", "后台服务", m.services},
 		{"Logs and diagnostics", "日志与诊断", m.logsAndDoctor},
-		{"Session options", "高级选项", m.options},
+		{"Advanced options", "高级选项", m.options},
 		{"Help and version", "帮助与版本", m.help},
 		{"Change language", "切换语言", m.language},
 	})

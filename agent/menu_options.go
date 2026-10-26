@@ -10,7 +10,7 @@ import (
 // These targets belong only to this menu session. Selecting a target never
 // rewrites a service or changes environment variables used by other commands.
 func (m *managementMenu) options() error {
-	return m.loop(m.text("Session options", "会话选项"), []menuAction{
+	return m.loop(m.text("Advanced options", "高级选项"), []menuAction{
 		{"Device configuration", "选择设备配置", m.selectConfig},
 		{"Supply configuration (setup / run / doctor)", "选择供给配置（配置账号 / 直接运行 / 诊断）", m.selectEgress},
 		{"Restore default paths", "恢复默认路径", func() error {
@@ -20,6 +20,7 @@ func (m *managementMenu) options() error {
 			m.refreshServiceTarget()
 			return m.back()
 		}},
+		{"Run existing configuration in foreground", "按现有配置前台运行", m.foreground},
 	})
 }
 
@@ -27,7 +28,7 @@ func (m *managementMenu) configurationPaths() {
 	m.field("Device configuration", "设备配置", m.configPath)
 	m.field("Supply configuration", "供给配置", m.egressPath)
 	if m.egressPath != defaultEgressPath(m.configPath) {
-		m.field("Guided start / status use", "引导启动 / 运行状态使用", defaultEgressPath(m.configPath))
+		m.field("Start / status use", "启动 / 运行状态使用", defaultEgressPath(m.configPath))
 	}
 }
 
@@ -71,7 +72,7 @@ func (m *managementMenu) selectEgress() error {
 		m.field("Supply file fixed by this start action", "本次启动固定使用的供给配置", m.egressPath)
 		return m.back()
 	}
-	m.note("Used by account setup, direct foreground run and diagnostics. Guided start and status use egress.json beside the device file.", "用于账号配置、直接前台运行和诊断。引导启动与运行状态使用设备文件旁的 egress.json。")
+	m.note("Used by account setup, direct foreground run and diagnostics. Start Bee and status use egress.json beside the device file.", "用于账号配置、直接前台运行和诊断。启动 Bee 与运行状态使用设备文件旁的 egress.json。")
 	path, ok, err := m.pathInput(m.egressPath)
 	if err != nil || !ok {
 		return err

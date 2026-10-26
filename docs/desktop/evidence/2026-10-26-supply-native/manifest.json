@@ -1,0 +1,107 @@
+{
+  "observed_on": "2026-10-26",
+  "source_revision": "24aca16f37e9fa17f843d1c300786056a2b083a1",
+  "version_observed_in_native_diagnostics": "dev+24aca16f37e9",
+  "selected_app": "desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app",
+  "package_binary_hashes_match_2026_10_24_manifest": true,
+  "config_bytes_unchanged_during_check": true,
+  "native_gui": {
+    "state": "partial",
+    "window_access": "verified via exact app path; one later cgWindowNotFound recovered by reselecting same path",
+    "passed": [
+      "bound device and both platform cards visible",
+      "initial verified platform results and reasons",
+      "manual read refresh hides prior success and disables buttons while checking",
+      "automatic poll read failure hides old success and disables both write buttons",
+      "failure evidence and manual read entry visible",
+      "overview/diagnostics/settings navigation",
+      "English platform and error copy",
+      "language restored to original Follow system",
+      "returned to Chinese overview"
+    ],
+    "not_passed": [
+      "continuous end-to-end online stability: HTTP 409 followed by EOF/TLS failures"
+    ],
+    "not_tested": [
+      "real pause/resume writes",
+      "native minimum-window resizing",
+      "Windows/Linux native UI",
+      "old P0/P1 remaining matrix"
+    ]
+  },
+  "observed_success": {
+    "openai_ready": false,
+    "claude_ready": false,
+    "openai_reasons": [
+      "offline",
+      "codex_source_unavailable",
+      "authorization_unavailable"
+    ],
+    "claude_reasons": [
+      "offline",
+      "authorization_unavailable"
+    ],
+    "manual_recheck_observed_checked_at_local": "2026/10/26 10:38:10"
+  },
+  "observed_failures": [
+    {
+      "phase": "automatic polling",
+      "method": "GET",
+      "path": "/api/bee/platforms/claude",
+      "http_status": 409,
+      "error_json_valid": false
+    },
+    {
+      "phase": "manual recheck",
+      "method": "GET",
+      "path": "/api/bee/identity",
+      "http_status": 409,
+      "error_json_valid": false
+    },
+    {
+      "phase": "overview remount",
+      "method": "GET",
+      "path": "/api/bee/identity",
+      "error": "EOF"
+    }
+  ],
+  "root_cause": "not established; independent Go HTTP diagnostic also failed TLS before HTTP, with and without credential",
+  "real_supply_writes_requested": false,
+  "contribution_started": false,
+  "hive_modified": false,
+  "ui_handed_back_to_user": true,
+  "files": {
+    "02-read-failure.ax.txt": {
+      "sha256": "9007f1c44f95a9aa14893bde9a3df2da61bbc81542a216d321bc58a4aadd03e1",
+      "bytes": 2780
+    },
+    "03-diagnostics.ax.txt": {
+      "sha256": "61cd82f8fe242d89b622abb5c46c948400d313a06248842079c5655290d6b3fc",
+      "bytes": 1059
+    },
+    "03-diagnostics.jpg": {
+      "sha256": "963c268f6b6b5ea06d579abc9baac62df84fc77cb159d2c5601afafe376d2241",
+      "bytes": 131288
+    },
+    "04-platform-en.ax.txt": {
+      "sha256": "6fd464670ed6ed468589229ba980fd34ca4c0c2e4a083656474c1d07eaad4231",
+      "bytes": 2961
+    },
+    "05-settings-restored.ax.txt": {
+      "sha256": "3157a72f39179fb80dd5aa69808dbbb9b9e0fad28b138c351e3e51585259aa13",
+      "bytes": 1255
+    },
+    "06-final-overview-zh.ax.txt": {
+      "sha256": "59a9e564af0ea847e27e74e092269dce2e3ab6f47045c48ea320548c0d8d5ba3",
+      "bytes": 2741
+    },
+    "http-diagnostic.json": {
+      "sha256": "db4df71ca41906a905df600e574940fd34e2b1c1cc1c07c263967af722b6c8ef",
+      "bytes": 1124
+    },
+    "unauthenticated-api-diagnostic.json": {
+      "sha256": "c14acd902a6aafa99fdac937c788fe2d5db2243c1a153d9aea4f45870c06eb3a",
+      "bytes": 350
+    }
+  }
+}

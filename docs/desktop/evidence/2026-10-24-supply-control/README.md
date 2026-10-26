@@ -25,3 +25,7 @@
 设备配置与更新前一致；旧包备份不含配置。`previous-app-manifest.json`记录旧程序hash。新版为ad-hoc开发签名、未公证，没有生产发布。Windows/Linux本增量界面与旧P0/P1环境缺口保留；不将fixture、进程存在或代码review换算为真实桌面通过。
 
 原始日志按运行字节归档。`build-app-final.log`、`rust-final.log`、`signed-final.log` 原样含末尾空行，`git diff --check` 对这三处提示 new blank line at EOF；未改写日志、Git配置或跳过hook。除此三份原始日志外暂存差异检查通过，三份日志均与cache原始文件字节一致。
+
+## 2026-10-26后续补验
+
+上述取窗失败为10月24日历史状态。用户显示主窗口后，已取得新版AX及诊断截图，完成平台卡、刷新状态、失败保护、导航和中英切换核对；连续联网稳定性仍因HTTP409及EOF/TLS失败保留。当前结果见[原生补验](../2026-10-26-supply-native/README.md)，不要求用户继续保持窗口。

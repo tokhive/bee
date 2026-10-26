@@ -1,0 +1,68 @@
+Window: "Bee · 开发验证", App: Bee Dev.
+0 standard window Bee · 开发验证, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Bee, URL: tauri://localhost
+			3 container
+				4 text Bee
+				5 container Main navigation
+					6 button Overview
+					7 button AI accounts
+					8 button Earnings
+					9 button Diagnostics
+					10 button Settings
+				11 text Platform status checked with Hive Reopen from the tray after closing B Bee Desktop Device and platform controls
+			12 container
+				13 text Workspace Overview This device
+			14 container
+				15 heading Overview, Value: 1
+					16 text Overview
+				17 text View device status and contribution summary.
+				18 container Device pairing
+					19 heading Connect this device, Value: 2
+						20 text Connect this device
+					21 text Contribution not started
+					22 text Confirm device ownership on the Hive website. Binding does not start contribution.
+					23 text Device bound. Contribution has not started.
+					24 description list
+						25 text Device name
+						26 text Bee Desktop
+						27 text Device owner
+						28 text [email redacted]
+						29 text Device ID
+						30 text [device id redacted]
+						31 text Hive
+						32 text https://dev.tokhive.ai
+					33 text This verifies device ownership. A separate account session is not connected.
+					34 button Verify device again
+					35 text Device settings are saved separately from the CLI. Review and confirm any device replacement on the Hive website.
+				36 container Platform supply
+					37 heading Platform supply, Value: 2
+						38 text Platform supply
+					39 button Recheck platforms
+					40 text Pause is saved for this Hive account and platform, persists across device replacement, and does not stop accepted requests.
+					41 text Resume only removes manual pause and does not start contribution on this device. Hive reports readiness.
+					42 container
+						43 text Platform result unconfirmed. Recheck to read the current state. Changes are never retried automatically. SUPPLY_OPERATION_FAILED: supply identity check failed: GET /api/bee/identity at https://dev.tokhive.ai: Get "https://dev.tokhive.ai/api/bee/identity": EOF
+					44 container OpenAI
+						45 heading OpenAI, Value: 3
+							46 text OpenAI
+						47 text Current result unconfirmed
+						48 container
+							49 text Last checked :  Not checked yet
+						50 button (disabled) Pause
+					51 container Claude
+						52 heading Claude, Value: 3
+							53 text Claude
+						54 text Current result unconfirmed
+						55 container
+							56 text Last checked :  Not checked yet
+						57 button (disabled) Pause
+			58 container
+				59 text Bee · Development build Device binding does not automatically start contribution
+		60 scroll bar (settable, float) 1
+	61 close button
+	62 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	63 minimize button
+	64 text Bee · 开发验证
+65 menu bar
+	66 Bee Dev

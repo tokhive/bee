@@ -87,5 +87,13 @@
   "production_release": false,
   "real_supply_writes": false,
   "contribution_started": false,
-  "hive_modified": false
+  "hive_modified": false,
+  "native_gui_follow_up": {
+    "observed_on": "2026-10-26",
+    "state": "partial",
+    "evidence": "../2026-10-26-supply-native/manifest.json",
+    "window_and_read_refresh_and_navigation_and_languages_checked": true,
+    "continuous_network_stability": "not passed; HTTP409 then EOF/TLS failures; root cause unknown",
+    "original_native_gui_entry_is_historical": true
+  }
 }

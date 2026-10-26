@@ -1,0 +1,68 @@
+Window: "Bee · 开发验证", App: Bee Dev.
+0 standard window Bee · 开发验证, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Bee, URL: tauri://localhost
+			3 container
+				4 text Bee
+				5 container 主导航
+					6 button 概览
+					7 button AI 账号
+					8 button 收益
+					9 button 诊断
+					10 button 设置
+				11 text 平台状态由 Hive 核对 关窗后可从托盘找回 B Bee 桌面端 设备与平台控制
+			12 container
+				13 text 工作空间 概览 本机设备
+			14 container
+				15 heading 概览, Value: 1
+					16 text 概览
+				17 text 查看设备状态与贡献摘要。
+				18 container 设备配对
+					19 heading 连接本机设备, Value: 2
+						20 text 连接本机设备
+					21 text 尚未开始贡献
+					22 text 在 Hive 网页确认这台设备的归属；绑定不会开始贡献。
+					23 text 设备已绑定，尚未开始贡献。
+					24 description list
+						25 text 设备名称
+						26 text Bee Desktop
+						27 text 设备归属
+						28 text [email redacted]
+						29 text 设备 ID
+						30 text [device id redacted]
+						31 text Hive
+						32 text https://dev.tokhive.ai
+					33 text 这是设备归属核验，独立账号登录尚未接入。
+					34 button 重新核对设备
+					35 text 设备配置独立保存，不覆盖 CLI；已有设备的替换请在 Hive 网页核对后确认。
+				36 container 平台供给
+					37 heading 平台供给, Value: 2
+						38 text 平台供给
+					39 button 重新核对平台
+					40 text 暂停按当前 Hive 账号和平台保存，换设备后仍保留；不会终止已接请求。
+					41 text 恢复只解除手动暂停，不启动本机贡献；接单条件由 Hive 报告。
+					42 container
+						43 text 平台结果未确认，请重新核对；不会自动重试修改。 SUPPLY_OPERATION_FAILED: supply identity check failed: GET /api/bee/identity at https://dev.tokhive.ai: Get "https://dev.tokhive.ai/api/bee/identity": EOF
+					44 container OpenAI
+						45 heading OpenAI, Value: 3
+							46 text OpenAI
+						47 text 本次结果未确认
+						48 container
+							49 text 最后核对时间 :  尚未核对
+						50 button (disabled) 暂停
+					51 container Claude
+						52 heading Claude, Value: 3
+							53 text Claude
+						54 text 本次结果未确认
+						55 container
+							56 text 最后核对时间 :  尚未核对
+						57 button (disabled) 暂停
+			58 container
+				59 text Bee · 开发版本 设备绑定不自动开始贡献
+		60 scroll bar (settable, float) 0
+	61 close button
+	62 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	63 minimize button
+	64 text Bee · 开发验证
+65 menu bar
+	66 Bee Dev

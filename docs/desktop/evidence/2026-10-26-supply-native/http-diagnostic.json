@@ -1,0 +1,33 @@
+{
+  "samples": [
+    {
+      "credential_sent": false,
+      "method": "GET",
+      "observed_at": "2026-10-26T02:42:02Z",
+      "path": "/api/bee/identity",
+      "transport_error": "Get \"https://dev.tokhive.ai/api/bee/identity\": remote error: tls: handshake failure"
+    },
+    {
+      "credential_sent": true,
+      "method": "GET",
+      "observed_at": "2026-10-26T02:42:02Z",
+      "path": "/api/bee/identity",
+      "transport_error": "Get \"https://dev.tokhive.ai/api/bee/identity\": remote error: tls: handshake failure"
+    },
+    {
+      "credential_sent": true,
+      "method": "GET",
+      "observed_at": "2026-10-26T02:42:02Z",
+      "path": "/api/bee/platforms/openai",
+      "transport_error": "Get \"https://dev.tokhive.ai/api/bee/platforms/openai\": remote error: tls: handshake failure"
+    },
+    {
+      "credential_sent": true,
+      "method": "GET",
+      "observed_at": "2026-10-26T02:42:03Z",
+      "path": "/api/bee/platforms/claude",
+      "transport_error": "Get \"https://dev.tokhive.ai/api/bee/platforms/claude\": remote error: tls: handshake failure"
+    }
+  ],
+  "writes_requested": false
+}

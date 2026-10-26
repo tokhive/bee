@@ -1,0 +1,29 @@
+Window: "Bee · 开发验证", App: Bee Dev.
+0 standard window Bee · 开发验证, Secondary Actions: Raise
+	1 scroll area
+		2 HTML content Description: Bee, URL: tauri://localhost
+			3 container
+				4 text Bee
+				5 container 主导航
+					6 button 概览
+					7 button AI 账号
+					8 button 收益
+					9 button 诊断
+					10 button 设置
+				11 text 平台状态由 Hive 核对 关窗后可从托盘找回 B Bee 桌面端 设备与平台控制
+			12 container
+				13 text 工作空间 诊断 本机设备
+			14 container
+				15 heading 诊断, Value: 1
+					16 text 诊断
+				17 text 检查 Bee 运行与连接状态。 原生管理进程 ready 版本 dev+24aca16f37e9 真实贡献 尚未开始贡献 设备核对 bound
+			18 container
+				19 text Bee · 开发版本 设备绑定不自动开始贡献
+	20 close button
+	21 full screen button Help: this button also has an action to zoom the window, Secondary Actions: zoom the window
+	22 minimize button
+	23 text Bee · 开发验证
+24 menu bar
+	25 Bee Dev
+
+The focused UI element is 9 button 诊断

@@ -1,0 +1,13 @@
+{
+  "observed_at": "2026-10-26T02:40:12.443366+00:00",
+  "credential_sent": false,
+  "method": "GET",
+  "path": "/api/bee/identity",
+  "curl_exit": 35,
+  "http_status_lines": [],
+  "headers": {},
+  "body_bytes": 0,
+  "json_valid": false,
+  "html_document": false,
+  "body_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

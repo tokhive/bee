@@ -228,7 +228,9 @@ backup_pairing() (
 	[ ! -L "$config_path.lock" ] || fail "$(message '%s is a symbolic link; configuration was not moved' '%s 是符号链接；未移动设备配置' "$config_path.lock")"
 	exec 9>>"$config_path.lock"
 	flock -n 9 || fail "$(message 'could not acquire configuration lock %s; stop other Bee processes and retry' '无法获得配置锁 %s；请停止其他 Bee 进程后重试' "$config_path.lock")"
-	[ -f "$config_path" ] && [ ! -L "$config_path" ] || fail "$(message '%s is no longer a regular configuration file; refusing to move it' '%s 已不是常规配置文件；拒绝移动' "$config_path")"
+	if [ ! -f "$config_path" ] || [ -L "$config_path" ]; then
+		fail "$(message '%s is no longer a regular configuration file; refusing to move it' '%s 已不是常规配置文件；拒绝移动' "$config_path")"
+	fi
 	if cmp "$config_path" "$work/previous-bee.json" >/dev/null; then
 		:
 	else

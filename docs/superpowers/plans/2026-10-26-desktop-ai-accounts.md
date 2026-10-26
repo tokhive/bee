@@ -108,11 +108,11 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 **接口：** Snapshot(refresh=true) 仅刷新 Hive GET，未绑定时保留本地检测；消费已绑定 `DesktopDevice`、`desktopCall` 和 `beewire.PlatformAccount/Capabilities`。固定查询 `/api/bee/identity`、`/api/bee/platforms/{platform}/account`、`/api/bee/platforms/{platform}/capabilities`。状态文件位于设备配置同目录 `ai-accounts.json`，版本 1，本批仅保存已验证归属下的通知去重状态；去重键严格为 Hive/owner/platform/指纹/问题类型，设备只作为归属核验字段。未来账号选择另按 Hive/owner/device/platform 隔离。
 
-- [ ] 写失败测试 `TestDesktopAccountsHive`：未绑定可检测；撤销／owner-device-Hive 不匹配拒绝；account→capabilities→account 变化（指纹、generation、credential_revision 任一）整组未确认；confirmation_id 标记不外泄；unknown、quota_exhausted、rate_limited 与陈旧能力按 Hive 读取语义展示。
-- [ ] 写失败测试 `TestDesktopAccountsState`：无文件、私密权限、symlink、未知版本／重复 JSON 字段、损坏不覆盖、原子写与读回失败；账号文件不会改设备／CLI／官方文件。`TestDesktopAccountsIssues` 覆盖 59/60 秒持续离线、反复刷新去重、恢复后复发、重启、归属／指纹隔离、无指纹时不合并为另一个账号。
-- [ ] 运行 `go test ./agent -run 'TestDesktopAccounts(Hive|State|Issues)' -count=1` 验证红灯；实现夹读与各部分时间／失败。只映射受控公开字段，市场开放始终未知；未匹配本地选择不得显示已接入／桌面 owned。
-- [ ] 实现受保护文件与提醒记录：沿用 `openRegularNoFollow/validatePrivateFile/writePrivateFile/lockState`，带版本及预期修订、原子替换后读回；固定设备配置→账号文件锁顺序，禁止嵌套调用再次获取同锁。写失败保留页面问题、提示去重存储未确认，不静默宣称持久化。只按明确恢复证据解除去重，读取失败不能当恢复。
-- [ ] 运行 `go test -race ./agent -run 'TestDesktopAccounts|TestDesktop(Device|Supply)' -count=1`；自检、任务审查并提交。
+- [x] 写失败测试 `TestDesktopAccountsHive`：未绑定可检测；撤销／owner-device-Hive 不匹配拒绝；account→capabilities→account 变化（指纹、generation、credential_revision 任一）整组未确认；confirmation_id 标记不外泄；unknown、quota_exhausted、rate_limited 与陈旧能力按 Hive 读取语义展示。
+- [x] 写失败测试 `TestDesktopAccountsState`：无文件、私密权限、symlink、未知版本／重复 JSON 字段、损坏不覆盖、原子写与读回失败；账号文件不会改设备／CLI／官方文件。`TestDesktopAccountsIssues` 覆盖 59/60 秒持续离线、反复刷新去重、恢复后复发、重启、归属／指纹隔离、无指纹时不合并为另一个账号。
+- [x] 运行 `go test ./agent -run 'TestDesktopAccounts(Hive|State|Issues)' -count=1` 验证红灯；实现夹读与各部分时间／失败。只映射受控公开字段，市场开放始终未知；未匹配本地选择不得显示已接入／桌面 owned。
+- [x] 实现受保护文件与提醒记录：沿用 `openRegularNoFollow/validatePrivateFile/writePrivateFile/lockState`，带版本及预期修订、原子替换后读回；固定设备配置→账号文件锁顺序，禁止嵌套调用再次获取同锁。写失败保留页面问题、提示去重存储未确认，不静默宣称持久化。只按明确恢复证据解除去重，读取失败不能当恢复。
+- [x] 运行 `go test -race ./agent -run 'TestDesktopAccounts|TestDesktop(Device|Supply)' -count=1`；自检、任务审查并提交。
 
 ## Task 4: Go 私有桥与 Rust typed 命令
 

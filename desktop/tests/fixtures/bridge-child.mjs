@@ -18,7 +18,7 @@ input.on('line', line => {
     const keys=Object.keys(request.params).sort().join(',');
     const required={account_defaults:'',account_detect:'directory,mode,platform,store',account_snapshot:'platform,refresh',account_action:'action,candidate_ref,confirmed,platform,revision'};
     if(keys!==required[request.method]){process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',error:{code:'FIXTURE_PARAMS_REJECTED',message:'account params differ from fixed contract'}})+'\n');return;}
-    const result=request.method==='account_defaults'?{defaults:{platforms:[]}}:request.method==='account_action'?{error:{code:'ACCOUNT_OPERATION_FAILED',message:'runtime ownership proof absent'}}:{account:{platform:request.params.platform}};
+    const result=request.method==='account_defaults'?{defaults:{platforms:[]}}:request.method==='account_action'?{error:{code:'ACCOUNT_OPERATION_FAILED',message:'runtime ownership proof absent'}}:{account:{platform:request.params.platform,operation:null}};
     const reply=JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',result})+'\n';
     if(mode==='slow-account')setTimeout(()=>process.stdout.write(reply),800);else process.stdout.write(reply);return;
   }

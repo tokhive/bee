@@ -232,36 +232,47 @@ impl Bridge {
         request: AccountDetectRequest,
     ) -> Result<BridgeReply, BridgeError> {
         request.validate()?;
-        self.request(
-            "account_detect",
-            serde_json::json!(request),
-            Duration::from_secs(15),
-        )
-        .await
+        let platform = request.platform;
+        let reply = self
+            .request(
+                "account_detect",
+                serde_json::json!(request),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::validate_account_operation(&reply.result, platform)?;
+        Ok(reply)
     }
     pub async fn account_snapshot(
         &self,
         platform: SupplyPlatform,
         refresh: bool,
     ) -> Result<BridgeReply, BridgeError> {
-        self.request(
-            "account_snapshot",
-            serde_json::json!({"platform":platform,"refresh":refresh}),
-            Duration::from_secs(15),
-        )
-        .await
+        let reply = self
+            .request(
+                "account_snapshot",
+                serde_json::json!({"platform":platform,"refresh":refresh}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::validate_account_operation(&reply.result, platform)?;
+        Ok(reply)
     }
     pub async fn account_action(
         &self,
         request: AccountActionRequest,
     ) -> Result<BridgeReply, BridgeError> {
         request.validate()?;
-        self.request(
-            "account_action",
-            serde_json::json!(request),
-            Duration::from_secs(15),
-        )
-        .await
+        let platform = request.platform;
+        let reply = self
+            .request(
+                "account_action",
+                serde_json::json!(request),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::validate_account_operation(&reply.result, platform)?;
+        Ok(reply)
     }
 
     pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {

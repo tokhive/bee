@@ -157,7 +157,7 @@ func TestDesktopAccountsBlockedActions(t *testing.T) {
 	if *first.Candidate.Reference == *second.Candidate.Reference || first.Revision >= second.Revision {
 		t.Fatal("candidate not invalidated")
 	}
-	for _, action := range []string{"select", "confirm_change", "remove", "clear_selection"} {
+	for _, action := range []string{"confirm_change", "remove"} {
 		_, err := a.Action(context.Background(), DesktopAccountActionRequest{Platform: "openai", Revision: second.Revision, CandidateRef: *second.Candidate.Reference, Action: action, Confirmed: true})
 		if err == nil || !strings.Contains(err.Error(), "runtime") {
 			t.Fatalf("action=%s err=%v", action, err)

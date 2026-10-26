@@ -112,7 +112,7 @@ func decodeAccountParams(req request, raw json.RawMessage) (request, *protocolEr
 			return req, rejected("INVALID_REQUEST", "account revision outside safe integer range; required=0..9007199254740991")
 		}
 		ref, err := hex.DecodeString(req.Action.CandidateRef)
-		if err != nil || len(ref) != 24 || hex.EncodeToString(ref) != req.Action.CandidateRef {
+		if !(req.Action.Action == "clear_selection" && req.Action.CandidateRef == "") && (err != nil || len(ref) != 24 || hex.EncodeToString(ref) != req.Action.CandidateRef) {
 			return req, rejected("INVALID_REQUEST", "account candidate_ref format rejected; required=48 lowercase hex characters")
 		}
 		if !slices.Contains([]string{"select", "confirm_change", "remove", "clear_selection"}, req.Action.Action) {

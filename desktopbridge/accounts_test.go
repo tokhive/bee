@@ -63,3 +63,15 @@ func TestAccountsFixedMethodsAndOrderedCapabilities(t *testing.T) {
 		t.Fatalf("fixed method result mismatch: %s", out.String())
 	}
 }
+
+func TestDesktopAccountActionClearDoesNotRequireCandidate(t *testing.T) {
+	var out bytes.Buffer
+	input := hello + supplyRequest("clear", "account_action", `{"platform":"openai","revision":0,"candidate_ref":"","action":"clear_selection","confirmed":true}`) + request("p", "ping")
+	if err := desktopbridge.RunWithAccounts(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil)); err != nil {
+		t.Fatal(err)
+	}
+	frames := replies(t, out.String())
+	if frames[1].Error != nil || !bytes.Contains(frames[1].Result, []byte(`"ACCOUNT_OPERATION_FAILED"`)) || frames[2].Error != nil {
+		t.Fatalf("local clear empty candidate not admitted as typed action: %s", out.String())
+	}
+}

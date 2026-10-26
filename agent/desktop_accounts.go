@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime"
+	"sync"
 	"time"
 
 	"github.com/tokhive/bee/beewire"
@@ -16,6 +17,12 @@ import (
 // DesktopAccounts keeps public observations, never authorization material.
 // Each platform has a separate, deadline-aware gate; snapshots are deep copies.
 type DesktopAccounts struct {
+	lifecycleMu sync.Mutex
+	storageMu   sync.Mutex
+	ctx         context.Context
+	cancel      context.CancelFunc
+	workers     sync.WaitGroup
+	closed      bool
 	device      *DesktopDevice
 	platforms   map[string]*desktopAccountPlatform
 	goos        string
@@ -26,6 +33,9 @@ type DesktopAccounts struct {
 
 type desktopAccountPlatform struct {
 	gate               chan struct{}
+	working            bool
+	pending            *desktopPendingOperation
+	selected           *desktopAccountSelection
 	snapshot           DesktopAccountSnapshot
 	source             *DesktopAccountSource
 	credentialRevision string
@@ -117,6 +127,7 @@ type DesktopAccountIssue struct {
 	Notify      bool    `json:"notify"`
 }
 type DesktopAccountSnapshot struct {
+	Operation     *DesktopOperation            `json:"operation"`
 	Platform      string                       `json:"platform"`
 	Revision      int64                        `json:"revision"`
 	Candidate     DesktopAccountCandidate      `json:"candidate"`
@@ -176,12 +187,13 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 		Selection: DesktopAccountFact{State: "not_selected"}, Hive: DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: "not_checked"}},
 		Authorization: DesktopAccountFact{State: "not_checked"}, Capabilities: []DesktopAccountCapabilities{emptyAccountCapabilities("official"), emptyAccountCapabilities("hive")}, Issues: []DesktopAccountIssue{},
 		Features: DesktopAccountFeatures{Detect: DesktopAccountAvailability{Available: true}, Check: DesktopAccountAvailability{Available: true},
-			Select: blocked, ConfirmChange: blocked, ClearSelection: blocked, Remove: unavailable("runtime_drain_and_detach_required"),
+			Select: DesktopAccountAvailability{Available: true}, ConfirmChange: blocked, ClearSelection: DesktopAccountAvailability{Available: true}, Remove: unavailable("runtime_drain_and_detach_required"),
 			Authorize: unavailable("verified_official_authorization_adapter_required"), SystemNotifications: unavailable("system_notification_service_required")},
 	}
 }
 func NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts {
-	result := &DesktopAccounts{device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring}
+	ctx, cancel := context.WithCancel(context.Background())
+	result := &DesktopAccounts{ctx: ctx, cancel: cancel, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring}
 	for _, platform := range []string{"openai", "claude"} {
 		result.platforms[platform] = &desktopAccountPlatform{gate: make(chan struct{}, 1), snapshot: initialAccountSnapshot(platform)}
 	}
@@ -219,8 +231,11 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	}
 	defer release()
 	a.expireCandidate(p, platform)
-	if refresh {
+	if refresh && !p.working {
 		a.refreshAccountHive(ctx, p, platform)
+	}
+	if refresh && !p.working && p.pending != nil && p.pending.Kind == "select" {
+		a.launchSelection(p, platform, *p.pending, true, false)
 	}
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
@@ -253,6 +268,9 @@ func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDete
 		return DesktopAccountSnapshot{}, err
 	}
 	defer release()
+	if p.working {
+		return accountSnapshotCopy(p.snapshot), accountFailure(request.Platform, "operation_pending", "platform_operation", "candidate detection blocked while the platform worker is active")
+	}
 	// Invalidate before reading: a failed replacement must not keep an old candidate usable.
 	p.snapshot.Revision++
 	p.snapshot.Candidate = DesktopAccountCandidate{State: "unavailable", ObservedAt: accountTime(a.now())}
@@ -315,11 +333,13 @@ func (a *DesktopAccounts) Action(ctx context.Context, request DesktopAccountActi
 	if request.Revision < 0 || request.Revision > 9007199254740991 || request.Revision != p.snapshot.Revision {
 		return fail("stale_revision", "revision", "revision must match the current platform snapshot")
 	}
-	if p.snapshot.Candidate.Reference == nil || request.CandidateRef != *p.snapshot.Candidate.Reference {
+	if request.Action != "clear_selection" && (p.snapshot.Candidate.Reference == nil || request.CandidateRef != *p.snapshot.Candidate.Reference) {
 		return fail("stale_candidate", "candidate_ref", "candidate must belong to this platform and current management instance")
 	}
 	switch request.Action {
-	case "select", "confirm_change", "clear_selection":
+	case "select", "clear_selection":
+		return a.beginSelection(p, request)
+	case "confirm_change":
 		return fail("runtime_dependency", "runtime_ownership", "runtime ownership, unused-source proof and source-switch barrier are required")
 	case "remove":
 		return fail("runtime_dependency", "runtime_detach", "runtime stop, drain and credential-detach proof are required")

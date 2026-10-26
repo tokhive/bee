@@ -97,10 +97,10 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 **接口：** Detect(official) 使用同一来源输入；Snapshot 不触发官方查询。复用 `queryClaudeProfile`、`capabilitySource.observe`、`claudeCapabilitySource.observe`，只注入测试 transport/时钟，不开放 URL 或代理参数。
 
-- [ ] 写失败测试 `TestDesktopAccountsOfficial`：Claude profile 才能确定指纹；OpenAI 本地验证与官方观察区分；查询前后换号／同号换 token 废弃结果；过期／scope 缺失不联网；原始文件字节／mtime 不变，未调用刷新接口。
-- [ ] 写缓存与额度矩阵：5 分钟内复用、6 分钟过期、5 小时元数据刷新、429 与 retry_at、reset 过期、null、99/100/120%、单窗／双窗／Claude 专属窗口；人工核算 120% 显示原值、剩余 0；对照 `beewire/capabilities_test.go` 和 `agent/testdata/claude-usage-2026-10-11.json`。
-- [ ] 运行 `go test ./agent -run 'TestDesktopAccountsOfficial' -count=1` 验证红灯；实现固定端点观察和每来源／指纹／凭证版本缓存。保留原 observed_at，不以重复读取刷新历史数据时效；失败不清除其他子域真实结果；错误呈现具体 HTTP／字段证据且不泄密。
-- [ ] 运行 `go test -race ./agent -run 'TestDesktopAccountsOfficial|TestClaudeProfile|TestClaudeCapabilit|TestCodexCapabilit|TestOpenAI' -count=1`；检查确实执行目标测试，必要时按现存测试名补命令；自检、任务审查并提交。
+- [x] 写失败测试 `TestDesktopAccountsOfficial`：Claude profile 才能确定指纹；OpenAI 本地验证与官方观察区分；查询前后换号／同号换 token 废弃结果；过期／scope 缺失不联网；原始文件字节／mtime 不变，未调用刷新接口。
+- [x] 写缓存与额度矩阵：5 分钟内复用、6 分钟过期、5 小时元数据刷新、429 与 retry_at、reset 过期、null、99/100/120%、单窗／双窗／Claude 专属窗口；人工核算 120% 显示原值、剩余 0；对照 `beewire/capabilities_test.go` 和 `agent/testdata/claude-usage-2026-10-11.json`。
+- [x] 运行 `go test ./agent -run 'TestDesktopAccountsOfficial' -count=1` 验证红灯；实现固定端点观察和每来源／指纹／凭证版本缓存。保留原 observed_at，不以重复读取刷新历史数据时效；失败不清除其他子域真实结果；错误呈现具体 HTTP／字段证据且不泄密。
+- [x] 运行 `go test -race ./agent -run 'TestDesktopAccountsOfficial|TestClaudeProfile|TestClaudeCapabilit|TestCodexCapabilit|TestOpenAI' -count=1`；检查确实执行目标测试，必要时按现存测试名补命令；自检、任务审查并提交。
 
 ## Task 3: Hive 账号夹读与持久提醒
 

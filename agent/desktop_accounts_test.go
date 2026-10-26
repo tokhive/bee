@@ -25,7 +25,7 @@ func TestDesktopAccountsDefaults(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv("CODEX_HOME", dir)
 	t.Setenv("CLAUDE_CONFIG_DIR", dir)
-	a := NewDesktopAccounts(&DesktopDevice{path: filepath.Join(dir, "device.json")})
+	a := NewDesktopAccounts(newDesktopTestDevice(t, filepath.Join(dir, "device.json")))
 	defaults, err := a.Defaults(context.Background())
 	if err != nil || len(defaults.Platforms) != 2 || defaults.Platforms[0].Directory != dir {
 		t.Fatalf("defaults=%+v err=%v", defaults, err)
@@ -144,7 +144,7 @@ func TestDesktopAccountsBlockedActions(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, "auth.json"), desktopCodexFixture(t, time.Now().Add(time.Hour)), 0600); err != nil {
 		t.Fatal(err)
 	}
-	a := NewDesktopAccounts(&DesktopDevice{path: filepath.Join(dir, "device.json")})
+	a := NewDesktopAccounts(newDesktopTestDevice(t, filepath.Join(dir, "device.json")))
 	request := DesktopAccountDetectRequest{Platform: "openai", Directory: &dir, Store: "auto", Mode: "local"}
 	first, err := a.Detect(context.Background(), request)
 	if err != nil {

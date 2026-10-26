@@ -61,7 +61,7 @@ func desktopSupplyFixture(t *testing.T, handler http.HandlerFunc, mutate ...func
 			t.Errorf("supply operation mutated configuration bytes: read_error=%v", err)
 		}
 	})
-	return &DesktopDevice{path: path}
+	return newDesktopTestDevice(t, path)
 }
 
 func desktopSupplyServeIdentity(w http.ResponseWriter, r *http.Request) bool {
@@ -135,7 +135,8 @@ func TestDesktopSupplyPlatformIsolationExplicitFalseAndRestart(t *testing.T) {
 	if err != nil || other.Paused {
 		t.Fatalf("pause crossed platform: %+v %v", other, err)
 	}
-	restarted := &DesktopDevice{path: d.path}
+	closeDesktopTestDevice(t, d)
+	restarted := newDesktopTestDevice(t, d.path)
 	result, err = restarted.SupplyStatus(context.Background(), "openai")
 	if err != nil || !result.Paused {
 		t.Fatalf("restart must read persisted server state: %+v %v", result, err)
@@ -452,7 +453,8 @@ func TestDesktopSupplyUnconfirmedWritesNeverReplay(t *testing.T) {
 				t.Fatalf("unexpected recovery/readback GETs: %d", gets.Load())
 			}
 			// Manual recheck and service restart are read-only, never replaying intent.
-			_, _ = (&DesktopDevice{path: d.path}).SupplyStatus(context.Background(), "openai")
+			closeDesktopTestDevice(t, d)
+			_, _ = (newDesktopTestDevice(t, d.path)).SupplyStatus(context.Background(), "openai")
 			if puts.Load() != 1 {
 				t.Fatal("manual recheck replayed write")
 			}

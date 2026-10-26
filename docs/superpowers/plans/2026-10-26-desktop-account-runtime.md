@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **给执行 agent：** 按用户选定的 `subagent-driven-development` 或 `executing-plans` 逐任务实施；使用 `- [ ]` 跟踪。本计划尚待用户审阅及选择执行模式，不能因 spec 已批准而自动实施。
+> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1 已验证，当前执行 S1-T2。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -19,18 +19,9 @@
 - 风险重点是暂停／接入／confirm 的外部副作用、旧 worker 提交、配置锁与持久化失败。测试使用真实 HTTP/WS 替身和进程句柄，记录调用与磁盘状态；不能只把快照赋成成功。
 - 下列新类型、文件、命令是实施契约，不表示已经存在。每任务先写所列失败用例并确认预期失败，再实现、运行同一命令至通过，最后只提交该任务明确路径。错误遵循 `fail-fast-with-evidence`，鉴权／迁移遵循 `high-stakes-implementation-testing`。
 
-## 三份计划的并行安排（共同约定）
+## 三份计划的执行顺序（已确认）
 
-关联：[S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md)、[S3 安装更新](2026-10-26-desktop-release-update.md)。这是供用户选择执行模式的建议，尚非并行执行授权。
-
-| 阶段 | 可以同时开展 | 汇合条件 |
-| --- | --- | --- |
-| 契约基线 | S1-T1 统一状态／锁／停止／网络输入契约 | 契约提交审过，三份使用同一基线 |
-| 独立功能 | S1-T2/T3 账号与运行；S1-T4 官方登录；S2-T1 偏好与 T2 系统适配；S3-T1 发布打包与 T2 更新下载 | 有依赖的 Task 在各自通道内顺序执行，不并改共享文件 |
-| 真实接通 | S1-T5/T6；S2-T3/T4 消费已完成的运行与网络能力；S3-T3/T4 消费停止与数据格式 | S1-T3 提供真实状态；S1-T6 提供可信退出；S2-T1 提供配置格式 |
-| 集成验收 | S1-T7/T8、S2-T5/T6、S3-T5 依次整合 | S1 核心不能留给 S3 实现；S3 全矩阵验证使用合并候选包 |
-
-只设一个集成负责人管理 `cmd/bee/main.go`、`desktopbridge/server.go` / `protocol.go`、`desktop/src/app/NativeApp.tsx`、`desktop/src-tauri/src/lib.rs` / `commands.rs` / `protocol.rs` / `lifecycle.rs` / `sidecar.rs`、`desktop/src/i18n/{zh,en}.ts`、Cargo/npm 锁文件、capabilities、Tauri 配置及共用测试配置。分工表中的新专用模块可独立开发；共享文件接线由负责人依次合入，不能把同一工作区同时交给三个改文件的 agent。采用多 agent 时按已选工作流使用独立 worktree，任务审阅通过再集成；单 agent 则按依赖顺序完成同样的范围。
+用户已明确要求逐份执行：S1 账号接入与贡献运行 → [S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md) → [S3 安装更新](2026-10-26-desktop-release-update.md)。每份计划内部按 Task 依赖顺序实现和验证；只读审阅可以委派，实施文件由当前执行者统一修改。此前并行建议不再作为执行安排。
 
 ## 文件职责及公共契约
 
@@ -49,7 +40,7 @@ T1 在 `docs/desktop/bridge-protocol.md` 一次定义以下字段，Go/Rust/TS �
 | --- | --- |
 | `DesktopNetworkConfig` | `revision: number, connect_proxy: string`；仅受信内部配置输入，默认 `{revision:0, connect_proxy:""}` |
 | `DesktopOperation` | `id: string, kind: select/start/stop/confirm_change/authorize, platform: Platform|null, state: pending/running/reconciling/succeeded/failed/cancelled, revision: number, error: DesktopAccountError|null`；ID 不等于 Hive confirmation_id |
-| `DesktopRuntimeSnapshot` | `run_id: string|null, revision, network_revision, observed_at, local, connection, platforms, operation, stop_receipt`；local为stopped/starting/running/stopping/failed，connection为disconnected/connecting/connected/reconnecting/rejected/occupied；platforms为按Platform索引的`{account:DesktopAccountSnapshot,supply:DesktopSupply,selection_revision:number}`，operation为DesktopOperation或null，stop_receipt为DesktopStopReceipt或null；不重新定义可接单判断 |
+| `DesktopRuntimeSnapshot` | `run_id: string|null, revision, network_revision, observed_at, local, connection, platforms, operation, stop_receipt`；local为stopped/starting/running/stopping/failed，connection为disconnected/connecting/connected/reconnecting/rejected/occupied；platforms为按Platform索引的`{account:DesktopAccountSnapshot,supply:DesktopSupply|null,selection_revision:number}`，operation为DesktopOperation或null，stop_receipt为DesktopStopReceipt或null；不重新定义可接单判断 |
 | `DesktopStartRequest` | `expected_revision, resume_platforms: Platform[]`；仅本次明确允许恢复的平台；内部重启恢复另由保存意图和新鲜暂停状态核对，不能假造一次用户开始操作 |
 | `DesktopStopRequest` | `expected_revision, reason: user_stop/app_exit/update/network_change`；reason 由 Rust 固定入口生成，网页不能选择退出理由绕过停止意图 |
 | `DesktopStopReceipt` | `workers_stopped: bool, intent_saved: bool, session_clean: bool`；只说明 Go 本机运行，不能替代 Rust 对管理子进程 wait/reap 的证明 |
@@ -66,11 +57,13 @@ T1 在 `docs/desktop/bridge-protocol.md` 一次定义以下字段，Go/Rust/TS �
 
 **输入／输出：** 复用 `lockState`、受保护原子文件工具和现有设备身份验证；输出共享会话与上述 DTO。`NewDesktopDevice()` 保持兼容，首次业务访问延迟取得会话；`Close()` 仅由管理进程最终退出调用。未实现功能不得提前在 hello 声称可用。
 
-- [ ] 写失败用例：hello/ping 零配置读取；设备／供给／账号共享一次锁；外部持锁拒绝写入；网络等待不占配置互斥锁；v1→v2 保留提醒；断电/写失败保留原件；重复键、未知版本、权限错误拒绝；scope 不得串用。
-- [ ] 运行 `go test ./agent ./desktopbridge -run 'TestDesktop(Session|AccountState)|Test.*Hello|Test.*Ping' -count=1`，确认失败来自新增不变量。
-- [ ] 实现会话和版本迁移，落盘公共契约 fixture；不启动贡献，不改变 CLI 的原文件及锁生命周期。
-- [ ] 重跑上述测试并运行 `go test -race ./agent -run 'TestDesktop(Session|AccountState|Supply)' -count=1`；预期全过、无数据竞争。
-- [ ] 精确提交本任务路径：`refactor(desktop): share owned device session and version account state`。
+- [x] 写失败用例：hello/ping 零配置读取；设备／供给／账号共享一次锁；外部持锁拒绝写入；网络等待不占配置互斥锁；v1→v2 保留提醒；断电/写失败保留原件；重复键、未知版本、权限错误拒绝；scope 不得串用。
+- [x] 运行 `go test ./agent ./desktopbridge -run 'TestDesktop(Session|AccountState)|Test.*Hello|Test.*Ping' -count=1`，确认失败来自新增不变量。
+- [x] 实现会话和版本迁移，落盘公共契约 fixture；不启动贡献，不改变 CLI 的原文件及锁生命周期。
+- [x] 重跑上述测试并运行 `go test -race ./agent -run 'TestDesktop(Session|AccountState|Supply)' -count=1`；预期全过、无数据竞争。
+- [x] 精确提交本任务路径：`refactor(desktop): share owned device session and version account state`。
+
+T1 验证：共享会话、严格 v2 迁移、Close 等待和未决状态回读测试通过；相关 Go race、go vet 与 diff 检查通过。审阅发现的大小写字段别名覆盖问题已用失败回归用例修复。
 
 ## Task 2（S1-T2）：确认选择并持久接入
 

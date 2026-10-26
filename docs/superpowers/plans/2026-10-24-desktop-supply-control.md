@@ -45,4 +45,4 @@
 
 Task3 交付记录：平台卡与测试入口已落地；任务级审查及最终完整路径审查通过，两个诊断 Minor 已先 RED 后 GREEN 修复，最终 C/I/M0/0/0。最终产品源码 `24aca16`；Mac arm64 包、ZIP字节/CRC/权限、签名及signed2和包内真实两平台只读均通过，原配置字节未改。验证批次与源码对应见 `docs/desktop/evidence/2026-10-24-supply-control/README.md`。
 
-CUA 图形尝试已执行，但新版 Bee 和 Finder 均报 `cgWindowNotFound`，没有新版 AX/截图；原生平台卡/重新核对/导航/语言**未验收**，不能用包或fixture通过代替。已请求用户解锁Mac并显示Bee主窗口后继续。此为本计划“尝试CUA”的保留缺口；不宣称原生图形通过，也不勾旧P0/P1。分支/worktree继续保留，不发布。
+CUA初次尝试取窗失败，历史证据保持。2026-10-26用户显示窗口后，原生平台卡/刷新核对中与成功/失败禁写/诊断与导航/中英切换已核对，语言恢复原设置并交还用户；见 `docs/desktop/evidence/2026-10-26-supply-native/README.md`。连续端到端联网稳定性因HTTP409及EOF/TLS失败保留未通过，根因未确定；真实暂停恢复、原生最小窗和Windows/Linux不在本轮补验结果内，不勾旧P0/P1。分支/worktree继续保留，不发布。

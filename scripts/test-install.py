@@ -489,7 +489,7 @@ else:
         config = self.revoked_configuration()
         (self.bin / 'flock').unlink(missing_ok=True)
         checksum_tool = 'sha256sum' if shutil.which('sha256sum') else 'shasum'
-        for command in ('awk', 'cat', 'chmod', 'cmp', 'cp', 'cut', 'grep', 'mkdir',
+        for command in ('awk', 'cat', 'chmod', 'cmp', 'cp', 'cut', 'grep', 'gzip', 'mkdir',
                         'mktemp', 'mv', 'rm', 'sed', checksum_tool, 'tar', 'test', 'true'):
             (self.bin / command).symlink_to(shutil.which(command))
         result = self.run_terminal_install(self.repair_answers(), INSTALL_TEST_REVOKED='1', PATH=str(self.bin))

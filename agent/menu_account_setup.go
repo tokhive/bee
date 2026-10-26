@@ -24,23 +24,42 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 	if e != nil {
 		return e
 	}
-	home := ""
-	if existing != nil && existing.Codex != nil {
+	if m.setup.proxy != nil && *m.setup.proxy != "" {
+		if _, e = localConnectProxy(*m.setup.proxy); e != nil {
+			return failCause("BEE-CONFIG-PROXY", e)
+		}
+	}
+	home := m.setup.codexHome
+	if home == "" && existing != nil && existing.Codex != nil {
 		home = existing.Codex.Home
 	}
-	detected := []detectedAccount{detectCodexWithUI(m.ctx, home, m.ui), detectClaudeWithUI(m.ctx, nil, existing, m.ui)}
+	detected := []detectedAccount{}
+	if m.setup.platform == "" || m.setup.platform == "openai" {
+		detected = append(detected, detectCodexWithUI(m.ctx, home, m.ui))
+	}
+	if m.setup.platform == "" || m.setup.platform == "claude" {
+		detected = append(detected, detectClaudeWithUI(m.ctx, m.setup.claudeDir, existing, m.ui))
+	}
 	chosen := []detectedAccount{}
 	names := []string{}
 	available := 0
 	for _, found := range detected {
 		fmt.Fprintln(m.out, "\n"+m.styled("1;36", platformName(found.platform)))
 		if found.problem != nil {
+			if m.setup.platform != "" {
+				return found.problem
+			}
 			m.reportError(found.problem)
 			continue
 		}
 		available++
 		m.ui.status(m.out, "✅", "32", "Official sign-in detected", "已检测到官方登录")
 		m.note(found.summary, found.summary)
+		if m.setup.all {
+			chosen = append(chosen, found)
+			names = append(names, found.platform)
+			continue
+		}
 		fmt.Fprintln(m.out, m.text("  1) Supply this account  2) Skip  0) Cancel selection", "  1) 供给此账号  2) 跳过  0) 取消本次选择"))
 		n, e := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
 		if e != nil {
@@ -76,6 +95,17 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 			}
 		}
 	}
+	proxy := ""
+	if existing != nil {
+		proxy = existing.ConnectProxy
+	}
+	if m.setup.proxy != nil {
+		proxy = *m.setup.proxy
+	}
+	if proxy == "" {
+		proxy = m.text("None", "不使用")
+	}
+	m.field("HTTP CONNECT proxy after saving", "保存后的 HTTP CONNECT 代理", proxy)
 	ok, e := m.confirm(m.text("Save this complete selection?", "保存以上完整供给选择？"))
 	if e != nil || !ok {
 		return e
@@ -87,7 +117,7 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 	if !bytes.Equal(current, before) {
 		return fmt.Errorf("%s changed during account selection; configuration was not overwritten", m.egressPath)
 	}
-	cfg := buildEgress(chosen, existing, nil)
+	cfg := buildEgress(chosen, existing, m.setup.proxy)
 	raw, e := json.MarshalIndent(cfg, "", "  ")
 	if e != nil {
 		return e

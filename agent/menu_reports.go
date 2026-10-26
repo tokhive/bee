@@ -1,6 +1,7 @@
 package bee
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -30,11 +31,13 @@ func (m *managementMenu) status() error {
 	m.ui.status(m.out, "✅", "32", "Device pairing verified", "设备配对有效")
 	m.field("Device", "设备名称", identity.Name)
 	m.field("Owner", "所属账号", identity.OwnerEmail)
-	if !fileExists(m.egressPath) {
+	egressPath := defaultEgressPath(m.configPath)
+	m.field("Supply configuration for status", "状态查询使用的供给配置", egressPath)
+	if !fileExists(egressPath) {
 		fmt.Fprintln(m.out, m.text("No supplied accounts selected; choose Manage accounts.", "尚未选择供给账号，请进入账号管理。"))
 		return nil
 	}
-	cfg, e := readEgress(m.ctx, m.egressPath)
+	cfg, e := readEgress(m.ctx, egressPath)
 	if e != nil {
 		return e
 	}
@@ -43,7 +46,6 @@ func (m *managementMenu) status() error {
 		if err != nil {
 			m.field("Platform", "供给平台", platformName(p))
 			m.reportError(err)
-			continue
 		} else {
 			m.printAccount(a)
 		}
@@ -97,7 +99,7 @@ func (m *managementMenu) reason(r string) string {
 func (m *managementMenu) diagnostics() error {
 	m.page(m.text("Diagnostics", "运行诊断"))
 	egressPath := m.egressPath
-	if _, err := os.Lstat(egressPath); os.IsNotExist(err) {
+	if _, err := os.Lstat(egressPath); !m.egressExplicit && os.IsNotExist(err) {
 		egressPath = ""
 	}
 	report := diagnose(m.ctx, m.configPath, egressPath)
@@ -204,4 +206,14 @@ func (m *managementMenu) reasonFix(reason string, admin bool) string {
 		return "保持 Bee 在线并启用能力上报，等待能力或额度查询更新。"
 	}
 	return ""
+}
+
+func (m *managementMenu) diagnosticsJSON() error {
+	egress := m.egressPath
+	if _, err := os.Lstat(egress); !m.egressExplicit && os.IsNotExist(err) {
+		egress = ""
+	}
+	encoder := json.NewEncoder(m.out)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(diagnose(m.ctx, m.configPath, egress))
 }

@@ -227,9 +227,17 @@ func claudeStatus(ctx context.Context, args []string, out io.Writer) error {
 }
 
 func inspectClaude(ctx context.Context, store string, read func(context.Context) (claudeCredential, error), verify bool, transport http.RoundTripper, out io.Writer) error {
-	credential, err := read(ctx)
+	report, err := readClaudeStatus(ctx, store, read, verify, transport)
 	if err != nil {
 		return err
+	}
+	return json.NewEncoder(out).Encode(report)
+}
+
+func readClaudeStatus(ctx context.Context, store string, read func(context.Context) (claudeCredential, error), verify bool, transport http.RoundTripper) (map[string]any, error) {
+	credential, err := read(ctx)
+	if err != nil {
+		return nil, err
 	}
 	state := "available"
 	if !credential.available(time.Now()) {
@@ -247,17 +255,17 @@ func inspectClaude(ctx context.Context, store string, read func(context.Context)
 	if verify {
 		identity, err := queryClaudeProfile(ctx, credential, transport)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		current, err := read(ctx)
 		if err != nil || current != credential {
-			return errClaudeSourceChanged
+			return nil, errClaudeSourceChanged
 		}
 		if !current.available(time.Now()) {
-			return errClaudeExpired
+			return nil, errClaudeExpired
 		}
 		status["validation"] = "official_profile_verified"
 		status["account_fingerprint"] = identity.fingerprint()
 	}
-	return json.NewEncoder(out).Encode(status)
+	return status, nil
 }

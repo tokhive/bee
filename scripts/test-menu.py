@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """Exercise the real Bee binary through a controlling terminal."""
 import errno
+import base64
+import hashlib
+import struct
+from datetime import datetime, timedelta, timezone
 import json
 import http.server
 import sys
@@ -33,6 +37,7 @@ class MenuTest(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.env = dict(os.environ, HOME=self.temp.name, XDG_CONFIG_HOME=self.temp.name + '/config',
                         CODEX_HOME=self.temp.name + '/codex', CLAUDE_CONFIG_DIR=self.temp.name + '/claude',
+                        CLAUDE_SECURESTORAGE_CONFIG_DIR=self.temp.name + '/claude',
                         BEE_LANG='zh', TERM='xterm-256color', NO_COLOR='')
 
     def terminal(self, answers, args=(), after_fork=None, **env):
@@ -83,11 +88,11 @@ class MenuTest(unittest.TestCase):
     def test_bare_bee_opens_chinese_management_menu(self):
         code, out = self.terminal([('请选择 [', '0\n')])
         self.assertEqual(code, 0, out)
-        for label in ('运行状态', '设备配对', '供给账号', '后台服务', '日志与诊断', '切换语言'):
+        for label in ('启动 Bee', '运行状态', '设备配对', '供给账号', '后台服务', '日志与诊断', '高级选项', '帮助与版本', '切换语言'):
             self.assertIn(label, out)
 
     def test_language_choice_and_nested_return_keep_fast_input(self):
-        code, out = self.terminal([('Choose language', '2\n3\n0\n0\n')], BEE_LANG='')
+        code, out = self.terminal([('Choose language', '2\n4\n0\n0\n')], BEE_LANG='')
         self.assertEqual(code, 0, out)
         self.assertIn('Supplied accounts', out)
         self.assertNotIn('Press Enter', out)
@@ -95,7 +100,7 @@ class MenuTest(unittest.TestCase):
         self.assertIn('Confirm account change', out)
 
     def test_switch_language_updates_next_page_without_pause(self):
-        code, out = self.terminal([('请选择 [', '6\n2\n1\n\n0\n')])
+        code, out = self.terminal([('请选择 [', '9\n2\n2\n\n0\n')])
         self.assertEqual(code, 0, out)
         english = out.split('Bee management', 1)[1]
         self.assertIn('Device pairing', english)
@@ -123,7 +128,7 @@ class MenuTest(unittest.TestCase):
                 config.write_text(json.dumps({'hive': f'http://127.0.0.1:{server.server_port}',
                                               'credential': 'bee_' + 'a' * 43, 'name': 'synthetic'}))
                 config.chmod(0o600)
-                code, out = self.terminal([('请选择 [', '1\n\n0\n')], after_fork=worker.start)
+                code, out = self.terminal([('请选择 [', '2\n\n0\n')], after_fork=worker.start)
                 self.assertEqual(code, 0, out)
                 for label in ('凭证已撤销', '重新配对', 'HTTP 401', 'device_replaced'):
                     self.assertIn(label, out)
@@ -139,9 +144,141 @@ class MenuTest(unittest.TestCase):
                 worker.join()
 
     def test_pairing_cancel_never_creates_device_configuration(self):
-        code, out = self.terminal([('请选择 [', '2\nhttps://hive.example\n0\n0\n')])
+        code, out = self.terminal([('请选择 [', '3\nhttps://hive.example\n\n0\n0\n')])
         self.assertEqual(code, 0, out)
         self.assertIn('确认', out)
+        self.assertFalse(list(Path(self.temp.name).rglob('bee.json')))
+
+    def test_foreground_connects_and_ctrl_c_exits_entire_menu(self):
+        self.foreground_scenario(guided=False)
+
+    def test_guided_start_pairs_selects_and_connects(self):
+        self.foreground_scenario(guided=True)
+
+    def foreground_scenario(self, guided):
+        requests = []
+        identity = {'id': 'synthetic-device', 'name': 'PTY worker', 'owner_email': 'synthetic@example.test'}
+        class Hive(http.server.BaseHTTPRequestHandler):
+            protocol_version = 'HTTP/1.1'
+            def handle(self):
+                try:
+                    super().handle()
+                except (ConnectionResetError, BrokenPipeError):
+                    # Ctrl+C intentionally closes the Bee process and its sockets.
+                    pass
+            def reply(self, status, body):
+                raw = json.dumps(body).encode()
+                self.send_response(status)
+                self.send_header('Content-Type', 'application/json')
+                self.send_header('Content-Length', str(len(raw)))
+                self.end_headers()
+                self.wfile.write(raw)
+            def do_POST(self):
+                requests.append(('POST', self.path))
+                self.rfile.read(int(self.headers.get('Content-Length', '0')))
+                if self.path == '/api/bee/pairings':
+                    self.reply(200, {'pairing_token': 'synthetic-pairing', 'user_code': 'TEST-CODE',
+                                     'verification_uri': f'http://127.0.0.1:{self.server.server_port}/pair',
+                                     'expires_at': (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+                                     'status': 'pending'})
+                elif self.path == '/api/bee/pairings/redeem':
+                    self.reply(200, identity)
+                else:
+                    self.reply(503, {'error': {'code': 'synthetic_maintenance_unavailable'}})
+            def do_GET(self):
+                requests.append(('GET', self.path))
+                if self.path == '/api/bee/identity':
+                    self.reply(401, {'error': {'code': 'unpaired'}})
+                elif self.path == '/api/bee/pairings':
+                    self.reply(200, {'status': 'approved'})
+                elif self.path in ('/api/bee/connect', '/api/bee/agent'):
+                    key = self.headers['Sec-WebSocket-Key']
+                    accept = base64.b64encode(hashlib.sha1((key + '258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode()
+                    self.send_response(101)
+                    self.send_header('Upgrade', 'websocket')
+                    self.send_header('Connection', 'Upgrade')
+                    self.send_header('Sec-WebSocket-Accept', accept)
+                    self.send_header('X-Bee-Lease', 'synthetic-lease')
+                    self.end_headers()
+                    self.wfile.flush()
+                    self.close_connection = True
+                    # Read masked client frames; complete the close handshake.
+                    while True:
+                        header = self.rfile.read(2)
+                        if len(header) != 2:
+                            break
+                        size = header[1] & 127
+                        if size == 126:
+                            size = struct.unpack('!H', self.rfile.read(2))[0]
+                        elif size == 127:
+                            size = struct.unpack('!Q', self.rfile.read(8))[0]
+                        mask = self.rfile.read(4) if header[1] & 128 else b''
+                        payload = self.rfile.read(size)
+                        if mask:
+                            payload = bytes(value ^ mask[i % 4] for i, value in enumerate(payload))
+                        if header[0] & 15 == 8:
+                            self.wfile.write(b'\x88\x02\x03\xe8')
+                            self.wfile.flush()
+                            break
+                        if header[0] & 15 == 9:
+                            self.wfile.write(bytes([0x8a, len(payload)]) + payload)
+                            self.wfile.flush()
+                elif self.path == '/api/bee/platforms/openai/account':
+                    self.reply(200, {'platform': 'openai', 'status': 'not_configured'})
+                else:
+                    self.reply(503, {'error': {'code': 'synthetic_endpoint_unavailable'}})
+            def log_message(self, *args):
+                pass
+        with http.server.ThreadingHTTPServer(('127.0.0.1', 0), Hive) as server:
+            worker = threading.Thread(target=server.serve_forever, daemon=True)
+            config_root = Path(self.temp.name) / ('Library/Application Support' if sys.platform == 'darwin' else 'config')
+            config = config_root / 'tokhive/bee.json'
+            url = f'http://127.0.0.1:{server.server_port}'
+            if guided:
+                codex = Path(self.env['CODEX_HOME'])
+                codex.mkdir()
+                def encoded(value):
+                    return base64.urlsafe_b64encode(json.dumps(value).encode()).decode().rstrip('=')
+                token = encoded({'alg': 'HS256'}) + '.' + encoded({'exp': int(time.time()) + 3600,
+                    'https://api.openai.com/auth': {'chatgpt_account_id': 'synthetic-account',
+                    'chatgpt_user_id': 'synthetic-user', 'chatgpt_plan_type': 'pro'}}) + '.c3ludGhldGlj'
+                (codex / 'auth.json').write_text(json.dumps({'tokens': {'access_token': token,
+                    'id_token': token, 'account_id': 'synthetic-account', 'refresh_token': 'synthetic-refresh'}}))
+                # Account options: restrict detection to Codex, then choose all.
+                answers = [('请选择 [', f'1\n1\n{url}\nPTY worker\n1\n'),
+                           ('逐个选择账号', '3\n1\n1\n0\n2\n1\n1\n1\n'),
+                           ('Bee connected to Hive', '\x03')]
+            else:
+                config.parent.mkdir(parents=True)
+                config.write_text(json.dumps({'hive': url, 'credential': 'bee_' + 'a' * 43,
+                                               'name': 'PTY worker', 'identity': identity}))
+                config.chmod(0o600)
+                answers = [('请选择 [', '1\n2\n1\n'), ('Bee connected to Hive', '\x03')]
+            try:
+                code, out = self.terminal(answers, after_fork=worker.start)
+                self.assertEqual(code, 0, out)
+                self.assertIn('Ctrl+C', out)
+                self.assertIn('运行日志（原文）', out)
+                self.assertNotIn('按回车返回', out)
+                self.assertEqual(out.count('Bee 管理'), 1, out)
+                self.assertIn(('GET', '/api/bee/agent' if guided else '/api/bee/connect'), requests)
+                if guided:
+                    self.assertIn(('POST', '/api/bee/pairings/redeem'), requests)
+                    self.assertEqual(json.loads(config.read_text())['name'], 'PTY worker')
+                    self.assertTrue(config.with_name('egress.json').exists())
+                    self.assertNotIn('synthetic-refresh', out)
+                else:
+                    self.assertIn('仅保持在线', out)
+                    self.assertFalse(config.with_name('egress.json').exists())
+            finally:
+                server.shutdown()
+                worker.join()
+
+    def test_help_and_version_without_pairing(self):
+        code, out = self.terminal([('请选择 [', '8\n1\n\n3\n\n0\n0\n')])
+        self.assertEqual(code, 0, out)
+        self.assertIn('Ctrl+C', out)
+        self.assertIn('程序版本', out)
         self.assertFalse(list(Path(self.temp.name).rglob('bee.json')))
 
     def test_ctrl_c_and_eof_exit_menu(self):

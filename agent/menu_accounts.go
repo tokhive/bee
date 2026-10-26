@@ -24,11 +24,14 @@ func (m *managementMenu) platform() (string, error) {
 }
 func (m *managementMenu) accounts() error {
 	return m.loop(m.text("Supplied accounts", "供给账号"), []menuAction{
-		{"View accounts and supply", "查看账号与接单状态", m.accountStatus},
-		{"Select supplied accounts", "重新选择供给账号", m.configureAccounts},
+		{"Registered accounts", "已登记账号", m.accountStatus},
+		{"Supply status", "接单状态", m.supplyStatus},
+		{"Select supplied accounts", "选择供给账号", func() error { return m.accountSetup(true) }},
 		{"Pause new work", "暂停接单", func() error { return m.changeSupply(true) }},
 		{"Resume new work", "恢复接单", func() error { return m.changeSupply(false) }},
 		{"Confirm account change", "确认账号变更", m.confirmAccount},
+		{"Codex checks", "Codex 检查", m.codexChecks},
+		{"Claude Code checks", "Claude Code 检查", m.claudeChecks},
 	})
 }
 func (m *managementMenu) printAccount(a beewire.PlatformAccount) {
@@ -45,7 +48,7 @@ func (m *managementMenu) printAccount(a beewire.PlatformAccount) {
 	}
 }
 func (m *managementMenu) accountStatus() error {
-	m.page(m.text("Accounts and supply", "账号与接单状态"))
+	m.page(m.text("Registered accounts", "已登记账号"))
 	p, e := m.platform()
 	if e != nil || p == "" {
 		return e
@@ -59,6 +62,19 @@ func (m *managementMenu) accountStatus() error {
 		return e
 	}
 	m.printAccount(a)
+	return nil
+}
+
+func (m *managementMenu) supplyStatus() error {
+	m.page(m.text("Supply status", "接单状态"))
+	p, e := m.platform()
+	if e != nil || p == "" {
+		return e
+	}
+	state, e := m.readDevice()
+	if e != nil {
+		return e
+	}
 	return m.showPlatform(state, p)
 }
 func (m *managementMenu) changeSupply(paused bool) error {

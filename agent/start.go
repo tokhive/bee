@@ -40,7 +40,9 @@ More:
   bee confirm-account --platform P --account-fingerprint FP
   bee codex-status / bee claude-status inspect the local sign-in without contacting Hive
 
-Every command takes --config PATH to use another device configuration.
+Device commands take --config PATH to use another device configuration.
+codex-status and claude-status use their own official-client directory options.
+help and version do not read device configuration.
 Run bee <command> -h for its options.
 `
 

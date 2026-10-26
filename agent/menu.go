@@ -21,6 +21,10 @@ type managementMenu struct {
 	out                    io.Writer
 	ui                     installUI
 	configPath, egressPath string
+	egressExplicit         bool
+	setupTargetFixed       bool
+	setup                  menuSetupOptions
+	checks                 menuCheckOptions
 	service                *managedService
 	serviceErr             error
 	configure              func() error
@@ -30,6 +34,11 @@ type managementMenu struct {
 
 func (m *managementMenu) text(en, zh string) string { return m.ui.text(en, zh) }
 func (m *managementMenu) line(prompt string) (string, error) {
+	value, err := m.rawLine(prompt)
+	return strings.TrimSpace(value), err
+}
+
+func (m *managementMenu) rawLine(prompt string) (string, error) {
 	if err := m.ctx.Err(); err != nil {
 		return "", err
 	}
@@ -49,7 +58,7 @@ func (m *managementMenu) line(prompt string) (string, error) {
 		if a.e != nil {
 			return "", a.e
 		}
-		return strings.TrimSpace(a.s), nil
+		return strings.TrimSuffix(strings.TrimSuffix(a.s, "\n"), "\r"), nil
 	}
 }
 func (m *managementMenu) choose(prompt string, max int) (int, error) {
@@ -92,6 +101,7 @@ func (m *managementMenu) loop(title string, actions []menuAction) error {
 		}
 		if m.depth == 1 {
 			m.page("")
+			m.field("Device configuration", "设备配置", m.configPath)
 		} else {
 			m.page(title)
 		}
@@ -190,8 +200,10 @@ func runManagement(ctx context.Context, out io.Writer) error {
 	}
 	m := &managementMenu{ctx: ctx, in: bufio.NewReader(os.Stdin), out: out, ui: ui, configPath: config, egressPath: defaultEgressPath(config)}
 	m.service, m.serviceErr = newManagedService(m.configPath, m.egressPath, os.Stdin, out)
+	m.checks.codex.Store, m.checks.codex.KeyringBackend = "file", "direct"
+	m.checks.claudeStore = defaultClaudeStore()
 	m.pair = func() error { return m.pairingWithNext(false) }
-	m.configure = func() error { return m.configureAccountsWithNext(false) }
+	m.configure = func() error { return m.accountSetup(false) }
 	if os.Getenv("BEE_LANG") == "" {
 		if e = m.language(); errors.Is(e, io.EOF) {
 			return nil
@@ -200,11 +212,14 @@ func runManagement(ctx context.Context, out io.Writer) error {
 		}
 	}
 	e = m.loop("", []menuAction{
+		{"Start Bee", "启动 Bee", m.starts},
 		{"Status", "运行状态", m.status},
 		{"Device pairing", "设备配对", m.pairing},
 		{"Supplied accounts", "供给账号", m.accounts},
 		{"Background service", "后台服务", m.services},
 		{"Logs and diagnostics", "日志与诊断", m.logsAndDoctor},
+		{"Session options", "高级选项", m.options},
+		{"Help and version", "帮助与版本", m.help},
 		{"Change language", "切换语言", m.language},
 	})
 	if errors.Is(e, io.EOF) {

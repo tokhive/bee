@@ -54,6 +54,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 		}
 	}
 	hive := state.Hive
+	name := state.Name
 	if state.Credential == "" || reset {
 		for {
 			prompt := m.text("Hive address (0 cancels)", "请输入 Hive 地址（0 取消）")
@@ -78,7 +79,23 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 			hive = origin
 			break
 		}
-		summary := fmt.Sprintf(m.text("Pair this device with %s?", "将此设备配对到 %s？"), hive)
+		value, e := m.line(m.text("Device name (Enter uses current name or hostname; 0 cancels): ", "设备名称（回车使用已有名称或主机名；0 取消）："))
+		if e != nil {
+			return e
+		}
+		if value == "0" {
+			return m.back()
+		}
+		if value != "" {
+			name = value
+		}
+		if name == "" {
+			name, e = os.Hostname()
+			if e != nil {
+				return e
+			}
+		}
+		summary := fmt.Sprintf(m.text("Pair device %q with %s?", "将设备 %q 配对到 %s？"), name, hive)
 		if reset {
 			summary += "\n" + m.text("The old device configuration will be backed up. Supplied account choices are kept. The matching local service will stop. Confirming replacement in Hive can deactivate another Bee.", "旧设备配置将备份，保留供给账号选择，并停止匹配的本机服务。在 Hive 网页确认替换可能停用另一台 Bee。")
 		}
@@ -102,7 +119,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 		}
 		fmt.Fprintf(m.out, m.text("Previous device configuration backed up to %s\n", "旧设备配置已备份至 %s\n"), path)
 	}
-	if err = m.pairDevice(hive, reset || state.Credential == ""); err != nil {
+	if err = m.pairDevice(hive, name, reset || state.Credential == ""); err != nil {
 		return err
 	}
 	if !offerNext {
@@ -114,7 +131,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 			return e
 		}
 		if ok {
-			if e = m.configureAccounts(); e != nil {
+			if e = m.accountSetup(true); e != nil {
 				return e
 			}
 		}
@@ -132,7 +149,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 		}
 		return nil
 	}
-	fmt.Fprintln(m.out, m.text("Pairing complete. Use the service menu or bee start to run Bee.", "配对完成。可通过服务菜单或 bee start 运行 Bee。"))
+	fmt.Fprintln(m.out, m.text("Pairing complete. Choose Start Bee to run in foreground or background.", "配对完成。请选择「启动 Bee」，使用前台或后台运行。"))
 	return nil
 }
 
@@ -162,7 +179,7 @@ func (m *managementMenu) backupDevice(snapshot []byte) (string, error) {
 	}
 	return path, nil
 }
-func (m *managementMenu) pairDevice(hive string, expectMissing bool) error {
+func (m *managementMenu) pairDevice(hive, name string, expectMissing bool) error {
 	unlock, e := lockState(m.configPath)
 	if e != nil {
 		return e
@@ -176,7 +193,7 @@ func (m *managementMenu) pairDevice(hive string, expectMissing bool) error {
 		return fmt.Errorf("%s was created by another operation; existing configuration kept", m.configPath)
 	}
 	if state.Credential == "" {
-		state, e = newDeviceState(hive, "")
+		state, e = newDeviceState(hive, name)
 		if e != nil {
 			return e
 		}

@@ -141,7 +141,7 @@ func TestMenuPairFailureKeepsBackupNewStateAndSupply(t *testing.T) {
 		}
 	}))
 	defer server.Close()
-	m, _ := pairedMenu(t, "2\n\n1\n")
+	m, _ := pairedMenu(t, "2\n\n\n1\n")
 	state, _ := readState(m.configPath)
 	state.Hive = server.URL
 	saveState(m.configPath, state)
@@ -251,7 +251,7 @@ func TestMenuGuidedPairingLeavesNextStepToCallingServiceAction(t *testing.T) {
 		json.NewEncoder(w).Encode(beewire.Identity{ID: "paired"})
 	}))
 	defer server.Close()
-	m, out := menuFixture(t, server.URL+"\n1\n")
+	m, out := menuFixture(t, server.URL+"\n\n1\n")
 	if e := m.pairingWithNext(false); e != nil {
 		t.Fatal(e)
 	}
@@ -265,7 +265,7 @@ func TestMenuGuidedPairingLeavesNextStepToCallingServiceAction(t *testing.T) {
 }
 
 func TestMenuPairStopFailureKeepsOriginalDevice(t *testing.T) {
-	m, _ := pairedMenu(t, "2\n\n1\n")
+	m, _ := pairedMenu(t, "2\n\n\n1\n")
 	before, _ := os.ReadFile(m.configPath)
 	s, _ := managedFixture(t)
 	m.service = s

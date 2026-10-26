@@ -109,7 +109,7 @@ func (m *managementMenu) serviceAction(op string) error {
 	return nil
 }
 func (m *managementMenu) logsAndDoctor() error {
-	return m.loop(m.text("Logs and diagnostics", "日志与诊断"), []menuAction{{"Recent 50 service log lines", "最近 50 行服务日志", m.logs}, {"Run diagnostics", "运行诊断", m.diagnostics}})
+	return m.loop(m.text("Logs and diagnostics", "日志与诊断"), []menuAction{{"Recent 50 service log lines", "最近 50 行服务日志", m.logs}, {"Run diagnostics", "运行诊断", m.diagnostics}, {"View diagnostic JSON", "查看诊断 JSON", m.diagnosticsJSON}, {"Supply configuration path", "诊断的供给配置路径", m.selectEgress}})
 }
 func (m *managementMenu) logs() error {
 	m.page(m.text("Service logs", "服务日志"))

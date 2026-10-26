@@ -20,6 +20,7 @@ type desktopAccountRead struct {
 	plan        string
 	expires     time.Time
 	revision    string
+	namespace   string
 	codex       codexCredential
 	claude      claudeCredential
 }
@@ -181,7 +182,7 @@ func (a *DesktopAccounts) readAccountSource(ctx context.Context, request Desktop
 		}
 		revision := sha256.Sum256([]byte(credential.secret.Token))
 		// Keep null for the default namespace; replacing it with its directory changes Keychain identity.
-		result = desktopAccountRead{source: DesktopAccountSource{Directory: request.Directory, Store: request.Store}, plan: credential.plan, expires: credential.expiresAt, revision: hex.EncodeToString(revision[:]), claude: credential}
+		result = desktopAccountRead{source: DesktopAccountSource{Directory: request.Directory, Store: request.Store}, namespace: store.namespace, plan: credential.plan, expires: credential.expiresAt, revision: hex.EncodeToString(revision[:]), claude: credential}
 	}
 	return result, nil
 }

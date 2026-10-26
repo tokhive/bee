@@ -1,6 +1,6 @@
 # Bee 数字交互管理菜单实施计划
 
-> 执行方式：使用 subagent-driven-development，在当前会话按任务串行实现并进行任务审查。用户已要求“清理 worktree 后再继续 Bee 功能”，据此继续执行，不重复请求实施许可。计划只落实已确认设计，不预实现生产代码。
+> 执行方式：使用 executing-plans，由主代理在当前会话直接按任务串行实现和自审；用户明确要求不使用子代理。用户已要求“清理 worktree 后再继续 Bee 功能”，据此继续执行，不重复请求实施许可。计划只落实已确认设计，不预实现生产代码。
 
 **目标：** 裸 `bee` 在交互终端提供双语数字管理菜单，完成状态、配对、账号、服务、诊断和语言操作。
 **架构：** 菜单持有一次会话的共享输入和语言；业务调用复用现有结构化数据与校验，系统服务操作由严格校验目标的适配器负责。安装器与已有 CLI 保持兼容。
@@ -32,10 +32,10 @@
 
 **对外接口（包内）：** `serviceState` 包含 `LoadState, ActiveState, UnitFileState string`；`newManagedService(configPath, egressPath string, in io.Reader, out io.Writer) (*managedService, error)`；方法 `inspect(context.Context) (serviceState, error)`、`apply(context.Context, string) (serviceState, error)`、`logs(context.Context, bool) error`。不可用平台/未安装提供可 errors.Is 判断的 `errServiceUnavailable`；调用者保留实际错误。服务对象可在测试中注入执行器、平台及用户信息，生产路径不得以测试环境变量绕过校验。
 
-- [ ] 写风险矩阵与 RED 测试：平台不支持、服务未安装、用户/二进制/配置不匹配、非托管/链接 unit、未知覆盖、锁定/过渡状态、sudo 拒绝、命令失败、启动未 active、enable 不 start、disable 不 stop、日志 50 行无 pager、特殊路径不会执行 shell 内容。
-- [ ] 实现只读探测与匹配校验。读取 systemctl 的实际属性并检查安装器 unit；不得依赖模糊字符串包含来证明 ExecStart 参数一致。可对首版不能可靠识别的覆盖返回具体不支持错误，不能静默忽略。独立依据为 install.sh 实际生成的 unit 和 Linux systemd 原生验证。
-- [ ] 实现允许列表 start/stop/restart/enable/disable，逐次重新验证目标，必要时仅提权该命令；透传当前终端供 sudo 使用。动作后查询与期望状态一致才成功，结果未知说明再次查询。日志受同一目标验证保护，无隐式提权。
-- [ ] 运行 `go test ./agent -run 'TestManaged' -count=1`、`go test ./agent`，自审、提交，并提供 RED/GREEN 命令及实际输出。任务审查同时验证规格和质量。
+- [x] 写风险矩阵与 RED 测试：平台不支持、服务未安装、用户/二进制/配置不匹配、非托管/链接 unit、未知覆盖、锁定/过渡状态、sudo 拒绝、命令失败、启动未 active、enable 不 start、disable 不 stop、日志 50 行无 pager、特殊路径不会执行 shell 内容。
+- [x] 实现只读探测与匹配校验。读取 systemctl 的实际属性并检查安装器 unit；不得依赖模糊字符串包含来证明 ExecStart 参数一致。可对首版不能可靠识别的覆盖返回具体不支持错误，不能静默忽略。独立依据为 install.sh 实际生成的 unit 和 Linux systemd 原生验证。
+- [x] 实现允许列表 start/stop/restart/enable/disable，逐次重新验证目标，必要时仅提权该命令；透传当前终端供 sudo 使用。动作后查询与期望状态一致才成功，结果未知说明再次查询。日志受同一目标验证保护，无隐式提权。
+- [x] 运行 `go test ./agent -run 'TestManaged' -count=1`、`go test ./agent`，自审、提交，并提供 RED/GREEN 命令及实际输出。任务自审同时验证规格和质量。
 
 ### Task 2：数字菜单框架、只读报告与服务交互
 
@@ -48,7 +48,7 @@
 - [ ] 实现共享输入和语言；不要在循环中重复包装 buffered reader，不用全局 Setenv 切换语言；所有提示可取消。
 - [ ] 实现状态、诊断与服务/日志子菜单。状态分别获取本地和远端结果，未配对给指引；诊断复用 diagnose 避免 doctor 修改全局 logger；正常栏目/结果本地化，具体原始故障保留。每次服务变化展示目标和影响后数字确认；缺配置时返回明确向导指引，Task 4 接入可选继续入口。
 - [ ] 实现服务变更后的状态展示、开机自启独立提示、权限失败和未知状态处理；读取日志失败时只对权限原因提供明确的单次 sudo 确认，不自动提升。
-- [ ] 运行 `go test ./agent -run 'TestMenu' -count=1`、`go test ./agent`，自审提交和任务审查；给 Task 3 提供实际接口说明。
+- [ ] 运行 `go test ./agent -run 'TestMenu' -count=1`、`go test ./agent`，自审提交和任务自审；给 Task 3 提供实际接口说明。
 
 ### Task 3：设备配对与账号管理向导
 
@@ -62,7 +62,7 @@
 - [ ] 写 RED 账号矩阵：读取官方登录、逐项数字选择、完整列表与删除项预览、最终取消无落盘、保留高级字段/拒绝手写配置、没有选择不清空；保存后的立即/稍后应用及失败状态。
 - [ ] 复用发现和构建供给配置逻辑，CLI 的 y/n 不变。保存前检查当前供给配置仍与选择时一致，避免覆盖已观察到的并发变更；原子私有写入。仅在用户确认后重启匹配服务，输出保存/应用两个结果。
 - [ ] 写 RED 并实现平台状态、暂停/恢复与确认账号变更。确认页面绑定待确认指纹和 ConfirmationID，提交前重读必须一致；远端结果不确定展示原始错误并指引查询，不重试。复用结构化动作，保持原 CLI 格式与暂停状态。
-- [ ] 运行 `go test ./agent -run 'TestMenu(Pair|Account|Supply)|TestLogin|TestSetup|TestAccount|TestSupply' -count=1`、`go test ./agent`；自审提交和任务审查，报告全部新测试及原 CLI 兼容结果。
+- [ ] 运行 `go test ./agent -run 'TestMenu(Pair|Account|Supply)|TestLogin|TestSetup|TestAccount|TestSupply' -count=1`、`go test ./agent`；自审提交和任务自审，报告全部新测试及原 CLI 兼容结果。
 
 ### Task 4：接入裸命令、终端验收与文档
 
@@ -75,7 +75,7 @@
 - [ ] 仅在 stdin/stdout 终端条件满足时接 runManagement；初始化语言和服务对象失败不能阻止其他可用菜单（展示准确不可用原因）。接齐六项及退出；服务启动缺配置时提供配对/选择账号向导，完成后重新询问启动。
 - [ ] 增加独立 Linux 校验：从 install.sh 现有测试夹具实际产生的 unit 验证服务适配器接受正确目标、拒绝不匹配；保留原生 systemd-analyze/systemctl --root 检查；不操作生产服务。Makefile 和 CI 执行菜单 PTY 回归。
 - [ ] 实际查看中英文终端输出，自审提示顺序与结果；更新 README 与安装指南，解释菜单/子命令、平台限制、退出菜单、保存与应用、自启与启动，以及需要新二进制 release。配套文档 PR #1 尚未合并，保留其安装功能说明后追加菜单说明。
-- [ ] 运行 `make test`、ShellCheck、`git diff --check`、文档构建；所有任务审查完成后做全分支审查、修复有效问题、最终验证与一致性/计划复核。按已有 PR 授权提交新的 Bee 功能 PR，不重开已合并 #20，不自动合并或发布。
+- [ ] 运行 `make test`、ShellCheck、`git diff --check`、文档构建；所有任务自审完成后做主代理全分支审查、修复有效问题、最终验证与一致性/计划复核。按已有 PR 授权提交新的 Bee 功能 PR，不重开已合并 #20，不自动合并或发布。
 
 ## 基线及进度
 

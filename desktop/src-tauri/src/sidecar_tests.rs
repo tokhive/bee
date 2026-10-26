@@ -3,6 +3,147 @@ use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 use tokio::time::{sleep, timeout};
 
+#[tokio::test]
+async fn queued_account_reply_deadline_does_not_wait_for_child_reaping() {
+    let bridge = Bridge::start(fixture("account-timeout"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let first = bridge.clone();
+    let pending = tokio::spawn(async move {
+        first
+            .request(
+                "account_snapshot",
+                serde_json::json!({"platform":"openai","refresh":false}),
+                Duration::from_millis(100),
+            )
+            .await
+    });
+    sleep(Duration::from_millis(20)).await;
+    let began = Instant::now();
+    let cause = bridge
+        .request(
+            "account_snapshot",
+            serde_json::json!({"platform":"claude","refresh":false}),
+            Duration::from_millis(150),
+        )
+        .await
+        .unwrap_err();
+    assert!(
+        began.elapsed() < Duration::from_millis(600),
+        "reply waited for reap: {:?}",
+        began.elapsed()
+    );
+    assert_eq!(cause.code, "REQUEST_QUEUE_TIMEOUT");
+    pending.await.unwrap().unwrap_err();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn account_native_commands_validate_typed_requests_without_expanding_generic_access() {
+    let bridge = Bridge::start(fixture("accounts"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let app = tauri::test::mock_builder()
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::account_defaults,
+            crate::commands::account_detect,
+            crate::commands::account_snapshot,
+            crate::commands::account_action,
+            crate::commands::bridge_request
+        ])
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let invoke = |cmd: &str, body: Value| {
+        tauri::test::get_ipc_response(
+            &view,
+            tauri::webview::InvokeRequest {
+                cmd: cmd.into(),
+                callback: tauri::ipc::CallbackFn(0),
+                error: tauri::ipc::CallbackFn(1),
+                url: "tauri://localhost".parse().unwrap(),
+                body: tauri::ipc::InvokeBody::Json(body),
+                headers: Default::default(),
+                invoke_key: tauri::test::INVOKE_KEY.into(),
+            },
+        )
+    };
+    for body in [
+        serde_json::json!({}),
+        serde_json::json!({"request":null}),
+        serde_json::json!({"request":{"platform":"openai","store":"file","mode":"local"}}),
+        serde_json::json!({"request":{"platform":"openai","directory":null,"store":"file","mode":"local","token":"private-secret"}}),
+    ] {
+        assert!(invoke("account_detect", body).is_err());
+    }
+    invoke("account_defaults", serde_json::json!({})).unwrap();
+    invoke("account_detect",serde_json::json!({"request":{"platform":"openai","directory":null,"store":"file","mode":"local"}})).unwrap();
+    for body in [
+        serde_json::json!({"platform":"openai"}),
+        serde_json::json!({"platform":"openai","refresh":null}),
+    ] {
+        assert!(invoke("account_snapshot", body).is_err());
+    }
+    invoke(
+        "account_snapshot",
+        serde_json::json!({"platform":"openai","refresh":false}),
+    )
+    .unwrap();
+    let reply:Value=invoke("account_action",serde_json::json!({"request":{"platform":"openai","revision":0,"candidate_ref":"a".repeat(48),"action":"select","confirmed":false}})).unwrap().deserialize().unwrap();
+    assert_eq!(reply["result"]["error"]["code"], "ACCOUNT_OPERATION_FAILED");
+    for method in [
+        "account_defaults",
+        "account_detect",
+        "account_snapshot",
+        "account_action",
+    ] {
+        assert!(invoke("bridge_request", serde_json::json!({"method":method})).is_err());
+    }
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn account_methods_use_fixed_params_and_survive_business_errors() {
+    let bridge = Bridge::start(fixture("accounts"));
+    wait(&bridge, BridgePhase::Ready).await;
+    assert_eq!(
+        bridge.account_defaults().await.unwrap().result["defaults"]["platforms"],
+        serde_json::json!([])
+    );
+    let request: protocol::AccountDetectRequest = serde_json::from_value(
+        serde_json::json!({"platform":"claude","directory":null,"store":"file","mode":"local"}),
+    )
+    .unwrap();
+    let reply = bridge.account_detect(request).await.unwrap();
+    assert_eq!(reply.result["account"]["platform"], "claude");
+    let reply = bridge
+        .account_snapshot(SupplyPlatform::Openai, false)
+        .await
+        .unwrap();
+    assert_eq!(reply.result["account"]["platform"], "openai");
+    let request:protocol::AccountActionRequest=serde_json::from_value(serde_json::json!({"platform":"openai","revision":0,"candidate_ref":"a".repeat(48),"action":"select","confirmed":false})).unwrap();
+    let reply = bridge.account_action(request).await.unwrap();
+    assert_eq!(reply.result["error"]["code"], "ACCOUNT_OPERATION_FAILED");
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn account_request_uses_its_15_second_boundary() {
+    let mut spec = fixture("slow-account");
+    spec.timeout = Duration::from_millis(100);
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    let reply = bridge
+        .account_snapshot(SupplyPlatform::Openai, false)
+        .await
+        .unwrap();
+    assert_eq!(reply.result["account"]["platform"], "openai");
+    bridge.stop().await.unwrap();
+}
+
 fn node() -> (PathBuf, String) {
     static NODE: OnceLock<(PathBuf, String)> = OnceLock::new();
     NODE.get_or_init(|| {

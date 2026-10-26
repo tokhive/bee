@@ -1,8 +1,20 @@
 use crate::build_source::BuildSource;
-use crate::protocol::{self, BridgeError, Envelope, FrameDecoder, SupplyPlatform};
+use crate::protocol::{
+    self, AccountActionRequest, AccountDetectRequest, BridgeError, Envelope, FrameDecoder,
+    SupplyPlatform,
+};
 use serde::Serialize;
 use serde_json::Value;
-use std::{collections::VecDeque, path::PathBuf, process::Stdio, sync::Arc, time::Duration};
+use std::{
+    collections::VecDeque,
+    path::PathBuf,
+    process::Stdio,
+    sync::{
+        atomic::{AtomicU8, Ordering},
+        Arc,
+    },
+    time::Duration,
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     process::{Child, ChildStdin, ChildStdout, Command},
@@ -56,11 +68,13 @@ struct Request {
     method: &'static str,
     params: Value,
     deadline: Instant,
+    phase: Arc<AtomicU8>,
     reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
 }
 
 struct Inner {
     status: watch::Receiver<BridgeStatus>,
+    status_tx: watch::Sender<BridgeStatus>,
     stop: watch::Sender<bool>,
     requests: mpsc::Sender<Request>,
     timeout: Duration,
@@ -156,11 +170,13 @@ impl Bridge {
         match spec {
             Ok(spec) => Self::start(spec),
             Err(cause) => {
-                let (_, state) = watch::channel(status(BridgePhase::Failed, None, Some(cause)));
+                let (status_tx, state) =
+                    watch::channel(status(BridgePhase::Failed, None, Some(cause)));
                 let (stop, _) = watch::channel(false);
                 let (requests, _) = mpsc::channel(1);
                 Self(Arc::new(Inner {
                     status: state,
+                    status_tx,
                     stop,
                     requests,
                     timeout: Duration::from_secs(5),
@@ -179,9 +195,11 @@ impl Bridge {
         let (stop_tx, stop_rx) = watch::channel(false);
         let (requests_tx, requests_rx) = mpsc::channel(16);
         let duration = spec.timeout;
-        let task = tauri::async_runtime::spawn(supervise(spec, status_tx, stop_rx, requests_rx));
+        let task =
+            tauri::async_runtime::spawn(supervise(spec, status_tx.clone(), stop_rx, requests_rx));
         Self(Arc::new(Inner {
             status: status_rx,
+            status_tx,
             stop: stop_tx,
             requests: requests_tx,
             timeout: duration,
@@ -199,6 +217,50 @@ impl Bridge {
     pub async fn ping(&self) -> Result<BridgeReply, BridgeError> {
         self.request("ping", serde_json::json!({}), self.0.timeout)
             .await
+    }
+    pub async fn account_defaults(&self) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "account_defaults",
+            serde_json::json!({}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+    pub async fn account_detect(
+        &self,
+        request: AccountDetectRequest,
+    ) -> Result<BridgeReply, BridgeError> {
+        request.validate()?;
+        self.request(
+            "account_detect",
+            serde_json::json!(request),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+    pub async fn account_snapshot(
+        &self,
+        platform: SupplyPlatform,
+        refresh: bool,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.request(
+            "account_snapshot",
+            serde_json::json!({"platform":platform,"refresh":refresh}),
+            Duration::from_secs(15),
+        )
+        .await
+    }
+    pub async fn account_action(
+        &self,
+        request: AccountActionRequest,
+    ) -> Result<BridgeReply, BridgeError> {
+        request.validate()?;
+        self.request(
+            "account_action",
+            serde_json::json!(request),
+            Duration::from_secs(15),
+        )
+        .await
     }
 
     pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
@@ -269,12 +331,14 @@ impl Bridge {
         }
         let deadline = Instant::now() + duration;
         let (reply, receive) = oneshot::channel();
+        let phase = Arc::new(AtomicU8::new(0));
         self.0
             .requests
             .try_send(Request {
                 method,
                 params,
                 deadline,
+                phase: phase.clone(),
                 reply,
             })
             .map_err(|cause| {
@@ -283,7 +347,14 @@ impl Bridge {
                     format!("ping queue rejected request: {cause}; capacity=16"),
                 )
             })?;
-        receive.await.map_err(|cause| {
+        let response = timeout_at(deadline, receive).await.map_err(|_| {
+            if phase.compare_exchange(0, 2, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+                { let cause=error("RESPONSE_TIMEOUT", format!("owned Bee {method} reply deadline elapsed; required=reply within {} ms including queue time; write result unconfirmed",duration.as_millis())); self.0.status_tx.send_if_modified(|current|{if current.state!=BridgePhase::Ready { return false; } *current=status(BridgePhase::Failed,None,Some(cause.clone()));true});cause }
+            } else {
+                error("REQUEST_QUEUE_TIMEOUT",format!("{method} expired in the request queue before any bytes were sent; bridge session preserved"))
+            }
+        })?;
+        response.map_err(|cause| {
             self.status().error.unwrap_or_else(|| {
                 error(
                     "BRIDGE_STOPPED",
@@ -418,6 +489,7 @@ async fn session(
             result = replies.next() => return Err(match result { Ok(frame) => error("UNEXPECTED_REPLY", format!("owned Bee sent a response with no pending request; id bytes={}", frame.id.len())), Err(cause) => cause }),
             request = requests.recv() => {
                 let Some(request) = request else { return Ok(()); };
+                if request.reply.is_closed() { continue; }
                 if Instant::now() >= request.deadline {
                     // No bytes were sent: only this queued request failed.
                     let _ = request.reply.send(Err(error("REQUEST_QUEUE_TIMEOUT", format!("{} expired in the request queue before any bytes were sent; bridge session preserved", request.method))));
@@ -425,6 +497,7 @@ async fn session(
                 }
                 counter = counter.checked_add(1).ok_or_else(|| error("REQUEST_ID_EXHAUSTED", "shell request counter reached u64 maximum"))?;
                 let id = format!("shell-{counter}");
+                if request.phase.compare_exchange(0,1,Ordering::SeqCst,Ordering::SeqCst).is_err() { continue; }
                 let response = tokio::select! {
                     biased;
                     _ = stopped(stop) => { let _ = request.reply.send(Err(error("BRIDGE_STOPPED", "ping cancelled because owned Bee is stopping"))); return Ok(()); },

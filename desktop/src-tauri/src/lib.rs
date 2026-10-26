@@ -37,6 +37,10 @@ pub fn run() {
             commands::device_open,
             commands::supply_status,
             commands::supply_set_paused,
+            commands::account_defaults,
+            commands::account_detect,
+            commands::account_snapshot,
+            commands::account_action,
             lifecycle::login_return_received
         ])
         .setup(|app| {

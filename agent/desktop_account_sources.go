@@ -56,6 +56,8 @@ func validateDesktopAccountDetect(r DesktopAccountDetectRequest) error {
 	}
 	return accountFailure("unknown", "invalid_source", "platform_store", "required=openai:auto,file,keyring or claude:file,keychain")
 }
+
+func (r DesktopAccountDetectRequest) Validate() error { return validateDesktopAccountDetect(r) }
 func desktopCodexHome(directory *string) (string, error) {
 	if directory != nil {
 		return *directory, nil

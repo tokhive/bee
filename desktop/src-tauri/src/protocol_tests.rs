@@ -137,7 +137,7 @@ fn error_response_does_not_become_success() {
 }
 
 #[test]
-fn supply_handshake_accepts_only_three_exact_capability_groups() {
+fn supply_handshake_accepts_only_four_exact_capability_groups() {
     let groups = [
         json!(["ping", "shutdown"]),
         json!(["ping", "shutdown", "device_status", "device_begin"]),
@@ -152,6 +152,30 @@ fn supply_handshake_accepts_only_three_exact_capability_groups() {
     ];
     for capabilities in groups {
         hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":capabilities}), "fixture","darwin","arm64").unwrap();
+    }
+    let accounts = json!([
+        "ping",
+        "shutdown",
+        "device_status",
+        "device_begin",
+        "supply_status",
+        "supply_set_paused",
+        "account_defaults",
+        "account_detect",
+        "account_snapshot",
+        "account_action"
+    ]);
+    hello(
+        json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":accounts}),
+        "fixture",
+        "darwin",
+        "arm64",
+    )
+    .unwrap();
+    for index in 6..10 {
+        let mut invalid = accounts.clone();
+        invalid.as_array_mut().unwrap().swap(5, index);
+        assert_eq!(hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":invalid}),"fixture","darwin","arm64").unwrap_err().code,"CAPABILITY_MISMATCH");
     }
     for capabilities in [
         json!(["ping", "shutdown", "supply_status", "supply_set_paused"]),
@@ -287,4 +311,24 @@ fn rejected_capabilities_report_first_difference_without_unknown_payload() {
         }
         assert!(!cause.message.contains("private-secret"));
     }
+}
+#[test]
+fn account_typed_requests_reject_missing_null_and_unknown_fields() {
+    for value in [
+        json!({"platform":"openai","store":"file","mode":"local"}),
+        json!({"platform":null,"directory":null,"store":"file","mode":"local"}),
+        json!({"platform":"openai","directory":null,"store":"file","mode":"local","token":"private-secret"}),
+    ] {
+        assert!(serde_json::from_value::<super::AccountDetectRequest>(value).is_err());
+    }
+    let request: super::AccountDetectRequest = serde_json::from_value(
+        json!({"platform":"openai","directory":null,"store":"file","mode":"local"}),
+    )
+    .unwrap();
+    assert!(request.validate().is_ok());
+    let request: super::AccountDetectRequest = serde_json::from_value(
+        json!({"platform":"openai","directory":"relative","store":"keychain","mode":"local"}),
+    )
+    .unwrap();
+    assert!(request.validate().is_err());
 }

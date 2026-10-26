@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	bee "github.com/tokhive/bee/agent"
 	"io"
 	"unicode/utf8"
 )
@@ -22,6 +23,9 @@ type request struct {
 	Name     string
 	Platform string
 	Paused   bool
+	Detect   bee.DesktopAccountDetectRequest
+	Action   bee.DesktopAccountActionRequest
+	Refresh  bool
 }
 
 type protocolError struct {
@@ -133,6 +137,9 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if req.Method == "account_defaults" || req.Method == "account_detect" || req.Method == "account_snapshot" || req.Method == "account_action" {
+		return decodeAccountParams(req, fields["params"])
 	}
 	if req.Method == "supply_status" || req.Method == "supply_set_paused" {
 		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))

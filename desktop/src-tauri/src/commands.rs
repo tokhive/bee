@@ -1,5 +1,5 @@
 use crate::{
-    protocol::{BridgeError, SupplyPlatform},
+    protocol::{AccountActionRequest, AccountDetectRequest, BridgeError, SupplyPlatform},
     sidecar::{Bridge, BridgeReply, BridgeStatus},
 };
 
@@ -28,6 +28,35 @@ pub async fn bridge_request(
 #[tauri::command]
 pub fn bridge_status(bridge: tauri::State<'_, Bridge>) -> BridgeStatus {
     bridge.status()
+}
+
+#[tauri::command]
+pub async fn account_defaults(
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.account_defaults().await
+}
+#[tauri::command]
+pub async fn account_detect(
+    bridge: tauri::State<'_, Bridge>,
+    request: AccountDetectRequest,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.account_detect(request).await
+}
+#[tauri::command]
+pub async fn account_snapshot(
+    bridge: tauri::State<'_, Bridge>,
+    platform: SupplyPlatform,
+    refresh: bool,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.account_snapshot(platform, refresh).await
+}
+#[tauri::command]
+pub async fn account_action(
+    bridge: tauri::State<'_, Bridge>,
+    request: AccountActionRequest,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.account_action(request).await
 }
 
 #[tauri::command]

@@ -73,7 +73,8 @@ func runDesktop(ctx context.Context, in, out *os.File, diagnostics io.Writer) er
 			closed <- nil
 		}
 	}()
-	err = desktopbridge.RunWithDevices(managed, in, cancelFailedWrite{out, cancel}, diagnostics, bee.BuildVersion(), bee.NewDesktopDevice())
+	device := bee.NewDesktopDevice()
+	err = desktopbridge.RunWithAccounts(managed, in, cancelFailedWrite{out, cancel}, diagnostics, bee.BuildVersion(), device, bee.NewDesktopAccounts(device))
 	close(done)
 	closeErr := <-closed
 	return errors.Join(err, closeErr, closeDesktopPipe(in), closeDesktopPipe(out))

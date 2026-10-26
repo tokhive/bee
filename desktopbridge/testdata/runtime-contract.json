@@ -1,7 +1,18 @@
 {
-  "network": {"revision": 0, "connect_proxy": ""},
-  "start": {"expected_revision": 0, "resume_platforms": ["openai"]},
-  "stop": {"expected_revision": 1, "reason": "user_stop"},
+  "network": {
+    "revision": 0,
+    "connect_proxy": ""
+  },
+  "start": {
+    "expected_revision": 0,
+    "resume_platforms": [
+      "openai"
+    ]
+  },
+  "stop": {
+    "expected_revision": 1,
+    "reason": "user_stop"
+  },
   "snapshot": {
     "run_id": null,
     "revision": 0,
@@ -9,7 +20,212 @@
     "observed_at": "2026-10-26T00:00:00Z",
     "local": "stopped",
     "connection": "disconnected",
-    "platforms": {},
+    "platforms": {
+      "openai": {
+        "account": {
+          "platform": "openai",
+          "operation": null,
+          "revision": 0,
+          "candidate": {
+            "state": "not_checked",
+            "reference": null,
+            "source": null,
+            "fingerprint": null,
+            "plan": null,
+            "expires_at": null,
+            "identity_verified": false,
+            "observed_at": null,
+            "error": null
+          },
+          "selection": {
+            "state": "not_selected",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null
+          },
+          "hive": {
+            "state": "unbound",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null,
+            "pending_fingerprint": null,
+            "generation": null
+          },
+          "authorization": {
+            "state": "not_checked",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null
+          },
+          "capabilities": [
+            {
+              "origin": "official",
+              "status": "unknown",
+              "observed_at": null,
+              "metadata_observed_at": null,
+              "valid_until": null,
+              "retry_at": null,
+              "plan": null,
+              "windows": [],
+              "models": [],
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "status": "unknown",
+              "observed_at": null,
+              "metadata_observed_at": null,
+              "valid_until": null,
+              "retry_at": null,
+              "plan": null,
+              "windows": [],
+              "models": [],
+              "error": null
+            }
+          ],
+          "features": {
+            "detect": {
+              "available": true,
+              "reason": null
+            },
+            "check": {
+              "available": true,
+              "reason": null
+            },
+            "select": {
+              "available": true,
+              "reason": null
+            },
+            "confirm_change": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            },
+            "remove": {
+              "available": false,
+              "reason": "runtime_drain_and_detach_required"
+            },
+            "clear_selection": {
+              "available": true,
+              "reason": null
+            },
+            "authorize": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            },
+            "system_notifications": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            }
+          },
+          "issues": [],
+          "checked_at": null
+        },
+        "supply": null,
+        "selection_revision": 0
+      },
+      "claude": {
+        "account": {
+          "platform": "claude",
+          "operation": null,
+          "revision": 0,
+          "candidate": {
+            "state": "not_checked",
+            "reference": null,
+            "source": null,
+            "fingerprint": null,
+            "plan": null,
+            "expires_at": null,
+            "identity_verified": false,
+            "observed_at": null,
+            "error": null
+          },
+          "selection": {
+            "state": "not_selected",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null
+          },
+          "hive": {
+            "state": "unbound",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null,
+            "pending_fingerprint": null,
+            "generation": null
+          },
+          "authorization": {
+            "state": "not_checked",
+            "fingerprint": null,
+            "observed_at": null,
+            "error": null
+          },
+          "capabilities": [
+            {
+              "origin": "official",
+              "status": "unknown",
+              "observed_at": null,
+              "metadata_observed_at": null,
+              "valid_until": null,
+              "retry_at": null,
+              "plan": null,
+              "windows": [],
+              "models": [],
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "status": "unknown",
+              "observed_at": null,
+              "metadata_observed_at": null,
+              "valid_until": null,
+              "retry_at": null,
+              "plan": null,
+              "windows": [],
+              "models": [],
+              "error": null
+            }
+          ],
+          "features": {
+            "detect": {
+              "available": true,
+              "reason": null
+            },
+            "check": {
+              "available": true,
+              "reason": null
+            },
+            "select": {
+              "available": true,
+              "reason": null
+            },
+            "confirm_change": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            },
+            "remove": {
+              "available": false,
+              "reason": "runtime_drain_and_detach_required"
+            },
+            "clear_selection": {
+              "available": true,
+              "reason": null
+            },
+            "authorize": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            },
+            "system_notifications": {
+              "available": false,
+              "reason": "runtime_ownership_and_source_barrier_required"
+            }
+          },
+          "issues": [],
+          "checked_at": null
+        },
+        "supply": null,
+        "selection_revision": 0
+      }
+    },
     "operation": null,
     "stop_receipt": null
   },
@@ -21,6 +237,17 @@
     "revision": 1,
     "error": null
   },
-  "stop_receipt": {"workers_stopped": true, "intent_saved": true, "session_clean": true},
-  "authorize": {"platform": "claude", "source": {"directory": null, "store": "file"}, "expected_revision": 0}
+  "stop_receipt": {
+    "workers_stopped": true,
+    "intent_saved": true,
+    "session_clean": true
+  },
+  "authorize": {
+    "platform": "claude",
+    "source": {
+      "directory": null,
+      "store": "file"
+    },
+    "expected_revision": 0
+  }
 }

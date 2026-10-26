@@ -30,6 +30,8 @@ import (
 )
 
 type egressConfig struct {
+	desktop                 *DesktopRuntime
+	synchronized            *desktopSynchronizationReceipt
 	ConnectProxy            string            `json:"connect_proxy,omitempty"`
 	Targets                 []string          `json:"targets"`
 	InboxKeyID              string            `json:"inbox_key_id"`
@@ -254,7 +256,9 @@ func (cfg *egressConfig) loopbackTargets() bool {
 	return true
 }
 
-func (cfg *egressConfig) dynamicAuthorization() bool { return cfg.Codex != nil || cfg.Claude != nil }
+func (cfg *egressConfig) dynamicAuthorization() bool {
+	return cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil
+}
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {
 	if cfg.lastAccountState != state {
@@ -274,6 +278,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if !force && sourceErr == nil && !changed && cfg.pacer.skip(time.Now()) {
 		return nil
 	}
+	cfg.synchronized = nil
 	// The previous cycle's response already carried the account version this
 	// one has to claim, so the read is only for a cycle that has none.
 	observed, known := cfg.pacer.expected()
@@ -355,6 +360,8 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if result.Task == nil && cfg.authorization != nil && !cfg.capabilityReportPending {
 		cfg.pacer.settled(result.Account, time.Now(), cfg.capabilityWorkAt())
 	}
+	auth := credential.metadata()
+	cfg.synchronized = &desktopSynchronizationReceipt{lease: lease, generation: cfg.accountGeneration, fingerprint: auth.AccountFingerprint, revision: auth.CredentialRevision}
 	return nil
 }
 
@@ -498,6 +505,9 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 				allowed = true
 				break
 			}
+		}
+		if cfg.desktop != nil {
+			allowed = cfg.desktop.allowsTarget(open.Host)
 		}
 		if !allowed {
 			egressDebug("stream rejected: %q is not in the target allowlist %v", open.Host, cfg.Targets)

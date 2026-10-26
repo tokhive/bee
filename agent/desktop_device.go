@@ -27,6 +27,7 @@ import (
 // DesktopDevice owns a separate device configuration. It never starts supply or
 // reads the CLI configuration. The path is deliberately not a frontend input.
 type DesktopDevice struct {
+	runtime *DesktopRuntime
 	path    string
 	session desktopDeviceSession
 }

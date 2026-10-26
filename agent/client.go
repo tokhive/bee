@@ -122,6 +122,16 @@ func pause(ctx context.Context, duration time.Duration) error {
 }
 
 func connect(ctx context.Context, state localState, egress *egressConfig, out io.Writer) error {
+	return connectObserved(ctx, state, egress, out, nil)
+}
+
+func connectObserved(ctx context.Context, state localState, egress *egressConfig, out io.Writer, observe func(string)) error {
+	owned := false
+	emit := func(value string) {
+		if observe != nil {
+			observe(value)
+		}
+	}
 	if _, ok := out.(*console); !ok {
 		// The console's handler serialises its own writes, and notify needs
 		// to see it unwrapped to print records rather than bare lines.
@@ -149,6 +159,11 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			metrics.reconnect()
 		}
 		attempted = true
+		if owned {
+			emit("reconnecting")
+		} else {
+			emit("connecting")
+		}
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
@@ -156,6 +171,8 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		cancel()
 		metrics.connect(connectStart, err)
 		if err == nil {
+			owned = true
+			emit("connected")
 			delay, conflicts = time.Second, 0
 			notify(out, slog.LevelInfo, "connect", "Bee connected to Hive", "endpoint", endpoint)
 			var live context.Context
@@ -165,11 +182,14 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			if egress != nil {
 				session := egress.start(beeSession(ctx), conn, out)
 				live, end, moved = session.Context, session.Close, session.Moved
-				go egress.failures.forward(live, state)
+				forwardDone := make(chan struct{})
+				go func() { defer close(forwardDone); egress.failures.forward(live, state) }()
+				finish := func() { session.Close(); session.Wait(); <-forwardDone }
+				end = finish
 				if egress.dynamicAuthorization() {
 					var wait func()
 					syncFailures, wait = egress.startSynchronization(live, state, response.Header.Get("X-Bee-Lease"), out)
-					end = func() { session.Close(); wait() }
+					end = func() { finish(); wait() }
 				} else {
 					err = egress.register(live, state, response.Header.Get("X-Bee-Lease"))
 				}
@@ -241,6 +261,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			metrics.disconnect()
 			end()
 		} else if response != nil && (response.StatusCode == 401 || response.StatusCode == 403) {
+			emit("rejected")
 			identityErr := call(ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, nil)
 			if replacedDevice(identityErr, out) {
 				return nil
@@ -250,6 +271,11 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		if ctx.Err() != nil {
 			return nil
 		}
+		if observe != nil && response != nil && response.StatusCode == http.StatusConflict && (!owned || conflicts >= conflictRetries) {
+			emit("occupied")
+			return fmt.Errorf("Hive connection ownership unconfirmed: HTTP 409 owned_session=%t consecutive_conflicts=%d", owned, conflicts+1)
+		}
+		emit("reconnecting")
 		if err != nil {
 			notify(out, slog.LevelWarn, "connect", "connection lost; reconnecting", "error", err.Error(), "retry_delay", delay.String())
 		} else {

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"runtime"
+	"slices"
 	"sync"
 
 	bee "github.com/tokhive/bee/agent"
@@ -43,6 +44,12 @@ func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 }
 
 func RunWithAccounts(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts) (runErr error) {
+	return RunWithRuntime(ctx, in, out, diagnostics, version, devices, accounts, nil)
+}
+func RunWithRuntime(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime) (runErr error) {
+	if runner != nil && accounts == nil {
+		return errors.New("runtime bridge requires account service")
+	}
 	supplies, hasSupplies := devices.(Supplies)
 	if accounts != nil && !hasSupplies {
 		return errors.New("account bridge requires the complete device and supply capability group")
@@ -158,6 +165,9 @@ func RunWithAccounts(ctx context.Context, in io.Reader, out io.Writer, diagnosti
 				if accounts != nil {
 					capabilities = append(capabilities, "account_defaults", "account_detect", "account_snapshot", "account_action")
 				}
+				if runner != nil {
+					capabilities = append(capabilities, runtimeMethods...)
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -168,6 +178,15 @@ func RunWithAccounts(ctx context.Context, in io.Reader, out io.Writer, diagnosti
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case runner != nil && slices.Contains(runtimeMethods, req.Method):
+				value, err := runtimeResult(ctx, runner, req)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("RUNTIME_OPERATION_FAILED", "%s", err)}
+				} else {
+					answer.Result = value
+				}
 			case accounts != nil && (req.Method == "account_defaults" || req.Method == "account_detect" || req.Method == "account_snapshot" || req.Method == "account_action"):
 				var value any
 				var operationErr error

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	bee "github.com/tokhive/bee/agent"
 	"io"
+	"slices"
 	"unicode/utf8"
 )
 
@@ -25,6 +26,9 @@ type request struct {
 	Paused   bool
 	Detect   bee.DesktopAccountDetectRequest
 	Action   bee.DesktopAccountActionRequest
+	Start    bee.DesktopStartRequest
+	Stop     bee.DesktopStopRequest
+	Network  bee.DesktopNetworkConfig
 	Refresh  bool
 }
 
@@ -137,6 +141,9 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if slices.Contains(runtimeMethods, req.Method) {
+		return decodeRuntimeParams(req, fields["params"])
 	}
 	if req.Method == "account_defaults" || req.Method == "account_detect" || req.Method == "account_snapshot" || req.Method == "account_action" {
 		return decodeAccountParams(req, fields["params"])

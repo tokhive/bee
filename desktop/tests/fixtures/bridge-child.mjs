@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline';
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 
 const mode = process.argv[2];
 if (process.argv[3]) writeFileSync(process.argv[3], String(process.pid));
@@ -12,6 +12,16 @@ const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
   if(mode==='account-timeout' && request.method!=='hello')return;
+  if(mode==='runtime'&&request.method.startsWith('runtime_')) {
+    const fixture=JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8'));
+    const keys=Object.keys(request.params).sort().join(',');
+    const required={runtime_snapshot:'',runtime_start:'expected_revision,resume_platforms',runtime_stop:'expected_revision,reason'};
+    if(keys!==required[request.method]||request.method==='runtime_stop'&&request.params.reason!=='user_stop') {
+      process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',error:{code:'FIXTURE_PARAMS_REJECTED',message:'runtime params or fixed stop reason rejected'}})+'\n');return;
+    }
+    const result=request.method==='runtime_snapshot'?{runtime:fixture.snapshot}:{operation:{...fixture.operation,kind:request.method==='runtime_start'?'start':'stop'}};
+    process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',result})+'\n');return;
+  }
   const supplyMode = ['supply', 'supply-error'].includes(mode);
   const accountMode=['accounts','slow-account','account-timeout'].includes(mode);
   if(accountMode&&request.method.startsWith('account_')) {
@@ -41,7 +51,7 @@ input.on('line', line => {
   if (mode === 'timeout') return;
   if (mode === 'utf8') { process.stdout.write(Buffer.from([255, 10])); return; }
   const result = request.method === 'hello'
-    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
+    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
     : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'fixture-instance', result }) + '\n';
   if (mode === 'slow-device' && request.method === 'device_status') {

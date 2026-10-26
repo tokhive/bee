@@ -44,11 +44,11 @@
 **消费：** Task 1 的 managedService 接口及现有 `localState`、`readState`、`diagnose`、`httpClient/call`、`beewire` 类型。
 **产出：** `managementMenu` 持有 `ctx context.Context`、`in *bufio.Reader`、`out io.Writer`、`ui installUI`、`configPath, egressPath string`、`service *managedService`；公共包内方法 `text(en,zh string) string`、`line(prompt string) (string,error)`、`choose(prompt string,max int) (int,error)`、`confirm(summary string) (bool,error)`、`status() error`、`services() error`、`logsAndDoctor() error`、`language() error`。导航使用简单 `menuAction`（双语名称与 `func() error`），不要创建泛化工作流框架。函数名可在报告说明必要改动，但消费者必须同步。
 
-- [ ] 写 RED 测试验证双语数字选择、越界重问、默认取消、EOF、连续答案不丢、主菜单循环/返回、颜色规则、操作失败后可返回，不在菜单退出时停止服务。
-- [ ] 实现共享输入和语言；不要在循环中重复包装 buffered reader，不用全局 Setenv 切换语言；所有提示可取消。
-- [ ] 实现状态、诊断与服务/日志子菜单。状态分别获取本地和远端结果，未配对给指引；诊断复用 diagnose 避免 doctor 修改全局 logger；正常栏目/结果本地化，具体原始故障保留。每次服务变化展示目标和影响后数字确认；缺配置时返回明确向导指引，Task 4 接入可选继续入口。
-- [ ] 实现服务变更后的状态展示、开机自启独立提示、权限失败和未知状态处理；读取日志失败时只对权限原因提供明确的单次 sudo 确认，不自动提升。
-- [ ] 运行 `go test ./agent -run 'TestMenu' -count=1`、`go test ./agent`，自审提交和任务自审；给 Task 3 提供实际接口说明。
+- [x] 写 RED 测试验证双语数字选择、越界重问、默认取消、EOF、连续答案不丢、主菜单循环/返回、颜色规则、操作失败后可返回，不在菜单退出时停止服务。
+- [x] 实现共享输入和语言；不要在循环中重复包装 buffered reader，不用全局 Setenv 切换语言；所有提示可取消。
+- [x] 实现状态、诊断与服务/日志子菜单。状态分别获取本地和远端结果，未配对给指引；诊断复用 diagnose 避免 doctor 修改全局 logger；正常栏目/结果本地化，具体原始故障保留。每次服务变化展示目标和影响后数字确认；缺配置时返回明确向导指引，Task 4 接入可选继续入口。
+- [x] 实现服务变更后的状态展示、开机自启独立提示、权限失败和未知状态处理；读取日志失败时只对权限原因提供明确的单次 sudo 确认，不自动提升。
+- [x] 运行 `go test ./agent -run 'TestMenu' -count=1`、`go test ./agent`，自审提交和任务自审；给 Task 3 提供实际接口说明。
 
 ### Task 3：设备配对与账号管理向导
 

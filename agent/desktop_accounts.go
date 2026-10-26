@@ -274,6 +274,10 @@ func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDete
 	if p.working {
 		return accountSnapshotCopy(p.snapshot), accountFailure(request.Platform, "operation_pending", "platform_operation", "candidate detection blocked while the platform worker is active")
 	}
+	return a.detectAccountLocked(ctx, p, request)
+}
+
+func (a *DesktopAccounts) detectAccountLocked(ctx context.Context, p *desktopAccountPlatform, request DesktopAccountDetectRequest) (DesktopAccountSnapshot, error) {
 	// Invalidate before reading: a failed replacement must not keep an old candidate usable.
 	p.snapshot.Revision++
 	p.snapshot.Candidate = DesktopAccountCandidate{State: "unavailable", ObservedAt: accountTime(a.now())}

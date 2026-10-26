@@ -314,3 +314,25 @@ pub async fn runtime_stop(
         )
         .await
 }
+
+#[tauri::command]
+pub async fn authorize_start(
+    bridge: tauri::State<'_, Bridge>,
+    request: crate::authorize_protocol::AuthorizeRequest,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.authorize_start(request).await
+}
+#[tauri::command]
+pub async fn authorize_status(
+    bridge: tauri::State<'_, Bridge>,
+    operation_id: String,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.authorize_status(operation_id).await
+}
+#[tauri::command]
+pub async fn authorize_cancel(
+    bridge: tauri::State<'_, Bridge>,
+    operation_id: String,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.authorize_cancel(operation_id).await
+}

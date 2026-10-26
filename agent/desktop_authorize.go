@@ -1,0 +1,473 @@
+package bee
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+)
+
+type desktopAuthorization struct {
+	operation DesktopOperation
+	request   DesktopAuthorizeRequest
+	cancel    context.CancelFunc
+	ctx       context.Context
+}
+
+// DesktopAuthorizer supervises only the official commands it starts. It never
+// receives login passwords, callback URLs or authorization material from the UI.
+type DesktopAuthorizer struct {
+	mu       sync.Mutex
+	ctx      context.Context
+	cancel   context.CancelFunc
+	workers  sync.WaitGroup
+	closed   bool
+	accounts *DesktopAccounts
+	jobs     map[string]*desktopAuthorization
+	timeout  time.Duration
+	resolve  func(string) (string, error)
+	command  func(string, ...string) *exec.Cmd
+}
+
+func NewDesktopAuthorizer(parent context.Context, a *DesktopAccounts) *DesktopAuthorizer {
+	ctx, cancel := context.WithCancel(parent)
+	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command}
+	for _, p := range a.platforms {
+		p.snapshot.Features.Authorize = DesktopAccountAvailability{Available: true}
+	}
+	return owner
+}
+func (o *DesktopAuthorizer) Close() {
+	o.mu.Lock()
+	o.closed = true
+	o.cancel()
+	o.mu.Unlock()
+	o.workers.Wait()
+}
+func copyDesktopOperation(op DesktopOperation) DesktopOperation {
+	raw, _ := json.Marshal(op)
+	var result DesktopOperation
+	_ = json.Unmarshal(raw, &result)
+	return result
+}
+func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeRequest) (DesktopOperation, error) {
+	if err := validateDesktopAccountDetect(DesktopAccountDetectRequest{Platform: request.Platform, Directory: request.Source.Directory, Store: request.Source.Store, Mode: "local"}); err != nil {
+		return DesktopOperation{}, err
+	}
+	if !desktopSafeRevision(request.ExpectedRevision) {
+		return DesktopOperation{}, fmt.Errorf("authorize expected_revision outside safe integer range")
+	}
+	p, release, err := o.accounts.acquire(ctx, request.Platform)
+	if err != nil {
+		return DesktopOperation{}, err
+	}
+	defer release()
+	o.accounts.lifecycleMu.Lock()
+	defer o.accounts.lifecycleMu.Unlock()
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	if o.closed || o.accounts.closed {
+		return DesktopOperation{}, fmt.Errorf("official login rejected: owner closed")
+	}
+	if p.working || o.accounts.activeActions[request.Platform] {
+		return DesktopOperation{}, fmt.Errorf("official login rejected: platform operation already active")
+	}
+	if p.snapshot.Revision != request.ExpectedRevision {
+		return DesktopOperation{}, fmt.Errorf("authorize revision changed: actual=%d expected=%d", p.snapshot.Revision, request.ExpectedRevision)
+	}
+	if r := o.accounts.runtime; r != nil {
+		r.mu.Lock()
+		state := r.snapshot.Local
+		r.mu.Unlock()
+		if state != "stopped" && state != "failed" {
+			return DesktopOperation{}, fmt.Errorf("official login requires stopped contribution: local=%s; stop contribution before replacing official credentials", state)
+		}
+	}
+	if _, _, err := desktopAuthorizationArgs(request, o.accounts.goos); err != nil {
+		return DesktopOperation{}, err
+	}
+	id, err := desktopOperationID()
+	if err != nil {
+		return DesktopOperation{}, err
+	}
+	live, cancel := context.WithTimeout(o.ctx, o.timeout)
+	p.working = true
+	o.accounts.activeActions[request.Platform] = true
+	p.source = nil
+	p.credentialRevision = ""
+	p.official = nil
+	p.snapshot.Candidate = DesktopAccountCandidate{State: "not_checked"}
+	p.snapshot.Revision++
+	op := DesktopOperation{ID: id, Kind: "authorize", Platform: accountString(request.Platform), State: "pending", Revision: p.snapshot.Revision}
+	p.snapshot.Operation = &op
+	job := &desktopAuthorization{operation: op, request: request, ctx: live, cancel: cancel}
+	// Keep at most the latest owned operation per platform; old IDs never attach
+	// to another process or a later authorization attempt.
+	for key, old := range o.jobs {
+		if old.request.Platform == request.Platform {
+			delete(o.jobs, key)
+		}
+	}
+	o.jobs[id] = job
+	o.workers.Add(1)
+	go func() { defer o.workers.Done(); defer cancel(); err := o.authorize(job); o.finish(job, err) }()
+	return copyDesktopOperation(op), nil
+}
+func (o *DesktopAuthorizer) Status(ctx context.Context, id string) (DesktopOperation, error) {
+	if err := ctx.Err(); err != nil {
+		return DesktopOperation{}, err
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	job, ok := o.jobs[id]
+	if !ok || !desktopHexID(id, 24) {
+		return DesktopOperation{}, fmt.Errorf("authorization operation is not owned by this management instance")
+	}
+	return copyDesktopOperation(job.operation), nil
+}
+func (o *DesktopAuthorizer) Cancel(ctx context.Context, id string) (DesktopOperation, error) {
+	if err := ctx.Err(); err != nil {
+		return DesktopOperation{}, err
+	}
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	job, ok := o.jobs[id]
+	if !ok || !desktopHexID(id, 24) {
+		return DesktopOperation{}, fmt.Errorf("authorization operation is not owned by this management instance")
+	}
+	if job.operation.State == "pending" || job.operation.State == "running" {
+		job.cancel()
+	}
+	// Cancellation is terminal only after the owned process has exited and joined.
+	return copyDesktopOperation(job.operation), nil
+}
+func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr error) {
+	request, ctx := job.request, job.ctx
+	program, err := o.resolve(request.Platform)
+	if err != nil {
+		return accountFailure(request.Platform, "client_missing", "official_executable", err.Error())
+	}
+	args, env, err := desktopAuthorizationArgs(request, o.accounts.goos)
+	if err != nil {
+		return err
+	}
+	version, err := o.probe(ctx, program, env, "--version")
+	if err != nil {
+		return fmt.Errorf("official version probe failed: %w", err)
+	}
+	if !desktopAuthorizationVersion(request.Platform, version) {
+		return fmt.Errorf("official client version unsupported: platform=%s response_bytes=%d; supported=Codex 0.162.x/0.163.x or Claude Code 2.1.153+ within 2.1.x", request.Platform, len(version))
+	}
+	helpArgs := []string{"login", "--help"}
+	if request.Platform == "claude" {
+		helpArgs = []string{"auth", "login", "--help"}
+	}
+	help, err := o.probe(ctx, program, env, helpArgs...)
+	if err != nil {
+		return fmt.Errorf("official login capability probe failed: %w", err)
+	}
+	if !strings.Contains(help, "login") || request.Platform == "claude" && !strings.Contains(help, "--claudeai") {
+		return fmt.Errorf("official login help lacks required command capability: platform=%s response_bytes=%d", request.Platform, len(help))
+	}
+	detect := DesktopAccountDetectRequest{Platform: request.Platform, Directory: request.Source.Directory, Store: request.Source.Store, Mode: "local"}
+	// Freeze the source actually passed to the official command. In particular,
+	// auto login targets file and must not read a fallback keyring or follow a
+	// subsequently replaced directory symlink during verification.
+	if request.Platform == "openai" {
+		directory := env["CODEX_HOME"]
+		detect.Directory = &directory
+		if detect.Store == "auto" {
+			detect.Store = "file"
+		}
+	} else if request.Source.Store == "file" {
+		directory := env["CLAUDE_CONFIG_DIR"]
+		detect.Directory = &directory
+	}
+	before, failure := o.accounts.readAccountSource(ctx, detect)
+	defer before.clear()
+	if failure != nil && failure.Code != "source_missing" {
+		return failure
+	}
+	p, release, err := o.accounts.acquire(ctx, request.Platform)
+	if err != nil {
+		return err
+	}
+	p.snapshot.Revision++
+	o.mu.Lock()
+	job.operation.State = "running"
+	job.operation.Revision = p.snapshot.Revision
+	p.snapshot.Operation = operationPointer(copyDesktopOperation(job.operation))
+	o.mu.Unlock()
+	release()
+	command := o.command(program, args...)
+	command.Env = desktopAuthorizationEnvironment(command.Env, env)
+	command.Stdin = nil
+	command.Stdout = io.Discard
+	command.Stderr = io.Discard
+	if err := runDesktopAuthorization(ctx, command); err != nil {
+		return fmt.Errorf("official login process failed: %w", err)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	after, failed := o.accounts.readAccountSource(ctx, detect)
+	defer after.clear()
+	if failed != nil {
+		return failed
+	}
+	if !sameDesktopAuthorizationSource(after.source, DesktopAccountSource{Directory: detect.Directory, Store: detect.Store}) {
+		return fmt.Errorf("official login source namespace differs from the started command; detect the intended source again")
+	}
+	if failure == nil && before.revision == after.revision {
+		return fmt.Errorf("official login exited successfully but selected source revision is unchanged; recheck official account before retrying")
+	}
+	fingerprint, err := o.accounts.selectionSource(ctx, request.Platform, desktopPendingOperation{Source: after.source, CredentialRevision: after.revision})
+	if err != nil {
+		return err
+	}
+	p, release, err = o.accounts.acquire(ctx, request.Platform)
+	if err != nil {
+		return err
+	}
+	defer release()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	defer func() {
+		if resultErr != nil {
+			p.snapshot.Candidate = DesktopAccountCandidate{State: "not_checked"}
+			p.source = nil
+			p.credentialRevision = ""
+			p.official = nil
+		}
+	}()
+	snapshot, err := o.accounts.detectAccountLocked(ctx, p, detect)
+	if err != nil {
+		return err
+	}
+	if p.credentialRevision != after.revision || p.source == nil || !sameDesktopAuthorizationSource(*p.source, after.source) {
+		return fmt.Errorf("official login source changed during final verification; detect the current account again")
+	}
+	if snapshot.Candidate.Reference == nil {
+		return fmt.Errorf("official login source recheck did not produce a selectable candidate: state=%s", snapshot.Candidate.State)
+	}
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	// Claude's fingerprint comes from the verified profile, not its token structure.
+	if request.Platform == "claude" {
+		p.snapshot.Candidate.Fingerprint = accountString(fingerprint)
+		p.snapshot.Candidate.IdentityVerified = true
+	}
+	return nil
+}
+func operationPointer(op DesktopOperation) *DesktopOperation { return &op }
+func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
+	p, release, _ := o.accounts.acquire(context.Background(), job.request.Platform)
+	defer release()
+	o.accounts.lifecycleMu.Lock()
+	defer o.accounts.lifecycleMu.Unlock()
+	o.mu.Lock()
+	defer o.mu.Unlock()
+	p.working = false
+	delete(o.accounts.activeActions, job.request.Platform)
+	p.snapshot.Revision++
+	job.operation.Revision = p.snapshot.Revision
+	job.operation.State = "succeeded"
+	if job.ctx.Err() != nil {
+		err = job.ctx.Err()
+	}
+	if err != nil {
+		job.operation.State = "failed"
+		if errors.Is(err, context.Canceled) {
+			job.operation.State = "cancelled"
+		}
+		var failure *DesktopAccountError
+		if errors.As(err, &failure) {
+			job.operation.Error = failure
+		} else {
+			job.operation.Error = accountFailure(job.request.Platform, "authorization_unconfirmed", "official_login", err.Error())
+		}
+		// A cancellation cannot confirm a late result. Official changes may already
+		// exist, so require an explicit new detection without selecting anything.
+		p.snapshot.Candidate = DesktopAccountCandidate{State: "not_checked"}
+		p.source = nil
+		p.credentialRevision = ""
+	}
+	p.snapshot.Operation = operationPointer(copyDesktopOperation(job.operation))
+}
+func (o *DesktopAuthorizer) probe(ctx context.Context, program string, env map[string]string, args ...string) (string, error) {
+	live, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	command := o.command(program, args...)
+	command.Env = desktopAuthorizationEnvironment(command.Env, env)
+	var output credentialBuffer
+	defer clear(output.Bytes())
+	command.Stdout = &output
+	command.Stderr = io.Discard
+	if err := runDesktopAuthorization(live, command); err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(output.String()), nil
+}
+
+var desktopCodexVersion = regexp.MustCompile(`^codex-cli 0\.(162|163)\.\d+$`)
+var desktopClaudeVersion = regexp.MustCompile(`^2\.1\.(\d+) \(Claude Code\)$`)
+
+func desktopAuthorizationVersion(platform, value string) bool {
+	if platform == "openai" {
+		return desktopCodexVersion.MatchString(value)
+	}
+	match := desktopClaudeVersion.FindStringSubmatch(value)
+	if len(match) != 2 {
+		return false
+	}
+	patch, err := strconv.Atoi(match[1])
+	return err == nil && patch >= 153
+}
+func desktopAuthorizationArgs(request DesktopAuthorizeRequest, goos string) ([]string, map[string]string, error) {
+	env := map[string]string{}
+	if request.Platform == "openai" {
+		directory, err := desktopCodexHome(request.Source.Directory)
+		if err != nil {
+			return nil, nil, err
+		}
+		if err := validateDesktopAccountDirectory(&directory); err != nil {
+			return nil, nil, err
+		}
+		if canonical, err := filepath.EvalSymlinks(directory); err == nil {
+			directory = canonical
+		}
+		store := request.Source.Store
+		if store == "auto" {
+			store = "file"
+		}
+		if store == "keyring" && goos != "darwin" {
+			return nil, nil, fmt.Errorf("official Codex keyring source unsupported on OS=%s", goos)
+		}
+		env["CODEX_HOME"] = directory
+		return []string{"login", "-c", "cli_auth_credentials_store=\"" + store + "\""}, env, nil
+	}
+	expected := "file"
+	if goos == "darwin" {
+		expected = "keychain"
+	}
+	if request.Source.Store != expected {
+		return nil, nil, fmt.Errorf("official Claude login namespace mismatch: selected_store=%s required_store=%s OS=%s", request.Source.Store, expected, goos)
+	}
+	if expected == "file" {
+		directory := resolveClaudeKeychain(request.Source.Directory).directory
+		if err := validateDesktopAccountDirectory(&directory); err != nil {
+			return nil, nil, err
+		}
+		if canonical, err := filepath.EvalSymlinks(directory); err == nil {
+			directory = canonical
+		}
+		env["CLAUDE_CONFIG_DIR"] = directory
+		env["CLAUDE_SECURESTORAGE_CONFIG_DIR"] = directory
+	} else if request.Source.Directory != nil {
+		env["CLAUDE_CONFIG_DIR"] = *request.Source.Directory
+		env["CLAUDE_SECURESTORAGE_CONFIG_DIR"] = *request.Source.Directory
+	}
+	return []string{"auth", "login", "--claudeai"}, env, nil
+}
+func desktopAuthorizationEnvironment(inherited []string, overrides map[string]string) []string {
+	if inherited == nil {
+		inherited = os.Environ()
+	}
+	result := make([]string, 0, len(inherited)+len(overrides))
+	for _, entry := range inherited {
+		key, _, _ := strings.Cut(entry, "=")
+		if _, ok := overrides[key]; ok {
+			continue
+		}
+		switch key {
+		case "OPENAI_API_KEY", "CODEX_ACCESS_TOKEN", "ANTHROPIC_API_KEY", "CLAUDE_CODE_OAUTH_TOKEN", "CLAUDE_CODE_OAUTH_REFRESH_TOKEN":
+			continue
+		}
+		result = append(result, entry)
+	}
+	for key, value := range overrides {
+		result = append(result, key+"="+value)
+	}
+	return result
+}
+func desktopOfficialExecutable(platform string) (string, error) {
+	name := "codex"
+	if platform == "claude" {
+		name = "claude"
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("official executable home lookup failed: %w", err)
+	}
+	suffix := ""
+	if runtime.GOOS == "windows" {
+		suffix = ".exe"
+	}
+	candidates := []string{filepath.Join(home, ".local", "bin", name+suffix), filepath.Join("/opt/homebrew/bin", name), filepath.Join("/usr/local/bin", name)}
+	if found, err := exec.LookPath(name); err == nil {
+		candidates = append(candidates, found)
+	}
+	for _, candidate := range candidates {
+		if !filepath.IsAbs(candidate) {
+			continue
+		}
+		path, err := filepath.EvalSymlinks(candidate)
+		if err != nil {
+			continue
+		}
+		info, err := os.Stat(path)
+		if err != nil || !info.Mode().IsRegular() {
+			continue
+		}
+		if runtime.GOOS != "windows" && (info.Mode().Perm()&0022 != 0 || info.Mode().Perm()&0111 == 0) {
+			continue
+		}
+		if runtime.GOOS == "windows" && !strings.EqualFold(filepath.Ext(path), ".exe") {
+			continue
+		}
+		return path, nil
+	}
+	return "", fmt.Errorf("official %s executable missing from supported install paths and PATH; install the official CLI first", name)
+}
+
+func sameDesktopAuthorizationSource(a, b DesktopAccountSource) bool {
+	if a.Store != b.Store || (a.Directory == nil) != (b.Directory == nil) {
+		return false
+	}
+	return a.Directory == nil || *a.Directory == *b.Directory
+}
+
+// PathError and exec.Error include complete local paths; keep only their cause.
+func desktopAuthorizationProcessError(check string, err error) error {
+	var path *os.PathError
+	if errors.As(err, &path) {
+		err = path.Err
+	}
+	var start *exec.Error
+	if errors.As(err, &start) {
+		err = start.Err
+	}
+	return fmt.Errorf("%s: %w", check, err)
+}
+func desktopAuthorizationExit(err error) error {
+	if err == nil {
+		return nil
+	}
+	var exited *exec.ExitError
+	if errors.As(err, &exited) {
+		return fmt.Errorf("official process exited: exit_code=%d", exited.ExitCode())
+	}
+	return desktopAuthorizationProcessError("wait official process", err)
+}

@@ -351,24 +351,28 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         ]
         .map(str::to_string),
     );
+    let mut authorize = runtime.clone();
+    authorize
+        .extend(["authorize_start", "authorize_status", "authorize_cancel"].map(str::to_string));
     let expected = match metadata.capabilities.len() {
         2 => &basic,
         4 => &devices,
         6 => &supplies,
         10 => &accounts,
         14 => &runtime,
+        17 => &authorize,
         count => {
             return Err(BridgeError::new(
                 "CAPABILITY_MISMATCH",
                 format!(
-                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14"
+                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14,17"
             ),
             ))
         }
     };
     for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
         if actual != expected {
-            let observed = if runtime.contains(actual) {
+            let observed = if authorize.contains(actual) {
                 actual.clone()
             } else {
                 format!("unknown member bytes={}", actual.len())
@@ -439,7 +443,7 @@ pub fn validate_account_operation(
     validate_operation(
         raw,
         Some(platform),
-        &["select", "clear_selection", "confirm_change"],
+        &["select", "clear_selection", "confirm_change", "authorize"],
     )
 }
 

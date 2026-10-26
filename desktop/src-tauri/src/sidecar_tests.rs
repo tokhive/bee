@@ -669,3 +669,52 @@ async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_priva
     }
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn authorize_native_commands_bind_operation_and_keep_shell_private() {
+    let bridge = Bridge::start(fixture("authorize"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let app = tauri::test::mock_builder()
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::authorize_start,
+            crate::commands::authorize_status,
+            crate::commands::authorize_cancel,
+            crate::commands::bridge_request
+        ])
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let invoke = |cmd: &str, body: Value| {
+        tauri::test::get_ipc_response(
+            &view,
+            tauri::webview::InvokeRequest {
+                cmd: cmd.into(),
+                callback: tauri::ipc::CallbackFn(0),
+                error: tauri::ipc::CallbackFn(1),
+                url: "tauri://localhost".parse().unwrap(),
+                body: tauri::ipc::InvokeBody::Json(body),
+                headers: Default::default(),
+                invoke_key: tauri::test::INVOKE_KEY.into(),
+            },
+        )
+    };
+    let reply:Value=invoke("authorize_start",serde_json::json!({"request":{"platform":"openai","source":{"directory":null,"store":"file"},"expected_revision":0}})).unwrap().deserialize().unwrap();
+    assert_eq!(reply["result"]["operation"]["kind"], "authorize");
+    for cmd in ["authorize_status", "authorize_cancel"] {
+        invoke(cmd, serde_json::json!({"operationId":"a".repeat(48)})).unwrap();
+        assert!(invoke(cmd, serde_json::json!({"operationId":"bad"})).is_err());
+    }
+    for request in [
+        serde_json::json!({}),
+        serde_json::json!({"platform":"openai","source":{"directory":null,"store":"file","program":"PRIVATE_SECRET"},"expected_revision":0}),
+    ] {
+        assert!(invoke("authorize_start", serde_json::json!({"request":request})).is_err());
+    }
+    for method in ["authorize_start", "authorize_status", "authorize_cancel"] {
+        assert!(invoke("bridge_request", serde_json::json!({"method":method})).is_err());
+    }
+    bridge.stop().await.unwrap();
+}

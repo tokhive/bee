@@ -275,6 +275,50 @@ impl Bridge {
         Ok(reply)
     }
 
+    pub async fn authorize_start(
+        &self,
+        request: crate::authorize_protocol::AuthorizeRequest,
+    ) -> Result<BridgeReply, BridgeError> {
+        request.validate()?;
+        let platform = request.platform;
+        let reply = self
+            .request(
+                "authorize_start",
+                serde_json::json!(request),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::authorize_protocol::validate_authorize_reply(&reply.result, Some(platform), None)?;
+        Ok(reply)
+    }
+    pub async fn authorize_status(&self, operation_id: String) -> Result<BridgeReply, BridgeError> {
+        self.authorize_operation("authorize_status", operation_id)
+            .await
+    }
+    pub async fn authorize_cancel(&self, operation_id: String) -> Result<BridgeReply, BridgeError> {
+        self.authorize_operation("authorize_cancel", operation_id)
+            .await
+    }
+    async fn authorize_operation(
+        &self,
+        method: &'static str,
+        operation_id: String,
+    ) -> Result<BridgeReply, BridgeError> {
+        crate::authorize_protocol::validate_operation_id(&operation_id)?;
+        let reply = self
+            .request(
+                method,
+                serde_json::json!({"operation_id":operation_id}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::authorize_protocol::validate_authorize_reply(
+            &reply.result,
+            None,
+            Some(&operation_id),
+        )?;
+        Ok(reply)
+    }
     pub async fn runtime_snapshot(&self) -> Result<BridgeReply, BridgeError> {
         let reply = self
             .request(

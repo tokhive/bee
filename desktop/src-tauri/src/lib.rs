@@ -1,3 +1,4 @@
+pub mod authorize_protocol;
 pub mod build_source;
 mod commands;
 mod diagnostics;
@@ -42,6 +43,9 @@ pub fn run() {
             commands::account_detect,
             commands::account_snapshot,
             commands::account_action,
+            commands::authorize_start,
+            commands::authorize_status,
+            commands::authorize_cancel,
             commands::runtime_snapshot,
             commands::runtime_start,
             commands::runtime_stop,

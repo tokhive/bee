@@ -20,6 +20,7 @@ var desktopAccountModelPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]
 func desktopAccountModelID(value string) bool { return desktopAccountModelPattern.MatchString(value) }
 
 func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAccountPlatform, platform string) {
+	p.hiveAccount = nil
 	p.snapshot.Hive = DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: "unbound"}}
 	p.snapshot.Capabilities[1] = emptyAccountCapabilities("hive")
 	p.snapshot.Issues = []DesktopAccountIssue{}
@@ -106,6 +107,7 @@ func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAcco
 		setAccountHiveFailure(p, platform, "account_sandwich", errors.New("account fingerprint, generation, authorization revision or status changed between reads"))
 		return
 	}
+	p.hiveAccount = &after
 	now := a.now()
 	p.snapshot.Hive = DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: after.Status, ObservedAt: accountTime(now)}, Generation: &after.Generation}
 	if after.PendingFingerprint != "" {

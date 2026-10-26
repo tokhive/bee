@@ -267,7 +267,7 @@ fn decode_envelope(bytes: &[u8]) -> Result<Envelope, BridgeError> {
     Ok(frame)
 }
 
-fn invalid_json(stage: &str, error: serde_json::Error) -> BridgeError {
+pub(crate) fn invalid_json(stage: &str, error: serde_json::Error) -> BridgeError {
     // serde errors can quote an unknown key or value. Expose the failed
     // check, location and category without copying the child's raw payload.
     BridgeError::new(
@@ -341,23 +341,34 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         ]
         .map(str::to_string),
     );
+    let mut runtime = accounts.clone();
+    runtime.extend(
+        [
+            "runtime_snapshot",
+            "runtime_start",
+            "runtime_stop",
+            "runtime_configure_network",
+        ]
+        .map(str::to_string),
+    );
     let expected = match metadata.capabilities.len() {
         2 => &basic,
         4 => &devices,
         6 => &supplies,
         10 => &accounts,
+        14 => &runtime,
         count => {
             return Err(BridgeError::new(
                 "CAPABILITY_MISMATCH",
                 format!(
-                "hello capability count rejected; actual count={count}; required counts=2,4,6,10"
+                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14"
             ),
             ))
         }
     };
     for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
         if actual != expected {
-            let observed = if accounts.contains(actual) {
+            let observed = if runtime.contains(actual) {
                 actual.clone()
             } else {
                 format!("unknown member bytes={}", actual.len())
@@ -386,11 +397,17 @@ struct AccountOperationError {
 struct AccountOperation {
     id: String,
     kind: String,
-    platform: SupplyPlatform,
+    #[serde(deserialize_with = "present_operation_platform")]
+    platform: Option<SupplyPlatform>,
     state: String,
     revision: u64,
     #[serde(deserialize_with = "present_operation_error")]
     error: Option<AccountOperationError>,
+}
+fn present_operation_platform<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<SupplyPlatform>, D::Error> {
+    Option::<SupplyPlatform>::deserialize(d)
 }
 fn present_operation_error<'de, D: serde::Deserializer<'de>>(
     d: D,
@@ -419,6 +436,19 @@ pub fn validate_account_operation(
     if raw.is_null() {
         return Ok(());
     }
+    validate_operation(
+        raw,
+        Some(platform),
+        &["select", "clear_selection", "confirm_change"],
+    )
+}
+
+pub(crate) fn validate_operation(
+    raw: &Value,
+    platform: Option<SupplyPlatform>,
+    kinds: &[&str],
+) -> Result<(), BridgeError> {
+    let invalid = |message: &str| BridgeError::new("ACCOUNT_REPLY_INVALID", message.into());
     let op: AccountOperation =
         serde_json::from_value(raw.clone()).map_err(|e| invalid_json("account.operation", e))?;
     if op.id.len() != 48
@@ -432,7 +462,7 @@ pub fn validate_account_operation(
     if op.platform != platform {
         return Err(invalid("operation platform differs from account request"));
     }
-    if !["select", "clear_selection", "confirm_change"].contains(&op.kind.as_str()) {
+    if !kinds.contains(&op.kind.as_str()) {
         return Err(invalid("operation kind outside account actions"));
     }
     if ![

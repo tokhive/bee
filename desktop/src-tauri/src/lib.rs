@@ -4,6 +4,7 @@ mod diagnostics;
 mod lifecycle;
 mod navigation;
 pub mod protocol;
+pub mod runtime_protocol;
 pub mod sidecar;
 use tauri::{Emitter, Manager};
 
@@ -41,6 +42,9 @@ pub fn run() {
             commands::account_detect,
             commands::account_snapshot,
             commands::account_action,
+            commands::runtime_snapshot,
+            commands::runtime_start,
+            commands::runtime_stop,
             lifecycle::login_return_received
         ])
         .setup(|app| {

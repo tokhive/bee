@@ -613,3 +613,59 @@ async fn supply_native_commands_require_platform_and_an_explicit_boolean() {
     bridge.ping().await.unwrap();
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_private() {
+    let bridge = Bridge::start(fixture("runtime"));
+    wait(&bridge, BridgePhase::Ready).await;
+    let app = tauri::test::mock_builder()
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::runtime_snapshot,
+            crate::commands::runtime_start,
+            crate::commands::runtime_stop,
+            crate::commands::bridge_request
+        ])
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let invoke = |cmd: &str, body: Value| {
+        tauri::test::get_ipc_response(
+            &view,
+            tauri::webview::InvokeRequest {
+                cmd: cmd.into(),
+                callback: tauri::ipc::CallbackFn(0),
+                error: tauri::ipc::CallbackFn(1),
+                url: "tauri://localhost".parse().unwrap(),
+                body: tauri::ipc::InvokeBody::Json(body),
+                headers: Default::default(),
+                invoke_key: tauri::test::INVOKE_KEY.into(),
+            },
+        )
+    };
+    invoke("runtime_snapshot", serde_json::json!({})).unwrap();
+    invoke(
+        "runtime_start",
+        serde_json::json!({"request":{"expected_revision":0,"resume_platforms":["openai"]}}),
+    )
+    .unwrap();
+    assert!(invoke("runtime_start",serde_json::json!({"request":{"expected_revision":0,"resume_platforms":["openai","openai"]}})).is_err());
+    // Untrusted extra arguments cannot change the fixed user-stop intent.
+    invoke(
+        "runtime_stop",
+        serde_json::json!({"expectedRevision":1,"reason":"update"}),
+    )
+    .unwrap();
+    for method in [
+        "runtime_snapshot",
+        "runtime_start",
+        "runtime_stop",
+        "runtime_configure_network",
+        "runtime_restore",
+    ] {
+        assert!(invoke("bridge_request", serde_json::json!({"method":method})).is_err());
+    }
+    bridge.stop().await.unwrap();
+}

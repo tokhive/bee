@@ -67,3 +67,5 @@ export function createAccountClient(invoke:DeviceInvoke,instance:string):Account
   async action(input){shape({platform:oneOf(['openai','claude']),revision:integer,candidate_ref:input.action==='clear_selection'?pattern(/^(?:[a-f0-9]{48})?$/):pattern(/^[a-f0-9]{48}$/),action:oneOf(['select','confirm_change','remove','clear_selection']),confirmed:bool})(input,'request');return request(input.platform,'account_action',{request:input},++epochs[input.platform]);}
  };
 }
+
+export function decodeAccountError(value:unknown,platform:AccountPlatform):AccountError|null{publicError(platform)(value,"error");return value as AccountError|null;}

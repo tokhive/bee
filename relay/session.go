@@ -5,6 +5,7 @@ import (
 	"io"
 	"log/slog"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -18,6 +19,7 @@ type Session struct {
 	Context context.Context
 	cancel  context.CancelFunc
 	carrier *carrier
+	done    <-chan struct{}
 }
 
 // Stream bounds for the two kinds of tunnel. A stream is one upstream TCP
@@ -61,7 +63,20 @@ func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle
 	slots := make(chan struct{}, limit)
 	var refused atomic.Uint64
 	var lastLogged atomic.Int64
+	var handlers sync.WaitGroup
+	var admission sync.Mutex
+	closing := false
+	done := make(chan struct{})
 	mux.Serve(func(stream *tunnel.Stream, metadata []byte) {
+		admission.Lock()
+		if closing {
+			admission.Unlock()
+			_ = stream.Close()
+			return
+		}
+		handlers.Add(1)
+		admission.Unlock()
+		defer handlers.Done()
 		select {
 		case slots <- struct{}{}:
 			defer func() { <-slots }()
@@ -85,11 +100,23 @@ func New(ctx context.Context, conn *websocket.Conn, side tunnel.Endpoint, handle
 		}
 	})
 	close(carrier.ready)
-	context.AfterFunc(live, func() { conn.CloseNow(); mux.Close() })
-	return &Session{Mux: mux, Context: live, cancel: cancel, carrier: carrier}
+	context.AfterFunc(live, func() {
+		admission.Lock()
+		closing = true
+		admission.Unlock()
+		conn.CloseNow()
+		mux.Close()
+		handlers.Wait()
+		close(done)
+	})
+	return &Session{Mux: mux, Context: live, cancel: cancel, carrier: carrier, done: done}
 }
 
 func (s *Session) Close() { s.cancel() }
+
+// Wait proves cancellation and all admitted upstream handlers have completed.
+// Call from the owner, never from a handler owned by this session.
+func (s *Session) Wait() { <-s.done }
 
 // Moved is how many tunnel bytes have crossed the WebSocket so far, in both
 // directions.

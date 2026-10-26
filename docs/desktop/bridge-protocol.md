@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 CLI 入口提供上述十项能力。旧供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这四组精确且有序的能力集合，不接受任意子集或额外方法。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述十四项能力。旧账号服务保留十项，供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这五组精确且有序的能力集合，不接受任意子集或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -44,11 +44,11 @@
 | `account_defaults` | `{}` | `{"defaults":DesktopAccountDefaults}`；不打开官方凭证或连接 Hive |
 | `account_detect` | `platform,directory,store,mode` | `{"account":DesktopAccountSnapshot}`；平台 openai/claude；directory 必须显式 null 或非空绝对路径（≤4096 UTF-8 字节，无控制字符）；OpenAI store 为 auto/file/keyring，Claude 为 file/keychain；mode 为 local/official |
 | `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 只刷新 Hive |
-| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝，本批全部动作在副作用前报告缺失依赖 |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝；select／clear_selection 已接通，confirm_change／已注册账号 remove 仍按当前实现报告不可用 |
 
 Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
 
-不存在贡献 `start`、独立账号授权、资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
+贡献使用下述固定 `runtime_start`；官方授权尚未接通，不存在资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
 
 ```json
 {"protocol":1,"id":"ping-1","instance":"0d957c72d63b4c06ae544c10f4c549799","error":{"code":"NOT_READY","message":"hello handshake has not succeeded; required=hello before other methods"}}
@@ -78,7 +78,7 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 ## S1 运行交接契约（T1 已定义，命令在接通服务后开放）
 
-公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。当前仍不公布尚未接通的运行／登录能力。下面是后续 Task 必须一致实现的契约，不能据类型存在声称可贡献。
+公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置四项；官方登录和恢复入口分别留待 T4／T6 接通后公布。以下包含完整后续契约，未公布能力不表示可调用。
 
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
@@ -120,3 +120,12 @@ go run ./cmd/bee help
 `account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change，state 为 pending／running／reconciling／succeeded／failed／cancelled。
 
 `clear_selection` 只清除尚未注册且未运行的本地选择，使用当前快照 revision 与 confirmed=true；candidate_ref 可以是空字符串，不要求官方凭证仍有效。select／confirm_change 继续要求当前候选引用。完整移除仍不可用。若暂停已证实、Hive 身份/代次未变而官方来源发生变化，原接入操作以失败结束并保持暂停，允许用户重新检测确认；无法确认暂停或 Hive 归属时保留未决操作，刷新只查询、不重发 PUT。
+
+
+### S1-T3 真实运行与同步屏障
+
+`runtime_snapshot` 返回 `{runtime:DesktopRuntimeSnapshot}`；`runtime_start`／`runtime_stop` 返回 `{operation:DesktopOperation}`；`runtime_configure_network` 返回 `{configured:true}`。业务错误为 `RUNTIME_OPERATION_FAILED`，不使管理桥失效。前端调用分别为 `{}`、`{request:{expected_revision,resume_platforms}}`、`{expectedRevision}`；停止理由由 Rust 固定为 `user_stop`，内部理由及代理配置不开放为网页命令。
+
+真实 Go 连接与授权维护运行于管理子进程。同步回执核对当前连接租约、账号指纹、代次和凭证修订，并与持久选择／run_id核对；手动恢复同样核验。来源切换先取消并等待原平台维护，再启用新来源，成功仍保持暂停。一个平台失败不阻塞另一个平台；首次409停止，不抢占连接。
+
+手动暂停的修订优先于正在准备的开始请求。重连为每个平台登记可取消的启动等待器，慢暂停不会永久漏启维护。停止即使保存失败也取消并等待授权维护、转发处理和失败上报退出；receipt如实报告，不能替代 Rust 对管理子进程的 wait/reap。普通窗口关闭仍沿用原有后台行为。

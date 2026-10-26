@@ -275,6 +275,81 @@ impl Bridge {
         Ok(reply)
     }
 
+    pub async fn runtime_snapshot(&self) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "runtime_snapshot",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::runtime_protocol::validate_runtime_reply(
+            &reply.result,
+            crate::runtime_protocol::RuntimeReplyKind::Snapshot,
+        )?;
+        Ok(reply)
+    }
+    pub async fn runtime_start(
+        &self,
+        request: crate::runtime_protocol::RuntimeStartRequest,
+    ) -> Result<BridgeReply, BridgeError> {
+        request.validate()?;
+        let reply = self
+            .request(
+                "runtime_start",
+                serde_json::json!(request),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::runtime_protocol::validate_runtime_reply(
+            &reply.result,
+            crate::runtime_protocol::RuntimeReplyKind::Operation,
+        )?;
+        Ok(reply)
+    }
+    pub(crate) async fn runtime_stop(
+        &self,
+        expected_revision: u64,
+        reason: crate::runtime_protocol::RuntimeStopReason,
+    ) -> Result<BridgeReply, BridgeError> {
+        crate::runtime_protocol::RuntimeStartRequest {
+            expected_revision,
+            resume_platforms: vec![],
+        }
+        .validate()?;
+        let reply = self
+            .request(
+                "runtime_stop",
+                serde_json::json!({"expected_revision":expected_revision,"reason":reason}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::runtime_protocol::validate_runtime_reply(
+            &reply.result,
+            crate::runtime_protocol::RuntimeReplyKind::Operation,
+        )?;
+        Ok(reply)
+    }
+    // Internal lifecycle/settings entry only; intentionally absent from Tauri commands.
+    #[allow(dead_code)] // Consumed by S2 after the S1 network contract is delivered.
+    pub(crate) async fn runtime_configure_network(
+        &self,
+        request: crate::runtime_protocol::RuntimeNetworkConfig,
+    ) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "runtime_configure_network",
+                serde_json::json!(request),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::runtime_protocol::validate_runtime_reply(
+            &reply.result,
+            crate::runtime_protocol::RuntimeReplyKind::Configured,
+        )?;
+        Ok(reply)
+    }
+
     pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
         self.request(
             "device_status",

@@ -288,3 +288,29 @@ mod browser_action_tests {
         assert_eq!(failure.code, "BROWSER_OPEN_TIMEOUT");
     }
 }
+
+#[tauri::command]
+pub async fn runtime_snapshot(
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.runtime_snapshot().await
+}
+#[tauri::command]
+pub async fn runtime_start(
+    bridge: tauri::State<'_, Bridge>,
+    request: crate::runtime_protocol::RuntimeStartRequest,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.runtime_start(request).await
+}
+#[tauri::command]
+pub async fn runtime_stop(
+    bridge: tauri::State<'_, Bridge>,
+    expected_revision: u64,
+) -> Result<BridgeReply, BridgeError> {
+    bridge
+        .runtime_stop(
+            expected_revision,
+            crate::runtime_protocol::RuntimeStopReason::UserStop,
+        )
+        .await
+}

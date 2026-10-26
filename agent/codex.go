@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
@@ -178,7 +179,18 @@ func readCodexKeyring(ctx context.Context, home string) ([]byte, error) {
 	command.Stdout = &output
 	command.Stderr = io.Discard
 	if err := command.Run(); err != nil {
-		return nil, errors.New("failed to read the Codex direct Keychain; verify the directory, login mode, and system permissions, or explicitly select file storage")
+		clear(output.Bytes())
+		if live.Err() != nil {
+			return nil, fmt.Errorf("Codex Keychain read context failed: %w", live.Err())
+		}
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			if exit.ExitCode() == 44 {
+				return nil, fmt.Errorf("Codex Keychain item absent: security exit=%d: %w", exit.ExitCode(), os.ErrNotExist)
+			}
+			return nil, fmt.Errorf("Codex Keychain read failed: security exit=%d; verify system permissions", exit.ExitCode())
+		}
+		return nil, fmt.Errorf("Codex Keychain command could not start: %w", err)
 	}
 	return bytes.TrimSpace(output.Bytes()), nil
 }

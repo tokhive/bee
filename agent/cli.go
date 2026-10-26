@@ -26,6 +26,9 @@ import (
 
 func Run(ctx context.Context, args []string, out io.Writer) error {
 	logx.Setup("bee", "BEE_DEBUG")
+	if len(args) == 0 && logx.Readable(os.Stdin) && logx.Readable(out) {
+		return runManagement(ctx, out)
+	}
 	if len(args) == 0 || args[0] == "help" || args[0] == "-h" || args[0] == "--help" {
 		fmt.Fprint(out, usage)
 		return nil

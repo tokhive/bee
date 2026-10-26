@@ -16,6 +16,9 @@ import (
 
 const usage = `Bee supplies your AI subscriptions to a TokHive market.
 
+Interactive management:
+  bee                       open the numbered management menu in a terminal
+
 Get started (run it again any time to start Bee):
   bee start --hive URL       pair this machine, choose the accounts to supply, and run
 

@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"github.com/tokhive/bee/beewire"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -61,6 +63,10 @@ func TestMenuPairBackupUsesLockAndKeepsSupply(t *testing.T) {
 	if info.Mode().Perm() != 0700 {
 		t.Fatal(info.Mode())
 	}
+	info, _ = os.Stat(path)
+	if info.Mode().Perm() != 0600 {
+		t.Fatal(info.Mode())
+	}
 	s, _ := os.ReadFile(m.egressPath)
 	if string(s) != "saved supply" {
 		t.Fatal("supply changed")
@@ -69,7 +75,11 @@ func TestMenuPairBackupUsesLockAndKeepsSupply(t *testing.T) {
 func TestMenuPairBackupRejectsChangedFile(t *testing.T) {
 	m, _ := pairedMenu(t, "")
 	before, _ := os.ReadFile(m.configPath)
-	os.WriteFile(m.configPath, []byte("changed"), 0600)
+	state, _ := readState(m.configPath)
+	state.Name = "changed while confirming"
+	if e := saveState(m.configPath, state); e != nil {
+		t.Fatal(e)
+	}
 	if _, e := m.backupDevice(before); e == nil {
 		t.Fatal("changed config moved")
 	}
@@ -233,5 +243,46 @@ func TestMenuSupplyResumeDoesNotClaimReady(t *testing.T) {
 	}
 	if writes != 1 || !strings.Contains(out.String(), "暂不可接单") {
 		t.Fatal(writes, out.String())
+	}
+}
+
+func TestMenuGuidedPairingLeavesNextStepToCallingServiceAction(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		json.NewEncoder(w).Encode(beewire.Identity{ID: "paired"})
+	}))
+	defer server.Close()
+	m, out := menuFixture(t, server.URL+"\n1\n")
+	if e := m.pairingWithNext(false); e != nil {
+		t.Fatal(e)
+	}
+	state, e := readState(m.configPath)
+	if e != nil || state.Identity == nil {
+		t.Fatal(state.Identity, e)
+	}
+	if strings.Contains(out.String(), "现在选择供给账号") {
+		t.Fatal(out.String())
+	}
+}
+
+func TestMenuPairStopFailureKeepsOriginalDevice(t *testing.T) {
+	m, _ := pairedMenu(t, "2\n\n1\n")
+	before, _ := os.ReadFile(m.configPath)
+	s, _ := managedFixture(t)
+	m.service = s
+	previous := s.execute
+	s.execute = func(c context.Context, n string, a []string, i io.Reader, o io.Writer) (string, error) {
+		if n == "sudo" {
+			return "", errors.New("exit 7: stop refused")
+		}
+		v, e := previous(c, n, a, i, o)
+		return strings.ReplaceAll(v, "ActiveState=inactive", "ActiveState=active"), e
+	}
+	if e := m.pairing(); e == nil || !strings.Contains(e.Error(), "stop refused") {
+		t.Fatal(e)
+	}
+	after, _ := os.ReadFile(m.configPath)
+	backups, _ := filepath.Glob(m.configPath + ".backup.*")
+	if !bytes.Equal(before, after) || len(backups) != 0 {
+		t.Fatal("stop failure moved device configuration")
 	}
 }

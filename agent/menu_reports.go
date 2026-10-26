@@ -32,6 +32,12 @@ func (m *managementMenu) status() error {
 		return e
 	}
 	for _, p := range configuredPlatforms(cfg) {
+		a, err := readPlatformAccount(m.ctx, device, p)
+		if err != nil {
+			fmt.Fprintf(m.out, "%s: %v\n", p, err)
+		} else {
+			m.printAccount(a)
+		}
 		if e = m.showPlatform(device, p); e != nil {
 			fmt.Fprintf(m.out, "%s: %v\n", p, e)
 		}
@@ -59,6 +65,13 @@ func (m *managementMenu) showPlatform(device localState, p string) error {
 }
 func (m *managementMenu) reason(r string) string {
 	if m.ui.lang == "zh" {
+		if zh, ok := map[string]string{
+			"codex_authorization_rejected": "Codex 授权被上游拒绝", "claude_authorization_rejected": "Claude 授权被上游拒绝",
+			"codex_source_unavailable": "等待官方 Codex 登录恢复", "claude_source_unavailable": "等待官方 Claude Code 登录恢复",
+			"codex_confirmation_required": "OpenAI 账号已变更，等待确认", "claude_confirmation_required": "Claude 账号已变更，等待确认",
+		}[r]; ok {
+			return zh
+		}
 		if zh, ok := map[string]string{"manually_paused": "已手动暂停接单", "offline": "Bee 离线", "not_configured": "尚未配置供给账号", "concurrency_full": "已达到并发上限", "quota_exhausted": "账号额度已用尽", "rate_limited": "上游限流冷却中", "plan_not_configured": "管理员尚未配置套餐限制", "authorization_unavailable": "暂无有效的在线授权", "capabilities_unknown": "账号能力未知或已过期", "quota_unknown": "正在等待新的额度查询", "model_unavailable": "模型当前不可交易", "banned": "已被管理员禁用", "device_draining": "设备替换中，等待当前任务完成"}[r]; ok {
 			return zh
 		}

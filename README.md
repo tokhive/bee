@@ -79,6 +79,20 @@ make test
 
 ## Getting started
 
+In a terminal, run `bee` with no arguments to open the numbered management menu:
+
+```sh
+bee
+```
+
+Choose **简体中文 / English**, then use the menu to view status, pair or re-pair with Hive, select supplied accounts, pause/resume new work, confirm an account change, manage the background service, or inspect logs and diagnostics. Use `0` to return or exit. Exiting the menu leaves the background Bee running. `BEE_LANG=zh` or `BEE_LANG=en` skips the initial language question; the menu can change language for the current session.
+
+Linux service controls require the installer-managed system service for the same user, executable and configuration. Custom units, drop-ins and other installation paths require manual management. **Start/stop** changes the current process; **enable/disable boot startup** changes what happens after reboot. Saving an account selection does not apply it to a running process until you confirm a restart. Service activity and account readiness are shown separately.
+
+The other menu actions work on macOS, but this version does not manage macOS background services; use `bee start` in the foreground. Existing subcommands remain available. Without both terminal input and output, bare `bee` prints help and exits.
+
+The menu requires a binary built from this change or a release containing it. Updating `install.sh` alone cannot add it to an older release. To test before a release, build this branch with `make build` and run `./bin/bee`.
+
 If the Linux installer has completed setup and started the service, use `bee status` to check it. The following steps are for macOS, binary-only installation, or running in the foreground.
 
 First sign in to the official client on this machine, as the user that will run Bee: Codex (`codex login`) for an OpenAI subscription, Claude Code (`claude`) for a Claude subscription. Then copy the command from the **Devices** page of your Hive, which already contains its address:
@@ -111,6 +125,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 
 | Command | Purpose |
 | --- | --- |
+| `bee` | Open the bilingual management menu in an interactive terminal; exiting leaves the background service running. |
 | `bee start [--hive URL] [--name NAME] [--yes]` | Pair, choose the subscriptions and run, skipping the steps already done. The way to start Bee. |
 | `bee status` | Show the build, the Hive, the device and whether each supplied account is taking work. |
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |

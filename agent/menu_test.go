@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
@@ -96,5 +97,57 @@ func TestMenuStatusRetainsLocalEvidenceWhenUnpaired(t *testing.T) {
 	e := m.status()
 	if e == nil || !strings.Contains(out.String(), "inactive") || !strings.Contains(out.String(), "enabled") {
 		t.Fatalf("%v %s", e, out.String())
+	}
+}
+
+func TestMenuStartResumesIncompletePairingBeforeServiceMutation(t *testing.T) {
+	m, _ := menuFixture(t, "1\n")
+	s, calls := managedFixture(t)
+	m.service = s
+	if e := saveState(m.configPath, localState{Hive: "https://hive.example", Credential: "bee_" + strings.Repeat("a", 43)}); e != nil {
+		t.Fatal(e)
+	}
+	paired := false
+	m.pair = func() error { paired = true; return io.EOF }
+	if e := m.serviceAction("start"); !errors.Is(e, io.EOF) || !paired {
+		t.Fatalf("pair=%t error=%v", paired, e)
+	}
+	for _, c := range *calls {
+		if strings.HasPrefix(c, "sudo ") {
+			t.Fatal(c)
+		}
+	}
+}
+
+func TestMenuLogElevationNeedsExplicitConfirmation(t *testing.T) {
+	for _, answer := range []string{"0\n", "1\n"} {
+		t.Run(strings.TrimSpace(answer), func(t *testing.T) {
+			m, _ := menuFixture(t, answer)
+			s, calls := managedFixture(t)
+			m.service = s
+			previous := s.execute
+			s.execute = func(c context.Context, n string, a []string, i io.Reader, o io.Writer) (string, error) {
+				v, e := previous(c, n, a, i, o)
+				if n == "journalctl" {
+					return "", fmt.Errorf("%w: not seeing messages from other users and the system", errJournalPermission)
+				}
+				return v, e
+			}
+			if e := m.logs(); e != nil {
+				t.Fatal(e)
+			}
+			elevated := 0
+			for _, c := range *calls {
+				if strings.HasPrefix(c, "sudo ") {
+					elevated++
+					if c != "sudo journalctl -u tokhive-bee -n 50 --no-pager" {
+						t.Fatal(c)
+					}
+				}
+			}
+			if (answer == "1\n" && elevated != 1) || (answer == "0\n" && elevated != 0) {
+				t.Fatal(*calls)
+			}
+		})
 	}
 }

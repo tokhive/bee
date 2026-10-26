@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -121,7 +122,7 @@ func (m *managementMenu) loop(title string, actions []menuAction) error {
 			return e
 		}
 		if e != nil {
-			fmt.Fprintf(m.out, m.text("Operation failed: %v\n", "操作失败：%v\n"), e)
+			m.ui.status(m.out, "❌", "31", fmt.Sprintf("Operation failed: %v", e), fmt.Sprintf("操作失败：%v", e))
 		}
 		if _, e = m.line(m.text("\nPress Enter to return...", "\n按回车返回…")); errors.Is(e, io.EOF) {
 			return nil
@@ -169,4 +170,42 @@ func (m *managementMenu) serviceState() (serviceState, error) {
 		return serviceState{}, errServiceUnavailable
 	}
 	return m.service.inspect(m.ctx)
+}
+
+func runManagement(ctx context.Context, out io.Writer) error {
+	ui, e := newInstallUI(out)
+	if e != nil {
+		return e
+	}
+	config := defaultConfigPath()
+	if config == "" {
+		return errors.New("cannot locate device configuration directory")
+	}
+	m := &managementMenu{ctx: ctx, in: bufio.NewReader(os.Stdin), out: out, ui: ui, configPath: config, egressPath: defaultEgressPath(config)}
+	m.service, m.serviceErr = newManagedService(m.configPath, m.egressPath, os.Stdin, out)
+	m.pair = func() error { return m.pairingWithNext(false) }
+	m.configure = func() error { return m.configureAccountsWithNext(false) }
+	if os.Getenv("BEE_LANG") == "" {
+		if e = m.language(); errors.Is(e, io.EOF) {
+			return nil
+		} else if e != nil {
+			return e
+		}
+	}
+	title := "Bee · " + buildVersion()
+	if ui.terminal {
+		title = "🐝 " + title
+	}
+	e = m.loop(title, []menuAction{
+		{"View status", "查看运行状态", m.status},
+		{"Pair / re-pair with Hive", "配对 / 重新配对 Hive", m.pairing},
+		{"Manage supplied accounts", "管理供给账号", m.accounts},
+		{"Manage background service", "管理后台服务", m.services},
+		{"Logs and diagnostics", "查看日志与诊断", m.logsAndDoctor},
+		{"Change language / 语言", "切换语言 / Language", m.language},
+	})
+	if errors.Is(e, io.EOF) {
+		return nil
+	}
+	return e
 }

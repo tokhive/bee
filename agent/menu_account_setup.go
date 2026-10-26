@@ -10,6 +10,10 @@ import (
 )
 
 func (m *managementMenu) configureAccounts() error {
+	return m.configureAccountsWithNext(true)
+}
+
+func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 	fmt.Fprintf(m.out, m.text("Target configuration: %s\n", "目标配置：%s\n"), m.egressPath)
 	before, e := configurationSnapshot(m.egressPath)
 	if e != nil {
@@ -87,6 +91,10 @@ func (m *managementMenu) configureAccounts() error {
 		return e
 	}
 	fmt.Fprintf(m.out, m.text("Configuration saved: %s\n", "配置已保存：%s\n"), m.egressPath)
+	if !offerNext {
+		fmt.Fprintln(m.out, m.text("These changes apply on the next start or restart.", "这些变更将在下一次启动或重启时应用。"))
+		return nil
+	}
 	state, serviceErr := m.serviceState()
 	if serviceErr == nil && state.ActiveState == "active" {
 		fmt.Fprintln(m.out, m.text("The running process has not loaded this change yet.", "当前运行进程尚未加载此变更。"))

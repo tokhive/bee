@@ -12,6 +12,11 @@ import (
 )
 
 func (m *managementMenu) pairing() error {
+	return m.pairingWithNext(true)
+}
+
+// Service actions own their next step; direct pairing can offer account setup.
+func (m *managementMenu) pairingWithNext(offerNext bool) error {
 	state, err := readState(m.configPath)
 	if err != nil {
 		return fmt.Errorf("read device %s: %w", m.configPath, err)
@@ -96,6 +101,9 @@ func (m *managementMenu) pairing() error {
 	if err = m.pairDevice(hive, reset || state.Credential == ""); err != nil {
 		return err
 	}
+	if !offerNext {
+		return nil
+	}
 	if !fileExists(m.egressPath) {
 		ok, e := m.confirm(m.text("Pairing complete. Select supplied accounts now?", "配对完成。现在选择供给账号？"))
 		if e != nil {
@@ -108,7 +116,17 @@ func (m *managementMenu) pairing() error {
 		}
 	}
 	if service, e := m.serviceState(); e == nil && service.ActiveState != "active" && fileExists(m.egressPath) {
-		return m.serviceAction("start")
+		if e = m.serviceAction("start"); e != nil {
+			return e
+		}
+		current, e := m.serviceState()
+		if e != nil {
+			return e
+		}
+		if current.ActiveState != "active" {
+			fmt.Fprintln(m.out, m.text("Pairing complete; the background service has not started.", "配对完成，后台服务尚未启动。"))
+		}
+		return nil
 	}
 	fmt.Fprintln(m.out, m.text("Pairing complete. Use the service menu or bee start to run Bee.", "配对完成。可通过服务菜单或 bee start 运行 Bee。"))
 	return nil

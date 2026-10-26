@@ -191,3 +191,34 @@ func TestManagedMissingUnitIsUnavailable(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+
+func TestManagedRejectsUnescapedEnvironmentSpecifier(t *testing.T) {
+	s, _ := managedFixture(t)
+	f, e := os.OpenFile(s.unitPath, os.O_APPEND|os.O_WRONLY, 0)
+	if e != nil {
+		t.Fatal(e)
+	}
+	_, e = f.WriteString("\n[Service]\nEnvironment=\"CODEX_HOME=/tmp/%h\"\n")
+	f.Close()
+	if e != nil {
+		t.Fatal(e)
+	}
+	if _, e = s.inspect(context.Background()); e == nil {
+		t.Fatal("systemd environment specifier accepted as literal")
+	}
+}
+
+func TestManagedJournalPermissionWarningIsVisibleAndActionable(t *testing.T) {
+	directory := t.TempDir()
+	program := filepath.Join(directory, "journalctl")
+	warning := "Hint: You are currently not seeing messages from other users and the system."
+	if e := os.WriteFile(program, []byte("#!/bin/sh\nprintf '%s\\n' '"+warning+"' >&2\nprintf '%s\\n' '-- No entries --'\n"), 0700); e != nil {
+		t.Fatal(e)
+	}
+	t.Setenv("PATH", directory+string(os.PathListSeparator)+os.Getenv("PATH"))
+	var out strings.Builder
+	_, e := executeService(context.Background(), "journalctl", []string{"-n", "50"}, nil, &out)
+	if e == nil || !strings.Contains(e.Error(), warning) || !strings.Contains(out.String(), warning) {
+		t.Fatalf("error=%v output=%q", e, out.String())
+	}
+}

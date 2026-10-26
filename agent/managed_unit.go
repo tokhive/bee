@@ -57,6 +57,9 @@ func (s *managedService) validateUnit(owner string) error {
 				return fmt.Errorf("invalid service Environment quoting in %s: %w", s.unitPath, e)
 			}
 			decoded = strings.ReplaceAll(decoded, "%%", "%")
+			if serviceQuote(decoded, false) != value {
+				return fmt.Errorf("service Environment re-encoding differs in %s; expected installer literal escaping", s.unitPath)
+			}
 			name, v, ok := strings.Cut(decoded, "=")
 			switch name {
 			case "HOME", "XDG_CONFIG_HOME", "PATH", "CODEX_HOME", "CLAUDE_CONFIG_DIR", "CLAUDE_SECURESTORAGE_CONFIG_DIR":

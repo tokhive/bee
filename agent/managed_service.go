@@ -15,6 +15,7 @@ import (
 )
 
 var errServiceUnavailable = errors.New("managed system service unavailable")
+var errJournalPermission = errors.New("journal access is incomplete")
 
 type serviceState struct{ LoadState, ActiveState, UnitFileState string }
 type managedService struct {
@@ -41,6 +42,8 @@ func newManagedService(configPath, egressPath string, in io.Reader, out io.Write
 }
 func executeService(ctx context.Context, name string, args []string, in io.Reader, out io.Writer) (string, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
+	// Keep system-tool diagnostics recognizable regardless of the menu language.
+	cmd.Env = append(os.Environ(), "LC_ALL=C")
 	cmd.Stdin = in
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
@@ -51,6 +54,15 @@ func executeService(ctx context.Context, name string, args []string, in io.Reade
 	if err := cmd.Run(); err != nil {
 		return stdout.String(), fmt.Errorf("%s %q: %w; stderr: %s", name, args, err, strings.TrimSpace(stderr.String()))
 	}
+	if out != nil {
+		fmt.Fprint(out, stderr.String())
+	}
+	if name == "journalctl" || (name == "sudo" && len(args) > 0 && args[0] == "journalctl") {
+		warning := strings.ToLower(stderr.String())
+		if strings.Contains(warning, "permission") || strings.Contains(warning, "access denied") || strings.Contains(warning, "not seeing messages from other users and the system") {
+			return stdout.String(), fmt.Errorf("%w: %s %q; stderr: %s", errJournalPermission, name, args, strings.TrimSpace(stderr.String()))
+		}
+	}
 	return stdout.String(), nil
 }
 func (s *managedService) inspect(ctx context.Context) (serviceState, error) {
@@ -60,7 +72,7 @@ func (s *managedService) inspect(ctx context.Context) (serviceState, error) {
 	}
 	raw, err := s.execute(ctx, "systemctl", []string{"show", "tokhive-bee", "--property=LoadState,ActiveState,UnitFileState,User,FragmentPath,DropInPaths,NeedDaemonReload"}, nil, nil)
 	if err != nil {
-		return state, fmt.Errorf("inspect tokhive-bee: %w", err)
+		return state, fmt.Errorf("inspect tokhive-bee (use bee start for foreground operation): %w", err)
 	}
 	props := map[string]string{}
 	for _, line := range strings.Split(strings.TrimSpace(raw), "\n") {

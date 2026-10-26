@@ -71,11 +71,11 @@
 **消费：** Tasks 1–3 的全部菜单动作。
 **产出：** 裸 bee 完整用户入口；菜单回归纳入 make test 与 Linux CI。
 
-- [ ] 真正 PTY 写入口 RED：裸 bee 应出现菜单，当前仅帮助则失败；非终端裸命令/显式 help 保持帮助；数字切换语言、嵌套返回、EOF/Ctrl-C、安全取消、快速连续输入、TERM=dumb/NO_COLOR。测试必须操作真实新二进制，不用 fake Bee 替代入口。
-- [ ] 仅在 stdin/stdout 终端条件满足时接 runManagement；初始化语言和服务对象失败不能阻止其他可用菜单（展示准确不可用原因）。接齐六项及退出；服务启动缺配置时提供配对/选择账号向导，完成后重新询问启动。
-- [ ] 增加独立 Linux 校验：从 install.sh 现有测试夹具实际产生的 unit 验证服务适配器接受正确目标、拒绝不匹配；保留原生 systemd-analyze/systemctl --root 检查；不操作生产服务。Makefile 和 CI 执行菜单 PTY 回归。
-- [ ] 实际查看中英文终端输出，自审提示顺序与结果；更新 README 与安装指南，解释菜单/子命令、平台限制、退出菜单、保存与应用、自启与启动，以及需要新二进制 release。配套文档 PR #1 尚未合并，保留其安装功能说明后追加菜单说明。
-- [ ] 运行 `make test`、ShellCheck、`git diff --check`、文档构建；所有任务自审完成后做主代理全分支审查、修复有效问题、最终验证与一致性/计划复核。按已有 PR 授权提交新的 Bee 功能 PR，不重开已合并 #20，不自动合并或发布。
+- [x] 真正 PTY 写入口 RED：裸 bee 应出现菜单，当前仅帮助则失败；非终端裸命令/显式 help 保持帮助；数字切换语言、嵌套返回、EOF/Ctrl-C、安全取消、快速连续输入、TERM=dumb/NO_COLOR。测试必须操作真实新二进制，不用 fake Bee 替代入口。
+- [x] 仅在 stdin/stdout 终端条件满足时接 runManagement；初始化语言和服务对象失败不能阻止其他可用菜单（展示准确不可用原因）。接齐六项及退出；服务启动缺配置时提供配对/选择账号向导，完成后重新询问启动。
+- [x] 增加独立 Linux 校验：从 install.sh 现有测试夹具实际产生的 unit 验证服务适配器接受正确目标、拒绝不匹配；保留原生 systemd-analyze/systemctl --root 检查；不操作生产服务。Makefile 和 CI 执行菜单 PTY 回归。
+- [x] 实际查看中英文终端输出，自审提示顺序与结果；更新 README 与安装指南，解释菜单/子命令、平台限制、退出菜单、保存与应用、自启与启动，以及需要新二进制 release。配套文档 PR #1 尚未合并，保留其安装功能说明后追加菜单说明。
+- [x] 运行 `make test`、ShellCheck、`git diff --check`、文档构建；所有任务自审完成后由主代理核对本分支实现、修复有效问题，完成最终验证与一致性/计划复核。
 
 ## 基线及进度
 
@@ -84,3 +84,14 @@
 - 原生工具因当前会话目录不是 Git 仓库而无法创建，attach 也确认手工 worktree 不受原生管理，采用 Git 创建/清理方式；未影响其他 worktree。
 - 基线 make test：安装器 64 项中 62 通过、2 项 Linux 原生检查在 macOS 跳过；go vet 与 go test -race 通过。
 - 设计—任务覆盖：入口/通用交互→2/4；状态→2；配对→3；账号→3；服务→1/2/4；日志诊断→1/2；发布和验收→4。所有任务沿用全局约束。
+
+## 最终验证与交付
+
+- Task 4 已完成，使用 executing-plans 全程由主代理执行；未继续使用子代理。原有安装器内容与 CI workflow 无需变更，Makefile 的 test-menu 已纳入现有 make test/CI。
+- PTY 入口 RED：接入前裸 bee 只显示帮助，缺少“查看运行状态”；GREEN：真实二进制 8 项终端检查通过，含 zh/en、连续输入、取消、EOF/Ctrl-C、TERM=dumb、NO_COLOR、显式 help 和双终端条件。
+- 补测复现并修复：未完成配对进入启动、损坏供给配置仍执行启动、日志成功退出却吞掉权限提示、systemd Environment 非字面量转义、状态页缺失账号状态。
+- 安装器独立对照：真实 install.sh 在临时目录生成普通及特殊字符路径 unit，菜单接受对应目标，拒绝其他可执行文件；原生 Linux unit 验证保留在 CI。
+- make test 通过：安装器 64 项（macOS 62 通过、2 项 Linux 原生跳过）、PTY 8 项、Go vet、Go race 全通过。向导衔接调整后再次执行 test-menu、go vet、全量 go test -race -timeout=600s ./...，均通过。
+- 配置保存与应用：单独验证取消重启、重启失败、重启成功；新增服务引导配对/账号选择不会嵌套重复启动。重新配对停止失败不移动文件，有效配置变化受保护，备份保持 0700/0600，日志只在明确确认后单次提权。
+- ShellCheck、两个仓库 git diff --check、doc-site npm run build 通过；已实际查看中英文主菜单终端转录。
+- 收尾按既有授权提交新 Bee 功能 PR，并更新仍 OPEN 的 doc-site #1；保留本 worktree 供反馈迭代，不自动合并或发布 release。安装脚本仍下载现有 release，菜单需新版二进制。

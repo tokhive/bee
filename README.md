@@ -27,6 +27,16 @@ curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
 
 On Linux, the script also registers and enables the system-level `tokhive-bee` service. It runs as the installing user at boot, even before an SSH login. Run the installer as the user who will pair Bee, without putting the whole command under `sudo`; only service management requests administrator access. In an interactive terminal, the installer offers to pair Bee, choose which signed-in accounts to supply, and start the background service. Accept the prompt, enter your Hive address and confirm pairing in its web console. Sign in to the official clients first so account setup can find them. See [Running as a service](#running-as-a-service) for the manual path.
 
+Interactive installation first offers **简体中文 / English**. Installation results appear separately from the three setup steps: **1/3 device pairing**, **2/3 supplied accounts**, and **3/3 background startup**. Existing configuration is reused while all three steps and the final service state remain visible. Terminal output uses separators, status icons and colors; redirected output or `TERM=dumb` uses plain text, and `NO_COLOR=1` disables colors.
+
+Set `BEE_LANG=zh` or `BEE_LANG=en` to skip the language menu. Without an interactive terminal, an unset language follows `LC_ALL`, `LC_MESSAGES`, then `LANG` (Chinese for `zh` locales, English otherwise):
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_LANG=zh sh
+```
+
+`bee login` and `bee setup` also accept the `BEE_LANG` environment variable. Full bilingual pairing and account selection require a Bee release containing this support; an older release selected by the installer continues working with its original command output. The language choice applies to this installation and is not saved in the service configuration.
+
 Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place. If the service is already running, the installer asks whether to restart it; the default is **no**, so current work can finish. Restart later with `sudo systemctl restart tokhive-bee`, or restart your foreground process if you use one.
 
 Set `BEE_INSTALL_INTERACTIVE=0` to skip the wizard. Without an interactive terminal it also skips automatically and prints manual commands; boot startup is still enabled. For example:

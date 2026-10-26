@@ -7,25 +7,106 @@
 # picks where bee goes. Linux also enables a systemd service for the installing
 # user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
 # Set BEE_INSTALL_INTERACTIVE=0 to skip the setup/start prompts.
+# BEE_LANG=zh or en selects a language without showing the language menu.
 set -eu
 
 repository=tokhive/bee
 directory=${BEE_INSTALL_DIR:-"$HOME/.local/bin"}
+installed=0
+lang=${BEE_LANG:-}
+if [ -z "$lang" ]; then
+	case ${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}} in
+	zh*) lang=zh ;;
+	*) lang=en ;;
+	esac
+fi
+
+message() {
+	if [ "$lang" = zh ]; then message_format=$2; else message_format=$1; fi
+	shift 2
+	# Formats are installer-owned literals; paths and user input are arguments.
+	# shellcheck disable=SC2059
+	printf "$message_format" "$@"
+}
+
+rich_output() { [ -t 1 ] && [ "${TERM:-}" != dumb ]; }
+
+line() {
+	case "$1" in
+	title) ui_mark='🐝'; ui_plain=''; ui_tint=36 ;;
+	success) ui_mark='✅'; ui_plain='[OK]'; ui_tint=32 ;;
+	wait) ui_mark='⏳'; ui_plain='[...]'; ui_tint=33 ;;
+	warn) ui_mark='🟡'; ui_plain='[!]'; ui_tint=33 ;;
+	error) ui_mark='❌'; ui_plain='[ERROR]'; ui_tint=31 ;;
+	done) ui_mark='🎉'; ui_plain='[OK]'; ui_tint=32 ;;
+	esac
+	if rich_output; then
+		if [ -z "${NO_COLOR:-}" ]; then
+			printf '\033[%sm%s %s\033[0m\n' "$ui_tint" "$ui_mark" "$2"
+		else
+			printf '%s %s\n' "$ui_mark" "$2"
+		fi
+	else
+		printf '%s%s\n' "${ui_plain:+$ui_plain }" "$2"
+	fi
+}
+
+rule() {
+	printf '\n'
+	if rich_output; then
+		if [ "${1:-}" = major ]; then
+			printf '%s\n' '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'
+		else
+			printf '%s\n' '────────────────────────────────────────'
+		fi
+	else
+		printf '%s\n' '----------------------------------------'
+	fi
+}
+
+step() {
+	rule
+	if rich_output && [ -z "${NO_COLOR:-}" ]; then
+		printf '\033[36m[%s/3] %s\033[0m\n\n' "$1" "$2"
+	else
+		printf '[%s/3] %s\n\n' "$1" "$2"
+	fi
+}
+
+failure() {
+	failure_code=$1
+	shift
+	{
+		line error "install.sh: $*"
+		if [ "$installed" = 1 ]; then
+			message 'The installed program and existing configuration have been kept.\n' '已保留安装的程序和已有配置。\n'
+			message 'Fix the reported error, then run the installer again.\n' '请根据错误提示处理后重新运行安装脚本。\n'
+			if [ "$install_service" = 1 ]; then
+				printf '  sudo journalctl -u tokhive-bee -n 50 --no-pager\n'
+			fi
+		fi
+	} >&2
+	exit "$failure_code"
+}
 
 fail() {
-	echo "install.sh: $*" >&2
-	exit 1
+	failure 1 "$@"
 }
+
+case "$lang" in
+zh | en) ;;
+*) fail "BEE_LANG=$lang; expected zh or en" ;;
+esac
 
 case $(uname -s) in
 Darwin) os=darwin ;;
 Linux) os=linux ;;
-*) fail "Bee runs on macOS and Linux; this is $(uname -s)" ;;
+*) fail "$(message 'Bee runs on macOS and Linux; this is %s' 'Bee 支持 macOS 和 Linux；当前系统为 %s' "$(uname -s)")" ;;
 esac
 case $(uname -m) in
 x86_64 | amd64) arch=amd64 ;;
 arm64 | aarch64) arch=arm64 ;;
-*) fail "no Bee build for $(uname -m)" ;;
+*) fail "$(message 'no Bee build for %s' '没有适用于 %s 的 Bee 构建' "$(uname -m)")" ;;
 esac
 
 install_service=${BEE_INSTALL_SERVICE:-0}
@@ -34,13 +115,40 @@ if [ "$os" = linux ]; then
 fi
 case "$install_service" in
 0 | 1) ;;
-*) fail "BEE_INSTALL_SERVICE=$install_service; expected 0 or 1" ;;
+*) fail "$(message 'BEE_INSTALL_SERVICE=%s; expected 0 or 1' 'BEE_INSTALL_SERVICE=%s；允许值为 0 或 1' "$install_service")" ;;
 esac
 interactive=${BEE_INSTALL_INTERACTIVE:-1}
 case "$interactive" in
 0 | 1) ;;
-*) fail "BEE_INSTALL_INTERACTIVE=$interactive; expected 0 or 1" ;;
+*) fail "$(message 'BEE_INSTALL_INTERACTIVE=%s; expected 0 or 1' 'BEE_INSTALL_INTERACTIVE=%s；允许值为 0 或 1' "$interactive")" ;;
 esac
+
+# Probe in a subshell: a missing controlling tty must not abort installation.
+can_prompt=0
+if [ -t 1 ] && (exec 2>/dev/null; : <>/dev/tty); then can_prompt=1; fi
+
+select_language() {
+	printf '请选择语言 / Choose a language\n  1) 简体中文\n  2) English\n\n'
+	while :; do
+		printf '请选择 / Select [1-2]: '
+		if ! IFS= read -r language_answer; then
+			interactive=0
+			printf '\n'
+			return
+		fi
+		case "$language_answer" in
+		1) lang=zh; return ;;
+		2) lang=en; return ;;
+		*) printf '请选择 1 或 2 / Select 1 or 2.\n' ;;
+		esac
+	done
+}
+
+line title 'TokHive Bee'
+rule major
+if [ "$interactive" = 1 ] && [ "$can_prompt" = 1 ] && [ -z "${BEE_LANG:-}" ]; then
+	select_language </dev/tty
+fi
 
 service_path=/etc/systemd/system/tokhive-bee.service
 service_marker='# Managed by Bee install.sh.'
@@ -59,16 +167,31 @@ shell_quote() {
 	printf "'"
 }
 
+service_status_help() {
+	printf '\n'
+	message 'View connection and accounts:\n  %s status --config %s\n' '查看连接与账号：\n  %s status --config %s\n' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
+	message 'Check service:\n  sudo systemctl status tokhive-bee\n' '查看服务状态：\n  sudo systemctl status tokhive-bee\n'
+	message 'View logs:\n  sudo journalctl -u tokhive-bee -f\n' '查看运行日志：\n  sudo journalctl -u tokhive-bee -f\n'
+}
+
 service_help() {
-	printf 'Pair or validate: %s login --config %s' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
+	rule
+	message 'Manual setup and startup\n\n' '手动配置并启动\n\n'
+	message 'Pair or validate: %s login --config %s' '配对或验证设备：%s login --config %s' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
 	if [ ! -f "$config_path" ]; then
 		printf " --hive '<Hive URL>'"
 	fi
-	printf '\nSelect accounts: %s setup --config %s --egress-config %s\n' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")" "$(shell_quote "$egress_path")"
-	echo "Start the service: sudo systemctl start tokhive-bee"
-	echo "Check it: sudo systemctl status tokhive-bee"
-	echo "Logs: sudo journalctl -u tokhive-bee -f"
-	echo "Upgrades take effect after: sudo systemctl restart tokhive-bee"
+	printf '\n'
+	if [ ! -f "$egress_path" ]; then
+		message 'Select accounts: %s setup --config %s --egress-config %s\n' '选择供给账号：%s setup --config %s --egress-config %s\n' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")" "$(shell_quote "$egress_path")"
+	fi
+	message 'Start the service: sudo systemctl start tokhive-bee\n' '启动服务：sudo systemctl start tokhive-bee\n'
+	service_status_help
+	message 'Apply an upgrade later: sudo systemctl restart tokhive-bee\n' '稍后应用更新：sudo systemctl restart tokhive-bee\n'
+}
+
+run_bee() {
+	BEE_LANG="$lang" BEE_INSTALL_UI=1 "$directory/bee" "$@"
 }
 
 # Keep the command's original diagnostics and exit status visible.
@@ -77,8 +200,7 @@ wizard_command() {
 	shift
 	"$@" || {
 		status=$?
-		echo "install.sh: $operation failed (exit $status); Bee configuration: $config_path" >&2
-		exit "$status"
+		failure "$status" "$(message '%s failed (exit %s); Bee configuration: %s' '%s 失败（退出码 %s）；Bee 配置：%s' "$operation" "$status" "$config_path")"
 	}
 }
 
@@ -94,7 +216,7 @@ confirm() {
 		[yY] | [yY][eE][sS]) return 0 ;;
 		[nN] | [nN][oO]) return 1 ;;
 		'') [ "$2" = yes ]; return ;;
-		*) echo "Please answer yes or no." ;;
+		*) message 'Please answer yes or no.\n' '请输入 y 或 n，回车采用默认选项。\n' ;;
 		esac
 	done
 }
@@ -103,39 +225,69 @@ service_wizard() {
 	read_service_state
 	case "$service_state" in
 	active)
-		echo "Bee is already running. Restart to apply this installation."
-		confirm 'Restart Bee now? [y/N]' no || return 0
+		rule
+		line title "$(message 'Bee update installed' 'Bee 更新完成')"
+		message 'Bee is already running. Restart to apply this installation.\nRestarting may interrupt current work.\n\n' 'Bee 当前正在运行，重启后将使用新程序。\n重启可能中断当前工作。\n\n'
+		if ! confirm "$(message 'Restart Bee now? [y/N]:' '现在重启 Bee？[y/N]:')" no; then
+			line success "$(message 'The current Bee process continues running.' '当前 Bee 继续运行。')"
+			message 'Apply the update later: sudo systemctl restart tokhive-bee\n' '稍后应用更新：sudo systemctl restart tokhive-bee\n'
+			service_status_help
+			return 0
+		fi
 		wizard_command 'systemctl restart tokhive-bee' as_root systemctl restart tokhive-bee
 		;;
 	inactive | failed)
-		confirm 'Set up and start Bee now? [Y/n]' yes || return 0
+		message '\nComplete device pairing and account selection to run Bee in the background.\n' '\n接下来完成设备配对和账号选择，让 Bee 在后台运行。\n'
+		if ! confirm "$(message 'Set up and start Bee now? [Y/n]:' '现在配置并启动 Bee？[Y/n]:')" yes; then
+			line warn "$(message 'Installation kept. Bee was not started by this wizard.' '安装已保留，本次向导尚未启动 Bee。')"
+			service_help
+			return 0
+		fi
+		step 1 "$(message 'Pair with Hive' '设备配对')"
 		if [ -f "$config_path" ]; then
-			wizard_command 'bee login' "$directory/bee" login --config "$config_path"
+			line wait "$(message 'Validating the existing device pairing...' '正在验证已有设备配对…')"
+			wizard_command 'bee login' run_bee login --config "$config_path"
 		else
 			while :; do
-				printf 'Hive address: '
-				IFS= read -r hive || return 0
+				message 'Hive address: ' '请输入 Hive 地址：'
+				if ! IFS= read -r hive; then
+					line warn "$(message 'Installation kept. Bee was not started by this wizard.' '安装已保留，本次向导尚未启动 Bee。')"
+					service_help
+					return 0
+				fi
 				[ -n "$hive" ] && break
-				echo "Hive address must not be empty."
+				message 'Hive address must not be empty.\n' 'Hive 地址不能为空。\n'
 			done
-			wizard_command 'bee login' "$directory/bee" login --config "$config_path" --hive "$hive"
+			wizard_command 'bee login' run_bee login --config "$config_path" --hive "$hive"
 		fi
-		[ -f "$config_path" ] || fail "bee login returned success but $config_path is missing; service was not started"
+		[ -f "$config_path" ] || fail "$(message 'bee login returned success but %s is missing; service was not started' 'bee login 返回成功，但配置 %s 不存在；尚未启动服务' "$config_path")"
+		step 2 "$(message 'Configure supplied accounts' '配置供给账号')"
 		if [ ! -f "$egress_path" ]; then
-			wizard_command 'bee setup' "$directory/bee" setup --config "$config_path" --egress-config "$egress_path"
+			wizard_command 'bee setup' run_bee setup --config "$config_path" --egress-config "$egress_path"
+		else
+			line success "$(message 'Using the existing supply configuration; no account selection needed.' '使用已有供给配置，无需重新选择账号。')"
 		fi
-		[ -f "$egress_path" ] || fail "bee setup returned success but $egress_path is missing; service was not started"
+		[ -f "$egress_path" ] || fail "$(message 'bee setup returned success but %s is missing; service was not started' 'bee setup 返回成功，但配置 %s 不存在；尚未启动服务' "$egress_path")"
+		step 3 "$(message 'Start Bee' '启动 Bee')"
+		line wait "$(message 'Starting the background service...' '正在启动后台服务…')"
 		wizard_command 'systemctl start tokhive-bee' as_root systemctl start tokhive-bee
 		;;
 	activating | reloading | deactivating)
-		echo "Bee service is $service_state; leaving the current process in place."
+		line warn "$(message 'Bee service is %s; leaving the current process in place.' 'Bee 服务当前状态为 %s，保留现有进程。' "$service_state")"
+		service_status_help
 		return 0
 		;;
-	*) fail "tokhive-bee ActiveState=$service_state; expected active, inactive, failed, activating, reloading, or deactivating" ;;
+	*) fail "$(message 'tokhive-bee ActiveState=%s; expected active, inactive, failed, activating, reloading, or deactivating' 'tokhive-bee ActiveState=%s；允许状态为 active、inactive、failed、activating、reloading 或 deactivating' "$service_state")" ;;
 	esac
+	line wait "$(message 'Checking service state...' '正在检查服务运行状态…')"
 	read_service_state
-	[ "$service_state" = active ] || fail "tokhive-bee ActiveState=$service_state after service operation; expected active (check: sudo journalctl -u tokhive-bee)"
-	echo "Bee service is active."
+	[ "$service_state" = active ] || fail "$(message 'tokhive-bee ActiveState=%s after service operation; expected active' '服务操作后 tokhive-bee ActiveState=%s；期望状态为 active' "$service_state")"
+	line success "$(message 'Bee service is active.' '后台服务已启动。')"
+	rule major
+	line 'done' "$(message 'Bee is running in the background' 'Bee 已在后台运行')"
+	message '\nBoot startup: enabled\nYou can disconnect SSH; Bee will keep running.\n' '\n开机自启：已启用\n现在可以退出 SSH，Bee 会继续运行。\n'
+	service_status_help
+	rule major
 }
 
 # Environment= and ExecStart= have different dollar expansion rules. Both
@@ -145,7 +297,7 @@ single_line() {
 	carriage_return=$(printf '\r')
 	case "$2" in
 	*"$carriage_return"* | *'
-'*) fail "$1 contains a line break; systemd settings must occupy one line" ;;
+'*) fail "$(message '%s contains a line break; systemd settings must occupy one line' '%s 包含换行；systemd 配置值必须为单行' "$1")" ;;
 	esac
 }
 
@@ -167,20 +319,20 @@ optional_environment() {
 }
 
 if [ "$install_service" = 1 ]; then
-	[ "$os" = linux ] || fail "systemd service installation requires Linux; detected $os"
+	[ "$os" = linux ] || fail "$(message 'systemd service installation requires Linux; detected %s' '安装 systemd 服务需要 Linux；当前为 %s' "$os")"
 	install_uid=$(id -u)
 	install_user=$(id -un)
 	if [ "$install_uid" = 0 ] && [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != root ]; then
-		fail "installer is running as root via sudo for $SUDO_USER; run it as $SUDO_USER without sudo so Bee uses that user's configuration"
+		fail "$(message 'installer is running as root via sudo for %s; run it as %s without sudo so Bee uses that user\047s configuration' '安装脚本通过 sudo 以 root 运行，原用户为 %s；请以 %s 直接运行脚本，不要对整个脚本使用 sudo' "$SUDO_USER" "$SUDO_USER")"
 	fi
 	config_home=${XDG_CONFIG_HOME:-"$HOME/.config"}
 	case "$HOME" in
 	/*) ;;
-	*) fail "HOME=$HOME; systemd service installation requires an absolute home directory" ;;
+	*) fail "$(message 'HOME=%s; systemd service installation requires an absolute home directory' 'HOME=%s；安装 systemd 服务需要绝对路径的主目录' "$HOME")" ;;
 	esac
 	case "$config_home" in
 	/*) ;;
-	*) fail "XDG_CONFIG_HOME=$config_home; Bee requires an absolute configuration directory" ;;
+	*) fail "$(message 'XDG_CONFIG_HOME=%s; Bee requires an absolute configuration directory' 'XDG_CONFIG_HOME=%s；Bee 配置目录必须为绝对路径' "$config_home")" ;;
 	esac
 	single_line HOME "$HOME"
 	single_line BEE_INSTALL_DIR "$directory"
@@ -189,22 +341,22 @@ if [ "$install_service" = 1 ]; then
 	codex_environment=$(optional_environment CODEX_HOME "${CODEX_HOME+x}" "${CODEX_HOME-}")
 	claude_environment=$(optional_environment CLAUDE_CONFIG_DIR "${CLAUDE_CONFIG_DIR+x}" "${CLAUDE_CONFIG_DIR-}")
 	claude_secure_environment=$(optional_environment CLAUDE_SECURESTORAGE_CONFIG_DIR "${CLAUDE_SECURESTORAGE_CONFIG_DIR+x}" "${CLAUDE_SECURESTORAGE_CONFIG_DIR-}")
-	command -v systemctl >/dev/null 2>&1 || fail "systemctl was not found on PATH; set BEE_INSTALL_SERVICE=0 to install only the binary"
-	systemctl show-environment >/dev/null || fail "systemctl show-environment failed; a running system systemd manager is required (set BEE_INSTALL_SERVICE=0 for binary-only installation)"
+	command -v systemctl >/dev/null 2>&1 || fail "$(message 'systemctl was not found on PATH; set BEE_INSTALL_SERVICE=0 to install only the binary' 'PATH 中未找到 systemctl；设置 BEE_INSTALL_SERVICE=0 可仅安装程序')"
+	systemctl show-environment >/dev/null || fail "$(message 'systemctl show-environment failed; a running system systemd manager is required (set BEE_INSTALL_SERVICE=0 for binary-only installation)' 'systemctl show-environment 失败；需要运行中的系统级 systemd（设置 BEE_INSTALL_SERVICE=0 可仅安装程序）')"
 	if [ "$install_uid" != 0 ]; then
-		command -v sudo >/dev/null 2>&1 || fail "sudo was not found on PATH for user $install_user; system service installation needs administrator access (set BEE_INSTALL_SERVICE=0 for binary-only installation)"
+		command -v sudo >/dev/null 2>&1 || fail "$(message 'sudo was not found on PATH for user %s; system service installation needs administrator access (set BEE_INSTALL_SERVICE=0 for binary-only installation)' '用户 %s 的 PATH 中未找到 sudo；安装系统服务需要管理员权限（设置 BEE_INSTALL_SERVICE=0 可仅安装程序）' "$install_user")"
 		# Validate a regular command: sudo -v can require a password even when
 		# NOPASSWD permits every command, due to other matching sudoers entries.
-		sudo true || fail "sudo true failed for $install_user while preparing $service_path"
+		sudo true || fail "$(message 'sudo true failed for %s while preparing %s' 'sudo true 失败；用户为 %s，待安装服务路径为 %s' "$install_user" "$service_path")"
 	fi
 	if as_root test -L "$service_path"; then
-		fail "$service_path is a symbolic link; remove or migrate the existing service before installing Bee's managed service"
+		fail "$(message '%s is a symbolic link; remove or migrate the existing service before installing Bee\047s managed service' '%s 是符号链接；请先移除或迁移现有服务，再安装 Bee 托管的服务' "$service_path")"
 	fi
 	if as_root test -e "$service_path" && ! as_root grep -Fxq "$service_marker" "$service_path"; then
-		fail "$service_path already exists and is not managed by this installer; migrate it first, or set BEE_INSTALL_SERVICE=0 to keep it"
+		fail "$(message '%s already exists and is not managed by this installer; migrate it first, or set BEE_INSTALL_SERVICE=0 to keep it' '%s 已存在且不由安装器管理；请先迁移，或设置 BEE_INSTALL_SERVICE=0 保留现有服务' "$service_path")"
 	fi
 	if systemctl --user is-enabled --quiet tokhive-bee 2>/dev/null || systemctl --user is-active --quiet tokhive-bee 2>/dev/null; then
-		fail "user-level tokhive-bee is enabled or active for $install_user; run 'systemctl --user disable --now tokhive-bee' before installing the system service"
+		fail "$(message 'user-level tokhive-bee is enabled or active for %s; run \047systemctl --user disable --now tokhive-bee\047 before installing the system service' '用户 %s 的用户级 tokhive-bee 已启用或正在运行；请先执行 systemctl --user disable --now tokhive-bee，再安装系统服务' "$install_user")"
 	fi
 fi
 
@@ -220,17 +372,17 @@ if command -v sha256sum >/dev/null 2>&1; then
 elif command -v shasum >/dev/null 2>&1; then
 	sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
 else
-	fail "need sha256sum or shasum to verify the download"
+	fail "$(message 'need sha256sum or shasum to verify the download' '未找到 sha256sum 或 shasum，无法校验下载文件')"
 fi
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-echo "Downloading $base/$archive"
-curl -fsSL -o "$work/$archive" "$base/$archive" || fail "download failed"
-curl -fsSL -o "$work/checksums.txt" "$base/checksums.txt" || fail "checksum download failed"
+line wait "$(message 'Downloading %s' '正在下载 %s' "$base/$archive")"
+curl -fsSL -o "$work/$archive" "$base/$archive" || fail "$(message 'download failed: %s' '下载失败：%s' "$base/$archive")"
+curl -fsSL -o "$work/checksums.txt" "$base/checksums.txt" || fail "$(message 'checksum download failed: %s' '校验清单下载失败：%s' "$base/checksums.txt")"
 expected=$(awk -v name="$archive" '$2 == name { print $1 }' "$work/checksums.txt")
-[ -n "$expected" ] || fail "$archive is not listed in checksums.txt"
-[ "$(sha256 "$work/$archive")" = "$expected" ] || fail "checksum mismatch for $archive"
+[ -n "$expected" ] || fail "$(message '%s is not listed in checksums.txt' 'checksums.txt 中未列出 %s' "$archive")"
+[ "$(sha256 "$work/$archive")" = "$expected" ] || fail "$(message 'checksum mismatch for %s' '%s 的校验和不匹配' "$archive")"
 
 tar -xzf "$work/$archive" -C "$work" bee
 mkdir -p "$directory"
@@ -238,11 +390,12 @@ mkdir -p "$directory"
 cp "$work/bee" "$directory/.bee.new"
 chmod 755 "$directory/.bee.new"
 mv -f "$directory/.bee.new" "$directory/bee"
-echo "Installed $("$directory/bee" version) to $directory/bee"
+installed=1
+line success "$(message 'Installed %s to %s' '程序已安装：%s，路径：%s' "$("$directory/bee" version)" "$directory/bee")"
 
 case ":$PATH:" in
 *":$directory:"*) ;;
-*) echo "Add $directory to your PATH, for example: export PATH=\"$directory:\$PATH\"" ;;
+*) message 'Add the installation directory to PATH: export PATH=%s\n' '将安装目录加入 PATH：export PATH=%s\n' "$(shell_quote "$directory"):\$PATH" ;;
 esac
 
 if [ "$install_service" = 1 ]; then
@@ -277,17 +430,16 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 EOF
-	as_root install -m 644 "$work/tokhive-bee.service" "$service_path" || fail "could not install $service_path for user $install_user"
-	as_root systemctl daemon-reload || fail "systemctl daemon-reload failed after installing $service_path"
-	as_root systemctl enable tokhive-bee || fail "systemctl enable tokhive-bee failed for $service_path"
-	echo "Enabled tokhive-bee at boot, running as $install_user without an SSH login."
-	# stdout alone does not imply a controlling terminal. Probe in a subshell so
-	# failure to open /dev/tty cannot abort unattended installation. Never read
-	# answers from the script's stdin: it may still contain curl's script body.
-	if [ "$interactive" = 1 ] && [ -t 1 ] && (exec 2>/dev/null; : <>/dev/tty); then
+	as_root install -m 644 "$work/tokhive-bee.service" "$service_path" || fail "$(message 'could not install %s for user %s' '无法安装 %s，运行用户为 %s' "$service_path" "$install_user")"
+	as_root systemctl daemon-reload || fail "$(message 'systemctl daemon-reload failed after installing %s' '安装 %s 后 systemctl daemon-reload 失败' "$service_path")"
+	as_root systemctl enable tokhive-bee || fail "$(message 'systemctl enable tokhive-bee failed for %s' 'systemctl enable tokhive-bee 失败，服务文件为 %s' "$service_path")"
+	line success "$(message 'Enabled tokhive-bee at boot, running as %s without an SSH login.' '已设置开机自启，以 %s 身份运行，无需 SSH 登录。' "$install_user")"
+	# The script's stdin may still contain curl's script body.
+	if [ "$interactive" = 1 ] && [ "$can_prompt" = 1 ]; then
 		service_wizard </dev/tty
+	else
+		service_help
 	fi
-	service_help
 else
-	printf 'Start Bee and complete setup: %s start\n' "$(shell_quote "$directory/bee")"
+	message 'Start Bee and complete setup: %s start\n' '运行 Bee 并完成配置：%s start\n' "$(shell_quote "$directory/bee")"
 fi

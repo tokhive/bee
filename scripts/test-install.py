@@ -45,6 +45,8 @@ class InstallTest(unittest.TestCase):
             "INSTALL_TEST_USER": "dayong",
             "INSTALL_TEST_UID": "1000",
             "INSTALL_TEST_INSTALL": shutil.which("install"),
+            "BEE_LANG": "en",
+            "TERM": "xterm-256color",
         }
         self.executable("uname", """
 import os, sys
@@ -118,6 +120,7 @@ elif args and args[0] in ('login', 'setup'):
     with (root / 'commands.jsonl').open('a') as log:
         log.write(json.dumps(['bee'] + args) + '\\n')
         log.write(json.dumps(['bee-stdin', args[0], str(os.isatty(0))]) + '\\n')
+        log.write(json.dumps(['bee-env', args[0], os.environ.get('BEE_LANG'), os.environ.get('BEE_INSTALL_UI')]) + '\\n')
     if args[0] == os.environ.get('INSTALL_TEST_BEE_FAIL'):
         print('bee: injected ' + args[0] + ' failure', file=sys.stderr)
         sys.exit(7)
@@ -230,6 +233,118 @@ else:
         self.assertIn(['bee-stdin', 'setup', 'True'], commands)
         self.assertIn(['systemctl', 'start', 'tokhive-bee'], commands)
         self.assertIn('Bee service is active', result.stdout)
+        for step in ('[1/3]', '[2/3]', '[3/3]'):
+            self.assertIn(step, result.stdout)
+
+    def test_chinese_first_install_passes_language_to_both_commands(self):
+        result = self.run_terminal_install([
+            ('现在配置并启动 Bee？', '\n'),
+            ('请输入 Hive 地址：', 'https://hive.example.com\n'),
+            ('Supply this account?', '\n'),
+        ], BEE_LANG='zh')
+        self.assert_success(result)
+        for operation in ('login', 'setup'):
+            self.assertIn(['bee-env', operation, 'zh', '1'], self.commands())
+        for text in ('[1/3]', '[2/3]', '[3/3]', 'Bee 已在后台运行'):
+            self.assertIn(text, result.stdout)
+        self.assertNotIn('BEE_LANG', self.unit.read_text())
+        self.assertNotIn('BEE_INSTALL_UI', self.unit.read_text())
+
+    def test_existing_configuration_shows_all_three_steps(self):
+        self.existing_configuration()
+        result = self.run_terminal_install([('Set up and start Bee now?', '\n')])
+        self.assert_success(result)
+        for step in ('[1/3]', '[2/3]', '[3/3]'):
+            self.assertIn(step, result.stdout)
+        positions = [result.stdout.index(step) for step in ('[1/3]', '[2/3]', '[3/3]')]
+        self.assertEqual(positions, sorted(positions))
+        self.assertIn('Bee is running in the background', result.stdout)
+        self.assertNotIn('Pair or validate:', result.stdout)
+        self.assertIn(['bee-env', 'login', 'en', '1'], self.commands())
+
+    def test_chinese_language_menu_and_complete_existing_configuration(self):
+        self.existing_configuration()
+        result = self.run_terminal_install([
+            ('Select [1-2]:', '1\n'), ('现在配置并启动 Bee？', '\n'),
+        ], BEE_LANG='')
+        self.assert_success(result)
+        for text in ('程序已安装', '[1/3]', '[2/3]', '[3/3]', '使用已有供给配置', 'Bee 已在后台运行'):
+            self.assertIn(text, result.stdout)
+        self.assertIn(['bee-env', 'login', 'zh', '1'], self.commands())
+
+    def test_english_language_menu_reprompts_and_declines_setup(self):
+        result = self.run_terminal_install([
+            ('Select [1-2]:', '3\n'), ('Select [1-2]:', '2\n'),
+            ('Set up and start Bee now?', 'n\n'),
+        ], BEE_LANG='')
+        self.assert_success(result)
+        self.assertIn('Select 1 or 2', result.stdout)
+        self.assertIn('Bee was not started', result.stdout)
+        self.assertNotIn('[3/3]', result.stdout)
+
+    def test_language_menu_eof_skips_further_interaction(self):
+        result = self.run_terminal_install([('Select [1-2]:', '\x04')], BEE_LANG='')
+        self.assert_success(result)
+        self.assertTrue(self.unit.exists())
+        self.assertNotIn('Set up and start Bee now?', result.stdout)
+        self.assertFalse(any(c[0] == 'bee' for c in self.commands()))
+
+    def test_noninteractive_chinese_output_is_plain(self):
+        result = self.run_install(BEE_LANG='zh')
+        self.assert_success(result)
+        self.assertIn('程序已安装', result.stdout)
+        self.assertIn('手动配置并启动', result.stdout)
+        self.assertNotIn('Select [1-2]:', result.stdout)
+        for decoration in ('\x1b', '🐝', '✅', '━', '─'):
+            self.assertNotIn(decoration, result.stdout)
+
+    def test_locale_precedence_selects_language_without_a_menu(self):
+        for environment, expected in (
+            ({'LC_ALL': 'zh_CN.UTF-8', 'LANG': 'en_US.UTF-8'}, '程序已安装'),
+            ({'LC_ALL': '', 'LC_MESSAGES': 'zh_TW.UTF-8'}, '程序已安装'),
+            ({'LC_ALL': 'C', 'LANG': 'zh_CN.UTF-8'}, 'Installed'),
+        ):
+            with self.subTest(environment=environment):
+                result = self.run_install(BEE_LANG='', **environment)
+                self.assert_success(result)
+                self.assertIn(expected, result.stdout)
+
+    def test_invalid_language_fails_before_installation(self):
+        result = self.run_install(BEE_LANG='fr')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('BEE_LANG=fr', result.stderr)
+        self.assertFalse((self.home / '.local/bin/bee').exists())
+
+    def test_terminal_style_respects_no_color_and_dumb_terminal(self):
+        result = self.run_terminal_install([('Set up and start Bee now?', 'n\n')], NO_COLOR='1')
+        self.assert_success(result)
+        self.assertIn('🐝', result.stdout)
+        self.assertIn('━━━━━━━━', result.stdout)
+        self.assertNotIn('\x1b', result.stdout)
+        result = self.run_terminal_install([('Set up and start Bee now?', 'n\n')], TERM='dumb')
+        self.assert_success(result)
+        for decoration in ('\x1b', '🐝', '✅', '━', '─'):
+            self.assertNotIn(decoration, result.stdout)
+
+    def test_chinese_start_failure_keeps_diagnostics_without_success(self):
+        self.existing_configuration()
+        result = self.run_terminal_install([('现在配置并启动 Bee？', '\n')],
+                                           BEE_LANG='zh', INSTALL_TEST_SYSTEMCTL_FAIL='start')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertNotIn('Select [1-2]:', result.stdout)
+        self.assertIn('[3/3]', result.stdout)
+        self.assertIn('systemctl: injected start failure', result.stdout)
+        self.assertIn('退出码 1', result.stdout)
+        self.assertIn('已保留安装的程序和已有配置', result.stdout)
+        self.assertNotIn('Bee 已在后台运行', result.stdout)
+
+    def test_chinese_active_service_declines_restart_without_setup_steps(self):
+        result = self.run_terminal_install([('现在重启 Bee？', '\n')],
+                                           BEE_LANG='zh', INSTALL_TEST_SERVICE_STATE='active')
+        self.assert_success(result)
+        self.assertIn('当前 Bee 继续运行', result.stdout)
+        self.assertNotIn('[1/3]', result.stdout)
+        self.assertNotIn(['systemctl', 'restart', 'tokhive-bee'], self.commands())
 
     def test_existing_identity_is_validated_without_reselecting_accounts(self):
         self.existing_configuration()
@@ -381,9 +496,10 @@ else:
         self.assertIn(['bee', 'login', '--config', str(special / 'config/tokhive/bee.json'), '--hive', hive], self.commands())
         self.assertTrue((special / 'config/tokhive/egress.json').exists())
         self.assertFalse((self.root / 'unexpected').exists())
-        manual_login = next(line for line in result.stdout.splitlines() if line.startswith('Pair or validate: '))
-        self.assertEqual(shlex.split(manual_login.removeprefix('Pair or validate: ')),
-                         [str(special / 'bin/bee'), 'login', '--config', str(special / 'config/tokhive/bee.json')])
+        lines = result.stdout.splitlines()
+        status_command = lines[lines.index('View connection and accounts:') + 1]
+        self.assertEqual(shlex.split(status_command),
+                         [str(special / 'bin/bee'), 'status', '--config', str(special / 'config/tokhive/bee.json')])
 
     def assert_success(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

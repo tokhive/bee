@@ -27,6 +27,7 @@ type desktopAccountPlatform struct {
 	snapshot           DesktopAccountSnapshot
 	source             *DesktopAccountSource
 	credentialRevision string
+	official           *desktopOfficialObservation
 }
 
 type DesktopAccountError struct {
@@ -210,6 +211,9 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	}
 	defer release()
 	a.expireCandidate(p, platform)
+	for i := range p.snapshot.Capabilities {
+		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
+	}
 	return accountSnapshotCopy(p.snapshot), nil
 }
 func (a *DesktopAccounts) expireCandidate(p *desktopAccountPlatform, platform string) {
@@ -272,6 +276,7 @@ func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDete
 		p.snapshot.Candidate.Reference = accountString(hex.EncodeToString(random[:]))
 		p.source, p.credentialRevision = &read.source, read.revision
 		p.snapshot.Authorization = DesktopAccountFact{State: "local_structure_only", ObservedAt: accountTime(a.now())}
+		a.observeOfficial(ctx, p, request, read)
 	}
 	return accountSnapshotCopy(p.snapshot), nil
 }

@@ -1,0 +1,37 @@
+import {test,expect,type Page} from '@playwright/test';
+import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
+async function fixture(page:Page){await page.addInitScript(installAccountFixture,{accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});}
+const card=(page:Page,p='OpenAI')=>page.getByRole('region',{name:`${p} 账号`,exact:true});
+const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+test('only explicit detection reads sources; details preserve 120%, unknown quota, market and keyboard focus',async({page})=>{
+ await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByText('尚未检测')).toBeVisible();expect(await calls(page,'account_detect')).toEqual([]);
+ await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();await expect(card(page).getByText('本地结构已核对，尚未在线核验')).toBeVisible();await expect(card(page).getByText('Hive 结果未确认')).toBeVisible();
+ await card(page).getByRole('button',{name:'检查账号',exact:true}).click();await expect(card(page).getByText('官方身份已核验')).toBeVisible();
+ const details=card(page).getByRole('button',{name:'查看详情',exact:true});await details.click();const dialog=page.getByRole('dialog');await expect(dialog.getByText('已用 120% · 剩余 0%')).toBeVisible();await expect(dialog.getByText('市场开放：未知',{exact:true})).toBeVisible();await expect(dialog.getByText('额度未知',{exact:true}).first()).toBeVisible();await page.keyboard.press('Escape');await expect(details).toBeFocused();
+ await card(page).getByText('高级来源',{exact:true}).click();await card(page).getByLabel('自定义目录').fill('/tmp/other');await expect(card(page).getByText('来源已编辑，请重新检测')).toBeVisible();await expect(card(page).getByText('官方身份已核验')).toHaveCount(0);
+ await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();expect((await calls(page,'account_detect')).at(-1).args.request.directory).toBe('/tmp/other');await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeDisabled();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);await page.screenshot({path:'../.cache/device-pairing/accounts-zh-860.png',fullPage:true});
+});
+test('source edits reject late results; independent failures, English and dark theme',async({page})=>{
+ await fixture(page);await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('尚未检测')).toBeVisible();
+ await page.evaluate(()=>{(window as any).delay=500;});await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();await card(page).getByText('高级来源',{exact:true}).click();await card(page).getByLabel('自定义目录').fill('/tmp/edited');await page.waitForTimeout(600);await expect(card(page).getByText('来源已编辑，请重新检测')).toBeVisible();
+ await page.evaluate(()=>{(window as any).delay=0;(window as any).fail='openai';});await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();await expect(card(page).getByRole('alert')).toContainText('permission_denied=true');await card(page,'Claude').getByRole('button',{name:'检测已有登录',exact:true}).click();await expect(card(page,'Claude').getByText('本地结构已核对，尚未在线核验')).toBeVisible();
+ await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');await page.getByLabel('Appearance',{exact:true}).selectOption('dark');await page.getByRole('button',{name:'AI accounts',exact:true}).click();await expect(page.getByText('Official authorization is not connected. Sign in with the official client, then detect again.').first()).toBeVisible();await page.getByRole('region',{name:'Claude account',exact:true}).getByRole('button',{name:'View details',exact:true}).click();await page.keyboard.press('Tab');await page.keyboard.press('Escape');
+ expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);await page.screenshot({path:'../.cache/device-pairing/accounts-en-dark.png',fullPage:true});
+});
+test('overview and accounts share pause state and bulk action results',async({page})=>{
+ await fixture(page);await page.goto('/');await expect(page.getByRole('region',{name:'Claude',exact:true}).getByText('已手动暂停')).toBeVisible();await page.getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('button',{name:'全部暂停',exact:true}).click();await expect(page.getByRole('region',{name:'OpenAI',exact:true}).getByText('已手动暂停')).toBeVisible();await page.getByRole('button',{name:'概览',exact:true}).click();await expect(page.getByRole('region',{name:'OpenAI',exact:true}).getByText('已手动暂停')).toBeVisible();expect((await calls(page,'supply_set_paused')).map((c:any)=>c.args.platform)).toEqual(['openai','claude']);
+});
+
+test('official scope failure stays visible beside the local candidate, expiry does not retain verified status',async({page})=>{
+ await fixture(page);await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page,'Claude').getByText('尚未检测')).toBeVisible();
+ await page.evaluate(()=>{(window as any).missingProfile=true;});await card(page,'Claude').getByRole('button',{name:'检查账号',exact:true}).click();await expect(card(page,'Claude').getByRole('alert')).toContainText('profile_scope');await expect(card(page,'Claude').getByText('本地结构已核对，尚未在线核验')).toBeVisible();
+ await page.clock.install();await page.evaluate(()=>{(window as any).missingProfile=false;(window as any).expiry=new Date(Date.now()+31000).toISOString();});await card(page,'Claude').getByRole('button',{name:'检查账号',exact:true}).click();await expect(card(page,'Claude').getByText('官方身份已核验')).toBeVisible();await page.clock.runFor(1100);await expect(card(page,'Claude').getByText('授权已失效',{exact:true})).toBeVisible();
+});
+test('bulk pause keeps the other platform success when one write is uncertain',async({page})=>{
+ await fixture(page);await page.goto('/');await expect(page.getByRole('region',{name:'Claude',exact:true}).getByText('已手动暂停')).toBeVisible();await page.evaluate(()=>{(window as any).supplyFail='openai';});await page.getByRole('button',{name:'全部暂停',exact:true}).click();await expect(page.getByRole('region',{name:'OpenAI',exact:true}).getByRole('alert')).toContainText('HTTP 503');await expect(page.getByRole('region',{name:'Claude',exact:true}).getByText('已手动暂停')).toBeVisible();expect((await calls(page,'supply_set_paused')).map((c:any)=>c.args.platform)).toEqual(['openai','claude']);
+});
+
+test('device verification failure permits local detection and preserves historical Hive rate limit status',async({page})=>{
+ await fixture(page);await page.addInitScript(()=>{(window as any).deviceFail=true;(window as any).historicalLimit=true;});await page.goto('/');await expect(page.getByRole('alert')).toContainText('HTTP 503');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('尚未检测')).toBeVisible();await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();await expect(card(page).getByText('本地结构已核对，尚未在线核验')).toBeVisible();await card(page).getByRole('button',{name:'查看详情',exact:true}).click();const dialog=page.getByRole('dialog');await expect(dialog.getByText('上游平台限流中')).toBeVisible();await expect(dialog.getByText('历史数据，已过期')).toBeVisible();
+});

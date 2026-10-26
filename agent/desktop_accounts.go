@@ -9,6 +9,8 @@ import (
 	"net/http"
 	"runtime"
 	"time"
+
+	"github.com/tokhive/bee/beewire"
 )
 
 // DesktopAccounts keeps public observations, never authorization material.
@@ -64,6 +66,11 @@ type DesktopAccountFact struct {
 	ObservedAt  *string              `json:"observed_at"`
 	Error       *DesktopAccountError `json:"error"`
 }
+type DesktopAccountHiveFact struct {
+	DesktopAccountFact
+	PendingFingerprint *string `json:"pending_fingerprint"`
+	Generation         *int64  `json:"generation"`
+}
 type DesktopAccountWindow struct {
 	Scope       string  `json:"scope"`
 	Seconds     int     `json:"seconds"`
@@ -114,7 +121,7 @@ type DesktopAccountSnapshot struct {
 	Revision      int64                        `json:"revision"`
 	Candidate     DesktopAccountCandidate      `json:"candidate"`
 	Selection     DesktopAccountFact           `json:"selection"`
-	Hive          DesktopAccountFact           `json:"hive"`
+	Hive          DesktopAccountHiveFact       `json:"hive"`
 	Authorization DesktopAccountFact           `json:"authorization"`
 	Capabilities  []DesktopAccountCapabilities `json:"capabilities"`
 	Features      DesktopAccountFeatures       `json:"features"`
@@ -166,7 +173,7 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 	blocked := unavailable("runtime_ownership_and_source_barrier_required")
 	return DesktopAccountSnapshot{
 		Platform: platform, Candidate: DesktopAccountCandidate{State: "not_checked"},
-		Selection: DesktopAccountFact{State: "not_selected"}, Hive: DesktopAccountFact{State: "not_checked"},
+		Selection: DesktopAccountFact{State: "not_selected"}, Hive: DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: "not_checked"}},
 		Authorization: DesktopAccountFact{State: "not_checked"}, Capabilities: []DesktopAccountCapabilities{emptyAccountCapabilities("official"), emptyAccountCapabilities("hive")}, Issues: []DesktopAccountIssue{},
 		Features: DesktopAccountFeatures{Detect: DesktopAccountAvailability{Available: true}, Check: DesktopAccountAvailability{Available: true},
 			Select: blocked, ConfirmChange: blocked, ClearSelection: blocked, Remove: unavailable("runtime_drain_and_detach_required"),
@@ -263,6 +270,9 @@ func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDete
 	defer read.clear()
 	p.snapshot.Candidate = DesktopAccountCandidate{State: "available", Source: &read.source, Fingerprint: read.fingerprint,
 		Plan: accountString(read.plan), ExpiresAt: accountTime(read.expires), ObservedAt: accountTime(a.now())}
+	if !beewire.KnownPlan(request.Platform, read.plan) {
+		p.snapshot.Candidate.Plan = nil
+	}
 	if !a.now().Add(30 * time.Second).Before(read.expires) {
 		p.snapshot.Candidate.State = "expired"
 		p.snapshot.Candidate.Error = accountFailure(request.Platform, "expired", "expiry", "authorization must expire more than 30 seconds from now")

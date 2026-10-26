@@ -131,11 +131,11 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 **接口：** `AccountClient.defaults()/detect(request)/snapshot(platform,refresh)/action(request)` 与 Task 4 一一对应。NativeWorkspace 创建一份账号／供给状态模型并传给概览和账号页；切页不重建两套暂停状态，不因页面轮询调用 detect。保持 demo 页面和 client 的隔离。
 
-- [ ] typed 客户端红灯覆盖全部响应字段、来源／归属／时间／百分比的错误值、未知键、实例变化／来源编辑／旧 Promise；敏感标记在测试返回中必须被拒绝或不进入公开视图，不能靠 `as Account` 绕过校验。
-- [ ] 原生页面 fixture 红灯：首次进入只有 defaults/snapshot；点击后检测；高级来源 null/自定义、权限拒绝和官方未核验；Hive 离线不遮盖本地候选；刷新只是安全 GET；单／双／专属额度窗、120%、null、旧数据标记、市场未知、受限按钮原因和两平台独立失败。
-- [ ] 实现原生卡片与详情复用既有视觉组件，当前／候选分别显示；接入、换号、移除和官方授权显示真实依赖，不能调用 demo 成功路径。提醒显示平台和问题，系统通知未开放且不弹 OS 授权。
-- [ ] 将现有 SupplyPanel 状态上移：共用客户端、快照、busy/error 和串行轮询；页面显示作用范围、暂停不结束在途、恢复不启动运行；全部暂停／恢复逐项执行并保留每项结果，未知写结果只提供 GET 核对。账号未决门禁由同一模型提供，不能只禁账号页按钮。
-- [ ] 运行 `node --test desktop/tests/nativeAccounts.test.ts desktop/tests/supply.test.ts`；在 `desktop` 运行 `npm run typecheck`、`npm run build`、`npm run build:demo`、`npm run test:device`；增加 native-accounts.spec.ts 到该脚本的 Playwright 集合。测试中英文、860×600、深浅主题、Tab/Escape/焦点返回、demo 不调用真实桥；自检、任务审查并提交。
+- [x] typed 客户端红灯覆盖全部响应字段、来源／归属／时间／百分比的错误值、未知键、实例变化／来源编辑／旧 Promise；敏感标记在测试返回中必须被拒绝或不进入公开视图，不能靠 `as Account` 绕过校验。
+- [x] 原生页面 fixture 红灯：首次进入只有 defaults/snapshot；点击后检测；高级来源 null/自定义、权限拒绝和官方未核验；Hive 离线不遮盖本地候选；刷新只是安全 GET；单／双／专属额度窗、120%、null、旧数据标记、市场未知、受限按钮原因和两平台独立失败。
+- [x] 实现原生卡片与详情复用既有视觉组件，当前／候选分别显示；接入、换号、移除和官方授权显示真实依赖，不能调用 demo 成功路径。提醒显示平台和问题，系统通知未开放且不弹 OS 授权。
+- [x] 将现有 SupplyPanel 状态上移：共用客户端、快照、busy/error 和串行轮询；页面显示作用范围、暂停不结束在途、恢复不启动运行；全部暂停／恢复逐项执行并保留每项结果，未知写结果只提供 GET 核对。账号未决门禁由同一模型提供，不能只禁账号页按钮。
+- [x] 运行 `node --test desktop/tests/nativeAccounts.test.ts desktop/tests/supply.test.ts`；在 `desktop` 运行 `npm run typecheck`、`npm run build`、`npm run build:demo`、`npm run test:device`；增加 native-accounts.spec.ts 到该脚本的 Playwright 集合。测试中英文、860×600、深浅主题、Tab/Escape/焦点返回、demo 不调用真实桥；自检、任务审查并提交。
 
 ## Task 6: 回归、证据与本批交付说明
 

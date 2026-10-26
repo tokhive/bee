@@ -45,7 +45,7 @@ test('an uncertain write stops polling and only explicit GET rechecks, without f
  await fixture(page,{ready:true});await page.goto('/');const openai=card(page,'OpenAI');
  await expect(openai.getByText('满足接单条件（Hive 报告）',{exact:true})).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {fail:string}).fail='PUT /api/bee/platforms/openai HTTP 503; result unconfirmed';});
- await openai.getByRole('button',{name:'暂停',exact:true}).click();await expect(page.getByRole('alert')).toContainText('HTTP 503');
+ await openai.getByRole('button',{name:'暂停',exact:true}).click();await expect(page.getByRole('alert').first()).toContainText('HTTP 503');
  await expect(openai.getByText('满足接单条件（Hive 报告）',{exact:true})).toHaveCount(0);await expect(openai.getByRole('button',{name:'恢复'})).toHaveCount(0);
  await page.clock.install();await page.clock.fastForward(12000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
  await page.evaluate(()=>{const w=window as unknown as {fail:string;delay:number};w.fail='';w.delay=500;});await page.getByRole('button',{name:'重新核对平台'}).click();
@@ -57,7 +57,7 @@ test('serial polling waits ten seconds after successful completion, never overla
  await fixture(page,{delay:700});await page.clock.install();await page.goto('/');await page.clock.runFor(1600);
  await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
  const before=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(before);
- await page.evaluate(()=>{(window as unknown as {fail:string}).fail='GET /api/bee/platforms/openai HTTP 502';});await page.clock.runFor(2500);await expect(page.getByRole('alert')).toContainText('HTTP 502');
+ await page.evaluate(()=>{(window as unknown as {fail:string}).fail='GET /api/bee/platforms/openai HTTP 502';});await page.clock.runFor(2500);await expect(page.getByRole('alert').first()).toContainText('HTTP 502');
  const failed=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.fastForward(60000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(failed);
  expect(await page.evaluate(()=> (window as unknown as {maxActive:number}).maxActive)).toBe(1);
 });
@@ -75,7 +75,7 @@ test('leaving overview cancels polling and old results cannot repopulate a new m
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.getByRole('button',{name:'重新核对平台'}).click();
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(1500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.fastForward(20000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);
  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('replacement');});
- await page.getByRole('button',{name:'概览',exact:true}).click();await expect(page.getByRole('alert')).toContainText('new instance GET HTTP 503');await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
+ await page.getByRole('button',{name:'概览',exact:true}).click();await expect(page.getByRole('alert').first()).toContainText('new instance GET HTTP 503');await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
 });
 test('English platform controls and reason copy are complete at minimum width',async({page})=>{
  await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
@@ -94,8 +94,8 @@ test('an old in-flight successful read cannot overwrite replacement-instance fai
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.getByRole('button',{name:'重新核对平台'}).click();
  await expect.poll(()=>page.evaluate(()=>(window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='replacement GET HTTP 503';w.emit('replacement');});await expect(card(page,'OpenAI').getByText('尚未核对')).toBeVisible();await page.clock.runFor(1500);
- await expect(page.getByRole('alert')).toContainText('replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('满足接单条件（Hive 报告）',{exact:true})).toHaveCount(0);
- expect(await page.evaluate(()=>(window as unknown as {calls:{platform:string}[]}).calls.map(c=>c.platform))).toEqual(['openai','claude','openai','openai']);
+ await expect(page.getByRole('alert').first()).toContainText('replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('满足接单条件（Hive 报告）',{exact:true})).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as unknown as {calls:{platform:string}[]}).calls.map(c=>c.platform))).toEqual(['openai','claude','openai','openai','claude']);
  expect(await page.evaluate(()=>(window as unknown as {maxActive:number}).maxActive)).toBe(1);
 });
 

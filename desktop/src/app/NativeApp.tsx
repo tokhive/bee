@@ -1,3 +1,7 @@
+import {useSupply} from '../features/supply/useSupply';
+import {useAccounts} from '../features/accounts/useAccounts';
+import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
+import type {AccountFactory} from '../system/accounts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import { StatusView } from '../components/StatusView';
@@ -14,7 +18,7 @@ function failure(cause:unknown):string {
  return String(cause);
 }
 interface NativeUi {page:Page;language:Preferences['language'];theme:Preferences['theme']}
-function NativeWorkspace({client,supply,native,ui,updateUi}:{client:DeviceClient;supply:SupplyFactory;native:BridgeStatus;ui:NativeUi;updateUi:(next:Partial<NativeUi>)=>void}) {
+function NativeWorkspace({client,supply,accountFactory,native,ui,updateUi}:{client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;native:BridgeStatus;ui:NativeUi;updateUi:(next:Partial<NativeUi>)=>void}) {
  const {page,language,theme}=ui;
  const setPage=(page:Page)=>updateUi({page});
  const [view,setView]=useState<DeviceView>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);
@@ -36,12 +40,15 @@ function NativeWorkspace({client,supply,native,ui,updateUi}:{client:DeviceClient
   return()=>clearTimeout(timer);
  },[native.state,busy,error,view,refresh]);
  const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?supply({hive:view.hive,deviceId:view.identity.id}):undefined,[supply,view?.state,view?.hive,view?.identity?.id]);
+ const accountClient=useMemo(()=>native.metadata?accountFactory(native.metadata.instance):undefined,[accountFactory,native.metadata?.instance]);
+ const accounts=useAccounts(accountClient,native.state==='ready'&&page==='accounts');
+ const sharedSupply=useSupply(supplyClient,native.state==='ready'&&(page==='overview'||page==='accounts'),busy||!!error,Object.values(accounts.views).filter(s=>s.hive.state==='confirmation_required').map(s=>s.platform));
  return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
   {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>
    {native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}
   </StatusView>:<>
-   {page==='overview'&&<><DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/>{!busy&&!error&&supplyClient&&<SupplyPanel client={supplyClient}/>}</>}
-   {page==='accounts'&&<StatusView kind="unavailable" title={t('账号')}>{t('真实平台账号接入尚未开放。')}</StatusView>}
+   {page==='overview'&&<><DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/>{sharedSupply&&<SupplyPanel supply={sharedSupply}/>}</>}
+   {page==='accounts'&&<NativeAccountsPage accounts={accounts} supply={sharedSupply} deviceError={error}/>}
    {page==='earnings'&&<StatusView kind="unavailable" title={t('收益')}>{t('真实收益尚未接通。')}</StatusView>}
    {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{t('尚未开始贡献')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div></section>}
    {page==='settings'&&<div className="settings-page"><section className="settings-form">
@@ -55,7 +62,7 @@ function NativeWorkspace({client,supply,native,ui,updateUi}:{client:DeviceClient
  </AppShell>;
 }
 
-export function NativeApp({client,supply,systemBridge}:{client:DeviceClient;supply:SupplyFactory;systemBridge:SystemBridge}) {
+export function NativeApp({client,supply,accountFactory,systemBridge}:{client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;systemBridge:SystemBridge}) {
  const [native,setNative]=useState<BridgeStatus>({state:'starting'});
  const [ui,setUi]=useState<NativeUi>({page:'overview',language:'system',theme:'system'});
  const updateUi=useCallback((next:Partial<NativeUi>)=>setUi(current=>({...current,...next})),[]);
@@ -66,5 +73,5 @@ export function NativeApp({client,supply,systemBridge}:{client:DeviceClient;supp
   void systemBridge.status().then(status=>{if(active&&!updated)setNative(status);},failed);
   return()=>{active=false;off?.();};
  },[systemBridge]);
- return <NativeWorkspace key={`${native.state}:${native.metadata?.instance??''}`} client={client} supply={supply} native={native} ui={ui} updateUi={updateUi}/>;
+ return <NativeWorkspace key={`${native.state}:${native.metadata?.instance??''}`} client={client} supply={supply} accountFactory={accountFactory} native={native} ui={ui} updateUi={updateUi}/>;
 }

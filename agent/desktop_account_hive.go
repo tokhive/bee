@@ -20,7 +20,7 @@ var desktopAccountModelPattern = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]
 func desktopAccountModelID(value string) bool { return desktopAccountModelPattern.MatchString(value) }
 
 func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAccountPlatform, platform string) {
-	p.snapshot.Hive = DesktopAccountFact{State: "unbound"}
+	p.snapshot.Hive = DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: "unbound"}}
 	p.snapshot.Capabilities[1] = emptyAccountCapabilities("hive")
 	p.snapshot.Issues = []DesktopAccountIssue{}
 	if a.device == nil {
@@ -112,7 +112,10 @@ func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAcco
 		return
 	}
 	now := a.now()
-	p.snapshot.Hive = DesktopAccountFact{State: after.Status, ObservedAt: accountTime(now)}
+	p.snapshot.Hive = DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: after.Status, ObservedAt: accountTime(now)}, Generation: &after.Generation}
+	if after.PendingFingerprint != "" {
+		p.snapshot.Hive.PendingFingerprint = accountString(after.PendingFingerprint)
+	}
 	p.snapshot.CheckedAt = accountTime(now)
 	if after.AccountFingerprint != "" {
 		p.snapshot.Hive.Fingerprint = accountString(after.AccountFingerprint)
@@ -144,7 +147,7 @@ func hiveAccountError(platform, check string, err error) *DesktopAccountError {
 	return failure
 }
 func setAccountHiveFailure(p *desktopAccountPlatform, platform, check string, err error) {
-	p.snapshot.Hive = DesktopAccountFact{State: "unconfirmed", Error: hiveAccountError(platform, check, err)}
+	p.snapshot.Hive = DesktopAccountHiveFact{DesktopAccountFact: DesktopAccountFact{State: "unconfirmed", Error: hiveAccountError(platform, check, err)}}
 	p.snapshot.Capabilities[1] = emptyAccountCapabilities("hive")
 	p.snapshot.Issues = []DesktopAccountIssue{{Code: "hive_unconfirmed", Platform: platform, Message: p.snapshot.Hive.Error.Error()}}
 }

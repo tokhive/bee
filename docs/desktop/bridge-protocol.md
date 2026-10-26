@@ -6,7 +6,7 @@
 
 - stdin 接收请求，stdout 只输出响应；诊断写入 stderr，父进程须持续消费两个输出管道。
 - 每个输入和输出帧是一个 UTF-8 JSON 对象，以 `\n` 结束；换行前最多 1,048,576 字节。分段读取和多个帧合并写入均支持。编码后的输出同样检查上限，防止 JSON 字符串转义扩大响应。
-- 请求字段必须恰好为 `protocol`（整数 1）、`id`（非空字符串）、`method`（字符串）和 `params`（对象）。`device_begin` 的 params 必须恰好包含非空字符串 `hive`、`name`；`supply_status` 恰好含枚举 `platform`（openai/claude），`supply_set_paused` 恰好含该 `platform` 和显式 boolean `paused`。账号四项参数见下表；除以上方法外 params 必须为空。未知字段、重复 JSON 字段、缺失字段和不合法的 JSON 类型均拒绝。
+- 请求字段必须恰好为 `protocol`（整数 1）、`id`（非空字符串）、`method`（字符串）和 `params`（对象）。`device_begin` 的 params 必须恰好包含非空字符串 `hive`、`name`；`supply_status` 恰好含枚举 `platform`（openai/claude），`supply_set_paused` 恰好含该 `platform` 和显式 boolean `paused`。账号、运行与官方登录参数见下表；其余基础方法 params 必须为空。未知字段、重复 JSON 字段、缺失字段和不合法的 JSON 类型均拒绝。
 - 每次 `Run` 创建新的随机 128 位 `instance`；一次会话内保持一致。父进程用 `id` 关联请求，用 `instance` 区分重新启动的管理实例。
 - 相同 ID 的前一响应尚未完整写入时，返回 `DUPLICATE_ID`，不执行重复操作。父进程应为每次请求生成新 ID。
 - ID 及版本号属于公开元数据，不能放入凭证。协议错误不回显完整请求、未知字段名、未知方法值或 JSON 解析器引用的载荷字节；JSON 语法错误报告字节位置和帧长度。
@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","authorize_start","authorize_status","authorize_cancel"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述十四项能力。旧账号服务保留十项，供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这五组精确且有序的能力集合，不接受任意子集或额外方法。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述十七项能力。仅运行服务保留十四项，旧账号服务保留十项，供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这六组精确且有序的能力集合，不接受任意子集或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -48,7 +48,7 @@
 
 Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
 
-贡献使用下述固定 `runtime_start`；官方授权尚未接通，不存在资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
+贡献使用下述固定 `runtime_start`；官方授权使用下述 authorize 三项固定动作，不存在资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
 
 ```json
 {"protocol":1,"id":"ping-1","instance":"0d957c72d63b4c06ae544c10f4c549799","error":{"code":"NOT_READY","message":"hello handshake has not succeeded; required=hello before other methods"}}
@@ -74,11 +74,11 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 命令入口拥有其标准管道：Unix 将继承的管道复制为 close-on-exec、非阻塞描述符，并注册 Go runtime poller；取消时关闭自有输入和输出，唤醒空闲读取和堵塞写入。普通文件不修改描述符标志。Windows 保留 Go 标准管道关闭行为，其既有原生验收进度以 P0 验证记录为准；本次设备增量未新增 Windows 原生证据。输出失败也会触发命令入口取消并回收本次资源。
 
-关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。此处只管理桌面通信、设备、供给和账号观察；真实贡献运行及任务收尾属于后续阶段。
+关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。同时回收 owned 贡献与官方登录进程；不等待 Hive 在途任务完成。
 
 ## S1 运行交接契约（T1 已定义，命令在接通服务后开放）
 
-公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置四项；官方登录和恢复入口分别留待 T4／T6 接通后公布。以下包含完整后续契约，未公布能力不表示可调用。
+公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置四项；S1-T4 已接通官方登录三项；恢复入口留待 T6 接通后公布。以下包含完整后续契约，未公布能力不表示可调用。
 
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
@@ -117,7 +117,7 @@ go run ./cmd/bee help
 
 ### S1 接入操作（已实现）
 
-`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change，state 为 pending／running／reconciling／succeeded／failed／cancelled。
+`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change／authorize，state 为 pending／running／reconciling／succeeded／failed／cancelled。
 
 `clear_selection` 只清除尚未注册且未运行的本地选择，使用当前快照 revision 与 confirmed=true；candidate_ref 可以是空字符串，不要求官方凭证仍有效。select／confirm_change 继续要求当前候选引用。完整移除仍不可用。若暂停已证实、Hive 身份/代次未变而官方来源发生变化，原接入操作以失败结束并保持暂停，允许用户重新检测确认；无法确认暂停或 Hive 归属时保留未决操作，刷新只查询、不重发 PUT。
 
@@ -129,3 +129,9 @@ go run ./cmd/bee help
 真实 Go 连接与授权维护运行于管理子进程。同步回执核对当前连接租约、账号指纹、代次和凭证修订，并与持久选择／run_id核对；手动恢复同样核验。来源切换先取消并等待原平台维护，再启用新来源，成功仍保持暂停。一个平台失败不阻塞另一个平台；首次409停止，不抢占连接。
 
 手动暂停的修订优先于正在准备的开始请求。重连为每个平台登记可取消的启动等待器，慢暂停不会永久漏启维护。停止即使保存失败也取消并等待授权维护、转发处理和失败上报退出；receipt如实报告，不能替代 Rust 对管理子进程的 wait/reap。普通窗口关闭仍沿用原有后台行为。
+
+### 官方登录动作（S1-T4）
+
+`authorize_start` 参数必须是 `{platform,source:{directory,store},expected_revision}`；`authorize_status`／`authorize_cancel` 必须是 `{operation_id}`。所有返回 `{operation:DesktopOperation}`，业务错误为 `AUTHORIZE_OPERATION_FAILED`。Go 严格拒绝 source 内外的未知、重复、缺失字段；directory 必须明确为 null 或绝对目录，修订必须为非负安全整数，operation_id 必须为当前管理实例拥有的 48 位小写十六进制引用。
+
+Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，只提供这三个固定命令。启动返回 pending，后续查状态；账号快照也包含同一平台操作。status／cancel 的 ID 必须与回执相同，前端拒绝旧 instance、修订倒退和跨平台回执。取消请求本身可能仍返回 running，回收完成后才返回 cancelled。真实登录的十分钟期限不占用桥请求；版本和 help 探测各五秒，输出不进入桥。支持范围及尚未完成的真实登录验收见 [AI 账号管理](ai-accounts.md)。

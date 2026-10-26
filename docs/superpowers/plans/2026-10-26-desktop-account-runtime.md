@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证，当前执行 S1-T4。
+> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境，继续执行 S1-T5。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -99,11 +99,14 @@ T3 验证：真实本机 HTTP／WS／TEE／CONNECT 替身覆盖同步、加密�
 
 **输入／输出：** 实现上述 authorize 三动作；固定 `codex login`、`claude auth login --claudeai`，支持的安装路径、客户端版本和官方命名空间记录到 `docs/desktop/ai-accounts.md`。需要官方交互界面的版本由适配器打开可操作界面；不让用户自行输入命令来冒充完成。
 
-- [ ] 进程替身用例：未安装／版本不支持／命名空间不匹配、启动失败、等待、退出0但身份未变、错误退出、取消/超时、取消后迟到结果、启动两个请求、App退出；标记授权 URL 和 stdout 秘密不得进入协议/日志；只终止本次句柄及其受控子树，不终止既有客户端。
-- [ ] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopAuthorize' -count=1`，确认失败；实测先只读版本/help，不自动登录真实账号。
-- [ ] 实现受控进程适配、版本能力检查、来源重新核验和取消；启动前提示官方当前登录可能变化；成功只成为待接入候选，不自动选择/恢复。登录网络沿用官方客户端自身设置。
-- [ ] 重跑 Go 测试及 `node --test desktop/tests/authorize.test.ts`；用用户明确授权的两平台测试登录完成原生验证，并记录实际版本/OS/取消行为，不能以 help 输出替代。
-- [ ] 提交本任务路径：`feat(desktop): launch and verify official account login`。
+- [x] 进程替身用例：未安装／版本不支持／命名空间不匹配、启动失败、等待、退出0但身份未变、错误退出、取消/超时、取消后迟到结果、启动两个请求、App退出；标记授权 URL 和 stdout 秘密不得进入协议/日志；只终止本次句柄及其受控子树，不终止既有客户端。
+- [x] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopAuthorize' -count=1`，确认失败；实测先只读版本/help，不自动登录真实账号。
+- [x] 实现受控进程适配、版本能力检查、来源重新核验和取消；启动前提示官方当前登录可能变化；成功只成为待接入候选，不自动选择/恢复。登录网络沿用官方客户端自身设置。
+- [x] 重跑 Go 测试及 `node --test desktop/tests/authorize.test.ts`，通过 Rust typed 命令/回执测试与 Windows 交叉编译。
+- [ ] 用用户明确授权的两平台测试登录完成原生验证，并记录实际版本/OS/取消行为，不能以 help 输出替代；目前未运行真实登录，随 T8 保留验收缺口。
+- [x] 提交本任务路径：`feat(desktop): launch and verify official account login`。
+
+T4 自动验证：Go 登录／账号／桌面管理相关 race 测试及 Go vet 通过；Node 24 下登录／账号／运行时共12项、TypeScript检查通过；Rust 授权协议和真实 typed invoke 共2项通过。Windows amd64测试程序交叉编译通过，未作Windows原生登录。独立审阅复现并修复最终凭证修订变化、目录链接切换／auto回退、候选失败发布、进程组回收时序、遗留子孙及可执行路径泄露；Windows先观察进程退出、清理Job再等待输出。Mac实际仅探测 Codex 0.162.1／Claude 2.1.153 的version/help，没有真实账号授权或流量。
 
 ## Task 5（S1-T5）：授权维护、换号与未知结果核对
 

@@ -22,6 +22,13 @@ input.on('line', line => {
     const result=request.method==='runtime_snapshot'?{runtime:fixture.snapshot}:{operation:{...fixture.operation,kind:request.method==='runtime_start'?'start':'stop'}};
     process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',result})+'\n');return;
   }
+  if(mode==='authorize'&&request.method.startsWith('authorize_')) {
+    const keys=Object.keys(request.params).sort().join(',');
+    const required=request.method==='authorize_start'?'expected_revision,platform,source':'operation_id';
+    if(keys!==required) {process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',error:{code:'FIXTURE_PARAMS_REJECTED',message:'authorization params differ from contract'}})+'\n');return;}
+    const operation={id:'a'.repeat(48),kind:'authorize',platform:request.params.platform??'openai',state:request.method==='authorize_cancel'?'cancelled':'running',revision:1,error:null};
+    process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',result:{operation}})+'\n');return;
+  }
   const supplyMode = ['supply', 'supply-error'].includes(mode);
   const accountMode=['accounts','slow-account','account-timeout'].includes(mode);
   if(accountMode&&request.method.startsWith('account_')) {
@@ -51,7 +58,7 @@ input.on('line', line => {
   if (mode === 'timeout') return;
   if (mode === 'utf8') { process.stdout.write(Buffer.from([255, 10])); return; }
   const result = request.method === 'hello'
-    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
+    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: mode==='authorize'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','authorize_start','authorize_status','authorize_cancel']:mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
     : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'fixture-instance', result }) + '\n';
   if (mode === 'slow-device' && request.method === 'device_status') {

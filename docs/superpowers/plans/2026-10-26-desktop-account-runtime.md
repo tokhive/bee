@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1 已验证，当前执行 S1-T2。
+> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2 已验证，当前执行 S1-T3。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -39,7 +39,7 @@ T1 在 `docs/desktop/bridge-protocol.md` 一次定义以下字段，Go/Rust/TS �
 | 契约 | 参数／返回及约束 |
 | --- | --- |
 | `DesktopNetworkConfig` | `revision: number, connect_proxy: string`；仅受信内部配置输入，默认 `{revision:0, connect_proxy:""}` |
-| `DesktopOperation` | `id: string, kind: select/start/stop/confirm_change/authorize, platform: Platform|null, state: pending/running/reconciling/succeeded/failed/cancelled, revision: number, error: DesktopAccountError|null`；ID 不等于 Hive confirmation_id |
+| `DesktopOperation` | `id: string, kind: select/clear_selection/start/stop/confirm_change/authorize, platform: Platform|null, state: pending/running/reconciling/succeeded/failed/cancelled, revision: number, error: DesktopAccountError|null`；ID 不等于 Hive confirmation_id |
 | `DesktopRuntimeSnapshot` | `run_id: string|null, revision, network_revision, observed_at, local, connection, platforms, operation, stop_receipt`；local为stopped/starting/running/stopping/failed，connection为disconnected/connecting/connected/reconnecting/rejected/occupied；platforms为按Platform索引的`{account:DesktopAccountSnapshot,supply:DesktopSupply|null,selection_revision:number}`，operation为DesktopOperation或null，stop_receipt为DesktopStopReceipt或null；不重新定义可接单判断 |
 | `DesktopStartRequest` | `expected_revision, resume_platforms: Platform[]`；仅本次明确允许恢复的平台；内部重启恢复另由保存意图和新鲜暂停状态核对，不能假造一次用户开始操作 |
 | `DesktopStopRequest` | `expected_revision, reason: user_stop/app_exit/update/network_change`；reason 由 Rust 固定入口生成，网页不能选择退出理由绕过停止意图 |
@@ -71,11 +71,13 @@ T1 验证：共享会话、严格 v2 迁移、Close 等待和未决状态回读�
 
 **输入／输出：** 消费现有 `DesktopAccountActionRequest` 的 revision/candidate_ref/confirmed；实现 `select` 和本地未注册选择的 `clear_selection`，已注册完整移除继续明确不可用。输出持久选择和可查询 operation；不把选择当作注册或贡献。
 
-- [ ] 写 HTTP 调用账本用例：核验候选→保存意图→暂停 PUT→GET 确认→原子保存；暂停响应丢失只查询；候选变化／device owner 改变／保存失败不继续；首次选择不启动运行、不发授权同步；未选平台零读取。
-- [ ] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopAccount(Selection|Action)' -count=1`，先确认预期失败。
-- [ ] 实现异步动作及按平台串行门；重启恢复选中来源但保留“待开始”；追加平台时通过 T3 的平台屏障接线，T3 未接通前不允许假报运行中热切换成功。
-- [ ] 重跑上述测试，再运行 `go test -race ./agent -run 'TestDesktopAccount' -count=1`、Rust协议测试及`node --test desktop/tests/nativeAccounts.test.ts`；两平台隔离、旧检测回执不能覆盖新选择。
-- [ ] 提交本任务路径：`feat(desktop): persist confirmed account selection while paused`。
+- [x] 写 HTTP 调用账本用例：核验候选→保存意图→暂停 PUT→GET 确认→原子保存；暂停响应丢失只查询；候选变化／device owner 改变／保存失败不继续；首次选择不启动运行、不发授权同步；未选平台零读取。
+- [x] 运行 `go test ./agent ./desktopbridge -run 'TestDesktopAccount(Selection|Action)' -count=1`，先确认预期失败。
+- [x] 实现异步动作及按平台串行门；重启恢复选中来源但保留“待开始”；追加平台时通过 T3 的平台屏障接线，T3 未接通前不允许假报运行中热切换成功。
+- [x] 重跑上述测试，再运行 `go test -race ./agent -run 'TestDesktopAccount' -count=1`、Rust协议测试及`node --test desktop/tests/nativeAccounts.test.ts`；两平台隔离、旧检测回执不能覆盖新选择。
+- [x] 提交本任务路径：`feat(desktop): persist confirmed account selection while paused`。
+
+T2 验证：Go 账号/桥相关 race 与 vet、13 项 Rust 协议测试、19 项 sidecar 测试（签名包专用项仍按原约定另验）、6 项 TS 账号测试及 typecheck 通过。两项审阅缺陷均先复现再修复并复核。Rust 使用本机完整的 `+1.94` 工具链（实际 1.94.0）；同版本 `1.94.0` 别名安装缺 Cargo，未改变项目版本。
 
 ## Task 3（S1-T3）：运行真实贡献循环及结构化状态
 

@@ -85,11 +85,12 @@ impl AccountActionRequest {
                 ),
             ));
         }
-        if self.candidate_ref.len() != 48
-            || !self
-                .candidate_ref
-                .bytes()
-                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        if !(self.action == "clear_selection" && self.candidate_ref.is_empty())
+            && (self.candidate_ref.len() != 48
+                || !self
+                    .candidate_ref
+                    .bytes()
+                    .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)))
         {
             return Err(BridgeError::new("ACCOUNT_REQUEST_REJECTED",format!("account candidate_ref rejected: bytes={}; required=48 lowercase hex characters",self.candidate_ref.len())));
         }
@@ -370,3 +371,125 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
 #[cfg(test)]
 #[path = "protocol_tests.rs"]
 mod tests;
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AccountOperationError {
+    code: String,
+    check: String,
+    platform: String,
+    message: String,
+    evidence: std::collections::BTreeMap<String, String>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct AccountOperation {
+    id: String,
+    kind: String,
+    platform: SupplyPlatform,
+    state: String,
+    revision: u64,
+    #[serde(deserialize_with = "present_operation_error")]
+    error: Option<AccountOperationError>,
+}
+fn present_operation_error<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<AccountOperationError>, D::Error> {
+    Option::<AccountOperationError>::deserialize(d)
+}
+
+pub fn validate_account_operation(
+    result: &Value,
+    platform: SupplyPlatform,
+) -> Result<(), BridgeError> {
+    // Account operation failures use the existing domain-error envelope.
+    if result.get("error").is_some() {
+        return Ok(());
+    }
+    let invalid = |message: &str| BridgeError::new("ACCOUNT_REPLY_INVALID", message.into());
+    let account = result
+        .get("account")
+        .ok_or_else(|| invalid("account result missing"))?;
+    if account.get("platform") != Some(&serde_json::json!(platform)) {
+        return Err(invalid("account result platform differs from request"));
+    }
+    let raw = account
+        .get("operation")
+        .ok_or_else(|| invalid("account.operation missing; required=explicit null or operation"))?;
+    if raw.is_null() {
+        return Ok(());
+    }
+    let op: AccountOperation =
+        serde_json::from_value(raw.clone()).map_err(|e| invalid_json("account.operation", e))?;
+    if op.id.len() != 48
+        || !op
+            .id
+            .bytes()
+            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    {
+        return Err(invalid("operation ID rejected; required=48 lowercase hex"));
+    }
+    if op.platform != platform {
+        return Err(invalid("operation platform differs from account request"));
+    }
+    if !["select", "clear_selection", "confirm_change"].contains(&op.kind.as_str()) {
+        return Err(invalid("operation kind outside account actions"));
+    }
+    if ![
+        "pending",
+        "running",
+        "reconciling",
+        "succeeded",
+        "failed",
+        "cancelled",
+    ]
+    .contains(&op.state.as_str())
+    {
+        return Err(invalid("operation state outside known lifecycle"));
+    }
+    if op.revision > 9007199254740991 {
+        return Err(invalid("operation revision exceeds JS safe integer"));
+    }
+    if let Some(error) = op.error {
+        let identifier = |v: &str| {
+            !v.is_empty()
+                && v.len() <= 80
+                && v.bytes()
+                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+        };
+        if !identifier(&error.code)
+            || !identifier(&error.check)
+            || !["openai", "claude", "unknown"].contains(&error.platform.as_str())
+            || error.message.len() > 32768
+        {
+            return Err(invalid(
+                "operation error fields rejected; required=public identifiers and bounded message",
+            ));
+        }
+        let allowed = [
+            "not_found",
+            "permission_denied",
+            "os_error",
+            "cause",
+            "parsed",
+            "profile_scope",
+            "inference_scope",
+            "expires_at",
+            "source_revision_match",
+            "http_status",
+            "path",
+            "transport_failed",
+            "confirmed",
+        ];
+        if error
+            .evidence
+            .iter()
+            .any(|(k, v)| !allowed.contains(&k.as_str()) || v.len() > 32768)
+        {
+            return Err(invalid(
+                "operation evidence contains unsupported fields or oversized value",
+            ));
+        }
+    }
+    Ok(())
+}

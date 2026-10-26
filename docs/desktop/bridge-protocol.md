@@ -83,7 +83,7 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
 | `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
-| `DesktopOperation` | id、kind（select/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled）、revision、error；id是本机动作引用，不是Hive confirmation_id |
+| `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled）、revision、error；id是本机动作引用，不是Hive confirmation_id |
 | `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、platforms、operation、stop_receipt。桥envelope的instance仍为管理进程实例 |
 | platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
 | `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
@@ -114,3 +114,9 @@ go run ./cmd/bee help
 本次设备配对的自动测试与实际子进程证据来自 macOS arm64；交叉编译不替代 Windows/Linux 的行为测试。设备增量的使用、验证及原生图形缺口见[设备配对说明](device-pairing.md)。既有 P0 三端进度仍以 [P0 验证记录](p0-validation.md)为准，不能用本增量宣称三端产品已通过。
 
 供给公开字段、暂停持久语义、前端串行刷新和未知写结果处理见[平台状态与暂停恢复说明](supply-control.md)。`DesktopSupply` 精确字段为 `hive/device_id/platform/paused/ready/reasons/checked_at`；凭证不进入前端。`checked_at` 为 UTC RFC3339。`ready` 当且仅当原因数组为空，`paused` 当且仅当含 `manually_paused`；两平台原因不能串线。PUT 后 GET 回读失败或目标值不符均报告结果未确认，重新核对仅 GET。
+
+### S1 接入操作（已实现）
+
+`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change，state 为 pending／running／reconciling／succeeded／failed／cancelled。
+
+`clear_selection` 只清除尚未注册且未运行的本地选择，使用当前快照 revision 与 confirmed=true；candidate_ref 可以是空字符串，不要求官方凭证仍有效。select／confirm_change 继续要求当前候选引用。完整移除仍不可用。若暂停已证实、Hive 身份/代次未变而官方来源发生变化，原接入操作以失败结束并保持暂停，允许用户重新检测确认；无法确认暂停或 Hive 归属时保留未决操作，刷新只查询、不重发 PUT。

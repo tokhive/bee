@@ -47,6 +47,12 @@ func RunWithAccounts(ctx context.Context, in io.Reader, out io.Writer, diagnosti
 	return RunWithRuntime(ctx, in, out, diagnostics, version, devices, accounts, nil)
 }
 func RunWithRuntime(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime) (runErr error) {
+	return RunWithAuthorization(ctx, in, out, diagnostics, version, devices, accounts, runner, nil)
+}
+func RunWithAuthorization(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime, authorizer Authorizer) (runErr error) {
+	if authorizer != nil && runner == nil {
+		return errors.New("authorization bridge requires the complete runtime capability group")
+	}
 	if runner != nil && accounts == nil {
 		return errors.New("runtime bridge requires account service")
 	}
@@ -168,6 +174,9 @@ func RunWithRuntime(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 				if runner != nil {
 					capabilities = append(capabilities, runtimeMethods...)
 				}
+				if authorizer != nil {
+					capabilities = append(capabilities, authorizeMethods...)
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -178,6 +187,15 @@ func RunWithRuntime(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case authorizer != nil && slices.Contains(authorizeMethods, req.Method):
+				value, err := authorizeResult(ctx, authorizer, req)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("AUTHORIZE_OPERATION_FAILED", "%s", err)}
+				} else {
+					answer.Result = value
+				}
 			case runner != nil && slices.Contains(runtimeMethods, req.Method):
 				value, err := runtimeResult(ctx, runner, req)
 				if err != nil {

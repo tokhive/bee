@@ -17,19 +17,21 @@ const (
 )
 
 type request struct {
-	Protocol int
-	ID       string
-	Method   string
-	Hive     string
-	Name     string
-	Platform string
-	Paused   bool
-	Detect   bee.DesktopAccountDetectRequest
-	Action   bee.DesktopAccountActionRequest
-	Start    bee.DesktopStartRequest
-	Stop     bee.DesktopStopRequest
-	Network  bee.DesktopNetworkConfig
-	Refresh  bool
+	Protocol    int
+	ID          string
+	Method      string
+	Hive        string
+	Name        string
+	Platform    string
+	Paused      bool
+	Detect      bee.DesktopAccountDetectRequest
+	Action      bee.DesktopAccountActionRequest
+	Start       bee.DesktopStartRequest
+	Stop        bee.DesktopStopRequest
+	Network     bee.DesktopNetworkConfig
+	Authorize   bee.DesktopAuthorizeRequest
+	OperationID string
+	Refresh     bool
 }
 
 type protocolError struct {
@@ -141,6 +143,9 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if slices.Contains(authorizeMethods, req.Method) {
+		return decodeAuthorizeParams(req, fields["params"])
 	}
 	if slices.Contains(runtimeMethods, req.Method) {
 		return decodeRuntimeParams(req, fields["params"])

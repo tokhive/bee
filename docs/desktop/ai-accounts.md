@@ -1,6 +1,6 @@
-# 桌面 AI 账号观察
+# 桌面 AI 账号管理
 
-原生「AI 账号」页可以检测 OpenAI／Claude 的官方登录，按需检查官方身份和额度，独立查看 Hive 账号与能力，并与概览共用暂停／恢复控制。本批不改变 Hive，也不启动贡献。接入、换号、撤销选择和完整移除仍受运行管理依赖阻塞；这些按钮没有假成功路径。
+原生「AI 账号」页可以检测 OpenAI／Claude 的官方登录，按需检查官方身份和额度，独立查看 Hive 账号与能力，并与概览共用暂停／恢复控制。S1 正在补齐真实操作：后端已接通选择保存、贡献运行和官方登录；原生页面的完整动作接线在 S1-T7。换号、退出恢复尚待后续任务，完整移除仍按已批准范围暂缓。不修改 Hive。
 
 ## 怎么使用
 
@@ -11,7 +11,7 @@
 5. 「刷新 Hive 状态」只核对 Hive，不重新检测官方来源。Hive 离线不遮盖本地候选，设备核对失败也不阻止本地检测；但设备未核实时不能写供给状态。
 6. 平台供给区与概览共享同一份状态。暂停不终止在途请求；恢复只解除手动暂停，不启动贡献。存在换号未决的平台禁止恢复，仍可安全暂停及 GET 核对。全部操作逐平台显示结果，一个失败不会抹掉另一个的成功。
 
-官方授权入口尚未接通，请在对应官方客户端登录后重新检测。不要将密码、验证码或 token 填入 Bee；本页只接受目录和受控存储选项。系统通知尚未接入，不弹 OS 授权，问题仅在应用内显示。
+官方授权后端已接通，原生页面入口在 S1-T7 接入。已有账号仍可按上述步骤检测。不要将密码、验证码或 token 填入 Bee；本页只接受目录和受控存储选项。系统通知尚未接入，不弹 OS 授权，问题仅在应用内显示。
 
 ## 来源、时效和失败
 
@@ -29,7 +29,7 @@ Hive 观察执行身份核验和 account → capabilities → account 夹读，�
 
 ## 本地记录与命令
 
-`ai-accounts.json` 位于独立桌面设备配置同目录，版本 1。本批仅持久化提醒去重，不保存来源选择、凭证或未来写操作状态机。文件受私密权限、禁止跟随符号链接、原子替换和读回保护；损坏或未知版本不会被静默覆盖。
+`ai-accounts.json` 位于独立桌面设备配置同目录，当前版本 2。保存提醒去重、按 Hive／owner／device 隔离的来源选择、未决操作、运行意图及会话标记，不保存 token。旧 v1 首次写入升级前保存受保护备份。文件受私密权限、禁止跟随符号链接、原子替换和读回保护；损坏或未知版本不会被静默覆盖。
 
 提醒按 Hive／owner／platform／指纹／问题类型去重，设备只参与归属核验。持续离线满 60 秒才提醒；明确恢复后再次异常可以重提醒，未知和陈旧观察不当作恢复。写去重记录失败时保留问题并说明持久化未确认。重启不把历史观察显示为已选择或贡献中。
 
@@ -40,28 +40,27 @@ Hive 观察执行身份核验和 account → capabilities → account 夹读，�
 | `account_defaults` | `{}` | 仅返回默认目录和存储能力 |
 | `account_detect` | `platform,directory,store,mode` | `mode=local/official`，必须显式给出 `directory:null` 或绝对目录 |
 | `account_snapshot` | `platform,refresh` | false 仅公开快照；true 只刷新 Hive |
-| `account_action` | `platform,revision,candidate_ref,action,confirmed` | 严格校验；本批在任何副作用前返回缺失依赖 |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | 严格校验；select／clear_selection 已有真实保存与暂停核对，confirm_change 在 S1-T5 接入；完整移除仍不可用 |
 
 Go 操作总期限 12 秒；Rust 账号请求从进入队列起共 15 秒。未发出的排队超时不破坏健康会话；已发送超时先撤销 ready，拒绝迟到成功和后续排队写。前端仅使用 typed 命令，不扩展 generic `bridge_request` 的 ping 权限。
 
-公开快照固定含 `platform/revision/candidate/selection/hive/authorization/capabilities/features/issues/checked_at`。Hive 额外公开 `pending_fingerprint/generation`，不公开 confirmation_id。能力按 official、hive 两项排列；所有时间为 UTC RFC3339（可含 1–9 位小数）或 null。前端逐字段解码，未知字段、错类型和错误实例不能进入视图。
+公开快照固定含 `platform/revision/operation/candidate/selection/hive/authorization/capabilities/features/issues/checked_at`。Hive 额外公开 `pending_fingerprint/generation`，不公开 confirmation_id。能力按 official、hive 两项排列；所有时间为 UTC RFC3339（可含 1–9 位小数）或 null。前端逐字段解码，未知字段、错类型和错误实例不能进入视图。
 
-## 本批覆盖与剩余条件
+## 官方登录适配（S1-T4）
 
-| 验收项 | 本批覆盖 | 尚需完成 |
+调用 `authorize_start` 后，Bee 检查官方客户端版本与登录能力，启动固定命令，等待完成，再重新读取已选来源。启动前应说明“这可能改变官方客户端当前登录账号”；贡献运行期间先停止贡献，避免在维护中替换凭证。登录成功只产生候选，用户仍须确认接入。退出零但来源未变化、来源在核验中再次变化、官方核验失败均不显示成功。OpenAI 的本地结构核验不冒充在线身份核验；Claude 使用官方 profile 核验身份。
+
+| 平台 | 固定命令与存储 | 版本适配范围 |
 | --- | --- | --- |
-| A01 卡片、A02 检测 | 真实只读适配、手动来源和两平台独立失败 | 三端真实来源和原生 GUI 验收 |
-| A03 官方授权 | 显示入口依赖，官方客户端登录后可重检 | 核实两平台授权身份、权限、完成／取消机制 |
-| A04 接入 | 候选核对与零副作用拒绝 | 运行归属、从未使用证据、prepared、暂停读回、原子选择 |
-| A05 身份与维护 | 本地／官方／Hive 分开，过期和失败证据 | 运行期间续期、同步结果、官方客户端并发写回验证 |
-| A06 额度 | 全部窗口、原值、时效、冷却与限流 | 真实账号和三端专项验收 |
-| A07 模型 | 账号支持与市场未知分开 | 设备鉴权可信市场读取接口 |
-| A08 暂停／恢复 | 与概览共享、逐项反馈、未决禁恢复 | 后续运行约束接入同一门禁 |
-| A09 换号 | 当前／候选只读展示，未决门禁 | owned 报告、来源切换屏障、同步与持久恢复；成功仍暂停 |
-| A10 移除 | 明确依赖并零副作用拒绝 | 停止准入、在途收尾、凭证解除、原操作查询 |
-| A11 提醒 | 应用内提醒、去重与明确恢复 | 全局系统通知与 OS 权限 |
-| A12 重启 | 不冒充已接入，持久提醒去重 | 选择、removed、未决操作随运行管理实施 |
+| OpenAI | `codex login -c cli_auth_credentials_store="file"` 或 `"keyring"`；固定 `CODEX_HOME`；auto 登录写 file，keyring 仅 macOS | Codex CLI 0.162.x／0.163.x，且 help 必须包含 login |
+| Claude | `claude auth login --claudeai`；macOS keychain、其他系统 file；自定义目录同时传给官方配置和安全存储命名空间 | Claude Code 2.1.x，patch ≥153，且 help 必须包含 --claudeai |
 
-本批 plan 完成只表示上述可执行交付完成，不表示 A01–A12 全模块完成。下一项是运行管理 spec 及其事实调查；新增选型或 Hive 改造仍须集中审阅。旧自动确认授权已取消，当前实施只依据用户本次对 `executing-plans` 的明确授权。
+可信安装候选依次为用户 `.local/bin`、Unix Homebrew／`/usr/local/bin` 和 PATH 中的绝对可执行文件，解析符号链接；Unix 拒绝组／其他用户可写文件，Windows 只接受 `.exe`，不执行 `.cmd` 包装。缺少或版本不支持时显示具体缺项，用户安装官方客户端后重试，不由 Bee 自动安装。官方客户端网络沿用自身设置及环境代理；Bee 的专用代理不会注入登录过程。会移除继承的 API key/token 登录覆盖环境项。
 
-自动回归、包内冒烟、截图及原生验收缺口见[本批证据](evidence/2026-10-26-ai-accounts/README.md)。保留 `feat/bee-desktop-p0` 和当前 worktree，不合并、不推送、不发布。
+Go 保有独立进程生命周期：Unix 使用固定 supervisor 保留进程组编号，结束后先清理受控组再回收；Windows 挂起创建、加入独立 Job 后再启动，取消终止本次 Job。正常退出也清理遗留的受控子进程。没有按程序名查杀；已有官方客户端不在本次生命周期内。启动、查询和取消都返回不含秘密的 operation；取消只有在回收后才成为终态，不能撤销已完成的官方登录。授权 URL、stdout/stderr、token、完整可执行路径不转发前端。等待最多 10 分钟，版本/help 各最多 5 秒。
+
+**验证边界：** macOS arm64 实际只读探测为 `codex-cli 0.162.1`、`Claude Code 2.1.153`，登录/help 能力存在。合成进程测试覆盖完成、取消、超时、App 关闭、迟到核验、错误退出、来源修订变化、外部进程保护及脱敏；Windows 仅交叉编译，尚未原生执行。本轮没有运行真实官方账号登录，版本/help 输出不算授权验收；两平台实际官方页面操作、原生取消及命名空间验证留在 S1-T8／S3 验收记录中。
+
+## 当前交付边界
+
+旧 AI 账号观察计划已完成；其历史截图与原生验收缺口见[观察阶段证据](evidence/2026-10-26-ai-accounts/README.md)。当前依次执行 S1 账号接入与贡献运行、S2 诊断与体验、S3 安装更新。S1-T1～T3 已验证，T4 交付官方登录适配，T5～T8 继续完成换号、恢复、原生页面及真实验收。完整移除和等待 Hive 在途任务退出暂缓；不新增市场或资金页面，不把 Hive 网站完善程度作为 Bee 的阻塞条件。保留当前工作树，不合并、不推送、不发布。

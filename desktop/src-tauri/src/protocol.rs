@@ -22,6 +22,92 @@ impl TryFrom<String> for SupplyPlatform {
     }
 }
 
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AccountDetectRequest {
+    pub platform: SupplyPlatform,
+    #[serde(deserialize_with = "account_directory")]
+    pub directory: Option<String>,
+    pub store: String,
+    pub mode: String,
+}
+fn account_directory<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(d)
+}
+impl AccountDetectRequest {
+    pub fn validate(&self) -> Result<(), BridgeError> {
+        let rejected = |message: String| BridgeError::new("ACCOUNT_REQUEST_REJECTED", message);
+        if let Some(path) = &self.directory {
+            if path.is_empty()
+                || path.len() > 4096
+                || !std::path::Path::new(path).is_absolute()
+                || path.chars().any(char::is_control)
+            {
+                return Err(rejected(format!("account directory rejected: bytes={} absolute={} control_present={}; required=nonempty absolute path <=4096 UTF-8 bytes without controls",path.len(),std::path::Path::new(path).is_absolute(),path.chars().any(char::is_control))));
+            }
+        }
+        let valid = match self.platform {
+            SupplyPlatform::Openai => ["auto", "file", "keyring"].contains(&self.store.as_str()),
+            SupplyPlatform::Claude => ["file", "keychain"].contains(&self.store.as_str()),
+        };
+        if !valid {
+            return Err(rejected(format!(
+                "account store rejected for platform: bytes={}; required=platform store whitelist",
+                self.store.len()
+            )));
+        }
+        if !["local", "official"].contains(&self.mode.as_str()) {
+            return Err(rejected(format!(
+                "account mode rejected: bytes={}; required=local,official",
+                self.mode.len()
+            )));
+        }
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct AccountActionRequest {
+    pub platform: SupplyPlatform,
+    pub revision: u64,
+    pub candidate_ref: String,
+    pub action: String,
+    pub confirmed: bool,
+}
+impl AccountActionRequest {
+    pub fn validate(&self) -> Result<(), BridgeError> {
+        if self.revision > 9007199254740991 {
+            return Err(BridgeError::new(
+                "ACCOUNT_REQUEST_REJECTED",
+                format!(
+                    "account revision rejected: actual={}; required=safe nonnegative integer",
+                    self.revision
+                ),
+            ));
+        }
+        if self.candidate_ref.len() != 48
+            || !self
+                .candidate_ref
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err(BridgeError::new("ACCOUNT_REQUEST_REJECTED",format!("account candidate_ref rejected: bytes={}; required=48 lowercase hex characters",self.candidate_ref.len())));
+        }
+        if !["select", "confirm_change", "remove", "clear_selection"]
+            .contains(&self.action.as_str())
+        {
+            return Err(BridgeError::new(
+                "ACCOUNT_REQUEST_REJECTED",
+                format!(
+                    "account action rejected: bytes={}; required=fixed action whitelist",
+                    self.action.len()
+                ),
+            ));
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct BridgeError {
@@ -244,21 +330,33 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
     ];
     let mut supplies = devices.clone();
     supplies.extend(["supply_status".to_string(), "supply_set_paused".to_string()]);
-    let expected =
-        match metadata.capabilities.len() {
-            2 => &basic,
-            4 => &devices,
-            6 => &supplies,
-            count => return Err(BridgeError::new(
+    let mut accounts = supplies.clone();
+    accounts.extend(
+        [
+            "account_defaults",
+            "account_detect",
+            "account_snapshot",
+            "account_action",
+        ]
+        .map(str::to_string),
+    );
+    let expected = match metadata.capabilities.len() {
+        2 => &basic,
+        4 => &devices,
+        6 => &supplies,
+        10 => &accounts,
+        count => {
+            return Err(BridgeError::new(
                 "CAPABILITY_MISMATCH",
                 format!(
-                    "hello capability count rejected; actual count={count}; required counts=2,4,6"
-                ),
-            )),
-        };
+                "hello capability count rejected; actual count={count}; required counts=2,4,6,10"
+            ),
+            ))
+        }
+    };
     for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
         if actual != expected {
-            let observed = if supplies.contains(actual) {
+            let observed = if accounts.contains(actual) {
                 actual.clone()
             } else {
                 format!("unknown member bytes={}", actual.len())

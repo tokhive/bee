@@ -39,7 +39,14 @@ func Run(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer
 
 // Device operations are opt-in. Hello and ping never access device state.
 func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices) (runErr error) {
+	return RunWithAccounts(ctx, in, out, diagnostics, version, devices, nil)
+}
+
+func RunWithAccounts(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts) (runErr error) {
 	supplies, hasSupplies := devices.(Supplies)
+	if accounts != nil && !hasSupplies {
+		return errors.New("account bridge requires the complete device and supply capability group")
+	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -148,6 +155,9 @@ func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 				if hasSupplies {
 					capabilities = append(capabilities, "supply_status", "supply_set_paused")
 				}
+				if accounts != nil {
+					capabilities = append(capabilities, "account_defaults", "account_detect", "account_snapshot", "account_action")
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -158,6 +168,36 @@ func RunWithDevices(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case accounts != nil && (req.Method == "account_defaults" || req.Method == "account_detect" || req.Method == "account_snapshot" || req.Method == "account_action"):
+				var value any
+				var operationErr error
+				if req.Method == "account_defaults" {
+					var defaults bee.DesktopAccountDefaults
+					defaults, operationErr = accounts.Defaults(ctx)
+					value = struct {
+						Defaults bee.DesktopAccountDefaults `json:"defaults"`
+					}{defaults}
+				} else {
+					var snapshot bee.DesktopAccountSnapshot
+					switch req.Method {
+					case "account_detect":
+						snapshot, operationErr = accounts.Detect(ctx, req.Detect)
+					case "account_snapshot":
+						snapshot, operationErr = accounts.Snapshot(ctx, req.Platform, req.Refresh)
+					case "account_action":
+						snapshot, operationErr = accounts.Action(ctx, req.Action)
+					}
+					value = struct {
+						Account bee.DesktopAccountSnapshot `json:"account"`
+					}{snapshot}
+				}
+				if operationErr != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("ACCOUNT_OPERATION_FAILED", "%s", operationErr)}
+				} else {
+					answer.Result = value
+				}
 			case devices != nil && (req.Method == "device_status" || req.Method == "device_begin"):
 				var view bee.DeviceView
 				var operationErr error

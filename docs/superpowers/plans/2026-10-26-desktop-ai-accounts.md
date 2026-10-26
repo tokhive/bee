@@ -120,10 +120,10 @@ NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts
 
 **接口：** `account_defaults {}`、`account_detect {platform,directory,store,mode}`、`account_snapshot {platform,refresh}`、`account_action {platform,revision,candidate_ref,action,confirmed}`。成功分别 `result.defaults` 或 `result.account`；业务错误 `result.error`，代码 `ACCOUNT_OPERATION_FAILED`。保留现有 `RunWithDevices` 和旧能力组，可增加仅服务端注入 accounts 的运行函数；`cmd/bee` 明确构造同一设备实例与账号服务。
 
-- [ ] Go 参数红灯：未知／重复／缺失／null／错类型、平台-store 组合、显式 false、超长路径和过时引用；业务失败后 ping 仍可用；旧设备／供给调用及旧能力组兼容。
-- [ ] Rust 用真实 fixture 验证新增四命令的固定 method/params、请求期限、实例变化、出错后拒绝迟到结果；新完整能力组为现有六项后追加上述四项，不接受任意子集／额外方法。
-- [ ] 实现 Go 严格参数解码与结构化分发；Rust 只接受 typed 参数，禁止扩大 generic `bridge_request`；Go 再校验一次。路径／引用与错误值不进入底层 shell 参数，不扩展权限或开放 arbitrary URL。
-- [ ] 运行 `go test ./desktopbridge ./cmd/bee`；重建 native sidecar 后运行 `cargo test --locked --offline --manifest-path desktop/src-tauri/Cargo.toml` 的相关协议／sidecar 测试；自检、任务审查并提交。
+- [x] Go 参数红灯：未知／重复／缺失／null／错类型、平台-store 组合、显式 false、超长路径和过时引用；业务失败后 ping 仍可用；旧设备／供给调用及旧能力组兼容。
+- [x] Rust 用真实 fixture 验证新增四命令的固定 method/params、请求期限、实例变化、出错后拒绝迟到结果；新完整能力组为现有六项后追加上述四项，不接受任意子集／额外方法。
+- [x] 实现 Go 严格参数解码与结构化分发；Rust 只接受 typed 参数，禁止扩大 generic `bridge_request`；Go 再校验一次。路径／引用与错误值不进入底层 shell 参数，不扩展权限或开放 arbitrary URL。
+- [x] 运行 `go test ./desktopbridge ./cmd/bee`；重建 native sidecar 后运行 `cargo test --locked --offline --manifest-path desktop/src-tauri/Cargo.toml` 的相关协议／sidecar 测试；自检、任务审查并提交。
 
 ## Task 5: 真实账号页、详情与共享供给状态
 

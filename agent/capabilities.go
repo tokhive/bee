@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -121,7 +120,11 @@ func codexOnPath(ctx context.Context) string {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	command := exec.CommandContext(ctx, path, "--version")
+	// A wrapper can exit while a descendant retains its output pipes.
+	// Bound pipe cleanup as well as the directly owned process.
+	command.WaitDelay = 100 * time.Millisecond
+	out, err := command.Output()
 	if err != nil {
 		return ""
 	}
@@ -134,12 +137,13 @@ func codexOnPath(ctx context.Context) string {
 }
 
 // cachedCodexVersion is the release recorded in models_cache.json, empty
-// when there is none to read.
+// when there is no regular file to read. Auxiliary metadata must not block
+// official account checks on a FIFO or follow a replaced symlink.
 func cachedCodexVersion(home string) string {
 	if home == "" {
 		return ""
 	}
-	file, err := os.Open(filepath.Join(home, "models_cache.json"))
+	file, err := openRegularNoFollow(filepath.Join(home, "models_cache.json"))
 	if err != nil {
 		return ""
 	}

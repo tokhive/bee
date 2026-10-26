@@ -332,3 +332,46 @@ fn account_typed_requests_reject_missing_null_and_unknown_fields() {
     .unwrap();
     assert!(request.validate().is_err());
 }
+
+#[test]
+fn account_operation_requires_current_platform_and_known_state() {
+    let operation = json!({"id":"a".repeat(48),"kind":"select","platform":"openai","state":"pending","revision":3,"error":null});
+    let valid = json!({"account":{"platform":"openai","operation":operation}});
+    assert!(super::validate_account_operation(&valid, super::SupplyPlatform::Openai).is_ok());
+    for (field, value) in [
+        ("state", json!("finished_maybe")),
+        ("platform", json!("claude")),
+        ("revision", json!(9007199254740992u64)),
+        ("id", json!("SECRET")),
+    ] {
+        let mut bad = valid.clone();
+        bad["account"]["operation"][field] = value;
+        assert!(super::validate_account_operation(&bad, super::SupplyPlatform::Openai).is_err());
+    }
+    let mut secret = valid.clone();
+    secret["account"]["operation"]["confirmation_id"] = json!("SECRET");
+    assert!(super::validate_account_operation(&secret, super::SupplyPlatform::Openai).is_err());
+    assert!(super::validate_account_operation(
+        &json!({"account":{"platform":"openai"}}),
+        super::SupplyPlatform::Openai
+    )
+    .is_err());
+    assert!(super::validate_account_operation(
+        &json!({"account":{"platform":"openai","operation":null}}),
+        super::SupplyPlatform::Openai
+    )
+    .is_ok());
+}
+#[test]
+fn clear_selection_accepts_revision_without_candidate_but_select_does_not() {
+    let mut request = super::AccountActionRequest {
+        platform: super::SupplyPlatform::Openai,
+        revision: 2,
+        candidate_ref: String::new(),
+        action: "clear_selection".into(),
+        confirmed: true,
+    };
+    assert!(request.validate().is_ok());
+    request.action = "select".into();
+    assert!(request.validate().is_err());
+}

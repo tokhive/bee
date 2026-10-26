@@ -78,6 +78,10 @@ func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAcco
 		setAccountHiveFailure(p, platform, "identity_binding", err)
 		return
 	}
+	if err := a.loadSelection(p, session, state, platform); err != nil {
+		setAccountHiveFailure(p, platform, "selection_storage", err)
+		return
+	}
 	base := "/api/bee/platforms/" + platform
 	var before, after beewire.PlatformAccount
 	var caps beewire.Capabilities
@@ -204,7 +208,9 @@ func (a *DesktopAccounts) accountIssues(p *desktopAccountPlatform, platform, dev
 		if code == "offline" {
 			delay = time.Minute
 		}
+		a.storageMu.Lock()
 		notify, err := updateDesktopAccountNotice(filepath.Join(filepath.Dir(devicePath), "ai-accounts.json"), desktopNoticeKey(b.hive, b.owner, platform, b.fingerprint, code), a.now().UTC(), active, delay)
+		a.storageMu.Unlock()
 		if active {
 			for i := range p.snapshot.Issues {
 				if p.snapshot.Issues[i].Code == code {

@@ -229,3 +229,19 @@ func TestDesktopAccountsDetectExpiresWithoutReadingSource(t *testing.T) {
 		t.Fatalf("expired candidate remained usable: %+v %v", s.Candidate, err)
 	}
 }
+
+func TestDesktopAccountsUnknownPlanIsNullInPublicDTO(t *testing.T) {
+	dir := t.TempDir()
+	raw := claudeSample(time.Now().Add(time.Hour))
+	raw = []byte(strings.ReplaceAll(string(raw), `"pro"`, `"future-private-plan"`))
+	if err := os.WriteFile(filepath.Join(dir, ".credentials.json"), raw, 0600); err != nil {
+		t.Fatal(err)
+	}
+	snapshot, err := NewDesktopAccounts(nil).Detect(context.Background(), DesktopAccountDetectRequest{Platform: "claude", Directory: &dir, Store: "file", Mode: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if snapshot.Candidate.State != "unknown_plan" || snapshot.Candidate.Plan != nil {
+		t.Fatalf("unknown plan public candidate=%+v", snapshot.Candidate)
+	}
+}

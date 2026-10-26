@@ -12,7 +12,7 @@ import (
 )
 
 func TestDesktopAccountsHive(t *testing.T) {
-	for _, scenario := range []string{"ready", "unbound", "identity_changed", "revoked", "fingerprint_changed", "generation_changed", "revision_changed", "unknown", "quota_exhausted", "rate_limited", "stale", "old_rate_limited"} {
+	for _, scenario := range []string{"ready", "unbound", "identity_changed", "revoked", "fingerprint_changed", "generation_changed", "revision_changed", "unknown", "quota_exhausted", "rate_limited", "stale", "old_rate_limited", "pending"} {
 		t.Run(scenario, func(t *testing.T) {
 			reads := 0
 			events := []string{}
@@ -36,6 +36,10 @@ func TestDesktopAccountsHive(t *testing.T) {
 				if strings.HasSuffix(r.URL.Path, "/account") {
 					reads++
 					account := beewire.PlatformAccount{Platform: "openai", Status: "ready", AccountFingerprint: strings.Repeat("a", 64), Generation: 1, CredentialRevision: strings.Repeat("b", 64), ConfirmationID: "confirmation-SECRET"}
+					if scenario == "pending" {
+						account.Status = "confirmation_required"
+						account.PendingFingerprint = strings.Repeat("c", 64)
+					}
 					if reads == 2 {
 						switch scenario {
 						case "fingerprint_changed":
@@ -77,6 +81,13 @@ func TestDesktopAccountsHive(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch scenario {
+			case "pending":
+				public, _ := json.Marshal(s.Hive)
+				var fields map[string]any
+				json.Unmarshal(public, &fields)
+				if fields["pending_fingerprint"] != strings.Repeat("c", 64) || fields["generation"] != float64(1) {
+					t.Fatalf("missing safe pending facts: %s", public)
+				}
 			case "ready", "unknown", "quota_exhausted", "rate_limited", "stale", "old_rate_limited":
 				if s.Hive.State != "ready" || s.Hive.Fingerprint == nil || reads != 2 {
 					t.Fatalf("hive=%+v reads=%d", s.Hive, reads)

@@ -21,6 +21,7 @@ type DesktopAccounts struct {
 	network          DesktopNetworkConfig
 	networkTransport http.RoundTripper
 	networkPaths     DesktopNetworkPaths
+	accountWorkers   map[string]*desktopAccountWorker
 	lifecycleMu      sync.Mutex
 	runtime          *DesktopRuntime
 	activeActions    map[string]bool
@@ -35,6 +36,11 @@ type DesktopAccounts struct {
 	now              func() time.Time
 	readKeyring      func(context.Context, string) ([]byte, error)
 	transport        http.RoundTripper
+}
+
+type desktopAccountWorker struct {
+	cancel context.CancelFunc
+	done   chan struct{}
 }
 
 type desktopAccountPlatform struct {
@@ -201,7 +207,8 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 }
 func NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts {
 	ctx, cancel := context.WithCancel(context.Background())
-	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring, networkTransport: officialTransport(""), networkPaths: desktopNetworkPaths("")}
+	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, accountWorkers: map[string]*desktopAccountWorker{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring, networkTransport: officialTransport(""), networkPaths: desktopNetworkPaths("")}
+
 	for _, platform := range []string{"openai", "claude"} {
 		result.platforms[platform] = &desktopAccountPlatform{gate: make(chan struct{}, 1), snapshot: initialAccountSnapshot(platform)}
 	}
@@ -245,8 +252,8 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	if refresh && !p.working {
 		a.refreshAccountHive(ctx, p, platform)
 	}
-	if refresh && !p.working && p.pending != nil && p.pending.Kind == "select" {
-		a.launchSelection(p, platform, *p.pending, true, false)
+	if refresh && !p.working && p.pending != nil && (p.pending.Kind == "select" || p.pending.Kind == "confirm_change") {
+		a.launchAccountOperation(p, platform, *p.pending, true, false, false)
 	}
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
@@ -355,7 +362,7 @@ func (a *DesktopAccounts) Action(ctx context.Context, request DesktopAccountActi
 	case "select", "clear_selection":
 		return a.beginSelection(p, request)
 	case "confirm_change":
-		return fail("runtime_dependency", "runtime_ownership", "runtime ownership, unused-source proof and source-switch barrier are required")
+		return a.beginAccountChange(p, request)
 	case "remove":
 		return fail("runtime_dependency", "runtime_detach", "runtime stop, drain and credential-detach proof are required")
 	default:

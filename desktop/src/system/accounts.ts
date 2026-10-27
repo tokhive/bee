@@ -49,7 +49,7 @@ export function decodeAccountReply(reply:unknown,platform:AccountPlatform,instan
  const account=value as AccountSnapshot;
  for(const [at,value]of [['candidate.observed_at',account.candidate.observed_at],['hive.observed_at',account.hive.observed_at],['authorization.observed_at',account.authorization.observed_at],['checked_at',account.checked_at],...account.capabilities.flatMap(c=>[[c.origin+'.observed_at',c.observed_at],[c.origin+'.metadata_observed_at',c.metadata_observed_at]])])if(value&&Date.parse(value)>Date.now()+5000)invalid(`${at} required=observation no later than now+5s`);
  if(account.capabilities.length!==2||account.capabilities[0].origin!=='official'||account.capabilities[1].origin!=='hive')invalid('capabilities required=official,hive in order');
- for(const key of ['confirm_change','remove','system_notifications'] as const)if(account.features[key].available)invalid(`features.${key} required=dependency unavailable in this build`);
+ for(const key of ['remove','system_notifications'] as const)if(account.features[key].available)invalid(`features.${key} required=dependency unavailable in this build`);
  return account;
 }
 export function decodeAccountDefaults(reply:unknown,instance:string):AccountDefaults {

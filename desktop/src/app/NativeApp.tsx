@@ -48,7 +48,7 @@ function NativeWorkspace({client,supply,accountFactory,runtimeFactory,authorizeF
  const runtimeClient=useMemo(()=>native.metadata?runtimeFactory(native.metadata.instance):undefined,[runtimeFactory,native.metadata?.instance]);
  const authorizeClient=useMemo(()=>native.metadata?authorizeFactory(native.metadata.instance):undefined,[authorizeFactory,native.metadata?.instance]);
  const runtime=useRuntime(runtimeClient,native.state==='ready');
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient);
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view);
  const sharedSupply=useSupply(supplyClient,native.state==='ready'&&(page==='overview'||page==='accounts'),busy||!!error,Object.values(accounts.views).filter(s=>s.hive.state==='confirmation_required').map(s=>s.platform));
  return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
   {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>

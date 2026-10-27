@@ -438,10 +438,12 @@ async fn concurrent_stop_reaps_stubborn_owned_child_and_preserves_external_proce
 
 #[cfg(target_os = "macos")]
 #[tokio::test]
-#[ignore = "requires a freshly built signed Bee Dev.app; run explicitly after tauri build"]
+#[ignore = "requires a freshly built signed Bee.app; set BEE_TEST_APP_BUNDLE for a release candidate"]
 async fn signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup() {
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let bundle = root.join("target/debug/bundle/macos/Bee Dev.app");
+    let bundle = std::env::var_os("BEE_TEST_APP_BUNDLE")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| root.join("target/debug/bundle/macos/Bee.app"));
     let bytes = include_bytes!(env!("BEE_SOURCE_FILE"));
     let source = BuildSource::parse(
         bytes,

@@ -1,6 +1,6 @@
 # Bee 桌面：安装、更新与发布验收实施计划（S3）
 
-> **给执行 agent：** 使用用户选定的 `subagent-driven-development` 或 `executing-plans` 逐任务实施，按复选框记录实际证据。本计划待整体审阅及执行模式选择；spec批准不构成上传或发布授权。
+> **执行状态（2026-10-27）：** 用户将另开会话并行实施 S3，原会话仅负责 S1；不再等待 S1/S2 整份结束才开始。使用独立分支及工作树，基于包含 S1 已提交基础的 `feat/bee-desktop-p0`（此次调整时为 `6dd2f4b`）；原工作树尚未提交的 S1-T5 不在该基础内。先实施独立任务，按下列依赖同步 S1/S2 后续提交；复选框只记录有验证证据的完成项。
 
 **目标：** 完整覆盖P1–P6，准备正式Bee安装包、签名更新、数据升级和八个原生目标组合的验收证据。
 
@@ -17,7 +17,7 @@
 - 自动检查每日最多一次，手动可重试；检查/下载不是安装批准。用户确认退出后才安装，可能中断任务；不承诺排空、任务数或任意断电点自动回滚。
 - 所有新迁移先保护原件；不覆盖CLI/官方登录、不在安装目录写账号状态。受控更新地址、公钥、渠道、版本由构建输入固定，前端不可改源或执行任意程序。
 - 需要真实发布仓库/HTTPS资产地址、Developer ID/公证、Windows Authenticode、更新签名密钥及目标桌面环境；密钥通过受控构建环境接入，不写仓库、不索取聊天粘贴。缺资源时继续实现和候选包准备，准确保留未完成发布项。
-- T1/T2可与S1账号实现、S2体验并行；T3需S1-T6和S2-T1的数据/退出契约，T4需S2设置页；T5用整合候选版本验收。共用配置/锁文件/CI注册点由S1共同约定的单一负责人整合。
+- T1/T2可与S1账号实现、S2体验并行；T3需S1-T6和S2-T1的数据/退出实现，T4需S2设置页；T5用整合候选版本验收。S1负责唯一运行／恢复／退出实现，S2负责普通偏好和设置页；本会话消费接口，不复制这些实现。共用配置、锁文件、生命周期和CI注册点在独立工作树开发后逐项合并，不覆盖其他会话代码。
 - 鉴权、签名、迁移和不可逆安装遵循`high-stakes-implementation-testing`。每任务先写下列失败用例，再实现、同命令复测至通过；修复错误不得掩盖失败环节。
 
 ## 文件职责和契约
@@ -47,11 +47,13 @@
 
 **输入／输出：** 沿用现有包生成和来源证据；补生产模式及受控构建变量，版本一致校验覆盖package.json、Cargo与Tauri发布输入。输出到被忽略的 `.cache/desktop-release/`：候选包/manifest/签名及哈希记录，不自动上传公开资产。
 
-- [ ] 写失败用例：正式包仍含Dev/demo；App/Bee版本/架构/提交不一致；PATH上的同名Bee；endpoint非HTTPS/缺公钥；Windows非当前用户安装配置；签名/公证证据缺失不能标正式；卸载不删除用户配置。
-- [ ] 运行 `node --test desktop/tests/release.test.mjs desktop/tests/tooling.test.mjs`，确认新增约束失败。
-- [ ] 实现prepare/verify脚本和发布模式接线；正式Bee名称/标题，标识和数据路径不变。扩展现有CI的构建/签名/公证步骤；敏感值只从CI受控secret读入，输出仅身份摘要和校验结果，开发构建仍可无生产密钥。
+- [x] 写失败用例：正式包仍含Dev/demo；App/Bee版本/架构/提交不一致；PATH上的同名Bee；endpoint非HTTPS/缺公钥；Windows非当前用户安装配置；签名/公证证据缺失不能标正式；卸载不删除用户配置。
+- [x] 运行 `node --test desktop/tests/release.test.mjs desktop/tests/tooling.test.mjs`，确认新增约束失败。
+- [x] 实现prepare/verify脚本和发布模式接线；正式Bee名称/标题，标识和数据路径不变。扩展现有CI的构建/签名/公证步骤；敏感值只从CI受控secret读入，输出仅身份摘要和校验结果，开发构建仍可无生产密钥。
 - [ ] 重跑测试及当前平台受控候选构建；运行 `node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release`检查包内Bee与来源。CI配置准备不等于远端签名已执行。
-- [ ] 提交本任务路径：`build(desktop): prepare matched production bundles and signing`。
+- [x] 提交本任务路径：`build(desktop): prepare matched production bundles and signing`（`1b0a8bd`）。
+
+T1 自动测试与审阅已通过，提交 `1b0a8bd`；本机候选包构建、包内真实签名侧车验证随后补充。正式签名／公证保持未完成。
 
 ## Task 2（S3-T2）：受控检查、下载及签名验证
 
@@ -59,11 +61,13 @@
 
 **输入／输出：** 插件2.14.0与上述快照；固定GitHub Release HTTPS静态清单和资产，支持三个包格式/所有目标架构。测试用临时签名密钥和隔离测试构建，只公开测试公钥。
 
-- [ ] 构造受控清单/资产：无更新、可更新、错版本/渠道/系统/架构、重定向到非受控源、签名错误、下载断开、大小/空间失败、重复请求/迟到进度、恶意发布说明；检查/下载不得停止Bee；跨重启每日节流、手动可重试。
-- [ ] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml updater`、`node --test desktop/tests/update-manifest.test.mjs`，确认失败。
-- [ ] 固定插件和锁文件，实施原生检查/下载/验签及有界进度；使用生产受控源和测试注入隔离。T1生成清单按实际updater schema验证，每个资产有真实更新签名，哈希不替代签名。不得在下载完成时调用安装。
-- [ ] 重跑上述测试及 `cargo check --locked --manifest-path desktop/src-tauri/Cargo.toml`；用临时密钥实际签名小型测试资产验证成功/篡改拒绝，不能只mock验签布尔值。
-- [ ] 提交本任务路径：`feat(desktop): check and verify controlled signed updates`。
+- [x] 构造受控清单/资产：无更新、可更新、错版本/渠道/系统/架构、重定向到非受控源、签名错误、下载断开、大小/空间失败、重复请求/迟到进度、恶意发布说明；检查/下载不得停止Bee；跨重启每日节流、手动可重试。
+- [x] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml updater`、`node --test desktop/tests/update-manifest.test.mjs`，确认失败。
+- [x] 固定插件和锁文件，实施原生检查/下载/验签及有界进度；使用生产受控源和测试注入隔离。T1生成清单按实际updater schema验证，每个资产有真实更新签名，哈希不替代签名。不得在下载完成时调用安装。
+- [x] 重跑上述测试及 `cargo check --locked --manifest-path desktop/src-tauri/Cargo.toml`；用临时密钥实际签名小型测试资产验证成功/篡改拒绝，不能只mock验签布尔值。
+- [x] 提交本任务路径：`feat(desktop): check and verify controlled signed updates`（`e58ed85`）。
+
+T2：14 项 updater 回归通过，含真实临时签名、篡改／错版本拒绝、停滞下载超时和 HTTP 错误限长；`cargo check --locked` 通过。五项审阅发现均修复并复审关闭；Linux AppImage 分支和 Windows 权限仍需原生执行。
 
 ## Task 3（S3-T3）：更新退出交接和数据升级恢复
 
@@ -71,11 +75,13 @@
 
 **输入／输出：** 消费已验签operation及S1退出receipt；S1账号v2、S2偏好v1的版本/迁移是唯一依据。持久更新标记不改变用户贡献意图和未决confirm身份。
 
-- [ ] 写真实子进程/文件用例：用户未确认无副作用；确认后冻结新动作；未决confirm原样保存；停止写失败、worker/reap/锁释放失败阻止安装；第二实例在交接至App退出前仍被挡住；外部Bee不被杀；取消保持旧App，已停后安装失败显示实际停止。
-- [ ] 写升级用例：旧提醒v1/新账号v2/普通偏好/配对保留，保护备份、迁移写失败原件不变；新版先核验包内Bee及数据后恢复；换号暂停/用户停止保持；不支持新格式的旧程序明确拒绝，不静默重置。原子边界故障注入覆盖写前、rename前后、退出前后。
-- [ ] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml update_install`、`go test ./agent -run 'TestDesktopUpgrade|TestDesktopAccountState|TestDesktopRuntimeRecovery' -count=1`，确认新用例失败。
-- [ ] 实现退出/安装交接与下次启动标记核对；下载和验签必须先完成。复用S1停止并实际reap管理子进程，App单实例锁直到真正退出才释放；保存失败继续回收但不安装。安装失败保留数据与可信旧包恢复指引，不许宣称自动回滚。
-- [ ] 重跑测试和Rust `sidecar` / `lifecycle` / `preferences` 回归；提交：`feat(desktop): coordinate safe update exit and data recovery`。
+- [x] 写真实子进程/文件用例：用户未确认无副作用；确认后冻结新动作；未决confirm原样保存；停止写失败、worker/reap/锁释放失败阻止安装；第二实例在交接至App退出前仍被挡住；外部Bee不被杀；取消保持旧App，已停后安装失败显示实际停止。
+- [x] 写升级用例：旧提醒v1/新账号v2/普通偏好/配对保留，保护备份、迁移写失败原件不变；新版先核验包内Bee及数据后恢复；换号暂停/用户停止保持；不支持新格式的旧程序明确拒绝，不静默重置。原子边界故障注入覆盖写前、rename前后、退出前后。
+- [x] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml update_install`、`go test ./agent -run 'TestDesktopUpgrade|TestDesktopAccountState|TestDesktopRuntimeRecovery' -count=1`，确认新用例失败。
+- [x] 实现退出/安装交接与下次启动标记核对；下载和验签必须先完成。复用S1停止并实际reap管理子进程，App单实例锁直到真正退出才释放；保存失败继续回收但不安装。安装失败保留数据与可信旧包恢复指引，不许宣称自动回滚。
+- [x] 重跑测试和Rust `sidecar` / `lifecycle` / `preferences` 回归；提交：`feat(desktop): coordinate safe update exit and data recovery`（`a6f419d`）。
+
+T3：Go 全量测试及 vet 通过，完整 Rust 单线程回归 105 通过、2 项签名包专用项 ignored；11 项更新安装／恢复用例均通过。三项 P1 已修复并复审通过。首轮并行负载下两项 fixture 启动超时原日志保留，未改 deadline；单线程完整复验通过。
 
 ## Task 4（S3-T4）：原生设置页更新操作与进度
 
@@ -83,22 +89,26 @@
 
 **输入／输出：** 消费UpdateSnapshot，后台检查在Rust调度，手动按钮可重试；S2版本展示扩展为更新状态。用户“退出并安装”是唯一安装确认。
 
-- [ ] 页面用例：后台检查失败仍可贡献；下载/验证分别显示；未知大小不编百分比；可重试而不重启应用；说明可能中断任务；无可信任务数不显示无任务；重复安装/旧回执拒绝；安装失败保持真实停止状态；发布说明按文本展示。
-- [ ] 运行 `node --test desktop/tests/updater.test.ts` 和 `npm --prefix desktop run test:device`，新native-updater用例被收集并先失败。
+- [x] 页面用例：后台检查失败仍可贡献；下载/验证分别显示；未知大小不编百分比；可重试而不重启应用；说明可能中断任务；无可信任务数不显示无任务；重复安装/旧回执拒绝；安装失败保持真实停止状态；发布说明按文本展示。
+- [x] 运行 `node --test desktop/tests/updater.test.ts` 和 `npm --prefix desktop run test:device`，新native-updater用例被收集并先失败。
 - [ ] 完成页面与固定命令接线，禁止前端任意更新源/文件路径/HTML；新版本未完成配置和运行核验前，不显示更新成功。
 - [ ] 重跑上述测试及 `npm --prefix desktop run typecheck`、`npm --prefix desktop run build`；原生受控更新源验证可观察进度和用户确认，再提交：`feat(desktop): expose verified update installation in settings`。
+
+T4 独立控件与严格客户端已通过审阅：Node 7 项、当前整合页面 Node 19 项／Chromium 41 项通过，typecheck／build 通过。独立控件已提交 `fede56d`，生产设置页接入等待 S2-T5 的已提交实现；不复制 S2 设置页，不将测试夹具视为生产联调完成。
 
 ## Task 5（S3-T5）：八组合安装升级验收及发布材料
 
 **依赖：** S1-T8、S2-T6、S3-T1–T4；若S1/S2仅有环境缺口，代码继续整合，但不得跳过缺口宣称正式发布。**文件：** 新建上述证据校验脚本、`desktop/tests/release-evidence.test.mjs`、两份release文档；修改 `desktop/scripts/ci-native-evidence.mjs`、`smoke-linux-appimage.mjs`、现有hosted工作流。
 
-- [ ] 给证据校验写失败用例：缺OS组合、错架构/源码/构建模式、未签名、旧包截图、容器冒充原生、任一主流程空缺即不通过；运行 `node --test desktop/tests/release-evidence.test.mjs`，先失败再实现。
-- [ ] 整合后运行 `go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:device`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:tooling`、`npm --prefix desktop run build`；复用相同源码已有证据，只对集成影响/失败补跑。
+- [x] 给证据校验写失败用例：缺OS组合、错架构/源码/构建模式、未签名、旧包截图、容器冒充原生、任一主流程空缺即不通过；运行 `node --test desktop/tests/release-evidence.test.mjs`，先失败再实现。
+- [x] 整合后运行 `go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:device`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:tooling`、`npm --prefix desktop run build`；复用相同源码已有证据，只对集成影响/失败补跑。
 - [ ] 生成同一候选版本的各目标包；mac拖入Applications、Windows普通用户NSIS/WebView2、Linux真实桌面AppImage逐项安装。两平台官方登录/来源权限、明确贡献、暂停恢复、换号暂停、断网重启，及诊断/代理/导出/通知/自启/窗口找回使用真实安装路径验证。
 - [ ] 对DMG对应mac更新资产、NSIS、AppImage分别用两个同源签名候选版本实测检查→下载→验签→确认退出→安装→新版本数据与运行核验；另实测错签名/错架构/断网/磁盘权限/重复安装/回收失败/旧程序拒绝新格式。只用用户授权测试账号/流量；临时签名结果标测试，不替代正式签名。
 - [ ] 八组合逐格记录OS版本/架构、源码、App/Bee/官方客户端版本、包哈希/签名、公证、操作/实际结果及缺口；缺机器或密钥列出具体资源和接入位置，继续完成能做的候选产物与文档。无证据保持未勾选，不删平台来过关。
 - [ ] 编写`docs/desktop/release.md`的安装/更新步骤、官方客户端前置、包校验、支持矩阵、已知限制；不宣传资金/移除/等待任务退出。执行 `node desktop/scripts/verify-release-evidence.mjs --evidence docs/desktop/release-validation.md`，所有P1–P6及八组合完整才可判正式发布就绪。
 - [ ] 执行 `verification-before-completion`、`consistency-check`、`post-verification-check`；提交文档和证据校验：`docs(desktop): record signed release readiness and native coverage`。准备完成的公开资产及说明供审阅，使用届时明确发布授权执行上传；没有该授权不发布。
+
+T5 证据校验与发布材料已提交 `927502c`，校验器 95 项通过。实际发布矩阵保持 pending；无正式签名／机器／账号证据的项目不勾选。
 
 | Spec验收 | 实施／证明 |
 | --- | --- |

@@ -16,6 +16,7 @@ test('uncertain account writes only refresh; confirmation still leaves platform 
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();
  await page.evaluate(()=>{(window as any).actionUnknown=true;(window as any).actionPending=true;});
  await card(page).getByRole('button',{name:'接入账号',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByText('操作结果未确认，请先重新核对。')).toBeVisible();
+ const reads=await page.evaluate(()=>(window as any).runtimeReadCount);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByText('操作结果未确认，请先重新核对。')).toBeVisible();
  await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeDisabled();await card(page).getByRole('button',{name:'刷新 Hive 状态',exact:true}).click();expect(await calls(page,'account_action')).toHaveLength(1);
 });
 test('official login warns about official account, can cancel, and successful login remains a candidate',async({page})=>{
@@ -65,4 +66,24 @@ test('English runtime and login confirmation support keyboard at minimum window 
  await expect(page.getByRole('region',{name:'Contribution runtime'})).toBeVisible();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.getByRole('button',{name:'AI accounts',exact:true}).click();const login=page.getByRole('region',{name:'OpenAI account',exact:true}).getByRole('button',{name:'Official authorization',exact:true});await login.focus();await page.keyboard.press('Enter');await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Tab');await expect(page.getByRole('dialog').getByRole('button',{name:'Cancel',exact:true})).toBeFocused();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);expect(await calls(page,'authorize_start')).toEqual([]);
+});
+
+
+test('runtime account revisions reach an open confirmation without changing its candidate',async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};a.revision++;w.accounts.openai=a;});
+ await card(page).getByRole('button',{name:'刷新 Hive 状态',exact:true}).click();await card(page).getByRole('button',{name:'确认换号',exact:true}).click();
+ const before=await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.revision+=2;w.accounts.openai=a;return {reads:w.runtimeReadCount,revision:a.revision,candidate:a.candidate.reference};});
+ await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before.reads);await page.getByRole('dialog').getByRole('button',{name:'确认更换',exact:true}).click();
+ const written=await calls(page,'account_action');expect(written).toHaveLength(1);expect(written[0].args.request.revision).toBe(before.revision);expect(written[0].args.request.candidate_ref).toBe(before.candidate);
+ await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();await expect(card(page).getByText('操作结果未确认，请先重新核对。')).toHaveCount(0);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+test('runtime observations preserve newer candidates and edited sources',async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await card(page).getByRole('button',{name:'检测已有登录',exact:true}).click();
+ const reads=await page.evaluate(()=>{const w=window as any;w.runtimeAccounts=structuredClone(w.accounts);w.runtimeAccounts.openai.revision=0;w.runtimeAccounts.openai.candidate.fingerprint='f'.repeat(64);return w.runtimeReadCount;});
+ await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();
+ await card(page).getByText('高级来源',{exact:true}).click();await card(page).getByLabel('自定义目录').fill('/tmp/edited-source');
+ const later=await page.evaluate(()=>{const w=window as any;delete w.runtimeAccounts;w.accounts.openai=structuredClone(w.accounts.openai);w.accounts.openai.revision++;return w.runtimeReadCount;});
+ await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(later);await expect(card(page).getByText('来源已编辑，请重新检测',{exact:true})).toBeVisible();await expect(card(page).getByLabel('自定义目录')).toHaveValue('/tmp/edited-source');await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeDisabled();expect(await calls(page,'account_action')).toEqual([]);
 });

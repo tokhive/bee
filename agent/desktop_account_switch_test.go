@@ -43,7 +43,7 @@ func desktopOtherCodexFixture(t *testing.T) []byte {
 }
 func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) {
 	for _, platform := range []string{"openai", "claude"} {
-		for _, scenario := range []string{"success", "lost_confirm", "confirm_unknown", "wrong_generation", "pending_changed", "pause_failed", "save_failed", "source_changed", "stop_before_connection", "committed_token_revision", "final_sync_save_failed", "restart_reconcile"} {
+		for _, scenario := range []string{"success", "lost_confirm", "confirm_unknown", "wrong_generation", "pending_changed", "pause_failed", "confirm_not_submitted", "save_failed", "source_changed", "stop_before_connection", "committed_token_revision", "final_sync_save_failed", "restart_reconcile"} {
 			if platform == "claude" && scenario == "source_changed" {
 				continue
 			}
@@ -61,6 +61,7 @@ func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) 
 				sourcePath := ""
 				saveBlocked := false
 				confirmationReadFailed := false
+				pauseReadFailed := false
 				pauseReady, pauseRelease := make(chan struct{}), make(chan struct{})
 				var pauseOnce sync.Once
 				defer pauseOnce.Do(func() { close(pauseRelease) })
@@ -100,6 +101,11 @@ func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) 
 							if !body.Paused {
 								resumes++
 							}
+							if scenario == "confirm_not_submitted" {
+								paused = true
+								w.WriteHeader(503)
+								return
+							}
 							if scenario == "pause_failed" {
 								w.WriteHeader(503)
 								return
@@ -112,6 +118,11 @@ func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) 
 								case <-q.Context().Done():
 								}
 							}
+						}
+						if scenario == "confirm_not_submitted" && paused && !pauseReadFailed {
+							pauseReadFailed = true
+							w.WriteHeader(503)
+							return
 						}
 						reasons := []string{"not_configured"}
 						if paused {
@@ -328,7 +339,7 @@ func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) 
 				if wantSuccess && (before != 1 || registrationCount < 2 || result.Selection.Fingerprint == nil || *result.Selection.Fingerprint != registeredFingerprint) {
 					t.Fatalf("switch incomplete: confirms=%d reports=%d selection=%+v", before, registrationCount, result.Selection)
 				}
-				if scenario == "pending_changed" || scenario == "pause_failed" {
+				if scenario == "pending_changed" || scenario == "pause_failed" || scenario == "confirm_not_submitted" {
 					if before != 0 {
 						t.Fatal("unverified candidate/pause still confirmed")
 					}
@@ -389,6 +400,25 @@ func TestDesktopAccountSwitchDurableConfirmationAndUnknownResults(t *testing.T) 
 				}
 				if after != before {
 					t.Fatalf("unknown confirmation repeated POST: before=%d after=%d", before, after)
+				}
+				if scenario == "confirm_not_submitted" {
+					if result.Operation.Error == nil || result.Operation.Error.Code != "confirmation_not_submitted" {
+						t.Fatalf("no structured explicit-continuation evidence: %+v", result.Operation)
+					}
+					_, err := a.Action(context.Background(), DesktopAccountActionRequest{Platform: platform, Revision: result.Revision, CandidateRef: *result.Candidate.Reference, Action: "confirm_change", Confirmed: true})
+					if err != nil {
+						t.Fatal(err)
+					}
+					result = waitSelection(t, a, platform)
+					if result.Operation.State != "succeeded" {
+						t.Fatalf("explicit continuation failed: %+v", result.Operation)
+					}
+					mu.Lock()
+					count := confirms
+					mu.Unlock()
+					if count != 1 {
+						t.Fatalf("explicit continuation confirms=%d", count)
+					}
 				}
 				runtime, _ := r.Snapshot(context.Background())
 				if runtime.Local != "stopped" {

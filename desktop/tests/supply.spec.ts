@@ -1,3 +1,5 @@
+import {readFileSync} from 'node:fs';
+const passiveRuntime={...JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,local:'stopped',connection:'disconnected',operation:null,stop_receipt:null};
 import { test, expect, type Page } from '@playwright/test';
 async function fixture(page:Page, options:{delay?:number;age?:number;ready?:boolean;unbound?:boolean}={}) {
  await page.addInitScript((options)=>{
@@ -5,11 +7,13 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
   const w=window as unknown as Runtime;w.isTauri=true;w.calls=[];w.active=0;w.maxActive=0;w.delay=options.delay??0;w.fail='';w.age=options.age??0;w.paused={openai:false,claude:true};
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();let eventHandler=0;
   const status=(instance='fixture')=>({state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance}});
-  w.emit=instance=>callbacks.get(eventHandler)?.({payload:status(instance)});
+  let currentInstance='fixture';
+  w.emit=instance=>{currentInstance=instance;callbacks.get(eventHandler)?.({payload:status(instance)});};
   w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
   w.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:{platform?:string;paused?:boolean;handler?:number})=>{
    if(command==='plugin:event|listen'){eventHandler=args!.handler!;return 1;}
    if(command==='plugin:event|unlisten')return;
+   if(command==='runtime_snapshot')return {instance:currentInstance,result:{runtime:{...options.passiveRuntime,observed_at:new Date().toISOString()}}};
    if(command==='bridge_status')return status();
    if(command==='device_status')return {result:{device:options.unbound?{state:'unbound'}:{state:'bound',hive:'https://hive.example',name:'Fixture Mac',identity:{id:'device-1',name:'Fixture Mac',owner_id:'owner-1',owner_email:'fixture@example.test'}}}};
    if(command.startsWith('supply_')){
@@ -25,7 +29,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
    }
    throw new Error('unexpected fixture IPC '+command);
   }};
- },options);
+ },{...options,passiveRuntime});
 }
 const card=(page:Page,platform:string)=>page.getByRole('region',{name:platform,exact:true});
 test('two verified platform cards show real reasons and explicit pause/resume semantics at 860x600',async({page})=>{

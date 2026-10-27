@@ -133,7 +133,7 @@ async fn account_methods_use_fixed_params_and_survive_business_errors() {
 #[tokio::test]
 async fn account_request_uses_its_15_second_boundary() {
     let mut spec = fixture("slow-account");
-    spec.timeout = Duration::from_millis(100);
+    spec.timeout = Duration::from_millis(400); // Below the 800ms account reply, with Node startup headroom.
     let bridge = Bridge::start(spec);
     wait(&bridge, BridgePhase::Ready).await;
     let reply = bridge
@@ -159,7 +159,7 @@ fn node() -> (PathBuf, String) {
     .clone()
 }
 
-fn fixture(mode: &str) -> LaunchSpec {
+pub(crate) fn fixture(mode: &str) -> LaunchSpec {
     let (program, hash) = node();
     let os = match std::env::consts::OS {
         "macos" => "darwin",
@@ -468,7 +468,7 @@ async fn signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup() 
 
 #[tokio::test]
 async fn owned_process_is_reaped_before_singleton_release() {
-    let bridge = Bridge::start(fixture("stubborn"));
+    let bridge = Bridge::start(fixture("owned-exit"));
     wait(&bridge, BridgePhase::Ready).await;
     let state_at_release = std::cell::RefCell::new(BridgePhase::Starting);
     crate::lifecycle::shutdown_owned(&bridge, || {

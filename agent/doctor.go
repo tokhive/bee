@@ -299,15 +299,27 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 		report.problem("supply", platform, "fail", hiveProblem(err))
 		return
 	}
-	if supply.Ready {
+	report.Checks = append(report.Checks, doctorSupplyChecks(platform, supply, explained)...)
+}
+
+// doctorSupplyChecks is shared by CLI doctor and desktop diagnostics. It only
+// interprets a supplied observation; it never reads credentials or changes state.
+func doctorSupplyChecks(platform string, supply beewire.PlatformSupply, explained string) []check {
+	var report doctorReport
+	if supply.Ready && !supply.Paused && len(supply.Reasons) == 0 {
 		report.pass("supply", platform, "taking new work")
-		return
+		return report.Checks
+	}
+	if supply.Ready || len(supply.Reasons) == 0 {
+		report.add(check{Name: "supply", Platform: platform, Status: "fail", Code: "supply_result_unconfirmed", Detail: fmt.Sprintf("supply observation is unconfirmed: ready=%t paused=%t reasons_count=%d", supply.Ready, supply.Paused, len(supply.Reasons))})
+		return report.Checks
 	}
 	for _, reason := range supply.Reasons {
 		if reason != explained {
 			report.reason("supply", platform, reason)
 		}
 	}
+	return report.Checks
 }
 
 func shortFingerprint(fingerprint string) string {

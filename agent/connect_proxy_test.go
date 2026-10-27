@@ -69,8 +69,12 @@ func TestConnectProxyCarriesOfficialRequestsWithoutHTTPSProxy(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if cfg.Codex.transport != nil || cfg.Claude.transport != nil || cfg.Capabilities.transport != nil {
-			t.Fatal("HTTPS_PROXY overridden by connect_proxy")
+		req, _ := http.NewRequest("GET", "https://chatgpt.com/", nil)
+		for _, transport := range []http.RoundTripper{cfg.Codex.transport, cfg.Claude.transport, cfg.Capabilities.transport} {
+			proxy, err := transport.(*http.Transport).Proxy(req)
+			if err != nil || proxy == nil || proxy.Host != "127.0.0.1:9" {
+				t.Fatal("HTTPS_PROXY overridden by connect_proxy")
+			}
 		}
 	})
 

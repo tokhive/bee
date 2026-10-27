@@ -28,6 +28,7 @@ type request struct {
 	Action      bee.DesktopAccountActionRequest
 	Start       bee.DesktopStartRequest
 	Stop        bee.DesktopStopRequest
+	NetworkTest bee.DesktopNetworkTestRequest
 	Network     bee.DesktopNetworkConfig
 	Authorize   bee.DesktopAuthorizeRequest
 	OperationID string
@@ -143,6 +144,12 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if slices.Contains(diagnosticMethods, req.Method) {
+		return decodeDiagnosticsParams(req, fields["params"])
+	}
+	if slices.Contains(networkMethods, req.Method) {
+		return decodeNetworkParams(req, fields["params"])
 	}
 	if slices.Contains(authorizeMethods, req.Method) {
 		return decodeAuthorizeParams(req, fields["params"])

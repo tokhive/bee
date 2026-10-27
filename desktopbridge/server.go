@@ -50,6 +50,14 @@ func RunWithRuntime(ctx context.Context, in io.Reader, out io.Writer, diagnostic
 	return RunWithAuthorization(ctx, in, out, diagnostics, version, devices, accounts, runner, nil)
 }
 func RunWithAuthorization(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime, authorizer Authorizer) (runErr error) {
+	return RunWithExperience(ctx, in, out, diagnostics, version, devices, accounts, runner, authorizer, nil, nil)
+}
+
+// RunWithExperience opts into diagnostics and read-only network capabilities.
+func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime, authorizer Authorizer, diagnosticService Diagnostics, network NetworkTester) (runErr error) {
+	if diagnosticService != nil && runner == nil {
+		return errors.New("diagnostics bridge requires the complete runtime capability group")
+	}
 	if authorizer != nil && runner == nil {
 		return errors.New("authorization bridge requires the complete runtime capability group")
 	}
@@ -177,6 +185,12 @@ func RunWithAuthorization(ctx context.Context, in io.Reader, out io.Writer, diag
 				if authorizer != nil {
 					capabilities = append(capabilities, authorizeMethods...)
 				}
+				if diagnosticService != nil {
+					capabilities = append(capabilities, diagnosticMethods...)
+				}
+				if network != nil {
+					capabilities = append(capabilities, networkMethods...)
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -187,6 +201,24 @@ func RunWithAuthorization(ctx context.Context, in io.Reader, out io.Writer, diag
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case diagnosticService != nil && slices.Contains(diagnosticMethods, req.Method):
+				value, err := diagnosticsResult(ctx, diagnosticService, req, instance)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("DIAGNOSTICS_OPERATION_FAILED", "%s", err)}
+				} else {
+					answer.Result = value
+				}
+			case network != nil && slices.Contains(networkMethods, req.Method):
+				value, err := networkResult(ctx, network, req)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("NETWORK_OPERATION_FAILED", "%s", err)}
+				} else {
+					answer.Result = value
+				}
 			case authorizer != nil && slices.Contains(authorizeMethods, req.Method):
 				value, err := authorizeResult(ctx, authorizer, req)
 				if err != nil {

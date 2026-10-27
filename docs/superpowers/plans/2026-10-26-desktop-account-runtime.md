@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5 已通过自动验证，继续 S1-T6。
+> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5／T6 已通过自动验证，继续 S1-T7。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -130,11 +130,13 @@ T5 验证：OpenAI／Claude 真实本机 HTTP／WS 调用账本覆盖确认丢�
 
 **输入／输出：** 实现 `Restore` 和 Rust `prepare_owned_exit`；S2复用停止/网络重启，S3复用完整退出receipt。用户停止保存不运行；正常退出保留此前意图但结束活动会话；异常上次退出必须明确恢复。
 
-- [ ] 写真实子进程/配置重开测试：首次不开启；正常重开核验后恢复；主动暂停/换号暂停/用户停止保持；损坏、401/403、撤销阻断；会话active/停止保存失败不自动重启；旧instance回执丢弃；外部Bee存活；本App子进程超时只能终止自己且必须wait/reap。
-- [ ] 运行 `go test ./agent -run 'TestDesktopRuntimeRecovery' -count=1` 和 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml runtime`，确认失败。
-- [ ] 接入启动恢复、冻结写动作和退出协议；等待本机worker不是等待Hive任务。保存失败仍回收但receipt如实；退出前不释放App单实例锁；子进程意外退出清除旧成功状态，禁止自动崩溃重启循环。
-- [ ] 重跑上述测试及 Rust `sidecar` / `lifecycle` 过滤测试；新增同一配置锁在进程退出后可被新进程取得的断言。
-- [ ] 提交本任务路径：`feat(desktop): preserve runtime intent and verify owned shutdown`。
+- [x] 写真实子进程/配置重开测试：首次不开启；正常重开核验后恢复；主动暂停/换号暂停/用户停止保持；损坏、401/403、撤销阻断；会话active/停止保存失败不自动重启；旧instance回执丢弃；外部Bee存活；本App子进程超时只能终止自己且必须wait/reap。
+- [x] 运行 `go test ./agent -run 'TestDesktopRuntimeRecovery' -count=1` 和 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml runtime`，确认失败。
+- [x] 接入启动恢复、冻结写动作和退出协议；等待本机worker不是等待Hive任务。保存失败仍回收但receipt如实；退出前不释放App单实例锁；子进程意外退出清除旧成功状态，禁止自动崩溃重启循环。
+- [x] 重跑上述测试及 Rust `sidecar` / `lifecycle` 过滤测试；新增同一配置锁在进程退出后可被新进程取得的断言。
+- [x] 提交本任务路径：`feat(desktop): preserve runtime intent and verify owned shutdown`。
+
+T6 验证：Go Runtime／AccountSwitch／Supply 与桥、命令子进程 race 测试及 vet 通过；Rust runtime 8项、sidecar 23项和 lifecycle 5项通过，签名包专用项留 T8 原生构建后执行。真实子进程证明停止仍持有配置锁、退出后第二进程可取得；未配对停止、调用方取消、排队冻结、错误operation回执及外部进程存活均验证。独立审阅复现的停止意图被覆盖、历史异常会话被洗白、恢复预留前后保存失败均已有回归；独立 runtime-session 标记保护账号文件故障。首次一项Node启动100ms测试抖动，增加至400ms（仍短于800ms业务响应）后通过。
 
 ## Task 7（S1-T7）：把真实闭环接到原生账号及概览
 

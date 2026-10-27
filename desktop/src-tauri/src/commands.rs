@@ -3,6 +3,21 @@ use crate::{
     sidecar::{Bridge, BridgeReply, BridgeStatus},
 };
 
+#[tauri::command]
+pub fn preferences_read(
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+) -> crate::preferences::PreferencesSnapshot {
+    store.read()
+}
+
+#[tauri::command]
+pub fn preferences_save(
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    request: crate::preferences::SavePreferencesRequest,
+) -> crate::preferences::PreferencesSnapshot {
+    store.save(request.expected_revision, request.preferences)
+}
+
 fn check_method(method: &str) -> Result<(), BridgeError> {
     if method == "ping" {
         return Ok(());

@@ -4,6 +4,7 @@ mod commands;
 mod diagnostics;
 mod lifecycle;
 mod navigation;
+mod preferences;
 pub mod protocol;
 pub mod runtime_protocol;
 pub mod sidecar;
@@ -34,6 +35,8 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bridge_request,
             commands::bridge_status,
+            commands::preferences_read,
+            commands::preferences_save,
             commands::device_status,
             commands::device_begin,
             commands::device_open,
@@ -52,6 +55,7 @@ pub fn run() {
             lifecycle::login_return_received
         ])
         .setup(|app| {
+            app.manage(preferences::PreferencesStore::new(app.path().config_dir()?.join("tokhive/desktop-preferences.json")));
             let config = app.config().app.windows.first().ok_or_else(|| {
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidData,

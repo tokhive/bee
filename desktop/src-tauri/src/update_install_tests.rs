@@ -1,0 +1,453 @@
+use crate::{update_install::*, updater::*};
+use std::sync::{Arc, Mutex};
+
+fn ready() -> (tempfile::TempDir, UpdateManager, UpdateInstallRequest) {
+    let dir = tempfile::tempdir().unwrap();
+    let manager = UpdateManager::new(
+        "0.1.0",
+        UpdateStore::new(dir.path().join("desktop-update-state.json")),
+    )
+    .unwrap();
+    let mut inner = manager.lock().unwrap();
+    inner.snapshot.state = UpdateState::Verified;
+    inner.snapshot.operation_id = Some("signed-operation".into());
+    inner.snapshot.target_version = Some("0.2.0".into());
+    inner.snapshot.revision = 42;
+    inner.asset = Some(AssetIdentity {
+        channel: "stable".into(),
+        target: "aarch64-apple-darwin".into(),
+        version: "0.2.0".into(),
+        sha256: "a".repeat(64),
+        size: 3,
+    });
+    inner.bytes = Some(Arc::new(b"abc".to_vec()));
+    drop(inner);
+    (
+        dir,
+        manager,
+        UpdateInstallRequest {
+            operation_id: "signed-operation".into(),
+            expected_revision: 42,
+            confirmed: true,
+        },
+    )
+}
+fn recovery() -> RecoveryEvidence {
+    RecoveryEvidence {
+        package_source_verified: true,
+        protocol_verified: true,
+        account_state_verified: true,
+        preferences_verified: true,
+        pending_actions_verified: true,
+        runtime_intent_restored: true,
+    }
+}
+fn receipt() -> UpdateExitReceipt {
+    UpdateExitReceipt {
+        intent_saved: true,
+        session_clean: true,
+        child_reaped: true,
+        config_lock_released: true,
+    }
+}
+
+#[test]
+fn update_install_requires_confirmation_exact_revision_and_operation_before_any_write() {
+    for bad in [
+        UpdateInstallRequest {
+            confirmed: false,
+            ..ready().2
+        },
+        UpdateInstallRequest {
+            expected_revision: 41,
+            ..ready().2
+        },
+        UpdateInstallRequest {
+            operation_id: "old-operation".into(),
+            ..ready().2
+        },
+    ] {
+        let (_d, manager, _) = ready();
+        assert!(prepare_install(&manager, &bad).is_err());
+        assert!(!manager.store.path().exists());
+        assert_eq!(manager.snapshot().unwrap().state, UpdateState::Verified);
+    }
+}
+
+#[tokio::test]
+async fn update_install_every_exit_receipt_failure_blocks_installer_and_retains_marker() {
+    for field in 0..4 {
+        let (_d, manager, request) = ready();
+        let ticket = prepare_install(&manager, &request).unwrap();
+        let mut r = receipt();
+        match field {
+            0 => r.intent_saved = false,
+            1 => r.session_clean = false,
+            2 => r.child_reaped = false,
+            _ => r.config_lock_released = false,
+        };
+        let called = Arc::new(Mutex::new(false));
+        let observed = called.clone();
+        assert!(coordinate_install(
+            &manager,
+            ticket,
+            || async { Ok(r) },
+            move || {
+                *observed.lock().unwrap() = true;
+                Ok(())
+            }
+        )
+        .await
+        .is_err());
+        assert!(!*called.lock().unwrap());
+        assert_eq!(manager.snapshot().unwrap().state, UpdateState::Failed);
+        assert!(manager.lock().unwrap().persistent.pending_update.is_some());
+    }
+}
+
+#[tokio::test]
+async fn update_install_persists_before_exit_and_does_not_release_app_singleton() {
+    let (_d, manager, request) = ready();
+    let ticket = prepare_install(&manager, &request).unwrap();
+    assert!(prepare_install(&manager, &request).is_err());
+    let order = Arc::new(Mutex::new(vec![]));
+    let before = order.clone();
+    let after = order.clone();
+    let observed = manager.clone();
+    let installing = manager.clone();
+    coordinate_install(
+        &manager,
+        ticket,
+        move || async move {
+            assert!(observed.store.path().exists());
+            assert_eq!(observed.snapshot().unwrap().state, UpdateState::Stopping);
+            before.lock().unwrap().push("owned-exit");
+            Ok(receipt())
+        },
+        move || {
+            assert_eq!(
+                installing.snapshot().unwrap().state,
+                UpdateState::Installing
+            );
+            assert_eq!(
+                installing
+                    .lock()
+                    .unwrap()
+                    .persistent
+                    .pending_update
+                    .as_ref()
+                    .unwrap()
+                    .stage,
+                "installing"
+            );
+            after.lock().unwrap().push("native-installer");
+            Ok(())
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        *order.lock().unwrap(),
+        vec!["owned-exit", "native-installer"]
+    );
+    assert_eq!(manager.snapshot().unwrap().state, UpdateState::Installing);
+    // The coordinator has no singleton release capability. Actual App exit owns it.
+}
+
+#[tokio::test]
+async fn update_install_real_owned_exit_reaps_before_installer_and_blocks_on_failed_save() {
+    use crate::{
+        runtime::OwnedExitReason,
+        sidecar::{Bridge, BridgePhase},
+    };
+    for mode in [
+        "owned-exit",
+        "owned-exit-save-failure",
+        "owned-exit-wrong-operation",
+    ] {
+        let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
+        tokio::time::timeout(std::time::Duration::from_secs(5), async {
+            while bridge.status().state == BridgePhase::Starting {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        let (_dir, manager, request) = ready();
+        let ticket = prepare_install(&manager, &request).unwrap();
+        let called = Arc::new(Mutex::new(false));
+        let observed = called.clone();
+        let stopped = bridge.clone();
+        let result = coordinate_install(
+            &manager,
+            ticket,
+            || async {
+                bridge
+                    .prepare_owned_exit(OwnedExitReason::Update)
+                    .await
+                    .map(|r| UpdateExitReceipt {
+                        intent_saved: r.intent_saved,
+                        session_clean: r.session_clean,
+                        child_reaped: r.child_reaped,
+                        config_lock_released: r.config_lock_released,
+                    })
+            },
+            move || {
+                assert_ne!(stopped.status().state, BridgePhase::Ready);
+                *observed.lock().unwrap() = true;
+                Ok(())
+            },
+        )
+        .await;
+        assert_eq!(result.is_ok(), mode == "owned-exit");
+        assert_eq!(*called.lock().unwrap(), mode == "owned-exit");
+        assert_ne!(bridge.status().state, BridgePhase::Ready);
+        assert!(bridge.ping().await.is_err());
+    }
+}
+
+#[tokio::test]
+async fn update_install_startup_reads_real_preferences_and_waits_for_s1_success_before_clearing_marker(
+) {
+    use crate::{
+        preferences::PreferencesStore,
+        sidecar::{Bridge, BridgePhase},
+    };
+    for mode in [
+        "owned-exit",
+        "owned-exit-restore-failure",
+        "owned-exit-restore-wrong-operation",
+    ] {
+        let (dir, manager, request) = ready();
+        prepare_install(&manager, &request).unwrap();
+        let manager = UpdateManager::new("0.2.0", manager.store.clone()).unwrap();
+        let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
+        hold_startup(&bridge);
+        let preferences = PreferencesStore::new(dir.path().join("preferences.json")).read();
+        let result = verify_startup(&manager, &bridge, preferences, "stable").await;
+        assert_eq!(result.is_ok(), mode == "owned-exit");
+        assert_eq!(manager.has_pending().unwrap(), mode != "owned-exit");
+        if result.is_ok() {
+            assert!(bridge.ping().await.is_ok());
+        } else {
+            assert!(
+                bridge.ping().await.is_ok(),
+                "management readback must remain usable after a safely stopped restore failure"
+            );
+            assert_eq!(
+                bridge.runtime_snapshot().await.unwrap().result["runtime"]["local"],
+                "stopped"
+            );
+        }
+        bridge.stop().await.unwrap();
+        assert_ne!(bridge.status().state, BridgePhase::Ready);
+    }
+}
+
+#[tokio::test]
+async fn update_install_startup_preferences_error_or_old_package_prevents_restore_and_keeps_originals(
+) {
+    use crate::{preferences::PreferencesStore, sidecar::Bridge};
+    for bad_preferences in [true, false] {
+        let (dir, manager, request) = ready();
+        prepare_install(&manager, &request).unwrap();
+        let manager = UpdateManager::new(
+            if bad_preferences { "0.2.0" } else { "0.0.1" },
+            manager.store.clone(),
+        )
+        .unwrap();
+        let path = dir.path().join("preferences.json");
+        if bad_preferences {
+            let file = std::fs::File::create(&path).unwrap();
+            #[cfg(unix)]
+            {
+                use std::os::unix::fs::PermissionsExt;
+                file.set_permissions(std::fs::Permissions::from_mode(0o600))
+                    .unwrap();
+            }
+            std::fs::write(&path, b"{\"version\":99}").unwrap();
+        }
+        let bridge = Bridge::start(crate::sidecar::tests::fixture("owned-exit"));
+        hold_startup(&bridge);
+        let cause = verify_startup(
+            &manager,
+            &bridge,
+            PreferencesStore::new(path.clone()).read(),
+            "stable",
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(
+            cause.code,
+            if bad_preferences {
+                "UPDATE_PREFERENCES_UNVERIFIED"
+            } else {
+                "UPDATE_RECOVERY_IDENTITY_MISMATCH"
+            }
+        );
+        assert!(!bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst));
+        assert!(manager.has_pending().unwrap());
+        if bad_preferences {
+            assert_eq!(std::fs::read(&path).unwrap(), b"{\"version\":99}");
+        }
+        assert_eq!(
+            bridge.ping().await.unwrap_err().code,
+            "STARTUP_VERIFICATION_PENDING"
+        );
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn update_install_recovery_marker_write_failure_stops_live_runtime_before_reporting_failure()
+{
+    use crate::{preferences::PreferencesStore, sidecar::Bridge};
+    let (dir, manager, request) = ready();
+    prepare_install(&manager, &request).unwrap();
+    let manager = UpdateManager::new("0.2.0", manager.store.clone()).unwrap();
+    // Fault after the protected state was loaded: the clear must reject this
+    // changed original, after the child's real restore reply reports running.
+    std::fs::write(manager.store.path(), b"{broken").unwrap();
+    let bridge = Bridge::start(crate::sidecar::tests::fixture("owned-exit"));
+    hold_startup(&bridge);
+    assert!(verify_startup(
+        &manager,
+        &bridge,
+        PreferencesStore::new(dir.path().join("prefs.json")).read(),
+        "stable"
+    )
+    .await
+    .is_err());
+    let snapshot = bridge
+        .exit_request("runtime_snapshot", serde_json::json!({}))
+        .await
+        .unwrap();
+    assert_eq!(
+        snapshot.result["runtime"]["local"], "stopped",
+        "failed marker clear left restored contribution running"
+    );
+    assert!(manager.has_pending().unwrap());
+    assert_eq!(std::fs::read(manager.store.path()).unwrap(), b"{broken");
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn update_install_trusted_previous_version_can_recover_and_retry_without_claiming_update_success(
+) {
+    use crate::{preferences::PreferencesStore, sidecar::Bridge};
+    let (dir, manager, request) = ready();
+    prepare_install(&manager, &request).unwrap();
+    let manager = UpdateManager::new("0.1.0", manager.store.clone()).unwrap();
+    let bridge = Bridge::start(crate::sidecar::tests::fixture("owned-exit"));
+    hold_startup(&bridge);
+    verify_startup(
+        &manager,
+        &bridge,
+        PreferencesStore::new(dir.path().join("prefs.json")).read(),
+        "stable",
+    )
+    .await
+    .unwrap();
+    assert!(!manager.has_pending().unwrap());
+    let snapshot = manager.snapshot().unwrap();
+    assert_eq!(snapshot.state, UpdateState::Failed);
+    assert_eq!(
+        snapshot.error.unwrap().code,
+        "UPDATE_PREVIOUS_NOT_INSTALLED"
+    );
+    assert!(manager.begin_check(true, 100).unwrap().is_some());
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn update_install_failed_recovery_with_unproven_stop_reaps_only_owned_child_and_keeps_gate() {
+    use crate::{
+        preferences::PreferencesStore,
+        sidecar::{Bridge, BridgePhase},
+    };
+    let (dir, manager, request) = ready();
+    prepare_install(&manager, &request).unwrap();
+    let manager = UpdateManager::new("0.2.0", manager.store.clone()).unwrap();
+    let bridge = Bridge::start(crate::sidecar::tests::fixture(
+        "owned-exit-restore-failure-stop-failure",
+    ));
+    hold_startup(&bridge);
+    let cause = verify_startup(
+        &manager,
+        &bridge,
+        PreferencesStore::new(dir.path().join("prefs.json")).read(),
+        "stable",
+    )
+    .await
+    .unwrap_err();
+    assert!(cause.message.contains("fixture account schema rejected"));
+    assert!(cause.message.contains("owned child cleanup=reaped"));
+    assert!(cause.message.contains("startup remains blocked"));
+    assert_ne!(bridge.status().state, BridgePhase::Ready);
+    assert_eq!(
+        bridge.ping().await.unwrap_err().code,
+        "STARTUP_VERIFICATION_PENDING"
+    );
+    assert!(manager.has_pending().unwrap());
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn update_install_disk_failure_prevents_exit_and_actual_installer_failure_retains_stopped_state(
+) {
+    let (dir, manager, request) = ready();
+    std::fs::create_dir(manager.store.path()).unwrap();
+    assert!(prepare_install(&manager, &request).is_err());
+    assert_eq!(manager.snapshot().unwrap().state, UpdateState::Verified);
+    drop(dir);
+    let (_d, manager, request) = ready();
+    let ticket = prepare_install(&manager, &request).unwrap();
+    let failure = error(
+        "INSTALLER_DENIED",
+        "native installer permission denied; code=13",
+    );
+    assert!(coordinate_install(
+        &manager,
+        ticket,
+        || async { Ok(receipt()) },
+        || Err(failure.clone())
+    )
+    .await
+    .is_err());
+    let snapshot = manager.snapshot().unwrap();
+    assert_eq!(snapshot.state, UpdateState::Failed);
+    assert!(snapshot.error.unwrap().message.contains("stopped"));
+    assert_eq!(
+        manager
+            .lock()
+            .unwrap()
+            .persistent
+            .pending_update
+            .as_ref()
+            .unwrap()
+            .stage,
+        "stopped"
+    );
+}
+
+#[test]
+fn update_install_recovery_requires_new_package_and_all_dependency_proofs_before_clearing() {
+    let (_d, manager, request) = ready();
+    prepare_install(&manager, &request).unwrap();
+    assert!(complete_recovery(&manager, "0.1.0", &recovery()).is_err());
+    for field in 0..6 {
+        let mut proof = recovery();
+        match field {
+            0 => proof.package_source_verified = false,
+            1 => proof.protocol_verified = false,
+            2 => proof.account_state_verified = false,
+            3 => proof.preferences_verified = false,
+            4 => proof.pending_actions_verified = false,
+            _ => proof.runtime_intent_restored = false,
+        };
+        assert!(complete_recovery(&manager, "0.2.0", &proof).is_err());
+        assert!(manager.lock().unwrap().persistent.pending_update.is_some());
+    }
+    complete_recovery(&manager, "0.2.0", &recovery()).unwrap();
+    assert!(manager.lock().unwrap().persistent.pending_update.is_none());
+}

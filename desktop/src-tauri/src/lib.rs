@@ -11,6 +11,9 @@ pub mod protocol;
 pub mod runtime;
 pub mod runtime_protocol;
 pub mod sidecar;
+pub mod update_install;
+#[cfg(test)]
+mod update_install_tests;
 pub mod updater;
 #[cfg(test)]
 mod updater_tests;
@@ -62,6 +65,7 @@ pub fn run() {
             updater::update_snapshot,
             updater::update_check,
             updater::update_download,
+            update_install::update_install,
             lifecycle::login_return_received
         ])
         .setup(|app| {
@@ -102,8 +106,11 @@ pub fn run() {
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
             let updates=updater::setup(app.handle()).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
-            updater::start_background(app.handle(),&updates);
+            let preferences=app.state::<preferences::PreferencesStore>().read();
             let bridge = sidecar::Bridge::bundled();
+            if updates.has_pending().map_err(|e|std::io::Error::other(e.message))? || preferences.error.is_some() {
+                update_install::hold_startup(&bridge);
+            }
             let mut statuses = bridge.subscribe();
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
@@ -115,10 +122,13 @@ pub fn run() {
                 }
             });
             let restoring = bridge.clone();
+            let startup_updates=updates.clone();
+            let startup_app=app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(cause) = restoring.restore_when_ready().await {
+                if let Err(cause) = update_install::verify_startup(&startup_updates,&restoring,preferences,option_env!("BEE_RELEASE_CHANNEL").unwrap_or("")).await {
                     eprintln!("Bee startup restore failed: {}: {}", cause.code, cause.message);
                 }
+                updater::start_background(&startup_app,&startup_updates);
             });
             app.manage(bridge);
             Ok(())

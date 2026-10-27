@@ -10,6 +10,7 @@ if (mode === 'diagnostic-exit') {
 }
 let exitSnapshot;
 let restores=0;
+let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
@@ -25,11 +26,22 @@ input.on('line', line => {
       result={operation};
       exitSnapshot={...exitSnapshot,local:'stopped',connection:'disconnected',revision:exitSnapshot.revision+1,
         operation:{...operation,id:(mode==='owned-exit-wrong-operation'?'c':'b').repeat(48),state:'succeeded',revision:exitSnapshot.revision+1},
-        stop_receipt:{workers_stopped:true,intent_saved:mode!=='owned-exit-save-failure',session_clean:mode!=='owned-exit-save-failure'}};
+        stop_receipt:{workers_stopped:true,intent_saved:!['owned-exit-save-failure','owned-exit-restore-failure-stop-failure'].includes(mode),session_clean:!['owned-exit-save-failure','owned-exit-restore-failure-stop-failure'].includes(mode)}};
     } else if(request.method==='runtime_restore') {
       if(++restores>1) throw new Error('restore repeated');
-      result={operation:{id:'d'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:exitSnapshot.revision,error:null}};
-    } else result={runtime:exitSnapshot};
+      const operation={id:'d'.repeat(48),kind:'start',platform:null,state:'pending',revision:++exitSnapshot.revision,error:null};
+      result={operation};
+      exitSnapshot={...exitSnapshot,run_id:'f'.repeat(32),local:mode==='owned-exit-restore-idle'?'starting':'running',connection:'connected',revision:exitSnapshot.revision+1,operation:{...operation,
+        id:(mode==='owned-exit-restore-wrong-operation'?'e':'d').repeat(48),
+        state:mode.includes('restore-failure')?'failed':mode==='owned-exit-restore-idle'?'running':'succeeded',revision:exitSnapshot.revision+1,
+        error:mode.includes('restore-failure')?{platform:'openai',code:'upgrade_data_invalid',check:'recovery_data',message:'fixture account schema rejected',evidence:{}}:null}};
+    } else {
+      if(mode==='owned-exit-restore-idle' && restores && ++restoreSnapshots>=2) {
+        exitSnapshot={...exitSnapshot,run_id:null,local:'stopped',connection:'disconnected',revision:exitSnapshot.revision+1,
+          operation:{...exitSnapshot.operation,state:'succeeded',revision:exitSnapshot.revision+1}};
+      }
+      result={runtime:exitSnapshot};
+    }
     process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'fixture-instance',result})+'\n');return;
   }
   if(mode==='account-timeout'  && request.method!=='hello')return;

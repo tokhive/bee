@@ -31,6 +31,7 @@ import (
 
 type egressConfig struct {
 	desktop                 *DesktopRuntime
+	desktopAction           func(context.Context, localState, string, io.Writer) (<-chan error, func())
 	synchronized            *desktopSynchronizationReceipt
 	ConnectProxy            string            `json:"connect_proxy,omitempty"`
 	Targets                 []string          `json:"targets"`
@@ -257,7 +258,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil
+	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

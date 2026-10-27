@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-26）：** 用户已授权三份计划逐个 spec 执行，顺序为 S1→S2→S3；本会话使用 `executing-plans`。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境，继续执行 S1-T5。
+> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5 已通过自动验证，继续 S1-T6。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -19,9 +19,11 @@
 - 风险重点是暂停／接入／confirm 的外部副作用、旧 worker 提交、配置锁与持久化失败。测试使用真实 HTTP/WS 替身和进程句柄，记录调用与磁盘状态；不能只把快照赋成成功。
 - 下列新类型、文件、命令是实施契约，不表示已经存在。每任务先写所列失败用例并确认预期失败，再实现、运行同一命令至通过，最后只提交该任务明确路径。错误遵循 `fail-fast-with-evidence`，鉴权／迁移遵循 `high-stakes-implementation-testing`。
 
-## 三份计划的执行顺序（已确认）
+## 三份计划的执行分工（2026-10-27 更新）
 
-用户已明确要求逐份执行：S1 账号接入与贡献运行 → [S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md) → [S3 安装更新](2026-10-26-desktop-release-update.md)。每份计划内部按 Task 依赖顺序实现和验证；只读审阅可以委派，实施文件由当前执行者统一修改。此前并行建议不再作为执行安排。
+用户最新指示覆盖此前三份 spec 串行安排：当前会话仅实施 S1；用户另开会话并行实施 [S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md) 和 [S3 安装更新](2026-10-26-desktop-release-update.md)。各会话使用独立分支及工作树，从包含 S1 已提交基础的 `feat/bee-desktop-p0` 分支建立，不能同时修改当前工作树。2026-10-27 此次调整时已提交基础为 `6dd2f4b`；S1-T5 尚未提交，不得假定新工作树已经包含它。
+
+每份计划内部继续按 Task 依赖实施。S2 可先做偏好、OS 适配、诊断和独立页面；S3 可先做发布构建、更新检查／下载／验签。S1 负责真实运行、账号状态、恢复与 `prepare_owned_exit` 的唯一实现；S2/S3 消费这些接口，不自行复制状态机。S2-T4／S3-T3 需同步 S1-T6 后集成；S2-T5 需 S1-T7，S3-T4 需 S2-T5。共用注册点、`NativeApp.tsx`、生命周期、依赖锁文件及协议文档在合并时逐项整合，不能覆盖其他会话实现；完整验收须使用整合后的代码。
 
 ## 文件职责及公共契约
 
@@ -114,11 +116,13 @@ T4 自动验证：Go 登录／账号／桌面管理相关 race 测试及 Go vet 
 
 **输入／输出：** `confirm_change` 消费持久 operation 与既有 Hive pending/confirmation_id；复用已有续期日记及并发写回。T3 worker 屏障守住 source/selection/credential revision；不发明 Hive 幂等接口。
 
-- [ ] 写调用账本与磁盘故障用例：同身份token更新不是换号；官方并发写入不被覆盖；Keychain不支持写回；换号暂停失败；pending变化；confirm成功但回包丢失/本地写失败；指纹相同代次不同；停止/重启后核对；另一平台不被堵住。
-- [ ] 运行 `go test ./agent -run 'TestDesktopAccountSwitch|Test.*Refresh|Test.*Confirm' -count=1`，新增危险分支先失败。
-- [ ] 实现持久阶段推进：暂停读回→核对来源/pending→同一confirmation_id提交→查询指纹/代次→提交本地修订→同步→保持暂停。未知响应只核对，不自动重复POST；中途换候选保留未决且拒绝恢复。原worker越过屏障后不得再提交旧授权。
-- [ ] 重跑上述测试及 `go test -race ./agent -run 'TestDesktopAccountSwitch|Test.*Synchronization|Test.*Refresh' -count=1`，验证真实HTTP副作用次数及续期回归。
-- [ ] 提交本任务路径：`feat(desktop): reconcile account changes and authorization maintenance`。
+- [x] 写调用账本与磁盘故障用例：同身份token更新不是换号；官方并发写入不被覆盖；Keychain不支持写回；换号暂停失败；pending变化；confirm成功但回包丢失/本地写失败；指纹相同代次不同；停止/重启后核对；另一平台不被堵住。
+- [x] 运行 `go test ./agent -run 'TestDesktopAccountSwitch|Test.*Refresh|Test.*Confirm' -count=1`，新增危险分支先失败。
+- [x] 实现持久阶段推进：暂停读回→核对来源/pending→同一confirmation_id提交→查询指纹/代次→提交本地修订→同步→保持暂停。未知响应只核对，不自动重复POST；中途换候选保留未决且拒绝恢复。原worker越过屏障后不得再提交旧授权。
+- [x] 重跑上述测试及 `go test -race ./agent -run 'TestDesktopAccountSwitch|Test.*Synchronization|Test.*Refresh' -count=1`，验证真实HTTP副作用次数及续期回归。
+- [x] 提交本任务路径：`feat(desktop): reconcile account changes and authorization maintenance`。
+
+T5 验证：OpenAI／Claude 真实本机 HTTP／WS 调用账本覆盖确认丢包、代次／pending 变化、停止前置竞态、真实目录写权限失败、同身份 token 更新及管理服务重开；临时连接首次409不重试、禁止 relay、Close 等待回收通过。相关账号／运行时／续期／同步／双平台 Go race、Go vet 和12项 TS测试通过。审阅发现的停止后继续、确认后新 revision 卡住及 cleanup 状态孤儿均已有回归修复；复用既有续期并发写保护与 Keychain 能力限制，未修改 Hive。
 
 ## Task 6（S1-T6）：重启恢复、明确停止与退出交接
 

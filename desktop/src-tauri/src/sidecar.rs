@@ -10,7 +10,7 @@ use std::{
     path::PathBuf,
     process::Stdio,
     sync::{
-        atomic::{AtomicU8, Ordering},
+        atomic::{AtomicBool, AtomicU8, Ordering},
         Arc,
     },
     time::Duration,
@@ -65,6 +65,7 @@ pub(crate) struct LaunchSpec {
 }
 
 struct Request {
+    exit_request: bool,
     method: &'static str,
     params: Value,
     deadline: Instant,
@@ -73,7 +74,10 @@ struct Request {
     reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
 }
 
-struct Inner {
+pub(crate) struct Inner {
+    pub(crate) frozen: Arc<AtomicBool>,
+    pub(crate) exit: Mutex<crate::runtime::OwnedExitTask>,
+    pub(crate) restored: AtomicBool,
     status: watch::Receiver<BridgeStatus>,
     status_tx: watch::Sender<BridgeStatus>,
     stop: watch::Sender<bool>,
@@ -89,7 +93,7 @@ struct StopTask {
 }
 
 #[derive(Clone)]
-pub struct Bridge(Arc<Inner>);
+pub struct Bridge(pub(crate) Arc<Inner>);
 
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError {
@@ -176,6 +180,9 @@ impl Bridge {
                 let (stop, _) = watch::channel(false);
                 let (requests, _) = mpsc::channel(1);
                 Self(Arc::new(Inner {
+                    frozen: Arc::new(AtomicBool::new(false)),
+                    exit: Mutex::new(Default::default()),
+                    restored: AtomicBool::new(false),
                     status: state,
                     status_tx,
                     stop,
@@ -196,9 +203,18 @@ impl Bridge {
         let (stop_tx, stop_rx) = watch::channel(false);
         let (requests_tx, requests_rx) = mpsc::channel(16);
         let duration = spec.timeout;
-        let task =
-            tauri::async_runtime::spawn(supervise(spec, status_tx.clone(), stop_rx, requests_rx));
+        let frozen = Arc::new(AtomicBool::new(false));
+        let task = tauri::async_runtime::spawn(supervise(
+            spec,
+            status_tx.clone(),
+            stop_rx,
+            requests_rx,
+            frozen.clone(),
+        ));
         Self(Arc::new(Inner {
+            frozen,
+            exit: Mutex::new(Default::default()),
+            restored: AtomicBool::new(false),
             status: status_rx,
             status_tx,
             stop: stop_tx,
@@ -441,12 +457,37 @@ impl Bridge {
         .await
     }
 
-    async fn request(
+    pub(crate) async fn request(
         &self,
         method: &'static str,
         params: Value,
         duration: Duration,
     ) -> Result<BridgeReply, BridgeError> {
+        self.request_inner(method, params, duration, false).await
+    }
+
+    pub(crate) async fn exit_request(
+        &self,
+        method: &'static str,
+        params: Value,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.request_inner(method, params, Duration::from_secs(5), true)
+            .await
+    }
+
+    async fn request_inner(
+        &self,
+        method: &'static str,
+        params: Value,
+        duration: Duration,
+        exit_request: bool,
+    ) -> Result<BridgeReply, BridgeError> {
+        if self.0.frozen.load(Ordering::SeqCst) && !exit_request {
+            return Err(error(
+                "OWNED_EXIT_PENDING",
+                "request rejected: owned exit has frozen new operations",
+            ));
+        }
         let current = self.status();
         if current.state != BridgePhase::Ready || *self.0.stop.borrow() {
             return Err(current.error.unwrap_or_else(|| {
@@ -466,6 +507,7 @@ impl Bridge {
         self.0
             .requests
             .try_send(Request {
+                exit_request,
                 method,
                 params,
                 deadline,
@@ -579,6 +621,7 @@ async fn session(
     statuses: &watch::Sender<BridgeStatus>,
     stop: &mut watch::Receiver<bool>,
     requests: &mut mpsc::Receiver<Request>,
+    frozen: &AtomicBool,
 ) -> Result<(), BridgeError> {
     let hello_params = serde_json::json!({});
     let handshake = exchange(
@@ -624,6 +667,10 @@ async fn session(
             request = requests.recv() => {
                 let Some(request) = request else { return Ok(()); };
                 if request.reply.is_closed() { continue; }
+                if frozen.load(Ordering::SeqCst) && !request.exit_request {
+                    let _ = request.reply.send(Err(error("OWNED_EXIT_PENDING", "queued operation rejected before send: owned exit is pending")));
+                    continue;
+                }
                 if Instant::now() >= request.deadline {
                     // No bytes were sent: only this queued request failed.
                     let _ = request.reply.send(Err(error("REQUEST_QUEUE_TIMEOUT", format!("{} expired in the request queue before any bytes were sent; bridge session preserved", request.method))));
@@ -680,6 +727,7 @@ async fn supervise(
     statuses: watch::Sender<BridgeStatus>,
     mut stop: watch::Receiver<bool>,
     mut requests: mpsc::Receiver<Request>,
+    frozen: Arc<AtomicBool>,
 ) -> Result<(), BridgeError> {
     let mut cleanup_failure = None;
     let run = async {
@@ -752,6 +800,7 @@ async fn supervise(
             &statuses,
             &mut stop,
             &mut requests,
+            &frozen,
         )
         .await;
         if let Err(cause) = &result {
@@ -836,4 +885,4 @@ async fn supervise(
 
 #[cfg(test)]
 #[path = "sidecar_tests.rs"]
-mod tests;
+pub(crate) mod tests;

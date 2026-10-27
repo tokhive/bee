@@ -40,7 +40,18 @@ func (d *DesktopDevice) SetPaused(ctx context.Context, platform string, paused b
 		defer release()
 		ctx = live
 	}
-	return d.operateSupply(ctx, platform, &paused)
+	var intentErr error
+	if d.runtime != nil {
+		intentErr = d.runtime.savePlatformResumeIntent(ctx, platform, false)
+		if intentErr != nil && !paused {
+			return DesktopSupply{}, intentErr
+		}
+	}
+	result, err := d.operateSupply(ctx, platform, &paused)
+	if err == nil && d.runtime != nil && !paused {
+		err = d.runtime.savePlatformResumeIntent(ctx, platform, true)
+	}
+	return result, errors.Join(intentErr, err)
 }
 
 func (d *DesktopDevice) operateSupply(ctx context.Context, platform string, paused *bool) (DesktopSupply, error) {

@@ -354,25 +354,32 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
     let mut authorize = runtime.clone();
     authorize
         .extend(["authorize_start", "authorize_status", "authorize_cancel"].map(str::to_string));
+    let mut recovery = runtime.clone();
+    recovery.push("runtime_restore".into());
+    let mut recovery_authorize = recovery.clone();
+    recovery_authorize
+        .extend(["authorize_start", "authorize_status", "authorize_cancel"].map(str::to_string));
     let expected = match metadata.capabilities.len() {
         2 => &basic,
         4 => &devices,
         6 => &supplies,
         10 => &accounts,
         14 => &runtime,
+        15 => &recovery,
         17 => &authorize,
+        18 => &recovery_authorize,
         count => {
             return Err(BridgeError::new(
                 "CAPABILITY_MISMATCH",
                 format!(
-                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14,17"
+                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14,15,17,18"
             ),
             ))
         }
     };
     for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
         if actual != expected {
-            let observed = if authorize.contains(actual) {
+            let observed = if recovery_authorize.contains(actual) {
                 actual.clone()
             } else {
                 format!("unknown member bytes={}", actual.len())

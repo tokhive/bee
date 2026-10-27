@@ -21,6 +21,9 @@ type DesktopRuntime struct {
 	cancel                context.CancelFunc
 	workers               sync.WaitGroup
 	closed                bool
+	userStopRequested     bool
+	ownedSession          *desktopRetiredAccountSession
+	recoveryGuardRun      string
 	device                *DesktopDevice
 	accounts              *DesktopAccounts
 	snapshot              DesktopRuntimeSnapshot
@@ -96,6 +99,9 @@ func desktopOperationID() (string, error) {
 	return hex.EncodeToString(raw[:]), nil
 }
 func (r *DesktopRuntime) Start(ctx context.Context, input DesktopStartRequest) (DesktopOperation, error) {
+	return r.beginStart(ctx, input, false)
+}
+func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartRequest, restoring bool) (DesktopOperation, error) {
 	if err := ctx.Err(); err != nil {
 		return DesktopOperation{}, err
 	}
@@ -116,7 +122,7 @@ func (r *DesktopRuntime) Start(ctx context.Context, input DesktopStartRequest) (
 	if r.closed {
 		return DesktopOperation{}, fmt.Errorf("runtime owner closed; start rejected")
 	}
-	if input.ExpectedRevision != r.snapshot.Revision {
+	if !restoring && input.ExpectedRevision != r.snapshot.Revision {
 		return DesktopOperation{}, fmt.Errorf("runtime revision changed: actual=%d expected=%d", r.snapshot.Revision, input.ExpectedRevision)
 	}
 	if r.snapshot.Local == "running" || r.snapshot.Local == "starting" || r.snapshot.Local == "stopping" {
@@ -151,13 +157,27 @@ func (r *DesktopRuntime) Start(ctx context.Context, input DesktopStartRequest) (
 	r.runDone = make(chan struct{})
 	done := r.runDone
 	r.workers.Add(1)
+	// Reserve the session before returning admission, before any cancellable
+	// network verification. Stop cannot observe the old clean recovery marker.
+	reservationErr := r.reserveRuntimeSession(ctx, run, restoring)
 	go func() {
 		defer r.workers.Done()
 		defer close(done)
-		err := r.run(live, run, input.ResumePlatforms, pauseRevisions)
+		err := reservationErr
+		if err == nil {
+			err = r.run(live, run, input.ResumePlatforms, pauseRevisions, restoring)
+		}
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		if r.snapshot.RunID == nil || *r.snapshot.RunID != run || r.snapshot.Local == "stopping" {
+			return
+		}
+		if errors.Is(err, errDesktopRuntimeIdle) {
+			r.snapshot.Local = "stopped"
+			r.snapshot.RunID = nil
+			r.snapshot.Revision++
+			r.snapshot.Operation.State = "succeeded"
+			r.snapshot.Operation.Revision = r.snapshot.Revision
 			return
 		}
 		r.snapshot.Local = "failed"
@@ -174,7 +194,7 @@ func (r *DesktopRuntime) Start(ctx context.Context, input DesktopStartRequest) (
 	}()
 	return op, nil
 }
-func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, pauseRevisions map[string]uint64) error {
+func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, pauseRevisions map[string]uint64, restoring bool) error {
 	session, release, err := r.device.acquireSession(ctx)
 	if err != nil {
 		return err
@@ -187,6 +207,15 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 	scope, err := r.accounts.selectionScope(session, state, nil)
 	if err != nil {
 		return err
+	}
+	if restoring {
+		if !scope.Session.Active || scope.Session.RunID != run || !scope.RuntimeIntent.Running {
+			return fmt.Errorf("saved runtime recovery evidence changed during device verification")
+		}
+		resume, err = recoveryResumePlatforms(ctx, state, scope)
+		if err != nil {
+			return err
+		}
 	}
 	if len(scope.Selections) == 0 {
 		return fmt.Errorf("runtime start requires a persisted account selection: selections=0")
@@ -211,9 +240,14 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 			return fmt.Errorf("runtime start raced an unresolved selection")
 		}
 		s.RuntimeIntent = desktopRuntimeIntent{Running: true, ResumePlatforms: append([]string{}, resume...)}
-		s.Session = desktopSessionMarker{RunID: run, Active: true}
+		if s.Session.RunID != run || !s.Session.Active {
+			return fmt.Errorf("runtime session reservation changed before intent save")
+		}
 		return nil
 	})
+	if err == nil && !restoring {
+		r.userStopRequested = false
+	}
 	r.mu.Unlock()
 	if err != nil {
 		return err
@@ -306,6 +340,11 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}
 	r.snapshot.Revision++
 	r.snapshot.Local = "stopping"
+	if input.Reason == "user_stop" {
+		r.userStopRequested = true
+	}
+	stoppedIntent := r.userStopRequested
+	owned := r.ownedSession
 	r.retiredAccountSession = nil
 	op := DesktopOperation{ID: id, Kind: "stop", State: "pending", Revision: r.snapshot.Revision}
 	r.snapshot.Operation = &op
@@ -315,7 +354,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	r.workers.Add(1)
 	go func() {
 		defer r.workers.Done()
-		receipt, err := r.stop(input.Reason, cancel, done, controlCancel, controlDone, accountWorkers)
+		receipt, err := r.stop(stoppedIntent, owned, cancel, done, controlCancel, controlDone, accountWorkers)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.snapshot.Revision++
@@ -335,7 +374,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}()
 	return op, nil
 }
-func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker) (DesktopStopReceipt, error) {
+func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSession, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker) (DesktopStopReceipt, error) {
 	receipt := DesktopStopReceipt{}
 	var saveErr error
 	session, release, err := r.device.acquireSession(context.Background())
@@ -344,15 +383,20 @@ func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done cha
 		defer release()
 		state, err = session.read()
 	}
-	if err == nil && state.Identity == nil {
-		err = fmt.Errorf("stop persistence has no saved device identity")
-	}
-	if err == nil {
+	unpaired := err == nil && state.Identity == nil
+	cleanable := false
+	if unpaired {
+		receipt.IntentSaved = true // No device binding means no resumable runtime scope.
+	} else if err == nil {
 		_, saveErr = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
-			if reason == "user_stop" {
+			if stoppedIntent {
 				s.RuntimeIntent = desktopRuntimeIntent{ResumePlatforms: []string{}}
 			}
-			s.Session.Clean = false
+			cleanable = !s.Session.Active && s.Session.Clean || owned != nil && owned.run == s.Session.RunID && owned.scope == desktopScopeKey(state.Hive, state.Identity.OwnerID, state.Identity.ID)
+			// Never sign off an active/dirty session inherited from another owner.
+			if cleanable {
+				s.Session.Clean = false
+			}
 			return nil
 		})
 		receipt.IntentSaved = saveErr == nil
@@ -380,9 +424,26 @@ func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done cha
 		<-done
 	}
 	receipt.WorkersStopped = true
-	if receipt.IntentSaved {
-		_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error { s.Session.Active = false; s.Session.Clean = true; return nil })
+	if receipt.IntentSaved && unpaired {
+		receipt.SessionClean = true
+	} else if receipt.IntentSaved && cleanable {
+		_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
+			if s.Session.Active && (owned == nil || s.Session.RunID != owned.run) {
+				return fmt.Errorf("stop session ownership changed before cleanup")
+			}
+			s.Session.Active = false
+			s.Session.Clean = true
+			return nil
+		})
 		receipt.SessionClean = err == nil
+	} else if receipt.IntentSaved {
+		err = fmt.Errorf("stop cannot certify a prior unclean session: current_owner_proof=false; explicit start required")
+	}
+	if receipt.SessionClean {
+		if guardErr := r.cleanRecoveryGuard(session); guardErr != nil {
+			receipt.SessionClean = false
+			err = errors.Join(err, guardErr)
+		}
 	}
 	return receipt, errors.Join(saveErr, err)
 }

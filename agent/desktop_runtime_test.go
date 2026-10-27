@@ -164,7 +164,7 @@ func desktopRuntimeDeviceFixture(t *testing.T, handler http.HandlerFunc) *Deskto
 }
 
 func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
-	for _, scenario := range []string{"clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start"} {
+	for _, scenario := range []string{"clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start", "restore_running", "restore_paused", "restore_manual_resume", "restore_user_stop", "restore_new_token", "crash_then_exit", "restore_stop_save_failure", "restore_reservation_save_failure"} {
 		t.Run(scenario, func(t *testing.T) {
 			saveFailure := scenario == "save_failure"
 			proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, q *http.Request) {
@@ -194,8 +194,15 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 			var blockPause atomic.Bool
 			firstIdentity, releaseIdentity := make(chan struct{}), make(chan struct{})
 			var identityRequests atomic.Int32
+			var blockRecoveryIdentity atomic.Bool
+			recoveryIdentityEntered := make(chan struct{})
 			var resumePuts atomic.Int32
 			d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+				if q.URL.Path == "/api/bee/identity" && blockRecoveryIdentity.CompareAndSwap(true, false) {
+					close(recoveryIdentityEntered)
+					<-q.Context().Done()
+					return
+				}
 				if (scenario == "pause_during_start" || scenario == "stop_during_start") && q.URL.Path == "/api/bee/identity" && identityRequests.Add(1) == 1 {
 					close(firstIdentity)
 					select {
@@ -512,6 +519,40 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					t.Fatalf("manual resume bypassed current runtime binding: err=%v new_puts=%d", err, resumePuts.Load()-before)
 				}
 			}
+			if scenario == "crash_then_exit" {
+				r.Close() // Kill owned workers without persisting a clean stop.
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if err := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := r.Restore(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				failed := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
+				t.Logf("unclean restore correctly refused: %+v", failed.Operation.Error)
+				if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: failed.Revision, Reason: "app_exit"}); err != nil {
+					t.Fatal(err)
+				}
+				second := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
+				t.Logf("after blocked restore, app exit receipt: %+v", second.StopReceipt)
+				r.Close()
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if err := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := r.Restore(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				restored := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.Local == "failed" || s.Local == "running" && s.Platforms["openai"].Supply != nil
+				})
+				if restored.Local == "running" {
+					t.Fatalf("unclean session was erased by app_exit without explicit recovery: local=%s paused=%t", restored.Local, restored.Platforms["openai"].Supply.Paused)
+				}
+				return
+			}
 			path := filepath.Join(filepath.Dir(d.path), "ai-accounts.json")
 			if saveFailure {
 				if e := os.Chmod(path, 0000); e != nil {
@@ -519,8 +560,22 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				}
 				defer os.Chmod(path, 0600)
 			}
+			if scenario == "restore_paused" || scenario == "restore_manual_resume" {
+				if _, e := d.SetPaused(context.Background(), "openai", true); e != nil {
+					t.Fatal(e)
+				}
+				if scenario == "restore_manual_resume" {
+					if _, e := d.SetPaused(context.Background(), "openai", false); e != nil {
+						t.Fatal(e)
+					}
+				}
+			}
+			reason := "user_stop"
+			if strings.HasPrefix(scenario, "restore_") && scenario != "restore_user_stop" {
+				reason = "app_exit"
+			}
 			s, _ = r.Snapshot(context.Background())
-			if _, e := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: s.Revision, Reason: "user_stop"}); e != nil {
+			if _, e := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: s.Revision, Reason: reason}); e != nil {
 				t.Fatal(e)
 			}
 			stopped := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
@@ -541,6 +596,130 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				t.Error("worker submitted after stop receipt")
 			}
 			mu.Unlock()
+			if saveFailure {
+				if err := os.Chmod(path, 0600); err != nil {
+					t.Fatal(err)
+				}
+				current, _ := r.Snapshot(context.Background())
+				if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: current.Revision, Reason: "app_exit"}); err != nil {
+					t.Fatal(err)
+				}
+				second := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
+				t.Logf("after failed user stop, app exit receipt: %+v", second.StopReceipt)
+				r.Close()
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if err := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := r.Restore(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				restored := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.Local == "stopped" && s.Operation.State == "succeeded" || s.Local == "failed" || s.Local == "running" && s.Platforms["openai"].Supply != nil
+				})
+				if restored.Local == "running" {
+					t.Fatalf("failed user-stop intent was erased by app_exit: local=%s paused=%t", restored.Local, restored.Platforms["openai"].Supply.Paused)
+				}
+			}
+			if scenario == "restore_stop_save_failure" || scenario == "restore_reservation_save_failure" {
+				r.Close()
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if err := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "restore_reservation_save_failure" {
+					if err := os.Chmod(path, 0000); err != nil {
+						t.Fatal(err)
+					}
+					defer os.Chmod(path, 0600)
+				} else {
+					blockRecoveryIdentity.Store(true)
+				}
+				if _, err := r.Restore(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				if scenario == "restore_reservation_save_failure" {
+					waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
+				} else {
+					select {
+					case <-recoveryIdentityEntered:
+					case <-time.After(5 * time.Second):
+						t.Fatal("restore did not enter identity")
+					}
+				}
+				if err := os.Chmod(path, 0000); err != nil {
+					t.Fatal(err)
+				}
+				defer os.Chmod(path, 0600)
+				current, _ := r.Snapshot(context.Background())
+				if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: current.Revision, Reason: "user_stop"}); err != nil {
+					t.Fatal(err)
+				}
+				stopped := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
+				t.Logf("stop during restore before active marker receipt: %+v", stopped.StopReceipt)
+				if stopped.StopReceipt.IntentSaved {
+					t.Fatal("expected actual save failure")
+				}
+				if err := os.Chmod(path, 0600); err != nil {
+					t.Fatal(err)
+				}
+				r.Close()
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if err := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+					t.Fatal(err)
+				}
+				if _, err := r.Restore(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				restored := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.Local == "failed" || s.Local == "running" && s.Platforms["openai"].Supply != nil
+				})
+				if restored.Local == "running" {
+					t.Fatalf("stop-save failure during restore retained old clean marker: local=%s paused=%t", restored.Local, restored.Platforms["openai"].Supply.Paused)
+				}
+				return
+			}
+			if strings.HasPrefix(scenario, "restore_") {
+				r.Close()
+				if scenario == "restore_new_token" {
+					p, unlock, e := a.acquire(context.Background(), "openai")
+					if e != nil {
+						t.Fatal(e)
+					}
+					path := filepath.Join(*p.selected.Source.Directory, "auth.json")
+					unlock()
+					raw, e := os.ReadFile(path)
+					if e != nil {
+						t.Fatal(e)
+					}
+					if e = os.WriteFile(path, []byte(strings.ReplaceAll(string(raw), "c3ludGhldGlj", "cmVuZXdlZA")), 0600); e != nil {
+						t.Fatal(e)
+					}
+				}
+				r = NewDesktopRuntime(context.Background(), d, a)
+				defer r.Close()
+				if e := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); e != nil {
+					t.Fatal(e)
+				}
+				if _, e := r.Restore(context.Background()); e != nil {
+					t.Fatal(e)
+				}
+				if scenario == "restore_user_stop" {
+					waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+						return s.Local == "stopped" && s.Operation != nil && s.Operation.State == "succeeded"
+					})
+				} else {
+					restored := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+						return s.Local == "running" && s.Platforms["openai"].Supply != nil
+					})
+					if restored.Platforms["openai"].Supply.Paused != (scenario == "restore_paused") {
+						t.Fatalf("restored pause incorrect: %+v", restored.Platforms["openai"].Supply)
+					}
+				}
+			}
 		})
 	}
 }

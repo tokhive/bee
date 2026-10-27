@@ -129,6 +129,14 @@ func (r *DesktopRuntime) preparePlatform(ctx context.Context, session *desktopDe
 	if err != nil {
 		return err
 	}
+	current, failure := r.accounts.readAccountSource(ctx, DesktopAccountDetectRequest{Platform: platform, Directory: selection.Source.Directory, Store: selection.Source.Store, Mode: "local"})
+	revision := current.revision
+	current.clear()
+	if failure != nil {
+		return failure
+	}
+	// Accept an official token renewal only after proving the saved identity.
+	selection.CredentialRevision = revision
 	if _, err := r.accounts.selectionSource(ctx, platform, desktopPendingOperation{Source: selection.Source, ToFingerprint: selection.Fingerprint, CredentialRevision: selection.CredentialRevision}); err != nil {
 		return err
 	}
@@ -153,6 +161,7 @@ func (r *DesktopRuntime) preparePlatform(ctx context.Context, session *desktopDe
 			return fmt.Errorf("runtime preparatory pause GET returned paused=false")
 		}
 	}
+	slot.selection = selection
 	cfg, err := r.configForSelection(platform, selection)
 	if err != nil {
 		return err

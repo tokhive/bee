@@ -128,7 +128,11 @@ pub async fn shutdown_owned(
     bridge: &crate::sidecar::Bridge,
     release_instance: impl FnOnce(),
 ) -> Result<(), crate::protocol::BridgeError> {
+    let saved = bridge
+        .prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
+        .await;
+    // Even when persistence fails, hold singleton ownership until child reaping.
     bridge.stop().await?;
     release_instance();
-    Ok(())
+    saved.map(|_| ())
 }

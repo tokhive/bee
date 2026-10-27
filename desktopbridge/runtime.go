@@ -10,16 +10,17 @@ import (
 )
 
 type Runtime interface {
+	Restore(context.Context) (bee.DesktopOperation, error)
 	Snapshot(context.Context) (bee.DesktopRuntimeSnapshot, error)
 	Start(context.Context, bee.DesktopStartRequest) (bee.DesktopOperation, error)
 	Stop(context.Context, bee.DesktopStopRequest) (bee.DesktopOperation, error)
 	ConfigureNetwork(context.Context, bee.DesktopNetworkConfig) error
 }
 
-var runtimeMethods = []string{"runtime_snapshot", "runtime_start", "runtime_stop", "runtime_configure_network"}
+var runtimeMethods = []string{"runtime_snapshot", "runtime_start", "runtime_stop", "runtime_configure_network", "runtime_restore"}
 
 func decodeRuntimeParams(req request, raw json.RawMessage) (request, *protocolError) {
-	required := map[string][]string{"runtime_snapshot": {}, "runtime_start": {"expected_revision", "resume_platforms"}, "runtime_stop": {"expected_revision", "reason"}, "runtime_configure_network": {"revision", "connect_proxy"}}[req.Method]
+	required := map[string][]string{"runtime_snapshot": {}, "runtime_restore": {}, "runtime_start": {"expected_revision", "resume_platforms"}, "runtime_stop": {"expected_revision", "reason"}, "runtime_configure_network": {"revision", "connect_proxy"}}[req.Method]
 	d := json.NewDecoder(bytes.NewReader(raw))
 	_, _ = d.Token()
 	fields := map[string]json.RawMessage{}
@@ -92,6 +93,11 @@ func runtimeResult(ctx context.Context, service Runtime, req request) (any, erro
 		v, e := service.Snapshot(ctx)
 		return struct {
 			Runtime bee.DesktopRuntimeSnapshot `json:"runtime"`
+		}{v}, e
+	case "runtime_restore":
+		v, e := service.Restore(ctx)
+		return struct {
+			Operation bee.DesktopOperation `json:"operation"`
 		}{v}, e
 	case "runtime_start":
 		v, e := service.Start(ctx, req.Start)

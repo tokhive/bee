@@ -1,7 +1,6 @@
-use crate::protocol::BridgeError;
 #[cfg(windows)]
-#[path = "private_file_windows.rs"]
-mod private_file_windows;
+use crate::private_file_windows;
+use crate::protocol::BridgeError;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{self, OpenOptions},

@@ -58,8 +58,9 @@ export function decodeAccountDefaults(reply:unknown,instance:string):AccountDefa
 }
 export function createAccountClient(invoke:DeviceInvoke,instance:string):AccountClient {
  const epochs={openai:0,claude:0};
+ const revisions={openai:-1,claude:-1};
  async function request(platform:AccountPlatform,command:string,args:Record<string,unknown>,version:number){
-  const reply=await invoke(command,args);if(version!==epochs[platform])throw new Error('ACCOUNT_RESULT_SUPERSEDED: source request superseded');return decodeAccountReply(reply,platform,instance);
+  const reply=await invoke(command,args);if(version!==epochs[platform])throw new Error('ACCOUNT_RESULT_SUPERSEDED: source request superseded');const snapshot=decodeAccountReply(reply,platform,instance);if(snapshot.revision<revisions[platform])invalid('account revision is older than the last observed revision');revisions[platform]=snapshot.revision;return snapshot;
  }
  return {defaults:async()=>decodeAccountDefaults(await invoke('account_defaults',{}),instance),invalidate(platform){epochs[platform]++;},
   snapshot(platform,refresh){oneOf(['openai','claude'])(platform,'request.platform');bool(refresh,'request.refresh');return request(platform,'account_snapshot',{platform,refresh},epochs[platform]);},

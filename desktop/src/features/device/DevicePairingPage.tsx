@@ -9,14 +9,14 @@ export function DevicePairingPage({view,busy,error,begin,refresh,open}:{
  useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
  const waiting=view?.state==='pending'||view?.state==='draining';
  return <section className="onboarding device-pairing" aria-label={t('设备配对')}>
-  <div className="section-heading"><h2>{t('连接本机设备')}</h2><span className="muted">{t('尚未开始贡献')}</span></div>
+  <div className="section-heading"><h2>{t('连接本机设备')}</h2><span className="muted">{t('设备归属')}</span></div>
   <p>{t('在 Hive 网页确认这台设备的归属；绑定不会开始贡献。')}</p>
   {error&&<p role="alert" className="device-error">{t('设备核对失败，未确认本次结果。')}<br/>{error}</p>}
   {busy&&<p role="status">{t('正在核对设备…')}</p>}
   {!error&&!busy&&view?.state==='bound'&&view.identity?<>
-   <p role="status">{t('设备已绑定，尚未开始贡献。')}</p>
+   <p role="status">{t('设备已绑定。')}</p>
    <dl><dt>{t('设备名称')}</dt><dd>{view.identity.name}</dd><dt>{t('设备归属')}</dt><dd>{view.identity.owner_email}</dd><dt>{t('设备 ID')}</dt><dd>{view.identity.id}</dd><dt>Hive</dt><dd>{view.hive}</dd></dl>
-   <p className="feature-note">{t('这是设备归属核验，独立账号登录尚未接入。')}</p>
+   <p className="feature-note">{t('设备配对使用 Hive 网页确认；AI 账号在账号页接入。')}</p>
   </>:<>
    <form className="settings-form" onSubmit={event=>{event.preventDefault();begin(hive.trim(),name.trim());}}>
     <label>{t('Hive 地址')}<input type="url" required placeholder="https://hive.example" value={hive} disabled={busy||Boolean(view?.hive)} onChange={event=>setHive(event.target.value)}/></label>

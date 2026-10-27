@@ -157,7 +157,7 @@ func (a *DesktopAccounts) performAccountChange(ctx context.Context, platform str
 		return nil, pending, fmt.Errorf("account change pause unconfirmed: GET paused=false; original PUT is not replayed")
 	}
 	if !allowConfirm && (op.Stage == "intent" || op.Stage == "paused") {
-		return nil, pending, fmt.Errorf("account confirmation was not submitted: stage=%s; an explicit confirmation is required to continue", op.Stage)
+		return nil, pending, accountFailure(platform, "confirmation_not_submitted", "account_change_submission", fmt.Sprintf("account confirmation was not submitted: stage=%s; an explicit confirmation is required to continue", op.Stage))
 	}
 	if err := ctx.Err(); err != nil {
 		return nil, pending, err

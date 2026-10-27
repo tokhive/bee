@@ -23,10 +23,10 @@ func (r *DesktopRuntime) repairRetiredAccountSession(session *desktopDeviceSessi
 	return r.clearRetiredAccountSession(session, state, proof)
 }
 func (r *DesktopRuntime) clearRetiredAccountSession(session *desktopDeviceSession, state localState, proof *desktopRetiredAccountSession) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	_, err := r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
-		r.mu.Lock()
 		allowed := r.retiredAccountSession == proof && !r.closed && r.snapshot.Local != "stopping"
-		r.mu.Unlock()
 		if !allowed || proof.scope != desktopScopeKey(state.Hive, state.Identity.OwnerID, state.Identity.ID) || s.Session.RunID != proof.run {
 			return fmt.Errorf("account session cleanup binding changed: receipt_current=%t run_match=%t", allowed, s.Session.RunID == proof.run)
 		}
@@ -35,11 +35,9 @@ func (r *DesktopRuntime) clearRetiredAccountSession(session *desktopDeviceSessio
 		return nil
 	})
 	if err == nil {
-		r.mu.Lock()
 		if r.retiredAccountSession == proof {
 			r.retiredAccountSession = nil
 		}
-		r.mu.Unlock()
 	}
 	return err
 }
@@ -104,13 +102,21 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 		return err
 	}
 	run := id[:32]
+	r.mu.Lock()
 	_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
+		if r.closed || r.snapshot.Local == "stopping" || live.Err() != nil {
+			return fmt.Errorf("account connection cancelled before session reservation")
+		}
 		if s.Session.Active {
 			return fmt.Errorf("account connection blocked: previous session remains active; verify owned shutdown before changing accounts")
 		}
 		s.Session = desktopSessionMarker{RunID: run, Active: true}
 		return nil
 	})
+	if err == nil {
+		r.ownedSession = &desktopRetiredAccountSession{run: run, scope: desktopScopeKey(state.Hive, state.Identity.OwnerID, state.Identity.ID)}
+	}
+	r.mu.Unlock()
 	if err != nil {
 		return err
 	}

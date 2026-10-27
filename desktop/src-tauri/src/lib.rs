@@ -6,6 +6,7 @@ mod lifecycle;
 mod navigation;
 mod preferences;
 pub mod protocol;
+pub mod runtime;
 pub mod runtime_protocol;
 pub mod sidecar;
 use tauri::{Emitter, Manager};
@@ -102,6 +103,12 @@ pub fn run() {
                     }
                 }
             });
+            let restoring = bridge.clone();
+            tauri::async_runtime::spawn(async move {
+                if let Err(cause) = restoring.restore_when_ready().await {
+                    eprintln!("Bee startup restore failed: {}: {}", cause.code, cause.message);
+                }
+            });
             app.manage(bridge);
             Ok(())
         })
@@ -129,7 +136,7 @@ pub fn run() {
                         }))
                     {
                         eprintln!(
-                            "Bee exit failed to reap owned management process: {}: {}",
+                            "Bee owned exit not fully confirmed: {}: {}",
                             cause.code, cause.message
                         );
                     }

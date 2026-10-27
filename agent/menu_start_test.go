@@ -53,6 +53,7 @@ func TestMenuForegroundUsesExplicitEgress(t *testing.T) {
 
 func TestMenuGuidedStartUsesDefaultSupplyAndRestoresSession(t *testing.T) {
 	m, _ := pairedMenu(t, "1\n")
+	validStartIdentity(t, m)
 	custom := m.egressPath + ".custom"
 	m.egressPath, m.egressExplicit = custom, true
 	m.configure = func() error {
@@ -86,7 +87,7 @@ func TestMenuPairingUsesRequestedDeviceName(t *testing.T) {
 }
 
 func TestMenuGuidedCancelPairingReturnsWithoutError(t *testing.T) {
-	m, _ := menuFixture(t, "1\n0\n")
+	m, _ := menuFixture(t, "0\n")
 	m.service = &managedService{platform: "darwin"}
 	if err := m.starts(); err != nil {
 		t.Fatal(err)
@@ -97,7 +98,8 @@ func TestMenuGuidedCancelPairingReturnsWithoutError(t *testing.T) {
 }
 
 func TestMenuGuidedCancelAccountSetupReturnsWithoutError(t *testing.T) {
-	m, _ := pairedMenu(t, "1\n0\n")
+	m, _ := pairedMenu(t, "0\n")
+	validStartIdentity(t, m)
 	m.configure = func() error { return m.accountSetup(false) }
 	m.service = &managedService{platform: "darwin"}
 	if err := m.starts(); err != nil {
@@ -110,6 +112,7 @@ func TestMenuGuidedCancelAccountSetupReturnsWithoutError(t *testing.T) {
 
 func TestMenuGuidedSetupCannotRedirectSupplyFile(t *testing.T) {
 	m, _ := pairedMenu(t, "1\n/tmp/another-bee-egress.json\n")
+	validStartIdentity(t, m)
 	m.configure = func() error {
 		if err := m.selectEgress(); err != nil {
 			return err
@@ -128,6 +131,7 @@ func TestMenuGuidedSetupCannotRedirectSupplyFile(t *testing.T) {
 func TestMenuGuidedStartOnMacOSRunsForeground(t *testing.T) {
 	t.Setenv("CODEX_HOME", codexHome(t, time.Now().Add(time.Hour)))
 	m, out := pairedMenu(t, "1\n")
+	validStartIdentity(t, m)
 	m.setup = menuSetupOptions{platform: "openai", all: true}
 	if err := m.configureAccountsWithNext(false); err != nil {
 		t.Fatal(err)

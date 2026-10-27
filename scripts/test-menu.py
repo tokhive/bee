@@ -155,13 +155,14 @@ class MenuTest(unittest.TestCase):
     def test_guided_start_pairs_selects_and_connects(self):
         self.foreground_scenario(guided=True)
 
-    def test_start_asks_only_about_configuration_in_both_languages(self):
+    def test_start_automatically_guides_missing_pairing_in_both_languages(self):
         for lang, question in [('zh', '启动前是否需要引导配置？'),
                                ('en', 'Would you like guidance before starting?')]:
             prompt = '请选择 [' if lang == 'zh' else 'Select ['
             code, out = self.terminal([(prompt, '1\n0\n0\n')], BEE_LANG=lang)
             self.assertEqual(code, 0, out)
-            self.assertIn(question, out)
+            self.assertNotIn(question, out)
+            self.assertIn("请输入 Hive 地址" if lang == "zh" else "Hive address", out)
             self.assertNotIn('按回车返回', out)
             self.assertNotIn('Press Enter to return', out)
             self.assertFalse(list(Path(self.temp.name).rglob('bee.json')))
@@ -212,7 +213,10 @@ class MenuTest(unittest.TestCase):
             def do_GET(self):
                 requests.append(('GET', self.path))
                 if self.path == '/api/bee/identity':
-                    self.reply(401, {'error': {'code': 'unpaired'}})
+                    if guided:
+                        self.reply(401, {'error': {'code': 'unpaired'}})
+                    else:
+                        self.reply(200, identity)
                 elif self.path == '/api/bee/pairings':
                     self.reply(200, {'status': 'approved'})
                 elif self.path in ('/api/bee/connect', '/api/bee/agent'):
@@ -269,7 +273,7 @@ class MenuTest(unittest.TestCase):
                 (codex / 'auth.json').write_text(json.dumps({'tokens': {'access_token': token,
                     'id_token': token, 'account_id': 'synthetic-account', 'refresh_token': 'synthetic-refresh'}}))
                 # Account options: restrict detection to Codex, then choose all.
-                answers = [('请选择 [', f'1\n1\n{url}\nPTY worker\n1\n'),
+                answers = [('请选择 [', f'1\n{url}\nPTY worker\n1\n'),
                            ('逐个选择账号', '3\n1\n1\n0\n2\n1\n'),
                            (running, '\x03')]
             else:
@@ -277,7 +281,12 @@ class MenuTest(unittest.TestCase):
                 config.write_text(json.dumps({'hive': url, 'credential': 'bee_' + 'a' * 43,
                                                'name': 'PTY worker', 'identity': identity}))
                 config.chmod(0o600)
-                answers = [(prompt, '7\n4\n1\n' if advanced else '1\n2\n'), (running, '\x03')]
+                if not advanced:
+                    supply = config.with_name('egress.json')
+                    supply.write_text(json.dumps({'targets': ['chatgpt.com:443'],
+                                                  'codex': {'home': self.env['CODEX_HOME'], 'store': 'file'}}))
+                    supply.chmod(0o600)
+                answers = [(prompt, '7\n4\n1\n' if advanced else '1\n'), (running, '\x03')]
             try:
                 code, out = self.terminal(answers, after_fork=worker.start, BEE_LANG=lang, TERM=term, NO_COLOR=no_color)
                 self.assertEqual(code, 0, out)
@@ -298,16 +307,20 @@ class MenuTest(unittest.TestCase):
                 if not advanced:
                     self.assertNotIn('现在启动前台 Bee？', out)
                     self.assertNotIn('选择运行方式', out)
-                    self.assertEqual(out.count('启动前是否需要引导配置？' if lang == 'zh' else 'Would you like guidance before starting?'), 1, out)
-                self.assertIn(('GET', '/api/bee/agent' if guided else '/api/bee/connect'), requests)
+                    self.assertEqual(out.count('启动前是否需要引导配置？' if lang == 'zh' else 'Would you like guidance before starting?'), 0, out)
+                self.assertIn(('GET', '/api/bee/connect' if advanced else '/api/bee/agent'), requests)
                 if guided:
                     self.assertIn(('POST', '/api/bee/pairings/redeem'), requests)
                     self.assertEqual(json.loads(config.read_text())['name'], 'PTY worker')
                     self.assertTrue(config.with_name('egress.json').exists())
                     self.assertNotIn('synthetic-refresh', out)
-                else:
+                elif advanced:
                     self.assertIn('仅保持在线' if lang == 'zh' else 'stays online without supplying accounts', out)
                     self.assertFalse(config.with_name('egress.json').exists())
+                else:
+                    self.assertNotIn('逐个选择账号', out)
+                    self.assertNotIn('Choose accounts individually', out)
+                    self.assertTrue(config.with_name('egress.json').exists())
             finally:
                 server.shutdown()
                 worker.join()

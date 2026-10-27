@@ -87,7 +87,7 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, fail("BEE-CONFIG-NOT-FOUND", path)
 	case err != nil:
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	case !info.Mode().IsRegular():
 		return nil, fail("BEE-CONFIG-NOT-REGULAR", path)
 	case info.Mode().Perm()&0077 != 0:
@@ -97,22 +97,22 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	}
 	defer file.Close()
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
 	if err != nil {
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	}
 	if len(raw) > 65536 {
 		return nil, fail("BEE-CONFIG-TOO-LARGE", path)
 	}
 	cfg, err := decodeEgress(raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := cfg.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return cfg, nil
 }

@@ -14,6 +14,7 @@ func automaticStartFixture(t *testing.T, input string) (*managementMenu, *string
 	t.Helper()
 	m, _ := pairedMenu(t, "1\n")
 	t.Setenv("CODEX_HOME", codexHome(t, time.Now().Add(time.Hour)))
+	validStartIdentity(t, m)
 	m.setup = menuSetupOptions{platform: "openai", all: true}
 	if err := m.configureAccountsWithNext(false); err != nil {
 		t.Fatal(err)
@@ -31,7 +32,7 @@ func automaticStartFixture(t *testing.T, input string) (*managementMenu, *string
 }
 
 func TestMenuStartAutomaticallyUsesBackground(t *testing.T) {
-	m, out, calls := automaticStartFixture(t, "2\n")
+	m, out, calls := automaticStartFixture(t, "")
 	old := m.service.execute
 	active := false
 	m.service.execute = func(c context.Context, n string, a []string, i io.Reader, o io.Writer) (string, error) {
@@ -81,7 +82,7 @@ func TestMenuStartAlreadyActiveDoesNotPromptOrMutate(t *testing.T) {
 func TestMenuStartUnavailableRunsForegroundWithoutAnotherPrompt(t *testing.T) {
 	for _, platform := range []string{"darwin", "linux"} {
 		t.Run(platform, func(t *testing.T) {
-			m, out := pairedMenu(t, "2\n")
+			m, out, _ := automaticStartFixture(t, "")
 			m.service = &managedService{platform: platform, execute: func(context.Context, string, []string, io.Reader, io.Writer) (string, error) {
 				return "LoadState=not-found\n", nil
 			}}
@@ -94,7 +95,7 @@ func TestMenuStartUnavailableRunsForegroundWithoutAnotherPrompt(t *testing.T) {
 			if err == nil || errors.Is(err, io.EOF) || !strings.Contains(out.String(), "运行日志（原文）") {
 				t.Fatalf("foreground not attempted: %v\n%s", err, out)
 			}
-			if !strings.Contains(out.String(), "仅保持在线") || strings.Contains(out.String(), "现在启动前台 Bee？") {
+			if strings.Contains(out.String(), "仅保持在线") || strings.Contains(out.String(), "现在启动前台 Bee？") {
 				t.Fatal(out.String())
 			}
 		})
@@ -102,7 +103,7 @@ func TestMenuStartUnavailableRunsForegroundWithoutAnotherPrompt(t *testing.T) {
 }
 
 func TestMenuStartInspectionErrorDoesNotFallBack(t *testing.T) {
-	m, out, calls := automaticStartFixture(t, "2\n")
+	m, out, calls := automaticStartFixture(t, "")
 	m.service.execute = func(context.Context, string, []string, io.Reader, io.Writer) (string, error) {
 		return "", errors.New("exit 7: permission denied")
 	}
@@ -117,6 +118,9 @@ func TestMenuStartInspectionErrorDoesNotFallBack(t *testing.T) {
 
 func TestMenuStartCancellationDoesNotMutate(t *testing.T) {
 	m, out, calls := automaticStartFixture(t, "0\n")
+	if err := os.Remove(m.egressPath); err != nil {
+		t.Fatal(err)
+	}
 	if err := m.starts(); err != nil {
 		t.Fatal(err)
 	}
@@ -133,7 +137,7 @@ func TestMenuStartCancellationDoesNotMutate(t *testing.T) {
 func TestMenuStartRejectsUnsafeServiceWithoutForegroundFallback(t *testing.T) {
 	for _, failure := range []string{"binary mismatch", "activating", "start failure"} {
 		t.Run(failure, func(t *testing.T) {
-			m, out, calls := automaticStartFixture(t, "2\n")
+			m, out, calls := automaticStartFixture(t, "")
 			old := m.service.execute
 			switch failure {
 			case "binary mismatch":
@@ -167,12 +171,12 @@ func TestMenuStartRejectsUnsafeServiceWithoutForegroundFallback(t *testing.T) {
 	}
 }
 
-func TestMenuStartExistingServiceNeedsSupplyFile(t *testing.T) {
-	m, _, calls := automaticStartFixture(t, "2\n")
+func TestMenuStartExistingServiceGuidesMissingSupply(t *testing.T) {
+	m, _, calls := automaticStartFixture(t, "0\n")
 	if err := os.Remove(m.egressPath); err != nil {
 		t.Fatal(err)
 	}
-	if err := m.starts(); err == nil || !strings.Contains(err.Error(), m.egressPath) {
+	if err := m.starts(); err != nil {
 		t.Fatal(err)
 	}
 	for _, c := range *calls {
@@ -185,14 +189,13 @@ func TestMenuStartExistingServiceNeedsSupplyFile(t *testing.T) {
 	}
 }
 
-func TestMenuStartWithoutGuidanceDoesNotPair(t *testing.T) {
-	m, out := menuFixture(t, "2\n")
+func TestMenuStartAutomaticallyGuidesMissingPairing(t *testing.T) {
+	m, out := menuFixture(t, "0\n")
 	m.service = &managedService{platform: "darwin"}
-	m.pair = func() error { t.Fatal("paired without guidance"); return nil }
-	if err := m.starts(); err == nil || !strings.Contains(err.Error(), "BEE-DEVICE-NOT-PAIRED") {
+	if err := m.starts(); err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(out.String(), "运行日志") {
+	if !strings.Contains(out.String(), "请输入 Hive 地址") || strings.Contains(out.String(), "是否需要引导") {
 		t.Fatal(out.String())
 	}
 	if _, err := os.Stat(m.configPath); !os.IsNotExist(err) {

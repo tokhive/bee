@@ -11,7 +11,7 @@ import (
 var menuProblemsZH = map[string]problem{
 	"BEE-DEVICE-NOT-PAIRED":          {"这台 Bee 尚未完成设备配对", "返回主菜单，选择「设备配对」，并在 Hive 网页确认。"},
 	"BEE-DEVICE-REPLACED":            {"这台设备已被另一台 Bee 替换，旧配对凭证已撤销", "返回主菜单，选择「设备配对 → 重新配对」。"},
-	"BEE-DEVICE-CONFIG":              {"设备配置无法使用", "根据下方详情检查配置文件及访问权限。"},
+	"BEE-DEVICE-CONFIG":              {"设备配置无法使用", "已保留文件。根据下方详情修正 JSON、路径或访问权限（chmod 600），然后重新启动。"},
 	"BEE-HIVE-CREDENTIAL":            {"Hive 拒绝了当前设备的配对凭证", "检查 Hive 地址；设备已删除或被替换时，选择「设备配对 → 重新配对」。"},
 	"BEE-HIVE-UNREACHABLE":           {"无法连接 Hive", "检查网络、Hive 地址和 Hive 服务状态。"},
 	"BEE-HIVE-ERROR":                 {"Hive 返回了错误", "根据错误码处理；持续失败时，将错误码和发生时间提供给 Hive 管理员。"},

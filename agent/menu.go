@@ -171,7 +171,7 @@ func (m *managementMenu) readDevice() (localState, error) {
 	}
 	origin, err := hiveOrigin(state.Hive)
 	if err != nil {
-		return state, err
+		return state, fmt.Errorf("Hive address in %s: %w", m.configPath, err)
 	}
 	state.Hive = origin
 	if len(state.Credential) != 47 || !strings.HasPrefix(state.Credential, "bee_") {

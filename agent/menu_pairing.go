@@ -2,10 +2,12 @@ package bee
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 
 	"github.com/tokhive/bee/beewire"
@@ -46,11 +48,29 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 			return nil
 		}
 	}
+	return m.pairingFlow(state, reset, offerNext)
+}
+
+// Pairing from Start Bee enters the required flow directly; the main menu
+// still offers explicit validation and replacement actions.
+func (m *managementMenu) pairingFlow(state localState, reset, offerNext bool) error {
+	var err error
 	var snapshot []byte
 	if reset {
 		snapshot, err = os.ReadFile(m.configPath)
 		if err != nil {
 			return err
+		}
+		var current localState
+		if err = json.Unmarshal(snapshot, &current); err != nil {
+			return failCause("BEE-DEVICE-CONFIG", fmt.Errorf("read %s before pairing: %w", m.configPath, err))
+		}
+		// readDevice normalizes the origin; compare the same representation.
+		current.Hive = strings.TrimSuffix(current.Hive, "/")
+		expected := state
+		expected.Hive = strings.TrimSuffix(expected.Hive, "/")
+		if !reflect.DeepEqual(current, expected) {
+			return fmt.Errorf("%s changed since pairing was checked; configuration kept", m.configPath)
 		}
 	}
 	hive := state.Hive
@@ -110,6 +130,8 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 			if _, e = m.service.apply(m.ctx, "stop"); e != nil {
 				return e
 			}
+		} else if e != nil && !errors.Is(e, errServiceUnavailable) {
+			return e
 		} else if e == nil && service.ActiveState != "inactive" {
 			return fmt.Errorf("service ActiveState=%q; wait before re-pairing", service.ActiveState)
 		}

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/logx"
 )
 
@@ -37,22 +38,9 @@ func (m *managementMenu) starts() error {
 	} else {
 		m.note("No supported background service is available. Bee will run in this terminal; closing it or pressing Ctrl+C stops Bee.", "当前没有可用的后台服务，将在本终端运行；关闭终端或按 Ctrl+C 会停止 Bee。")
 	}
-	m.note("Would you like guidance before starting? Existing configuration will be kept.", "启动前是否需要引导配置？已有配置会保留。")
-	m.option(1, m.text("Yes, complete missing configuration", "需要，引导补齐配置"))
-	m.option(2, m.text("No, start with existing configuration", "不需要，使用已有配置启动"))
-	m.option(0, m.text("Back", "返回上级"))
-	choice, err := m.choose(m.text("Select [0–2]: ", "请选择 [0–2]："), 2)
-	if err != nil {
+	ready, err := m.prepareStart()
+	if err != nil || !ready {
 		return err
-	}
-	if choice == 0 {
-		return m.back()
-	}
-	if choice == 1 {
-		ready, err := m.prepareStart()
-		if err != nil || !ready {
-			return err
-		}
 	}
 	if !background {
 		return m.runForeground(false)
@@ -77,26 +65,27 @@ func (m *managementMenu) prepareStart() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if state.Identity == nil {
-		m.note("Pair this device", "设备配对")
-		navigation := m.navigation
-		if m.pair != nil {
-			err = m.pair()
-		} else {
-			err = m.pairingWithNext(false)
-		}
+	if state.Credential != "" {
+		state, err = m.readDevice()
 		if err != nil {
-			return false, err
+			return false, failCause("BEE-DEVICE-CONFIG", err)
 		}
-		if m.navigation != navigation {
-			return false, nil
-		}
-		if err = m.requirePairing(); err != nil {
-			return false, err
-		}
+	} else if state.Identity != nil || state.Pairing != nil {
+		return false, failf("BEE-DEVICE-CONFIG", "%s: credential is missing from saved pairing", m.configPath)
 	}
-	if _, err = os.Lstat(m.egressPath); os.IsNotExist(err) {
-		m.note("Select supplied accounts", "选择供给账号")
+	// Inspect both files before entering any flow that can change configuration.
+	_, err = readEgress(m.ctx, m.egressPath)
+	var problem *codedError
+	missingSupply := errors.As(err, &problem) && problem.code == "BEE-CONFIG-NOT-FOUND"
+	if err != nil && !missingSupply {
+		return false, err
+	}
+	ready, err := m.prepareStartPairing(state)
+	if err != nil || !ready {
+		return false, err
+	}
+	if missingSupply {
+		m.note("Supply configuration is missing. Select supplied accounts to continue.", "尚无供给配置，请选择供给账号后继续。")
 		if m.configure != nil {
 			err = m.configure()
 		} else {
@@ -105,16 +94,47 @@ func (m *managementMenu) prepareStart() (bool, error) {
 		if err != nil {
 			return false, err
 		}
-		if _, err = os.Lstat(m.egressPath); os.IsNotExist(err) {
-			m.note("No supply configuration saved; Bee has not started.", "尚未保存供给配置，Bee 未启动。")
-			return false, m.back()
-		} else if err != nil {
-			return false, err
-		}
-	} else if err != nil {
-		return false, err
 	}
 	if _, err = readEgress(m.ctx, m.egressPath); err != nil {
+		if errors.As(err, &problem) && problem.code == "BEE-CONFIG-NOT-FOUND" {
+			m.note("No supply configuration saved; Bee has not started.", "尚未保存供给配置，Bee 未启动。")
+			return false, m.back()
+		}
+		return false, err
+	}
+	return true, nil
+}
+
+func (m *managementMenu) prepareStartPairing(state localState) (bool, error) {
+	reset := false
+	if state.Identity != nil {
+		m.ui.status(m.out, "⏳", "33", "Checking device pairing…", "正在验证设备配对…")
+		var identity beewire.Identity
+		err := call(m.ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+		if err == nil {
+			return true, nil
+		}
+		var failure *apiFailure
+		if !errors.As(err, &failure) || (failure.Status != 401 && failure.Status != 403) ||
+			(failure.Code != "device_replaced" && failure.Code != "invalid_device_credential") {
+			return false, fmt.Errorf(m.text("Verify device at %s (configuration kept): %w", "验证设备 %s（已保留配置）：%w"), state.Hive, hiveProblem(err))
+		}
+		p, _ := m.apiProblem(failure)
+		m.ui.status(m.out, "⚠️", "33", p.cause, p.cause)
+		m.field("Response", "响应信息", fmt.Sprintf("HTTP %d · %s", failure.Status, failure.Code))
+		m.note("Pairing is no longer valid. Follow the steps to pair again; changes require confirmation.", "原配对已失效，接下来重新配对；确认后才会修改配置。")
+		reset = true
+	} else {
+		m.note("Device pairing is missing or unfinished. Complete pairing to continue.", "设备尚未完成配对，接下来完成配对。")
+	}
+	navigation := m.navigation
+	if err := m.pairingFlow(state, reset, false); err != nil {
+		return false, err
+	}
+	if m.navigation != navigation {
+		return false, nil
+	}
+	if err := m.requirePairing(); err != nil {
 		return false, err
 	}
 	return true, nil

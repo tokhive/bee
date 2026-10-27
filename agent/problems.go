@@ -102,7 +102,7 @@ var problems = map[string]problem{
 	},
 	"BEE-DEVICE-CONFIG": {
 		"the Bee device configuration cannot be used",
-		"check the --config path; the file must be accessible only to the user running Bee (chmod 600)",
+		"configuration kept; fix the reported JSON, path or access issue (chmod 600), then start again",
 	},
 	"BEE-DEVICE-NOT-PAIRED": {
 		"this Bee is not paired with Hive",

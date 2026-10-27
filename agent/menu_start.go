@@ -147,20 +147,27 @@ func (m *managementMenu) runForeground(confirm bool) error {
 	} else {
 		m.note("No supply configuration: Bee stays online without supplying accounts.", "没有供给配置：Bee 仅保持在线，不供给账号。")
 	}
-	m.note("This terminal stays occupied. Ctrl+C stops this foreground Bee and exits; run bee again to reopen the menu.", "本终端将持续运行 Bee。Ctrl+C 停止本次前台 Bee 并退出；再次输入 bee 可重新打开菜单。")
+	m.note("Keep this terminal open. Press Ctrl+C to stop Bee and exit; run bee again to reopen the menu.", "请保持此终端打开。按 Ctrl+C 停止 Bee 并退出；再次输入 bee 打开菜单。")
 	if confirm {
 		ok, err := m.confirm(m.text("Start foreground Bee now?", "现在启动前台 Bee？"))
 		if err != nil || !ok {
 			return err
 		}
 	}
+	m.ui.status(m.out, "⏳", "1;33", "Starting Bee…", "正在启动 Bee…")
 	m.note("Runtime logs (original):", "运行日志（原文）：")
+	console := newConsole(m.out)
+	console.onConnected = func() {
+		fmt.Fprintln(m.out)
+		m.ui.status(m.out, "✅", "1;32", "Bee is running… (connected to Hive)", "Bee 持续运行中…（已连接 Hive）")
+		fmt.Fprintln(m.out)
+	}
 	previous := slog.Default()
 	if logx.Readable(os.Stderr) {
 		slog.SetDefault(slog.New(logx.Friendly(os.Stderr, slog.LevelWarn)))
 	}
 	defer slog.SetDefault(previous)
-	if err = run(m.ctx, args, m.out); err != nil {
+	if err = run(m.ctx, args, console); err != nil {
 		return err
 	}
 	fmt.Fprintln(m.out, m.text("Foreground Bee stopped.", "本次前台 Bee 已停止。"))

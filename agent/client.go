@@ -162,7 +162,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		metrics.connect(connectStart, err)
 		if err == nil {
 			delay, conflicts = time.Second, 0
-			notify(out, slog.LevelInfo, "connect", "Bee connected to Hive", "endpoint", endpoint)
+			notifyConnected(out, endpoint)
 			var live context.Context
 			var end func()
 			var syncFailures <-chan error

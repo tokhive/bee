@@ -124,7 +124,7 @@ class MenuTest(unittest.TestCase):
             try:
                 config_root = Path(self.temp.name) / ('Library/Application Support' if sys.platform == 'darwin' else 'config')
                 config = config_root / 'tokhive/bee.json'
-                config.parent.mkdir(parents=True)
+                config.parent.mkdir(parents=True, exist_ok=True)
                 config.write_text(json.dumps({'hive': f'http://127.0.0.1:{server.server_port}',
                                               'credential': 'bee_' + 'a' * 43, 'name': 'synthetic'}))
                 config.chmod(0o600)
@@ -169,7 +169,17 @@ class MenuTest(unittest.TestCase):
     def test_advanced_foreground_remains_available(self):
         self.foreground_scenario(guided=False, advanced=True)
 
-    def foreground_scenario(self, guided, advanced=False):
+    def test_foreground_status_language_and_terminal_style(self):
+        for lang, term, no_color in [('en', 'xterm-256color', ''),
+                                     ('zh', 'xterm-256color', '1'),
+                                     ('zh', 'dumb', '')]:
+            with self.subTest(lang=lang, term=term, no_color=no_color):
+                self.foreground_scenario(False, lang=lang, term=term, no_color=no_color)
+
+    def foreground_scenario(self, guided, advanced=False, lang='zh', term='xterm-256color', no_color=''):
+        running = 'Bee 持续运行中…（已连接 Hive）' if lang == 'zh' else 'Bee is running… (connected to Hive)'
+        starting = '正在启动 Bee…' if lang == 'zh' else 'Starting Bee…'
+        prompt = '请选择 [' if lang == 'zh' else 'Select ['
         requests = []
         identity = {'id': 'synthetic-device', 'name': 'PTY worker', 'owner_email': 'synthetic@example.test'}
         class Hive(http.server.BaseHTTPRequestHandler):
@@ -261,24 +271,34 @@ class MenuTest(unittest.TestCase):
                 # Account options: restrict detection to Codex, then choose all.
                 answers = [('请选择 [', f'1\n1\n{url}\nPTY worker\n1\n'),
                            ('逐个选择账号', '3\n1\n1\n0\n2\n1\n'),
-                           ('Bee connected to Hive', '\x03')]
+                           (running, '\x03')]
             else:
-                config.parent.mkdir(parents=True)
+                config.parent.mkdir(parents=True, exist_ok=True)
                 config.write_text(json.dumps({'hive': url, 'credential': 'bee_' + 'a' * 43,
                                                'name': 'PTY worker', 'identity': identity}))
                 config.chmod(0o600)
-                answers = [('请选择 [', '7\n4\n1\n' if advanced else '1\n2\n'), ('Bee connected to Hive', '\x03')]
+                answers = [(prompt, '7\n4\n1\n' if advanced else '1\n2\n'), (running, '\x03')]
             try:
-                code, out = self.terminal(answers, after_fork=worker.start)
+                code, out = self.terminal(answers, after_fork=worker.start, BEE_LANG=lang, TERM=term, NO_COLOR=no_color)
                 self.assertEqual(code, 0, out)
                 self.assertIn('Ctrl+C', out)
-                self.assertIn('运行日志（原文）', out)
+                self.assertIn('运行日志（原文）' if lang == 'zh' else 'Runtime logs (original)', out)
+                self.assertLess(out.index(starting), out.index('Bee connected to Hive'))
+                self.assertLess(out.index('Bee connected to Hive'), out.index(running))
+                if term != 'dumb':
+                    self.assertIn('✅ ' + running, out)
+                else:
+                    self.assertNotIn('✅', out)
+                if no_color or term == 'dumb':
+                    self.assertNotIn('\x1b', out)
+                else:
+                    self.assertIn('\x1b[1;32m✅ ' + running, out)
                 self.assertNotIn('按回车返回', out)
-                self.assertEqual(out.count('Bee 管理'), 1, out)
+                self.assertEqual(out.count('Bee 管理' if lang == 'zh' else 'Bee management'), 1, out)
                 if not advanced:
                     self.assertNotIn('现在启动前台 Bee？', out)
                     self.assertNotIn('选择运行方式', out)
-                    self.assertEqual(out.count('启动前是否需要引导配置？'), 1, out)
+                    self.assertEqual(out.count('启动前是否需要引导配置？' if lang == 'zh' else 'Would you like guidance before starting?'), 1, out)
                 self.assertIn(('GET', '/api/bee/agent' if guided else '/api/bee/connect'), requests)
                 if guided:
                     self.assertIn(('POST', '/api/bee/pairings/redeem'), requests)
@@ -286,7 +306,7 @@ class MenuTest(unittest.TestCase):
                     self.assertTrue(config.with_name('egress.json').exists())
                     self.assertNotIn('synthetic-refresh', out)
                 else:
-                    self.assertIn('仅保持在线', out)
+                    self.assertIn('仅保持在线' if lang == 'zh' else 'stays online without supplying accounts', out)
                     self.assertFalse(config.with_name('egress.json').exists())
             finally:
                 server.shutdown()

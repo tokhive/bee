@@ -28,7 +28,7 @@ func TestMenuForegroundCancellationDoesNotCreateSupply(t *testing.T) {
 }
 
 func TestMenuForegroundKeepsConfigurationLock(t *testing.T) {
-	m, _ := pairedMenu(t, "1\n")
+	m, out := pairedMenu(t, "1\n")
 	unlock, err := lockState(m.configPath)
 	if err != nil {
 		t.Fatal(err)
@@ -36,6 +36,9 @@ func TestMenuForegroundKeepsConfigurationLock(t *testing.T) {
 	defer unlock()
 	if err = m.foreground(); err == nil {
 		t.Fatal("foreground bypassed running lock")
+	}
+	if strings.Contains(out.String(), "持续运行中") {
+		t.Fatal("reported success before acquiring configuration lock")
 	}
 }
 

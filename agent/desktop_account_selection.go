@@ -47,7 +47,7 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 	if p.snapshot.Candidate.Fingerprint != nil {
 		op.ToFingerprint = *p.snapshot.Candidate.Fingerprint
 	}
-	if !a.launchSelection(p, r.Platform, op, false, r.Action == "clear_selection") {
+	if !a.launchAccountOperation(p, r.Platform, op, false, r.Action == "clear_selection", false) {
 		return accountSnapshotCopy(p.snapshot), accountFailure(r.Platform, "closed", "account_service", "management account service has closed")
 	}
 	return accountSnapshotCopy(p.snapshot), nil
@@ -55,7 +55,7 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 
 // Caller holds only this platform's short gate. Network/disk work runs without
 // it; duplicate writes remain fenced by working/pending and the durable ID.
-func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection bool) bool {
+func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection, allowConfirm bool) bool {
 	a.lifecycleMu.Lock()
 	defer a.lifecycleMu.Unlock()
 	if a.closed {
@@ -67,15 +67,22 @@ func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform st
 	}
 	if a.runtime != nil {
 		a.runtime.mu.Lock()
-		busy := a.runtime.snapshot.Local == "starting" || a.runtime.snapshot.Local == "stopping"
+		busy := a.runtime.closed || a.runtime.snapshot.Local == "starting" || a.runtime.snapshot.Local == "stopping"
 		a.runtime.mu.Unlock()
 		if busy {
 			return false
 		}
 	}
+	ctx, cancel := context.WithTimeout(a.ctx, 12*time.Second)
+	worker := &desktopAccountWorker{cancel: cancel, done: make(chan struct{})}
+	a.accountWorkers[platform] = worker
+	var stopRuntime func() bool
+	if a.runtime != nil {
+		stopRuntime = context.AfterFunc(a.runtime.ctx, cancel)
+	}
 	a.activeActions[platform] = true
 	p.working = true
-	kind := "select"
+	kind := op.Kind
 	if clearSelection {
 		kind = "clear_selection"
 	}
@@ -84,13 +91,28 @@ func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform st
 	a.workers.Add(1)
 	go func() {
 		defer a.workers.Done()
-		defer func() { a.lifecycleMu.Lock(); delete(a.activeActions, platform); a.lifecycleMu.Unlock() }()
-		ctx, cancel := context.WithTimeout(a.ctx, 12*time.Second)
+		defer close(worker.done)
+		if stopRuntime != nil {
+			defer stopRuntime()
+		}
 		defer cancel()
-		selection, pending, err := a.performSelection(ctx, platform, op, reconcile, clearSelection, expectedSelectionRevision)
+		var selection *desktopAccountSelection
+		var pending *desktopPendingOperation
+		var err error
+		if op.Kind == "confirm_change" {
+			selection, pending, err = a.performAccountChange(ctx, platform, op, reconcile, allowConfirm)
+		} else {
+			selection, pending, err = a.performSelection(ctx, platform, op, reconcile, clearSelection, expectedSelectionRevision)
+		}
 		// Closing cancels external work, not the final publication of its evidence.
 		locked, release, _ := a.acquire(context.Background(), platform)
 		defer release()
+		// Publish completion and release admission while the platform gate is
+		// still held, so a later worker cannot have its ownership erased.
+		a.lifecycleMu.Lock()
+		delete(a.accountWorkers, platform)
+		delete(a.activeActions, platform)
+		a.lifecycleMu.Unlock()
 		locked.working = false
 		locked.pending = pending
 		locked.snapshot.Revision++
@@ -106,7 +128,7 @@ func (a *DesktopAccounts) launchSelection(p *desktopAccountPlatform, platform st
 			if errors.As(err, &failure) {
 				result.Error = failure
 			} else {
-				result.Error = accountFailure(platform, "selection_unconfirmed", "selection_commit", err.Error())
+				result.Error = accountFailure(platform, "account_operation_unconfirmed", "account_operation_commit", err.Error())
 			}
 		} else {
 			locked.selected = selection

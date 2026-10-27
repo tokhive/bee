@@ -81,7 +81,10 @@ func runDesktop(ctx context.Context, in, out *os.File, diagnostics io.Writer) er
 	defer runner.Close()
 	authorizer := bee.NewDesktopAuthorizer(managed, accounts)
 	defer authorizer.Close()
-	err = desktopbridge.RunWithAuthorization(managed, in, cancelFailedWrite{out, cancel}, diagnostics, bee.BuildVersion(), device, accounts, runner, authorizer)
+	diagnosticService := bee.NewDesktopDiagnostics(managed, device, accounts, runner)
+	defer diagnosticService.Close()
+	network := bee.NewDesktopNetwork(accounts)
+	err = desktopbridge.RunWithExperience(managed, in, cancelFailedWrite{out, cancel}, diagnostics, bee.BuildVersion(), device, accounts, runner, authorizer, diagnosticService, network)
 	close(done)
 	closeErr := <-closed
 	return errors.Join(err, closeErr, closeDesktopPipe(in), closeDesktopPipe(out))

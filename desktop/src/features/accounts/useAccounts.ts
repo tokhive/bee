@@ -1,29 +1,41 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest} from '../../system/accounts';
 import type {AuthorizeClient} from '../../system/authorize';
+import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
-export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient){
+export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState('');
  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,string>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
  const [writeBusy,setWriteBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const epochs=useRef({openai:0,claude:0}),active=useRef(true),running=useRef({openai:false,claude:false});
+ const revisions=useRef({openai:-1,claude:-1});
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
+ const publish=useCallback((platform:AccountPlatform,view:AccountSnapshot,detected=false)=>{
+  if(view.revision<revisions.current[platform])return false;
+  revisions.current[platform]=view.revision;setViews(v=>({...v,[platform]:view}));
+  const login=view.operation?.kind==='authorize'&&view.operation.state==='succeeded'?view.operation.id:undefined;
+  if(detected||login&&!completedLogins.current.has(login))setDirty(v=>({...v,[platform]:false}));
+  if(login)completedLogins.current.add(login);
+  return true;
+ },[]);
+ useEffect(()=>{
+  if(!enabled||!runtime)return;
+  for(const p of platforms){const next=runtime.platforms[p].account;if(!running.current[p]&&next.revision>revisions.current[p])publish(p,next);}
+  // Runtime observations keep revisions fresh but never resolve an uncertain write.
+ },[enabled,runtime,busy,publish]);
  const run=useCallback(async(platform:AccountPlatform,operation:()=>Promise<AccountSnapshot>,detected=false,write=false)=>{
   if(running.current[platform])return;
   running.current[platform]=true;if(write){writing.current[platform]=true;setWriteBusy(v=>({...v,[platform]:true}));}const epoch=++epochs.current[platform];setBusy(v=>({...v,[platform]:true}));setErrors(v=>({...v,[platform]:''}));
   try{
    const view=await operation();
    if(active.current&&epoch===epochs.current[platform]){
-    setViews(v=>({...v,[platform]:view}));setUncertain(v=>({...v,[platform]:false}));
-    const login=view.operation?.kind==='authorize'&&view.operation.state==='succeeded'?view.operation.id:undefined;
-    if(detected||login&&!completedLogins.current.has(login))setDirty(v=>({...v,[platform]:false}));
-    if(login)completedLogins.current.add(login);
+    if(publish(platform,view,detected))setUncertain(v=>({...v,[platform]:false}));
    }
   }catch(cause){if(active.current&&epoch===epochs.current[platform]){setErrors(v=>({...v,[platform]:failure(cause)}));if(write)setUncertain(v=>({...v,[platform]:true}));}}
   finally{if(write){writing.current[platform]=false;if(active.current)setWriteBusy(v=>({...v,[platform]:false}));}if(active.current&&epoch===epochs.current[platform]){running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));}}
- },[]);
+ },[publish]);
  const read=useCallback(async(platform:AccountPlatform,refresh:boolean,operationId?:string)=>{
   if(!client)return;
   await run(platform,async()=>{if(operationId&&authorizer)await authorizer.status(operationId);return client.snapshot(platform,refresh);});

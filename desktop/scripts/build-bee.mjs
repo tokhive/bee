@@ -16,7 +16,8 @@ export function beeTarget(target) {
   return targets[target];
 }
 
-export function buildBee({ root = beeRoot, target, run = runProcess } = {}) {
+export function buildBee({ root = beeRoot, target, releaseVersion = process.env.BEE_RELEASE_VERSION, run = runProcess } = {}) {
+  if (releaseVersion && !/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/.test(releaseVersion)) throw new Error(`release Bee version malformed: actual=${releaseVersion}; required=SemVer without build metadata`);
   const host = /^host: (.+)$/m.exec(run('rustc', ['-vV'], { cwd: root }))?.[1];
   target ??= host;
   const { goos, goarch, suffix } = beeTarget(target);
@@ -31,7 +32,8 @@ export function buildBee({ root = beeRoot, target, run = runProcess } = {}) {
   const buildEnv = { ...process.env, GOOS: goos, GOARCH: goarch };
   if (goos === 'darwin') buildEnv.MACOSX_DEPLOYMENT_TARGET = '13.0';
   // Match linuxdeploy's final RUNPATH before provenance hashes these bytes.
-  const linkerArgs = goos === 'linux' ? ['-ldflags=-r=$ORIGIN/../lib'] : [];
+  const flags = [goos === 'linux' && '-r=$ORIGIN/../lib', releaseVersion && `-X main.version=${releaseVersion}`].filter(Boolean);
+  const linkerArgs = flags.length ? [`-ldflags=${flags.join(' ')}`] : [];
   run('go', ['build', '-trimpath', ...linkerArgs, '-o', output, './cmd/bee'], { cwd: root, env: buildEnv });
   if (goos === 'darwin') {
     const loadCommands = run('/usr/bin/otool', ['-l', output], { cwd: root });
@@ -41,6 +43,7 @@ export function buildBee({ root = beeRoot, target, run = runProcess } = {}) {
   const binaryVersion = run(output, ['version'], { cwd: root }).trim();
   const reported = /^bee (\S+) (\S+)$/.exec(binaryVersion);
   if (!reported || reported[2] !== `${goos}/${goarch}`) throw new Error(`built Bee version target mismatch: actual=${binaryVersion}; required=bee <version> ${goos}/${goarch}`);
+  if (releaseVersion && reported[1] !== releaseVersion) throw new Error(`built Bee beeVersion mismatch: actual=${reported[1]}; required=${releaseVersion}`);
   const binarySha256 = createHash('sha256').update(readFileSync(output)).digest('hex');
   writeFileSync(output + '.source.json', JSON.stringify({ revision, teeRevision, target, goos, goarch, go: version, beeVersion: reported[1], binarySha256 }, null, 2) + '\n');
   console.log(`Bee sidecar built: ${output}; revision=${revision}; target=${target}`);

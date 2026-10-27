@@ -2,6 +2,11 @@ name: Desktop hosted Windows Server 2022 build evidence
 
 on:
   workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: Also build an unsigned Bee native candidate; never publishes or uploads it
+        type: boolean
+        default: false
   push:
     branches: [feat/bee-desktop-p0]
     paths:
@@ -232,3 +237,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
           path: desktop-ci-evidence/
+
+      - name: Prepare optional native Bee release candidate (no publish or upload)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          node --test desktop/tests/release.test.mjs desktop/tests/update-manifest.test.mjs
+          if ($LASTEXITCODE -ne 0) { throw "Release tooling tests failed: exit=$LASTEXITCODE; see original test output" }
+          node desktop/scripts/prepare-release.mjs --mode candidate --target x86_64-pc-windows-msvc --build
+          if ($LASTEXITCODE -ne 0) { throw "Native release candidate failed: exit=$LASTEXITCODE; see original prepare-release output" }
+          node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release
+          if ($LASTEXITCODE -ne 0) { throw "Release verification failed: exit=$LASTEXITCODE; see original verify-release output" }

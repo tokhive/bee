@@ -1,6 +1,6 @@
 # Bee 桌面：诊断、网络与日常体验实施计划（S2）
 
-> **给执行 agent：** 使用用户选定的 `subagent-driven-development` 或 `executing-plans` 逐任务实施；复选框只标记有证据的完成项。本计划待审阅及执行模式选择，不自动开始代码实施。
+> **执行状态（2026-10-27）：** 用户将另开会话并行实施 S2，原会话仅负责 S1；不再等待 S1 整份结束才开始。使用独立分支及工作树，基于包含 S1 已提交基础的 `feat/bee-desktop-p0`（此次调整时为 `6dd2f4b`）；原工作树尚未提交的 S1-T5 不在该基础内。按下列 Task 依赖开发，集成时同步 S1 后续提交；复选框只记录有验证证据的完成项。
 
 **目标：** 完整交付E1–E6：四页原生导航、真实诊断、日志/脱敏导出、HTTP代理、偏好、通知、自启及窗口找回。
 
@@ -16,7 +16,7 @@
 - 代理仅空值或无认证回环IP HTTP地址；Hive及官方客户端登录网络不由它控制。`HTTPS_PROXY`/`https_proxy`/`NO_PROXY`现有优先级保留；显示实际路径，不回显环境原文。
 - 默认语言/主题跟随系统，自启关闭；通知开关与系统权限分开。关窗后台运行，明确退出仅回收owned Bee，不承诺任务排空。保持银白精工、中英文、860×600。
 - 每Task先执行所列新增失败用例，再实现并复跑至通过；迁移、秘密、代理重启使用`high-stakes-implementation-testing`；错误保留失败环节和公开证据。所有命令从Bee工作树根执行。
-- 按S1共同并行表和共享文件单一负责人执行：T1/T2可在S1-T1后独立开展；T3/T4真实接通需S1-T3/T6；T5集中改主页面，T6为完整验收。S2版本展示先用现有桥，S3更新不是S2前置条件。
+- 按S1计划的最新会话分工执行：T1/T2可在S1-T1后独立开展；T3已有S1-T3基础，T4真实重启接通需S1-T6；T5主页面整合需S1-T7，T6为完整验收。S2版本展示先用现有桥，S3更新不是S2前置条件。S1运行／恢复／退出实现由S1维护；本会话消费接口，不复制状态机。共用注册点、生命周期和锁文件在独立工作树开发后逐项合并，不覆盖其他会话代码。
 
 ## 文件职责及跨任务契约
 
@@ -44,15 +44,17 @@
 
 ## Task 1（S2-T1）：普通偏好和代理草稿持久化
 
+**验证记录（2026-10-27）：** macOS 上 9 项 Rust preferences 与 3 项 TS preferences 测试通过，typecheck 通过；原失败场景经过回归和独立只读复核。Windows 10 项测试已通过目标交叉 check 和 Clippy，尚未在 Windows 执行行为测试，该平台验收保留至 T6。草稿实际设备接线在 T4 完成。
+
 **依赖：** S1-T1确认scope/版本规则。**文件：** 新建上述preferences模块、`desktop/src/system/preferences.ts`、`desktop/tests/preferences.test.ts`；修改Rust注册点。普通配置位于现有用户配置目录的`desktop-preferences.json`，不放安装目录。
 
 **输出：** preferences_read/save契约；新文件默认值与spec一致；升级备份和原子替换策略供S3使用，不读demo localStorage。
 
-- [ ] 写失败用例：首次默认、保存回读、重启、修订冲突、损坏/未知版本/重复键/文件权限、原子替换失败保留原件；origin/设备隔离，未配对代理草稿配对后核验关联、不复制其他device设置；秘密字段一律拒绝。
-- [ ] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml preferences` 和 `node --test desktop/tests/preferences.test.ts`，确认预期失败。
-- [ ] 实现版本文件、保护/备份和原子读写；偏好schema为上述version1；OS实际状态单独查询，不能保存成功就宣称自启注册成功。
-- [ ] 重跑测试；检查任何失败均保留上次已保存值，S3可在无设备配对时迁移普通偏好。
-- [ ] 提交本任务路径：`feat(desktop): persist native preferences and scoped proxy drafts`。
+- [x] 写失败用例：首次默认、保存回读、重启、修订冲突、损坏/未知版本/重复键/文件权限、原子替换失败保留原件；origin/设备隔离，未配对代理草稿配对后核验关联、不复制其他device设置；秘密字段一律拒绝。
+- [x] 运行 `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml preferences` 和 `node --test desktop/tests/preferences.test.ts`，确认预期失败。
+- [x] 实现版本文件、保护/备份和原子读写；偏好schema为上述version1；OS实际状态单独查询，不能保存成功就宣称自启注册成功。
+- [x] 重跑测试；检查任何失败均保留上次已保存值，S3可在无设备配对时迁移普通偏好。
+- [x] 提交本任务路径：`feat(desktop): persist native preferences and scoped proxy drafts`。
 
 ## Task 2（S2-T2）：系统通知与当前用户自启适配
 

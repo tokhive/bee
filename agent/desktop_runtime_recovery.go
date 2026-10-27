@@ -1,0 +1,176 @@
+package bee
+
+import (
+	"bytes"
+	"context"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"slices"
+)
+
+var errDesktopRuntimeIdle = errors.New("saved runtime intent is stopped")
+
+// Restore is an internal lifecycle entry. It never synthesizes user consent;
+// run rechecks the saved intent and clean-session evidence before any writes.
+func (r *DesktopRuntime) Restore(ctx context.Context) (DesktopOperation, error) {
+	return r.beginStart(ctx, DesktopStartRequest{ResumePlatforms: []string{}}, true)
+}
+
+func (r *DesktopRuntime) recoveryScope(ctx context.Context, session *desktopDeviceSession, state localState) (desktopAccountScope, error) {
+	if state.Identity == nil {
+		return desktopAccountScope{}, errDesktopRuntimeIdle
+	}
+	scope, err := r.accounts.selectionScope(session, state, nil)
+	if err != nil {
+		return scope, err
+	}
+	if !scope.RuntimeIntent.Running {
+		return scope, errDesktopRuntimeIdle
+	}
+	if scope.Session.Active || !scope.Session.Clean {
+		return scope, fmt.Errorf("automatic recovery rejected: previous_session_active=%t clean=%t; explicit recovery required", scope.Session.Active, scope.Session.Clean)
+	}
+	if len(scope.PendingOperations) > 0 {
+		return scope, fmt.Errorf("automatic recovery blocked by unresolved account operations: count=%d", len(scope.PendingOperations))
+	}
+	return scope, nil
+}
+
+func recoveryResumePlatforms(ctx context.Context, state localState, scope desktopAccountScope) ([]string, error) {
+	result := []string{}
+	for _, platform := range scope.RuntimeIntent.ResumePlatforms {
+		if _, ok := scope.Selections[platform]; !ok {
+			return nil, fmt.Errorf("saved resume platform has no selection: platform=%s", platform)
+		}
+		supply, err := desktopSupplyCall(ctx, state, platform, nil)
+		if err != nil {
+			return nil, fmt.Errorf("recovery pause readback failed: platform=%s: %w", platform, err)
+		}
+		if !supply.Paused {
+			result = append(result, platform)
+		}
+	}
+	return result, nil
+}
+
+// Before manual supply writes, remove automatic-resume permission. Re-add it
+// only after a successful unpause and readback on the current owned run.
+func (r *DesktopRuntime) savePlatformResumeIntent(ctx context.Context, platform string, resume bool) error {
+	session, release, err := r.device.acquireSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	state, err := session.read()
+	if err != nil {
+		return err
+	}
+	if state.Identity == nil {
+		return fmt.Errorf("save platform intent requires a saved device identity")
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
+		s.RuntimeIntent.ResumePlatforms = slices.DeleteFunc(s.RuntimeIntent.ResumePlatforms, func(p string) bool { return p == platform })
+		if resume {
+			running := r.snapshot.Local == "running" && r.snapshot.RunID != nil && *r.snapshot.RunID == s.Session.RunID
+			_, pending := s.PendingOperations[platform]
+			if !running || !s.RuntimeIntent.Running || !s.Session.Active || pending {
+				return fmt.Errorf("resume intent binding unconfirmed: owned_running=%t active=%t pending=%t", running, s.Session.Active, pending)
+			}
+			s.RuntimeIntent.ResumePlatforms = append(s.RuntimeIntent.ResumePlatforms, platform)
+		}
+		return nil
+	})
+	return err
+}
+
+// Caller holds r.mu and lifecycleMu. Only local storage is touched here.
+func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, restoring bool) error {
+	if restoring && r.userStopRequested {
+		return errDesktopRuntimeIdle
+	}
+	session, release, err := r.device.acquireSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	state, err := session.read()
+	if err != nil {
+		return err
+	}
+	if state.Identity == nil {
+		if restoring {
+			return errDesktopRuntimeIdle
+		}
+		return fmt.Errorf("runtime start requires a saved device identity")
+	}
+	// Independent evidence survives a failure to read/write ai-accounts.json.
+	if err = r.reserveRecoveryGuard(session, run, restoring); err != nil {
+		return err
+	}
+	if restoring {
+		if _, err = r.recoveryScope(ctx, session, state); err != nil {
+			if errors.Is(err, errDesktopRuntimeIdle) {
+				if cleanup := r.cleanRecoveryGuard(session); cleanup != nil {
+					return cleanup
+				}
+			}
+			return err
+		}
+	}
+	_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
+		if len(s.Selections) == 0 || len(s.PendingOperations) > 0 {
+			return fmt.Errorf("runtime reservation requires selections and no pending operations: selections=%d pending=%d", len(s.Selections), len(s.PendingOperations))
+		}
+		if restoring && (s.Session.Active || !s.Session.Clean || !s.RuntimeIntent.Running) {
+			return fmt.Errorf("runtime recovery evidence changed before reservation")
+		}
+		s.Session = desktopSessionMarker{RunID: run, Active: true}
+		return nil
+	})
+	if err == nil {
+		r.ownedSession = &desktopRetiredAccountSession{run: run, scope: desktopScopeKey(state.Hive, state.Identity.OwnerID, state.Identity.ID)}
+	}
+	return err
+}
+
+// The device lock serializes this file across processes. Only this owner may
+// retire its marker, after the normal account-state stop has been persisted.
+func (r *DesktopRuntime) reserveRecoveryGuard(session *desktopDeviceSession, run string, restoring bool) error {
+	path := filepath.Join(filepath.Dir(session.path), "runtime-session")
+	previous, err := readDesktopAccountBytes(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("read recovery guard: %w", err)
+	}
+	if restoring && err == nil && !bytes.Equal(previous, []byte("clean\n")) {
+		return fmt.Errorf("automatic recovery rejected: previous recovery guard is not clean; explicit start required")
+	}
+	if err = writePrivateFile(path, []byte(run+"\n"), ".runtime-session-*"); err != nil {
+		return fmt.Errorf("reserve recovery guard before account-state access: %w", err)
+	}
+	r.recoveryGuardRun = run
+	return nil
+}
+func (r *DesktopRuntime) cleanRecoveryGuard(session *desktopDeviceSession) error {
+	path := filepath.Join(filepath.Dir(session.path), "runtime-session")
+	previous, err := readDesktopAccountBytes(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("read recovery guard before cleanup: %w", err)
+	}
+	if bytes.Equal(previous, []byte("clean\n")) {
+		return nil
+	}
+	if r.recoveryGuardRun == "" || !bytes.Equal(previous, []byte(r.recoveryGuardRun+"\n")) {
+		return fmt.Errorf("cannot clean recovery guard: current owner does not match stored run")
+	}
+	if err = writePrivateFile(path, []byte("clean\n"), ".runtime-session-*"); err != nil {
+		return fmt.Errorf("persist clean recovery guard: %w", err)
+	}
+	return nil
+}

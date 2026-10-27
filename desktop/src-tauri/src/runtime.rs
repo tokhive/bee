@@ -71,11 +71,47 @@ impl Bridge {
                 }
             }
         }
-        checked(
-            self.request("runtime_restore", json!({}), Duration::from_secs(15))
-                .await?,
+        let admitted = checked(
+            self.exit_request("runtime_restore", json!({})).await?,
             RuntimeReplyKind::Operation,
         )?;
+        let operation = &admitted.result["operation"];
+        if operation["kind"] != "start" {
+            return Err(failure(format!(
+                "startup restore admission kind={}; required=start",
+                operation["kind"]
+            )));
+        }
+        timeout(Duration::from_secs(90), async {
+            let mut revision=operation["revision"].as_u64().unwrap();
+            let mut run_id=None;
+            loop {
+                let reply=self.exit_snapshot().await?;
+                let snapshot=&reply.result["runtime"];
+                let current=&snapshot["operation"];
+                let observed=snapshot["revision"].as_u64().unwrap();
+                let idle=current["state"] == "succeeded" && snapshot["local"] == "stopped" && snapshot["run_id"].is_null() && snapshot["connection"] == "disconnected";
+                if reply.instance != admitted.instance || current["id"] != operation["id"] || current["kind"] != "start" || observed < revision || !idle && run_id.as_ref().is_some_and(|run|run != &snapshot["run_id"]) {
+                    return Err(failure(format!("startup restore receipt binding failed: instance_matches={} operation_matches={} kind={} revision={observed} previous={revision}; required=same instance/run/start operation and monotonic revision",reply.instance == admitted.instance,current["id"] == operation["id"],current["kind"])));
+                }
+                revision=observed;
+                // An idle saved intent can complete by clearing run_id; only bind a
+                // concrete run while pending, then verify its successful terminal state.
+                match current["state"].as_str() {
+                    Some("succeeded") => {
+                        if !(snapshot["local"] == "running" && snapshot["connection"] == "connected" && snapshot["run_id"].is_string() || idle) {
+                            return Err(failure(format!("startup restore succeeded with local={} connection={} run_present={}; required=connected running or idle stopped",snapshot["local"],snapshot["connection"],!snapshot["run_id"].is_null())));
+                        }
+                        return Ok(());
+                    }
+                    Some("failed"|"cancelled") => return Err(failure(format!("startup restore terminal state={}; error={}; saved intent not proven restored",current["state"],current["error"]))),
+                    _ => {
+                        if !snapshot["run_id"].is_null(){run_id=Some(snapshot["run_id"].clone());}
+                        sleep(Duration::from_millis(25)).await;
+                    }
+                }
+            }
+        }).await.map_err(|_|failure("startup restore completion deadline elapsed: limit=90000ms; update recovery remains unconfirmed"))??;
         Ok(())
     }
 
@@ -118,6 +154,38 @@ impl Bridge {
         exit.handle.take();
         exit.result = Some(result.clone());
         result
+    }
+
+    /// A failed startup recovery must stop contribution, while keeping the
+    /// management process available for pending-account readback when proven safe.
+    pub(crate) async fn stop_failed_restore(&self) -> Result<(), BridgeError> {
+        let stopped = timeout(
+            Duration::from_secs(12),
+            self.persist_owned_exit(OwnedExitReason::AppExit),
+        )
+        .await
+        .unwrap_or_else(|_| {
+            Err(failure(
+                "failed restore stop deadline elapsed: limit=12000ms",
+            ))
+        });
+        match stopped {
+            Ok(()) => Ok(()),
+            Err(cause) => {
+                // Cancelling restore polling does not cancel the Go worker. If its
+                // stop receipt cannot be proven, reap our child to prevent late work.
+                let cleanup = self.stop().await;
+                Err(failure(format!(
+                    "failed restore stop unproven: {}: {}; owned child cleanup={}",
+                    cause.code,
+                    cause.message,
+                    match cleanup {
+                        Ok(()) => "reaped; management unavailable until restart".into(),
+                        Err(error) => format!("{}: {}", error.code, error.message),
+                    }
+                )))
+            }
+        }
     }
 
     async fn exit_snapshot(&self) -> Result<BridgeReply, BridgeError> {

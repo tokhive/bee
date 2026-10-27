@@ -1,0 +1,161 @@
+# Bee 安装、更新与发布验证记录
+
+日期：2026-10-27。当前状态：**待验收（pending），尚不具备八组合正式发布证据**。
+
+本文件落实[已批准的 S3 设计](../superpowers/specs/2026-10-26-desktop-release-update-design.md)中的 P1–P6。代码和候选包准备、当前平台验证、八组合正式发布就绪分别记录。自动测试或构建通过不能填写真实安装验收为通过。
+
+当前已同步 S1-T6 的 owned 退出／恢复、S1-T7 原生贡献界面及 S2-T1 偏好存储，S3 已消费真实退出与偏好接口；S2-T5 设置页尚未提交，更新控件仍独立验证，S1/S2 最终原生验收尚未齐备。S3 消费这些实现，不复制另一套账号、偏好或退出逻辑。生产 HTTPS 更新地址、生产更新签名密钥、Developer ID／公证、Authenticode、授权测试账号及八组合原生桌面资源尚未提供。本轮没有发布或上传资产，也没有运行用户的官方客户端或贡献流量。
+
+## 现有证据的适用范围
+
+历史记录保留在 [P0 验证](p0-validation.md)、[P1 页面验收](../../desktop/docs/p1-acceptance.md)及 `evidence/`。历史 demo、ad-hoc 签名、浏览器、容器／Xvfb、Windows Server 或较新 macOS 结果只能证明其当时条件，不证明本次正式包及新功能。旧包截图不得给新候选的 P1–P6 打勾。
+
+只有源码、构建模式、候选身份和相关包路径仍相符的证据才可复用。纯文档变更无须重新制造全部历史构建；一旦候选包或相关代码变化，须补对应证据。集成测试命令及实际结果由整合者补入本文件，未执行项保持待验证。
+
+## 八组合原生矩阵
+
+macOS 必须包含 13.x 最低支持版本的原生验收；新系统不能填补这一格。Windows 必须是桌面工作站系统。Linux 必须在真实 X11／Wayland 桌面完成安装后的操作，容器与 Xvfb 不能替代。
+
+| 证据 ID | OS／架构 | 安装格式 | P1–P6 | 缺口 |
+| --- | --- | --- | --- | --- |
+| `macos-13-arm64` | macOS 13.x／arm64 | DMG | 待验收 | 原生桌面、正式签名／公证、整合候选、授权账号 |
+| `macos-13-x64` | macOS 13.x／x64 | DMG | 待验收 | 原生桌面、正式签名／公证、整合候选、授权账号 |
+| `windows-10-22h2-x64` | Windows 10 22H2／x64，build 19045 | NSIS | 待验收 | 工作站、Authenticode、WebView2、整合候选、授权账号 |
+| `windows-11-x64` | Windows 11／x64，build ≥22000 | NSIS | 待验收 | 工作站、Authenticode、WebView2、整合候选、授权账号 |
+| `ubuntu-22.04-x64` | Ubuntu 22.04／x64 | AppImage | 待验收 | 原生桌面、签名更新资产、整合候选、授权账号 |
+| `ubuntu-22.04-arm64` | Ubuntu 22.04／arm64 | AppImage | 待验收 | 原生桌面、签名更新资产、整合候选、授权账号 |
+| `ubuntu-24.04-x64` | Ubuntu 24.04／x64 | AppImage | 待验收 | 原生桌面、签名更新资产、整合候选、授权账号 |
+| `ubuntu-24.04-arm64` | Ubuntu 24.04／arm64 | AppImage | 待验收 | 原生桌面、签名更新资产、整合候选、授权账号 |
+
+## 可执行证据入口
+
+从仓库根目录运行 Node 24：
+
+```sh
+node --test desktop/tests/release-evidence.test.mjs
+node desktop/scripts/verify-release-evidence.mjs --evidence docs/desktop/release-validation.md
+```
+
+第二条命令目前必须非零退出并显示 pending 和具体缺口。只有八组合、每格 P1–P6、两个配套候选及全部附件齐全时才通过完整性门槛。校验器不会联网、发布、安装、启动 App 或读取签名私钥。
+
+Markdown 内必须且只能包含下方这种明确标记的 JSON 围栏。也可将同一对象保存为 `.json` 文件后传给 `--evidence`；不自动猜测旁边的文件。附件路径相对该证据文件所在目录解析；附件必须全部位于该目录或其普通子目录，拒绝绝对路径、`..` 上级目录、附件及中间目录的符号链接。工具核对词法路径与 `realpath` 均在允许根目录内，不读取目录外附件。所有 SHA-256 均核对本地实际文件字节。记录附件修改后必须重算其引用摘要。空文件、缺文件、摘要不符、身份不符立即失败。
+
+```json bee-release-evidence
+{
+  "schema_version": 1,
+  "status": "pending",
+  "blockers": [
+    "S2-T5 设置页整合尚未导入，最终 S1/S2 原生验收未齐",
+    "未提供生产 HTTPS 更新地址、发布渠道和正式候选版本",
+    "未提供生产更新签名、macOS Developer ID/公证、Windows Authenticode 受控构建凭据",
+    "没有两个配套正式签名候选及完整包摘要、签名工具输出",
+    "八组合原生桌面安装/升级与 P1–P6 记录尚未齐备",
+    "未提供明确授权的 OpenAI/Claude 测试账号及贡献流量操作范围"
+  ],
+  "candidate": null,
+  "previous_candidate": null,
+  "release_notes": null,
+  "rows": [
+    { "id": "macos-13-arm64", "status": "pending" },
+    { "id": "macos-13-x64", "status": "pending" },
+    { "id": "windows-10-22h2-x64", "status": "pending" },
+    { "id": "windows-11-x64", "status": "pending" },
+    { "id": "ubuntu-22.04-x64", "status": "pending" },
+    { "id": "ubuntu-22.04-arm64", "status": "pending" },
+    { "id": "ubuntu-24.04-x64", "status": "pending" },
+    { "id": "ubuntu-24.04-arm64", "status": "pending" }
+  ]
+}
+```
+
+## 完整证据对象契约（版本 1）
+
+不得将上述 pending 改为 ready 来绕过缺口。以下字段均来自真实候选或验收运行；可参考 `desktop/tests/release-evidence.test.mjs` 的结构，但其中临时文件和签名文案只是校验器测试夹具，绝不能作为发布证据。
+
+顶层 `status` 为 `ready`、`blockers` 为空才进入校验。`candidate` 和 `previous_candidate` 均包含下表字段，App 和内置 Bee 版本必须相同；旧候选版本必须低于新候选，两个候选使用同一渠道、更新源和生产更新公钥。两个版本的源码提交分别记录，不把旧版提交伪装成新版。
+
+| 候选身份字段 | 要求 |
+| --- | --- |
+| `version`、`bee_version` | 明确的语义版本，App／Bee 配套 |
+| `source_revision` | 完整 40 或 64 位小写源码提交 SHA；包含实际整合的 S1/S2/S3 |
+| `build_mode` | 必须为 `production`；demo／e2e／开发包不通过 |
+| `channel` | 非空且由受控构建固定的发行渠道 |
+| `update_endpoint` | 无嵌入凭据的生产 HTTPS 更新地址，不能是本地测试源 |
+| `updater_public_key_sha256` | 生产更新公钥的 64 位小写 SHA-256，不含秘密 |
+
+顶层 `release_notes` 指向正式候选对应的中文发布说明。所有附件引用均为 `{ "path": "相对路径", "sha256": "64位小写摘要", "kind": "类型" }`；`kind` 使用下文规定值，不接受 URL 代替本地可核验附件。原始签名输出不得删掉失败环节；包含日志时先按 S2 脱敏规则移除凭据。
+
+`rows` 必须恰好包含矩阵八个 ID，无重复、无替换。每行包含 `id`、`status: "passed"`、`environment`、`candidate`、`previous_candidate`、`native_identity`、`acceptance`。
+
+### 原生身份
+
+`environment` 包含 `os`（`macos`／`windows`／`ubuntu`）、真实 `version`、`arch`（`x64`／`arm64`）、`execution: "native-desktop"`、`container: false`、`emulated: false`、`display`。macOS 使用 `aqua`；Windows 使用 `windows`，另填数值 `windows_build` 和工作站 `windows_product_type: 1`；Ubuntu 使用 `x11` 或 `wayland`。Windows 版本使用产品版本 `10.0` 或 `11.0`，内核 build 另填，避免 Windows 11 的 NT 10.0 混淆。
+
+`native_identity` 是 `kind: "native-identity"` 的 JSON 附件，字段包括 `schema_version: 1`、`ok: true`、候选绑定字段和完全相同的 `environment`。候选绑定字段为 `source_revision`、`version`、`build_mode`、`installer_sha256`、`update_asset_sha256`。此摘要由原生操作者依据 `ci-native-evidence.mjs` 原始输出及真实桌面观测整理，原始输出也须作为 P1 的 `native-log` 附件保留；摘要本身不能把容器改称原生。
+
+### 每行的两个候选工件
+
+每个 `candidate`／`previous_candidate` 工件对象包含：
+
+| 字段 | 必需内容 |
+| --- | --- |
+| `identity` | 与顶层相应候选的全部身份字段逐项相同 |
+| `os`、`arch` | 与该行目标相同 |
+| `installer` | `format` 为 `dmg`／`nsis`／`appimage`；`file` 引用实际安装包，kind 为 `package` |
+| `update_asset` | `format`：macOS 为 `app.tar.gz`，Windows 为 `nsis`，Linux 为 `appimage`；`file` 引用对应更新资产，kind 为 `package` |
+| `bundled_bee` | `version`、`source_revision` 与相应候选一致；`file` 为从该包核对的 Bee，kind 为 `binary` |
+| `signatures.updater` | `verified: true`、`scope: "production"`、匹配的 `public_key_sha256`、`proof` 为 kind `native-log` 的签名验证输出 |
+| `signatures.platform` | macOS／Windows 必填：`verified: true`、`scope: "production"`、非空 `identity`、`kind` 为 `developer-id`／`authenticode`、`proof` 为 kind `native-log` |
+| `signatures.notarization` | macOS 必填：`verified: true`、`stapled: true`、`proof` 为 kind `native-log`，保留公证及票据核验输出 |
+
+签名输出必须覆盖该候选的安装包、包内原生应用和对应更新资产，记录工具、实际身份／公钥、被验文件摘要及结果。SHA-256 只能核对文件，不能代替签名。测试密钥、临时身份、自签／ad-hoc 结果可另存测试目录，不得写为 production。
+
+每个签名 `proof` 指向 kind `native-log` 的结构化 JSON 验证报告，不接受仅写“已签名”的文本。报告包含 `schema_version: 1`、`verified: true`、`scope: "production"`、`signature_kind`（`updater`／`platform`／`notarization`）、候选绑定字段、`bundled_bee_sha256`、非空 `tool`，以及 kind `native-log` 的 `raw_output` 原始工具输出附件。`updater` 报告另填 `public_key_sha256`；`platform` 报告另填匹配的 `signing_identity`；`notarization` 报告另填 `stapled: true`。这些字段必须与该候选工件一致，旧包的验证日志不能移作新包证明。结构化报告可由真实工具输出整理，原始输出必须保留供审阅，不得在没有实际验签时生成通过报告。
+
+### 安装后的验收 JSON
+
+`acceptance` 为 `kind: "acceptance"` 的 JSON 附件，包含 `schema_version: 1`、真实 ISO 8601 `recorded_at`、实际 `installed_path`、候选绑定字段、与该行一致的 `environment`、`official_clients` 和 `cases`。`official_clients.openai`／`.claude` 均填实际官方客户端 `name` 和 `version`，记录受支持来源及权限结果，不保存账号 token。
+
+`cases` 必须包含 P1–P6，每项均有 `status: "passed"`、候选绑定字段、非空 `evidence` 附件数组及如下步骤。P1–P5 至少有一个 `native-log`；截图可作为 kind `screenshot` 的补充，不能单独证明运行、登录或恢复。P6 至少有一个 kind `document` 的发布材料附件。每一步为 `{ "status": "passed", "actual": "实际操作、观察及核验结果" }`，不接受空文本或仅将总标题写成通过。
+
+| 验收项 | 必需步骤键及内容 |
+| --- | --- |
+| P1 | `install` 普通用户安装、`start` 安装路径启动、`bundled_bee_source` 包内 Bee 来源、`no_automatic_contribution` 首启不自动贡献、`preserve_existing_config` 保留配置、`preserve_external_bee` 不终止外部 Bee |
+| P2 | `platforms.openai`／`.claude` 各自完整填写：`existing_login`、`official_login`、`select_account`、`explicit_contribution`、`pause`、`resume`、`switch_account_stays_paused`、`offline`、`restart_recovery` |
+| P3 | `doctor`、`log_export`、`proxy`、`language_theme`、`autostart`、`notifications`、`close_and_reopen`、`permission_denied`、`export_failure`；Linux 记录托盘存在／不存在时窗口找回 |
+| P4 | `check`、`download`、`verify_signature`、`confirm_exit`、`owned_stop`、`install`、`new_version_start`、`pairing_preserved`、`account_selection_preserved`、`pause_preserved`、`preferences_preserved`、`pending_actions_reconciled`、`runtime_recovered` |
+| P5 | `wrong_signature`、`wrong_platform`、`wrong_architecture`、`interrupted_download`、`disk_failure`、`permission_failure`、`duplicate_install`、`child_reap_failure`、`old_app_new_config`；每一步另填 `data_preserved: true`、`no_false_success: true` 并在 actual 说明旧包／原数据及实际停止状态 |
+| P6 | `release_notes`、`supported_platforms`、`installation`、`update`、`official_clients`、`known_limitations`、`package_checksums`、`signing_evidence` |
+
+除 P2 外步骤放在 `steps` 中。P4 另有 `previous`，包含旧候选 `source_revision`、`version`、`installer_sha256` 和 `update_asset_sha256`，必须与该行 `previous_candidate` 相同。P4 的新版本绑定须与当前候选相同；安装器返回成功不能代替新版本实际启动及恢复证据。
+
+### 官方来源与 Linux 托盘的必需子场景
+
+P2 另须有 `source_coverage.openai` 和 `source_coverage.claude`，不能用“正常文件登录已通过”的总述代替。每个平台包含下表四项；这里的来源支持范围依据 S1 当前公开能力：文件来源三端支持，OpenAI `keyring`／Claude `keychain` 仅 macOS 支持。来源能力变化时须同步实现、证据契约和本矩阵，不能仅将必需项改为不适用。
+
+| 字段 | 必需结构及证明 |
+| --- | --- |
+| `file` | `store: "file"`、`applicability: "required"`、`steps.read`／`.permission_denied`／`.corrupt` 各有 passed 和非空 actual，以及包含原始观测的 `evidence` 数组（至少一个 native-log） |
+| `keychain` | OpenAI 的 `store: "keyring"`，Claude 的 `store: "keychain"`。macOS 必须 `applicability: "required"`，同样填写 read／permission_denied／corrupt 三步骤和原生 evidence；Windows／Ubuntu 为 `applicability: "not_applicable"`，必须有具体 `reason` 和来源能力原生 evidence，不得将未实现／未测误写为不适用 |
+| `source_switch` | `status: "passed"`、非空 `actual`、不同的 `from`／`to` 来源命名空间，以及原生 evidence；非 macOS 可核对两个受支持文件命名空间的切换，不伪造 Keychain 支持 |
+| `unsupported_storage` | 通常为 `applicability: "required"`、passed、非空 actual、`does_not_report_logged_out: true` 和原生 evidence，证明不支持的存储方式被准确显示为不支持而非未登录。Windows／Ubuntu 的不支持 Keychain 场景必须实测；macOS 若对应客户端／原生入口没有可触发的不支持来源模式，才可填 `applicability: "not_applicable"`，但仍须具体 reason 和客户端能力／入口的原生 evidence |
+
+每个子场景必须显式列出自己的证据引用，相关观测可位于同一完整原生会话日志。所有引用继续受候选绑定与目录／摘要规则约束；不能仅解析自由文本推断“应该覆盖了”。
+
+Ubuntu 的 P3 另须 `tray_scenarios.present` 和 `tray_scenarios.absent`，分别记录有托盘和无托盘时关窗后找回窗口。每项为 `{ "status": "passed", "actual": "实际桌面、操作及窗口找回结果", "evidence": [...] }`，每个 evidence 至少有一个 native-log。单个 `close_and_reopen` 步骤不能替代这两个分支。此两分支约束不用于 macOS／Windows。
+
+本工具检查结构、覆盖范围、文件摘要和身份一致性，不调用平台签名工具，也不能判断手工记录是否真实。因此完整性通过后，发布负责人仍须核对签名工具原始输出、原生运行记录和授权范围。只有真实证据同时满足 P1–P6 才能判定正式就绪；工具通过不产生外部发布授权。
+
+## 集成验证与资源接入
+
+整合者应记录候选完整提交、各命令、退出码与日志路径：`go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:device`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:tooling`、`npm --prefix desktop run build`。复用同源码证据时说明适用范围，只补受整合影响及失败项。当前这里未记录这些整合命令为通过。
+
+| 缺少资源 | 接入位置及剩余动作 |
+| --- | --- |
+| S1/S2 实现和验收 | 合并各自已验证提交，确认 owned 退出 receipt、配置版本和偏好迁移接口，再生成整合候选 |
+| 生产版本／渠道／HTTPS 地址／更新公钥 | 受控构建输入 `BEE_RELEASE_VERSION`、`BEE_RELEASE_CHANNEL`、`BEE_UPDATE_ENDPOINT`、`BEE_UPDATER_PUBLIC_KEY`；先确认公开资源，不允许前端改源 |
+| 更新签名私钥 | 构建环境 Tauri 更新签名 secrets，仅在受控 CI 接入，不写仓库、不在聊天粘贴 |
+| Developer ID／公证及 Authenticode | 相应原生签名任务的受控 secrets／证书存储；补签名、公证和票据验证输出 |
+| 八组合原生桌面 | 对应真实系统和 CPU 的 runner／桌面会话；补普通用户安装、官方来源权限与升级记录 |
+| 授权测试账号／流量 | 用户明确测试账号、工具／权限、允许贡献范围后操作；不索取密码或 token |
+| 发布授权 | 候选资产和中文说明准备齐全后，按届时明确授权上传；本轮无上传授权 |

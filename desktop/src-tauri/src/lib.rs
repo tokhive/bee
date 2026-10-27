@@ -5,10 +5,15 @@ mod diagnostics;
 mod lifecycle;
 mod navigation;
 mod preferences;
+#[cfg(windows)]
+pub(crate) mod private_file_windows;
 pub mod protocol;
 pub mod runtime;
 pub mod runtime_protocol;
 pub mod sidecar;
+pub mod updater;
+#[cfg(test)]
+mod updater_tests;
 use tauri::{Emitter, Manager};
 
 pub fn run() {
@@ -22,6 +27,7 @@ pub fn run() {
             }
             lifecycle::dispatch(app, lifecycle::WindowEvent::SecondLaunch);
         }))
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -53,6 +59,9 @@ pub fn run() {
             commands::runtime_snapshot,
             commands::runtime_start,
             commands::runtime_stop,
+            updater::update_snapshot,
+            updater::update_check,
+            updater::update_download,
             lifecycle::login_return_received
         ])
         .setup(|app| {
@@ -92,6 +101,8 @@ pub fn run() {
             for argument in std::env::args().skip(1) {
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
+            let updates=updater::setup(app.handle()).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
+            updater::start_background(app.handle(),&updates);
             let bridge = sidecar::Bridge::bundled();
             let mut statuses = bridge.subscribe();
             let handle = app.handle().clone();

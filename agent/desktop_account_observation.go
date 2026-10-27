@@ -17,6 +17,7 @@ import (
 // Cache contains only public observations and metadata. In particular the
 // runtime observers' raw account/user fields are never retained here.
 type desktopOfficialObservation struct {
+	networkRevision               int64
 	key                           string
 	fingerprint                   *string
 	identityVerified              bool
@@ -105,12 +106,18 @@ func (o *desktopOfficialObservation) reusable(now time.Time) bool {
 	return true
 }
 func (a *DesktopAccounts) observeOfficial(ctx context.Context, p *desktopAccountPlatform, r DesktopAccountDetectRequest, read desktopAccountRead) {
+	a.networkMu.RLock()
+	a.invalidateOfficialNetworkLocked(p)
+	networkRevision := a.network.Revision
+	baseTransport := a.officialTransportLocked()
 	key := desktopObservationKey(read)
 	old := p.official
-	if old != nil && old.key == key && old.reusable(a.now()) {
+	if old != nil && old.networkRevision == networkRevision && old.key == key && old.reusable(a.now()) {
 		applyOfficialObservation(p, old)
+		a.networkMu.RUnlock()
 		return
 	}
+	a.networkMu.RUnlock()
 	if r.Mode != "official" {
 		return
 	}
@@ -121,8 +128,8 @@ func (a *DesktopAccounts) observeOfficial(ctx context.Context, p *desktopAccount
 		p.snapshot.Authorization.Error = failure
 		return
 	}
-	observation := &desktopOfficialObservation{key: key, at: a.now().UTC(), fingerprint: read.fingerprint}
-	transport := &desktopObservationTransport{base: a.transport}
+	observation := &desktopOfficialObservation{key: key, networkRevision: networkRevision, at: a.now().UTC(), fingerprint: read.fingerprint}
+	transport := &desktopObservationTransport{base: baseTransport}
 	var caps beewire.Capabilities
 	var failure string
 	metadata := old
@@ -170,6 +177,12 @@ func (a *DesktopAccounts) observeOfficial(ctx context.Context, p *desktopAccount
 	// the first account's identity/quota with the second account's candidate.
 	current, err := a.readAccountSource(ctx, r)
 	defer current.clear()
+	a.networkMu.RLock()
+	defer a.networkMu.RUnlock()
+	if a.network.Revision != networkRevision {
+		a.invalidateOfficialNetworkLocked(p)
+		return
+	}
 	var readbackFailure *DesktopAccountError
 	if err != nil {
 		readbackFailure = accountFailure(r.Platform, "unconfirmed", "source_readback", "official observation could not verify its source after the query")

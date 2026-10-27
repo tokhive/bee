@@ -17,23 +17,28 @@ import (
 // DesktopAccounts keeps public observations, never authorization material.
 // Each platform has a separate, deadline-aware gate; snapshots are deep copies.
 type DesktopAccounts struct {
-	lifecycleMu   sync.Mutex
-	runtime       *DesktopRuntime
-	activeActions map[string]bool
-	storageMu     sync.Mutex
-	ctx           context.Context
-	cancel        context.CancelFunc
-	workers       sync.WaitGroup
-	closed        bool
-	device        *DesktopDevice
-	platforms     map[string]*desktopAccountPlatform
-	goos          string
-	now           func() time.Time
-	readKeyring   func(context.Context, string) ([]byte, error)
-	transport     http.RoundTripper
+	networkMu        sync.RWMutex
+	network          DesktopNetworkConfig
+	networkTransport http.RoundTripper
+	networkPaths     DesktopNetworkPaths
+	lifecycleMu      sync.Mutex
+	runtime          *DesktopRuntime
+	activeActions    map[string]bool
+	storageMu        sync.Mutex
+	ctx              context.Context
+	cancel           context.CancelFunc
+	workers          sync.WaitGroup
+	closed           bool
+	device           *DesktopDevice
+	platforms        map[string]*desktopAccountPlatform
+	goos             string
+	now              func() time.Time
+	readKeyring      func(context.Context, string) ([]byte, error)
+	transport        http.RoundTripper
 }
 
 type desktopAccountPlatform struct {
+	networkRevision    int64
 	gate               chan struct{}
 	working            bool
 	pending            *desktopPendingOperation
@@ -196,7 +201,7 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 }
 func NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts {
 	ctx, cancel := context.WithCancel(context.Background())
-	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring}
+	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring, networkTransport: officialTransport(""), networkPaths: desktopNetworkPaths("")}
 	for _, platform := range []string{"openai", "claude"} {
 		result.platforms[platform] = &desktopAccountPlatform{gate: make(chan struct{}, 1), snapshot: initialAccountSnapshot(platform)}
 	}
@@ -213,6 +218,9 @@ func (a *DesktopAccounts) acquire(ctx context.Context, platform string) (*deskto
 			<-p.gate
 			return nil, nil, accountFailure(platform, "deadline", "platform_gate", "request context canceled before source access")
 		}
+		a.networkMu.RLock()
+		a.invalidateOfficialNetworkLocked(p)
+		a.networkMu.RUnlock()
 		return p, func() { <-p.gate }, nil
 	case <-ctx.Done():
 		return nil, nil, accountFailure(platform, "deadline", "platform_gate", "request canceled or 12-second deadline exceeded")

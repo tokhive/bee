@@ -20,14 +20,14 @@ const callbacks=new Map();
   if(command.startsWith('runtime_')){
    if(command==='runtime_start'){local='running';operation=op('start',null,++runtimeRevision);if(w.runtimeUnknown)throw new Error('RESPONSE_TIMEOUT: start result unconfirmed');return {instance,result:{operation}};}
    if(command==='runtime_stop'){local='stopped';operation=op('stop',null,++runtimeRevision);return {instance,result:{operation}};}
-   return {instance,result:{runtime:{run_id:local==='running'?'a'.repeat(32):null,revision:runtimeRevision,network_revision:0,observed_at:new Date().toISOString(),local,connection:local==='running'?'connected':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:accounts[p],supply:null,selection_revision:accounts[p].selection.state==='selected'?1:0}])),operation,stop_receipt:operation?.kind==='stop'?{workers_stopped:true,intent_saved:true,session_clean:true}:null}}};
+   w.runtimeReadCount=(w.runtimeReadCount??0)+1;return structuredClone({instance,result:{runtime:{run_id:local==='running'?'a'.repeat(32):null,revision:runtimeRevision,network_revision:0,observed_at:new Date().toISOString(),local,connection:local==='running'?'connected':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:(w.runtimeAccounts??accounts)[p],supply:null,selection_revision:accounts[p].selection.state==='selected'?1:0}])),operation,stop_receipt:operation?.kind==='stop'?{workers_stopped:true,intent_saved:true,session_clean:true}:null}}});
   }
   if(command.startsWith('authorize_')){
    const p=args.request?.platform??Object.keys(accounts).find(p=>accounts[p].operation?.id===args.operationId),a=accounts[p];
    if(command==='authorize_start'){if(w.loginAdmissionDelay)await new Promise(r=>setTimeout(r,w.loginAdmissionDelay));a.operation=op('authorize',p,++a.revision,'running');}
    if(command==='authorize_cancel')a.operation={...a.operation,state:'cancelled',revision:++a.revision};
    if(command==='authorize_status'&&w.loginComplete){a.operation={...a.operation,state:'succeeded',revision:++a.revision};a.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:p==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:new Date().toISOString(),error:null};}
-   return {instance,result:{operation:a.operation}};
+   return {instance,result:{operation:structuredClone(a.operation)}};
   }
   if(command.startsWith('supply_')){const p=args.platform;if(command==='supply_set_paused'&&w.supplyFail===p)return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:'PUT HTTP 503 result unconfirmed'}}};if(command==='supply_set_paused')w.paused[p]=args.paused;return {result:{supply:{hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:false,reasons:w.paused[p]?['manually_paused','offline']:['offline'],checked_at:new Date().toISOString()}}};}
   if(command==='account_defaults')return {instance,result:{defaults:{platforms:['openai','claude'].map(p=>({platform:p,directory:p==='openai'?'/tmp/codex':'/tmp/claude',default_store:'file',stores:(p==='openai'?['auto','file','keyring']:['file','keychain']).map(store=>({store,supported:true,reason:null}))}))}}};
@@ -35,6 +35,7 @@ const callbacks=new Map();
   if(w.fail===platform)return {instance:captured,result:{error:{code:'ACCOUNT_OPERATION_FAILED',message:'source_read permission_denied=true; check=file_read'}}};
   const a=structuredClone(accounts[platform]);
   if(command==='account_action'){
+   if(args.request.revision!==a.revision)return {instance,result:{error:{code:'ACCOUNT_OPERATION_FAILED',message:'stale_revision: revision must match the current platform snapshot'}}};
    a.revision++;a.operation=op(args.request.action,platform,a.revision,w.actionPending?'reconciling':'succeeded');
    if(!w.actionPending){a.selection={state:args.request.action==='clear_selection'?'not_selected':'selected',fingerprint:args.request.action==='clear_selection'?null:a.candidate.fingerprint,observed_at:new Date().toISOString(),error:null};w.paused[platform]=true;}
    accounts[platform]=a;
@@ -46,6 +47,6 @@ const callbacks=new Map();
    accounts[platform]=a;
   }
   if(w.historicalLimit)a.capabilities[1]={...a.capabilities[1],status:'rate_limited',observed_at:new Date(Date.now()-600000).toISOString(),valid_until:new Date(Date.now()-240000).toISOString(),retry_at:new Date(Date.now()+60000).toISOString()};
-  return {instance:captured,result:{account:a}};
+  return {instance:captured,result:{account:structuredClone(a)}};
  }};
 }

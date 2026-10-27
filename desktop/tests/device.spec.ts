@@ -1,12 +1,15 @@
+import {readFileSync} from 'node:fs';
+const passiveRuntime={...JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,local:'stopped',connection:'disconnected',operation:null,stop_receipt:null};
 import { test, expect } from '@playwright/test';
 
 test.beforeEach(async({page})=>{
- await page.addInitScript(()=>{
+ await page.addInitScript((passiveRuntime)=>{
   const runtime=window as unknown as {isTauri:boolean;__TAURI_INTERNALS__:unknown;deviceStage:string;deviceCalls:string[]};
   (window as unknown as {__TAURI_EVENT_PLUGIN_INTERNALS__:unknown}).__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
   runtime.isTauri=true;runtime.deviceStage='unbound';runtime.deviceCalls=[];
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();
   runtime.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:{handler:number})=>{
+   if(command==='runtime_snapshot')return {instance:'fixture',result:{runtime:{...passiveRuntime,observed_at:new Date().toISOString()}}};
    runtime.deviceCalls.push(command);
    if(command==='plugin:event|listen') {if(location.search.includes('stale-status'))setTimeout(()=>callbacks.get(args!.handler)?.({payload:{state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance:'fixture'}}}),20);return 1;}
    if(command==='plugin:event|unlisten')return;
@@ -22,7 +25,7 @@ test.beforeEach(async({page})=>{
    }
    throw new Error('unexpected IPC '+command);
   }};
- });
+ },passiveRuntime);
 });
 test('normal native build pairs and verifies without demo balances or starting supply',async({page})=>{
  await page.setViewportSize({width:860,height:600});await page.goto('/');
@@ -36,7 +39,7 @@ test('normal native build pairs and verifies without demo balances or starting s
  await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
  await expect(page.getByText('real@example.test',{exact:true})).toBeVisible({timeout:10000});
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toBeVisible();
+ await expect(page.getByText('设备已绑定。')).toBeVisible();
  await page.getByRole('button',{name:'收益',exact:true}).click();
  await expect(page.getByText('真实收益尚未接通。')).toBeVisible();
  expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply_set_paused|run/.test(c)))).toBe(false);
@@ -47,7 +50,7 @@ test('failed verification blocks success and remains retryable',async({page})=>{
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
  await page.getByRole('button',{name:'重新核对设备'}).click();
  await expect(page.getByRole('alert')).toContainText('HTTP 503');
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toHaveCount(0);
+ await expect(page.getByText('设备已绑定。')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
 });
 
@@ -55,14 +58,14 @@ test('retrying a failed bound-device check does not revive cached success',async
  await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
  await page.getByRole('button',{name:'重新核对设备'}).click();
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toBeVisible();
+ await expect(page.getByText('设备已绑定。')).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
  await page.getByRole('button',{name:'重新核对设备'}).click();await expect(page.getByRole('alert')).toContainText('HTTP 503');
  await page.evaluate(()=>{(window as unknown as {deviceStage:string;deviceDelay:number}).deviceStage='bound';(window as unknown as {deviceDelay:number}).deviceDelay=500;});
  await page.getByRole('button',{name:'重新核对设备'}).click();
  await expect(page.getByText('正在核对设备…')).toBeVisible();
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toHaveCount(0);
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toBeVisible();
+ await expect(page.getByText('设备已绑定。')).toHaveCount(0);
+ await expect(page.getByText('设备已绑定。')).toBeVisible();
 });
 
 test('an old native status rejection cannot overwrite a newer ready event',async({page})=>{
@@ -76,7 +79,7 @@ test('opening after website confirmation consumes the latest bound result',async
  await page.getByRole('button',{name:'生成配对码'}).click();await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
  await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
- await expect(page.getByText('设备已绑定，尚未开始贡献。')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
+ await expect(page.getByText('设备已绑定。')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
 });
 
 test('English device entry and settings have complete translations',async({page})=>{

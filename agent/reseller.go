@@ -54,6 +54,9 @@ type resellerSource struct {
 	// registered is the lease and key fingerprint Hive last accepted.
 	registeredLease, registeredKey string
 	reportedAt                     time.Time
+	// chargedThrough is the newest charge already reported, so each cycle
+	// reads only the reseller's billing records that came after it.
+	chargedThrough time.Time
 }
 
 func (source *resellerSource) validate() error {
@@ -144,6 +147,11 @@ func (cfg *egressConfig) synchronizeReseller(ctx context.Context, state localSta
 		return err
 	}
 	source.reportedAt = time.Now()
+	if status.State == beewire.ResellerReady {
+		if err := source.reportCharges(ctx, state, key, keyPrint); err != nil {
+			slog.Warn("reseller charges not reported", "module", "sync", "reseller", source.Reseller, "error", err.Error())
+		}
+	}
 	switch status.State {
 	case beewire.ResellerReady:
 		source.message(out, "ready", fmt.Sprintf("%s key ready: %d models", source.Reseller, len(status.Models)))
@@ -241,4 +249,67 @@ func (source *resellerSource) get(ctx context.Context, key, path string, out any
 		return 0
 	}
 	return resp.StatusCode
+}
+
+// resellerChargePages bounds how far back one cycle reads the reseller's
+// billing records: twenty a page, newest first.
+const resellerChargePages = 10
+
+// reportCharges reads the reseller's per-request billing records made since
+// the last report and sends them to Hive, which reconciles them with what it
+// settled for the same requests. A record without an amount (a request the
+// reseller did not charge) is reported as zero.
+func (source *resellerSource) reportCharges(ctx context.Context, state localState, key, keyPrint string) error {
+	var charges []beewire.ResellerCharge
+	seen := map[string]bool{}
+	newest := source.chargedThrough
+	for page := 1; page <= resellerChargePages; page++ {
+		var records struct {
+			Data []struct {
+				ID        string    `json:"id"`
+				Model     string    `json:"modelId"`
+				Status    string    `json:"status"`
+				Amount    *string   `json:"actualAmount"`
+				CreatedAt time.Time `json:"createdAt"`
+			} `json:"data"`
+		}
+		if code := source.get(ctx, key, fmt.Sprintf("/v1/requests?page=%d", page), &records); code != http.StatusOK {
+			return fmt.Errorf("billing records answered %d", code)
+		}
+		reached := len(records.Data) == 0
+		for _, record := range records.Data {
+			if !record.CreatedAt.After(source.chargedThrough) {
+				reached = true
+				break
+			}
+			if seen[record.ID] {
+				continue
+			}
+			seen[record.ID] = true
+			amount := "0"
+			if record.Amount != nil && *record.Amount != "" {
+				amount = *record.Amount
+			}
+			charges = append(charges, beewire.ResellerCharge{RequestID: record.ID, Model: record.Model, Status: record.Status, AmountUSD: amount, ChargedAt: record.CreatedAt})
+			if record.CreatedAt.After(newest) {
+				newest = record.CreatedAt
+			}
+		}
+		if reached {
+			break
+		}
+	}
+	for len(charges) > 0 {
+		batch := charges[:min(len(charges), beewire.MaxResellerCharges)]
+		charges = charges[len(batch):]
+		report := beewire.ResellerCharges{KeyFingerprint: keyPrint, Charges: batch}
+		if !report.Valid() {
+			return errors.New("the reseller's billing records do not fit the report format")
+		}
+		if err := call(ctx, httpClient(), state.Hive, "/api/bee/resellers/"+source.Reseller+"/charges", "POST", state.Credential, report, nil); err != nil {
+			return err
+		}
+	}
+	source.chargedThrough = newest
+	return nil
 }

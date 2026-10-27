@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/tee/tee"
@@ -207,5 +209,57 @@ func TestResellerSynchronization(t *testing.T) {
 	}
 	if strings.Contains(out.String(), "sk-") {
 		t.Fatal("the key reached the console")
+	}
+}
+
+func TestResellerChargesReportOnlyWhatIsNew(t *testing.T) {
+	now := time.Now().UTC().Truncate(time.Second)
+	var pages atomic.Int32
+	records := func(page string) string {
+		switch page {
+		case "1":
+			return `{"data":[{"id":"r3","modelId":"gpt-6-astra","status":"succeeded","actualAmount":"0.000021","createdAt":"` + now.Format(time.RFC3339) + `"},` +
+				`{"id":"r2","modelId":"gpt-6-astra","status":"failed","actualAmount":null,"createdAt":"` + now.Add(-time.Minute).Format(time.RFC3339) + `"}]}`
+		case "2":
+			return `{"data":[{"id":"r1","modelId":"gpt-6-astra","status":"succeeded","actualAmount":"0.5","createdAt":"` + now.Add(-time.Hour).Format(time.RFC3339) + `"}]}`
+		}
+		return `{"data":[]}`
+	}
+	reseller := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer sk-reseller-key" || r.URL.Path != "/v1/requests" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		pages.Add(1)
+		io.WriteString(w, records(r.URL.Query().Get("page")))
+	}))
+	defer reseller.Close()
+	var reported []beewire.ResellerCharge
+	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var input beewire.ResellerCharges
+		json.NewDecoder(r.Body).Decode(&input)
+		if r.URL.Path != "/api/bee/resellers/wokey/charges" || !input.Valid() {
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		reported = append(reported, input.Charges...)
+		io.WriteString(w, `{"stored":1}`)
+	}))
+	defer hive.Close()
+	source := &resellerSource{Reseller: "wokey", api: reseller.URL}
+	state := localState{Hive: hive.URL, Credential: "device-secret"}
+	if err := source.reportCharges(context.Background(), state, "sk-reseller-key", fingerprint("sk-reseller-key")); err != nil {
+		t.Fatal(err)
+	}
+	if len(reported) != 3 || reported[1].AmountUSD != "0" || reported[2].RequestID != "r1" {
+		t.Fatalf("first report: %+v", reported)
+	}
+	reported = nil
+	pages.Store(0)
+	if err := source.reportCharges(context.Background(), state, "sk-reseller-key", fingerprint("sk-reseller-key")); err != nil {
+		t.Fatal(err)
+	}
+	if len(reported) != 0 || pages.Load() != 1 {
+		t.Fatalf("records already reported were sent again, or more than one page read: %+v %d", reported, pages.Load())
 	}
 }

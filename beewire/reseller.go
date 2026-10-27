@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // An API reseller (Hive ADR 0030) is a third-party endpoint, such as wokey,
@@ -69,4 +70,42 @@ func (s ResellerStatus) Valid() bool {
 func validFingerprint(value string) bool {
 	raw, err := hex.DecodeString(value)
 	return err == nil && len(raw) == 32 && value == strings.ToLower(value)
+}
+
+// ResellerCharge is one request as the reseller billed it: its own request
+// ID, which the reseller also returns on the response, and what it charged.
+type ResellerCharge struct {
+	RequestID string    `json:"request_id"`
+	Model     string    `json:"model"`
+	Status    string    `json:"status"`
+	AmountUSD string    `json:"amount_usd"`
+	ChargedAt time.Time `json:"charged_at"`
+}
+
+// ResellerCharges is a batch of charges a platform Bee read from the
+// reseller's billing records with the registered key, for Hive to reconcile
+// against what it settled.
+type ResellerCharges struct {
+	KeyFingerprint string           `json:"key_fingerprint"`
+	Charges        []ResellerCharge `json:"charges"`
+}
+
+var resellerRequestID = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
+
+// MaxResellerCharges bounds one report.
+const MaxResellerCharges = 100
+
+func (c ResellerCharges) Valid() bool {
+	if !validFingerprint(c.KeyFingerprint) || len(c.Charges) == 0 || len(c.Charges) > MaxResellerCharges {
+		return false
+	}
+	seen := make(map[string]bool, len(c.Charges))
+	for _, charge := range c.Charges {
+		if !resellerRequestID.MatchString(charge.RequestID) || seen[charge.RequestID] || len(charge.Model) > 128 || len(charge.Status) > 32 ||
+			!usdBalance.MatchString(charge.AmountUSD) || charge.ChargedAt.IsZero() {
+			return false
+		}
+		seen[charge.RequestID] = true
+	}
+	return true
 }

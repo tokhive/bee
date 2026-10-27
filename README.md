@@ -169,7 +169,7 @@ The market falls back to a third-party API reseller, such as wokey, when no subs
 }
 ```
 
-Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. Replacing the key in the file takes effect on the next synchronization.
+Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. While the key is ready it also reads the reseller's per-request billing records made since its last report and sends them to Hive, which reconciles what it settled against what the reseller charged. Replacing the key in the file takes effect on the next synchronization.
 
 ### Environment variables
 

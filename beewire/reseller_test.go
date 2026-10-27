@@ -3,6 +3,7 @@ package beewire
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestResellerKeyAndStatusValidation(t *testing.T) {
@@ -33,6 +34,29 @@ func TestResellerKeyAndStatusValidation(t *testing.T) {
 		status.Models = append([]string(nil), ok.Models...)
 		edit(&status)
 		if status.Valid() {
+			t.Errorf("%s accepted", name)
+		}
+	}
+}
+
+func TestResellerChargesValidation(t *testing.T) {
+	charge := ResellerCharge{RequestID: "2026102608083912dfi", Model: "claude-sonnet-5-5", Status: "succeeded", AmountUSD: "0.000021", ChargedAt: time.Now()}
+	ok := ResellerCharges{KeyFingerprint: strings.Repeat("ab", 32), Charges: []ResellerCharge{charge}}
+	if !ok.Valid() {
+		t.Fatal("valid charges rejected")
+	}
+	for name, edit := range map[string]func(*ResellerCharges){
+		"none":         func(c *ResellerCharges) { c.Charges = nil },
+		"duplicate":    func(c *ResellerCharges) { c.Charges = append(c.Charges, c.Charges[0]) },
+		"bad id":       func(c *ResellerCharges) { c.Charges[0].RequestID = "a b" },
+		"bad amount":   func(c *ResellerCharges) { c.Charges[0].AmountUSD = "-1" },
+		"no time":      func(c *ResellerCharges) { c.Charges[0].ChargedAt = time.Time{} },
+		"too many":     func(c *ResellerCharges) { c.Charges = make([]ResellerCharge, MaxResellerCharges+1) },
+		"wrong prints": func(c *ResellerCharges) { c.KeyFingerprint = "x" },
+	} {
+		report := ResellerCharges{KeyFingerprint: ok.KeyFingerprint, Charges: []ResellerCharge{charge}}
+		edit(&report)
+		if report.Valid() {
 			t.Errorf("%s accepted", name)
 		}
 	}

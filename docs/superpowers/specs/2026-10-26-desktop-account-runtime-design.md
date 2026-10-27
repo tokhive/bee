@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行
 
-日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 待审阅和选择执行模式**。本文为三份后续 spec 的第一份，代号 S1；[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)、[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)已随本文整体获批。[对应实施计划](../plans/2026-10-26-desktop-account-runtime.md)已写成，待整体审阅。
+日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 已获执行授权，2026-10-27 用户调整为本会话仅执行 S1，S2／S3 另开独立会话并行；各自按 S1 plan 公共契约集成**。本文为三份后续 spec 的第一份，代号 S1；[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)、[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)已随本文整体获批。[对应实施计划](../plans/2026-10-26-desktop-account-runtime.md)已获执行授权。
 
 ## 1. 用户最终得到什么
 

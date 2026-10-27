@@ -76,7 +76,7 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。同时回收 owned 贡献与官方登录进程；不等待 Hive 在途任务完成。
 
-## S1 运行交接契约（T1 已定义，命令在接通服务后开放）
+## S1 运行交接契约
 
 公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置；S1-T4 已接通官方登录；S1-T6 接通仅供 Rust 启动生命周期调用的 runtime_restore。
 
@@ -96,7 +96,7 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 新数值修订使用非负JS安全整数，时间为UTC RFC3339，状态枚举封闭；旧instance/run_id/revision不能覆盖新结果。未知值和结果未确认时保持不可恢复。
 
-账号文件v2保留提醒entries，新增scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent及session；不保存token。旧v1在首次写入升级前原样保存到受保护`.v1.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。未来运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
+账号文件v2保留提醒entries，新增scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent及session；不保存token。旧v1在首次写入升级前原样保存到受保护`.v1.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
 
 ## 验证命令
 
@@ -146,3 +146,5 @@ Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重�
 `runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。上次非 clean 标记必须通过明确开始处理。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
 
 `Bridge::prepare_owned_exit(OwnedExitReason::{AppExit,Update})` 冻结新请求及尚未发送的排队操作，核对同 instance、run_id、stop operation 和修订的停止回执，最多等待12秒后仍必须回收 owned Child。调用方取消不会取消该清理任务。仅保存意图、会话clean和Child wait/reap均被证实后返回四项为真的 `OwnedExitReceipt`；配置锁随该子进程退出释放。更新准备不释放 App 单实例，普通退出在回收后才释放。该回执不代表 Hive 在途任务已排空。
+
+账号换号待核对状态中，`operation.error.code=confirmation_not_submitted` 表示持久阶段证明确认 POST 尚未提交；界面可以在来源候选仍新鲜、修订一致且用户再次确认时继续原操作。其他 reconciling／结果未知状态只允许查询，不能重新确认。错误码为跨语言结构化字段，界面不解析英文错误文案判断提交状态。

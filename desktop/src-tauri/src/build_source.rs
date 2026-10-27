@@ -17,6 +17,15 @@ pub struct BuildSource {
 }
 
 impl BuildSource {
+    pub fn verify_release_version(&self, version: &str) -> Result<(), String> {
+        if self.bee_version != version {
+            return Err(format!(
+                "release build source beeVersion mismatch: actual={}; required={version}",
+                self.bee_version
+            ));
+        }
+        Ok(())
+    }
     pub fn verify_runtime_binary(&self, path: &Path, bundle: Option<&Path>) -> Result<(), String> {
         #[cfg(target_os = "macos")]
         if let Some(bundle) = bundle {
@@ -172,6 +181,24 @@ mod tests {
     }
 
     #[test]
+    fn production_source_version_must_equal_app_release_version() {
+        let source = parse(metadata()).unwrap();
+        let cause = source.verify_release_version("0.1.0").unwrap_err();
+        assert!(
+            cause.contains("beeVersion")
+                && cause.contains("dev+fixture")
+                && cause.contains("0.1.0"),
+            "{cause}"
+        );
+        let mut matched = metadata();
+        matched["beeVersion"] = json!("0.1.0");
+        parse(matched)
+            .unwrap()
+            .verify_release_version("0.1.0")
+            .unwrap();
+    }
+
+    #[test]
     fn actual_bundled_bytes_must_match_recorded_sha256() {
         let source = parse(metadata()).unwrap();
         let directory = std::env::temp_dir().join(format!(
@@ -205,10 +232,12 @@ mod tests {
 
     #[cfg(target_os = "macos")]
     #[test]
-    #[ignore = "requires a freshly built and ad-hoc signed Bee Dev.app; run explicitly after tauri build"]
+    #[ignore = "requires a freshly built and ad-hoc signed Bee.app; set BEE_TEST_APP_BUNDLE for a release candidate"]
     fn macos_signed_bundle_seal_accepts_signing_changes_and_rejects_tampering() {
         let root = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        let bundle = root.join("target/debug/bundle/macos/Bee Dev.app");
+        let bundle = std::env::var_os("BEE_TEST_APP_BUNDLE")
+            .map(std::path::PathBuf::from)
+            .unwrap_or_else(|| root.join("target/debug/bundle/macos/Bee.app"));
         let binary = bundle.join("Contents/MacOS/bee");
         let bytes = include_bytes!(env!("BEE_SOURCE_FILE"));
         let source = BuildSource::parse(
@@ -231,7 +260,7 @@ mod tests {
             }
         }
         let _cleanup = Cleanup(directory.clone());
-        let copy = directory.join("Bee Dev.app");
+        let copy = directory.join("Bee.app");
         assert!(std::process::Command::new("/usr/bin/ditto")
             .arg(&bundle)
             .arg(&copy)

@@ -2,6 +2,11 @@ name: Desktop hosted macOS 15 Intel supplemental evidence
 
 on:
   workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: Also build an unsigned Bee native candidate; never publishes or uploads it
+        type: boolean
+        default: false
   push:
     branches: [feat/bee-desktop-p0]
     paths:
@@ -29,7 +34,7 @@ concurrency:
 jobs:
   macos-intel:
     # Supplemental current-OS evidence; the strict macOS 13 matrix stays separate.
-    if: ${{ github.repository == 'wangdayong228/bee' && github.ref == 'refs/heads/feat/bee-desktop-p0' }}
+    if: ${{ github.repository == 'wangdayong228/bee' && (github.ref == 'refs/heads/feat/bee-desktop-p0' || (github.event_name == 'workflow_dispatch' && inputs.release_candidate)) }}
     name: macOS 15 Intel native Bee, Rust bridge and P1 demo DMG
     runs-on: macos-15-intel
     timeout-minutes: 90
@@ -223,3 +228,10 @@ jobs:
             desktop-ci-evidence/
             desktop/test-results/
             desktop/playwright-report/
+
+      - name: Prepare optional native Bee release candidate (no publish or upload)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+        run: |
+          node --test desktop/tests/release.test.mjs desktop/tests/update-manifest.test.mjs
+          node desktop/scripts/prepare-release.mjs --mode candidate --target "$BEE_CI_TARGET" --build
+          node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release

@@ -16,6 +16,23 @@ name: Bee native desktop test packages
           - x86_64-pc-windows-msvc
           - x86_64-unknown-linux-gnu
           - aarch64-unknown-linux-gnu
+      release_candidate:
+        description: Also prepare a Bee native candidate in .cache/desktop-release (never publishes)
+        type: boolean
+        default: false
+      release_mode:
+        description: Production requires controlled signing secrets and all release repository variables
+        type: choice
+        default: candidate
+        options: [candidate, production]
+      release_version:
+        description: Must exactly match package.json, Cargo.toml, and Tauri version
+        type: string
+        default: '0.1.0'
+      release_channel:
+        description: Channel pinned into the binary and static manifest
+        type: string
+        default: candidate
 
 permissions:
   contents: read
@@ -161,3 +178,48 @@ jobs:
             desktop/playwright-report/
             .cache/device-pairing/playwright/
           include-hidden-files: true
+
+      # No release upload: these outputs stay in the controlled runner workspace.
+      - name: Import controlled Windows signing certificate
+        if: ${{ inputs.release_candidate && inputs.release_mode == 'production' && runner.os == 'Windows' }}
+        shell: pwsh
+        env:
+          BEE_SIGNING_CERTIFICATE: ${{ secrets.BEE_WINDOWS_CERTIFICATE }}
+          BEE_SIGNING_CERTIFICATE_PASSWORD: ${{ secrets.BEE_WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if (-not $env:BEE_SIGNING_CERTIFICATE) { throw 'Windows release certificate missing: actual=BEE_WINDOWS_CERTIFICATE empty; required=controlled CI signing certificate' }
+          $certificatePath = Join-Path $env:RUNNER_TEMP 'bee-release-signing.pfx'
+          try {
+            [IO.File]::WriteAllBytes($certificatePath, [Convert]::FromBase64String($env:BEE_SIGNING_CERTIFICATE))
+            $password = ConvertTo-SecureString $env:BEE_SIGNING_CERTIFICATE_PASSWORD -AsPlainText -Force
+            $certificate = Import-PfxCertificate -FilePath $certificatePath -CertStoreLocation Cert:\CurrentUser\My -Password $password
+            "BEE_WINDOWS_CERT_THUMBPRINT=$($certificate.Thumbprint)" >> $env:GITHUB_ENV
+          } finally { Remove-Item $certificatePath -Force -ErrorAction SilentlyContinue }
+
+      - name: Prepare source-matched native Bee candidate and verify package contents
+        if: ${{ inputs.release_candidate }}
+        env:
+          BEE_RELEASE_MODE: ${{ inputs.release_mode }}
+          BEE_RELEASE_VERSION: ${{ inputs.release_version }}
+          BEE_RELEASE_CHANNEL: ${{ inputs.release_channel }}
+          BEE_UPDATE_ENDPOINT: ${{ vars.BEE_UPDATE_ENDPOINT }}
+          BEE_RELEASE_ASSET_BASE_URL: ${{ vars.BEE_RELEASE_ASSET_BASE_URL }}
+          BEE_UPDATER_PUBLIC_KEY: ${{ vars.BEE_UPDATER_PUBLIC_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.BEE_UPDATER_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.BEE_UPDATER_PRIVATE_KEY_PASSWORD }}
+          APPLE_CERTIFICATE: ${{ secrets.BEE_APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.BEE_APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.BEE_APPLE_SIGNING_IDENTITY }}
+          APPLE_API_ISSUER: ${{ secrets.BEE_APPLE_API_ISSUER }}
+          APPLE_API_KEY: ${{ secrets.BEE_APPLE_API_KEY }}
+          APPLE_API_KEY_PATH: ${{ secrets.BEE_APPLE_API_KEY_PATH }}
+        run: |
+          node --test desktop/tests/release.test.mjs desktop/tests/update-manifest.test.mjs
+          node desktop/scripts/prepare-release.mjs --target "$BEE_CI_TARGET" --build
+          node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release ${{ inputs.release_mode == 'production' && '--require-signing' || '' }}
+
+      - name: Remove temporary Windows signing certificate
+        if: ${{ always() && inputs.release_candidate && inputs.release_mode == 'production' && runner.os == 'Windows' && env.BEE_WINDOWS_CERT_THUMBPRINT != '' }}
+        shell: pwsh
+        run: Remove-Item "Cert:\CurrentUser\My\$env:BEE_WINDOWS_CERT_THUMBPRINT" -Force

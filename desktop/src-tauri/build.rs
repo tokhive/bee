@@ -60,6 +60,71 @@ fn main() {
     metadata
         .verify_binary(&binary)
         .unwrap_or_else(|cause| panic!("{cause}"));
+    let release_mode = std::env::var("BEE_RELEASE_MODE").unwrap_or_else(|_| "development".into());
+    assert!(["development", "candidate", "production"].contains(&release_mode.as_str()), "Bee release mode invalid: actual={release_mode}; required=development|candidate|production");
+    let mut release = std::collections::BTreeMap::new();
+    for name in [
+        "BEE_RELEASE_VERSION",
+        "BEE_RELEASE_CHANNEL",
+        "BEE_UPDATE_ENDPOINT",
+        "BEE_UPDATER_PUBLIC_KEY",
+        "BEE_RELEASE_ASSET_BASE_URL",
+    ] {
+        println!("cargo:rerun-if-env-changed={name}");
+        let value = std::env::var(name).unwrap_or_default();
+        assert!(
+            !value.contains(['\r', '\n']),
+            "Bee release input has line break: field={name}; required=single line"
+        );
+        if release_mode == "production" {
+            assert!(!value.is_empty(), "Bee production release input missing: actual={name} empty; required=controlled production input");
+        }
+        release.insert(name, value);
+    }
+    println!("cargo:rerun-if-env-changed=BEE_RELEASE_MODE");
+    println!("cargo:rustc-env=BEE_RELEASE_MODE={release_mode}");
+    let release_version = &release["BEE_RELEASE_VERSION"];
+    if !release_version.is_empty() {
+        let cargo_version =
+            std::env::var("CARGO_PKG_VERSION").expect("Cargo package version missing");
+        assert_eq!(
+            release_version, &cargo_version,
+            "Bee App release version mismatch: required=Cargo package version"
+        );
+        metadata
+            .verify_release_version(release_version)
+            .unwrap_or_else(|cause| panic!("{cause}"));
+        for (path, name) in [
+            (root.join("desktop/package.json"), "package.json"),
+            (manifest.join("tauri.conf.json"), "tauri.conf.json"),
+        ] {
+            println!("cargo:rerun-if-changed={}", path.display());
+            let json: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(&path).unwrap_or_else(|cause| {
+                    panic!("read release {name} at {}: {cause}", path.display())
+                }))
+                .unwrap_or_else(|cause| panic!("parse release {name}: {cause}"));
+            assert_eq!(
+                json["version"].as_str(),
+                Some(release_version.as_str()),
+                "Bee release {name} version mismatch: required={release_version}"
+            );
+        }
+    }
+    if release_mode == "production" {
+        let endpoint = &release["BEE_UPDATE_ENDPOINT"];
+        assert!(endpoint.starts_with("https://") && !endpoint.contains('@') && !endpoint.contains(['?', '#']), "Bee production endpoint invalid: actual={endpoint}; required=credential-free static HTTPS manifest");
+        let channel = &release["BEE_RELEASE_CHANNEL"];
+        assert!(
+            channel
+                .bytes()
+                .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'-'),
+            "Bee production channel invalid: actual={channel}; required=lowercase channel"
+        );
+    }
+    for (name, value) in release {
+        println!("cargo:rustc-env={name}={value}");
+    }
     println!("cargo:rustc-env=BEE_SOURCE_FILE={}", source.display());
     println!("cargo:rustc-env=BEE_TARGET={target}");
     println!("cargo:rustc-env=BEE_REVISION={revision}");

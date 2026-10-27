@@ -80,7 +80,7 @@ function childEnvironment(env) {
 // supplied by focused tests. The CLI below always requires real Linux/X11.
 export async function observeOwnedProcess({ program, args = [], cwd, env = process.env, evidenceDir,
   startupMs = 20_000, observeMs = 10_000, pollMs = 100,
-  findWindows = () => findNativeWindows('Bee · 开发验证'),
+  findWindows = () => findNativeWindows('Bee'),
   screenshot = (window, path) => command('import', ['-window', window.id, path], { timeout: 10_000 }),
   captureDesktop = path => command('import', ['-window', 'root', path], { timeout: 10_000 }),
   resizeWindow = (window, width, height) => command('xdotool', ['windowsize', '--sync', window.id, String(width), String(height)], { timeout: 5000 }),

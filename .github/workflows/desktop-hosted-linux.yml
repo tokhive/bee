@@ -2,6 +2,11 @@ name: Desktop hosted Linux native evidence
 
 on:
   workflow_dispatch:
+    inputs:
+      release_candidate:
+        description: Also build an unsigned Bee native candidate; never publishes or uploads it
+        type: boolean
+        default: false
   push:
     branches: [feat/bee-desktop-p0]
     paths:
@@ -179,3 +184,10 @@ jobs:
             desktop-ci-evidence/
             desktop/test-results/
             desktop/playwright-report/
+
+      - name: Prepare optional native Bee release candidate (no publish or upload)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}
+        run: |
+          node --test desktop/tests/release.test.mjs desktop/tests/update-manifest.test.mjs
+          node desktop/scripts/prepare-release.mjs --mode candidate --target "$BEE_CI_TARGET" --build
+          node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release

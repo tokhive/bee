@@ -23,7 +23,7 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","authorize_start","authorize_status","authorize_cancel"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel"]}}
 ```
 
 版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述十七项能力。仅运行服务保留十四项，旧账号服务保留十项，供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这六组精确且有序的能力集合，不接受任意子集或额外方法。
@@ -78,7 +78,7 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 
 ## S1 运行交接契约（T1 已定义，命令在接通服务后开放）
 
-公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置四项；S1-T4 已接通官方登录三项；恢复入口留待 T6 接通后公布。以下包含完整后续契约，未公布能力不表示可调用。
+公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置；S1-T4 已接通官方登录；S1-T6 接通仅供 Rust 启动生命周期调用的 runtime_restore。
 
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
@@ -124,7 +124,7 @@ go run ./cmd/bee help
 
 ### S1-T3 真实运行与同步屏障
 
-`runtime_snapshot` 返回 `{runtime:DesktopRuntimeSnapshot}`；`runtime_start`／`runtime_stop` 返回 `{operation:DesktopOperation}`；`runtime_configure_network` 返回 `{configured:true}`。业务错误为 `RUNTIME_OPERATION_FAILED`，不使管理桥失效。前端调用分别为 `{}`、`{request:{expected_revision,resume_platforms}}`、`{expectedRevision}`；停止理由由 Rust 固定为 `user_stop`，内部理由及代理配置不开放为网页命令。
+`runtime_snapshot` 返回 `{runtime:DesktopRuntimeSnapshot}`；`runtime_start`／`runtime_stop`／`runtime_restore` 返回 `{operation:DesktopOperation}`；`runtime_configure_network` 返回 `{configured:true}`。业务错误为 `RUNTIME_OPERATION_FAILED`，不使管理桥失效。前端调用分别为 `{}`、`{request:{expected_revision,resume_platforms}}`、`{expectedRevision}`；停止理由由 Rust 固定为 `user_stop`，内部理由及代理配置不开放为网页命令。
 
 真实 Go 连接与授权维护运行于管理子进程。同步回执核对当前连接租约、账号指纹、代次和凭证修订，并与持久选择／run_id核对；手动恢复同样核验。来源切换先取消并等待原平台维护，再启用新来源，成功仍保持暂停。一个平台失败不阻塞另一个平台；首次409停止，不抢占连接。
 
@@ -137,3 +137,12 @@ go run ./cmd/bee help
 Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，只提供这三个固定命令。启动返回 pending，后续查状态；账号快照也包含同一平台操作。status／cancel 的 ID 必须与回执相同，前端拒绝旧 instance、修订倒退和跨平台回执。取消请求本身可能仍返回 running，回收完成后才返回 cancelled。真实登录的十分钟期限不占用桥请求；版本和 help 探测各五秒，输出不进入桥。支持范围及尚未完成的真实登录验收见 [AI 账号管理](ai-accounts.md)。
 
 `account_action.confirm_change` 返回原有账号 operation；持久操作 ID 独立于私有 Hive confirmation_id。确认提交前保持原候选 revision，确认后按目标指纹及严格下一代 generation 核对。submitted 之后不会重发 confirm POST；尚未提交的未决操作只有再次显式确认可继续，快照刷新不会代替该确认。成功前完成实际同步，平台仍暂停；临时连接不能转发贡献请求。
+
+
+### S1-T6 恢复与退出
+
+Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重启崩溃进程。Go 在返回开始操作前保存本次活动会话，自动恢复仅接受已保存运行意图与正常结束记录；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
+
+`runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。上次非 clean 标记必须通过明确开始处理。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
+
+`Bridge::prepare_owned_exit(OwnedExitReason::{AppExit,Update})` 冻结新请求及尚未发送的排队操作，核对同 instance、run_id、stop operation 和修订的停止回执，最多等待12秒后仍必须回收 owned Child。调用方取消不会取消该清理任务。仅保存意图、会话clean和Child wait/reap均被证实后返回四项为真的 `OwnedExitReceipt`；配置锁随该子进程退出释放。更新准备不释放 App 单实例，普通退出在回收后才释放。该回执不代表 Hive 在途任务已排空。

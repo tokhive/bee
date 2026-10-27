@@ -13,6 +13,9 @@ import (
 
 type runtimeFixture struct{ starts int }
 
+func (f *runtimeFixture) Restore(context.Context) (bee.DesktopOperation, error) {
+	return bee.DesktopOperation{ID: strings.Repeat("c", 48), Kind: "start", State: "pending"}, nil
+}
 func (f *runtimeFixture) Snapshot(context.Context) (bee.DesktopRuntimeSnapshot, error) {
 	return bee.DesktopRuntimeSnapshot{Local: "stopped", Connection: "disconnected", Platforms: map[string]bee.DesktopRuntimePlatform{}}, nil
 }

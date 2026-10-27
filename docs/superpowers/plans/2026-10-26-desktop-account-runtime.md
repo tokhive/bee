@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5／T6 已通过自动验证，继续 S1-T7。
+> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5／T6／T7 已通过自动验证，继续 S1-T8 全量回归与原生包验证。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -144,11 +144,13 @@ T6 验证：Go Runtime／AccountSwitch／Supply 与桥、命令子进程 race �
 
 **输入／输出：** 消费同一运行/账号/供给快照；S2 接手应用级订阅前沿用现有协调点，不为每页创建runtime。S1便能独立操作开始、停止、登录、接入、换号；保留真实账号模型/额度，不新增收益或市场入口。
 
-- [ ] 写浏览器契约用例：管理ready但未运行；已选择待开始；开始两个平台部分成功；登录返回待核验；换号成功仍暂停；请求未知不可重提；旧instance/revision不覆盖；平台问题各自显示；未知额度不归零；退出提示可能中断任务。
-- [ ] 运行 `node --test desktop/tests/runtime.test.ts desktop/tests/authorize.test.ts desktop/tests/nativeAccounts.test.ts` 和 `npm --prefix desktop run test:device`，新页面用例必须被配置收集且先失败。
-- [ ] 实现真实动作、处理中/待核对状态和四层展示，禁止以永远disabled的按钮算交付；共享页面编辑由集成负责人串行进行。
-- [ ] 重跑上述命令及 `npm --prefix desktop run typecheck`、`npm --prefix desktop run build`；检查中英文、860×600键盘操作和错误证据脱敏。
-- [ ] 提交本任务路径：`feat(desktop): expose complete native account contribution flow`。
+- [x] 写浏览器契约用例：管理ready但未运行；已选择待开始；开始两个平台部分成功；登录返回待核验；换号成功仍暂停；请求未知不可重提；旧instance/revision不覆盖；平台问题各自显示；未知额度不归零；退出提示可能中断任务。
+- [x] 运行 `node --test desktop/tests/runtime.test.ts desktop/tests/authorize.test.ts desktop/tests/nativeAccounts.test.ts` 和 `npm --prefix desktop run test:device`，新页面用例必须被配置收集且先失败。
+- [x] 实现真实动作、处理中/待核对状态和四层展示，禁止以永远disabled的按钮算交付；共享页面编辑由集成负责人串行进行。
+- [x] 重跑上述命令及 `npm --prefix desktop run typecheck`、`npm --prefix desktop run build`；检查中英文、860×600键盘操作和错误证据脱敏。
+- [x] 提交本任务路径：`feat(desktop): expose complete native account contribution flow`。
+
+T7 验证：20项 Node 账号／设备／供给测试、29项完整浏览器用例及新增2项针对性用例、13项账号／运行／登录客户端测试通过；typecheck、构建及换号 Go race 通过。新增最小窗口英文键盘操作、确认未提交才允许继续；独立审阅发现的已完成登录清除后续来源编辑、写受理前来源可编辑均已回归修复并复核。未知写结果仍只允许核对，换号完成保持暂停。
 
 ## Task 8（S1-T8）：完整功能验收及交付证据
 

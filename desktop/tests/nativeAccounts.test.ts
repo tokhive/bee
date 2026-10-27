@@ -43,3 +43,12 @@ test('clearing a saved selection uses its revision without a detected credential
  assert.deepEqual(sent,{request:{platform:'openai',revision:1,candidate_ref:'',action:'clear_selection',confirmed:true}});
  await assert.rejects(client.action({platform:'openai',revision:1,candidate_ref:'',action:'select',confirmed:true}),/ACCOUNT_REPLY_INVALID/);
 });
+
+test('an older account read cannot replace a newer operation receipt',async()=>{
+ let current=fixtureAccount();current.revision=5;
+ const client=createAccountClient(async()=>wrap(current),'one');
+ await client.snapshot('openai',false);
+ current={...current,revision:4};
+ await assert.rejects(client.snapshot('openai',true),/revision/);
+ current={...current,revision:6};await client.snapshot('openai',false);
+});

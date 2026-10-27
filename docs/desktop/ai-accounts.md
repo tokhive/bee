@@ -1,6 +1,6 @@
 # 桌面 AI 账号管理
 
-原生「AI 账号」页可以检测 OpenAI／Claude 的官方登录，按需检查官方身份和额度，独立查看 Hive 账号与能力，并与概览共用暂停／恢复控制。S1 正在补齐真实操作：后端已接通选择保存、贡献运行和官方登录；原生页面的完整动作接线在 S1-T7。换号、退出恢复尚待后续任务，完整移除仍按已批准范围暂缓。不修改 Hive。
+原生「AI 账号」页可以检测 OpenAI／Claude 的官方登录，按需检查官方身份和额度，独立查看 Hive 账号与能力，并与概览共用暂停／恢复控制。S1 正在补齐真实操作：后端已接通选择保存、贡献运行、官方登录和换号；原生页面的完整动作接线在 S1-T7。退出恢复尚待后续任务，完整移除仍按已批准范围暂缓。不修改 Hive。
 
 ## 怎么使用
 
@@ -40,7 +40,7 @@ Hive 观察执行身份核验和 account → capabilities → account 夹读，�
 | `account_defaults` | `{}` | 仅返回默认目录和存储能力 |
 | `account_detect` | `platform,directory,store,mode` | `mode=local/official`，必须显式给出 `directory:null` 或绝对目录 |
 | `account_snapshot` | `platform,refresh` | false 仅公开快照；true 只刷新 Hive |
-| `account_action` | `platform,revision,candidate_ref,action,confirmed` | 严格校验；select／clear_selection 已有真实保存与暂停核对，confirm_change 在 S1-T5 接入；完整移除仍不可用 |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | 严格校验；select／clear_selection 已有真实保存与暂停核对，confirm_change 已接通真实暂停、确认及同步核对；完整移除仍不可用 |
 
 Go 操作总期限 12 秒；Rust 账号请求从进入队列起共 15 秒。未发出的排队超时不破坏健康会话；已发送超时先撤销 ready，拒绝迟到成功和后续排队写。前端仅使用 typed 命令，不扩展 generic `bridge_request` 的 ping 权限。
 
@@ -63,4 +63,12 @@ Go 保有独立进程生命周期：Unix 使用固定 supervisor 保留进程组
 
 ## 当前交付边界
 
-旧 AI 账号观察计划已完成；其历史截图与原生验收缺口见[观察阶段证据](evidence/2026-10-26-ai-accounts/README.md)。当前依次执行 S1 账号接入与贡献运行、S2 诊断与体验、S3 安装更新。S1-T1～T3 已验证，T4 交付官方登录适配，T5～T8 继续完成换号、恢复、原生页面及真实验收。完整移除和等待 Hive 在途任务退出暂缓；不新增市场或资金页面，不把 Hive 网站完善程度作为 Bee 的阻塞条件。保留当前工作树，不合并、不推送、不发布。
+旧 AI 账号观察计划已完成；其历史截图与原生验收缺口见[观察阶段证据](evidence/2026-10-26-ai-accounts/README.md)。当前会话仅执行 S1 账号接入与贡献运行，S2 诊断与体验、S3 安装更新由用户另开会话并行。S1-T1～T5 代码及自动验证已完成，T6～T8 继续完成恢复、原生页面及真实验收；T4 的真实官方登录验收仍待授权测试环境。完整移除和等待 Hive 在途任务退出暂缓；不新增市场或资金页面，不把 Hive 网站完善程度作为 Bee 的阻塞条件。保留当前工作树，不合并、不推送、不发布。
+
+## 换号与结果核对
+
+`confirm_change` 会先核验新身份，停止该平台旧授权 worker，持久保存原账号／目标账号／代次，再暂停并读回。Hive 要求设备在线，因此贡献已停止时使用本进程短暂连接完成换号；该连接拒绝所有 relay 目标，不改变“停止贡献”意图。
+
+确认 POST 之前保存提交阶段；响应丢失后只核对目标指纹和严格递增一代的 generation，不重发确认。确认已证实后，同身份的新 token 可重新核验并同步；不同身份保留未决状态。同步、连接回收与本地保存全部成功后才删除未决操作，换号成功仍暂停。
+
+停止贡献会取消并等待已受理的账号写操作，包括尚未建立连接的操作；普通刷新不会把尚未提交的换号自动提交，须用户再次明确确认同一操作。若连接已回收但清理标记保存失败，只允许本次管理实例凭该连接的确切 run／设备范围证明重试清理；跨进程异常恢复由恢复规则处理。

@@ -44,7 +44,7 @@
 | `account_defaults` | `{}` | `{"defaults":DesktopAccountDefaults}`；不打开官方凭证或连接 Hive |
 | `account_detect` | `platform,directory,store,mode` | `{"account":DesktopAccountSnapshot}`；平台 openai/claude；directory 必须显式 null 或非空绝对路径（≤4096 UTF-8 字节，无控制字符）；OpenAI store 为 auto/file/keyring，Claude 为 file/keychain；mode 为 local/official |
 | `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 只刷新 Hive |
-| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝；select／clear_selection 已接通，confirm_change／已注册账号 remove 仍按当前实现报告不可用 |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝；select／clear_selection／confirm_change 已接通；已注册账号 remove 仍不可用 |
 
 Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
 
@@ -135,3 +135,5 @@ go run ./cmd/bee help
 `authorize_start` 参数必须是 `{platform,source:{directory,store},expected_revision}`；`authorize_status`／`authorize_cancel` 必须是 `{operation_id}`。所有返回 `{operation:DesktopOperation}`，业务错误为 `AUTHORIZE_OPERATION_FAILED`。Go 严格拒绝 source 内外的未知、重复、缺失字段；directory 必须明确为 null 或绝对目录，修订必须为非负安全整数，operation_id 必须为当前管理实例拥有的 48 位小写十六进制引用。
 
 Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，只提供这三个固定命令。启动返回 pending，后续查状态；账号快照也包含同一平台操作。status／cancel 的 ID 必须与回执相同，前端拒绝旧 instance、修订倒退和跨平台回执。取消请求本身可能仍返回 running，回收完成后才返回 cancelled。真实登录的十分钟期限不占用桥请求；版本和 help 探测各五秒，输出不进入桥。支持范围及尚未完成的真实登录验收见 [AI 账号管理](ai-accounts.md)。
+
+`account_action.confirm_change` 返回原有账号 operation；持久操作 ID 独立于私有 Hive confirmation_id。确认提交前保持原候选 revision，确认后按目标指纹及严格下一代 generation 核对。submitted 之后不会重发 confirm POST；尚未提交的未决操作只有再次显式确认可继续，快照刷新不会代替该确认。成功前完成实际同步，平台仍暂停；临时连接不能转发贡献请求。

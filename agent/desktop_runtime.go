@@ -16,21 +16,24 @@ import (
 // DesktopRuntime owns the existing Go relay and authorization loops inside the
 // management child. Its mutex protects observations, never network calls.
 type DesktopRuntime struct {
-	mu         sync.Mutex
-	ctx        context.Context
-	cancel     context.CancelFunc
-	workers    sync.WaitGroup
-	closed     bool
-	device     *DesktopDevice
-	accounts   *DesktopAccounts
-	snapshot   DesktopRuntimeSnapshot
-	network    DesktopNetworkConfig
-	runCancel  context.CancelFunc
-	runDone    chan struct{}
-	slots      map[string]*desktopRuntimeSlot
-	targets    map[string]bool
-	syncMu     sync.Mutex
-	connection *desktopRuntimeConnection
+	mu                    sync.Mutex
+	ctx                   context.Context
+	cancel                context.CancelFunc
+	workers               sync.WaitGroup
+	closed                bool
+	device                *DesktopDevice
+	accounts              *DesktopAccounts
+	snapshot              DesktopRuntimeSnapshot
+	network               DesktopNetworkConfig
+	runCancel             context.CancelFunc
+	runDone               chan struct{}
+	controlCancel         context.CancelFunc
+	controlDone           chan struct{}
+	retiredAccountSession *desktopRetiredAccountSession
+	slots                 map[string]*desktopRuntimeSlot
+	targets               map[string]bool
+	syncMu                sync.Mutex
+	connection            *desktopRuntimeConnection
 }
 
 func NewDesktopRuntime(parent context.Context, d *DesktopDevice, a *DesktopAccounts) *DesktopRuntime {
@@ -40,15 +43,27 @@ func NewDesktopRuntime(parent context.Context, d *DesktopDevice, a *DesktopAccou
 		r.slots[platform] = &desktopRuntimeSlot{gate: make(desktopRuntimeGate, 1), control: make(desktopRuntimeGate, 1)}
 		r.snapshot.Platforms[platform] = DesktopRuntimePlatform{Account: initialAccountSnapshot(platform)}
 	}
+	for _, p := range a.platforms {
+		p.snapshot.Features.ConfirmChange = DesktopAccountAvailability{Available: true}
+	}
 	a.runtime = r
 	d.runtime = r
 	return r
 }
 func (r *DesktopRuntime) Close() {
+	r.accounts.lifecycleMu.Lock()
 	r.mu.Lock()
 	r.closed = true
 	r.cancel()
+	accountWorkers := r.accountWorkersLocked()
 	r.mu.Unlock()
+	r.accounts.lifecycleMu.Unlock()
+	for _, worker := range accountWorkers {
+		worker.cancel()
+	}
+	for _, worker := range accountWorkers {
+		<-worker.done
+	}
 	r.workers.Wait()
 }
 func (r *DesktopRuntime) Snapshot(ctx context.Context) (DesktopRuntimeSnapshot, error) {
@@ -272,6 +287,8 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	if !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change"}, input.Reason) {
 		return DesktopOperation{}, fmt.Errorf("runtime stop reason outside fixed entry points")
 	}
+	r.accounts.lifecycleMu.Lock()
+	defer r.accounts.lifecycleMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.closed {
@@ -289,13 +306,16 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}
 	r.snapshot.Revision++
 	r.snapshot.Local = "stopping"
+	r.retiredAccountSession = nil
 	op := DesktopOperation{ID: id, Kind: "stop", State: "pending", Revision: r.snapshot.Revision}
 	r.snapshot.Operation = &op
 	cancel, done := r.runCancel, r.runDone
+	controlCancel, controlDone := r.controlCancel, r.controlDone
+	accountWorkers := r.accountWorkersLocked()
 	r.workers.Add(1)
 	go func() {
 		defer r.workers.Done()
-		receipt, err := r.stop(input.Reason, cancel, done)
+		receipt, err := r.stop(input.Reason, cancel, done, controlCancel, controlDone, accountWorkers)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.snapshot.Revision++
@@ -315,7 +335,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}()
 	return op, nil
 }
-func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done chan struct{}) (DesktopStopReceipt, error) {
+func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker) (DesktopStopReceipt, error) {
 	receipt := DesktopStopReceipt{}
 	var saveErr error
 	session, release, err := r.device.acquireSession(context.Background())
@@ -339,9 +359,22 @@ func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done cha
 	} else {
 		saveErr = err
 	}
-	// A failed intent save must never leave workers running.
+	// A failed intent save must never leave workers running. Cancel every
+	// admitted account operation, including work before a tunnel exists.
+	for _, worker := range accountWorkers {
+		worker.cancel()
+	}
+	if controlCancel != nil {
+		controlCancel()
+	}
 	if cancel != nil {
 		cancel()
+	}
+	for _, worker := range accountWorkers {
+		<-worker.done
+	}
+	if controlDone != nil {
+		<-controlDone
 	}
 	if done != nil {
 		<-done
@@ -352,6 +385,16 @@ func (r *DesktopRuntime) stop(reason string, cancel context.CancelFunc, done cha
 		receipt.SessionClean = err == nil
 	}
 	return receipt, errors.Join(saveErr, err)
+}
+
+// Caller holds accounts.lifecycleMu. Official-login processes have a separate
+// lifecycle and are not stopped by the contribution stop action.
+func (r *DesktopRuntime) accountWorkersLocked() []*desktopAccountWorker {
+	result := make([]*desktopAccountWorker, 0, len(r.accounts.accountWorkers))
+	for _, worker := range r.accounts.accountWorkers {
+		result = append(result, worker)
+	}
+	return result
 }
 func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNetworkConfig) error {
 	if err := ctx.Err(); err != nil {
@@ -365,8 +408,13 @@ func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNe
 			return fmt.Errorf("runtime proxy rejected: %w", err)
 		}
 	}
+	r.accounts.lifecycleMu.Lock()
+	defer r.accounts.lifecycleMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.closed || len(r.accounts.activeActions) > 0 || r.controlDone != nil {
+		return fmt.Errorf("network change blocked: closed=%t active_account_actions=%d account_connection=%t", r.closed, len(r.accounts.activeActions), r.controlDone != nil)
+	}
 	if r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" {
 		return fmt.Errorf("network change requires stopped runtime: local=%s", r.snapshot.Local)
 	}

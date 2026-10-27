@@ -66,6 +66,90 @@ func beeCommand(t *testing.T, args ...string) *exec.Cmd {
 	return cmd
 }
 
+func TestDesktopRuntimeExitReleasesOnlyOwnedConfigurationLock(t *testing.T) {
+	isolated := t.TempDir()
+	start := func() (*exec.Cmd, func(string, any) map[string]any) {
+		cmd := beeCommand(t, "desktop")
+		cmd.Env = append(cmd.Env, "HOME="+isolated, "XDG_CONFIG_HOME="+isolated, "APPDATA="+isolated)
+		in, err := cmd.StdinPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		out, err := cmd.StdoutPipe()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err = cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+		t.Cleanup(func() {
+			in.Close()
+			if cmd.ProcessState == nil {
+				cmd.Process.Kill()
+				cmd.Wait()
+			}
+		})
+		decoder := json.NewDecoder(out)
+		call := func(method string, params any) map[string]any {
+			t.Helper()
+			if err := json.NewEncoder(in).Encode(map[string]any{"protocol": 1, "id": "lock-test", "method": method, "params": params}); err != nil {
+				t.Fatal(err)
+			}
+			var frame map[string]any
+			if err := decoder.Decode(&frame); err != nil {
+				t.Fatal(err)
+			}
+			result, ok := frame["result"].(map[string]any)
+			if !ok {
+				t.Fatalf("missing bridge result: %v", frame)
+			}
+			return result
+		}
+		call("hello", map[string]any{})
+		return cmd, call
+	}
+	first, one := start()
+	if got := one("device_status", map[string]any{}); got["error"] != nil {
+		t.Fatalf("first owner: %v", got)
+	}
+	second, two := start()
+	if got := two("device_status", map[string]any{}); got["error"] == nil {
+		t.Fatal("second process acquired live first-owner lock")
+	}
+	if got := one("runtime_stop", map[string]any{"expected_revision": 0, "reason": "app_exit"}); got["error"] != nil {
+		t.Fatal(got)
+	}
+	deadline := time.Now().Add(3 * time.Second)
+	for {
+		snapshot := one("runtime_snapshot", map[string]any{})["runtime"].(map[string]any)
+		if snapshot["local"] == "stopped" {
+			receipt := snapshot["stop_receipt"].(map[string]any)
+			if receipt["intent_saved"] != true || receipt["session_clean"] != true || receipt["workers_stopped"] != true {
+				t.Fatalf("unpaired exit failed: %v", snapshot)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("owned stop did not complete")
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if got := two("device_status", map[string]any{}); got["error"] == nil {
+		t.Fatal("stop released config lock before child exit")
+	}
+	one("shutdown", map[string]any{})
+	if err := first.Wait(); err != nil {
+		t.Fatal(err)
+	}
+	if got := two("device_status", map[string]any{}); got["error"] != nil {
+		t.Fatalf("new process could not acquire released lock: %v", got)
+	}
+	two("shutdown", map[string]any{})
+	if err := second.Wait(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDesktopCommandHandshakeAndParentEOF(t *testing.T) {
 	for _, shutdown := range []bool{false, true} {
 		t.Run(map[bool]string{false: "parent-EOF", true: "shutdown"}[shutdown], func(t *testing.T) {

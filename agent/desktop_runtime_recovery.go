@@ -103,6 +103,11 @@ func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, 
 	}
 	if state.Identity == nil {
 		if restoring {
+			// An unpaired device still has local account data. Upgrade recovery
+			// must validate that data before declaring an idle restore successful.
+			if err := r.accounts.verifyStoredAccountState(session); err != nil {
+				return err
+			}
 			return errDesktopRuntimeIdle
 		}
 		return fmt.Errorf("runtime start requires a saved device identity")

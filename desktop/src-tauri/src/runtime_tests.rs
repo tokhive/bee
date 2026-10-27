@@ -69,6 +69,29 @@ async fn startup_restore_is_once_per_child_and_exit_failure_still_reaps() {
 }
 
 #[tokio::test]
+async fn startup_restore_requires_bound_terminal_success_not_operation_admission() {
+    for mode in [
+        "owned-exit-restore-failure",
+        "owned-exit-restore-wrong-operation",
+    ] {
+        let bridge = ready(mode).await;
+        let result = bridge.restore_when_ready().await;
+        assert!(
+            result.is_err(),
+            "accepted unproven restore completion: {mode}"
+        );
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn startup_restore_allows_s1_saved_user_stop_to_complete_with_no_run() {
+    let bridge = ready("owned-exit-restore-idle").await;
+    bridge.restore_when_ready().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
 async fn owned_exit_requires_persisted_stop_and_reaps_before_receipt() {
     for mode in [
         "owned-exit",

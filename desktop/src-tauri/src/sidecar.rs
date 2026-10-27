@@ -76,6 +76,7 @@ struct Request {
 
 pub(crate) struct Inner {
     pub(crate) frozen: Arc<AtomicBool>,
+    pub(crate) startup_verified: AtomicBool,
     pub(crate) exit: Mutex<crate::runtime::OwnedExitTask>,
     pub(crate) restored: AtomicBool,
     status: watch::Receiver<BridgeStatus>,
@@ -181,6 +182,7 @@ impl Bridge {
                 let (requests, _) = mpsc::channel(1);
                 Self(Arc::new(Inner {
                     frozen: Arc::new(AtomicBool::new(false)),
+                    startup_verified: AtomicBool::new(true),
                     exit: Mutex::new(Default::default()),
                     restored: AtomicBool::new(false),
                     status: state,
@@ -213,6 +215,7 @@ impl Bridge {
         ));
         Self(Arc::new(Inner {
             frozen,
+            startup_verified: AtomicBool::new(true),
             exit: Mutex::new(Default::default()),
             restored: AtomicBool::new(false),
             status: status_rx,
@@ -482,6 +485,9 @@ impl Bridge {
         duration: Duration,
         exit_request: bool,
     ) -> Result<BridgeReply, BridgeError> {
+        if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request {
+            return Err(error("STARTUP_VERIFICATION_PENDING", "request rejected: startup package/data/runtime verification has not succeeded; contribution remains blocked"));
+        }
         if self.0.frozen.load(Ordering::SeqCst) && !exit_request {
             return Err(error(
                 "OWNED_EXIT_PENDING",

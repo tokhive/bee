@@ -9,9 +9,27 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"reflect"
 	"time"
 )
+
+// Uses the same protected reader and account lock as selection/migration. It is
+// read-only: unpaired upgrade recovery must not reset or migrate orphaned data.
+func (a *DesktopAccounts) verifyStoredAccountState(session *desktopDeviceSession) error {
+	a.storageMu.Lock()
+	defer a.storageMu.Unlock()
+	path := filepath.Join(filepath.Dir(session.path), "ai-accounts.json")
+	unlock, err := lockState(path)
+	if err != nil {
+		return fmt.Errorf("lock account state before idle recovery: %w", err)
+	}
+	defer unlock()
+	if _, err := readDesktopAccountState(path); err != nil {
+		return fmt.Errorf("validate account state before idle recovery: %w", err)
+	}
+	return nil
+}
 
 type desktopAccountNotice struct {
 	FirstSeen time.Time `json:"first_seen"`

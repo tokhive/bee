@@ -1,6 +1,6 @@
 # Bee 桌面：诊断、网络与日常桌面体验
 
-日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 待审阅和选择执行模式**。本文为 S2，依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)的真实状态和运行控制；[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)验证原生平台行为。[对应实施计划](../plans/2026-10-26-desktop-diagnostics-experience.md)已写成，待整体审阅。
+日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 已获执行授权，按 S1→S2→S3 顺序推进**。本文为 S2，依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)的真实状态和运行控制；[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)验证原生平台行为。[对应实施计划](../plans/2026-10-26-desktop-diagnostics-experience.md)已获执行授权。
 
 ## 1. 用户最终得到什么
 

@@ -1,6 +1,6 @@
 # Bee 桌面：安装、更新与发布验收
 
-日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 待审阅和选择执行模式**。本文为 S3，承接[S1 账号与运行](2026-10-26-desktop-account-runtime-design.md)、[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)。[对应实施计划](../plans/2026-10-26-desktop-release-update.md)已写成，待整体审阅；本轮不发布安装包。
+日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 已获执行授权，按 S1→S2→S3 顺序推进**。本文为 S3，承接[S1 账号与运行](2026-10-26-desktop-account-runtime-design.md)、[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)。[对应实施计划](../plans/2026-10-26-desktop-release-update.md)已获执行授权；本轮不发布安装包。
 
 ## 1. 用户最终得到什么
 

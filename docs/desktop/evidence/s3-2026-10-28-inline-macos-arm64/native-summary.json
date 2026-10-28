@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-28",
+  "scope": "关于内联整合后的本机候选补充验证；不能替代 macOS 13 或八组合正式验收",
+  "environment": {
+    "os": "macos",
+    "version": "15.7.7",
+    "arch": "arm64"
+  },
+  "source_revision": "a34d9345e55db885f0754905417063bef2ea8ccd",
+  "version": "0.1.0",
+  "mode": "candidate",
+  "working_tree_dirty": false,
+  "installer": {
+    "name": "Bee_0.1.0_aarch64.dmg",
+    "size": 21687841,
+    "sha256": "23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2",
+    "role": "installer"
+  },
+  "platform_signature": "ad-hoc 封印校验通过；无 Developer ID 或公证证据",
+  "native_tests": {
+    "passed": 2,
+    "failed": 0,
+    "cases": [
+      "签名封印接受原包并拒绝篡改副本",
+      "同一 DMG 内实际 Bee hello/ping/shutdown 与 owned 子进程回收"
+    ]
+  },
+  "commands": [
+    {
+      "command": "node desktop/scripts/prepare-release.mjs --mode candidate --build",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml -- --ignored --test-threads=1",
+      "exit_code": 0,
+      "environment": "BEE_TEST_APP_BUNDLE 指向同一 DMG 的只读挂载 Bee.app"
+    }
+  ],
+  "ui": "源码已含 S2 设置页及关于内联更新；布局验证使用浏览器模拟 IPC，未运行该候选 GUI",
+  "did_install_application": false,
+  "did_start_gui": false,
+  "did_use_real_accounts_or_contribution": false,
+  "did_publish": false,
+  "pending": [
+    "生产更新源、渠道、正式版本及签名输入",
+    "真实原生 GUI 两版本安装升级",
+    "八个受支持系统／架构原生验收",
+    "授权测试账号与贡献范围"
+  ],
+  "files": {
+    "bee.source.json": "511900fb083b2679d447d9150ecd3954a497a8e682f40b05ceac0ad04594106b",
+    "release-manifest.json": "a8483f19b55307c4532d3a88f465699d422fcd730d12718f4fd1076c152d66d8",
+    "verification.json": "96c32c138ed7747f8eb7a5c91977c0b1c40cca4e6b3498f916317b261979125f",
+    "candidate-build.log": "7d22208df496b0d3ab15dff5a1d3215bce9a91643c6ee45e15001ce1a5baac2d",
+    "readonly-mount.log": "c9a6b894a540ee0a9d137f309824e9877ae2b05c9a41241c7aa2403f81e402bf",
+    "signed-bundle-tests.log": "1b5c30b60abdc807c824dbdb8ec697a5db04759898c71d52581e3019c0bae6cd"
+  },
+  "log_format": "归档日志仅清理行尾空白及末尾多余空行；原始输出保留在本工作树 .cache/s3-inline-candidate-*.log。"
+}

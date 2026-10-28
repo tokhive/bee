@@ -100,6 +100,8 @@ T4（2026-10-28）：独立控件提交 `fede56d` 后，已导入 S2 必需依�
 
 本次整合验证：页面基础 Node 25 项／Chromium 63 项、额外客户端 Node 24 项、bridge 11 项、typecheck／build、受影响 Go 测试及 vet 均通过；完整 Rust 177 通过、2 项包专用测试 ignored，另 network contract 27 通过。随后扩展的真实 Tauri 命令下载／临时签名测试单独通过：经真实 HTTP 观察 available→downloading→verified，窗口宿主为 MockRuntime，未执行安装。日志见 `docs/desktop/release-validation.md`。最后一个复选框仍保留：真实原生 GUI 的受控源、用户确认及两版本安装升级未验收，不将浏览器夹具或测试窗口宿主当作完整生产联调。
 
+整合代码提交 `a34d934` 后，已在干净源码重建 macOS arm64 ad-hoc 候选，DMG 实际提取校验及同包两项封印／Bee 握手回收测试均通过；旧候选另行归档。新包未安装、未启动 GUI、未发布，不能据此勾选真实两版本升级或八组合验收。
+
 ## Task 5（S3-T5）：八组合安装升级验收及发布材料
 
 **依赖：** S1-T8、S2-T6、S3-T1–T4；若S1/S2仅有环境缺口，代码继续整合，但不得跳过缺口宣称正式发布。**文件：** 新建上述证据校验脚本、`desktop/tests/release-evidence.test.mjs`、两份release文档；修改 `desktop/scripts/ci-native-evidence.mjs`、`smoke-linux-appimage.mjs`、现有hosted工作流。

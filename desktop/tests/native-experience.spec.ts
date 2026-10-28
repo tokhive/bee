@@ -235,7 +235,7 @@ test('older initial network observation cannot replace an explicit refresh or an
   };
  });
  await nav(page,'设置').click();await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:7900');
- await page.getByRole('button',{name:'刷新生效路径',exact:true}).click();await expect(page.locator('.ns-network-summary')).toContainText('关闭');
+ await page.getByRole('button',{name:'刷新生效路径',exact:true}).click();await expect(page.locator('.ns-network-summary')).toContainText('代理未启用');
  await page.evaluate(()=>{(window as any).releaseNetwork();});await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7900');await expect(page.locator('.ns-network-summary')).not.toContainText('7801');
 });
 
@@ -262,10 +262,17 @@ for(const [width,height,language,theme] of [[1440,1000,'zh','light'],[1440,1000,
  await page.setViewportSize({width,height});await setup(page);await nav(page,'设置').click();await tab(page,'通用').click();await page.getByLabel('外观',{exact:true}).selectOption(theme);await page.getByLabel('语言',{exact:true}).selectOption(language);
  const en=language==='en',networkTab=tab(page,en?'Network and proxy':'网络与代理');await expect(page.getByRole('status')).toHaveText(en?'Preferences saved.':'偏好已保存。');await networkTab.focus();await page.keyboard.press('End');await expect(tab(page,en?'About':'关于')).toHaveAttribute('aria-selected','true');await page.keyboard.press('Home');await expect(tab(page,en?'General':'通用')).toHaveAttribute('aria-selected','true');await page.keyboard.press('ArrowRight');await expect(networkTab).toHaveAttribute('aria-selected','true');
  const proxy=page.getByLabel(en?'Local HTTP proxy':'本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:7900');await expectPrimaryContrast(page,'.ns-network-actions .primary');await page.getByRole('button',{name:en?'Save proxy':'保存代理',exact:true}).click();
+ await expect(page.locator('.ns-network-summary')).toContainText(en?'Proxy disabled':'代理未启用');
  const restart=page.getByRole('button',{name:en?'Stop and restart to apply':'停止并重新启动以应用',exact:true});await restart.click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(restart).toBeFocused();expect(await calls(page,'network_apply_saved')).toEqual([]);
+ const networkShot=`settings-network-${theme}${en?'-en':''}-${width}`;await page.screenshot({path:`../.cache/s2-ui-verification/${networkShot}.png`});
+ if(en&&width===1440){await page.setViewportSize({width:860,height:600});await page.screenshot({path:'../.cache/s2-ui-verification/settings-network-dark-en-860.png'});await page.locator('.ns-observed').scrollIntoViewIfNeeded();await page.screenshot({path:'../.cache/s2-ui-verification/settings-paths-dark-en-860.png'});await page.setViewportSize({width,height});}
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
  await nav(page,en?'Diagnostics':'诊断').click();const checks=tab(page,en?'Check results':'检查结果');await checks.focus();await page.keyboard.press('ArrowRight');await expect(tab(page,en?'Safe logs':'安全日志')).toHaveAttribute('aria-selected','true');await page.keyboard.press('ArrowLeft');await expect(checks).toHaveAttribute('aria-selected','true');
  await expectPrimaryContrast(page,'.nd-actions .primary');await page.getByRole('button',{name:en?'Run diagnostics':'运行诊断',exact:true}).click();const exportButton=page.getByRole('button',{name:en?'Export sanitized report':'导出脱敏报告',exact:true});await exportButton.click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');await expect(page.getByRole('dialog')).toHaveCount(0);await expect(exportButton).toBeFocused();
  expect(await calls(page,'diagnostics_export')).toEqual([]);expect(await calls(page,'diagnostic_logs')).toEqual([]);expect(await calls(page,'notification_enable')).toEqual([]);expect(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth)).toBe(true);
+ await tab(page,en?'Safe logs':'安全日志').click();await page.getByRole('button',{name:en?'Refresh logs':'刷新日志',exact:true}).click();await expect(page.locator('.nd-log-list li')).toHaveCount(1);
+ if(en)await page.setViewportSize({width:860,height:600});
+ const logBounds=await page.locator('.nd-log-list li').first().evaluate(row=>{const range=document.createRange();range.selectNodeContents(row.querySelector('.nd-log-level')!);return {levelRight:range.getBoundingClientRect().right,codeLeft:row.querySelector('strong')!.getBoundingClientRect().left};});expect(logBounds.levelRight).toBeLessThanOrEqual(logBounds.codeLeft);
+ if(en)await page.screenshot({path:`../.cache/s2-ui-verification/logs-${theme}-en-860.png`});
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
 });

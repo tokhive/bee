@@ -14,7 +14,7 @@
 
 ## 本机候选与自动验证补充（2026-10-28）
 
-已生成 macOS 15.7.7／arm64 的 ad-hoc 候选 `Bee_0.1.0_aarch64.dmg`（20,895,477 字节），源码 `10a1e6dcfd087fb677e7ad8f160ede5b39c4b117`，构建时工作树干净。App／包内 Bee 均为 0.1.0，DMG SHA-256 为 `1e1134b185f97999f97beac4ca017a3b13798a05292d9dd895c1a47a376dfe41`。候选保存在本工作树 `.cache/desktop-release/`，未安装到 Applications，未上传。
+曾生成 macOS 15.7.7／arm64 的 ad-hoc 候选 `Bee_0.1.0_aarch64.dmg`（20,895,477 字节），源码 `10a1e6dcfd087fb677e7ad8f160ede5b39c4b117`，构建时工作树干净。App／包内 Bee 均为 0.1.0，DMG SHA-256 为 `1e1134b185f97999f97beac4ca017a3b13798a05292d9dd895c1a47a376dfe41`。旧候选现归档在本工作树 `.cache/desktop-release-10a1e6d-before-inline/`，未安装到 Applications，未上传。
 
 [补充证据摘要](evidence/s3-2026-10-28-macos-arm64/native-summary.json)绑定了实际 manifest、来源和校验报告及日志。prepare-release 的实际 DMG 提取校验已通过，包内 Bee 来源／架构／版本与 App 签名封印相符；只读挂载同一 DMG 后，2 项包专用测试通过：封印接受原包并拒绝篡改副本，实际包内 Bee 完成 hello／ping／shutdown 并等待 owned 子进程回收。挂载点随后卸载，没有 GUI、真实账号或贡献流量。
 
@@ -50,6 +50,14 @@
 浏览器与手动预览使用正式页面组件、模拟 IPC，已核对浅／深主题、确认框、取消、按钮悬停对比度及 320px 内容宽度无横向溢出。`node desktop/scripts/preview-update.mjs` 启动 `http://127.0.0.1:1434/__s3-updater-preview`，刷新重置模拟状态；该页面不会实际下载、安装、登录或贡献。
 
 原生接口补充测试通过真实 Tauri 命令处理器调用 `update_snapshot`／`update_download`，从临时 HTTP 源下载真实签名资产并核验签名／摘要，观察 available→downloading→verified。窗口宿主是 MockRuntime；只有异步轮询限时 5 秒，未给所有同步 socket／IPC 调用声明统一限时。没有调用实际安装器，也未使用生产更新源，不能替代真实原生 GUI 的两版本安装升级验收。
+
+### 整合后的本机候选
+
+源码 `a34d9345e55db885f0754905417063bef2ea8ccd` 在干净工作树重建候选，已包含 S2 正式设置页和“关于内联”更新接线。产物为本工作树 `.cache/desktop-release/Bee_0.1.0_aarch64.dmg`，21,687,841 字节，SHA-256 `23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2`；App／Bee 均为 0.1.0，macOS 15.7.7／arm64，ad-hoc 签名。
+
+`node desktop/scripts/prepare-release.mjs --mode candidate --build` 退出 0，内含实际 DMG 提取、App／Bee 架构／版本／提交及签名封印校验。同一 DMG 再以只读方式挂载，设置 `BEE_TEST_APP_BUNDLE` 后运行两项包专用测试，退出 0、2 项通过：签名封印接受原包并拒绝篡改副本，包内真实 Bee 完成握手／ping／shutdown 并回收 owned 子进程。随后卸载挂载点。[新候选证据摘要](evidence/s3-2026-10-28-inline-macos-arm64/native-summary.json)保存对应来源、manifest、校验报告和日志摘要。
+
+没有安装到 Applications、启动该候选 GUI、调用安装器、使用真实账号或发布。候选缺少生产更新输入、更新资产签名及正式平台签名／公证；浏览器截图只证明页面布局，不证明该包已完成原生 GUI 验收。两个候选均为 0.1.0，不能冒充两个版本的升级证据。
 
 ## 八组合原生矩阵
 

@@ -68,32 +68,32 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
   const request=++networkRead.current,value=await networkClient.snapshot();if(!current()||request!==networkRead.current)return;
   setNetwork(value);if(paired&&!proxyDirty.current)setProxy(value.saved_proxy);if(value.error)throw value.error;return value;
  }
- function changePreference(change:Partial<DesktopPreferences>){void run('preferences',async()=>{await savePreference(change);if(current())setNotice(t('偏好已保存。'));});}
+ function changePreference(change:Partial<DesktopPreferences>){void run('preferences',async()=>{await savePreference(change);if(current())setNotice('偏好已保存。');});}
  function notifications(enabled:boolean){void run('notifications',async()=>{
   await savePreference({notifications_enabled:enabled});if(!current())return;
   if(enabled){permissionRead.current++;const allowed=await notificationsClient.enable();if(!current())return;setPermission(allowed);setPermissionError('');}
-  if(current())setNotice(t('通知偏好已保存。'));
+  if(current())setNotice('通知偏好已保存。');
  });}
  function setStartup(enabled:boolean){void run('autostart',async()=>{
   autostartRead.current++;const actual=await notificationsClient.autostartSet(enabled);if(!current())return;setAutostart(actual);setAutostartError(actual.error?failure(actual.error):'');
   const value=await preferencesClient.read();acceptPreferences(value);
   if(actual.error)throw actual.error;
   if(actual.registered!==enabled)throw new Error(`AUTOSTART_UNCONFIRMED: desired=${enabled} registered=${actual.registered}; required=matching OS readback`);
-  if(current())setNotice(t('已核对系统启动登记。'));
+  if(current())setNotice('已核对系统启动登记。');
  });}
  async function applySaved(){await run('apply',async()=>{
-  networkRead.current++;const actual=await networkClient.applySaved(true);if(!current())return;setNetwork(actual);if(actual.error)throw actual.error;setNotice(t('已应用保存的代理，并按此前选择恢复。'));
+  networkRead.current++;const actual=await networkClient.applySaved(true);if(!current())return;setNetwork(actual);if(actual.error)throw actual.error;setNotice('已应用保存的代理，并按此前选择恢复。');
  });}
  return <Tabs.Root className="native-settings section-tabs" data-testid="native-settings" defaultValue="network">
   <Tabs.List className="section-tabs-list ns-tabs" aria-label={t('设置分类')}><Tabs.Trigger value="general">{t('通用')}</Tabs.Trigger><Tabs.Trigger value="network">{t('网络与代理')}</Tabs.Trigger><Tabs.Trigger value="system">{t('通知与启动')}</Tabs.Trigger><Tabs.Trigger value="about">{t('关于')}</Tabs.Trigger></Tabs.List>
-  {(error||saved.error)&&<div className="ns-failure"><p className="ns-error" role="alert">{error||failure(saved.error)}</p>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{notice}</p>}
+  {(error||saved.error)&&<div className="ns-failure"><p className="ns-error" role="alert">{error||failure(saved.error)}</p>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
   <Tabs.Content value="general">  <section className="ns-section" aria-labelledby="ns-preferences-title"><header><h2 id="ns-preferences-title">{t('语言与外观')}</h2><p>{t('保存到当前系统用户，重启后保留。')}</p></header>
    <div className="ns-row"><label htmlFor="ns-language">{t('语言')}</label><select id="ns-language" disabled={!!busy||!!saved.error} value={prefs.language} onChange={event=>changePreference({language:event.target.value as DesktopPreferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></div>
    <div className="ns-row"><label htmlFor="ns-theme">{t('外观')}</label><select id="ns-theme" disabled={!!busy||!!saved.error} value={prefs.theme} onChange={event=>changePreference({theme:event.target.value as DesktopPreferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></div>
   </section></Tabs.Content>
   <Tabs.Content value="network">  <section className="ns-section" aria-labelledby="ns-network-title"><header><h2 id="ns-network-title">{t('网络与代理')}</h2><p>{t('先启动本机代理工具，再保存或测试连接。')}</p></header>
 <div className="ns-network-layout"><div className="ns-network-editor"><p className="ns-scope"><span>{t('适用范围')}</span>{hive||draftOrigin||t('尚未配对')}</p>   <form onSubmit={event=>{event.preventDefault();void run('save-proxy',async()=>{
-    const origin=hive??draftOrigin.trim(),value=await networkClient.saveProxy({proxy,origin:origin||null,expectedRevision:prefs.revision});acceptPreferences(value);if(!current())return;proxyDirty.current=false;if(!paired)setProxy(draftProxy(value.preferences,origin));const actual=await refreshNetwork();if(current())setNotice(t(paired&&actual?.pending_restart?'代理已保存；下次启动生效。':'代理配置已保存。'));
+    const origin=hive??draftOrigin.trim(),value=await networkClient.saveProxy({proxy,origin:origin||null,expectedRevision:prefs.revision});acceptPreferences(value);if(!current())return;proxyDirty.current=false;if(!paired)setProxy(draftProxy(value.preferences,origin));const actual=await refreshNetwork();if(current())setNotice(paired&&actual?.pending_restart?'代理已保存；下次启动生效。':'代理配置已保存。');
    });}}>{!paired&&!hive&&<label className="ns-proxy-input" htmlFor="ns-draft-origin">{t('代理草稿的 Hive 地址')}<input id="ns-draft-origin" type="url" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={2048} disabled={!!busy||!!saved.error} value={draftOrigin} placeholder="https://hive.example" onChange={event=>{const origin=event.target.value;setDraftOrigin(origin);proxyDirty.current=false;setProxy(draftProxy(prefs,origin.trim()));setTest(null);}}/></label>}{!paired&&<p className="feature-note">{t('配对前可保存代理草稿；绑定该 Hive 后再应用。')}</p>}<label className="ns-proxy-input" htmlFor="ns-proxy">{t('本机 HTTP 代理')}<input id="ns-proxy" type="text" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={256} disabled={!!busy||!!saved.error} value={proxy} placeholder="http://127.0.0.1:7890" onChange={event=>{proxyDirty.current=true;setProxy(event.target.value);setTest(null);}}/></label>
     <p className="feature-note">{t('留空关闭。仅支持无认证的回环 IP 与端口；不修改系统代理。')}</p><div className="inline-actions ns-network-actions"><button className="primary" type="submit" disabled={!!busy||!!saved.error}>{t('保存代理')}</button><button type="button" disabled={!!busy} aria-busy={busy==='test'} onClick={()=>void run('test',async()=>{const value=await networkClient.test(proxy);if(current())setTest(value);})}>{t(busy==='test'?'正在测试…':'测试连接')}</button></div>
    </form>
@@ -105,7 +105,7 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
 </aside></div></section></Tabs.Content>
   <Tabs.Content value="system"><section className="ns-section" aria-labelledby="ns-system-title"><header><h2 id="ns-system-title">{t('通知与启动')}</h2><p>{t('偏好与系统实际状态分别显示。')}</p></header>   <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error} checked={prefs.notifications_enabled} onChange={event=>notifications(event.target.checked)}/><span>{t('希望接收系统通知')}</span></label><p>{t('授权、换号、离线和额度问题仍会保留在应用内。')}</p></div><div className="ns-os-status"><span>{t('系统权限')}</span><strong>{t(permission==='granted'?'已允许':permission==='denied'?'已拒绝':permission==='prompt'?'尚未允许':'尚未确认')}</strong></div></div>
    {permissionError&&<p className="ns-error" role="alert">{permissionError}</p>}
-   {deliveryError&&<div className="ns-delivery-error"><p className="ns-error" role="alert">{t('最近一次后台通知错误')} · {deliveryError}</p>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())setNotice(t('将在下次后台检查时重试明确失败的通知。'));})}>{t('重试失败的通知')}</button>}</div>}
+   {deliveryError&&<div className="ns-delivery-error"><p className="ns-error" role="alert">{t('最近一次后台通知错误')} · {deliveryError}</p>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())setNotice('将在下次后台检查时重试明确失败的通知。');})}>{t('重试失败的通知')}</button>}</div>}
    {permission==='denied'&&<p className="feature-note">{t('请在系统设置中允许 Bee 发送通知；应用内提醒会继续显示。')}</p>}
    {prefs.notifications_enabled&&permission==='prompt'&&<button disabled={!!busy} onClick={()=>void run('permission',async()=>{permissionRead.current++;const value=await notificationsClient.enable();if(current()){setPermission(value);setPermissionError('');}})}>{t('允许系统通知')}</button>}
    <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error} checked={prefs.autostart_desired} onChange={event=>setStartup(event.target.checked)}/><span>{t('登录桌面后启动 Bee')}</span></label><p>{t('保留此前运行选择，不会自动授权或解除暂停。')}</p></div><div className="ns-os-status"><span>{t('系统登记')}</span><strong>{t(autostart?.registered===true?'已登记':autostart?.registered===false?'未登记':'尚未确认')}</strong></div></div>

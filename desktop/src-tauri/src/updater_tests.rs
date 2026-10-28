@@ -1,5 +1,6 @@
 use crate::updater::*;
 use serde_json::json;
+use sha2::Digest;
 
 fn store() -> (tempfile::TempDir, UpdateStore) {
     let dir = tempfile::tempdir().unwrap();
@@ -419,6 +420,7 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
     let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
     let address = listener.local_addr().unwrap();
     let server = std::thread::spawn(move || {
+        for _ in 0..2 {
         let (mut socket, _) = listener.accept().unwrap();
         let mut request = [0; 4096];
         socket.read(&mut request).unwrap();
@@ -433,11 +435,15 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
             )
             .unwrap();
         socket.write_all(bytes).unwrap();
+        }
     });
     use tauri_plugin_updater::UpdaterExt;
     let mut context = tauri::test::mock_context(tauri::test::noop_assets());
     context.config_mut().plugins.0.insert("updater".into(),json!({"pubkey":public.trim(),"requireSignedVersion":true,"dangerousInsecureTransportProtocol":true,"endpoints":[format!("http://{address}/manifest.json")]}));
+    let manager = UpdateManager::new("0.1.0",UpdateStore::new(directory.path().join("state.json"))).unwrap();
     let app = tauri::test::mock_builder()
+        .manage(manager.clone())
+        .invoke_handler(tauri::generate_handler![update_snapshot,update_download])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .build(context)
         .unwrap();
@@ -460,7 +466,6 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
         )
         .await
         .unwrap();
-    server.join().unwrap();
     assert_eq!(received, 26);
     assert_eq!(&bytes, b"isolated test update asset");
     update.verify(&bytes).unwrap();
@@ -469,4 +474,39 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
     forged["version"] = json!("9.0.0");
     let wrong = updater.restore_update(forged).unwrap().unwrap();
     assert!(wrong.verify(&bytes).is_err());
+
+    // Exercise the real fixed Tauri commands and asynchronous download worker.
+    // Only the native window host is a test runtime; signing, HTTP bytes,
+    // signature/digest verification and snapshot serialization are real.
+    let checking=manager.begin_check(true,now()).unwrap().unwrap();
+    let id=checking.operation_id.unwrap();
+    let identity=AssetIdentity{channel:"test".into(),target:"aarch64-apple-darwin".into(),version:"2.0.0".into(),sha256:format!("{:x}",sha2::Sha256::digest(&bytes)),size:bytes.len() as u64};
+    manager.complete_check(&id,Some(identity),"2.0.0".into(),Some("Signed IPC fixture".into())).unwrap();
+    manager.lock().unwrap().native=Some(update);
+    let view=tauri::WebviewWindowBuilder::new(&app,"main",Default::default()).build().unwrap();
+    let invoke=|cmd:&str| -> serde_json::Value {
+        tauri::test::get_ipc_response(&view,tauri::webview::InvokeRequest{
+            cmd:cmd.into(),callback:tauri::ipc::CallbackFn(0),error:tauri::ipc::CallbackFn(1),
+            url:"tauri://localhost".parse().unwrap(),body:tauri::ipc::InvokeBody::Json(json!({})),
+            headers:Default::default(),invoke_key:tauri::test::INVOKE_KEY.into(),
+        }).unwrap().deserialize().unwrap()
+    };
+    assert_eq!(invoke("update_snapshot")["state"],"available");
+    assert_eq!(invoke("update_download")["state"],"downloading");
+    tokio::time::timeout(std::time::Duration::from_secs(5),async {
+        loop {
+            let snapshot=invoke("update_snapshot");
+            assert_ne!(snapshot["state"],"failed","native download failed: {snapshot}");
+            if snapshot["state"]=="verified" {
+                assert_eq!(snapshot["downloaded_bytes"],26);
+                assert_eq!(snapshot["total_bytes"],26);
+                assert_eq!(snapshot["operation_id"],id);
+                assert_eq!(snapshot["target_version"],"2.0.0");
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    }).await.expect("signed native IPC download did not reach verified within 5s");
+    server.join().unwrap();
+
 }

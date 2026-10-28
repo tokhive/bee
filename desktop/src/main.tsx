@@ -1,3 +1,4 @@
+import {createUpdateClient} from './system/updater';
 import {createRuntimeClient} from './system/runtime';
 import {createAuthorizeClient} from './system/authorize';
 import {createAccountClient} from './system/accounts';
@@ -36,7 +37,7 @@ async function mount() {
     return;
   }
   if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
-    root.render(<React.StrictMode><NativeApp preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
+    root.render(<React.StrictMode><NativeApp updateClient={createUpdateClient(invoke)} preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

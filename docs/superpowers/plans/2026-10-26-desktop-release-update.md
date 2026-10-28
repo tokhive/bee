@@ -93,10 +93,12 @@ T3：Go 全量测试及 vet 通过，完整 Rust 单线程回归 105 通过、2 
 
 - [x] 页面用例：后台检查失败仍可贡献；下载/验证分别显示；未知大小不编百分比；可重试而不重启应用；说明可能中断任务；无可信任务数不显示无任务；重复安装/旧回执拒绝；安装失败保持真实停止状态；发布说明按文本展示。
 - [x] 运行 `node --test desktop/tests/updater.test.ts` 和 `npm --prefix desktop run test:device`，新native-updater用例被收集并先失败。
-- [ ] 完成页面与固定命令接线，禁止前端任意更新源/文件路径/HTML；新版本未完成配置和运行核验前，不显示更新成功。
+- [x] 完成页面与固定命令接线，禁止前端任意更新源/文件路径/HTML；新版本未完成配置和运行核验前，不显示更新成功。
 - [ ] 重跑上述测试及 `npm --prefix desktop run typecheck`、`npm --prefix desktop run build`；原生受控更新源验证可观察进度和用户确认，再提交：`feat(desktop): expose verified update installation in settings`。
 
-T4 独立控件与严格客户端已通过审阅：Node 7 项、当前整合页面 Node 19 项／Chromium 41 项通过，typecheck／build 通过。独立控件已提交 `fede56d`，生产设置页接入等待 S2-T5 的已提交实现；不复制 S2 设置页，不将测试夹具视为生产联调完成。
+T4（2026-10-28）：独立控件提交 `fede56d` 后，已导入 S2 必需依赖 `61cc66c`／`79d8f1e`，将更新区内联接入正式设置页“关于 Bee”，复用版本展示。安装失败后先重新读取状态，再明确重新检查以取得新回执，不重复提交已尝试的安装。S2 网络启动配置先于 S1 恢复；待升级核验期间仅放行必要的内部读／网络配置，普通操作及退出冻结保护仍生效。页面、失败恢复、启动网络回归均有先红后绿证据，并经独立审阅关闭发现。
+
+本次整合验证：页面基础 Node 25 项／Chromium 63 项、额外客户端 Node 24 项、bridge 11 项、typecheck／build、受影响 Go 测试及 vet 均通过；完整 Rust 177 通过、2 项包专用测试 ignored，另 network contract 27 通过。随后扩展的真实 Tauri 命令下载／临时签名测试单独通过：经真实 HTTP 观察 available→downloading→verified，窗口宿主为 MockRuntime，未执行安装。日志见 `docs/desktop/release-validation.md`。最后一个复选框仍保留：真实原生 GUI 的受控源、用户确认及两版本安装升级未验收，不将浏览器夹具或测试窗口宿主当作完整生产联调。
 
 ## Task 5（S3-T5）：八组合安装升级验收及发布材料
 

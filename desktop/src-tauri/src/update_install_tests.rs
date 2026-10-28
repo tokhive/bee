@@ -451,3 +451,44 @@ fn update_install_recovery_requires_new_package_and_all_dependency_proofs_before
     complete_recovery(&manager, "0.2.0", &recovery()).unwrap();
     assert!(manager.lock().unwrap().persistent.pending_update.is_none());
 }
+
+
+#[tokio::test]
+async fn update_install_pending_recovery_bootstraps_s2_network_while_user_actions_remain_blocked() {
+    use crate::{network::NetworkController, network_native::BridgeNetworkRuntime,
+        preferences::PreferencesStore, sidecar::{Bridge, BridgePhase}};
+    let (dir, old, request) = ready();
+    prepare_install(&old, &request).unwrap();
+    let manager = UpdateManager::new("0.2.0", old.store.clone()).unwrap();
+    let store = PreferencesStore::new(dir.path().join("preferences.json"));
+    let bridge = Bridge::start(crate::sidecar::tests::fixture("owned-exit-bootstrap"));
+    let mut statuses = bridge.subscribe();
+    while statuses.borrow_and_update().state != BridgePhase::Ready {statuses.changed().await.unwrap();}
+    hold_startup(&bridge);
+    let controller = NetworkController::default();
+    let device = bridge.device_status().await.expect("pending update must permit S2 startup device read before S1 recovery");
+    let scope = controller.bind_verified_device(&store, &device.result).unwrap().unwrap();
+    let mut prefs = store.read().preferences;
+    prefs.proxies.push(crate::preferences::ProxyPreference{origin:scope.origin().into(),device_scope:Some(scope.device_scope().into()),connect_proxy:"http://127.0.0.1:7890".into()});
+    let saved = store.save(prefs.revision, prefs);
+    assert!(saved.error.is_none());
+    let network = controller.bootstrap_saved(&store, &BridgeNetworkRuntime(&bridge), &scope).await;
+    assert!(network.error.is_none(), "S2 bootstrap rejected during update recovery: {:?}", network.error);
+    assert_eq!(network.effective_proxy, "http://127.0.0.1:7890");
+    assert!(manager.has_pending().unwrap());
+    assert!(!bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst));
+    assert_eq!(bridge.ping().await.unwrap_err().code, "STARTUP_VERIFICATION_PENDING");
+    assert_eq!(bridge.runtime_start(crate::runtime_protocol::RuntimeStartRequest{expected_revision:1,resume_platforms:vec![]}).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+    // Even these startup reads/configuration must respect a concurrent owned exit.
+    bridge.0.frozen.store(true,std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(bridge.device_status().await.unwrap_err().code,"OWNED_EXIT_PENDING");
+    assert_eq!(bridge.runtime_configure_network(crate::runtime_protocol::RuntimeNetworkConfig{revision:99,connect_proxy:String::new()}).await.unwrap_err().code,"OWNED_EXIT_PENDING");
+    bridge.0.frozen.store(false,std::sync::atomic::Ordering::SeqCst);
+    verify_startup(&manager,&bridge,store.read(),"stable").await.unwrap();
+    assert!(!manager.has_pending().unwrap());
+    assert_eq!(manager.snapshot().unwrap().state,UpdateState::Current);
+    let runtime=bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(runtime.result["runtime"]["network_revision"],network.effective_revision);
+    assert_eq!(runtime.result["runtime"]["local"],"running");
+    bridge.stop().await.unwrap();
+}

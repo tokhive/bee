@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Bee S2 Native Probe</title><link rel="stylesheet" href="probe.css"><script defer src="probe.js"></script></head>
+<body><main>
+<h1>Bee S2 原生验收</h1>
+<p>独立测试应用 · dev.tokhive.bee.s2-probe</p>
+<p>系统通知和自启均为真实 OS 操作。仅使用测试偏好与通知记录，不启动 Bee 运行，不读取设备或官方凭证。</p>
+<section aria-label="通知验收"><h2>通知</h2><div class="actions">
+<button data-action="query_permission">查询权限</button><button data-action="enable_notifications">明确请求通知权限</button><button data-action="disable_notifications">关闭测试通知开关</button>
+<button data-action="submit_notice">提交固定通知</button><button data-action="repeat_notice">相同 identity 再试</button><button data-action="recover_and_resubmit">明确恢复后再提交</button>
+</div><p>Accepted 只表示 OS API 接受提交。横幅、通知中心显示与点击须分别观察；点击只产生固定页面导航回执。</p></section>
+<section aria-label="自启验收"><h2>当前用户自启</h2><div class="actions"><button data-action="query_autostart">查询自启登记</button><button data-action="enable_autostart">登记 probe 自启并回读</button><button data-action="disable_autostart">撤销 probe 自启并回读</button></div><p>仅操作本 probe 的登记。测试结束请撤销；正常退出还会尝试撤销本次操作的登记。</p></section>
+<section aria-label="日志与导出验收"><h2>安全日志与真实 WebView 下载</h2><div class="actions"><button data-action="verify_safe_logs">写入三条合成日志并分页回读</button><button data-download="prepare_report_save">实际下载到 probe 目录</button><button data-download="prepare_report_cancel">实际取消下一次下载</button><button data-download="prepare_report_write_failure">实际下载到只读测试目录并触发写失败</button></div><p>仅合成白名单报告；下载目标全部在 probe 目录。macOS WebView 本身无保存对话框，这三个操作用独立探针 hook 选择目标/取消，不代表系统保存对话框验收。</p></section>
+<div class="actions"><button data-action="info">刷新测试信息</button><button id="quit">退出并清理</button><span id="status" role="status">正在连接本地原生界面…</span></div>
+<h2>真实动作回执 JSON</h2><pre id="receipts" aria-live="polite"></pre>
+</main></body></html>

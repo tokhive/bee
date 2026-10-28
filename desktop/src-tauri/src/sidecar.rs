@@ -564,7 +564,12 @@ impl Bridge {
         duration: Duration,
         exit_request: bool,
     ) -> Result<BridgeReply, BridgeError> {
-        if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request {
+        // S2 must read the owned device/runtime and apply its saved network before
+        // S3 can ask S1 to restore. The configure method has no WebView command.
+        // Keep the ordinary frozen/queued-exit checks for every one of these calls.
+        let startup_network = matches!(method,
+            "device_status" | "runtime_snapshot" | "network_status" | "runtime_configure_network");
+        if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request && !startup_network {
             return Err(error("STARTUP_VERIFICATION_PENDING", "request rejected: startup package/data/runtime verification has not succeeded; contribution remains blocked"));
         }
         if self.0.frozen.load(Ordering::SeqCst) && !exit_request {

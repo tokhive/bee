@@ -260,12 +260,12 @@ version = "0.1.0"
 dependencies = [
  "block2",
  "libc",
- "reqwest",
- "rustls",
- "semver",
  "objc2",
  "objc2-foundation",
  "objc2-user-notifications",
+ "reqwest",
+ "rustls",
+ "semver",
  "serde",
  "serde_json",
  "sha2",
@@ -2584,20 +2584,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "osakit"
-version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "732c71caeaa72c065bb69d7ea08717bd3f4863a4f451402fc9513e29dbd5261b"
-dependencies = [
- "objc2",
- "objc2-foundation",
- "objc2-osa-kit",
- "serde",
- "serde_json",
- "thiserror 2.0.21",
-]
-
-[[package]]
 name = "os_info"
 version = "3.15.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2610,6 +2596,20 @@ dependencies = [
  "objc2-foundation",
  "objc2-ui-kit",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "osakit"
+version = "0.3.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "732c71caeaa72c065bb69d7ea08717bd3f4863a4f451402fc9513e29dbd5261b"
+dependencies = [
+ "objc2",
+ "objc2-foundation",
+ "objc2-osa-kit",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -4011,7 +4011,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7259989d4fe11b2bf51f7d671642249b1837c4ae2da1430dc713ae38f98ceeec"
 dependencies = [
  "base64 0.22.1",
- "dirs",
+ "dirs 7.0.0",
  "flate2",
  "futures-util",
  "http",

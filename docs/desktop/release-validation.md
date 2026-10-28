@@ -1,10 +1,10 @@
 # Bee 安装、更新与发布验证记录
 
-日期：2026-10-27。当前状态：**待验收（pending），尚不具备八组合正式发布证据**。
+更新日期：2026-10-28。当前状态：**待验收（pending），尚不具备八组合正式发布证据**。
 
 本文件落实[已批准的 S3 设计](../superpowers/specs/2026-10-26-desktop-release-update-design.md)中的 P1–P6。代码和候选包准备、当前平台验证、八组合正式发布就绪分别记录。自动测试或构建通过不能填写真实安装验收为通过。
 
-当前已同步 S1-T6 的 owned 退出／恢复、S1-T7 原生贡献界面及 S2-T1 偏好存储，S3 已消费真实退出与偏好接口；S2-T5 设置页尚未提交，更新控件仍独立验证，S1/S2 最终原生验收尚未齐备。S3 消费这些实现，不复制另一套账号、偏好或退出逻辑。生产 HTTPS 更新地址、生产更新签名密钥、Developer ID／公证、Authenticode、授权测试账号及八组合原生桌面资源尚未提供。本轮没有发布或上传资产，也没有运行用户的官方客户端或贡献流量。
+当前已同步 S1-T6 的 owned 退出／恢复、S1-T7 原生贡献界面及 S2 偏好、诊断／网络服务和日常体验实现；S3 已将更新区接入 S2 正式设置页“关于 Bee”，消费真实退出、偏好与固定更新命令。S1/S2 最终原生验收尚未齐备。S3 不复制另一套账号、偏好或退出逻辑。生产 HTTPS 更新地址、生产更新签名密钥、Developer ID／公证、Authenticode、授权测试账号及八组合原生桌面资源尚未提供。本轮没有发布或上传资产，也没有运行用户的官方客户端或贡献流量。
 
 ## 现有证据的适用范围
 
@@ -27,7 +27,29 @@
 | 原生页面夹具 | Node 19、Chromium 41 通过 |
 | bridge／TypeScript／前端构建 | bridge 10 通过，typecheck 与 build 通过 |
 
-这些结果是当前较新 macOS 上的补充证据，不填补 macOS 13 最低系统格，也不等于 Developer ID／公证、生产更新签名、两版本安装升级或正式发布就绪。S2 设置页尚未提交，本候选尚不含其最终生产接线；集成后需重建相关候选及重跑受影响验证。首轮 Rust 与浏览器并行时两项 fixture 启动超时，避开负载后单线程完整回归通过，未放宽生产或 fixture deadline。
+这些结果是当前较新 macOS 上的历史补充证据，不填补 macOS 13 最低系统格，也不等于 Developer ID／公证、生产更新签名、两版本安装升级或正式发布就绪。本候选早于本次 S2 设置页与内联更新整合，不含最终界面；不可用其包内测试或截图证明新界面。首轮 Rust 与浏览器并行时两项 fixture 启动超时，避开负载后单线程完整回归通过，未放宽生产或 fixture deadline。
+
+## 关于内联整合验证（2026-10-28）
+
+已导入 S2 的已提交依赖：本分支 `61cc66c` 对应 S2 `eee5a07` 的只读诊断／网络服务，`79d8f1e` 对应 S2 `bdfbb84` 的诊断及日常体验。合并时保留 S1 accountWorkers 修复，统一 updater／notification／autostart 插件和固定命令注册；S2 网络配置完成后再由 S3 启动核验调用 S1 恢复，不重复恢复运行。
+
+按用户已确认的“关于内联”布局，正式设置页只显示一次版本；每个更新状态对应一个主要按钮，发布说明及错误详情折叠。安装先打开确认框，默认取消，支持 Escape 及关闭后焦点恢复；只有“退出并安装”才提交已验签回执。安装失败的未知结果不自动重放，先读取状态，再由用户重新检查更新取得新回执。页面接入、失败恢复和升级启动网络回归均先复现失败再修复，独立审阅发现已关闭。
+
+以下命令在本工作树使用 Node 24.22.1、Rust 1.94 执行，均退出 0；日志保存在本工作树 `.cache/`，不会作为正式签名或八组合附件使用。
+
+| 命令／范围 | 结果 | 本地日志 |
+| --- | --- | --- |
+| `npm --prefix desktop run test:device` | 基础 Node 25、Chromium 63 通过 | `s3-inline-device-final.log` |
+| `node --test desktop/tests/desktopState.test.ts desktop/tests/network.test.ts desktop/tests/notifications.test.ts desktop/tests/updater.test.ts` | 24 通过 | `s3-inline-node-final.log` |
+| `npm --prefix desktop run test:bridge` | 11 通过 | 执行输出已核对 |
+| `npm --prefix desktop run build`（含 typecheck） | 通过 | `s3-inline-build-final.log` |
+| `cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml -- --test-threads=1` | 177 通过、2 项包专用项 ignored；另 network contract 27 通过 | `s3-inline-rust-final.log` |
+| 扩展的真实 Tauri 下载命令／临时签名测试 | 1 通过（在完整 Rust 回归后补跑受影响项） | `s3-inline-native-ipc.log` |
+| `go test ./agent ./desktopbridge`／`go vet ./agent ./desktopbridge` | 通过；其他 Go 路径复用上轮全量证据 | `s3-inline-go.log`／`s3-inline-vet.log` |
+
+浏览器与手动预览使用正式页面组件、模拟 IPC，已核对浅／深主题、确认框、取消、按钮悬停对比度及 320px 内容宽度无横向溢出。`node desktop/scripts/preview-update.mjs` 启动 `http://127.0.0.1:1434/__s3-updater-preview`，刷新重置模拟状态；该页面不会实际下载、安装、登录或贡献。
+
+原生接口补充测试通过真实 Tauri 命令处理器调用 `update_snapshot`／`update_download`，从临时 HTTP 源下载真实签名资产并核验签名／摘要，观察 available→downloading→verified。窗口宿主是 MockRuntime；只有异步轮询限时 5 秒，未给所有同步 socket／IPC 调用声明统一限时。没有调用实际安装器，也未使用生产更新源，不能替代真实原生 GUI 的两版本安装升级验收。
 
 ## 八组合原生矩阵
 
@@ -62,7 +84,7 @@ Markdown 内必须且只能包含下方这种明确标记的 JSON 围栏。也�
   "schema_version": 1,
   "status": "pending",
   "blockers": [
-    "S2-T5 设置页整合尚未导入，最终 S1/S2 原生验收未齐",
+    "最终 S1/S2 原生验收及真实 GUI 两版本安装升级未完成",
     "未提供生产 HTTPS 更新地址、发布渠道和正式候选版本",
     "未提供生产更新签名、macOS Developer ID/公证、Windows Authenticode 受控构建凭据",
     "没有两个配套正式签名候选及完整包摘要、签名工具输出",
@@ -165,11 +187,11 @@ Ubuntu 的 P3 另须 `tray_scenarios.present` 和 `tray_scenarios.absent`，分�
 
 ## 集成验证与资源接入
 
-整合者应记录候选完整提交、各命令、退出码与日志路径：`go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:device`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:tooling`、`npm --prefix desktop run build`。复用同源码证据时说明适用范围，只补受整合影响及失败项。当前这里未记录这些整合命令为通过。
+整合者应记录候选完整提交、各命令、退出码与日志路径：`go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:device`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:tooling`、`npm --prefix desktop run build`。本次整合结果及复用范围见上表；后续候选变化仍需补对应验证，不将历史源码的结果套到新包。
 
 | 缺少资源 | 接入位置及剩余动作 |
 | --- | --- |
-| S1/S2 实现和验收 | 合并各自已验证提交，确认 owned 退出 receipt、配置版本和偏好迁移接口，再生成整合候选 |
+| S1/S2 原生验收 | 必需实现已导入；补真实安装位置的 owned 退出、配置／偏好迁移、诊断及贡献主流程证据 |
 | 生产版本／渠道／HTTPS 地址／更新公钥 | 受控构建输入 `BEE_RELEASE_VERSION`、`BEE_RELEASE_CHANNEL`、`BEE_UPDATE_ENDPOINT`、`BEE_UPDATER_PUBLIC_KEY`；先确认公开资源，不允许前端改源 |
 | 更新签名私钥 | 构建环境 Tauri 更新签名 secrets，仅在受控 CI 接入，不写仓库、不在聊天粘贴 |
 | Developer ID／公证及 Authenticode | 相应原生签名任务的受控 secrets／证书存储；补签名、公证和票据验证输出 |

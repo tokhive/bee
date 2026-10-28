@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bee · S2 诊断页三版预览</title>
+  <link rel="stylesheet" href="../../desktop/src/styles/tokens.css">
+  <link rel="stylesheet" href="bee-s2-diagnostics-prototype/style.css">
+</head>
+<body>
+  <!-- Throwaway UI preview: three diagnostic layouts inside the approved Bee shell.
+       Same data and tabs, ?variant=A|B|C. All actions use memory-only fixtures.
+       Run: python3 -m http.server 1432 --bind 127.0.0.1 (from this S2 worktree). -->
+  <div class="viewer">
+    <header class="review-header">
+      <div><strong>Bee <span>/</span> 诊断页布局</strong><small id="review-label"></small></div>
+      <div class="review-controls">
+        <label>场景 <select id="scene"><option value="completed">检查完成，有问题</option><option value="empty">尚未运行诊断</option></select></label>
+        <button id="theme" class="icon-button" aria-label="切换深色主题"></button>
+      </div>
+    </header>
+    <div class="app-frame">
+      <aside class="sidebar">
+        <div class="brand"><img src="../../desktop/src/assets/app-icon-dark.svg" alt=""><span>Bee</span></div>
+        <nav aria-label="主导航" id="app-navigation"></nav>
+        <div class="side-bottom"><div class="side-state"><span><i class="dot good-dot"></i>dev.tokhive.ai</span><small>本机 Bee 已连接</small></div><div class="local-user"><span class="avatar" id="device-icon"></span><div>Bee Desktop<small>本机设备</small></div></div></div>
+      </aside>
+      <div class="workspace">
+        <header class="toolbar"><span id="toolbar-device"></span></header>
+        <main>
+          <div class="page-heading"><div><h1>诊断</h1><p>检查设备、账号与网络，找到不能贡献的原因。</p></div><button class="button" id="hive-link">打开 Hive 控制台 <span id="external-icon"></span></button></div>
+          <div class="tab-bar"><div class="tabs" role="tablist" aria-label="诊断内容"><button id="tab-checks" role="tab" data-tab="checks" aria-selected="true">检查结果</button><button id="tab-logs" role="tab" data-tab="logs" aria-selected="false">安全日志</button></div><div id="tab-actions" class="actions"></div></div>
+          <div id="panel" class="page-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-checks"></div>
+        </main>
+        <footer><span><i class="dot good-dot"></i>Hive 已连接</span><span>Bee Desktop</span></footer>
+      </div>
+    </div>
+    <div class="review-note"><span id="variant-description"></span><span>设计预览 · 示例数据，操作仅模拟</span></div>
+  </div>
+  <nav class="prototype-switcher" aria-label="切换布局方案"><button id="previous" aria-label="上一版">←</button><div id="variant-buttons"></div><button id="next" aria-label="下一版">→</button></nav>
+  <dialog id="export-dialog"><form method="dialog"><div class="dialog-heading"><h2>导出脱敏报告</h2><button class="icon-button" aria-label="关闭">×</button></div><p class="dialog-description">选择本次报告的内容范围。报告不会自动上传。</p><fieldset><legend>导出内容</legend><label><input type="radio" name="scope" value="checks" checked><span>仅本次检查结果<small>包含检查时间、公开证据与生效网络路径</small></span></label><label><input type="radio" name="scope" value="logs"><span>检查结果与安全日志<small>同时附上本机保留范围内的安全事件</small></span></label></fieldset><div class="privacy-note" id="export-privacy"></div><div class="dialog-actions"><button class="button">取消</button><button class="button primary" id="confirm-export" value="confirm">确认导出</button></div></form></dialog>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <script src="bee-s2-diagnostics-prototype/preview.js"></script>
+</body>
+</html>

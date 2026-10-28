@@ -50,10 +50,10 @@
 - [x] 写失败用例：正式包仍含Dev/demo；App/Bee版本/架构/提交不一致；PATH上的同名Bee；endpoint非HTTPS/缺公钥；Windows非当前用户安装配置；签名/公证证据缺失不能标正式；卸载不删除用户配置。
 - [x] 运行 `node --test desktop/tests/release.test.mjs desktop/tests/tooling.test.mjs`，确认新增约束失败。
 - [x] 实现prepare/verify脚本和发布模式接线；正式Bee名称/标题，标识和数据路径不变。扩展现有CI的构建/签名/公证步骤；敏感值只从CI受控secret读入，输出仅身份摘要和校验结果，开发构建仍可无生产密钥。
-- [ ] 重跑测试及当前平台受控候选构建；运行 `node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release`检查包内Bee与来源。CI配置准备不等于远端签名已执行。
+- [x] 重跑测试及当前平台受控候选构建；运行 `node desktop/scripts/verify-release.mjs --artifacts .cache/desktop-release`检查包内Bee与来源。CI配置准备不等于远端签名已执行。
 - [x] 提交本任务路径：`build(desktop): prepare matched production bundles and signing`（`1b0a8bd`）。
 
-T1 自动测试与审阅已通过，提交 `1b0a8bd`；本机候选包构建、包内真实签名侧车验证随后补充。正式签名／公证保持未完成。
+T1 自动测试与审阅已通过，提交 `1b0a8bd`；macOS 15.7.7／arm64 候选 DMG 已构建并通过包校验，同一 DMG 内真实 Bee 的封印／篡改检测及握手／回收 2 项测试通过，见 `docs/desktop/release-validation.md` 补充证据；不能替代 macOS 13 或正式签名／公证。
 
 ## Task 2（S3-T2）：受控检查、下载及签名验证
 

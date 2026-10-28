@@ -7,11 +7,13 @@ export interface BridgeStatus {
 export interface BridgeReply { protocol: 1; id: string; instance: string; result: { alive: true } }
 export interface DownloadResult { url: string; success: boolean }
 export type Unlisten = () => void;
+export type NotificationPage = 'overview'|'accounts'|'diagnostics'|'settings';
 export interface SystemBridge {
   status(): Promise<BridgeStatus>;
   ping(): Promise<BridgeReply>;
   onStatus(listener: (status: BridgeStatus) => void): Promise<Unlisten>;
   onDownload(listener: (result: DownloadResult) => void): Promise<Unlisten>;
+  onNotification?(listener: (page:NotificationPage) => void):Promise<Unlisten>;
 }
 
 export function createSystemBridge(): SystemBridge {
@@ -21,10 +23,18 @@ export function createSystemBridge(): SystemBridge {
     async ping() { throw unavailable; },
     async onStatus(listener) { listener({ state: 'failed', error: unavailable }); return () => {}; },
     async onDownload() { throw unavailable; },
+    async onNotification() { return () => {}; },
   };
   return {
     status: () => invoke<BridgeStatus>('bridge_status'),
     ping: () => invoke<BridgeReply>('bridge_request', { method: 'ping' }),
+    async onNotification(listener) {
+      let active=true;
+      const off=await listen<unknown>('bee://notification-navigation',event=>{
+        if(active&&typeof event.payload==='string'&&['overview','accounts','diagnostics','settings'].includes(event.payload))listener(event.payload as NotificationPage);
+      });
+      return()=>{if(active){active=false;off();}};
+    },
     async onDownload(listener) {
       let active = true;
       const eventName = 'bee://download-finished';

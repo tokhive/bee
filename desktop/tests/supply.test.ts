@@ -62,3 +62,43 @@ test('pending account confirmation blocks writes in the shared supply model',asy
  const model=createSupplyModel({status:async platform=>({...good,platform,reasons:['codex_confirmation_required'],checked_at:new Date().toISOString()}),setPaused:async()=>{writes++;return good as any;}});
  t.after(()=>model.stop());model.start();await model.read();await model.write('openai',false);assert.equal(writes,0);await model.write('openai',true);assert.equal(writes,1);model.stop();
 });
+
+test('coordinated supply consumes adopted snapshots and routes every read through the shared refresh',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let gets=0,refreshes=0,writes=0;
+ const model=createSupplyModel({status:async platform=>{gets++;return {...good,platform};},setPaused:async(platform,paused)=>{writes++;return {...good,platform,paused,reasons:paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()};}});
+ t.after(()=>model.stop());
+ const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()},claude:{...good,platform:'claude' as const,checked_at:new Date().toISOString()}};
+ model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:'',busy:false});});
+ model.start();model.adopt({views,error:'',busy:false});
+ await model.read();assert.equal(refreshes,1);assert.equal(gets,0);
+ await model.write('openai',true);assert.equal(writes,1);assert.equal(refreshes,2);assert.equal(gets,0);
+ model.adopt({views,error:'central GET failed: HTTP 503',busy:false});assert.equal(model.canWrite('claude'),false);
+ model.adopt({views,error:'',busy:true});assert.equal(model.canWrite('claude'),false);
+});
+
+test('coordinated supply preserves an uncertain write until an explicit refreshed adoption',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0,refreshes=0,pauses=0;
+ const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;throw new Error('PUT HTTP 503 uncertain');}});
+ t.after(()=>model.stop());
+ const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
+ model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:'',busy:false});},()=>{pauses++;});model.start();model.adopt({views,error:'',busy:false});
+ await model.write('openai',true);assert.match(model.getSnapshot().errors.openai??'',/PUT HTTP 503 uncertain/);assert.equal(pauses,1);assert.equal(refreshes,0);
+ model.adopt({views,error:'',busy:false});await model.write('openai',true);assert.equal(writes,1);
+ await model.read();assert.equal(refreshes,1);assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',true),true);
+});
+test('a stopped supply owner cannot pause a newer coordinator when its write fails late',async()=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let rejectWrite!:(reason:Error)=>void,pauses=0;
+ const model=createSupplyModel({status:async()=>good as any,setPaused:()=>new Promise((_resolve,reject)=>{rejectWrite=reject;})});
+ model.setCoordinated(async()=>{},()=>{pauses++;});model.start();model.adopt({views:{openai:{...good,platform:'openai',checked_at:new Date().toISOString()}},error:'',busy:false});
+ const write=model.write('openai',true);model.stop();rejectWrite(new Error('old owner write failed after replacement'));await write;
+ assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai,undefined);
+});
+for(const outcome of ['success','failure'])test(`a previous supply generation cannot refresh or pause its replacement after late ${outcome}`,async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let finishWrite!:()=>void,refreshes=0,pauses=0;
+ const model=createSupplyModel({status:async()=>good as any,setPaused:()=>new Promise((resolve,reject)=>{finishWrite=()=>outcome==='success'?resolve(good as any):reject(new Error('old generation write failed'));})});
+ t.after(()=>model.stop());
+ const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
+ model.setCoordinated(async()=>{refreshes++;},()=>{pauses++;});model.start();model.adopt({views,error:'',busy:false});
+ const write=model.write('openai',true);model.stop();model.start();model.adopt({views,error:'',busy:false});finishWrite();await write;
+ assert.equal(refreshes,0);assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',true),true);
+});

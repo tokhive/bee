@@ -482,3 +482,49 @@ func TestDesktopNetworkStatusUsesAppliedRevisionAndSafePolicy(t *testing.T) {
 		t.Fatal("failed configuration altered effective network status")
 	}
 }
+
+func TestDesktopNetworkRuntimeConfigurePublishesSharedOfficialTransportAtomically(t *testing.T) {
+	clearDesktopProxyEnvironment(t)
+	var requests, connects desktopNetworkLedger
+	official := desktopNetworkOfficial(t, &requests, func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusForbidden) })
+	proxy := desktopNetworkProxy(t, desktopProxyHost(official.URL), &connects)
+	device := NewDesktopDevice()
+	accounts := NewDesktopAccounts(device)
+	runtime := NewDesktopRuntime(context.Background(), device, accounts)
+	defer runtime.Close()
+	config := DesktopNetworkConfig{Revision: 4, ConnectProxy: proxy.URL}
+	if err := runtime.ConfigureNetwork(context.Background(), config); err != nil {
+		t.Fatal(err)
+	}
+	actual, transport := accounts.OfficialNetwork()
+	if actual != config {
+		t.Fatalf("runtime configured relay but official transport kept a different revision: actual=%+v required=%+v", actual, config)
+	}
+	// Keep the production transport's captured proxy policy. Trust only this
+	// synthetic TLS endpoint; the fixed official host still travels over CONNECT.
+	httpTransport := transport.(*http.Transport).Clone()
+	httpTransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	defer httpTransport.CloseIdleConnections()
+	response, err := (&http.Client{Transport: httpTransport}).Get("https://chatgpt.com/backend-api/wham/usage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = response.Body.Close()
+	if response.StatusCode != http.StatusForbidden || !reflect.DeepEqual(connects.all(), []string{"CONNECT chatgpt.com:443"}) || !reflect.DeepEqual(requests.all(), []string{"GET chatgpt.com/backend-api/wham/usage"}) {
+		t.Fatalf("configured transport path was not observed: status=%d CONNECT=%v HTTP=%v", response.StatusCode, connects.all(), requests.all())
+	}
+	before, err := runtime.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rejected := range []DesktopNetworkConfig{{Revision: 4}, {Revision: 3, ConnectProxy: proxy.URL}, {Revision: 5, ConnectProxy: "http://remote.example:7890"}} {
+		if err := runtime.ConfigureNetwork(context.Background(), rejected); err == nil {
+			t.Fatalf("invalid/conflicting configuration accepted: revision=%d", rejected.Revision)
+		}
+		after, _ := runtime.Snapshot(context.Background())
+		actual, nextTransport := accounts.OfficialNetwork()
+		if after.Revision != before.Revision || after.NetworkRevision != before.NetworkRevision || actual != config || nextTransport != transport {
+			t.Fatalf("rejected configuration changed published state: runtime_revision=%d/%d network_revision=%d/%d official_revision=%d", after.Revision, before.Revision, after.NetworkRevision, before.NetworkRevision, actual.Revision)
+		}
+	}
+}

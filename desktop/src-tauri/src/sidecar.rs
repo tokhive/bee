@@ -335,6 +335,85 @@ impl Bridge {
         )?;
         Ok(reply)
     }
+    pub(crate) async fn diagnostics_action(
+        &self,
+        method: &'static str,
+        id: Option<String>,
+    ) -> Result<BridgeReply, BridgeError> {
+        let params = if method == "diagnostics_start" {
+            serde_json::json!({})
+        } else {
+            let id = id.ok_or_else(|| BridgeError {
+                code: "DIAGNOSTICS_REQUEST_INVALID".into(),
+                message: "diagnostics report identifier missing".into(),
+            })?;
+            crate::authorize_protocol::validate_operation_id(&id)?;
+            serde_json::json!({"id":id})
+        };
+        if ![
+            "diagnostics_start",
+            "diagnostics_snapshot",
+            "diagnostics_cancel",
+        ]
+        .contains(&method)
+        {
+            return Err(BridgeError {
+                code: "DIAGNOSTICS_REQUEST_INVALID".into(),
+                message: "diagnostics method outside fixed allowlist".into(),
+            });
+        }
+        let reply = self
+            .request(method, params, Duration::from_secs(15))
+            .await?;
+        crate::diagnostics_protocol::validate_report(&reply.result, &reply.instance)?;
+        Ok(reply)
+    }
+    pub(crate) async fn network_status(&self) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "network_status",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::network::decode_network_status(&reply.result)?;
+        Ok(reply)
+    }
+    pub(crate) async fn notification_snapshot(&self) -> Result<BridgeReply, BridgeError> {
+        let reply=self.request("notification_snapshot",serde_json::json!({}),Duration::from_secs(15)).await?;
+        crate::notification_poll::validate(&reply.result)?;
+        Ok(reply)
+    }
+    pub(crate) async fn network_test(&self, proxy: String) -> Result<BridgeReply, BridgeError> {
+        crate::preferences::validate_proxy(&proxy)?;
+        let reply = self
+            .request(
+                "network_test",
+                serde_json::json!({"proxy":proxy}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::network_protocol::validate_test(&reply.result)?;
+        Ok(reply)
+    }
+    pub(crate) async fn runtime_restore(&self) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "runtime_restore",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::runtime_protocol::validate_runtime_reply(
+            &reply.result,
+            crate::runtime_protocol::RuntimeReplyKind::Operation,
+        )?;
+        if let Some(error) = reply.result.get("error") {
+            return Err(serde_json::from_value(error.clone())
+                .map_err(|e| crate::protocol::invalid_json("runtime restore error", e))?);
+        }
+        Ok(reply)
+    }
     pub async fn runtime_snapshot(&self) -> Result<BridgeReply, BridgeError> {
         let reply = self
             .request(
@@ -845,11 +924,10 @@ async fn supervise(
             }
             if let Some(diagnostic) = diagnostic {
                 cause.message.push_str(&format!(
-                    "; management stderr bytes={}, retained={}, truncated={}, tail={:?}",
+                    "; management stderr bytes={}, retained={}, truncated={}",
                     diagnostic.bytes,
                     diagnostic.tail.len(),
-                    diagnostic.bytes > diagnostic.tail.len() as u64,
-                    String::from_utf8_lossy(&diagnostic.tail)
+                    diagnostic.bytes > diagnostic.tail.len() as u64
                 ));
             }
         }

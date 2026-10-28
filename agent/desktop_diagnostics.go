@@ -95,12 +95,19 @@ func (d *DesktopDiagnostics) Start(ctx context.Context, instance string) (Deskto
 	if d.active != "" {
 		return DesktopDiagnosticReport{}, errors.New("diagnostics already running; cancel or await the active report before starting")
 	}
+	runtime, err := d.runtime.Snapshot(ctx)
+	if err != nil {
+		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics start runtime snapshot failed: code=%s", diagnosticErrorCode(err))
+	}
+	if !desktopSafeRevision(runtime.NetworkRevision) || runtime.RunID != nil && !diagnosticHex(*runtime.RunID, 16) {
+		return DesktopDiagnosticReport{}, errors.New("diagnostics start runtime context rejected; required=safe network revision and valid run identifier")
+	}
 	id, err := desktopOperationID()
 	if err != nil {
 		return DesktopDiagnosticReport{}, errors.New("diagnostics report ID unavailable: system_random_failed")
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	report := DesktopDiagnosticReport{ID: id, Instance: instance, StartedAt: now, State: "running", Checks: []DiagnosticCheck{}}
+	report := DesktopDiagnosticReport{ID: id, Instance: instance, RunID: runtime.RunID, NetworkRevision: runtime.NetworkRevision, StartedAt: now, State: "running", Checks: []DiagnosticCheck{}}
 	for _, name := range []string{"device", "runtime", "hive", "proxy"} {
 		report.Checks = append(report.Checks, newDiagnosticCheck(name, "", "skipped", "pending", now, "diagnostics", nil))
 	}
@@ -319,6 +326,11 @@ func (d *DesktopDiagnostics) failed(id, name, platform string, err error) {
 	d.set(id, name, platform, "fail", code, "diagnostics", evidence)
 }
 func (d *DesktopDiagnostics) run(ctx context.Context, id string) {
+	defer func() {
+		if snapshot, err := d.runtime.Snapshot(ctx); err == nil {
+			d.observeRuntimeContext(id, snapshot)
+		}
+	}()
 	session, release, err := d.device.acquireSession(ctx)
 	if err != nil {
 		d.set(id, "device", "", "fail", "local_read_failed", "settings", map[string]string{"stage": "session"})
@@ -348,16 +360,9 @@ func (d *DesktopDiagnostics) run(ctx context.Context, id string) {
 	if err != nil {
 		d.failed(id, "runtime", "", err)
 	} else {
-		d.mu.Lock()
-		report := d.reports[id]
-		if runtime.RunID != nil && diagnosticHex(*runtime.RunID, 16) {
-			report.RunID = accountString(*runtime.RunID)
+		if !d.observeRuntimeContext(id, runtime) {
+			return
 		}
-		if desktopSafeRevision(runtime.NetworkRevision) {
-			report.NetworkRevision = runtime.NetworkRevision
-		}
-		d.reports[id] = report
-		d.mu.Unlock()
 		status, code := "warning", "runtime_stopped"
 		if runtime.Local == "running" && runtime.Connection == "connected" {
 			status, code = "pass", "owned_runtime_connected"
@@ -434,6 +439,27 @@ func (d *DesktopDiagnostics) run(ctx context.Context, id string) {
 			}
 		}
 	}
+}
+
+// Reports retain the context captured before Start returns. A later snapshot
+// can invalidate observations, but cannot relabel an old report as a new run.
+func (d *DesktopDiagnostics) observeRuntimeContext(id string, snapshot DesktopRuntimeSnapshot) bool {
+	d.mu.Lock()
+	report := d.reports[id]
+	d.mu.Unlock()
+	changedNetwork := snapshot.NetworkRevision != report.NetworkRevision
+	changedRun := (snapshot.RunID == nil) != (report.RunID == nil) || snapshot.RunID != nil && report.RunID != nil && *snapshot.RunID != *report.RunID
+	if changedNetwork {
+		evidence := map[string]string{"checked_revision": strconv.FormatInt(report.NetworkRevision, 10)}
+		if desktopSafeRevision(snapshot.NetworkRevision) {
+			evidence["current_revision"] = strconv.FormatInt(snapshot.NetworkRevision, 10)
+		}
+		d.set(id, "proxy", "", "skipped", "network_changed", "settings", evidence)
+	}
+	if changedRun {
+		d.set(id, "runtime", "", "skipped", "runtime_unknown", "overview", nil)
+	}
+	return !changedNetwork && !changedRun
 }
 func diagnosticEnum(value string, allowed []string) string {
 	if slices.Contains(allowed, value) {

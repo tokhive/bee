@@ -1,6 +1,15 @@
 use super::*;
 use serde_json::json;
 
+#[test]
+fn experience_notification_capability_requires_complete_ordered_group() {
+ let mut methods=vec!["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot"];
+ let check=|caps:&Vec<&str>|hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":caps}),"fixture","darwin","arm64");
+ assert!(check(&methods).is_ok());
+ methods.swap(22,23);assert_eq!(check(&methods).unwrap_err().code,"CAPABILITY_MISMATCH");
+ methods=vec!["ping","shutdown","notification_snapshot"];assert!(check(&methods).is_err());
+}
+
 fn frame(id: &str, instance: &str, result: Value) -> Vec<u8> {
     let mut bytes =
         serde_json::to_vec(&json!({"protocol":1,"id":id,"instance":instance,"result":result}))

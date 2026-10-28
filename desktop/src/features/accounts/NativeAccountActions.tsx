@@ -17,7 +17,7 @@ export function NativeAccountActions({accounts,platform,runtime}:{accounts:Accou
  function disabled(action:Action){
   const continuation=action==='confirm_change'&&op?.state==='reconciling'&&op.error?.code==='confirmation_not_submitted';
   if(!view||busy||pending&&!continuation||unknown||transitioning||!view.features[action].available)return true;
-  if(action==='authorize')return !accounts.defaults||runtime.uncertain||!!runtime.error||!runtime.view||!['stopped','failed'].includes(runtime.view.local);
+  if(action==='authorize')return !accounts.defaults||runtime.uncertain||!!runtime.error||runtime.stalled||!runtime.view||!['stopped','failed'].includes(runtime.view.local);
   if(action==='clear_selection')return view.selection.state!=='selected';
   if(dirty||!candidate)return true;
   if(action==='confirm_change')return view.selection.state!=='selected'||view.candidate.fingerprint!==null&&view.selection.fingerprint===view.candidate.fingerprint;

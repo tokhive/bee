@@ -8,13 +8,21 @@ test.beforeEach(async({page})=>{
   (window as unknown as {__TAURI_EVENT_PLUGIN_INTERNALS__:unknown}).__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
   runtime.isTauri=true;runtime.deviceStage='unbound';runtime.deviceCalls=[];
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();
-  runtime.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:{handler:number})=>{
-   if(command==='runtime_snapshot')return {instance:'fixture',result:{runtime:{...passiveRuntime,observed_at:new Date().toISOString()}}};
+  const instance='b'.repeat(32);let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
+  runtime.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:any)=>{
+   if(command==='runtime_snapshot')return {instance,result:{runtime:{...passiveRuntime,observed_at:new Date().toISOString()}}};
    runtime.deviceCalls.push(command);
-   if(command==='plugin:event|listen') {if(location.search.includes('stale-status'))setTimeout(()=>callbacks.get(args!.handler)?.({payload:{state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance:'fixture'}}}),20);return 1;}
+   if(command==='plugin:event|listen') {if(args.event==='bee://bridge-status'&&location.search.includes('stale-status'))setTimeout(()=>callbacks.get(args!.handler)?.({payload:{state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}}}),20);return args.handler;}
    if(command==='plugin:event|unlisten')return;
    if(command==='bridge_status'&&location.search.includes('stale-status'))return new Promise((_,reject)=>setTimeout(()=>{(window as unknown as {initialRejected:boolean}).initialRejected=true;reject(new Error('old status read failed'));},100));
-   if(command==='bridge_status')return {state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance:'fixture'}};
+   if(command==='bridge_status')return {state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}};
+   if(command==='preferences_read')return {preferences,error:null};
+   if(command==='preferences_save'){preferences={...args.request.preferences,revision:preferences.revision+1};return {preferences,error:null};}
+   if(command==='notification_permission')return 'prompt';
+   if(command==='autostart_status')return {desired:false,registered:false,error:null};
+   if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
+   if(command==='account_defaults')return {instance,result:{defaults:{platforms:['openai','claude'].map(platform=>({platform,directory:'/tmp/fixture',default_store:'file',stores:[{store:'file',supported:true,reason:null}]}))}}};
+   if(command==='account_snapshot')return {instance,result:{account:(passiveRuntime.platforms as any)[args.platform].account}};
    if(command==='supply_status'||command==='supply_set_paused')return {result:{supply:{hive:'https://hive.example',device_id:'device-1',platform:(args as unknown as {platform:string}).platform,paused:false,ready:false,reasons:['offline'],checked_at:new Date().toISOString()}}};
    if(command==='device_begin')runtime.deviceStage='pending';
    if(command==='device_status'||command==='device_begin'||command==='device_open'){
@@ -40,8 +48,8 @@ test('normal native build pairs and verifies without demo balances or starting s
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
  await expect(page.getByText('real@example.test',{exact:true})).toBeVisible({timeout:10000});
  await expect(page.getByText('设备已绑定。')).toBeVisible();
- await page.getByRole('button',{name:'收益',exact:true}).click();
- await expect(page.getByText('真实收益尚未接通。')).toBeVisible();
+ await expect(page.getByRole('navigation').getByRole('button')).toHaveCount(4);
+ await expect(page.getByRole('button',{name:'收益',exact:true})).toHaveCount(0);
  expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply_set_paused|run/.test(c)))).toBe(false);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -49,7 +57,7 @@ test('failed verification blocks success and remains retryable',async({page})=>{
  await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
  await page.getByRole('button',{name:'重新核对设备'}).click();
- await expect(page.getByRole('alert')).toContainText('HTTP 503');
+ await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
  await expect(page.getByText('设备已绑定。')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
 });
@@ -60,7 +68,7 @@ test('retrying a failed bound-device check does not revive cached success',async
  await page.getByRole('button',{name:'重新核对设备'}).click();
  await expect(page.getByText('设备已绑定。')).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
- await page.getByRole('button',{name:'重新核对设备'}).click();await expect(page.getByRole('alert')).toContainText('HTTP 503');
+ await page.getByRole('button',{name:'重新核对设备'}).click();await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string;deviceDelay:number}).deviceStage='bound';(window as unknown as {deviceDelay:number}).deviceDelay=500;});
  await page.getByRole('button',{name:'重新核对设备'}).click();
  await expect(page.getByText('正在核对设备…')).toBeVisible();
@@ -84,7 +92,7 @@ test('opening after website confirmation consumes the latest bound result',async
 
 test('English device entry and settings have complete translations',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
- await expect(page.getByText('Device binding does not automatically start contribution')).toBeVisible();
+ await expect(page.getByText('Saved for this system user and retained after restarting.')).toBeVisible();
  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Connect this device'})).toBeVisible();
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
 });

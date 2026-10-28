@@ -482,6 +482,9 @@ func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNe
 	if network.Revision < r.network.Revision {
 		return fmt.Errorf("network revision moved backwards: actual=%d current=%d", network.Revision, r.network.Revision)
 	}
+	if err := r.accounts.ConfigureNetwork(ctx, network); err != nil {
+		return err
+	}
 	r.network = network
 	r.snapshot.NetworkRevision = network.Revision
 	r.snapshot.Revision++

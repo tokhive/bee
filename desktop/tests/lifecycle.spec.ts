@@ -14,7 +14,7 @@ for (const cold of [true, false]) {
           unregisterCallback(id: number) { callbacks.delete(id); },
           async invoke(command: string, args: { handler?: number; event?: string; method?: string }) {
             if (command === 'login_return_received') return cold;
-            if (command === 'bridge_status') return { state: 'ready', metadata: { bee_version: 'fixture', os: 'darwin', arch: 'arm64', instance: 'owned' } };
+            if (command === 'bridge_status') return { state: 'ready', metadata: { bee_version: 'fixture', os: 'darwin', arch: 'arm64', instance: 'b'.repeat(32) } };
             if (command === 'plugin:event|listen') { if (args.event === 'bee://login-return') receipt = args.handler; return args.handler; }
             if (command === 'plugin:event|unlisten') return;
             throw new Error(`unexpected fixture IPC command=${command}`);

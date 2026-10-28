@@ -95,7 +95,11 @@ fn apply(app: &tauri::AppHandle, intent: WindowIntent) -> tauri::Result<()> {
     Ok(())
 }
 
-pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<()> {
+pub fn background_should_hide(background: bool, tray_available: bool) -> bool {
+    background && tray_available
+}
+
+pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
     use tauri::menu::{Menu, MenuItem, Submenu};
     let open = MenuItem::with_id(app, "bee-open", "打开 Bee", true, Some("CmdOrCtrl+O"))?;
     let quit = MenuItem::with_id(app, "bee-quit", "退出", true, Some("CmdOrCtrl+Q"))?;
@@ -120,8 +124,9 @@ pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<()> {
         eprintln!(
             "create Bee tray icon failed; recover the window by launching Bee again: {cause}"
         );
+        return Ok(false);
     }
-    Ok(())
+    Ok(true)
 }
 
 pub async fn shutdown_owned(

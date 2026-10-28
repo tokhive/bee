@@ -11,7 +11,7 @@ export function NativeRuntimeControls({runtime}:{runtime:RuntimeModel}){
  const {view,busy,error,uncertain}=runtime;
  const [resume,setResume]=useState<AccountPlatform[]>([]),[stopOpen,setStopOpen]=useState(false);
  const selected=(['openai','claude'] as const).filter(p=>view?.platforms[p].account.selection.state==='selected');
- const blocked=busy||uncertain||!view||!!error;
+ const blocked=busy||uncertain||!view||!!error||runtime.stalled;
  return <section className="supply-panel native-runtime" aria-label={t('贡献运行')}>
   <div className="section-heading"><h2>{t('贡献运行')}</h2><button disabled={busy} onClick={()=>void runtime.refresh()}>{t('重新核对运行状态')}</button></div>
   <p className="account-state">{t(view?localCopy[view.local]:'正在读取 Bee…')}</p>

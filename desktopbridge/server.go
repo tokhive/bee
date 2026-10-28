@@ -53,7 +53,8 @@ func RunWithAuthorization(ctx context.Context, in io.Reader, out io.Writer, diag
 	return RunWithExperience(ctx, in, out, diagnostics, version, devices, accounts, runner, authorizer, nil, nil)
 }
 
-// RunWithExperience opts into diagnostics and read-only network capabilities.
+// RunWithExperience opts into diagnostics, read-only network and optional
+// account notification facts without expanding earlier capability groups.
 func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnostics io.Writer, version string, devices Devices, accounts Accounts, runner Runtime, authorizer Authorizer, diagnosticService Diagnostics, network NetworkTester) (runErr error) {
 	if diagnosticService != nil && runner == nil {
 		return errors.New("diagnostics bridge requires the complete runtime capability group")
@@ -65,6 +66,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		return errors.New("runtime bridge requires account service")
 	}
 	supplies, hasSupplies := devices.(Supplies)
+	notifications, hasNotifications := accounts.(Notifications)
+	hasNotifications = hasNotifications && (diagnosticService != nil || network != nil)
 	if accounts != nil && !hasSupplies {
 		return errors.New("account bridge requires the complete device and supply capability group")
 	}
@@ -191,6 +194,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if network != nil {
 					capabilities = append(capabilities, networkMethods...)
 				}
+				if hasNotifications {
+					capabilities = append(capabilities, notificationMethods...)
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
@@ -201,6 +207,15 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				answer.Result = struct {
 					Alive bool `json:"alive"`
 				}{true}
+			case hasNotifications && slices.Contains(notificationMethods, req.Method):
+				value, err := notificationsResult(ctx, notifications)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{rejected("NOTIFICATIONS_OPERATION_FAILED", "%s", err)}
+				} else {
+					answer.Result = value
+				}
 			case diagnosticService != nil && slices.Contains(diagnosticMethods, req.Method):
 				value, err := diagnosticsResult(ctx, diagnosticService, req, instance)
 				if err != nil {

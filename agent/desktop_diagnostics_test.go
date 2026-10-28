@@ -74,6 +74,59 @@ func diagnosticReadyHandler(w http.ResponseWriter, q *http.Request) {
 	}
 }
 
+func TestDesktopDiagnosticsStartCapturesRuntimeContextBeforeDeviceChecks(t *testing.T) {
+	service, device, _, runtime := diagnosticFixture(t, diagnosticReadyHandler, false)
+	original, err := os.ReadFile(device.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.WriteFile(device.path, original, 0600) })
+	if err := saveState(device.path, localState{}); err != nil {
+		t.Fatal(err)
+	}
+	runtime.mu.Lock()
+	runtime.snapshot.NetworkRevision = 7
+	runtime.snapshot.RunID = accountString(strings.Repeat("c", 32))
+	runtime.mu.Unlock()
+	first, err := service.Start(context.Background(), strings.Repeat("1", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, report := range []DesktopDiagnosticReport{first, waitDiagnostics(t, service, first.ID)} {
+		if report.NetworkRevision != 7 || report.RunID == nil || *report.RunID != strings.Repeat("c", 32) {
+			t.Fatalf("report lost start context: revision=%d run_present=%t", report.NetworkRevision, report.RunID != nil)
+		}
+	}
+}
+
+func TestDesktopDiagnosticsNetworkChangeKeepsOriginalReportContext(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	service, _, _, runtime := diagnosticFixture(t, func(w http.ResponseWriter, q *http.Request) {
+		close(entered)
+		<-release
+		diagnosticReadyHandler(w, q)
+	}, false)
+	runtime.mu.Lock()
+	runtime.snapshot.NetworkRevision = 2
+	runtime.mu.Unlock()
+	first, err := service.Start(context.Background(), strings.Repeat("1", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-entered
+	runtime.mu.Lock()
+	runtime.snapshot.NetworkRevision = 3
+	runtime.mu.Unlock()
+	close(release)
+	report := waitDiagnostics(t, service, first.ID)
+	if first.NetworkRevision != 2 || report.NetworkRevision != 2 {
+		t.Fatalf("report context relabelled: initial=%d final=%d; required=2", first.NetworkRevision, report.NetworkRevision)
+	}
+	if check := diagnosticCheck(t, report, "proxy", ""); check.Status == "pass" || check.Code != "network_changed" {
+		t.Fatalf("changed network passed: status=%s code=%s", check.Status, check.Code)
+	}
+}
+
 func TestDesktopDiagnosticsOnlyReadsSelectedSourcesAndDoesNotChangeGlobalLogger(t *testing.T) {
 	var mu sync.Mutex
 	var requests []string

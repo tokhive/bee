@@ -1,84 +1,80 @@
-import {useRuntime} from '../features/lifecycle/useRuntime';
+import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {AppShell} from '../components/AppShell';
+import {StatusView} from '../components/StatusView';
+import {DevicePairingPage} from '../features/device/DevicePairingPage';
+import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
+import {useAccounts} from '../features/accounts/useAccounts';
 import {NativeRuntimeControls} from '../features/lifecycle/NativeRuntimeControls';
+import {useRuntime} from '../features/lifecycle/useRuntime';
+import {SupplyPanel} from '../features/supply/SupplyPanel';
+import {useSupply} from '../features/supply/useSupply';
+import {NativeDiagnosticsPage} from '../features/diagnostics/NativeDiagnosticsPage';
+import {NativeSettingsPage} from '../features/settings/NativeSettingsPage';
+import {createDesktopState,type DesktopSnapshot,type DesktopState} from '../system/desktopState';
+import {defaultPreferences,type PreferencesClient,type PreferencesSnapshot} from '../system/preferences';
+import type {createNotificationsClient} from '../system/notifications';
+import type {NetworkClient} from '../system/network';
+import type {DiagnosticsClient} from '../system/diagnostics';
+import type {DeviceClient,DeviceView} from '../system/device';
+import type {AccountFactory} from '../system/accounts';
 import type {RuntimeFactory} from '../system/runtime';
 import type {AuthorizeFactory} from '../system/authorize';
-import {useSupply} from '../features/supply/useSupply';
-import {useAccounts} from '../features/accounts/useAccounts';
-import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
-import type {AccountFactory} from '../system/accounts';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AppShell } from '../components/AppShell';
-import { StatusView } from '../components/StatusView';
-import { SupplyPanel } from '../features/supply/SupplyPanel';
-import type { SupplyFactory } from '../system/supply';
-import { DevicePairingPage } from '../features/device/DevicePairingPage';
-import type { DeviceClient, DeviceView } from '../system/device';
-import type { BridgeStatus, SystemBridge } from '../system/bridge';
-import type { Page, Preferences } from '../client/types';
-import { t, useLanguage } from '../i18n/index';
-function failure(cause:unknown):string {
- if(cause instanceof Error)return cause.message;
- if(typeof cause==='object'&&cause!==null&&'message' in cause)return `${'code' in cause?String(cause.code)+': ':''}${String(cause.message)}`;
- return String(cause);
+import type {SupplyFactory} from '../system/supply';
+import type {SystemBridge} from '../system/bridge';
+import type {Page} from '../client/types';
+import {t,useLanguage} from '../i18n/index';
+
+interface NativeProps {
+ client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;systemBridge:SystemBridge;
+ preferencesClient:PreferencesClient;notificationsClient:ReturnType<typeof createNotificationsClient>;networkClient:NetworkClient;
+ diagnosticsFactory:(instance:string|undefined,networkRevision:number,runId?:string|null)=>DiagnosticsClient;
+ openHive:()=>Promise<unknown>;
 }
-interface NativeUi {page:Page;language:Preferences['language'];theme:Preferences['theme']}
-function NativeWorkspace({client,supply,accountFactory,runtimeFactory,authorizeFactory,native,ui,updateUi}:{client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;native:BridgeStatus;ui:NativeUi;updateUi:(next:Partial<NativeUi>)=>void}) {
- const {page,language,theme}=ui;
- const setPage=(page:Page)=>updateUi({page});
- const [view,setView]=useState<DeviceView>();const [error,setError]=useState('');const [busy,setBusy]=useState(false);
- useLanguage(language);
- useEffect(()=>{document.documentElement.dataset.theme=theme;},[theme]);
- const working=useRef(false);const mounted=useRef(true);
+const failure=(cause:unknown):string=>cause instanceof Error?cause.message:typeof cause==='object'&&cause!==null&&'message'in cause?`${'code'in cause?String(cause.code)+': ':''}${String(cause.message)}`:String(cause);
+const initial:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},error:'',busy:false};
+function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void}){
+ const {native,device:view}=snapshot;
+ const [busy,setBusy]=useState(false),[error,setError]=useState('');const working=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
- const run=useCallback(async(operation:()=>Promise<DeviceView|void>)=>{
-  if(working.current)return;working.current=true;setBusy(true);setError('');
-  try{const next=await operation();if(mounted.current&&next)setView(next);}
-  catch(cause){if(mounted.current)setError(failure(cause));}
-  finally{working.current=false;if(mounted.current)setBusy(false);}
- },[]);
- const refresh=useCallback(()=>run(()=>client.status()),[client,run]);
- useEffect(()=>{if(native.state==='ready')void refresh();},[native.state,refresh]);
- useEffect(()=>{
-  if(native.state!=='ready'||busy||error||!(view?.state==='pending'||view?.state==='draining'))return;
-  const timer=setTimeout(()=>void refresh(),(view.poll_interval_seconds??2)*1000);
-  return()=>clearTimeout(timer);
- },[native.state,busy,error,view,refresh]);
- const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?supply({hive:view.hive,deviceId:view.identity.id}):undefined,[supply,view?.state,view?.hive,view?.identity?.id]);
- const accountClient=useMemo(()=>native.metadata?accountFactory(native.metadata.instance):undefined,[accountFactory,native.metadata?.instance]);
- const runtimeClient=useMemo(()=>native.metadata?runtimeFactory(native.metadata.instance):undefined,[runtimeFactory,native.metadata?.instance]);
- const authorizeClient=useMemo(()=>native.metadata?authorizeFactory(native.metadata.instance):undefined,[authorizeFactory,native.metadata?.instance]);
- const runtime=useRuntime(runtimeClient,native.state==='ready');
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view);
- const sharedSupply=useSupply(supplyClient,native.state==='ready'&&(page==='overview'||page==='accounts'),busy||!!error,Object.values(accounts.views).filter(s=>s.hive.state==='confirmation_required').map(s=>s.platform));
- return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
-  {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>
-   {native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}
-  </StatusView>:<>
-   {page==='overview'&&<><DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/><NativeRuntimeControls runtime={runtime}/>{sharedSupply&&<SupplyPanel supply={sharedSupply}/>}</>}
-   {page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error}/>}
-   {page==='earnings'&&<StatusView kind="unavailable" title={t('收益')}>{t('真实收益尚未接通。')}</StatusView>}
-   {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{runtime.view?.local??t('未知')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div></section>}
-   {page==='settings'&&<div className="settings-page"><section className="settings-form">
-    <label>{t('语言')}<select aria-label={t('语言')} value={language} onChange={e=>updateUi({language:e.target.value as Preferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></label>
-    <label>{t('外观')}<select aria-label={t('外观')} value={theme} onChange={e=>updateUi({theme:e.target.value as Preferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></label>
-    <p className="feature-note">{t('外观和语言仅用于本次运行。设备绑定保存在独立的受保护配置中。')}</p>
-    <p>{t('Hive 地址')}: {view?.hive||t('尚未设置')}</p>
-    <p className="feature-note">{t('已保存设备配置时禁止直接切换 Hive；原配置将保留。')}</p>
-   </section></div>}
-  </>}
+ const refresh=useCallback(()=>model?.refresh()??Promise.resolve(),[model]);
+ const pause=useCallback(()=>model?.pause(),[model]);
+ const run=async(action:()=>Promise<DeviceView|unknown>)=>{if(working.current)return;working.current=true;setBusy(true);setError('');const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;try{await action();if(current())await refresh();}catch(cause){if(current())setError(failure(cause));}finally{working.current=false;if(mounted.current)setBusy(false);}};
+ const instance=native.metadata?.instance;
+ const accountClient=useMemo(()=>instance?props.accountFactory(instance):undefined,[props.accountFactory,instance]);
+ const runtimeClient=useMemo(()=>instance?props.runtimeFactory(instance):undefined,[props.runtimeFactory,instance]);
+ const authorizeClient=useMemo(()=>instance?props.authorizeFactory(instance):undefined,[props.authorizeFactory,instance]);
+ const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?props.supply({hive:view.hive,deviceId:view.identity.id}):undefined,[props.supply,view?.state,view?.hive,view?.identity?.id]);
+ const generation=useCallback(()=>model?.generation()??0,[model]);
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,busy:snapshot.busy,refresh,pause,generation});
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,{defaults:snapshot.defaults,error:snapshot.error,accountErrors:snapshot.accountErrors,refresh,pause,generation});
+ const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error,Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,error:snapshot.error,busy:snapshot.busy,refresh,pause});
+ const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id),[props.diagnosticsFactory,instance]);
+ const ready=native.state==='ready';
+ return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode debug={<button disabled={!view?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
+  {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>{native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}</StatusView>}
+  {error&&page!=='overview'&&<p role="alert">{error}</p>}
+  {ready&&page==='overview'&&<><DevicePairingPage view={view} busy={busy||snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(refresh)} open={()=>void run(()=>props.client.open())}/><NativeRuntimeControls runtime={runtime}/>{sharedSupply&&<SupplyPanel supply={sharedSupply}/>}</>}
+  {ready&&page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
+  {page==='diagnostics'&&<NativeDiagnosticsPage client={diagnostics} onNavigate={setPage} instance={instance} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/>}
+  {page==='settings'&&<NativeSettingsPage paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
  </AppShell>;
 }
-
-export function NativeApp({client,supply,accountFactory,runtimeFactory,authorizeFactory,systemBridge}:{client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;systemBridge:SystemBridge}) {
- const [native,setNative]=useState<BridgeStatus>({state:'starting'});
- const [ui,setUi]=useState<NativeUi>({page:'overview',language:'system',theme:'system'});
- const updateUi=useCallback((next:Partial<NativeUi>)=>setUi(current=>({...current,...next})),[]);
+export function NativeApp(props:NativeProps){
+ const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
+ const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
+ const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
+ const acceptPreferences=useCallback((value:PreferencesSnapshot)=>setPreferences(previous=>value.preferences.revision>=previous.preferences.revision?value:previous),[]);
+ useLanguage(preferences.preferences.language);
+ useEffect(()=>{let active=true;const revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active)acceptPreferences(v);},cause=>{if(active)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:{code:'PREFERENCES_READ_FAILED',message:failure(cause)}});});return()=>{active=false;};},[props.preferencesClient,acceptPreferences]);
  useEffect(()=>{
-  let active=true,updated=false;let off:(()=>void)|undefined;
-  const failed=(cause:unknown)=>{if(active&&!updated)setNative({state:'failed',error:{code:'NATIVE_STATUS_FAILED',message:failure(cause)}});};
-  void systemBridge.onStatus(status=>{updated=true;if(active)setNative(status);}).then(dispose=>{if(active)off=dispose;else dispose();},failed);
-  void systemBridge.status().then(status=>{if(active&&!updated)setNative(status);},failed);
-  return()=>{active=false;off?.();};
- },[systemBridge]);
- return <NativeWorkspace key={`${native.state}:${native.metadata?.instance??''}`} client={client} supply={supply} accountFactory={accountFactory} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} native={native} ui={ui} updateUi={updateUi}/>;
+  const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
+  apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);
+ },[preferences.preferences.theme]);
+ useEffect(()=>{
+  const coordinator=createDesktopState({bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
+  setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
+  return()=>{off();coordinator.dispose();};
+ },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
+ useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
+ return <NativeWorkspace key={snapshot.native.metadata?.instance??'starting'} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} onSaved={acceptPreferences}/>;
 }

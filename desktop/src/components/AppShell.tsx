@@ -28,7 +28,7 @@ export function AppShell({
           <span>Bee</span>
         </div>
         <nav aria-label={t("主导航")}>
-          {navigation.map(({ id, label, icon: Icon }) => (
+          {navigation.filter(item=>!deviceMode||item.id!=='earnings').map(({ id, label, icon: Icon }) => (
             <button key={id} aria-current={id === page ? 'page' : undefined} onClick={() => onNavigate(id)}>
               <Icon aria-hidden="true" />
               {t(label)}

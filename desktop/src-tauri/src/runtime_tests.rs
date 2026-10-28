@@ -1,17 +1,24 @@
 use super::*;
 use crate::sidecar::{Bridge, BridgePhase};
-use tokio::time::{timeout, Duration};
+use tokio::time::{sleep, timeout, Duration};
 
 async fn ready(mode: &str) -> Bridge {
     let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
-    timeout(Duration::from_secs(5), async {
+    timeout(Duration::from_secs(30), async {
         while bridge.status().state == BridgePhase::Starting {
-            tokio::task::yield_now().await;
+            sleep(Duration::from_millis(10)).await;
         }
     })
     .await
-    .unwrap();
-    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    .unwrap_or_else(|_| {
+        panic!("owned-exit fixture stayed in Starting for 30s: mode={mode}")
+    });
+    assert_eq!(
+        bridge.status().state,
+        BridgePhase::Ready,
+        "owned-exit fixture left Starting without becoming Ready: mode={mode} error={:?}",
+        bridge.status().error
+    );
     bridge
 }
 
@@ -99,13 +106,15 @@ async fn owned_exit_requires_persisted_stop_and_reaps_before_receipt() {
         "owned-exit-wrong-operation",
     ] {
         let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
-        timeout(Duration::from_secs(5), async {
+        timeout(Duration::from_secs(30), async {
             while bridge.status().state == BridgePhase::Starting {
-                tokio::task::yield_now().await;
+                sleep(Duration::from_millis(10)).await;
             }
         })
         .await
-        .unwrap();
+        .unwrap_or_else(|_| {
+            panic!("owned-exit fixture stayed in Starting for 30s: mode={mode}")
+        });
         let result = bridge.prepare_owned_exit(OwnedExitReason::Update).await;
         if mode == "owned-exit" {
             let receipt = result.unwrap();

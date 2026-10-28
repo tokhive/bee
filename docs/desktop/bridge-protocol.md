@@ -1,6 +1,6 @@
 # Bee 桌面私有管理协议
 
-`bee desktop` 是桌面壳与本次创建的 Bee 子进程之间的机器入口，不能附加参数。启动、`hello`、`ping` 不读取设备配置、不连接 Hive；显式设备命令使用独立的受保护配置并访问 Hive 现有设备 API。它不读取 CLI 配置、不启动贡献、不开放监听端口。其他 CLI 命令仍走原入口。此协议可用不代表 Bee 已具备接单条件。
+`bee desktop` 是桌面壳与本次创建的 Bee 子进程之间的机器入口，不能附加参数。启动、`hello`、`ping` 不读取设备配置、不连接 Hive；显式设备命令使用独立的受保护配置并访问 Hive 现有设备 API。管理入口本身不读取 CLI 配置、不自动启动贡献、不开放监听端口；贡献由固定运行命令控制。其他 CLI 命令仍走原入口。此协议可用不代表 Bee 已具备接单条件。
 
 ## 帧与关联
 
@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述十七项能力。仅运行服务保留十四项，旧账号服务保留十项，供给服务保留六项，无供给实现的设备替身保留四项，`desktopbridge.Run` 无设备服务时保留原 P0 两项。Rust 只接受这六组精确且有序的能力集合，不接受任意子集或额外方法。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述 **24 项**有序能力。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -99,6 +99,58 @@ Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 
 账号文件v2保留提醒entries，新增scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent及session；不保存token。旧v1在首次写入升级前原样保存到受保护`.v1.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。未来运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
 
 ## 验证命令
+
+### S2 诊断、网络与后台问题事实
+
+下表属于 Go sidecar 的固定能力；参数同样拒绝未知、重复、缺失及错类型字段。日志、普通偏好和 OS 适配由 Rust 提供，不增加 Go 任意文件／Shell 入口。
+
+| 请求 method | params | result／边界 |
+| --- | --- | --- |
+| `diagnostics_start` | `{}` | `{report:DesktopDiagnosticReport}`；显式启动异步检查，复用 S1 会话、已选来源和有效网络；不读默认 `bee.json`，不配对、续期、暂停、同步或启动贡献 |
+| `diagnostics_snapshot` | `{id}` | `{report:DesktopDiagnosticReport}`；id 为当前实例保留的 48 位小写十六进制报告引用；只读已有结果，不重跑 |
+| `diagnostics_cancel` | `{id}` | `{report:DesktopDiagnosticReport}`；取消当前检查并保留部分结果；终态报告不回退为运行中 |
+| `network_status` | `{}` | `{network:{effective_revision,effective_proxy,paths}}`；仅内存中的实际生效策略，不访问设备配置或网络；没有 Rust 保存值 |
+| `network_test` | `{proxy}` | `{network_test:{observed_at,checks}}`；proxy 必须显式字符串；只测试本机代理 CONNECT 和两个固定官方只读 GET，不接收端点、账号或凭证 |
+| `notification_snapshot` | `{}` | `{notifications:{facts,observed_at,network_revision}}`；仅供 Rust 后台调度，读取 S1 公开问题及持久提醒门禁；不刷新官方／Hive，不消费应用内 Notify 脉冲，也不写提醒记录 |
+
+对应业务错误分别为 `DIAGNOSTICS_OPERATION_FAILED`、`NETWORK_OPERATION_FAILED`、`NOTIFICATIONS_OPERATION_FAILED`，位于 `result.error`；错误参数为 envelope 的 `INVALID_REQUEST`。业务错误及未知报告不破坏后续 ping。
+
+`DesktopDiagnosticReport` 精确字段为 `id,instance,run_id,network_revision,started_at,finished_at,state,checks`。id 为 48 位小写十六进制，instance 为当前管理进程 32 位引用，run_id 为 S1 运行引用或 null；修订为非负 JS 安全整数，时间为 UTC RFC3339。state 为 running/completed/cancelled；running 的 finished_at 为 null，终态必须有完成时间。每实例最多保留 8 份，至多一份正在运行。
+
+每项检查为 `id,platform,status,observed_at,code,evidence,next_action`。全局 device/runtime/hive/proxy 的 platform 为 null；每个平台各有 source/authorization/quota/capabilities/account/supply，共 16 项。status 为 pass/warning/fail/skipped，code 和 evidence 使用公开白名单；未知检查不转成通过。next_action 仅 overview/accounts/diagnostics/settings，不是命令或 URL。前端按 instance、run_id、network_revision 拒绝过期上下文；切页不新建报告。
+
+`paths` 精确字段为 relay/official/hive/official_login：relay 为 direct/local_proxy；official 为 `openai=<path>;claude=<path>`，每项 path 为 direct/environment_proxy/local_proxy；Hive 固定 process_environment，官方登录固定 official_client。只公开路径类别，不回显环境代理原文。测试 checks 固定依次为 local_proxy/openai_read_only/claude_read_only，每项含 id/status/message/path/http_status；status 为 ok/failed/skipped，HTTP 状态为整数或 null。401/403/429 只能证明收到 HTTP 响应，不能证明账号、额度或贡献可用。
+
+通知 facts 最多 8 项，每项为 `identity,platform,problem,active,eligible,recovered`：identity 为 64 位不透明摘要，problem 仅 authorization_rejected/confirmation_required/offline/quota_exhausted。eligible 必须同时 active，recovered 不可同时 active；来源、邮箱、完整账号指纹及自定义通知正文不进入此通道。Rust 持有独立 OS 提交去重记录，提交已接受不等于用户已读。
+
+### S2 Rust typed 命令
+
+以下是 WebView invoke 契约；未注明时参数为空对象，multiword 参数由 Tauri 使用 camelCase。generic `bridge_request` 继续只允许 ping。
+
+| 命令 | invoke 参数／返回 |
+| --- | --- |
+| `preferences_read` / `preferences_save` | `{}` / `{request:{expected_revision,preferences}}`；返回 `{preferences,error}`；preferences 为 version:1、revision、language(system/zh/en)、theme(system/light/dark)、notifications_enabled、autostart_desired、proxies |
+| `diagnostics_start` / `diagnostics_snapshot` / `diagnostics_cancel` | `{}` / `{id}` / `{id}`；返回原管理桥 envelope，由 Rust 与 TS 双重核验报告 |
+| `diagnostic_logs` | `{query:{cursor,limit,module,platform,level}}`；返回 `{entries,next_cursor,truncated}`；limit 为 1..200，其余过滤项或 cursor 可为 null |
+| `diagnostics_export` | `{reportId,includeLogs}`；返回 `product,app_version,bee_version,os,arch,report,logs,truncated,truncated_sections`；报告须属于当前实例，页面选择范围后复用下载完成／取消／失败回执 |
+| `network_test` / `network_snapshot` | `{proxy}` 返回 Go envelope；`{}` 返回 `{saved_revision,effective_revision,saved_proxy,effective_proxy,paths,pending_restart,error}` |
+| `network_save_proxy` / `network_apply_saved` | `{proxy,origin,expectedRevision}` 保存并返回偏好快照，origin 为未配对草稿的 canonical origin 或 null；`{confirmed:true}` 明确确认可能中断任务后应用，返回网络快照 |
+| `notification_permission` / `notification_enable` | 查询 / 用户明确触发请求权限；返回 granted/denied/prompt，普通保存偏好不申请权限 |
+| `notification_delivery_status` / `notification_retry` | 查询返回 `{error}`；用户主动允许失败提交再试，返回 null，不清除 S1 问题 |
+| `autostart_status` / `autostart_set` | `{}` / `{enabled}`；返回 `{desired,registered,error}`；registered 可为 null，登记失败不能按 desired 宣称成功 |
+| `hive_open` | 不接受 URL 参数；由已保存 canonical origin 打开站点根地址，不携带凭证或配对码 |
+
+proxies 每项为 `{origin,device_scope,connect_proxy}`，device_scope 为 null 时仅未配对草稿；核验设备后才关联范围。专用代理仅空值或无认证、显式回环 IP 的 HTTP 地址和合法端口（允许根路径 `/`），不支持 SOCKS、localhost 名称、远端主机、认证、其他路径或 query。保存与生效分离，运行中保存显示 pending_restart；应用时复用 S1 停止证明、内部配置和保存意图恢复，不能解除原暂停或未决换号。
+
+普通偏好位于当前 OS 用户配置目录 `tokhive/desktop-preferences.json`，不导入 demo localStorage；默认语言／主题跟随系统，通知及自启关闭。OS 提交记录另存 `tokhive/notification-delivery.json`。安全诊断日志位于 App 日志目录 safe-diagnostics，每份最多 5 MiB、最多 3 份；仅记录固定结构的公开证据，不复制原始 stderr。导出在 Rust 组装且最多 5 MiB，以 truncated/truncated_sections 显式标记截断，沿用 1 MiB sidecar 帧限制。
+
+### 安全只读 smoke
+
+Node 24 下可执行 `node desktop/scripts/smoke-accounts.mjs <Bee绝对路径>` 以及 `node desktop/scripts/smoke-experience.mjs <Bee绝对路径> [证据目录]`。二者均严格断言当前完整 24 项能力；前者只取默认来源及 refresh:false 公开快照，后者另核对 S1 内存快照、网络策略、参数拒绝、未知报告业务错误及 owned 子进程回收，不执行配对／检测凭证／恢复／贡献／有效网络测试。
+
+体验脚本以独立临时工作目录运行：Linux 将子进程 XDG_CONFIG_HOME、Windows 将 APPDATA 指向空临时目录，才额外执行未配对诊断及空通知快照，只允许产生临时配置锁。macOS 的 Go `os.UserConfigDir()` 不使用 XDG_CONFIG_HOME，因此脚本明确跳过会打开设备会话的命令；不重定向 HOME，不读取用户的 `~/Library/Application Support/tokhive`。JSON 证据记录覆盖、跳过、二进制 SHA256 与正常退出；协议 smoke、浏览器 fixture 均不替代 doctor 真实配对路径、实际代理、日志下载或原生 OS 通知／自启／窗口验收。
+
+### Go 协议回归
 
 从 Bee 实施检出运行：
 

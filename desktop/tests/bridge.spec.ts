@@ -15,7 +15,7 @@ for (const failed of [false, true]) {
       let next = 0;
       const state = failed
         ? { state: 'failed', error: { code: 'CHILD_EXITED', message: 'owned Bee exited: status=9' } }
-        : { state: 'ready', metadata: { bee_version: 'fixture', os: 'darwin', arch: 'arm64', instance: 'owned' } };
+        : { state: 'ready', metadata: { bee_version: 'fixture', os: 'darwin', arch: 'arm64', instance: 'b'.repeat(32) } };
       Object.assign(window, {
         isTauri: true,
         __TAURI_INTERNALS__: {
@@ -24,7 +24,7 @@ for (const failed of [false, true]) {
           async invoke(command: string, args: { handler?: number; method?: string }) {
             if (command === 'login_return_received') return false;
             if (command === 'bridge_status') return state;
-            if (command === 'bridge_request' && args.method === 'ping' && !failed) return { protocol: 1, id: 'shell-2', instance: 'owned', result: { alive: true } };
+            if (command === 'bridge_request' && args.method === 'ping' && !failed) return { protocol: 1, id: 'shell-2', instance: 'b'.repeat(32), result: { alive: true } };
             if (command === 'plugin:event|listen') return args.handler;
             if (command === 'plugin:event|unlisten') return;
             throw new Error(`unexpected fixture IPC command=${command}`);

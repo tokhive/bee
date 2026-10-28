@@ -359,33 +359,64 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
     let mut recovery_authorize = recovery.clone();
     recovery_authorize
         .extend(["authorize_start", "authorize_status", "authorize_cancel"].map(str::to_string));
-    let expected = match metadata.capabilities.len() {
-        2 => &basic,
-        4 => &devices,
-        6 => &supplies,
-        10 => &accounts,
-        14 => &runtime,
-        15 => &recovery,
-        17 => &authorize,
-        18 => &recovery_authorize,
-        count => {
-            return Err(BridgeError::new(
-                "CAPABILITY_MISMATCH",
-                format!(
-                "hello capability count rejected; actual count={count}; required counts=2,4,6,10,14,15,17,18"
-            ),
-            ))
+    let mut candidates = Vec::new();
+    for prefix in [
+        &basic,
+        &devices,
+        &supplies,
+        &accounts,
+        &runtime,
+        &authorize,
+        &recovery,
+        &recovery_authorize,
+    ] {
+        candidates.push(prefix.clone());
+        let mut network = prefix.clone();
+        network.extend(["network_status", "network_test"].map(str::to_string));
+        candidates.push(network);
+        if prefix.len() >= runtime.len() {
+            let mut diagnostics = prefix.clone();
+            diagnostics.extend(
+                [
+                    "diagnostics_start",
+                    "diagnostics_snapshot",
+                    "diagnostics_cancel",
+                ]
+                .map(str::to_string),
+            );
+            candidates.push(diagnostics.clone());
+            diagnostics.extend(["network_status", "network_test"].map(str::to_string));
+            candidates.push(diagnostics);
         }
-    };
-    for (index, (actual, expected)) in metadata.capabilities.iter().zip(expected).enumerate() {
-        if actual != expected {
-            let observed = if recovery_authorize.contains(actual) {
+    }
+    let notification_candidates:Vec<_>=candidates.iter().filter(|group|group.iter().any(|m|m=="account_snapshot")&&group.iter().any(|m|m=="network_test"||m=="diagnostics_start")).map(|group|{let mut group=group.clone();group.push("notification_snapshot".into());group}).collect();
+    candidates.extend(notification_candidates);
+    if !candidates.contains(&metadata.capabilities) {
+        let expected = candidates
+            .iter()
+            .filter(|v| v.len() == metadata.capabilities.len())
+            .max_by_key(|v| {
+                v.iter()
+                    .zip(&metadata.capabilities)
+                    .take_while(|(a, b)| a == b)
+                    .count()
+            });
+        if let Some(expected) = expected {
+            let (index, (actual, required)) = metadata
+                .capabilities
+                .iter()
+                .zip(expected)
+                .enumerate()
+                .find(|(_, (a, b))| a != b)
+                .unwrap();
+            let observed = if candidates.iter().any(|v| v.contains(actual)) {
                 actual.clone()
             } else {
                 format!("unknown member bytes={}", actual.len())
             };
-            return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability order rejected at index={index} (zero-based); expected={expected}; actual={observed}")));
+            return Err(BridgeError::new("CAPABILITY_MISMATCH",format!("hello capability order rejected at index={index} (zero-based); expected={required}; actual={observed}")));
         }
+        return Err(BridgeError::new("CAPABILITY_MISMATCH", format!("hello capability count rejected; actual count={}; required counts=2,4,6,10,14,17 with complete optional diagnostics/network groups", metadata.capabilities.len())));
     }
     Ok(metadata)
 }

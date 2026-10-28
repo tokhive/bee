@@ -43,6 +43,7 @@ async fn account_native_commands_validate_typed_requests_without_expanding_gener
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
         .manage(bridge.clone())
+        .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::account_defaults,
             crate::commands::account_detect,
@@ -224,7 +225,7 @@ async fn fragmented_child_responses_and_concurrent_requests_are_correlated() {
     let mut ids = std::collections::HashSet::new();
     while let Some(result) = pending.join_next().await {
         let reply = result.unwrap().unwrap();
-        assert_eq!(reply.instance, "fixture-instance");
+        assert_eq!(reply.instance, "f".repeat(32));
         assert_eq!(reply.result, serde_json::json!({"alive":true}));
         assert!(ids.insert(reply.id));
     }
@@ -255,7 +256,7 @@ async fn invalid_utf8_version_exit_and_timeout_never_become_ready() {
 }
 
 #[tokio::test]
-async fn child_failure_retains_exit_status_and_bounded_management_diagnostic() {
+async fn child_failure_retains_safe_management_evidence_without_exposing_stderr() {
     let bridge = Bridge::start(fixture("diagnostic-exit"));
     wait(&bridge, BridgePhase::Failed).await;
     bridge.stop().await.unwrap();
@@ -272,12 +273,11 @@ async fn child_failure_retains_exit_status_and_bounded_management_diagnostic() {
         "missing actual exit: {}",
         cause.message
     );
-    assert!(
-        cause.message.contains("E42"),
-        "missing management diagnostic: {}",
-        cause.message
-    );
     assert!(cause.message.contains("stderr bytes="));
+    assert!(cause.message.contains("retained="));
+    assert!(cause.message.contains("truncated="));
+    assert!(!cause.message.contains("MARKER"), "raw stderr leaked into public native status");
+    assert!(!serde_json::to_string(&bridge.status()).unwrap().contains("MARKER"));
 }
 
 #[tokio::test]
@@ -622,6 +622,10 @@ async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_priva
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
         .manage(bridge.clone())
+        .manage(crate::experience::StartupGate::verified())
+        .manage(crate::preferences::PreferencesStore::new(std::env::temp_dir().join(format!("bee-s2-command-preferences-{}.json",std::process::id()))))
+        .manage(crate::network::NetworkController::default())
+        .manage(crate::diagnostics_native::NativeDiagnostics::new(std::env::temp_dir().join(format!("bee-s2-command-logs-{}",std::process::id()))))
         .invoke_handler(tauri::generate_handler![
             crate::commands::runtime_snapshot,
             crate::commands::runtime_start,
@@ -678,6 +682,7 @@ async fn authorize_native_commands_bind_operation_and_keep_shell_private() {
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
         .manage(bridge.clone())
+        .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::authorize_start,
             crate::commands::authorize_status,

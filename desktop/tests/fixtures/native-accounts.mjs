@@ -4,36 +4,77 @@ export function accountFixture(platform) {
 }
 export function installAccountFixture({accounts, runtimeEnabled=false}){
  const w=window;w.isTauri=true;w.calls=[];w.delay=0;w.fail='';w.paused={openai:false,claude:true};
- let callback=0,event=0,instance='fixture';
+ let callback=0,instance='b'.repeat(32);
  let runtimeRevision=0,local='stopped',operation=null;
+ let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
+ let diagnostic=null,diagnosticSequence=0;
  if(runtimeEnabled)for(const a of Object.values(accounts))for(const key of ['select','clear_selection','confirm_change','authorize'])a.features[key]={available:true,reason:null};
  const op=(kind,platform,revision,state='succeeded')=>({id:(kind==='authorize'?'d':kind==='stop'?'e':'c').repeat(48),kind,platform,state,revision,error:null});
+ const finishLogins=()=>{if(w.loginComplete)for(const [platform,account]of Object.entries(accounts))if(account.operation?.kind==='authorize'&&['pending','running'].includes(account.operation.state)){
+  account.operation={...account.operation,state:'succeeded',revision:++account.revision};account.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:platform==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:new Date().toISOString(),error:null};
+ }};
  w.accounts=accounts;
-const callbacks=new Map();
- const status=()=>({state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance}});w.emit=id=>{instance=id;callbacks.get(event)?.({payload:status()});};
- w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
- w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command,args)=>{
-  if(command==='plugin:event|listen'){event=args.handler;return 1;}if(command==='plugin:event|unlisten')return;if(command==='bridge_status')return status();
+ const callbacks=new Map(),subscriptions=new Map();
+ const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}});
+ const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
+ w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});
+ w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
+ w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
+ const supply=p=>({hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:false,reasons:w.paused[p]?['manually_paused','offline']:['offline'],checked_at:new Date().toISOString()});
+ const network=()=>{const saved=preferences.proxies[0]?.connect_proxy??'',effective=w.effectiveProxy??'';return {saved_revision:preferences.revision,effective_revision:w.networkRevision??0,saved_proxy:saved,effective_proxy:effective,paths:{relay:effective?'local_proxy':'direct',official:`openai=${effective?'local_proxy':'direct'};claude=${effective?'local_proxy':'direct'}`,hive:'process_environment',official_login:'official_client'},pending_restart:saved!==effective,error:null};};
+ const preferenceError=()=>({code:'PREFERENCES_WRITE_FAILED',message:'private file publish failed: kind=PermissionDenied os_code=13'});
+ w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:id=>{callbacks.delete(id);},invoke:async(command,args={})=>{
+  if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();
   if(command==='device_status'&&w.deviceFail)return {result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET identity HTTP 503'}}};
   if(command==='device_status')return {result:{device:{state:'bound',hive:'https://hive.example',name:'Fixture',identity:{id:'dev-1',name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}}}};
   w.calls.push({command,args});
+  if(command==='preferences_read')return structuredClone({preferences,error:null});
+  if(command==='preferences_save'){
+   if(w.preferencesFail)return structuredClone({preferences,error:preferenceError()});
+   preferences={...args.request.preferences,revision:preferences.revision+1};return structuredClone({preferences,error:null});
+  }
+  if(command==='notification_permission')return w.notificationPermission??'prompt';
+  if(command==='notification_enable')return w.notificationPermission??'granted';
+  if(command==='notification_delivery_status')return {error:w.notificationDeliveryError??null};
+  if(command==='notification_retry')return null;
+  if(command==='autostart_status')return {desired:preferences.autostart_desired,registered:preferences.autostart_desired,error:null};
+  if(command==='autostart_set'){preferences={...preferences,revision:preferences.revision+1,autostart_desired:args.enabled};return {desired:args.enabled,registered:args.enabled,error:null};}
+  if(command==='network_snapshot')return network();
+  if(command==='network_save_proxy'){
+   if(w.preferencesFail)return structuredClone({preferences,error:preferenceError()});
+   preferences={...preferences,revision:preferences.revision+1,proxies:[{origin:args.origin??'https://hive.example',device_scope:'fixture-device',connect_proxy:args.proxy}]};return structuredClone({preferences,error:null});
+  }
+  if(command==='network_apply_saved'){w.effectiveProxy=preferences.proxies[0]?.connect_proxy??'';w.networkRevision=(w.networkRevision??0)+1;runtimeRevision++;return network();}
+  if(command==='network_test')return {protocol:1,id:'fixture-network',instance,result:{network_test:{observed_at:new Date().toISOString(),checks:['local_proxy','openai_read_only','claude_read_only'].map(id=>({id,status:'ok',message:'read-only endpoint reachable',path:args.proxy?'local_proxy':'direct',http_status:id==='local_proxy'?null:200}))}}};
+  if(command==='hive_open'){w.openedHive='https://hive.example/';return;}
+  if(command.startsWith('diagnostics_')){
+   if(command==='diagnostics_start'){
+    const now=new Date().toISOString();diagnostic={id:(++diagnosticSequence).toString(16).padStart(48,'0'),instance,run_id:local==='running'?'a'.repeat(32):null,network_revision:w.networkRevision??0,started_at:now,finished_at:null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:now,code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity',http_status:'200'},next_action:'diagnostics'},{id:'source',platform:'openai',status:'skipped',observed_at:now,code:'source_not_selected',evidence:{selected:'false'},next_action:'accounts'}]};
+    const captured=structuredClone(diagnostic);if(w.diagnosticDelay)await new Promise(resolve=>setTimeout(resolve,w.diagnosticDelay));return {instance:captured.instance,result:{report:captured}};
+   }
+   if(command==='diagnostics_snapshot'&&!w.diagnosticsStayRunning){diagnostic={...diagnostic,state:'completed',finished_at:new Date().toISOString()};}
+   if(command==='diagnostics_cancel')diagnostic={...diagnostic,state:'cancelled',finished_at:new Date().toISOString()};
+   if(command==='diagnostics_export')return {product:'Bee',app_version:'0.1.0',bee_version:'dev',os:'darwin',arch:'arm64',report:structuredClone(diagnostic),logs:args.includeLogs?[{time:diagnostic.started_at,level:'info',module:'diagnostics',platform:null,code:'hive_identity_verified',evidence:{method:'GET'}}]:[],truncated:false,truncated_sections:[]};
+   return {instance,result:{report:structuredClone(diagnostic)}};
+  }
+  if(command==='diagnostic_logs')return {entries:[{time:new Date().toISOString(),level:args.query.level??'info',module:args.query.module??'diagnostics',platform:args.query.platform,code:'hive_identity_verified',evidence:{method:'GET'}}],next_cursor:args.query.cursor?null:`v1:${'0'.repeat(32)}:2:1:${'a'.repeat(16)}`,truncated:false};
   if(command.startsWith('runtime_')){
    if(command==='runtime_start'){local='running';operation=op('start',null,++runtimeRevision);if(w.runtimeUnknown)throw new Error('RESPONSE_TIMEOUT: start result unconfirmed');return {instance,result:{operation}};}
    if(command==='runtime_stop'){local='stopped';operation=op('stop',null,++runtimeRevision);return {instance,result:{operation}};}
-   w.runtimeReadCount=(w.runtimeReadCount??0)+1;return structuredClone({instance,result:{runtime:{run_id:local==='running'?'a'.repeat(32):null,revision:runtimeRevision,network_revision:0,observed_at:new Date().toISOString(),local,connection:local==='running'?'connected':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:(w.runtimeAccounts??accounts)[p],supply:null,selection_revision:accounts[p].selection.state==='selected'?1:0}])),operation,stop_receipt:operation?.kind==='stop'?{workers_stopped:true,intent_saved:true,session_clean:true}:null}}});
+   finishLogins();w.runtimeReadCount=(w.runtimeReadCount??0)+1;return structuredClone({instance,result:{runtime:{run_id:local==='running'?'a'.repeat(32):null,revision:runtimeRevision,network_revision:w.networkRevision??0,observed_at:new Date().toISOString(),local,connection:local==='running'?'connected':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:(w.runtimeAccounts??accounts)[p],supply:supply(p),selection_revision:accounts[p].selection.state==='selected'?1:0}])),operation,stop_receipt:operation?.kind==='stop'?{workers_stopped:true,intent_saved:true,session_clean:true}:null}}});
   }
   if(command.startsWith('authorize_')){
    const p=args.request?.platform??Object.keys(accounts).find(p=>accounts[p].operation?.id===args.operationId),a=accounts[p];
    if(command==='authorize_start'){if(w.loginAdmissionDelay)await new Promise(r=>setTimeout(r,w.loginAdmissionDelay));a.operation=op('authorize',p,++a.revision,'running');}
    if(command==='authorize_cancel')a.operation={...a.operation,state:'cancelled',revision:++a.revision};
-   if(command==='authorize_status'&&w.loginComplete){a.operation={...a.operation,state:'succeeded',revision:++a.revision};a.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:p==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:new Date().toISOString(),error:null};}
+   if(command==='authorize_status')finishLogins();
    return {instance,result:{operation:structuredClone(a.operation)}};
   }
   if(command.startsWith('supply_')){const p=args.platform;if(command==='supply_set_paused'&&w.supplyFail===p)return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:'PUT HTTP 503 result unconfirmed'}}};if(command==='supply_set_paused')w.paused[p]=args.paused;return {result:{supply:{hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:false,reasons:w.paused[p]?['manually_paused','offline']:['offline'],checked_at:new Date().toISOString()}}};}
   if(command==='account_defaults')return {instance,result:{defaults:{platforms:['openai','claude'].map(p=>({platform:p,directory:p==='openai'?'/tmp/codex':'/tmp/claude',default_store:'file',stores:(p==='openai'?['auto','file','keyring']:['file','keychain']).map(store=>({store,supported:true,reason:null}))}))}}};
   const platform=args.request?.platform??args.platform,captured=instance;if(w.delay)await new Promise(r=>setTimeout(r,w.delay));
   if(w.fail===platform)return {instance:captured,result:{error:{code:'ACCOUNT_OPERATION_FAILED',message:'source_read permission_denied=true; check=file_read'}}};
-  const a=structuredClone(accounts[platform]);
+  if(command==='account_snapshot')finishLogins();const a=structuredClone(accounts[platform]);
   if(command==='account_action'){
    if(args.request.revision!==a.revision)return {instance,result:{error:{code:'ACCOUNT_OPERATION_FAILED',message:'stale_revision: revision must match the current platform snapshot'}}};
    a.revision++;a.operation=op(args.request.action,platform,a.revision,w.actionPending?'reconciling':'succeeded');

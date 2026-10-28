@@ -145,6 +145,9 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
 	}
+	if slices.Contains(notificationMethods, req.Method) {
+		return decodeNotificationParams(req, fields["params"])
+	}
 	if slices.Contains(diagnosticMethods, req.Method) {
 		return decodeDiagnosticsParams(req, fields["params"])
 	}

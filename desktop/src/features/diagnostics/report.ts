@@ -1,5 +1,5 @@
 import { isTauri } from '@tauri-apps/api/core';
-import { createSystemBridge, type Unlisten } from '../../system/bridge';
+import { createSystemBridge, type Unlisten } from '../../system/bridge.ts';
 
 export type CheckId = 'process' | 'connection' | 'proxy';
 export type LogCode = 'CHECK_STARTED' | 'CHECK_PASSED' | 'PROXY_UNREACHABLE';
@@ -18,6 +18,10 @@ export function generateReport(input: SanitizedDiagnostics) {
 }
 export async function downloadReport(input: SanitizedDiagnostics): Promise<'completed' | 'initiated' | 'unconfirmed'> {
   const blob = new Blob([generateReport(input)], { type: 'application/json' });
+  return downloadPayload(blob, 'bee-demo-diagnostics.json');
+}
+/** Shares the native receipt path with demo exports; activation alone is not delivery. */
+export async function downloadPayload(blob: Blob, filename: string): Promise<'completed' | 'initiated' | 'unconfirmed'> {
   const url = URL.createObjectURL(blob);
   let unlisten: Unlisten | undefined;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -32,7 +36,7 @@ export async function downloadReport(input: SanitizedDiagnostics): Promise<'comp
       // Absence of a receipt is unknown, never proof of failure or delivery.
       timer = setTimeout(() => finish('unconfirmed'), 30_000);
     }
-    const a = document.createElement('a'); a.href = url; a.download = 'bee-demo-diagnostics.json';
+    const a = document.createElement('a'); a.href = url; a.download = filename;
     document.body.append(a); try { a.click(); } finally { a.remove(); }
     if (!completion) return 'initiated';
     const result = await completion;

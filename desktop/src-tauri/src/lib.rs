@@ -1,9 +1,19 @@
 pub mod authorize_protocol;
+mod autostart;
 pub mod build_source;
 mod commands;
+mod diagnostic_log;
 mod diagnostics;
+mod diagnostics_native;
+mod diagnostics_protocol;
+mod experience;
 mod lifecycle;
 mod navigation;
+mod network;
+mod network_native;
+mod network_protocol;
+mod notification_poll;
+mod notifications;
 mod preferences;
 #[cfg(windows)]
 pub(crate) mod private_file_windows;
@@ -22,6 +32,10 @@ use tauri::{Emitter, Manager};
 pub fn run() {
     tauri::Builder::default()
         .manage(lifecycle::LoginReceipt::default())
+        .manage(experience::StartupGate::default())
+        .manage(network::NetworkController::default())
+        .manage(autostart::AutostartLock::default())
+        .manage(notification_poll::NotificationPollState::default())
         // This must be the first plugin: its setup exits secondary instances
         // before the window and owned management Child can be created.
         .plugin(tauri_plugin_single_instance::init(|app, args, _cwd| {
@@ -31,6 +45,8 @@ pub fn run() {
             lifecycle::dispatch(app, lifecycle::WindowEvent::SecondLaunch);
         }))
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_autostart::Builder::new().args(["--bee-background"]).build())
         .on_window_event(|window, event| {
             if window.label() == "main" {
                 if let tauri::WindowEvent::CloseRequested { api, .. } = event {
@@ -45,6 +61,22 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bridge_request,
             commands::bridge_status,
+            commands::autostart_status,
+            commands::autostart_set,
+            commands::diagnostics_start,
+            commands::diagnostics_snapshot,
+            commands::diagnostics_cancel,
+            commands::diagnostic_logs,
+            commands::diagnostics_export,
+            commands::notification_permission,
+            commands::notification_enable,
+            commands::notification_delivery_status,
+            commands::notification_retry,
+            commands::network_test,
+            commands::network_snapshot,
+            commands::network_apply_saved,
+            commands::network_save_proxy,
+            commands::hive_open,
             commands::preferences_read,
             commands::preferences_save,
             commands::device_status,
@@ -70,6 +102,13 @@ pub fn run() {
         ])
         .setup(|app| {
             app.manage(preferences::PreferencesStore::new(app.path().config_dir()?.join("tokhive/desktop-preferences.json")));
+            app.manage(diagnostics_native::NativeDiagnostics::new(app.path().app_log_dir()?.join("safe-diagnostics")));
+            let notify_handle = app.handle().clone();
+            let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |page| {
+                lifecycle::dispatch(&notify_handle,lifecycle::WindowEvent::Reopen);
+                if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",page){eprintln!("notification navigation delivery failed: {cause}");}
+            }));
+            app.manage(notifications::NotificationService::new(app.path().config_dir()?.join("tokhive/notification-delivery.json"),std::sync::Arc::new(adapter)));
             let config = app.config().app.windows.first().ok_or_else(|| {
                 std::io::Error::new(
                     std::io::ErrorKind::InvalidData,
@@ -101,7 +140,10 @@ pub fn run() {
                     true
                 })
                 .build()?;
-            lifecycle::install_menu_and_tray(app)?;
+            let tray_available = lifecycle::install_menu_and_tray(app)?;
+            if lifecycle::background_should_hide(std::env::args().any(|a| a == "--bee-background"), tray_available) {
+                lifecycle::dispatch(app.handle(), lifecycle::WindowEvent::Menu(lifecycle::WindowIntent::Hide));
+            }
             for argument in std::env::args().skip(1) {
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
@@ -115,7 +157,7 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 while statuses.changed().await.is_ok() {
-                    let state = statuses.borrow_and_update().clone();
+                    let state = handle.state::<experience::StartupGate>().status(statuses.borrow_and_update().clone());
                     if let Err(cause) = handle.emit_to("main", "bee://bridge-status", state) {
                         eprintln!("deliver Bee bridge status to main window: {cause}");
                     }
@@ -125,11 +167,10 @@ pub fn run() {
             let startup_updates=updates.clone();
             let startup_app=app.handle().clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(cause) = update_install::verify_startup(&startup_updates,&restoring,preferences,option_env!("BEE_RELEASE_CHANNEL").unwrap_or("")).await {
-                    eprintln!("Bee startup restore failed: {}: {}", cause.code, cause.message);
-                }
+                experience::startup(startup_app.clone(),restoring).await;
                 updater::start_background(&startup_app,&startup_updates);
             });
+            tauri::async_runtime::spawn(notification_poll::run(app.handle().clone(),bridge.clone()));
             app.manage(bridge);
             Ok(())
         })

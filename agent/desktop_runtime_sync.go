@@ -284,6 +284,7 @@ func (r *DesktopRuntime) observeSynchronizedPlatform(ctx context.Context, state 
 	if err != nil {
 		return err
 	}
+	p.binding = observed.binding
 	p.snapshot.Hive = observed.snapshot.Hive
 	p.snapshot.Capabilities[1] = observed.snapshot.Capabilities[1]
 	p.snapshot.Issues = observed.snapshot.Issues

@@ -359,6 +359,9 @@ impl PreferencesStore {
     }
 }
 fn protected_read(path: &Path) -> std::io::Result<Vec<u8>> {
+    protected_read_bounded(path, MAX_FILE)
+}
+pub(crate) fn protected_read_bounded(path: &Path, limit: u64) -> std::io::Result<Vec<u8>> {
     let mut options = OpenOptions::new();
     options.read(true);
     #[cfg(unix)]
@@ -371,7 +374,7 @@ fn protected_read(path: &Path) -> std::io::Result<Vec<u8>> {
     #[cfg(windows)]
     let file = private_file_windows::protected_open(path)?;
     let metadata = file.metadata()?;
-    if !metadata.is_file() || metadata.len() > MAX_FILE {
+    if !metadata.is_file() || metadata.len() > limit {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
             "preferences must be a bounded regular file",
@@ -391,16 +394,16 @@ fn protected_read(path: &Path) -> std::io::Result<Vec<u8>> {
         }
     }
     let mut raw = Vec::new();
-    file.take(MAX_FILE + 1).read_to_end(&mut raw)?;
-    if raw.len() > MAX_FILE as usize {
+    file.take(limit + 1).read_to_end(&mut raw)?;
+    if raw.len() > limit as usize {
         return Err(std::io::Error::new(
             std::io::ErrorKind::InvalidData,
-            "preferences exceed 64 KiB",
+            format!("protected file bytes={} limit={limit}", raw.len()),
         ));
     }
     Ok(raw)
 }
-fn private_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+pub(crate) fn private_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
     let parent = path.parent().ok_or_else(|| {
         std::io::Error::new(
             std::io::ErrorKind::InvalidInput,

@@ -12,6 +12,23 @@
 
 只有源码、构建模式、候选身份和相关包路径仍相符的证据才可复用。纯文档变更无须重新制造全部历史构建；一旦候选包或相关代码变化，须补对应证据。集成测试命令及实际结果由整合者补入本文件，未执行项保持待验证。
 
+## 本机候选与自动验证补充（2026-10-28）
+
+已生成 macOS 15.7.7／arm64 的 ad-hoc 候选 `Bee_0.1.0_aarch64.dmg`（20,895,477 字节），源码 `10a1e6dcfd087fb677e7ad8f160ede5b39c4b117`，构建时工作树干净。App／包内 Bee 均为 0.1.0，DMG SHA-256 为 `1e1134b185f97999f97beac4ca017a3b13798a05292d9dd895c1a47a376dfe41`。候选保存在本工作树 `.cache/desktop-release/`，未安装到 Applications，未上传。
+
+[补充证据摘要](evidence/s3-2026-10-28-macos-arm64/native-summary.json)绑定了实际 manifest、来源和校验报告及日志。prepare-release 的实际 DMG 提取校验已通过，包内 Bee 来源／架构／版本与 App 签名封印相符；只读挂载同一 DMG 后，2 项包专用测试通过：封印接受原包并拒绝篡改副本，实际包内 Bee 完成 hello／ping／shutdown 并等待 owned 子进程回收。挂载点随后卸载，没有 GUI、真实账号或贡献流量。
+
+| 自动验证 | 本轮结果 |
+| --- | --- |
+| Go 全量测试与 vet | 通过 |
+| Rust 完整回归 | 105 通过，2 项包专用测试单独补跑后均通过 |
+| 受控 updater 回归 | 14 通过，含临时真实签名／篡改、HTTP 状态正文、read timeout |
+| S3 相关 Node | 180 通过，1 项 Windows 原生 PowerShell 用例在 macOS 明确跳过 |
+| 原生页面夹具 | Node 19、Chromium 41 通过 |
+| bridge／TypeScript／前端构建 | bridge 10 通过，typecheck 与 build 通过 |
+
+这些结果是当前较新 macOS 上的补充证据，不填补 macOS 13 最低系统格，也不等于 Developer ID／公证、生产更新签名、两版本安装升级或正式发布就绪。S2 设置页尚未提交，本候选尚不含其最终生产接线；集成后需重建相关候选及重跑受影响验证。首轮 Rust 与浏览器并行时两项 fixture 启动超时，避开负载后单线程完整回归通过，未放宽生产或 fixture deadline。
+
 ## 八组合原生矩阵
 
 macOS 必须包含 13.x 最低支持版本的原生验收；新系统不能填补这一格。Windows 必须是桌面工作站系统。Linux 必须在真实 X11／Wayland 桌面完成安装后的操作，容器与 Xvfb 不能替代。

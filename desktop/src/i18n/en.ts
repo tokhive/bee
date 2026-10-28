@@ -981,6 +981,7 @@ export const en: Record<string, string> = {
   "尚未完成的检查": "Incomplete checks",
   "通过的检查": "Passed checks",
   "所选范围没有保留的安全事件。": "No retained safe events match these filters.",
+  "代理未启用": "Proxy disabled",
   "设置分类": "Settings categories",
   "通用": "General",
   "通知与启动": "Notifications and startup",

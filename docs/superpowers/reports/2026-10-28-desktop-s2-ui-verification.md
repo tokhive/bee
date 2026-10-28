@@ -8,7 +8,7 @@
 
 公共壳的暖银白主题仍依赖 S1 尚未提交的实现；本轮未复制这些脏文件，因此截图仍带 S2 已有公共壳。S2 原生窗口与本次页面的真实后端联调也尚未完成。以下浏览器截图中的状态来自已有 IPC 测试替身，不能作为真实 Hive、账号、网络或 OS 的验收证据。
 
-工作根目录：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-s2`；分支：`feat/bee-desktop-s2`；实施基线：`035589a`。本轮已有提交：`a6d7014`（规格与计划）、`0e7eafe`（诊断页）、`0134919`（设置页）。本记录随阶段验证提交保存。原工作树、两个已有计时文件、S1 未提交文件均未改写；未合并、推送或发布。
+工作根目录：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-s2`；分支：`feat/bee-desktop-s2`；实施基线：`035589a`。本轮已有提交：`a6d7014`（规格与计划）、`0e7eafe`（诊断页）、`0134919`（设置页）。阶段验证提交为 `c29dec8`，随后补充英文日志列宽与代理状态文案修正。原工作树、两个已有计时文件、S1 未提交文件均未改写；未合并、推送或发布。
 
 ## 已实现行为
 
@@ -28,8 +28,9 @@
 | --- | --- | --- |
 | `node --test tests/diagnostic-presentation.test.ts tests/diagnostics.test.ts tests/network.test.ts tests/preferences.test.ts tests/notifications.test.ts` | 24/24 通过 | [node.log](../../../.cache/s2-ui-verification/node.log) |
 | `npm run typecheck` | 退出码 0 | [typecheck.log](../../../.cache/s2-ui-verification/typecheck.log) |
-| `npm run build` | 退出码 0，Vite 构建完成 | [build.log](../../../.cache/s2-ui-verification/build.log) |
-| `BEE_DEVICE_TEST_PORT=1433 npx --no-install playwright test --config playwright.device.config.ts` | 最后一次 69/69 通过，18.2 秒 | [playwright-final.log](../../../.cache/s2-ui-verification/playwright-final.log) |
+| `npm run build` | 退出码 0，Vite 构建完成；主 chunk 超过 500 kB 的体积提示保留 | [build.log](../../../.cache/s2-ui-verification/build.log) |
+| `BEE_DEVICE_TEST_PORT=1433 npx --no-install playwright test --config playwright.device.config.ts` | 最后一次 69/69 通过，15.9 秒 | [playwright-final.log](../../../.cache/s2-ui-verification/playwright-final.log) |
+| 同配置 `native-experience.spec.ts --grep 'S2 tabs, dialogs'` | 更新最终截图后 4/4 通过，3.7 秒 | [layout-final.log](../../../.cache/s2-ui-verification/layout-final.log) |
 | `git diff --check` | 无空白错误 | 终端结果 |
 
 浏览器测试覆盖真实 NativeApp + 原有 IPC fixture：设备／账号／供给旧用例、单一协调观察、旧实例隔离、问题完整分区、空／取消／未完成、手动日志与 cursor、空日志与未读取的区分、旧筛选的迟到回包、旧网络观察不覆盖新刷新及输入、代理保存／生效分离、取消零应用与明确确认一次应用、偏好回读与旧结果隔离、通知拒绝、自启登记未知、版本未知、导出成功／失败／未知回执。
@@ -43,10 +44,13 @@
 3. 配置摘要与关于的 dt 继承全局 25px 上边距，造成标签／值错行；局部清零后重截画面。诊断失败色在深色主题提高可读性。
 4. 切换英文后保存提示仍显示中文；先取得失败断言，再将设置页提示保存为文案 key、在渲染时翻译。错误证据原文保持原样。
 5. 最后一轮的旧 Hive 用例遇到测试时钟 `Cannot fast-forward to the past`：使用主进程的当前时间暂停页面时钟存在毫秒偏差。改为读取页面时间加 1 秒后暂停，保留所有旧实例回包断言；随后整组 69 项通过。
+6. 截图复核发现 860px 英文日志的 Information 超过固定列宽，贴到事件名上；先取得文本边界重叠的失败断言，再将级别列改为按内容分配。另将代理状态从通用“关闭／Close”改为“代理未启用／Proxy disabled”，保持窗口关闭按钮的原有翻译。最终重跑 24 项 Node、类型检查、构建及 69 项浏览器用例全部通过。
 
 ## 实际浏览与截图
 
 使用 ego-browser TaskSpace 17 查看正式源码页面与所选原型，实际读取截图。正式页面由 S2 Vite `http://127.0.0.1:1435/` 提供，浏览器启动前注入已有测试 fixture；未给正式 App 增加预览入口。截图使用 CDP 固定视口并核对实际宽高；不采用最初跟随系统深色、尺寸不符的截图。
+
+后续英文日志列宽与代理状态措辞修复后，由同一组 NativeApp + IPC fixture 的 Playwright 回归更新网络和英文窄窗日志截图，并再次读取图片核对。
 
 截图根目录为 `/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-s2/.cache/s2-ui-verification/`。目录及测试日志为本机验证产物，不属于发布包。
 

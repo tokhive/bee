@@ -49,7 +49,7 @@ test('management startup failure keeps safe native logs accessible without enabl
 });
 
 test('failed preference save keeps the saved appearance; recovery and English copy stay usable',async({page})=>{
- await setup(page);await nav(page,'设置').click();await page.evaluate(()=>{(window as any).preferencesFail=true;});
+ await setup(page);await nav(page,'设置').click();await tab(page,'通用').click();await page.evaluate(()=>{(window as any).preferencesFail=true;});
  await page.getByLabel('外观',{exact:true}).selectOption('dark');
  await expect(page.getByRole('alert')).toContainText('PREFERENCES_WRITE_FAILED');await expect(page.getByLabel('外观',{exact:true})).toHaveValue('system');
  expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe(await page.evaluate(()=>matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
@@ -77,13 +77,13 @@ for(const outcome of ['success','failure'])test(`late Hive open ${outcome} from 
 
 test('notification delivery failures stay visible and retry requires an explicit action',async({page})=>{
  await setup(page);await page.evaluate(()=>{const w=window as any;w.notificationPermission='granted';w.notificationDeliveryError={code:'NOTIFICATION_NATIVE',message:'native notification rejected: os_code=13'};});
- await nav(page,'设置').click();await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
+ await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
  expect(await calls(page,'notification_retry')).toEqual([]);expect(await calls(page,'notification_enable')).toEqual([]);
  await page.getByLabel('希望接收系统通知',{exact:true}).check();
  await page.getByRole('button',{name:'重试失败的通知',exact:true}).click();
  expect(await calls(page,'notification_retry')).toEqual([{command:'notification_retry',args:{}}]);
  await expect(page.getByRole('status')).toContainText('将在下次后台检查时重试明确失败的通知');
- await nav(page,'概览').click();await nav(page,'设置').click();
+ await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();
  expect((await calls(page,'notification_retry')).length).toBe(1);await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
 });
 
@@ -95,9 +95,9 @@ for(const outcome of ['success','failure'])test(`a delayed initial preference ${
   w.releasePreferences=()=>{for(const release of releases.splice(0))release();};
  },outcome);
  await page.goto('/');await expect(page.getByText('owner@example.test',{exact:true})).toBeVisible();
- await nav(page,'设置').click();await page.getByLabel('外观',{exact:true}).selectOption('dark');await expect(page.getByRole('status')).toHaveText('偏好已保存。');
+ await nav(page,'设置').click();await tab(page,'通用').click();await page.getByLabel('外观',{exact:true}).selectOption('dark');await expect(page.getByRole('status')).toHaveText('偏好已保存。');
  await page.evaluate(()=>{(window as any).releasePreferences();return new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
- await nav(page,'概览').click();await nav(page,'设置').click();
+ await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通用').click();
  await expect(page.getByLabel('外观',{exact:true})).toHaveValue('dark');expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe('dark');
  await expect(page.getByRole('alert')).toHaveCount(0);
 });
@@ -144,4 +144,19 @@ test('diagnostic tabs keep reads explicit and preserve the running report',async
  await expect(page.getByText('诊断已取消',{exact:true})).toBeVisible();
  await expect(page.getByText('全部检查通过',{exact:true})).toHaveCount(0);
  expect(await calls(page,'diagnostic_logs')).toEqual([]);
+});
+
+test('settings categories preserve the proxy draft and test result without querying the OS again',async({page})=>{
+ await setup(page);await nav(page,'设置').click();
+ await expect(tab(page,'网络与代理')).toHaveAttribute('aria-selected','true');
+ expect(await page.getByRole('tab').allTextContents()).toEqual(['通用','网络与代理','通知与启动','关于']);
+ await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:7900');
+ await page.getByRole('button',{name:'测试连接',exact:true}).click();await expect(page.locator('.ns-test')).toContainText('read-only endpoint reachable');
+ const reads=()=>page.evaluate(()=>(window as any).calls.filter((call:any)=>/^(network_snapshot|notification_permission|autostart_status|notification_delivery_status)$/.test(call.command)));
+ const before=await reads();
+ await tab(page,'通用').click();await tab(page,'通知与启动').click();await tab(page,'关于').click();
+ await expect(page.getByText('桌面应用版本',{exact:true})).toBeVisible();await expect(page.getByText('0.1.0',{exact:true})).toBeVisible();await expect(page.getByText('dev',{exact:true})).toBeVisible();
+ await tab(page,'网络与代理').click();
+ await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7900');await expect(page.locator('.ns-test')).toContainText('read-only endpoint reachable');
+ expect(await reads()).toEqual(before);expect(await calls(page,'notification_enable')).toEqual([]);expect(await calls(page,'autostart_set')).toEqual([]);expect(await calls(page,'network_save_proxy')).toEqual([]);
 });

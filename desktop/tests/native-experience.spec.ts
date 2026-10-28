@@ -3,6 +3,7 @@ import {accountFixture,installAccountFixture} from './fixtures/native-accounts.m
 
 const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((call:any)=>call.command===command),command);
 const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('button',{name,exact:true});
+const tab=(page:Page,name:string)=>page.getByRole('tab',{name,exact:true});
 async function setup(page:Page){
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.clock.install();await page.goto('/');
@@ -10,7 +11,7 @@ async function setup(page:Page){
 }
 async function completeReport(page:Page){
  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();
- await expect(page.getByText('Hive 身份已核对',{exact:true})).toBeVisible();await page.clock.runFor(900);
+ await page.getByTestId('passed-checks').locator(':scope > summary').click();await expect(page.getByText('Hive 身份已核对',{exact:true})).toBeVisible();await page.clock.runFor(900);
  await expect(page.getByText('检查已完成',{exact:false})).toBeVisible();
 }
 
@@ -22,13 +23,13 @@ test('four native pages share one poller; diagnostics starts only on click and s
  expect((await calls(page,'runtime_snapshot')).length).toBe(before.length);
  await completeReport(page);const diagnosticReads=(await calls(page,'diagnostics_snapshot')).length;
  await nav(page,'AI 账号').click();await nav(page,'概览').click();await nav(page,'诊断').click();
- await expect(page.getByText('Hive 身份已核对',{exact:true})).toBeVisible();expect((await calls(page,'diagnostics_start')).length).toBe(1);expect((await calls(page,'diagnostics_snapshot')).length).toBe(diagnosticReads);
+ await page.getByTestId('passed-checks').locator(':scope > summary').click();await expect(page.getByText('Hive 身份已核对',{exact:true})).toBeVisible();expect((await calls(page,'diagnostics_start')).length).toBe(1);expect((await calls(page,'diagnostics_snapshot')).length).toBe(diagnosticReads);
  const writes=await page.evaluate(()=>(window as any).calls.filter((call:any)=>/^(runtime_start|runtime_stop|account_action|authorize_start|supply_set_paused)$/.test(call.command)));expect(writes).toEqual([]);
  await expect(page.getByRole('button',{name:'收益',exact:true})).toHaveCount(0);await expect(page.getByText('演示数据',{exact:true})).toHaveCount(0);
 });
 
 test('safe logs load manually with module/platform/level filters and native cursors',async({page})=>{
- await setup(page);await nav(page,'诊断').click();
+ await setup(page);await nav(page,'诊断').click();await tab(page,'安全日志').click();
  await page.getByLabel(/^模块/).selectOption('accounts');await page.getByLabel(/^平台/).selectOption('openai');await page.getByLabel(/^日志级别/).selectOption('warning');
  expect(await calls(page,'diagnostic_logs')).toEqual([]);
  await page.getByRole('button',{name:'刷新日志',exact:true}).click();
@@ -43,7 +44,7 @@ test('management startup failure keeps safe native logs accessible without enabl
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
  await page.goto('/');await expect(page.getByText('SIDECAR_EXIT: owned management child exited: status=1',{exact:true})).toBeVisible();
  await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
- await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
+ await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);
 });
 
@@ -128,4 +129,19 @@ test('new management instance discards a pending diagnostic from the previous in
  await page.getByRole('button',{name:'运行诊断',exact:true}).click();await expect.poll(async()=>(await calls(page,'diagnostics_start')).length).toBe(1);
  await page.evaluate(()=>{(window as any).emit('d'.repeat(32));});await page.clock.runFor(1600);
  await expect(page.getByText('Hive 身份已核对',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeEnabled();expect((await calls(page,'diagnostics_start')).length).toBe(1);
+});
+
+test('diagnostic tabs keep reads explicit and preserve the running report',async({page})=>{
+ await setup(page);await nav(page,'诊断').click();
+ await expect(tab(page,'检查结果')).toHaveAttribute('aria-selected','true');
+ await tab(page,'安全日志').click();await expect(page.getByRole('button',{name:'刷新日志',exact:true})).toBeVisible();
+ await tab(page,'检查结果').click();expect(await calls(page,'diagnostics_start')).toEqual([]);expect(await calls(page,'diagnostic_logs')).toEqual([]);
+ await page.evaluate(()=>{(window as any).diagnosticsStayRunning=true;});
+ await page.getByRole('button',{name:'运行诊断',exact:true}).click();
+ await tab(page,'安全日志').click();await tab(page,'检查结果').click();
+ expect((await calls(page,'diagnostics_start')).length).toBe(1);
+ await page.getByRole('button',{name:'取消诊断',exact:true}).click();
+ await expect(page.getByText('诊断已取消',{exact:true})).toBeVisible();
+ await expect(page.getByText('全部检查通过',{exact:true})).toHaveCount(0);
+ expect(await calls(page,'diagnostic_logs')).toEqual([]);
 });

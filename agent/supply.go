@@ -17,16 +17,19 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 		input = map[string]bool{"paused": command == "pause"}
 	}
 	var result beewire.PlatformSupply
-	err := call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, method, state.Credential, input, &result)
-	if err != nil {
-		if method == "PUT" {
-			return fmt.Errorf("operation result unconfirmed: %w; connect to Hive and run bee supply-status --platform %s to verify; the same operation can be retried", err, platform)
+	var err error
+	if method == "PUT" {
+		result, err = updatePlatformSupply(ctx, client, state, platform, command == "pause")
+	} else {
+		err = call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, method, state.Credential, input, &result)
+		if err == nil && result.Platform != platform {
+			err = fmt.Errorf("Hive returned platform %q; expected %q", result.Platform, platform)
 		}
+	}
+	if err != nil {
 		return err
 	}
-	if result.Platform != platform || (method == "PUT" && result.Paused != (command == "pause")) {
-		return fmt.Errorf("Hive returned a state inconsistent with the operation; run bee supply-status --platform %s to verify again", platform)
-	}
+
 	if method == "PUT" {
 		action := "manual pause cleared"
 		if result.Paused {
@@ -64,4 +67,16 @@ var supplyReasonLabels = map[string]string{
 	"claude_authorization_rejected": "Claude authorization rejected by upstream",
 	"claude_source_unavailable":     "waiting for official Claude Code authorization recovery",
 	"claude_confirmation_required":  "Claude account changed; awaiting explicit confirmation",
+}
+
+func updatePlatformSupply(ctx context.Context, client *http.Client, state localState, platform string, paused bool) (beewire.PlatformSupply, error) {
+	var result beewire.PlatformSupply
+	err := call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, "PUT", state.Credential, map[string]bool{"paused": paused}, &result)
+	if err != nil {
+		return result, fmt.Errorf("operation result unconfirmed: %w; query bee supply-status --platform %s before retrying", err, platform)
+	}
+	if result.Platform != platform || result.Paused != paused {
+		return result, fmt.Errorf("Hive returned platform=%q paused=%t; expected %q paused=%t; query supply status again", result.Platform, result.Paused, platform, paused)
+	}
+	return result, nil
 }

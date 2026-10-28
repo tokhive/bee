@@ -29,7 +29,9 @@ type check struct {
 	Code   string `json:"code,omitempty"`
 	Fix    string `json:"fix,omitempty"`
 	// Admin marks a problem the market's administrator, not the provider, resolves.
-	Admin bool `json:"admin,omitempty"`
+	Admin              bool `json:"admin,omitempty"`
+	err                error
+	skipReason, reason string
 }
 
 type doctorReport struct {
@@ -43,8 +45,18 @@ func (r *doctorReport) pass(name, platform, detail string) {
 	r.add(check{Name: name, Platform: platform, Status: "pass", Detail: detail})
 }
 
-func (r *doctorReport) skip(name, platform, why string) {
-	r.add(check{Name: name, Platform: platform, Status: "skip", Detail: why})
+var doctorSkipReasons = map[string]bilingualText{
+	"no_egress":      {"no egress configuration; run bee start or bee setup to choose accounts. Account checks show only what Hive sees", "尚未选择供给账号；请选择供给账号。账号检查仅显示 Hive 已知的状态。"},
+	"egress_failed":  {"egress configuration failed", "供给配置检查未通过，暂不检查授权。"},
+	"device_failed":  {"device configuration failed", "设备配置检查未通过，暂不连接 Hive。"},
+	"hive_failed":    {"Hive check failed", "Hive 检查未通过，暂时无法查询。"},
+	"account_failed": {"account check failed", "账号检查未通过，暂时无法查询接单状态。"},
+	"not_supplied":   {"no account registered; this Bee does not appear to supply it", "未注册账号，本机也未配置该平台的供给。"},
+	"no_account":     {"no account registered", "该平台尚未注册账号。"},
+}
+
+func (r *doctorReport) skip(name, platform, reason string) {
+	r.add(check{Name: name, Platform: platform, Status: "skip", Detail: doctorSkipReasons[reason].en, skipReason: reason})
 }
 
 // problem records a catalogued error as a failure, or as a warning when the
@@ -54,17 +66,17 @@ func (r *doctorReport) problem(name, platform, status string, err error) {
 	if !ok {
 		code, summary, fix = "", err.Error(), ""
 	}
-	r.add(check{Name: name, Platform: platform, Status: status, Code: code, Detail: summary, Fix: fix})
+	r.add(check{Name: name, Platform: platform, Status: status, Code: code, Detail: summary, Fix: fix, err: err})
 }
 
 // reason records a supply reason Hive gave, explained from the shared catalog.
 func (r *doctorReport) reason(name, platform, reason string) {
 	explained, ok := beewire.ExplainReason(reason, platform)
 	if !ok {
-		r.add(check{Name: name, Platform: platform, Status: "fail", Code: reason, Detail: "[" + reason + "] reason this Bee version does not know"})
+		r.add(check{Name: name, Platform: platform, Status: "fail", Code: reason, Detail: "[" + reason + "] reason this Bee version does not know", reason: reason})
 		return
 	}
-	r.add(check{Name: name, Platform: platform, Status: "fail", Code: reason, Detail: "[" + reason + "] " + explained.Cause, Fix: explained.Fix, Admin: explained.Admin})
+	r.add(check{Name: name, Platform: platform, Status: "fail", Code: reason, Detail: "[" + reason + "] " + explained.Cause, Fix: explained.Fix, Admin: explained.Admin, reason: reason})
 }
 
 var errDoctorFailed = errors.New("bee doctor found problems; see the report above")
@@ -121,7 +133,7 @@ func diagnose(ctx context.Context, configPath, egressPath string) doctorReport {
 	var egress *egressConfig
 	switch {
 	case egressPath == "":
-		report.skip("egress", "", "no egress configuration; run bee start or bee setup to choose accounts. Account checks show only what Hive sees")
+		report.skip("egress", "", "no_egress")
 	default:
 		cfg, err := readEgress(ctx, egressPath)
 		if err != nil {
@@ -136,7 +148,7 @@ func diagnose(ctx context.Context, configPath, egressPath string) doctorReport {
 		switch {
 		case egressPath == "":
 		case egress == nil:
-			report.skip("authorization", platform, "egress configuration failed")
+			report.skip("authorization", platform, "egress_failed")
 		default:
 			checkAuthorization(ctx, &report, egress, platform)
 		}
@@ -144,14 +156,14 @@ func diagnose(ctx context.Context, configPath, egressPath string) doctorReport {
 
 	hiveOK := false
 	if !deviceOK {
-		report.skip("hive", "", "device configuration failed")
+		report.skip("hive", "", "device_failed")
 	} else {
 		hiveOK = checkHive(ctx, &report, state)
 	}
 	for _, platform := range platforms {
 		if !hiveOK {
-			report.skip("account", platform, "Hive check failed")
-			report.skip("supply", platform, "Hive check failed")
+			report.skip("account", platform, "hive_failed")
+			report.skip("supply", platform, "hive_failed")
 			continue
 		}
 		checkPlatform(ctx, &report, state, platform, egress != nil)
@@ -206,7 +218,7 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 	if platform == "openai" {
 		credential, err := cfg.Codex.readForMaintenance(ctx)
 		if err != nil {
-			report.problem(name, platform, "fail", fail("BEE-CODEX-SOURCE", err.Error()))
+			report.problem(name, platform, "fail", failCause("BEE-CODEX-SOURCE", err))
 			return
 		}
 		hash := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
@@ -228,7 +240,7 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 	credential, err := store.read(ctx)
 	switch {
 	case err != nil:
-		report.problem(name, platform, "fail", fail("BEE-CLAUDE-SOURCE", err.Error()))
+		report.problem(name, platform, "fail", failCause("BEE-CLAUDE-SOURCE", err))
 	case !credential.hasInferenceScope:
 		report.problem(name, platform, "fail", fail("BEE-CLAUDE-SCOPE", ""))
 	case !credential.available(time.Now()) && cfg.Claude.Refresh:
@@ -256,13 +268,13 @@ func hiveProblem(err error) error {
 	var failure *apiFailure
 	switch {
 	case !errors.As(err, &failure):
-		return fail("BEE-HIVE-UNREACHABLE", err.Error())
+		return failCause("BEE-HIVE-UNREACHABLE", err)
 	case failure.Code == "device_replaced":
-		return fail("BEE-DEVICE-REPLACED", "")
+		return failCause("BEE-DEVICE-REPLACED", err)
 	case failure.Status == 401 || failure.Status == 403:
-		return failf("BEE-HIVE-CREDENTIAL", "HTTP %d", failure.Status)
+		return failCause("BEE-HIVE-CREDENTIAL", err)
 	default:
-		return failf("BEE-HIVE-ERROR", "HTTP %d %s", failure.Status, failure.Code)
+		return failCause("BEE-HIVE-ERROR", err)
 	}
 }
 
@@ -273,7 +285,7 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 	if err := call(ctx, httpClient(), state.Hive, path+"/account", "GET", state.Credential, nil, &account); err != nil {
 		// The supply query would fail the same way; say it once.
 		report.problem("account", platform, "fail", hiveProblem(err))
-		report.skip("supply", platform, "account check failed")
+		report.skip("supply", platform, "account_failed")
 		return
 	} else {
 		switch account.Status {
@@ -283,8 +295,8 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 			if !configured {
 				// Without an egress configuration doctor cannot tell an
 				// unsupplied platform from a broken one.
-				report.skip("account", platform, "no account registered; this Bee does not appear to supply it")
-				report.skip("supply", platform, "no account registered")
+				report.skip("account", platform, "not_supplied")
+				report.skip("supply", platform, "no_account")
 				return
 			}
 			explained = beewire.ReasonNotConfigured

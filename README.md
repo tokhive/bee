@@ -79,6 +79,32 @@ make test
 
 ## Getting started
 
+In a terminal, run `bee` with no arguments to open the numbered management menu:
+
+```sh
+bee
+```
+
+Choose **简体中文 / English**. The main menu groups all existing command capabilities into **Start Bee**, **Status**, **Device pairing**, **Supplied accounts**, **Background service**, **Logs and diagnostics**, **Advanced options**, **Help and version**, and **Change language**. Use `0` to return directly from a submenu, or to exit from the main menu. Exiting the menu leaves the background Bee running. `BEE_LANG=zh` or `BEE_LANG=en` skips the initial language question; the menu can change language for the current session.
+
+**Start Bee** checks configuration automatically. Missing or unfinished pairing opens the pairing flow; a missing supply file opens account selection. Pairing and saving accounts still require confirmation; cancelling either step leaves Bee stopped. With complete, valid configuration, it starts directly without another question. It automatically starts the matching installer-managed systemd service on Linux, or runs in the foreground when no supported background service is available (including macOS). If the service is already active, Bee reports that instead of starting again. Service inspection or configuration-matching errors stop the action with diagnostic details. Foreground operation occupies the terminal: **closing the terminal or pressing Ctrl+C stops this Bee**. Ctrl+C exits the program; enter `bee` again to reopen the menu. Background startup returns to the menu and keeps running after the terminal closes.
+
+Unreadable, incorrectly permissioned or malformed configuration stops startup with the file path and recovery guidance; existing files are kept. A paired device is verified with Hive before starting. Only an explicit device-replaced or invalid-credential response opens re-pairing, with confirmation and a private backup before replacing the device configuration. Supply selections are kept. Network or other verification failures stop this attempt without resetting pairing. A valid supply file whose official Codex or Claude sign-in is temporarily unavailable is kept: Bee can connect and wait for sign-in recovery. To change existing choices, use **Device pairing** or **Supplied accounts** from the main menu.
+
+**Advanced options → Run existing configuration in foreground** preserves explicit foreground operation with custom supply paths. Without a default supply file, this action keeps Bee online without supplying accounts. Ordinary **Start Bee** completes missing supply configuration before running.
+
+Under **Supplied accounts**, query registered accounts and supply status independently, select accounts individually or all at once, pause/resume supply, or confirm a pending account change. Configuration options include platform filtering, official-client directories and a local HTTP CONNECT proxy (keep, set or clear). The final confirmation shows the complete selection and removed platforms. Codex and Claude Code checks have separate local sign-in and online model/quota actions; Claude also offers online identity verification. Their options select the official directory and credential store. Claude's omitted directory, explicitly empty directory and literal directory value retain the CLI's distinct meanings.
+
+**Advanced options** changes the device and supply paths for this menu session without saving preferences or modifying the environment. Selecting a device file resets its associated supply path and service target. A custom supply path applies to account setup, direct foreground run and diagnostics. Start Bee and status always use `egress.json` beside the device file; the displayed paths identify the actual targets. Background controls still require an exact service match. **Logs and diagnostics** includes the complete diagnostic JSON report; **Help and version** works without pairing or network access and includes every command's original option reference.
+
+The menu uses compact pages, status icons and colors. `NO_COLOR=1` disables colors; `TERM=dumb` uses plain text. Known errors and recovery steps follow the selected language. Error codes and HTTP statuses remain visible; unfamiliar external errors and service logs appear as clearly labeled original technical details.
+
+Linux service controls require the installer-managed system service for the same user, executable and configuration. Custom units, drop-ins and other installation paths require manual management. **Start/stop** changes the current process; **enable/disable boot startup** changes what happens after reboot. Saving an account selection does not apply it to a running process until you confirm a restart. Service activity and account readiness are shown separately.
+
+The other menu actions work on macOS, including automatic foreground operation under **Start Bee**; this version does not manage macOS background services. Existing subcommands remain available. Without both terminal input and output, bare `bee` prints help and exits.
+
+The menu requires a binary built from this change or a release containing it. Updating `install.sh` alone cannot add it to an older release. To test before a release, build this branch with `make build` and run `./bin/bee`.
+
 If the Linux installer has completed setup and started the service, use `bee status` to check it. The following steps are for macOS, binary-only installation, or running in the foreground.
 
 First sign in to the official client on this machine, as the user that will run Bee: Codex (`codex login`) for an OpenAI subscription, Claude Code (`claude`) for a Claude subscription. Then copy the command from the **Devices** page of your Hive, which already contains its address:
@@ -111,6 +137,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 
 | Command | Purpose |
 | --- | --- |
+| `bee` | Open the bilingual management menu in an interactive terminal; exiting leaves the background service running. |
 | `bee start [--hive URL] [--name NAME] [--yes]` | Pair, choose the subscriptions and run, skipping the steps already done. The way to start Bee. |
 | `bee status` | Show the build, the Hive, the device and whether each supplied account is taking work. |
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |

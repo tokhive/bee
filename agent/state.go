@@ -3,6 +3,8 @@ package bee
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"syscall"
@@ -41,22 +43,32 @@ func readState(path string) (localState, error) {
 		return state, nil
 	}
 	if err != nil {
-		return state, errors.New("failed to read Bee configuration")
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("inspect device configuration %s: %w", path, err))
 	}
-	if !info.Mode().IsRegular() || info.Mode().Perm()&0077 != 0 {
-		return state, errors.New("Bee configuration must be a regular file readable and writable only by the current user (0600)")
+	if !info.Mode().IsRegular() {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: mode=%s; expected a regular file, not a directory or symbolic link", path, info.Mode())
+	}
+	if info.Mode().Perm()&0077 != 0 {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: permissions=%04o; require access only by the current user (chmod 600)", path, info.Mode().Perm())
 	}
 	file, err := os.Open(path)
 	if err != nil {
-		return state, errors.New("failed to read Bee configuration")
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("open device configuration %s: %w", path, err))
 	}
 	defer file.Close()
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&state); err != nil {
-		return localState{}, errors.New("invalid Bee configuration")
+	var decoded *localState
+	if err = decoder.Decode(&decoded); err != nil {
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("decode device configuration %s: %w", path, err))
 	}
-	return state, nil
+	if decoded == nil {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: expected a JSON object, got null", path)
+	}
+	if err = decoder.Decode(new(any)); err != io.EOF {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: extra content after the device JSON object at byte %d; keep exactly one JSON object", path, decoder.InputOffset())
+	}
+	return *decoded, nil
 }
 
 func saveState(path string, state localState) error {

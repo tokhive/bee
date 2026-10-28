@@ -500,26 +500,34 @@ func (e *claudeQueryFailure) Error() string {
 func (e *claudeQueryFailure) Unwrap() error { return errClaudeCapabilityQuery }
 
 func inspectClaudeCapabilities(ctx context.Context, read func(context.Context) (claudeCredential, error), transport http.RoundTripper, out io.Writer) error {
+	snapshot, err := readClaudeCapabilities(ctx, read, transport)
+	if err != nil {
+		return err
+	}
+	return json.NewEncoder(out).Encode(snapshot)
+}
+
+func readClaudeCapabilities(ctx context.Context, read func(context.Context) (claudeCredential, error), transport http.RoundTripper) (beewire.Capabilities, error) {
 	source := claudeSource{read: read, transport: transport}
 	credential, auth, err := source.authorization(ctx)
 	if err != nil {
-		return err
+		return beewire.Capabilities{}, err
 	}
 	snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, 1, transport)
 	if err != nil {
-		return err
+		return beewire.Capabilities{}, err
 	}
 	current, err := read(ctx)
 	if err != nil || current != credential || !current.available(time.Now()) {
-		return errClaudeSourceChanged
+		return beewire.Capabilities{}, errClaudeSourceChanged
 	}
 	if snapshot.Status != "ready" {
 		if failure := source.capabilities.failure; failure != "" {
-			return &claudeQueryFailure{failure}
+			return beewire.Capabilities{}, &claudeQueryFailure{failure}
 		}
-		return errClaudeCapabilityQuery
+		return beewire.Capabilities{}, errClaudeCapabilityQuery
 	}
-	return json.NewEncoder(out).Encode(snapshot)
+	return snapshot, nil
 }
 
 // announce tells the operator once when the upstream quota payload grows a

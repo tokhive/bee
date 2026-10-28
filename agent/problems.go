@@ -110,7 +110,7 @@ var problems = map[string]problem{
 	},
 	"BEE-DEVICE-CONFIG": {
 		"the Bee device configuration cannot be used",
-		"check the --config path; the file must be accessible only to the user running Bee (chmod 600)",
+		"configuration kept; fix the reported JSON, path or access issue (chmod 600), then start again",
 	},
 	"BEE-DEVICE-NOT-PAIRED": {
 		"this Bee is not paired with Hive",
@@ -204,6 +204,7 @@ func init() {
 type codedError struct {
 	code   string
 	detail string
+	cause  error
 }
 
 func fail(code, detail string) error {
@@ -212,6 +213,18 @@ func fail(code, detail string) error {
 	}
 	return &codedError{code: code, detail: detail}
 }
+
+// failCause preserves the typed cause for menu presentation while keeping the
+// established English CLI/JSON format and including the response evidence.
+func failCause(code string, cause error) error {
+	e := fail(code, cause.Error()).(*codedError)
+	e.cause = cause
+	if api, ok := cause.(*apiFailure); ok {
+		e.detail += fmt.Sprintf(" (HTTP %d; code=%s)", api.Status, api.Code)
+	}
+	return e
+}
+func (e *codedError) Unwrap() error { return e.cause }
 
 func failf(code, format string, args ...any) error {
 	return fail(code, fmt.Sprintf(format, args...))

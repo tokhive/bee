@@ -239,6 +239,10 @@ func existingEgress(ctx context.Context, path string) (*egressConfig, error) {
 }
 
 func detectCodex(ctx context.Context, home string) detectedAccount {
+	ui, _ := newInstallUI(io.Discard)
+	return detectCodexWithUI(ctx, home, ui)
+}
+func detectCodexWithUI(ctx context.Context, home string, ui installUI) detectedAccount {
 	found := detectedAccount{platform: "openai"}
 	if home == "" {
 		home = os.Getenv("CODEX_HOME")
@@ -277,7 +281,6 @@ func detectCodex(ctx context.Context, home string) detectedAccount {
 		}
 		found.codex = source
 		hash := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
-		ui, _ := newInstallUI(io.Discard)
 		state := ui.text("expires ", "有效期至 ") + credential.ExpiresAt.Local().Format(time.RFC3339)
 		if !time.Now().Add(30 * time.Second).Before(credential.ExpiresAt) {
 			state = ui.text("access token expired; Hive refreshes it once bee run is connected", "访问令牌已过期；bee run 连接后由 Hive 刷新")
@@ -285,11 +288,15 @@ func detectCodex(ctx context.Context, home string) detectedAccount {
 		found.summary = fmt.Sprintf(ui.text("Codex sign-in in %s (%s), account %s, plan %s, %s", "Codex 登录位置 %s（%s），账号 %s，方案 %s，%s"), home, store, hex.EncodeToString(hash[:6]), credential.Plan, state)
 		return found
 	}
-	found.problem = fail("BEE-CODEX-SOURCE", first.Error())
+	found.problem = failCause("BEE-CODEX-SOURCE", first)
 	return found
 }
 
 func detectClaude(ctx context.Context, directory *string, existing *egressConfig) detectedAccount {
+	ui, _ := newInstallUI(io.Discard)
+	return detectClaudeWithUI(ctx, directory, existing, ui)
+}
+func detectClaudeWithUI(ctx context.Context, directory *string, existing *egressConfig, ui installUI) detectedAccount {
 	found := detectedAccount{platform: "claude"}
 	source := &claudeSource{Store: defaultClaudeStore(), Capabilities: true, ConfigDir: directory}
 	if existing != nil && existing.Claude != nil {
@@ -302,7 +309,6 @@ func detectClaude(ctx context.Context, directory *string, existing *egressConfig
 			source.ConfigDir = existing.Claude.ConfigDir
 		}
 	}
-	ui, _ := newInstallUI(io.Discard)
 	where := ui.text("the macOS Keychain", "macOS 钥匙串")
 	if source.Store == claudeStoreFile {
 		where = filepath.Join(resolveClaudeKeychain(source.ConfigDir).directory, ".credentials.json")
@@ -313,7 +319,7 @@ func detectClaude(ctx context.Context, directory *string, existing *egressConfig
 		if _, _, _, coded := Coded(err); coded {
 			found.problem = err
 		} else {
-			found.problem = fail("BEE-CLAUDE-SOURCE", err.Error())
+			found.problem = failCause("BEE-CLAUDE-SOURCE", err)
 		}
 	case !credential.hasInferenceScope:
 		found.problem = fail("BEE-CLAUDE-SCOPE", "")

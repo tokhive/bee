@@ -1,0 +1,73 @@
+{
+  "status": "candidate",
+  "version": "0.1.0",
+  "revision": "10a1e6dcfd087fb677e7ad8f160ede5b39c4b117",
+  "target": "aarch64-apple-darwin",
+  "inspected": {
+    "path": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-s3/.cache/desktop-release/.inspect-5Pzmij/payload/Bee.app/Contents/MacOS/bee",
+    "beeVersion": "0.1.0",
+    "sourceSha256": "df55bfa23daf2bc80b2f47314ae57621d8897d38d7355bbafac138eb17a12013",
+    "packagedSha256": "cd3b13baae0a47741cc21f4d3a690c37e649b17887558c7cf3655decb32f1531",
+    "signedSeal": true,
+    "appSha256": "5963ef7f16b1ce46cb9b9a099cfa8d4384605b885335b475087cf5ead9d72be3",
+    "bundleTree": {
+      "": {
+        "type": "directory"
+      },
+      "Contents": {
+        "type": "directory"
+      },
+      "Contents/Info.plist": {
+        "type": "file",
+        "mode": 420,
+        "sha256": "86700a53771c4d4003f414597e76e9925da739a1a6fbecbb2f3058d0e1c34775"
+      },
+      "Contents/MacOS": {
+        "type": "directory"
+      },
+      "Contents/MacOS/bee": {
+        "type": "file",
+        "mode": 493,
+        "sha256": "cd3b13baae0a47741cc21f4d3a690c37e649b17887558c7cf3655decb32f1531"
+      },
+      "Contents/MacOS/bee-desktop": {
+        "type": "file",
+        "mode": 493,
+        "sha256": "5963ef7f16b1ce46cb9b9a099cfa8d4384605b885335b475087cf5ead9d72be3"
+      },
+      "Contents/Resources": {
+        "type": "directory"
+      },
+      "Contents/Resources/icon.icns": {
+        "type": "file",
+        "mode": 420,
+        "sha256": "e7ab4e5a8656cbea2c3e66ab07a78656b13b5cdd6b6f4a8638925f11e62246f1"
+      },
+      "Contents/_CodeSignature": {
+        "type": "directory"
+      },
+      "Contents/_CodeSignature/CodeResources": {
+        "type": "file",
+        "mode": 420,
+        "sha256": "2822d8473690274b11eb30bb1b742f77d7056a47369abf1bb6dbe73354bffa88"
+      }
+    },
+    "signing": {
+      "seal": "verified",
+      "identity": "not-production-verified"
+    }
+  },
+  "updater": {
+    "verified": false,
+    "reason": "updater asset/signature not present"
+  },
+  "blockers": [
+    "BEE_RELEASE_VERSION missing",
+    "BEE_RELEASE_CHANNEL missing",
+    "BEE_UPDATE_ENDPOINT missing",
+    "BEE_UPDATER_PUBLIC_KEY missing",
+    "BEE_RELEASE_ASSET_BASE_URL missing",
+    "native signing and platform installation evidence not yet verified",
+    "production signatures and notarization not verified"
+  ]
+}

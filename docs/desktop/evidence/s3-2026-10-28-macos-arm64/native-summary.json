@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-28",
+  "scope": "supplemental native candidate validation; not the macOS 13 acceptance row",
+  "environment": {
+    "os": "macos",
+    "version": "15.7.7",
+    "arch": "arm64"
+  },
+  "source_revision": "10a1e6dcfd087fb677e7ad8f160ede5b39c4b117",
+  "version": "0.1.0",
+  "mode": "candidate",
+  "working_tree_dirty": false,
+  "installer": {
+    "name": "Bee_0.1.0_aarch64.dmg",
+    "size": 20895477,
+    "sha256": "1e1134b185f97999f97beac4ca017a3b13798a05292d9dd895c1a47a376dfe41",
+    "role": "installer"
+  },
+  "platform_signature": "ad-hoc seal verified; no Developer ID or notarization proof",
+  "native_tests": {
+    "passed": 2,
+    "failed": 0,
+    "cases": [
+      "signed bundle accepts valid seal and rejects tampered copy",
+      "actual packaged Bee hello/ping/shutdown and owned child reaping"
+    ]
+  },
+  "did_install_application": false,
+  "did_start_gui": false,
+  "did_use_real_accounts_or_contribution": false,
+  "did_publish": false,
+  "pending": [
+    "S2-T5 production settings integration",
+    "controlled production update source and signing inputs",
+    "two signed candidate versions native installation and upgrade",
+    "eight supported native OS/architecture acceptance combinations"
+  ],
+  "files": {
+    "bee.source.json": "a7f2f76865a5af8256c5c13a2730fd17690f8889ee75e074eeaf237eb7aa6efc",
+    "readonly-mount.log": "4b3374baf219bb902f7876c50cc82552dc4b3473aca8c90b3c5a16ad9ff76333",
+    "release-manifest.json": "6e3e72e327488ec2b73a208fef8ee7b34005abca59458e8d12dd7317037bb909",
+    "signed-bundle-tests.log": "c4cf0e797883b152230797c8940994c1be6ddba80241df658db585d599163a76",
+    "verification.json": "b3137fb113522d4a342ca9fed5a67725aec91051d481738bcff7f52fa65b89ad"
+  }
+}

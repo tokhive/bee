@@ -142,7 +142,7 @@ struct RuntimeSupply {
     checked_at: String,
 }
 
-fn timestamp(value: &str) -> bool {
+pub(crate) fn timestamp(value: &str) -> bool {
     let b = value.as_bytes();
     if b.len() < 20
         || b.len() > 30

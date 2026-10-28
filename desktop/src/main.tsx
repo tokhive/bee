@@ -1,6 +1,10 @@
 import {createRuntimeClient} from './system/runtime';
 import {createAuthorizeClient} from './system/authorize';
 import {createAccountClient} from './system/accounts';
+import {createPreferencesClient} from './system/preferences';
+import {createNotificationsClient} from './system/notifications';
+import {createNetworkClient} from './system/network';
+import {createDiagnosticsClient} from './system/diagnostics';
 import { invoke, isTauri } from '@tauri-apps/api/core';
 import { NativeApp } from './app/NativeApp';
 import { createSupplyClient, type SupplyBinding } from './system/supply';
@@ -18,6 +22,7 @@ const runtimeFactory=(instance:string)=>createRuntimeClient(invoke,instance);
 const authorizeFactory=(instance:string)=>createAuthorizeClient(invoke,instance);
 const accountFactory=(instance:string)=>createAccountClient(invoke,instance);
 const supply = (binding:SupplyBinding) => createSupplyClient(invoke,binding);
+const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:string|null)=>createDiagnosticsClient(invoke,instance,revision,runId);
 async function mount() {
   const root = createRoot(document.getElementById('root')!);
   const params = new URLSearchParams(location.search);
@@ -31,7 +36,7 @@ async function mount() {
     return;
   }
   if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
-    root.render(<React.StrictMode><NativeApp runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
+    root.render(<React.StrictMode><NativeApp preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

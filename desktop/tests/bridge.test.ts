@@ -62,3 +62,12 @@ test('原生错误保留本次错误码和诊断证据', async () => {
   await assert.rejects(createSystemBridge().ping(), error);
   await assert.rejects(createSystemBridge().status(), error);
 });
+
+test('notification clicks accept only fixed native page routes',async()=>{
+ globals.isTauri=true;let callback=0;
+ mockIPC((command,args)=>{if(command==='plugin:event|listen'){callback=(args as any).handler;return 1;}return;});
+ const pages:string[]=[];const off=await createSystemBridge().onNotification!(page=>pages.push(page));
+ const runtime=(window as any).__TAURI_INTERNALS__;
+ for(const payload of ['accounts','settings','https://unsafe.example','overview','diagnostics'])runtime.runCallback(callback,{payload});
+ assert.deepEqual(pages,['accounts','settings','overview','diagnostics']);off();
+});

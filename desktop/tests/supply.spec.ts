@@ -5,16 +5,23 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
  await page.addInitScript((options)=>{
   type Runtime={isTauri:boolean;__TAURI_INTERNALS__:unknown;__TAURI_EVENT_PLUGIN_INTERNALS__:unknown;calls:{command:string;platform?:string;paused?:boolean}[];active:number;maxActive:number;delay:number;fail:string;age:number;emit:(instance:string)=>void;paused:Record<string,boolean>};
   const w=window as unknown as Runtime;w.isTauri=true;w.calls=[];w.active=0;w.maxActive=0;w.delay=options.delay??0;w.fail='';w.age=options.age??0;w.paused={openai:false,claude:true};
-  let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();let eventHandler=0;
-  const status=(instance='fixture')=>({state:'ready',metadata:{bee_version:'fixture',os:'darwin',arch:'arm64',instance}});
-  let currentInstance='fixture';
-  w.emit=instance=>{currentInstance=instance;callbacks.get(eventHandler)?.({payload:status(instance)});};
-  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
-  w.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:{platform?:string;paused?:boolean;handler?:number})=>{
-   if(command==='plugin:event|listen'){eventHandler=args!.handler!;return 1;}
-   if(command==='plugin:event|unlisten')return;
+  let callback=1;const callbacks=new Map<number,(value:unknown)=>void>(),subscriptions=new Map<number,string>();
+  const status=(instance=currentInstance)=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}});
+  let currentInstance='b'.repeat(32),preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
+  w.emit=instance=>{currentInstance=instance;for(const [handler,event]of subscriptions)if(event==='bee://bridge-status')callbacks.get(handler)?.({payload:status(instance)});};
+  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event:string,id:number)=>{subscriptions.delete(id);callbacks.delete(id);}};
+  w.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:(id:number)=>{callbacks.delete(id);},invoke:async(command:string,args?:{platform?:string;paused?:boolean;handler?:number;event?:string;eventId?:number;request?:{preferences:typeof preferences}})=>{
+   if(command==='plugin:event|listen'){subscriptions.set(args!.handler!,args!.event!);return args!.handler;}
+   if(command==='plugin:event|unlisten'){subscriptions.delete(args!.eventId!);return;}
    if(command==='runtime_snapshot')return {instance:currentInstance,result:{runtime:{...options.passiveRuntime,observed_at:new Date().toISOString()}}};
    if(command==='bridge_status')return status();
+   if(command==='preferences_read')return structuredClone({preferences,error:null});
+   if(command==='preferences_save'){preferences={...args!.request!.preferences,revision:preferences.revision+1};return structuredClone({preferences,error:null});}
+   if(command==='notification_permission')return 'prompt';
+   if(command==='autostart_status')return {desired:false,registered:false,error:null};
+   if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
+   if(command==='account_defaults')return {instance:currentInstance,result:{defaults:{platforms:['openai','claude'].map(platform=>({platform,directory:platform==='openai'?'/tmp/codex':'/tmp/claude',default_store:'file',stores:[{store:'file',supported:true,reason:null}]}))}}};
+   if(command==='account_snapshot')return {instance:currentInstance,result:{account:options.passiveRuntime.platforms[args!.platform! as 'openai'|'claude'].account}};
    if(command==='device_status')return {result:{device:options.unbound?{state:'unbound'}:{state:'bound',hive:'https://hive.example',name:'Fixture Mac',identity:{id:'device-1',name:'Fixture Mac',owner_id:'owner-1',owner_email:'fixture@example.test'}}}};
    if(command.startsWith('supply_')){
     w.calls.push({command,platform:args?.platform,...(args?.paused===undefined?{}:{paused:args.paused})});w.maxActive=Math.max(w.maxActive,++w.active);
@@ -74,11 +81,12 @@ test('a running read hides previous success and becomes expired after thirty sec
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=60000;});await page.clock.runFor(11000);await expect(page.getByText('正在核对平台…')).toBeVisible();
  await expect(card(page,'OpenAI').getByText('满足接单条件（Hive 报告）',{exact:true})).toHaveCount(0);await page.clock.runFor(31000);await expect(card(page,'OpenAI').getByRole('button',{name:'暂停',exact:true})).toBeDisabled();
 });
-test('leaving overview cancels polling and old results cannot repopulate a new manager instance',async({page})=>{
+test('navigation keeps one application poller and old results cannot repopulate a new manager instance',async({page})=>{
  await fixture(page);await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();await page.clock.install();
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.getByRole('button',{name:'重新核对平台'}).click();
- await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(1500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.fastForward(20000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);
- await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('replacement');});
+ await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(2500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);
+ await page.clock.runFor(3000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count+2);
+ await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('c'.repeat(32));});
  await page.getByRole('button',{name:'概览',exact:true}).click();await expect(page.getByRole('alert').first()).toContainText('new instance GET HTTP 503');await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
 });
 test('English platform controls and reason copy are complete at minimum width',async({page})=>{
@@ -97,9 +105,9 @@ test('an old in-flight successful read cannot overwrite replacement-instance fai
  await fixture(page,{ready:true});await page.clock.install();await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.getByRole('button',{name:'重新核对平台'}).click();
  await expect.poll(()=>page.evaluate(()=>(window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
- await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='replacement GET HTTP 503';w.emit('replacement');});await expect(card(page,'OpenAI').getByText('尚未核对')).toBeVisible();await page.clock.runFor(1500);
+ await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='replacement GET HTTP 503';w.emit('c'.repeat(32));});await expect(card(page,'OpenAI')).toHaveCount(0);await page.clock.runFor(1500);
  await expect(page.getByRole('alert').first()).toContainText('replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('满足接单条件（Hive 报告）',{exact:true})).toHaveCount(0);
- expect(await page.evaluate(()=>(window as unknown as {calls:{platform:string}[]}).calls.map(c=>c.platform))).toEqual(['openai','claude','openai','openai','claude']);
+ expect(await page.evaluate(()=>(window as unknown as {calls:{platform:string}[]}).calls.map(c=>c.platform))).toEqual(['openai','claude','openai','openai']);
  expect(await page.evaluate(()=>(window as unknown as {maxActive:number}).maxActive)).toBe(1);
 });
 
@@ -113,6 +121,6 @@ test('a delayed expiry timer cannot authorize a write from a stale rendered butt
 test('manager replacement invalidates device data while preserving this run’s language and navigation',async({page})=>{
  await fixture(page);await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
- await page.evaluate(()=>(window as unknown as {emit:(id:string)=>void}).emit('replacement'));
+ await page.evaluate(()=>(window as unknown as {emit:(id:string)=>void}).emit('c'.repeat(32)));
  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await expect(page.getByLabel('Language',{exact:true})).toHaveValue('en');
 });

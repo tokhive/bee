@@ -2,6 +2,7 @@ use crate::{
     protocol::{AccountActionRequest, AccountDetectRequest, BridgeError, SupplyPlatform},
     sidecar::{Bridge, BridgeReply, BridgeStatus},
 };
+use tauri::Manager;
 
 #[tauri::command]
 pub fn preferences_read(
@@ -16,6 +17,21 @@ pub fn preferences_save(
     request: crate::preferences::SavePreferencesRequest,
 ) -> crate::preferences::PreferencesSnapshot {
     store.save(request.expected_revision, request.preferences)
+}
+
+fn notification_join_failure(code: &str, operation: &str, error: tauri::Error) -> BridgeError {
+    let evidence = match &error {
+        tauri::Error::JoinError(join) => format!(
+            "panicked={} cancelled={}",
+            join.is_panic(),
+            join.is_cancelled()
+        ),
+        other => other.to_string(),
+    };
+    BridgeError {
+        code: code.into(),
+        message: format!("{operation} worker failed to join: {evidence}"),
+    }
 }
 
 fn check_method(method: &str) -> Result<(), BridgeError> {
@@ -41,8 +57,11 @@ pub async fn bridge_request(
 }
 
 #[tauri::command]
-pub fn bridge_status(bridge: tauri::State<'_, Bridge>) -> BridgeStatus {
-    bridge.status()
+pub fn bridge_status(
+    bridge: tauri::State<'_, Bridge>,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
+) -> BridgeStatus {
+    gate.status(bridge.status())
 }
 
 #[tauri::command]
@@ -70,7 +89,9 @@ pub async fn account_snapshot(
 pub async fn account_action(
     bridge: tauri::State<'_, Bridge>,
     request: AccountActionRequest,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
 ) -> Result<BridgeReply, BridgeError> {
+    gate.check()?;
     bridge.account_action(request).await
 }
 
@@ -307,14 +328,32 @@ mod browser_action_tests {
 #[tauri::command]
 pub async fn runtime_snapshot(
     bridge: tauri::State<'_, Bridge>,
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
 ) -> Result<BridgeReply, BridgeError> {
-    bridge.runtime_snapshot().await
+    let reply = bridge.runtime_snapshot().await?;
+    diagnostics.capture_runtime(&reply)?;
+    Ok(reply)
 }
 #[tauri::command]
 pub async fn runtime_start(
     bridge: tauri::State<'_, Bridge>,
-    request: crate::runtime_protocol::RuntimeStartRequest,
+    mut request: crate::runtime_protocol::RuntimeStartRequest,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    controller: tauri::State<'_, crate::network::NetworkController>,
 ) -> Result<BridgeReply, BridgeError> {
+    gate.check()?;
+    request.validate()?;
+    let device = bridge.device_status().await?;
+    let scope=controller.bind_verified_device(&store,&device.result)?.ok_or_else(||BridgeError{code:"NETWORK_SCOPE_REQUIRED".into(),message:"runtime start requires a freshly verified bound device; actual=no trusted device scope".into()})?;
+    request.expected_revision = controller
+        .prepare_start(
+            &store,
+            &crate::network_native::BridgeNetworkRuntime(&bridge),
+            &scope,
+            request.expected_revision,
+        )
+        .await?;
     bridge.runtime_start(request).await
 }
 #[tauri::command]
@@ -334,7 +373,9 @@ pub async fn runtime_stop(
 pub async fn authorize_start(
     bridge: tauri::State<'_, Bridge>,
     request: crate::authorize_protocol::AuthorizeRequest,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
 ) -> Result<BridgeReply, BridgeError> {
+    gate.check()?;
     bridge.authorize_start(request).await
 }
 #[tauri::command]
@@ -350,4 +391,297 @@ pub async fn authorize_cancel(
     operation_id: String,
 ) -> Result<BridgeReply, BridgeError> {
     bridge.authorize_cancel(operation_id).await
+}
+
+#[tauri::command]
+pub fn autostart_status(
+    app: tauri::AppHandle,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+) -> crate::autostart::AutostartSnapshot {
+    let saved = store.read();
+    let mut snapshot = crate::autostart::status(
+        saved.preferences.autostart_desired,
+        &crate::autostart::NativeRegistrar(&app),
+    );
+    if saved.error.is_some() {
+        snapshot.error = saved.error;
+    }
+    snapshot
+}
+#[tauri::command]
+pub fn autostart_set(
+    app: tauri::AppHandle,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    lock: tauri::State<'_, crate::autostart::AutostartLock>,
+    enabled: bool,
+) -> Result<crate::autostart::AutostartSnapshot, BridgeError> {
+    let _guard = lock.0.lock().map_err(|_| BridgeError {
+        code: "AUTOSTART_LOCK_FAILED".into(),
+        message: "autostart operation mutex poisoned; registration not changed".into(),
+    })?;
+    let saved = store.read();
+    if let Some(error) = saved.error {
+        return Err(error);
+    }
+    let mut desired = saved.preferences;
+    let revision = desired.revision;
+    desired.autostart_desired = enabled;
+    let saved = store.save(revision, desired);
+    if let Some(error) = saved.error {
+        return Err(error);
+    }
+    Ok(crate::autostart::apply(
+        enabled,
+        &crate::autostart::NativeRegistrar(&app),
+    ))
+}
+
+#[tauri::command]
+pub async fn diagnostics_start(
+    bridge: tauri::State<'_, Bridge>,
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
+) -> Result<BridgeReply, BridgeError> {
+    let reply = bridge.diagnostics_action("diagnostics_start", None).await?;
+    diagnostics.capture(&reply)?;
+    Ok(reply)
+}
+#[tauri::command]
+pub async fn diagnostics_snapshot(
+    bridge: tauri::State<'_, Bridge>,
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
+    id: String,
+) -> Result<BridgeReply, BridgeError> {
+    let reply = bridge
+        .diagnostics_action("diagnostics_snapshot", Some(id))
+        .await?;
+    diagnostics.capture(&reply)?;
+    Ok(reply)
+}
+#[tauri::command]
+pub async fn diagnostics_cancel(
+    bridge: tauri::State<'_, Bridge>,
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
+    id: String,
+) -> Result<BridgeReply, BridgeError> {
+    let reply = bridge
+        .diagnostics_action("diagnostics_cancel", Some(id))
+        .await?;
+    diagnostics.capture(&reply)?;
+    Ok(reply)
+}
+#[tauri::command]
+pub fn diagnostic_logs(
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
+    query: crate::diagnostic_log::LogQuery,
+) -> Result<crate::diagnostic_log::LogPage, BridgeError> {
+    diagnostics.page(query)
+}
+#[tauri::command]
+pub async fn diagnostics_export(
+    bridge: tauri::State<'_, Bridge>,
+    diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
+    report_id: String,
+    include_logs: bool,
+) -> Result<crate::diagnostic_log::DiagnosticExport, BridgeError> {
+    let reply = bridge
+        .diagnostics_action("diagnostics_snapshot", Some(report_id))
+        .await?;
+    let metadata = bridge.status().metadata.ok_or_else(|| BridgeError {
+        code: "DIAGNOSTICS_METADATA_UNAVAILABLE".into(),
+        message: "diagnostic export requires current bundled build metadata".into(),
+    })?;
+    diagnostics.export(&reply, include_logs, metadata)
+}
+#[tauri::command]
+pub async fn notification_permission(
+    app: tauri::AppHandle,
+) -> Result<crate::notifications::Permission, BridgeError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<crate::notifications::NotificationService>()
+            .permission()
+    })
+    .await
+    .map_err(|error| {
+        notification_join_failure(
+            "NOTIFICATION_PERMISSION_JOIN",
+            "notification permission",
+            error,
+        )
+    })?
+}
+#[tauri::command]
+pub fn notification_delivery_status(
+    state: tauri::State<'_, crate::notification_poll::NotificationPollState>,
+) -> serde_json::Value {
+    serde_json::json!({"error":state.error()})
+}
+#[tauri::command]
+pub async fn notification_retry(app: tauri::AppHandle) -> Result<(), BridgeError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<crate::notifications::NotificationService>()
+            .allow_failed_retry()
+    })
+    .await
+    .map_err(|error| {
+        notification_join_failure("NOTIFICATION_RETRY_JOIN", "notification retry", error)
+    })?
+}
+#[tauri::command]
+pub async fn notification_enable(
+    app: tauri::AppHandle,
+) -> Result<crate::notifications::Permission, BridgeError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<crate::notifications::NotificationService>()
+            .enable()
+    })
+    .await
+    .map_err(|error| {
+        notification_join_failure("NOTIFICATION_PERMISSION_JOIN", "notification enable", error)
+    })?
+}
+#[tauri::command]
+pub async fn network_test(
+    bridge: tauri::State<'_, Bridge>,
+    proxy: String,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.network_test(proxy).await
+}
+
+#[tauri::command]
+pub async fn network_snapshot(
+    bridge: tauri::State<'_, Bridge>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    controller: tauri::State<'_, crate::network::NetworkController>,
+) -> Result<crate::network::NetworkSnapshot, BridgeError> {
+    let device = bridge.device_status().await?;
+    let scope = controller.bind_verified_device(&store, &device.result)?;
+    Ok(controller
+        .snapshot(
+            &store,
+            &crate::network_native::BridgeNetworkRuntime(&bridge),
+            scope.as_ref(),
+        )
+        .await)
+}
+#[tauri::command]
+pub async fn network_apply_saved(
+    bridge: tauri::State<'_, Bridge>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    controller: tauri::State<'_, crate::network::NetworkController>,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
+    confirmed: bool,
+) -> Result<crate::network::NetworkSnapshot, BridgeError> {
+    gate.check()?;
+    let device = bridge.device_status().await?;
+    let scope=controller.bind_verified_device(&store,&device.result)?.ok_or_else(||BridgeError{code:"NETWORK_DEVICE_REQUIRED".into(),message:"applying a contribution proxy requires a verified paired device; unpaired drafts can be tested read-only".into()})?;
+    Ok(controller
+        .apply_saved(
+            &store,
+            &crate::network_native::BridgeNetworkRuntime(&bridge),
+            &scope,
+            confirmed,
+        )
+        .await)
+}
+#[tauri::command]
+pub async fn network_save_proxy(
+    bridge: tauri::State<'_, Bridge>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    proxy: String,
+    origin: Option<String>,
+    expected_revision: u64,
+) -> Result<crate::preferences::PreferencesSnapshot, BridgeError> {
+    crate::preferences::validate_proxy(&proxy)?;
+    let saved = store.read();
+    if let Some(error) = saved.error {
+        return Err(error);
+    }
+    if saved.preferences.revision != expected_revision {
+        return Err(BridgeError {
+            code: "PREFERENCES_REVISION_CONFLICT".into(),
+            message: format!(
+                "proxy save rejected: expected_revision={expected_revision} current_revision={}",
+                saved.preferences.revision
+            ),
+        });
+    }
+    let device = bridge.device_status().await?;
+    let scope = crate::network::trusted_scope(&device.result)?;
+    let (origin, device_scope) = if let Some(scope) = scope {
+        (
+            scope.origin().to_owned(),
+            Some(scope.device_scope().to_owned()),
+        )
+    } else {
+        let origin = origin.ok_or_else(|| BridgeError {
+            code: "PREFERENCES_ORIGIN".into(),
+            message: "an unpaired proxy draft requires the chosen canonical Hive origin".into(),
+        })?;
+        crate::preferences::validate_origin(&origin)?;
+        (origin, None)
+    };
+    let mut next = saved.preferences;
+    if let Some(existing) = next
+        .proxies
+        .iter_mut()
+        .find(|p| p.origin == origin && p.device_scope == device_scope)
+    {
+        existing.connect_proxy = proxy;
+    } else {
+        next.proxies.push(crate::preferences::ProxyPreference {
+            origin,
+            device_scope,
+            connect_proxy: proxy,
+        });
+    }
+    Ok(store.save(expected_revision, next))
+}
+fn hive_root(value: &serde_json::Value) -> Result<tauri::Url, BridgeError> {
+    let origin = value
+        .pointer("/device/hive")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| BridgeError {
+            code: "HIVE_ORIGIN_UNAVAILABLE".into(),
+            message: "saved Hive origin is absent; configure or pair this device first".into(),
+        })?;
+    crate::preferences::validate_origin(origin)?;
+    tauri::Url::parse(&format!("{origin}/")).map_err(|_| BridgeError {
+        code: "HIVE_ORIGIN_INVALID".into(),
+        message: "saved canonical Hive root URL parsing failed".into(),
+    })
+}
+#[tauri::command]
+pub async fn hive_open(bridge: tauri::State<'_, Bridge>) -> Result<(), BridgeError> {
+    let device = bridge.device_status().await?;
+    let url = hive_root(&device.result)?;
+    #[cfg(target_os = "macos")]
+    let mut command = tokio::process::Command::new("/usr/bin/open");
+    #[cfg(target_os = "linux")]
+    let mut command = tokio::process::Command::new("xdg-open");
+    #[cfg(target_os = "windows")]
+    let mut command = {
+        let mut c = tokio::process::Command::new("rundll32.exe");
+        c.arg("url.dll,FileProtocolHandler");
+        c.creation_flags(0x08000000);
+        c
+    };
+    command.arg(url.as_str());
+    wait_opener(command, std::time::Duration::from_secs(5)).await
+}
+#[cfg(test)]
+mod hive_root_tests {
+    use super::*;
+    #[test]
+    fn hive_root_uses_only_saved_canonical_origin() {
+        let v = serde_json::json!({"device":{"hive":"https://hive.example","credential":"SECRET"}});
+        assert_eq!(hive_root(&v).unwrap().as_str(), "https://hive.example/");
+        for hive in [
+            "https://u:p@hive.example",
+            "https://hive.example/path?token=SECRET",
+            "https://hive.example#secret",
+            "http://remote.example",
+        ] {
+            assert!(hive_root(&serde_json::json!({"device":{"hive":hive}})).is_err());
+        }
+    }
 }

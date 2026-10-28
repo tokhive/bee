@@ -9,6 +9,8 @@ import {useRuntime} from '../features/lifecycle/useRuntime';
 import {SupplyPanel} from '../features/supply/SupplyPanel';
 import {useSupply} from '../features/supply/useSupply';
 import {NativeDiagnosticsPage} from '../features/diagnostics/NativeDiagnosticsPage';
+import {NativeUpdateControls} from '../features/settings/NativeUpdateControls';
+import type {UpdateClient} from '../system/updater';
 import {NativeSettingsPage} from '../features/settings/NativeSettingsPage';
 import {createDesktopState,type DesktopSnapshot,type DesktopState} from '../system/desktopState';
 import {defaultPreferences,type PreferencesClient,type PreferencesSnapshot} from '../system/preferences';
@@ -26,7 +28,7 @@ import {t,useLanguage} from '../i18n/index';
 
 interface NativeProps {
  client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;systemBridge:SystemBridge;
- preferencesClient:PreferencesClient;notificationsClient:ReturnType<typeof createNotificationsClient>;networkClient:NetworkClient;
+ updateClient:UpdateClient;preferencesClient:PreferencesClient;notificationsClient:ReturnType<typeof createNotificationsClient>;networkClient:NetworkClient;
  diagnosticsFactory:(instance:string|undefined,networkRevision:number,runId?:string|null)=>DiagnosticsClient;
  openHive:()=>Promise<unknown>;
 }
@@ -56,7 +58,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
   {ready&&page==='overview'&&<><DevicePairingPage view={view} busy={busy||snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(refresh)} open={()=>void run(()=>props.client.open())}/><NativeRuntimeControls runtime={runtime}/>{sharedSupply&&<SupplyPanel supply={sharedSupply}/>}</>}
   {ready&&page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
   {page==='diagnostics'&&<NativeDiagnosticsPage client={diagnostics} onNavigate={setPage} instance={instance} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/>}
-  {page==='settings'&&<NativeSettingsPage paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
+  {page==='settings'&&<NativeSettingsPage updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
  </AppShell>;
 }
 export function NativeApp(props:NativeProps){

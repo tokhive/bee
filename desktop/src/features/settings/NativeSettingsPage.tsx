@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {ConfirmDialog} from '../../components/ConfirmDialog';
 import {t} from '../../i18n/index';
 import type {DesktopPreferences,PreferencesClient,PreferencesSnapshot} from '../../system/preferences';
@@ -14,6 +14,7 @@ export interface NativeSettingsPageProps {
  hive?:string;
  paired?:boolean;
  version?:string;
+ updateControls?:ReactNode;
  onSaved:(snapshot:PreferencesSnapshot)=>void;
 }
 function failure(cause:unknown):string {
@@ -26,7 +27,7 @@ function officialPath(value:string,platform:'openai'|'claude'){return path(value
 const checkNames={local_proxy:'本机代理连接',openai_read_only:'OpenAI 只读端点',claude_read_only:'Claude 只读端点'};
 const draftProxy=(preferences:DesktopPreferences,origin:string)=>preferences.proxies.find(entry=>entry.origin===origin&&entry.device_scope===null)?.connect_proxy??'';
 
-export function NativeSettingsPage({preferences,preferencesClient,notificationsClient,networkClient,hive,paired=false,version,onSaved}:NativeSettingsPageProps){
+export function NativeSettingsPage({preferences,preferencesClient,notificationsClient,networkClient,hive,paired=false,version,updateControls,onSaved}:NativeSettingsPageProps){
  const [draftOrigin,setDraftOrigin]=useState(()=>hive??preferences.preferences.proxies.find(entry=>entry.device_scope===null)?.origin??'');
  const [saved,setSaved]=useState(preferences),[network,setNetwork]=useState<NetworkSnapshot|null>(null),[proxy,setProxy]=useState(()=>paired?'':draftProxy(preferences.preferences,hive??draftOrigin));
  const [permission,setPermission]=useState<NotificationPermission|null>(null),[autostart,setAutostart]=useState<AutostartSnapshot|null>(null),[test,setTest]=useState<NetworkTestResult|null>(null);
@@ -112,6 +113,6 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
    <table className="ns-paths"><caption>{t('当前实际生效路径')}</caption><thead><tr><th scope="col">{t('流量')}</th><th scope="col">{t('路径')}</th></tr></thead><tbody><tr><th scope="row">{t('Bee 转发的上游连接')}</th><td>{path(network?.paths.relay??'unknown')}</td></tr><tr><th scope="row">{t('官方查询与续期')}</th><td>OpenAI: {officialPath(network?.paths.official??'unknown','openai')}<br/>Claude: {officialPath(network?.paths.official??'unknown','claude')}</td></tr><tr><th scope="row">Hive HTTP / WebSocket</th><td>{t('沿用进程环境')}</td></tr><tr><th scope="row">{t('官方客户端登录')}</th><td>{t('由官方客户端管理')}</td></tr></tbody></table>
    <p className="feature-note">{t('官方查询优先使用进程环境代理，并遵守直连规则；环境配置原文不会显示。')}</p>
   </section>
-  <section className="ns-about" aria-label={t('关于 Bee')}><div><span>Hive</span><strong>{hive??t('尚未配对')}</strong></div><div><span>{t('版本')}</span><strong>{version??'Bee 0.1.0'}</strong></div><p>{t('关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。')}</p></section>
+  <section className="ns-about" aria-label={t('关于 Bee')}><h2>{t('关于 Bee')}</h2>{updateControls??<div><span>{t('版本')}</span><strong>{version??'Bee 0.1.0'}</strong></div>}<div><span>Hive</span><strong>{hive??t('尚未配对')}</strong></div><p>{t('关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。')}</p></section>
  </div>;
 }

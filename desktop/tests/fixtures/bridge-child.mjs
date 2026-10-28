@@ -9,18 +9,26 @@ if (mode === 'diagnostic-exit') {
   process.stderr.write('management initialization failed: E42 Authorization=MARKER-A Cookie=MARKER-C token=MARKER-T confirmation_id=MARKER-I /Users/MARKER-P model_input=MARKER-IN model_output=MARKER-OUT\n', () => process.exit(9));
 }
 let exitSnapshot;
+let bootstrapProxy='',bootstrapRevision=0;
 let restores=0;
 let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
-  if(mode==='owned-exit-slow' && request.method==='device_status') {
+  if(mode==='owned-exit-bootstrap'&&['device_status','network_status'].includes(request.method)) {
+    const result=request.method==='device_status'?{device:{state:'bound',hive:'https://hive.example',identity:{id:'device',owner_id:'owner'}}}:{network:{effective_revision:bootstrapRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}};
+    process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');return;
+  }
+  if(mode==='owned-exit-slow'  && request.method==='device_status') {
     setTimeout(()=>process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result:{error:{code:'DEVICE_OPERATION_FAILED',message:'test device unavailable'}}})+'\n'),300);return;
   }
   if(mode.startsWith('owned-exit') && request.method.startsWith('runtime_')) {
     exitSnapshot ??= JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot;
     let result;
-    if(request.method==='runtime_stop') {
+    if(mode==='owned-exit-bootstrap'&&request.method==='runtime_configure_network') {
+      bootstrapProxy=request.params.connect_proxy;bootstrapRevision=request.params.revision;
+      exitSnapshot={...exitSnapshot,network_revision:bootstrapRevision,revision:exitSnapshot.revision+1};result={configured:true};
+    } else if(request.method==='runtime_stop') {
       if(!['app_exit','update'].includes(request.params.reason)) throw new Error('exit reason not fixed');
       const operation={id:'b'.repeat(48),kind:'stop',platform:null,state:'pending',revision:++exitSnapshot.revision,error:null};
       result={operation};

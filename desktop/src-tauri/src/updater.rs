@@ -1092,8 +1092,8 @@ pub fn update_check(
     start_check(&app, &manager, ReleasePolicy::compiled()?, true)
 }
 #[tauri::command]
-pub fn update_download(
-    app: tauri::AppHandle,
+pub fn update_download<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     manager: tauri::State<'_, UpdateManager>,
 ) -> Result<UpdateSnapshot, BridgeError> {
     let size = manager

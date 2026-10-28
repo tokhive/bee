@@ -1,6 +1,7 @@
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {t} from '../../i18n';
+import './native-update.css';
 import type {UpdateClient, UpdateInstallRequest, UpdateSnapshot, UpdateState} from '../../system/updater';
 
 const activeStates: readonly UpdateState[] = ['checking','downloading','stopping','installing'];
@@ -16,7 +17,7 @@ function failure(cause: unknown): string {
 }
 
 /** Mount inside the S2 native settings page; this component never changes runtime or preferences. */
-export function NativeUpdateControls({client, pollIntervalMs = 1000}: {client: UpdateClient; pollIntervalMs?: number}) {
+export function NativeUpdateControls({client, currentVersion, platform, pollIntervalMs = 1000}: {client: UpdateClient; currentVersion?: string; platform?: string; pollIntervalMs?: number}) {
   const [snapshot, setSnapshot] = useState<UpdateSnapshot>();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,6 +27,7 @@ export function NativeUpdateControls({client, pollIntervalMs = 1000}: {client: U
   const serial = useRef(0);
   const prepareButton = useRef<HTMLButtonElement>(null);
   const cancelButton = useRef<HTMLButtonElement>(null);
+  const attemptedInstall = useRef<string | undefined>(undefined);
   const run = useCallback(async (operation: () => Promise<UpdateSnapshot>): Promise<boolean> => {
     if (working.current) return false;
     working.current = true;
@@ -58,38 +60,41 @@ export function NativeUpdateControls({client, pollIntervalMs = 1000}: {client: U
   const active = snapshot && activeStates.includes(snapshot.state);
   const diagnostic = error || (snapshot?.error ? `${snapshot.error.code}: ${snapshot.error.message}` : '');
   const verified = snapshot?.state === 'verified' && !diagnostic && !!snapshot.operation_id && !!snapshot.target_version;
-  return <section className="settings-form" aria-label={t('应用更新')} aria-busy={busy}>
-    <h2>{t('应用更新')}</h2>
-    {snapshot && <>
-      <p>{t('当前版本')}：<span>{snapshot.current_version}</span></p>
-      {snapshot.target_version && <p>{t('可用版本')}：<span>{snapshot.target_version}</span></p>}
-      <p role="status">{t(labels[snapshot.state])}</p>
-      {snapshot.checked_at && <p>{t('最后检查时间')}：<time dateTime={snapshot.checked_at}>{snapshot.checked_at}</time></p>}
-      {snapshot.state === 'downloading' && <div>
-        <progress aria-label={t('更新下载进度')} {...(snapshot.total_bytes !== null && snapshot.total_bytes > 0 ? {max:snapshot.total_bytes,value:snapshot.downloaded_bytes} : {})}/>
-        <p>{snapshot.total_bytes === null
-          ? t('已接收 {bytes} 字节；总大小未知', {bytes:snapshot.downloaded_bytes})
-          : t('已接收 {bytes} / {total} 字节', {bytes:snapshot.downloaded_bytes,total:snapshot.total_bytes})}</p>
-        <p className="feature-note">{t('只有签名验证通过后才能安装。')}</p>
-      </div>}
-      {snapshot.release_notes !== null && <section aria-label={t('发布说明')}>
-        <h3>{t('发布说明')}</h3>
-        <p style={{whiteSpace:'pre-wrap',overflowWrap:'anywhere'}}>{snapshot.release_notes}</p>
-      </section>}
-    </>}
-    {!snapshot && <p role="status">{t('正在读取更新状态…')}</p>}
-    {diagnostic && <p role="alert" style={{overflowWrap:'anywhere'}}>{diagnostic}</p>}
-    <div className="dialog-actions">
-      <button disabled={busy || !!active} onClick={() => void run(() => client.check())}>{t('检查更新')}</button>
-      <button disabled={busy} onClick={() => void run(() => client.snapshot())}>{t('刷新更新状态')}</button>
-      {snapshot?.state === 'available' && <button disabled={busy || !!diagnostic} onClick={() => void run(() => client.download())}>{t('下载更新')}</button>}
-      {verified && <button ref={prepareButton} className="primary" disabled={busy} onClick={() => setConfirmation({operation_id:snapshot.operation_id!,expected_revision:snapshot.revision,confirmed:true})}>{t('准备安装')}</button>}
+  const receipt = snapshot ? `${snapshot.operation_id}:${snapshot.revision}` : '';
+  const installable = verified && attemptedInstall.current !== receipt;
+  const action = error ? '重新读取更新状态' : installable ? '安装更新…' : verified ? '重新检查更新' : snapshot?.state === 'available' ? '下载更新' : '检查更新';
+  return <section className="native-update" aria-label={t('应用更新')}>
+    <div className="nu-version-row">
+      <div><h3>Bee {snapshot?.current_version ?? currentVersion ?? '…'}</h3><div className="nu-platform">{platform ?? t('当前安装版本')}</div></div>
+      <button ref={prepareButton} className={installable ? 'primary' : undefined} disabled={busy || (!error && !!active) || (!snapshot && !error)} onClick={() => {
+        if (error) {void run(() => client.snapshot());return;}
+        if (installable) {setConfirmation({operation_id:snapshot.operation_id!,expected_revision:snapshot.revision,confirmed:true});return;}
+        void run(() => snapshot?.state === 'available' ? client.download() : client.check());
+      }}>{t(action)}</button>
     </div>
-    <p className="feature-note">{t('检查和下载不会退出 Bee。安装需要你确认退出，可能中断正在处理的任务。')}</p>
+    <div className="nu-state-row" aria-live="polite">
+      <span className={`nu-status-dot${snapshot?.state === 'current' || verified ? ' nu-status-good' : ''}`} aria-hidden="true"/>
+      <span><span>{error ? t('无法读取更新状态') : snapshot ? t(labels[snapshot.state]) : t('正在读取更新状态…')}</span>{snapshot?.target_version && <span className="nu-target"> · {snapshot.target_version}</span>}</span>
+    </div>
+    {snapshot?.state === 'downloading' && <div className="nu-progress">
+      <progress aria-label={t('更新下载进度')} {...(snapshot.total_bytes !== null && snapshot.total_bytes > 0 ? {max:snapshot.total_bytes,value:snapshot.downloaded_bytes} : {})}/>
+      <span>{snapshot.total_bytes === null
+        ? t('已接收 {bytes} 字节；总大小未知', {bytes:snapshot.downloaded_bytes})
+        : t('已接收 {bytes} / {total} 字节', {bytes:snapshot.downloaded_bytes,total:snapshot.total_bytes})}</span>
+      <span>{t('只有签名验证通过后才能安装。')}</span>
+    </div>}
+    {snapshot?.checked_at && <div className="nu-checked">{t('最后检查时间')}：<time dateTime={snapshot.checked_at}>{new Date(snapshot.checked_at).toLocaleString()}</time></div>}
+    {snapshot?.release_notes && <details className="nu-details" aria-label={t('发布说明')}>
+      <summary>{t('发布说明')}</summary><p>{snapshot.release_notes}</p>
+    </details>}
+    {diagnostic && <div className="nu-error" role="alert"><details className="nu-details" aria-label={t('错误详情')}>
+      <summary>{t('错误详情')}</summary><p>{diagnostic}</p>
+    </details></div>}
+    <div className="nu-note">{t('检查和下载不会退出 Bee。安装需要你确认退出，可能中断正在处理的任务。')}</div>
     <Dialog.Root open={confirmation !== null} onOpenChange={open => {if (!busy && !open) setConfirmation(null);}}>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay"/>
-        <Dialog.Content className="dialog-content" aria-busy={busy}
+        <Dialog.Content className="dialog-content nu-install-dialog" aria-busy={busy}
           onOpenAutoFocus={event => {event.preventDefault();cancelButton.current?.focus();}}
           onCloseAutoFocus={event => {event.preventDefault();prepareButton.current?.focus();}}>
           <Dialog.Title>{t('退出 Bee 并安装更新？')}</Dialog.Title>
@@ -99,6 +104,7 @@ export function NativeUpdateControls({client, pollIntervalMs = 1000}: {client: U
             <button className="primary" disabled={busy || !confirmation} onClick={() => {
               if (!confirmation) return;
               const request = confirmation;
+              attemptedInstall.current = `${request.operation_id}:${request.expected_revision}`;
               void run(() => client.install(request)).then(() => {if (mounted.current) setConfirmation(null);});
             }}>{t('退出并安装')}</button>
           </div>

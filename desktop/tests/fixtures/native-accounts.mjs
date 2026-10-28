@@ -28,6 +28,16 @@ export function installAccountFixture({accounts, runtimeEnabled=false}){
   if(command==='device_status'&&w.deviceFail)return {result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET identity HTTP 503'}}};
   if(command==='device_status')return {result:{device:{state:'bound',hive:'https://hive.example',name:'Fixture',identity:{id:'dev-1',name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}}}};
   w.calls.push({command,args});
+  if(command.startsWith('update_')){
+   w.updateSnapshot??={operation_id:null,revision:0,state:'idle',current_version:'0.1.0',target_version:null,checked_at:null,downloaded_bytes:0,total_bytes:null,release_notes:null,error:null};
+   if(command==='update_check')w.updateSnapshot={...w.updateSnapshot,operation_id:'fixture-update',revision:w.updateSnapshot.revision+1,state:'available',target_version:'0.2.0',checked_at:new Date().toISOString(),release_notes:'Fixture release notes'};
+   if(command==='update_download')w.updateSnapshot={...w.updateSnapshot,revision:w.updateSnapshot.revision+1,state:'verified',downloaded_bytes:200,total_bytes:200};
+   if(command==='update_install'){
+    if(args.request.operation_id!==w.updateSnapshot.operation_id||args.request.expected_revision!==w.updateSnapshot.revision)throw new Error(`UPDATE_INSTALL_REJECTED: operation or revision differs; expected_revision=${args.request.expected_revision} actual_revision=${w.updateSnapshot.revision}`);
+    w.updateSnapshot={...w.updateSnapshot,revision:w.updateSnapshot.revision+1,state:'stopping'};
+   }
+   return structuredClone(w.updateSnapshot);
+  }
   if(command==='preferences_read')return structuredClone({preferences,error:null});
   if(command==='preferences_save'){
    if(w.preferencesFail)return structuredClone({preferences,error:preferenceError()});

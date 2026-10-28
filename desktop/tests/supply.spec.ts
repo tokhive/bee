@@ -91,7 +91,7 @@ test('navigation keeps one application poller and old results cannot repopulate 
 });
 test('English platform controls and reason copy are complete at minimum width',async({page})=>{
  await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
- await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');await page.getByRole('button',{name:'Overview',exact:true}).click();
+ await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');await page.getByRole('button',{name:'Overview',exact:true}).click();
  await expect(card(page,'OpenAI').getByText('Hive does not see this platform’s Bee connection')).toBeVisible();await expect(card(page,'Claude').getByRole('button',{name:'Resume',exact:true})).toBeEnabled();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
@@ -120,7 +120,7 @@ test('a delayed expiry timer cannot authorize a write from a stale rendered butt
 
 test('manager replacement invalidates device data while preserving this run’s language and navigation',async({page})=>{
  await fixture(page);await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
- await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
+ await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
  await page.evaluate(()=>(window as unknown as {emit:(id:string)=>void}).emit('c'.repeat(32)));
- await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await expect(page.getByLabel('Language',{exact:true})).toHaveValue('en');
+ await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.getByRole('tab',{name:'General',exact:true}).click();await expect(page.getByLabel('Language',{exact:true})).toHaveValue('en');
 });

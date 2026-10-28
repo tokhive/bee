@@ -91,7 +91,7 @@ test('opening after website confirmation consumes the latest bound result',async
 });
 
 test('English device entry and settings have complete translations',async({page})=>{
- await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
+ await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
  await expect(page.getByText('Saved for this system user and retained after restarting.')).toBeVisible();
  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Connect this device'})).toBeVisible();
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);

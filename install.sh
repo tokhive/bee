@@ -7,19 +7,13 @@
 # picks where bee goes. Linux also enables a systemd service for the installing
 # user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
 # Set BEE_INSTALL_INTERACTIVE=0 to skip the setup/start prompts.
-# BEE_LANG=zh or en selects a language without showing the language menu.
+# Installation uses English by default; set BEE_LANG=zh for Chinese.
 set -eu
 
 repository=tokhive/bee
 directory=${BEE_INSTALL_DIR:-"$HOME/.local/bin"}
 installed=0
-lang=${BEE_LANG:-}
-if [ -z "$lang" ]; then
-	case ${LC_ALL:-${LC_MESSAGES:-${LANG:-en}}} in
-	zh*) lang=zh ;;
-	*) lang=en ;;
-	esac
-fi
+lang=${BEE_LANG:-en}
 
 message() {
 	if [ "$lang" = zh ]; then message_format=$2; else message_format=$1; fi
@@ -127,28 +121,8 @@ esac
 can_prompt=0
 if [ -t 1 ] && (exec 2>/dev/null; : <>/dev/tty); then can_prompt=1; fi
 
-select_language() {
-	printf '请选择语言 / Choose a language\n  1) 简体中文\n  2) English\n\n'
-	while :; do
-		printf '请选择 / Select [1-2]: '
-		if ! IFS= read -r language_answer; then
-			interactive=0
-			printf '\n'
-			return
-		fi
-		case "$language_answer" in
-		1) lang=zh; return ;;
-		2) lang=en; return ;;
-		*) printf '请选择 1 或 2 / Select 1 or 2.\n' ;;
-		esac
-	done
-}
-
 line title 'TokHive Bee'
 rule major
-if [ "$interactive" = 1 ] && [ "$can_prompt" = 1 ] && [ -z "${BEE_LANG:-}" ]; then
-	select_language </dev/tty
-fi
 
 service_path=/etc/systemd/system/tokhive-bee.service
 service_marker='# Managed by Bee install.sh.'
@@ -254,17 +228,37 @@ pairing_cancelled() {
 pair_device() {
 	repair_pairing=0
 	if [ -f "$config_path" ]; then
-		wizard_command "$(message 'snapshot device configuration' '保存设备配置快照')" cp "$config_path" "$work/previous-bee.json"
-		line wait "$(message 'Validating the existing device pairing...' '正在验证已有设备配对…')"
-		# Keep stdout live for unfinished web pairing. Replay stderr verbatim,
-		# retaining the exact legacy diagnostic without parsing configuration JSON.
-		if run_bee login --config "$config_path" 2>"$work/login-error"; then
+		handoff_attempted=0
+		while :; do
+			wizard_command "$(message 'snapshot device configuration' '保存设备配置快照')" cp "$config_path" "$work/previous-bee.json"
+			line wait "$(message 'Validating the existing device pairing...' '正在验证已有设备配对…')"
+			# Keep unfinished web pairing live and preserve the CLI's diagnostics.
+			if run_bee login --config "$config_path" 2>"$work/login-error"; then
+				cat "$work/login-error" >&2
+				return 0
+			else
+				login_status=$?
+			fi
 			cat "$work/login-error" >&2
-			return 0
-		else
-			login_status=$?
-		fi
-		cat "$work/login-error" >&2
+			if [ "$handoff_attempted" = 0 ] && grep -Fxq 'a Bee process is already running with this configuration' "$work/login-error"; then
+				handoff_attempted=1
+				# The new binary pins and verifies the holder before asking to stop it.
+				# Older releases reject this command without touching any process.
+				if run_bee install-handoff --config "$config_path" 2>"$work/handoff-error"; then
+					cat "$work/handoff-error" >&2
+					continue
+				else
+					handoff_status=$?
+				fi
+				cat "$work/handoff-error" >&2
+				if [ "$handoff_status" = 3 ]; then
+					return 1
+				fi
+				message 'Automatic handoff is unavailable. Stop the existing Bee in its original terminal or process manager, then run the installer again.\n' '无法自动接管。请在原终端或进程管理器中停止已有 Bee，再重新运行安装器。\n' >&2
+				failure "$handoff_status" "$(message '%s failed (exit %s); Bee configuration: %s' '%s 失败（退出码 %s）；Bee 配置：%s' 'bee install-handoff' "$handoff_status" "$config_path")"
+			fi
+			break
+		done
 		if ! grep -Fxq 'bound device credential is invalid; silent pairing is not allowed' "$work/login-error"; then
 			failure "$login_status" "$(message '%s failed (exit %s); Bee configuration: %s' '%s 失败（退出码 %s）；Bee 配置：%s' 'bee login' "$login_status" "$config_path")"
 		fi

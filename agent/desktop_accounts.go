@@ -21,10 +21,10 @@ type DesktopAccounts struct {
 	network          DesktopNetworkConfig
 	networkTransport http.RoundTripper
 	networkPaths     DesktopNetworkPaths
+	accountWorkers   map[string]*desktopAccountWorker
 	lifecycleMu      sync.Mutex
 	runtime          *DesktopRuntime
 	activeActions    map[string]bool
-	accountWorkers   map[string]*desktopAccountWorker
 	storageMu        sync.Mutex
 	ctx              context.Context
 	cancel           context.CancelFunc
@@ -208,6 +208,7 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 func NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts {
 	ctx, cancel := context.WithCancel(context.Background())
 	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, accountWorkers: map[string]*desktopAccountWorker{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring, networkTransport: officialTransport(""), networkPaths: desktopNetworkPaths("")}
+
 	for _, platform := range []string{"openai", "claude"} {
 		result.platforms[platform] = &desktopAccountPlatform{gate: make(chan struct{}, 1), snapshot: initialAccountSnapshot(platform)}
 	}
@@ -275,7 +276,11 @@ func (a *DesktopAccounts) expireCandidate(p *desktopAccountPlatform, platform st
 	}
 }
 func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDetectRequest) (DesktopAccountSnapshot, error) {
-	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
+	limit := 12 * time.Second
+	if request.Platform == "openai" && request.Mode == "official" {
+		limit = officialCapabilityQueryTimeout
+	}
+	ctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	if err := validateDesktopAccountDetect(request); err != nil {
 		return DesktopAccountSnapshot{}, err

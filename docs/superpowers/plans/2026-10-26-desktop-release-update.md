@@ -106,6 +106,8 @@ T4 继续（2026-10-29）：按用户“S2 已完成”指令，真实 merge 导
 
 本轮 Node 页面基础 33、Chromium 97、完整 Rust 177（另 2 ignored）及 network contract 27、Go 全量测试／vet、前端 typecheck／build 通过。Node 全量首轮 301 通过／1 跳过／1 TEE 下载网络超时；固定本机源码缓存复验该项 2 通过。新版设置接入与核心版本缺失用例先红后绿，手动复核中英／明暗／窄窗和安装取消行为，合并专项审阅无 Critical／Important 发现。详细边界及日志见发布验证记录；S2 UI 完成不等同于其全部原生功能验收完成，真实 GUI 两版本升级和八组合继续保持未勾选。
 
+整合提交 `b7b49da` 后，干净源码重建 macOS arm64 ad-hoc 候选并通过实际 DMG 提取校验；同包两项封印／Bee 握手回收测试退出 0，挂载点已卸载。包 SHA-256 为 `601568ec767377dbca5204007b7481e341134bad56a56a7ea77ca0c2ca7529f5`，完整绑定见 `docs/desktop/evidence/s3-2026-10-29-final-s2-macos-arm64/native-summary.json`。旧包归档，原工作树未写入，未安装／启动候选 GUI／发布，发布证据校验仍为 pending（退出 1）。
+
 ## Task 5（S3-T5）：八组合安装升级验收及发布材料
 
 **依赖：** S1-T8、S2-T6、S3-T1–T4；若S1/S2仅有环境缺口，代码继续整合，但不得跳过缺口宣称正式发布。**文件：** 新建上述证据校验脚本、`desktop/tests/release-evidence.test.mjs`、两份release文档；修改 `desktop/scripts/ci-native-evidence.mjs`、`smoke-linux-appimage.mjs`、现有hosted工作流。

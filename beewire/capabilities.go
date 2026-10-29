@@ -37,6 +37,19 @@ type Capabilities struct {
 	// account's requests as. Only a ready report carries it; it is metadata,
 	// reported and reused with the models.
 	ClientVersion string `json:"client_version,omitempty"`
+
+	// Credits is the paid balance an OpenAI account holds beside its
+	// subscription, which the upstream may draw on once the subscription
+	// quota runs out. Only a ready OpenAI report carries it; Hive shows it
+	// and does not schedule by it.
+	Credits *Credits `json:"credits,omitempty"`
+}
+
+// Credits is what the usage report says about an account's paid balance.
+type Credits struct {
+	HasCredits     bool `json:"has_credits"`
+	Unlimited      bool `json:"unlimited"`
+	OverageReached bool `json:"overage_limit_reached"`
 }
 
 type CapabilityReport struct {
@@ -114,6 +127,9 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 		return false
 	}
 	if c.ClientVersion != "" && (c.Status != "ready" || !ValidClientVersion(c.ClientVersion)) {
+		return false
+	}
+	if c.Credits != nil && (c.Status != "ready" || platform != "openai") {
 		return false
 	}
 	seen := map[string]bool{}

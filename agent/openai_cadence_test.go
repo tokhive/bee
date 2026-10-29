@@ -23,6 +23,8 @@ type openaiControlFixture struct {
 	fail           bool
 	// primary overrides the length of the primary window when set.
 	primary int
+	// extra are further top-level usage fields.
+	extra map[string]any
 	// versions are the client_version and User-Agent each models query sent.
 	versions [][2]string
 	// identities are the originator, version header and User-Agent each models
@@ -62,6 +64,9 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	usage := map[string]any{"plan_type": f.plan, "rate_limit": limit}
 	if f.excluded != "" {
 		usage["additional_rate_limits"] = []any{map[string]any{"metered_feature": "base_model_inference", "limit_name": "gpt-reserve", "normal_model_slug": f.excluded}}
+	}
+	for key, value := range f.extra {
+		usage[key] = value
 	}
 	raw, _ := json.Marshal(usage)
 	return claudeProfileResponse(200, string(raw)), nil
@@ -331,6 +336,28 @@ func TestOpenAISingleWindowPlansSupply(t *testing.T) {
 	s := capabilitySource{transport: &openaiControlFixture{plan: "promax", excluded: "gpt-test-b"}}
 	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || len(got.Models) != 1 || got.Models[0] != "gpt-test-a" {
 		t.Fatalf("promax additional_rate_limits not honoured: %+v %q", got, s.failure)
+	}
+}
+
+// The usage report carries the account's paid credits, which Bee passes on, and
+// per-model availability: a model it marks unavailable is not reported.
+func TestOpenAIReportsCreditsAndDropsUnavailableModels(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	s := capabilitySource{transport: &openaiControlFixture{plan: "pro", extra: map[string]any{
+		"credits":     map[string]any{"has_credits": true, "unlimited": false, "overage_limit_reached": true, "balance": "12.5", "approx_local_messages": []int{1, 2}},
+		"model_usage": map[string]any{"gpt-test-a": map[string]any{"available": true, "available_at": nil, "credits_would_enable": false}, "gpt-test-b": map[string]any{"available": false, "available_at": nil, "credits_would_enable": true}},
+	}}}
+	got := s.observe(context.Background(), c, 1)
+	if got.Status != "ready" || len(got.Models) != 1 || got.Models[0] != "gpt-test-a" {
+		t.Fatalf("unavailable model reported: %+v %q", got, s.failure)
+	}
+	if got.Credits == nil || !got.Credits.HasCredits || got.Credits.Unlimited || !got.Credits.OverageReached {
+		t.Fatalf("credits not reported: %+v", got.Credits)
+	}
+	// A report without credits or model_usage still supplies every model.
+	s = capabilitySource{transport: &openaiControlFixture{plan: "pro"}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || got.Credits != nil || len(got.Models) != 2 {
+		t.Fatalf("plain report: %+v %q", got, s.failure)
 	}
 }
 

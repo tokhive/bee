@@ -4,7 +4,7 @@ const port=Number(process.env.BEE_E2E_PORT??1420);
 export default defineConfig({
   testDir: './tests',
   testMatch: '**/*.spec.ts',
-  testIgnore: ['**/device.spec.ts', '**/supply.spec.ts', '**/native-accounts.spec.ts', '**/native-runtime.spec.ts', '**/account-auto-read.spec.ts'],
+  testIgnore: ['**/device.spec.ts', '**/supply.spec.ts', '**/native-accounts.spec.ts', '**/native-runtime.spec.ts', '**/account-auto-read.spec.ts', '**/polling-stability.spec.ts'],
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: 0,

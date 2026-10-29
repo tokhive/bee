@@ -102,3 +102,76 @@ for(const outcome of ['success','failure'])test(`a previous supply generation ca
  const write=model.write('openai',true);model.stop();model.start();model.adopt({views,error:'',busy:false});finishWrite();await write;
  assert.equal(refreshes,0);assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',true),true);
 });
+const flushSupply=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+test('failed supply reads retry every ten seconds and preserve the other fresh platform',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});
+ const calls:string[]=[];let fail=true;
+ const model=createSupplyModel({status:async platform=>{calls.push(platform);if(platform==='openai'&&fail)throw new Error('GET openai HTTP 503');return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async()=>{throw new Error('unexpected PUT');}});
+ t.after(()=>model.stop());model.start();await model.read();
+ assert.equal(model.getSnapshot().retryAt,now+10000);assert.equal(model.getSnapshot().operation,'idle');
+ assert.equal(model.canWrite('claude',true),true);assert.equal(model.canWrite('openai',true),false);
+ t.mock.timers.tick(9999);await flushSupply();assert.equal(calls.length,2);
+ t.mock.timers.tick(1);await flushSupply();assert.equal(calls.length,4);assert.equal(model.getSnapshot().retryAt,now+20000);
+ fail=false;t.mock.timers.tick(10000);await flushSupply();assert.equal(calls.length,6);assert.deepEqual(model.getSnapshot().errors,{});assert.equal(model.getSnapshot().retryAt,null);
+});
+test('supply retries are GET only after uncertain writes and slow reads never overlap',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});
+ let writes=0,reads=0,release:(()=>void)|undefined;let slow=false;
+ const model=createSupplyModel({status:async platform=>{reads++;if(slow)await new Promise<void>(r=>release=r);return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async()=>{writes++;throw new Error('PUT HTTP 503 uncertain');}});
+ t.after(()=>model.stop());model.start();await model.read();await model.write('openai',true);assert.equal(writes,1);
+ slow=true;t.mock.timers.tick(10000);await flushSupply();assert.equal(reads,3);assert.equal(model.getSnapshot().operation,'read');assert.equal(model.getSnapshot().activePlatform,'openai');
+ t.mock.timers.tick(60000);void model.read();await flushSupply();assert.equal(reads,3);assert.equal(writes,1);
+ slow=false;release?.();await flushSupply();assert.equal(reads,4);assert.equal(model.getSnapshot().busy,false);assert.equal(writes,1);
+});
+test('supply progress stays quiet for fresh background reads and expires while a request is pending',async(t)=>{
+ const {createSupplyModel,supplyProgress}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});
+ let release:(()=>void)|undefined,slow=false;
+ const model=createSupplyModel({status:async platform=>{if(slow)await new Promise<void>(r=>release=r);return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async()=>good as any});
+ t.after(()=>model.stop());model.start();await model.read();slow=true;
+ t.mock.timers.tick(10000);await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),null);
+ t.mock.timers.tick(20001);await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'checking');assert.equal(model.getSnapshot().now,now+30001);assert.equal(model.canWrite('openai',true),false);
+ slow=false;release?.();await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),null);
+});
+test('expiry triggers a read and late stopped results cannot publish or schedule retries',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});
+ let reads=0,release:(()=>void)|undefined;
+ const model=createSupplyModel({status:async platform=>{reads++;if(reads>2)await new Promise<void>(r=>release=r);return {...good,platform,checked_at:new Date(Date.now()-25000).toISOString()};},setPaused:async()=>good as any});
+ model.start();await model.read();t.mock.timers.tick(5001);await flushSupply();assert.equal(reads,3);
+ const view=model.getSnapshot().views.openai;model.stop();release?.();await flushSupply();t.mock.timers.tick(60000);await flushSupply();assert.equal(reads,3);assert.equal(model.getSnapshot().views.openai,view);assert.equal(model.getSnapshot().operation,'idle');assert.equal(model.getSnapshot().retryAt,null);
+});
+test('expiry does not shorten a failed read retry interval',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});let reads=0,fail=false;
+ const model=createSupplyModel({status:async platform=>{reads++;if(fail&&platform==='openai')throw new Error('GET HTTP 503');return {...good,platform,checked_at:new Date(Date.now()-25000).toISOString()};},setPaused:async()=>good as any});
+ t.after(()=>model.stop());model.start();await model.read();fail=true;await model.read();
+ t.mock.timers.tick(5001);await flushSupply();assert.equal(reads,4);
+ t.mock.timers.tick(4999);await flushSupply();assert.equal(reads,6);
+});
+test('restarting a stopped model waits for its old request and discards the late result',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let reads=0,release!:()=>void,active=0,maxActive=0;
+ const model=createSupplyModel({status:async platform=>{reads++;maxActive=Math.max(maxActive,++active);if(reads===1)await new Promise<void>(r=>release=r);active--;return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async()=>good as any});
+ t.after(()=>model.stop());model.start();const old=model.read();model.stop();model.start();const next=model.read();assert.equal(reads,1);release();await Promise.all([old,next]);assert.equal(reads,3);assert.equal(maxActive,1);assert.equal(model.getSnapshot().views.claude?.platform,'claude');
+});
+test('each platform expires on its own timestamp during a slow shared read',async(t)=>{
+ const {createSupplyModel,supplyProgress}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});let slow=false;
+ const model=createSupplyModel({status:async platform=>{if(slow)await new Promise<void>(()=>{});return {...good,platform,checked_at:new Date(Date.now()-(platform==='openai'?1000:0)).toISOString()};},setPaused:async()=>good as any});
+ t.after(()=>model.stop());model.start();await model.read();slow=true;
+ t.mock.timers.tick(10000);await flushSupply();t.mock.timers.tick(19001);await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'checking');assert.equal(supplyProgress(model.getSnapshot(),'claude'),null);
+ t.mock.timers.tick(1000);await flushSupply();assert.equal(model.getSnapshot().now,now+30001);assert.equal(supplyProgress(model.getSnapshot(),'claude'),'checking');
+});
+test('first supply load is quiet and retry progress follows the platform actually being read',async(t)=>{
+ const {createSupplyModel,supplyProgress}=await import('../src/features/supply/useSupply.ts');
+ const releases:Array<()=>void>=[];
+ const model=createSupplyModel({status:async()=>{await new Promise<void>(resolve=>releases.push(resolve));throw new Error('GET HTTP 503');},setPaused:async()=>good as any});
+ t.after(()=>model.stop());model.start();const initial=model.read();
+ assert.equal(supplyProgress(model.getSnapshot(),'openai'),null);assert.equal(supplyProgress(model.getSnapshot(),'claude'),null);
+ releases.shift()!();await flushSupply();releases.shift()!();await initial;
+ const retry=model.read();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'retrying');assert.equal(supplyProgress(model.getSnapshot(),'claude'),'waiting');
+ releases.shift()!();await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'waiting');assert.equal(supplyProgress(model.getSnapshot(),'claude'),'retrying');
+ releases.shift()!();await retry;
+});

@@ -1,25 +1,26 @@
 :root {
   color-scheme: light dark;
-  --paper: #ffffff; --canvas: #f7f8fa; --side: #f2f3f5; --ink: #242830;
-  --muted: #717680; --line: #e8eaee; --faint: #f4f5f7; --selected: #ffffff;
-  --accent: #ae7615; --accent-ink: #95620f; --accent-soft: #fbf4e5; --good: #31765a; --good-soft: #eef5f0;
-  --primary: #2d323a; --on-primary: #ffffff; --shadow: #202c4212; --sheen: #ffffff;
+  --paper: #ffffff; --canvas: #f7f8fa; --panel: #f8f7f4; --side: #f7f6f3; --ink: #2c2b28;
+  --muted: #7b776d; --line: #eae7e1; --faint: #f1efe9; --selected: #ffffff;
+  --accent: #ba8d49; --accent-ink: #a3742b; --accent-soft: #faf6ed; --good: #4c8066; --good-soft: #eef4ef;
+  --primary: #30312e; --on-primary: #ffffff; --shadow: #202c4212; --sheen: #ffffff;
   font: 13px/1.5 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-synthesis: none; -webkit-font-smoothing: antialiased;
   color: var(--ink); background: var(--canvas);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme='light']) {
-    --paper: #222426; --canvas: #1b1d20; --side: #1c1e21; --ink: #edf0f4;
-    --muted: #a4aab4; --line: #34373d; --faint: #2b2e33; --selected: #34373e;
-    --accent: #e6bb70; --accent-ink: #e6bb70; --accent-soft: #3e3423; --good: #94c8aa; --good-soft: #2c3c32;
-    --primary: #e4e7ed; --on-primary: #262a31; --shadow: #00000024; --sheen: #4a4e56;
+    --paper: #242421; --canvas: #181a1e; --panel: #2a2a26; --side: #20201e; --ink: #e5e4df;
+    --muted: #a09d94; --line: #3a3933; --faint: #36352f; --selected: #242421;
+    --accent: #ba8d49; --accent-ink: #cba76d; --accent-soft: #373024; --good: #8fc5a6; --good-soft: #2b3b33;
+    --primary: #e5e3dc; --on-primary: #272721; --shadow: #00000024; --sheen: #4a4e56;
   }
 }
 :root[data-theme='dark'] {
-  --paper: #222426; --canvas: #1b1d20; --side: #1c1e21; --ink: #edf0f4;
-  --muted: #a4aab4; --line: #34373d; --faint: #2b2e33; --selected: #34373e;
-  --accent: #e6bb70; --accent-ink: #e6bb70; --accent-soft: #3e3423; --good: #94c8aa; --good-soft: #2c3c32;
-  --primary: #e4e7ed; --on-primary: #262a31; --shadow: #00000024; --sheen: #4a4e56;
+  --paper: #242421; --canvas: #181a1e; --panel: #2a2a26; --side: #20201e; --ink: #e5e4df;
+  --muted: #a09d94; --line: #3a3933; --faint: #36352f; --selected: #242421;
+  --accent: #ba8d49; --accent-ink: #cba76d; --accent-soft: #373024; --good: #8fc5a6; --good-soft: #2b3b33;
+  --primary: #e5e3dc; --on-primary: #272721; --shadow: #00000024; --sheen: #4a4e56;
 }
 :root[data-theme='light'] { color-scheme: light; }
 :root[data-theme='dark'] { color-scheme: dark; }

@@ -30,7 +30,7 @@ export function NativeAccountDetails({accounts,platform,runtime,supply}:{account
   <details open className="account-source"><summary>{t('凭证读取方式')}</summary><p>{t('读取官方客户端已保存的登录；目录留空使用默认位置。')}</p>
    <label>{t('自定义目录')}<input disabled={blocked} placeholder={defaults?.directory??t('默认目录')} value={directory} onChange={e=>setDirectory(e.target.value)} onBlur={commitDirectory} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitDirectory();}}}/></label>
    <label>{t('存储方式')}<select disabled={blocked||!defaults} value={source.store} onChange={e=>accounts.edit(platform,{directory:directory||null,store:e.target.value})}>{defaults?.stores.map(v=><option key={v.store} value={v.store} disabled={!v.supported}>{t(storeNames[v.store]??v.store)}{v.supported?'':` (${t('暂不支持')})`}</option>)}</select></label>
-   {accounts.busy[platform]&&<p role="status">{t('正在读取已有登录…')}</p>}
+   {accounts.busy[platform]&&!accountPending(snapshot)&&(accounts.dirty[platform]||!snapshot?.candidate.source)&&<p role="status">{t('正在读取已有登录…')}</p>}
    {accounts.sourceReadFailed[platform]?<p role="alert">{t('无法读取凭证来源，请检查目录和访问权限；重新进入账号页会再次读取。')}</p>:accounts.dirty[platform]&&!accounts.busy[platform]&&<p>{t('来源已更改，等待自动读取。')}</p>}
    <p>{t('修改读取位置不会自动更换已接入账号。')}</p>
    {!defaults&&<p>{t('凭证读取方式暂不可用，正在自动核对。')}</p>}

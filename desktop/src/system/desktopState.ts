@@ -10,12 +10,13 @@ const failure=(e:unknown)=>e instanceof Error?e.message:typeof e==='object'&&e!=
 export function createDesktopState(deps:DesktopDeps){
  let state:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:'',busy:false};
  let disposed=false,started=false,epoch=0,pendingEpoch=0,paused=false,unlisten:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
+ let runtimeReceiptRevision=-1,accountReceiptRevisions:Partial<Record<'openai'|'claude',number>>={};
  const listeners=new Set<()=>void>();
  const publish=(next:Partial<DesktopSnapshot>)=>{if(disposed)return;state={...state,...next};listeners.forEach(fn=>fn());};
  function accept(status:BridgeStatus){
   if(disposed)return;
   const changed=status.metadata?.instance!==state.native.metadata?.instance||status.state!==state.native.state;
-  if(changed){epoch++;paused=false;clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;publish({native:status,device:undefined,deviceError:'',runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:'',busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
+  if(changed){epoch++;paused=false;runtimeReceiptRevision=-1;accountReceiptRevisions={};clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;publish({native:status,device:undefined,deviceError:'',runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:'',busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
   else publish({native:status});
  }
  function begin(){if(started||disposed)return;started=true;let received=false;
@@ -52,6 +53,14 @@ export function createDesktopState(deps:DesktopDeps){
     if(observedSupply)supplies[platform]=observedSupply;else if(!supply&&view?.supply)supplies[platform]=view.supply;else if(state.supplies[platform])supplies[platform]=state.supplies[platform];
    }
    if(!current())return;
+   if(next.revision<runtimeReceiptRevision)throw new Error(`DESKTOP_STALE_RESULT: runtime revision actual=${next.revision}; required>=${runtimeReceiptRevision} from confirmed operation receipt`);
+   for(const platform of ['openai','claude'] as const){
+    const minimum=Math.max(accountReceiptRevisions[platform]??-1,state.accounts[platform]?.revision??-1),actual=views[platform]?.revision;
+    if(minimum>=0&&(actual===undefined||actual<minimum)){
+     accountErrors[platform]=`${accountErrors[platform]?accountErrors[platform]+'; ':''}DESKTOP_STALE_RESULT: account revision platform=${platform} actual=${actual??'missing'}; required>=${minimum} from last confirmed observation`;
+     if(state.accounts[platform]){views[platform]=state.accounts[platform];next.platforms[platform]={...next.platforms[platform],account:state.accounts[platform]!};}
+    }
+   }
    publish({device,deviceError,runtime:next,defaults,accounts:views,accountErrors,supplies,supplyErrors,error:''});
   }catch(e){if(current()&&!deviceError){const message=failure(e);if(message.startsWith('DESKTOP_STALE_RESULT:'))paused=true;publish({device,deviceError,error:message});};if(deviceError)throw e;}finally{pending=undefined;if(current()){
    publish({busy:false,supplyPlatform:null});
@@ -63,6 +72,8 @@ export function createDesktopState(deps:DesktopDeps){
   pending=task;return task;
  }
  return {subscribe(fn:()=>void){if(disposed)return()=>{};listeners.add(fn);begin();return()=>{listeners.delete(fn);};},getSnapshot:()=>state,refresh,generation:()=>epoch,
+  recordRuntimeReceipt(revision:number){runtimeReceiptRevision=Math.max(runtimeReceiptRevision,revision);},
+  recordAccountReceipt(platform:'openai'|'claude',revision:number){accountReceiptRevisions[platform]=Math.max(accountReceiptRevisions[platform]??-1,revision);},
   pause(){paused=true;epoch++;clearTimeout(timer);publish({busy:false,supplyPlatform:null});const generation=epoch;timer=setTimeout(()=>{if(!disposed&&epoch===generation)void refresh().catch(()=>undefined);},10000);},
   dispose(){disposed=true;epoch++;clearTimeout(timer);unlisten?.();listeners.clear();}};
 }

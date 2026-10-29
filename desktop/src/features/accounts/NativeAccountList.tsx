@@ -1,5 +1,5 @@
 import {Sparkles,Check,Pause,ShieldCheck} from 'lucide-react';
-import type {AccountsModel} from './useAccounts';
+import {accountPending,type AccountsModel} from './useAccounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {platforms,supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {reasonCopy} from '../supply/SupplyPanel';
@@ -25,7 +25,7 @@ export function NativeAccountList({context,accounts,runtime,supply}:{context:'ov
    const candidate=!dirty?snapshot?.candidate:undefined;
    const reasons=current?view!.reasons.map(reason=>t(reasonCopy[reason])):[];
    if(current&&!running&&!view!.reasons.includes('offline'))reasons.push(t('贡献尚未启动'));
-   const localReason=!selected?(accounts.busy[platform]?t('正在读取已有登录…'):candidate?.state==='available'?t('已有登录，尚未接入'):candidate&&candidate.state!=='not_checked'?t('还没有 {platform} 登录',{platform:label}):t('登录状态待确认')):null;
+   const localReason=!selected?(accounts.busy[platform]&&!accountPending(snapshot)&&!candidate?.source?t('正在读取已有登录…'):candidate?.state==='available'?t('已有登录，尚未接入'):candidate&&candidate.state!=='not_checked'?t('还没有 {platform} 登录',{platform:label}):t('登录状态待确认')):null;
    const copy=current?ready?'可接单':'不能接单':view||supply?.state.errors[platform]?'状态待更新':'状态待确认';
    const paused=view?.paused===true;
    const localErrors=!dirty?[candidate?.error,snapshot?.authorization.error,snapshot?.capabilities[0]?.error]:[];

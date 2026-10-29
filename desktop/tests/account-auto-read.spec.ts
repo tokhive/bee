@@ -30,7 +30,7 @@ async function hookHarness(page:Page){
  },{openai:accountFixture('openai'),claude:accountFixture('claude')});
  await page.route('**/model-harness',route=>route.fulfill({contentType:'text/html',body:`<div id="harness"></div><script type="module">
  import React from '/node_modules/.vite/deps/react.js';import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';import {useAccounts} from '/src/features/accounts/useAccounts.ts';
- const root=ReactDOM.createRoot(document.getElementById('harness'));function Harness(){window.model=useAccounts(window.client,true,undefined,window.runtime,window.autoRead??false,window.coordinated);return null;}window.rerender=()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Harness)));window.rerender();</script>`}));
+ const root=ReactDOM.createRoot(document.getElementById('harness'));window.unmount=()=>root.unmount();function Harness(){window.model=useAccounts(window.client,true,window.authorizer,window.runtime,window.autoRead??false,window.coordinated);return null;}window.rerender=()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Harness)));window.rerender();</script>`}));
  await page.goto('/model-harness');await expect.poll(()=>page.evaluate(()=>!!(window as any).model?.defaults)).toBe(true);
  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).model.busy).every(v=>!v))).toBe(true);
 }
@@ -106,4 +106,63 @@ test('a late coordinated readback cannot confirm a replacement credential source
  await page.waitForTimeout(100);
  expect(await page.evaluate(()=>(window as any).model.dirty.openai)).toBe(true);
  expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+});
+async function holdSnapshot(page:Page){
+ await page.evaluate(()=>{
+  const w=window as any,original=w.client.snapshot;
+  w.client.snapshot=async(...args:any[])=>{await new Promise<void>(resolve=>w.releaseSnapshot=resolve);w.client.snapshot=original;return original(...args);};
+  const action=w.client.action;w.client.action=async(request:any)=>{w.actionRequests??=[];w.actionRequests.push(request);return action(request);};
+  w.model.refresh('openai');
+ });
+ await expect.poll(()=>page.evaluate(()=>Boolean((window as any).releaseSnapshot))).toBe(true);
+}
+test('account action waits for a background snapshot and submits once using the refreshed revision',async({page})=>{
+ await hookHarness(page);await holdSnapshot(page);
+ await page.evaluate(()=>{const w=window as any;w.data.openai.revision++;w.model.action('openai','select');w.model.action('openai','select');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(true);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+ await page.evaluate(()=>(window as any).releaseSnapshot());await expect.poll(()=>page.evaluate(()=>(window as any).counts.action)).toBe(1);
+ expect(await page.evaluate(()=>(window as any).actionRequests[0].revision)).toBe(2);
+});
+for(const outcome of ['failed','candidate-changed','expired','unmounted'])test('a waiting account action never writes after '+outcome,async({page})=>{
+ await page.clock.install();await hookHarness(page);
+ await page.evaluate(()=>{const w=window as any;w.data.openai.candidate.expires_at=new Date(Date.now()+31000).toISOString();w.model.refresh('openai');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.candidate.expires_at)).not.toBeNull();
+ await holdSnapshot(page);await page.evaluate(()=>{const w=window as any;w.model.action('openai','select');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(true);
+ if(outcome==='expired')await page.clock.runFor(1100);
+ await page.evaluate(outcome=>{const w=window as any;if(outcome==='failed')w.snapshotFail='openai';if(outcome==='candidate-changed')w.data.openai.candidate.reference='f'.repeat(48);if(outcome==='unmounted')w.unmount();w.releaseSnapshot();},outcome);
+ if(outcome!=='unmounted')await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(false);
+ expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+});
+test('account read errors remain visible throughout the retry and clear only after success',async({page})=>{
+ await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';w.model.refresh('openai');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+ await page.evaluate(()=>(window as any).snapshotFail='');await holdSnapshot(page);
+ expect(await page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+ await page.evaluate(()=>(window as any).releaseSnapshot());await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toBe('');
+});
+
+test('repeated account read failures keep retrying until a successful snapshot',async({page})=>{
+ await page.clock.install();await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';w.model.refresh('openai');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+ for(let attempt=0;attempt<3;attempt++){
+  const before=await page.evaluate(()=>(window as any).counts.snapshot);await page.clock.runFor(10000);
+  await expect.poll(()=>page.evaluate(()=>(window as any).counts.snapshot)).toBeGreaterThan(before);
+  expect(await page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+ }
+ await page.evaluate(()=>(window as any).snapshotFail='');await page.clock.runFor(10000);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toBe('');expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+});
+
+for(const state of ['running','succeeded','replaced'])test('waiting login cancellation revalidates the same operation when it becomes '+state,async({page})=>{
+ await hookHarness(page);await page.evaluate(()=>{
+  const w=window as any;w.cancelIds=[];w.authorizer={status:async()=>{},cancel:async(id:string)=>{w.cancelIds.push(id);}};
+  w.data.openai.operation={id:'c'.repeat(48),kind:'authorize',state:'pending',platform:'openai',revision:w.data.openai.revision,error:null};w.rerender();
+ });
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.operation?.state)).toBe('pending');
+ await holdSnapshot(page);await page.evaluate(()=>{(window as any).model.cancelAuthorize('openai');});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(true);
+ await page.evaluate(state=>{const w=window as any;if(state==='replaced')w.data.openai.operation.id='d'.repeat(48);else w.data.openai.operation.state=state;w.releaseSnapshot();},state);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(false);
+ expect(await page.evaluate(()=>(window as any).cancelIds)).toEqual(state==='running'?['c'.repeat(48)]:[]);
 });

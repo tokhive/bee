@@ -18,7 +18,7 @@ export function AccountOperationStatus({accounts,platform}:{accounts:AccountsMod
 }
 export function NativeAccountActions({accounts,platform,runtime,placement='row'}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail'}){
  const [confirm,setConfirm]=useState<{action:Action;candidate:string|null}|null>(null);
- const view=accounts.views[platform],pending=accountPending(view),busy=!!accounts.busy[platform],dirty=!!accounts.dirty[platform],unknown=!!accounts.uncertain[platform];
+ const view=accounts.views[platform],pending=accountPending(view),busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform],unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform];
  const selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude';
  const transitioning=runtime.view?.local==='starting'||runtime.view?.local==='stopping';
  const candidate=!dirty&&!!view?.candidate.reference&&view.candidate.state==='available'&&!!view.candidate.expires_at&&Date.parse(view.candidate.expires_at)>Date.now()+30000;

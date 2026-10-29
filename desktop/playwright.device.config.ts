@@ -2,7 +2,7 @@ import { defineConfig, devices } from '@playwright/test';
 const port=Number(process.env.BEE_E2E_PORT??1421);
 export default defineConfig({
  outputDir:'../.cache/device-pairing/playwright',
- testDir:'./tests',testMatch:['device.spec.ts','supply.spec.ts','native-accounts.spec.ts','native-runtime.spec.ts','account-auto-read.spec.ts'],fullyParallel:true,retries:0,
+ testDir:'./tests',testMatch:['device.spec.ts','supply.spec.ts','native-accounts.spec.ts','native-runtime.spec.ts','account-auto-read.spec.ts','polling-stability.spec.ts'],fullyParallel:true,retries:0,
  forbidOnly:Boolean(process.env.CI),
  use:{locale:'zh-CN',baseURL:`http://127.0.0.1:${port}`,trace:'retain-on-failure'},
  projects:[{name:'chromium',use:{...devices['Desktop Chrome']}}],

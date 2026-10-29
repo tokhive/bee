@@ -64,6 +64,22 @@ test('pending account confirmation blocks writes in the shared supply model',asy
 });
 
 const flushSupply=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
+test('a fresh background read keeps supply writable and one explicit write waits for it',async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ let slow=false,release=()=>{},writes=0;
+ const model=createSupplyModel({status:async platform=>{if(slow&&platform==='openai')await new Promise<void>(r=>release=r);return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async(platform,paused)=>{writes++;return {...good,platform,paused,reasons:paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()} as any;}});
+ t.after(()=>model.stop());model.start();await model.read();slow=true;const reading=model.read();
+ assert.equal(model.canWrite('openai',true),true);
+ const first=model.write('openai',true),duplicate=model.write('openai',true);assert.equal(model.canWrite('openai',true),false);assert.equal(writes,0);
+ slow=false;release();await Promise.all([reading,first,duplicate]);assert.equal(writes,1);assert.equal(model.canWrite('openai',false),true);
+});
+for(const outcome of ['failed','expired','stopped'])test('a waiting supply write is cancelled when its refreshed state is '+outcome,async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ t.mock.timers.enable({apis:['setTimeout','Date'],now});let slow=false,release=()=>{},writes=0;
+ const model=createSupplyModel({status:async platform=>{if(slow&&platform==='openai'){await new Promise<void>(r=>release=r);if(outcome==='failed')throw new Error('GET HTTP 503');}return {...good,platform,checked_at:new Date(now).toISOString()};},setPaused:async()=>{writes++;return good as any;}});
+ t.after(()=>model.stop());model.start();await model.read();slow=true;const reading=model.read(),writing=model.write('openai',true);
+ if(outcome==='expired')t.mock.timers.tick(30001);if(outcome==='stopped')model.stop();release();await Promise.all([reading,writing]);assert.equal(writes,0);
+});
 test('failed supply reads retry every ten seconds and preserve the other fresh platform',async(t)=>{
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
  t.mock.timers.enable({apis:['setTimeout','Date'],now});
@@ -135,4 +151,15 @@ test('first supply load is quiet and retry progress follows the platform actuall
  const retry=model.read();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'retrying');assert.equal(supplyProgress(model.getSnapshot(),'claude'),'waiting');
  releases.shift()!();await flushSupply();assert.equal(supplyProgress(model.getSnapshot(),'openai'),'waiting');assert.equal(supplyProgress(model.getSnapshot(),'claude'),'retrying');
  releases.shift()!();await retry;
+});
+
+for(const outcome of ['changed','changed-back','runtime-stopped'])test('a waiting supply resume is cancelled after context '+outcome,async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');
+ let slow=false,release=()=>{},writes=0;
+ const model=createSupplyModel({status:async platform=>{if(slow&&platform==='openai')await new Promise<void>(r=>release=r);return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async()=>{writes++;return good as any;}});
+ t.after(()=>model.stop());model.start();model.setWriteContext({openai:'account-A:running'});await model.read();
+ slow=true;const reading=model.read(),writing=model.write('openai',false);
+ model.setWriteContext({openai:outcome==='runtime-stopped'?'account-A:stopped':'account-B:running'});
+ if(outcome==='changed-back')model.setWriteContext({openai:'account-A:running'});
+ release();await Promise.all([reading,writing]);assert.equal(writes,0);
 });

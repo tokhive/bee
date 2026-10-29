@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/tokhive/bee/logx"
 )
@@ -22,14 +21,6 @@ func newInstallUI(out io.Writer) (installUI, error) {
 	}
 	if lang == "" {
 		lang = "en"
-		for _, name := range []string{"LC_ALL", "LC_MESSAGES", "LANG"} {
-			if value := os.Getenv(name); value != "" {
-				if strings.HasPrefix(value, "zh") {
-					lang = "zh"
-				}
-				break
-			}
-		}
 	}
 	terminal := logx.Readable(out) && os.Getenv("TERM") != "dumb"
 	return installUI{lang: lang, terminal: terminal, color: terminal && os.Getenv("NO_COLOR") == "", installer: os.Getenv("BEE_INSTALL_UI") == "1"}, nil

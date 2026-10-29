@@ -25,7 +25,7 @@
 - 无交互终端或 `BEE_INSTALL_INTERACTIVE=0` 时不询问语言。未指定语言时，按首个非空的 `LC_ALL`、`LC_MESSAGES`、`LANG` 判断；以 `zh` 开头使用中文，其他使用英文。
 - 菜单无效输入重新询问。菜单 EOF 沿用环境语言完成安装，并跳过后续交互；不能消费管道中的脚本内容。
 - 所选 `BEE_LANG` 传给 login/setup。`BEE_INSTALL_UI=1` 仅标记安装器调用上下文，用于省去子命令中重复的“接下来运行 bee run”等引导；不写入 systemd 环境或修改账号配置。
-- `bee login/setup` 独立调用也识别 `BEE_LANG`，未指定时使用同一环境语言规则；其他 Bee 命令和后台结构化日志的全面翻译不在本次范围。
+- `bee login/setup` 独立调用也识别 `BEE_LANG`。未指定时直接使用英文，不根据系统 locale 切换。其他 Bee 命令和后台结构化日志的全面翻译不在本次范围。
 
 ## 显示规则
 

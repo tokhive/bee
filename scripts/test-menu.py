@@ -91,10 +91,12 @@ class MenuTest(unittest.TestCase):
         for label in ('启动 Bee', '运行状态', '设备配对', '供给账号', '后台服务', '日志与诊断', '高级选项', '帮助与版本', '切换语言'):
             self.assertIn(label, out)
 
-    def test_language_choice_and_nested_return_keep_fast_input(self):
-        code, out = self.terminal([('Choose language', '2\n4\n0\n0\n')], BEE_LANG='')
+    def test_default_english_skips_language_menu_and_keeps_fast_input(self):
+        code, out = self.terminal([('Select [', '4\n0\n0\n')], BEE_LANG='', LC_ALL='zh_CN.UTF-8')
         self.assertEqual(code, 0, out)
+        self.assertNotIn('Choose language', out)
         self.assertIn('Supplied accounts', out)
+        self.assertNotIn('供给账号', out)
         self.assertNotIn('Press Enter', out)
         self.assertNotIn('Back / Exit', out)
         self.assertIn('Confirm account change', out)

@@ -204,13 +204,6 @@ func runManagement(ctx context.Context, out io.Writer) error {
 	m.checks.claudeStore = defaultClaudeStore()
 	m.pair = func() error { return m.pairingWithNext(false) }
 	m.configure = func() error { return m.accountSetup(false) }
-	if os.Getenv("BEE_LANG") == "" {
-		if e = m.language(); errors.Is(e, io.EOF) {
-			return nil
-		} else if e != nil {
-			return e
-		}
-	}
 	e = m.loop("", []menuAction{
 		{"Start Bee", "启动 Bee", m.starts},
 		{"Status", "运行状态", m.status},

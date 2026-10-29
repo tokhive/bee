@@ -37,7 +37,7 @@ The default language is English regardless of the system locale, with or without
 curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_LANG=zh sh
 ```
 
-`bee login` and `bee setup` also accept the `BEE_LANG` environment variable. Full bilingual pairing and account selection require a Bee release containing this support; an older release selected by the installer continues working with its original command output. The language choice applies to this installation and is not saved in the service configuration.
+`bee login`, `bee setup`, and the management menu also accept `BEE_LANG`. When it is unset, they use English and do not follow the system locale. Full bilingual pairing and account selection require a Bee release containing this support; an older release selected by the installer continues working with its original command output. The language choice applies to this run and is not saved in the service configuration.
 
 Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place. If the service is already running, the installer asks whether to restart it; the default is **no**, so current work can finish. Restart later with `sudo systemctl restart tokhive-bee`, or restart your foreground process if you use one.
 
@@ -85,7 +85,7 @@ In a terminal, run `bee` with no arguments to open the numbered management menu:
 bee
 ```
 
-Choose **简体中文 / English**. The main menu groups all existing command capabilities into **Start Bee**, **Status**, **Device pairing**, **Supplied accounts**, **Background service**, **Logs and diagnostics**, **Advanced options**, **Help and version**, and **Change language**. Use `0` to return directly from a submenu, or to exit from the main menu. Exiting the menu leaves the background Bee running. `BEE_LANG=zh` or `BEE_LANG=en` skips the initial language question; the menu can change language for the current session.
+The menu opens in **English** without a language-selection prompt, regardless of the system locale. The main menu groups all existing command capabilities into **Start Bee**, **Status**, **Device pairing**, **Supplied accounts**, **Background service**, **Logs and diagnostics**, **Advanced options**, **Help and version**, and **Change language**. Use `0` to return directly from a submenu, or to exit from the main menu. Exiting the menu leaves the background Bee running. Set `BEE_LANG=zh` for Chinese or `BEE_LANG=en` for English. **Change language** affects only the current session.
 
 **Start Bee** checks configuration automatically. Missing or unfinished pairing opens the pairing flow; a missing supply file opens account selection. Pairing and saving accounts still require confirmation; cancelling either step leaves Bee stopped. With complete, valid configuration, it starts directly without another question. It automatically starts the matching installer-managed systemd service on Linux, or runs in the foreground when no supported background service is available (including macOS). If the service is already active, Bee reports that instead of starting again. Service inspection or configuration-matching errors stop the action with diagnostic details. Foreground operation occupies the terminal: **closing the terminal or pressing Ctrl+C stops this Bee**. Ctrl+C exits the program; enter `bee` again to reopen the menu. Background startup returns to the menu and keeps running after the terminal closes.
 

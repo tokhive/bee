@@ -1,5 +1,23 @@
 # Bee 桌面客户端
 
+## 一键构建 macOS App
+
+在当前源码 checkout 的仓库根目录执行：
+
+```sh
+make app
+```
+
+此命令按顺序检查工具链、准备固定 TEE 依赖、按锁文件安装前端依赖、重建当前 revision 的内置 Bee，再编译正式前端和 Tauri 原生开发包；任一步失败立即停止。要求 Node 24、Go 1.27.3、Rust 1.94.0 和 Xcode。优先使用本机 NVM 或项目缓存中已有的 Node 24.22.1，也可用 `make app APP_NODE_BIN=/path/to/node24/bin` 指定；其他安装方式使用 PATH 并由预检校验。已有项目 Cargo 缓存时自动复用，显式设置的 CARGO_HOME 优先；缺少依赖时允许联网下载，不自动安装工具链。
+
+产物为 `desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app`，使用本机 ad-hoc 签名。构建命令不会启动或退出 App；先在旧 Bee 中按 ⌘Q 完全退出，再打开新包：
+
+```sh
+open "desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app"
+```
+
+`make build` 继续只编译 CLI；本命令不使用演示模式，也不执行登录、接入或贡献操作。以下记录按各自历史版本保留。
+
 2026-10-24 供给增量：普通原生概览在设备核验后显示 OpenAI/Claude 真实平台状态，支持分平台暂停／恢复和只读重新核对。恢复不会开始贡献，失败不会自动重试修改。使用和交付证据见[平台供给说明](../docs/desktop/supply-control.md)。Mac arm64 开发包已构建并通过签名和真实只读验收；2026-10-26已核对原生窗口、刷新、失败保护、导航及中英切换；连续联网稳定性仍有HTTP409/EOF/TLS异常，Windows/Linux增量界面未验收。
 
 2026-10-24 设备增量：普通原生客户端接入现有 Hive 设备配对与重启核验，Hive 源码保持不动。打开当前开发包后，从“概览”连接本机设备；网页确认后手动回到 Bee。使用步骤、自动测试与限制见[设备配对说明](../docs/desktop/device-pairing.md)。账号、收益及真实贡献仍未接通；下面的 P0/P1 演示和历史证据按各自版本保留。

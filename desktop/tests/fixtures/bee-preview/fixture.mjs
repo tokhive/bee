@@ -42,6 +42,7 @@ export async function installPreviewFixture(id){
  let deviceStage=id==='device-unbound'?'unbound':id==='device-pending'?'pending':id==='device-expired'?'expired':'bound';
  let pairingExpiresAt=stamp(600000);
  const original=w.__TAURI_INTERNALS__.invoke;
+ const instance=(await original('bridge_status')).metadata.instance;
  const reads={openai:0,claude:0};
  w.__beePreviewActivate=()=>{reads.openai=0;reads.claude=0;};
  const businessError=(code,message,instance)=>({...instance?{instance}:{},result:{error:{code,message}}});
@@ -63,6 +64,7 @@ export async function installPreviewFixture(id){
   return {hive:'https://hive.example',device_id:'dev-1',platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
  };
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
+  if(command==='preferences_read'){const result=await original(command,args);result.preferences.language='zh';result.preferences.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';return result;}
   if(command==='device_status'||command==='device_begin'||command==='device_open'){
    w.calls.push({command,args});
    if(id==='device-error')return businessError('DEVICE_OPERATION_FAILED','GET /device identity HTTP 503; preview upstream unavailable');
@@ -78,23 +80,23 @@ export async function installPreviewFixture(id){
    w.calls.push({command,args});local='running';revision++;stopReceipt=null;
    runtimeOperation={id:'e'.repeat(48),kind:'start',platform:null,state:'succeeded',revision,error:null};
    if(id==='runtime-unknown'){unknown=true;throw new Error('RESPONSE_TIMEOUT: runtime_start preview response lost; submitted=true; result=unconfirmed');}
-   return {instance:'fixture',result:{operation:clone(runtimeOperation)}};
+   return {instance,result:{operation:clone(runtimeOperation)}};
   }
   if(command==='runtime_stop'){
    w.calls.push({command,args});local='stopped';revision++;
    runtimeOperation={id:'e'.repeat(48),kind:'stop',platform:null,state:'succeeded',revision,error:null};
    stopReceipt={workers_stopped:true,intent_saved:true,session_clean:true};
-   return {instance:'fixture',result:{operation:clone(runtimeOperation)}};
+   return {instance,result:{operation:clone(runtimeOperation)}};
   }
   if(command==='runtime_snapshot'){
    w.calls.push({command,args});
-   if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted','fixture');
-   return {instance:'fixture',result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?(id==='runtime-disconnected'?'disconnected':'connected'):local==='starting'?'connecting':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+   if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
+   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?(id==='runtime-disconnected'?'disconnected':'connected'):local==='starting'?'connecting':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(command==='account_detect'||command==='account_snapshot'){
    w.calls.push({command,args});const p=args.request?.platform??args.platform;
    if(id==='account-reading'&&p==='openai')return hold();
-   return {instance:'fixture',result:{account:clone(w.accounts[p])}};
+   return {instance,result:{account:clone(w.accounts[p])}};
   }
   if(command.startsWith('supply_')){
    w.calls.push({command,args});const p=args.platform;

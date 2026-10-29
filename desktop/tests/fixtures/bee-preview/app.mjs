@@ -11,9 +11,6 @@ const button=(name,scope=document)=>[...scope.querySelectorAll('button')].find(e
 try{
  await installPreviewFixture(scene.id);
  step='加载正式 NativeApp';await import('/src/main.tsx');
- step='打开正式设置页';(await until(()=>button('设置'))).click();
- step='设置中文语言';const language=await until(()=>document.querySelector('select[aria-label="语言"]'));language.value='zh';language.dispatchEvent(new Event('change',{bubbles:true}));
- step='设置主题';const theme=await until(()=>document.querySelector('select[aria-label="外观"]'));theme.value=params.get('theme')==='dark'?'dark':'light';theme.dispatchEvent(new Event('change',{bubbles:true}));
  window.__beePreviewActivate();
  step=`导航 ${scene.page}`;(await until(()=>button(scene.page==='accounts'?'AI 账号':'概览'))).click();
  await until(()=>document.querySelector('.native-account-row'));

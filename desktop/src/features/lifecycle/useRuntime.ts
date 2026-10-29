@@ -1,43 +1,66 @@
 import {useCallback,useEffect,useRef,useState} from 'react';
-import type {RuntimeClient,RuntimeOperation,RuntimeSnapshot} from '../../system/runtime';
+import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
 import {failure} from '../supply/useSupply';
 
-export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:string;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number}
+export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:string;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:string;busy:boolean}}
 export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordinated?:CoordinatedRuntime){
- const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState(''),[busy,setBusy]=useState(false),[uncertain,setUncertain]=useState(false);
- const active=useRef(true),working=useRef(false);
+ const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState(''),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
+ const [settled,setSettled]=useState(0);
+ const active=useRef(true),writing=useRef(false),reading=useRef<Promise<boolean>|undefined>(undefined),latest=useRef<RuntimeSnapshot|undefined>(undefined),verified=useRef(false);
  const external=!!coordinated,refreshCentral=coordinated?.refresh,view=external?coordinated?.view:localView;
- const currentView=useRef(view);currentView.current=view;
+ const central=useRef(coordinated);central.current=coordinated;
  const resolution=useRef<{previous:RuntimeSnapshot|undefined}|undefined>(undefined);
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
- useEffect(()=>{
-  if(!external||busy||!resolution.current)return;
-  if(coordinated?.error){resolution.current=undefined;return;}
-  if(view&&view!==resolution.current.previous){resolution.current=undefined;setError('');setUncertain(false);}
- },[external,view,busy,coordinated?.error]);
- const read=useCallback(async()=>{
-  if(!client||working.current)return;
-  working.current=true;setBusy(true);
-  try{if(refreshCentral){resolution.current={previous:currentView.current};await refreshCentral();}else{const next=await client.snapshot();if(active.current){setView(next);setError('');setUncertain(false);}}}
-  catch(cause){resolution.current=undefined;if(active.current)setError(failure(cause));}
-  finally{working.current=false;if(active.current)setBusy(false);}
- },[client,refreshCentral]);
+ const observe=useCallback(()=>{
+  const next=central.current?.snapshot?.()??central.current;
+  if(!next?.view||next.error){verified.current=false;return false;}
+  latest.current=next.view;verified.current=true;
+  if(!resolution.current||next.view!==resolution.current.previous){resolution.current=undefined;setError('');setUncertain(false);}
+  return true;
+ },[]);
+ useEffect(()=>{if(external&&!busy)observe();},[external,view,busy,coordinated?.error,observe]);
+ const read=useCallback(()=>{
+  if(!client||writing.current)return Promise.resolve(false);
+  if(reading.current)return reading.current;
+  setRefreshing(true);const started=central.current?.generation?.();
+  const request=(async()=>{
+   try{
+    if(refreshCentral){await refreshCentral();return active.current&&central.current?.generation?.()===started?observe():false;}
+    const next=await client.snapshot();if(active.current){latest.current=next;verified.current=true;setView(next);setError('');setUncertain(false);return true;}return false;
+   }catch(cause){if(active.current&&central.current?.generation?.()===started){verified.current=false;setError(failure(cause));}return false;}
+  })().finally(()=>{if(reading.current===request)reading.current=undefined;if(active.current){setRefreshing(false);setSettled(v=>v+1);}});
+  reading.current=request;return request;
+ },[client,refreshCentral,observe]);
  useEffect(()=>{if(!enabled||external)return;void read();},[enabled,read,external]);
  useEffect(()=>{
-  if(!enabled||external||busy)return;
+  if(!enabled||external||busy||refreshing)return;
   const timer=setTimeout(()=>void read(),!error&&!uncertain&&(view?.local==='starting'||view?.local==='stopping')?300:2000);
   return()=>clearTimeout(timer);
- },[enabled,busy,error,uncertain,view,read,external]);
- const write=async(action:()=>Promise<RuntimeOperation>)=>{
-  if(!client||working.current||uncertain||coordinated?.busy||coordinated?.error)return;
-  working.current=true;setBusy(true);setError('');const started=coordinated?.generation?.();
-  try{await action();if(!active.current||coordinated?.generation?.()!==started)return;if(refreshCentral){resolution.current={previous:currentView.current};setUncertain(true);await refreshCentral();}else{const next=await client.snapshot();if(active.current)setView(next);}}
-  catch(cause){if(active.current&&coordinated?.generation?.()===started){resolution.current={previous:currentView.current};coordinated?.pause?.();setError(failure(cause));setUncertain(true);}}
-  finally{working.current=false;if(active.current)setBusy(false);}
+ },[enabled,busy,refreshing,error,uncertain,view,settled,read,external]);
+ const write=async(kind:'start'|'stop',resume:AccountPlatform[]=[])=>{
+  if(!client||writing.current||uncertain||central.current?.error||!verified.current||!latest.current)return;
+  const intent=latest.current,started=central.current?.generation?.();
+  const current=()=>active.current&&central.current?.generation?.()===started;
+  writing.current=true;setBusy(true);
+  try{
+   if(reading.current&&!await reading.current)return;
+   if(central.current?.snapshot?.().busy&&refreshCentral){await refreshCentral();if(!current()||!observe())return;}
+   const next=latest.current;
+   const selected=(s:RuntimeSnapshot)=>JSON.stringify(Object.values(s.platforms).map(p=>[p.account.selection.state,p.account.selection.fingerprint,p.selection_revision]));
+   if(!current()||!verified.current||!next||next.local!==intent.local||next.run_id!==intent.run_id||selected(next)!==selected(intent))return;
+   const receipt=kind==='start'?await client.start({expected_revision:next.revision,resume_platforms:resume}):await client.stop(next.revision);
+   if(!current())return;
+   central.current?.recordReceipt?.(receipt.revision);
+   if(refreshCentral){
+    resolution.current={previous:next};setUncertain(true);
+    if(central.current?.snapshot?.().busy)await refreshCentral();
+    if(!current())return;await refreshCentral();if(current())observe();
+   }else{const observed=await client.snapshot();if(current()){latest.current=observed;verified.current=true;setView(observed);setError('');}}
+  }catch(cause){if(current()){verified.current=false;resolution.current={previous:latest.current};central.current?.pause?.();setError(failure(cause));setUncertain(true);}}
+  finally{writing.current=false;if(active.current)setBusy(false);}
  };
- return {view,error,stalled:!!coordinated?.error,busy:busy||!!coordinated?.busy,uncertain,refresh:read,
-  start:(resume:AccountPlatform[])=>view&&client?write(()=>client.start({expected_revision:view.revision,resume_platforms:resume})):Promise.resolve(),
-  stop:()=>view&&client?write(()=>client.stop(view.revision)):Promise.resolve()};
+ return {view,error,stalled:!!coordinated?.error,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
+  start:(resume:AccountPlatform[])=>write('start',resume),stop:()=>write('stop')};
 }
 export type RuntimeModel=ReturnType<typeof useRuntime>;

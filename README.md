@@ -41,6 +41,8 @@ make build        # fetches the pinned TEE client library, then builds bin/bee
 
 `make build` runs `scripts/prepare-tee.sh` first. The script downloads the TEE client library at the commit pinned in `TEE_REVISION` and places it in `.cache/reclaim-tee`. That library can't be fetched through the Go module proxy, so `go.mod` points to the local copy. After the first run you can also build with plain `go build -o bin/bee ./cmd/bee`.
 
+For the macOS desktop development App, run `make app`. It prepares dependencies and builds the native Bee, frontend, and Tauri bundle. See the [desktop build guide](desktop/README.md#一键构建-macos-app) for toolchain requirements and the output path.
+
 The examples below call `bee`; with a source build, put `bin/bee` on your `PATH` or call it as `./bin/bee`.
 
 To run the tests:

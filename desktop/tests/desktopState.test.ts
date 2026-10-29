@@ -70,3 +70,15 @@ test('a superseded initial status rejection cannot block a ready event',async t=
  const f=fixture();let reject!:(e:Error)=>void;f.deps.bridge.status=()=>new Promise((_,no)=>{reject=no;});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});f.emit(ready('a'));await tick();reject(new Error('STALE_INITIAL_STATUS_READ_REJECTED'));await tick();assert.equal(m.getSnapshot().error,'');assert.equal(m.getSnapshot().native.state,'ready');
 });
+
+test('an account receipt floor retains the failing read evidence and resets with its native instance',async t=>{
+ const f=fixture();let fail=false;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{if(fail&&platform==='openai')throw new Error('ACCOUNT_OPERATION_FAILED: GET account HTTP 503');return {platform,revision:1,issues:[]};}});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ m.recordAccountReceipt('openai',9);fail=true;await m.refresh();
+ assert.match(m.getSnapshot().accountErrors.openai??'',/GET account HTTP 503/);
+ assert.match(m.getSnapshot().accountErrors.openai??'',/actual=1; required>=9/);
+ assert.equal(m.getSnapshot().accountErrors.claude,undefined);
+ fail=false;f.emit(ready('b'));await tick();assert.deepEqual(m.getSnapshot().accountErrors,{});assert.equal(m.getSnapshot().accounts.openai?.revision,1);
+});

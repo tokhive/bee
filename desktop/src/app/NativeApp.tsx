@@ -31,6 +31,12 @@ interface NativeProps {
  openHive:()=>Promise<unknown>;
 }
 const failure=(cause:unknown):string=>cause instanceof Error?cause.message:typeof cause==='object'&&cause!==null&&'message'in cause?`${'code'in cause?String(cause.code)+': ':''}${String(cause.message)}`:String(cause);
+function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'openai'|'claude',string>>={}){
+ return Object.fromEntries((['openai','claude'] as const).map(p=>{
+  const account=snapshot.accounts[p],runtime=snapshot.runtime;
+  return [p,JSON.stringify([runtime?.local,runtime?.run_id,runtime?.platforms[p].selection_revision,!!snapshot.error,account?.selection.state,account?.selection.fingerprint,account?.hive.state,account?.hive.fingerprint,account?.hive.generation,!!snapshot.accountErrors[p],local[p]])];
+ }));
+}
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:'',busy:false};
 function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void}){
  const {native,device:view}=snapshot;
@@ -38,22 +44,41 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  const refresh=useCallback(()=>model?.refresh()??Promise.resolve(),[model]);
  const pause=useCallback(()=>model?.pause(),[model]);
- const run=async(action?:()=>Promise<DeviceView|unknown>)=>{if(working.current)return;working.current=true;setBusy(true);setError('');const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;try{await action?.();if(current())await refresh();}catch(cause){if(current())setError(failure(cause));}finally{working.current=false;if(mounted.current)setBusy(false);}};
+ const run=async(action?:()=>Promise<DeviceView|unknown>)=>{
+  if(working.current)return;working.current=true;setBusy(true);setError('');
+  const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;
+  try{
+   const binding=(value:DeviceView|undefined)=>JSON.stringify([value?.state,value?.hive,value?.user_code,value?.identity?.id]);
+   const intent=model?.getSnapshot().device;
+   if(action&&model?.getSnapshot().busy){
+    await refresh();if(!current())return;
+    const next=model?.getSnapshot();
+    if(next?.error||next?.deviceError||binding(intent)!==binding(next?.device))return;
+   }
+   await action?.();if(current())await refresh();
+  }catch(cause){if(current())setError(failure(cause));}
+  finally{working.current=false;if(mounted.current)setBusy(false);}
+ };
  const instance=native.metadata?.instance;
  const accountClient=useMemo(()=>instance?props.accountFactory(instance):undefined,[props.accountFactory,instance]);
  const runtimeClient=useMemo(()=>instance?props.runtimeFactory(instance):undefined,[props.runtimeFactory,instance]);
  const authorizeClient=useMemo(()=>instance?props.authorizeFactory(instance):undefined,[props.authorizeFactory,instance]);
  const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?props.supply({hive:view.hive,deviceId:view.identity.id}):undefined,[props.supply,view?.state,view?.hive,view?.identity?.id]);
  const generation=useCallback(()=>model?.generation()??0,[model]);
- const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,busy:snapshot.busy,refresh,pause,generation});
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,error:snapshot.error,accountErrors:snapshot.accountErrors,refresh,pause,generation});
- const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error,Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error,busy:snapshot.busy,refresh,pause});
+ const supplyLocal=useRef<Partial<Record<'openai'|'claude',string>>>({});
+ const currentSnapshot=useCallback(()=>model?.getSnapshot()??initial,[model]);
+ const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error,busy:s.busy};},[currentSnapshot]);
+ const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error,busy:s.busy,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,busy:snapshot.busy,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,error:snapshot.error,accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:currentSnapshot});
+ supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
+ const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error,Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error,busy:snapshot.busy,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id),[props.diagnosticsFactory,instance]);
  const ready=native.state==='ready';
  return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode deviceName={!snapshot.deviceError?view?.identity?.name:undefined} hive={view?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!view?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
   {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>{native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}</StatusView>}
   {error&&page!=='overview'&&<p role="alert">{error}</p>}
-  {ready&&page==='overview'&&<NativeOverviewPage accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run()} open={()=>void run(()=>props.client.open())}/>}
+  {ready&&page==='overview'&&<NativeOverviewPage accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||!view&&snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run()} open={()=>void run(()=>props.client.open())}/>}
   {ready&&page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
   {page==='diagnostics'&&<><NativeDiagnosticsPage client={diagnostics} onNavigate={setPage} instance={instance} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('核对诊断')}</summary><pre>{JSON.stringify({runtime:runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
   {page==='settings'&&<NativeSettingsPage updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}

@@ -24,7 +24,8 @@ async function completeReport(page:Page){
 
 test('four native pages share one poller; diagnostics starts only on click and survives navigation',async({page})=>{
  await setup(page);expect(await page.getByRole('navigation').getByRole('button').allTextContents()).toEqual(['概览','AI 账号','诊断','设置']);
- const before=await calls(page,'runtime_snapshot');
+ await nav(page,'AI 账号').click();await expect.poll(async()=>(await calls(page,'account_detect')).length).toBe(2);await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toBeEnabled();
+ await nav(page,'概览').click();const before=await calls(page,'runtime_snapshot');
  for(const name of ['AI 账号','诊断','设置','概览','诊断'])await nav(page,name).click();
  await expect(page.getByText('尚未运行诊断',{exact:true})).toBeVisible();expect(await calls(page,'diagnostics_start')).toEqual([]);expect(await calls(page,'diagnostic_logs')).toEqual([]);
  expect((await calls(page,'runtime_snapshot')).length).toBe(before.length);
@@ -77,7 +78,7 @@ for(const outcome of ['success','failure'])test(`late Hive open ${outcome} from 
  await page.evaluate((outcome:string)=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command!=='hive_open')return invoke(command,args);const result=await invoke(command,args);w.oldHiveStarted=true;return new Promise((resolve,reject)=>{w.finishOldHive=()=>outcome==='success'?resolve(result):reject(new Error('HIVE_OPEN_FAILED: old instance result arrived after replacement'));});};},outcome);
  await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).oldHiveStarted)).toBe(true);
  const before=await page.evaluate(()=>{const w=window as any;w.emit('d'.repeat(32));return w.runtimeReadCount;});await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
- await expect(page.getByRole('button',{name:'重新核对运行状态',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
  const reads=await page.evaluate(()=>{const w=window as any;w.finishOldHive();return w.runtimeReadCount;});await page.clock.runFor(1);
  expect(await page.evaluate(()=>(window as any).runtimeReadCount)).toBe(reads);await expect(page.getByText(/HIVE_OPEN_FAILED/)).toHaveCount(0);
 });

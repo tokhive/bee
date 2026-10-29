@@ -139,3 +139,21 @@ func TestCapabilityClientVersionOnlyOnReadyReports(t *testing.T) {
 		t.Fatal("an unknown report carried a version")
 	}
 }
+
+func TestCapabilityCreditsOnlyOnReadyOpenAIReports(t *testing.T) {
+	now := time.Now()
+	used := 10
+	windows := []QuotaWindow{{Seconds: 18000, UsedPercent: &used, ResetAt: now.Add(time.Hour)}, {Seconds: 604800, UsedPercent: &used, ResetAt: now.Add(time.Hour)}}
+	c := Capabilities{Sequence: 1, Status: "ready", Plan: "plus", ObservedAt: now, Models: []string{}, Windows: windows, Credits: &Credits{HasCredits: true}}
+	if !c.ValidFor("openai", now) {
+		t.Fatal("a ready OpenAI report refused its credits")
+	}
+	c.Plan = "pro"
+	if c.ValidFor("claude", now) {
+		t.Fatal("a Claude report carried OpenAI credits")
+	}
+	unknown := Capabilities{Sequence: 1, Status: "unknown", ObservedAt: now, Models: []string{}, Windows: []QuotaWindow{}, Credits: &Credits{}}
+	if unknown.ValidFor("openai", now) {
+		t.Fatal("an unknown report carried credits")
+	}
+}

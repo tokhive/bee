@@ -360,6 +360,14 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		} `json:"rate_limit"`
 		Additional []json.RawMessage `json:"additional_rate_limits"`
 		Spend      json.RawMessage   `json:"spend_control"`
+		Credits    *struct {
+			Has       *bool `json:"has_credits"`
+			Unlimited *bool `json:"unlimited"`
+			Overage   bool  `json:"overage_limit_reached"`
+		} `json:"credits"`
+		ModelUsage map[string]struct {
+			Available *bool `json:"available"`
+		} `json:"model_usage"`
 	}
 	refreshMetadata := s.LocalURL != "" || s.metadataAt.IsZero() || !now.Before(s.metadataAt.Add(capabilityMetadataTTL)) || s.metadataPlan != credential.Plan || s.metadataVersion != s.version
 	queries := []struct {
@@ -416,7 +424,14 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		}
 		result.MetadataObservedAt = now
 	}
+	if c := usage.Credits; c != nil && c.Has != nil && c.Unlimited != nil {
+		result.Credits = &beewire.Credits{HasCredits: *c.Has, Unlimited: *c.Unlimited, OverageReached: c.Overage}
+	}
 	for _, model := range catalog {
+		// The usage report names the models this account cannot use now.
+		if use, listed := usage.ModelUsage[model]; listed && use.Available != nil && !*use.Available {
+			continue
+		}
 		if !excluded[model] {
 			result.Models = append(result.Models, model)
 		}

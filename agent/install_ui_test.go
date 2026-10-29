@@ -18,7 +18,12 @@ import (
 
 func TestInstallUILanguage(t *testing.T) {
 	for _, tc := range []struct{ explicit, all, messages, lang, want string }{
-		{"zh", "en", "", "", "zh"}, {"en", "zh", "", "", "en"}, {"", "", "zh_CN.UTF-8", "en", "zh"}, {"", "C", "zh", "zh", "en"}, {"", "", "", "zh_TW", "zh"},
+		{"zh", "en", "", "", "zh"},
+		{"en", "zh", "", "", "en"},
+		{"", "zh_CN.UTF-8", "", "en_US.UTF-8", "en"},
+		{"", "", "zh_CN.UTF-8", "en", "en"},
+		{"", "C", "zh", "zh", "en"},
+		{"", "", "", "zh_TW", "en"},
 	} {
 		t.Run(tc.explicit+tc.all+tc.messages+tc.lang, func(t *testing.T) {
 			t.Setenv("BEE_LANG", tc.explicit)

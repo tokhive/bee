@@ -12,7 +12,7 @@
 
 新增安装器内部命令 `bee install-handoff --config PATH`，仅 Linux 支持；语言沿用 BEE_LANG。它自己完成确认，避免 shell 将 PID 在不同命令之间传递。仅在已有 login 明确报告配置锁冲突后调用。旧发行版不支持该命令时保留原始错误，并提示手动停止旧进程；普通安装和 active 服务重启分支不受影响。
 
-安装器默认直接使用英文，不再展示语言选择，也不根据系统 locale 切换语言。保留显式 `BEE_LANG=zh` 中文设置，语言继续传递给 login、setup 和 install-handoff；不改变独立的 Bee 管理菜单语言交互。
+安装器和 Bee 进程默认直接使用英文，不再展示语言选择，也不根据系统 locale 切换语言。保留显式 `BEE_LANG=zh` 中文设置。安装器把语言传给 login、setup 和 install-handoff。Bee 管理菜单仍可在当前会话中切换语言，不写入服务或账号配置。
 
 ## 身份与时序
 

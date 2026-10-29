@@ -60,7 +60,7 @@ Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`
 
 Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只在 pending/draining 时打开同 Hive 的 `/devices/pair?code=…`；若恰好已绑定或过期，直接返回最新状态。系统启动器最长等待 5 秒，超时回收自有启动器并报告打开结果未确认。浏览器确认后须手动回到 Bee，没有账号自动回跳。
 
-Go 一次设备、供给或账号操作总期限 12 秒，单次 HTTP 最长 10 秒；Rust 这些请求从进入队列起共 15 秒，原 hello/ping 为 5 秒。排队时期限已过且尚未发送的请求单独返回 `REQUEST_QUEUE_TIMEOUT`，取消后不会迟发，保留健康会话。已发送请求超时先撤销 ready，再返回 `RESPONSE_TIMEOUT`；子进程回收不延迟调用方超时。会话拒绝迟到成功及后续排队写，不能因 supervisor 暂时未被调度而恢复 ready。
+Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最长 10 秒；S1 `dd8ef64` 将 OpenAI official 检测及官方能力查询放宽到最多 10 分钟，仍服从调用方取消。Rust 普通业务请求从进入队列起共 15 秒，`account_detect` 为 10 分钟，原 hello/ping 为 5 秒。排队时期限已过且尚未发送的请求单独返回 `REQUEST_QUEUE_TIMEOUT`，取消后不会迟发，保留健康会话。已发送请求超时先撤销 ready，再返回 `RESPONSE_TIMEOUT`；子进程回收不延迟调用方超时。会话拒绝迟到成功及后续排队写，不能因 supervisor 暂时未被调度而恢复 ready。
 
 请求含有唯一有效 ID 时，未知字段或重复非 ID 字段的错误仍关联原 ID。无法可靠解码请求信封、重复 ID 字段有歧义，或编码后的响应超过上限时，错误响应的 `id` 为空字符串。输出超长只发送小型 `FRAME_TOO_LARGE` 错误帧并终止会话；父进程应将这种响应作为协议错误处理，不能据此完成某个正常请求。
 

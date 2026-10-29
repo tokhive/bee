@@ -1,0 +1,7 @@
+.section-tabs{min-width:0}
+.section-tabs-list{display:flex;align-items:stretch;gap:24px;flex-wrap:wrap;min-width:0}
+.section-tabs-list>button{min-height:43px;padding:0 1px 12px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;color:var(--muted);font-size:12px;white-space:normal}
+.section-tabs-list>button[data-state=active]{color:var(--ink);border-bottom-color:var(--accent);font-weight:500}
+.section-tabs-list>button:hover:not(:disabled){background:transparent;color:var(--ink)}
+.section-tabs [role=tabpanel]{min-width:0;outline-offset:4px}
+@media(max-width:900px){.section-tabs-list{gap:18px}}

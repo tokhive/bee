@@ -25,15 +25,15 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
  },[client,refreshCentral]);
  useEffect(()=>{if(!enabled||external)return;void read();},[enabled,read,external]);
  useEffect(()=>{
-  if(!enabled||external||busy||error||uncertain)return;
-  const timer=setTimeout(()=>void read(),view?.local==='starting'||view?.local==='stopping'?300:2000);
+  if(!enabled||external||busy)return;
+  const timer=setTimeout(()=>void read(),!error&&!uncertain&&(view?.local==='starting'||view?.local==='stopping')?300:2000);
   return()=>clearTimeout(timer);
  },[enabled,busy,error,uncertain,view,read,external]);
  const write=async(action:()=>Promise<RuntimeOperation>)=>{
   if(!client||working.current||uncertain||coordinated?.busy||coordinated?.error)return;
   working.current=true;setBusy(true);setError('');const started=coordinated?.generation?.();
   try{await action();if(!active.current||coordinated?.generation?.()!==started)return;if(refreshCentral){resolution.current={previous:currentView.current};setUncertain(true);await refreshCentral();}else{const next=await client.snapshot();if(active.current)setView(next);}}
-  catch(cause){resolution.current=undefined;if(active.current&&coordinated?.generation?.()===started){coordinated?.pause?.();setError(failure(cause));setUncertain(true);}}
+  catch(cause){if(active.current&&coordinated?.generation?.()===started){resolution.current={previous:currentView.current};coordinated?.pause?.();setError(failure(cause));setUncertain(true);}}
   finally{working.current=false;if(active.current)setBusy(false);}
  };
  return {view,error,stalled:!!coordinated?.error,busy:busy||!!coordinated?.busy,uncertain,refresh:read,

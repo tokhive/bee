@@ -22,3 +22,6 @@
 @media (max-width: 480px) {
   .nu-version-row { align-items: flex-start; flex-wrap: wrap; gap: 12px; }
 }
+
+.ns-about .native-update { max-width: 760px; }
+.ns-core-version { color: var(--muted); font-size: 11px; margin-bottom: 16px; }

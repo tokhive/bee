@@ -256,7 +256,7 @@ impl Bridge {
             .request(
                 "account_detect",
                 serde_json::json!(request),
-                Duration::from_secs(15),
+                Duration::from_secs(10 * 60),
             )
             .await?;
         crate::protocol::validate_account_operation(&reply.result, platform)?;

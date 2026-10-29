@@ -181,6 +181,9 @@ func newerVersion(a, b string) bool {
 	return preA > preB
 }
 
+// officialCapabilityQueryTimeout bounds one Codex models or usage read, including the response body.
+const officialCapabilityQueryTimeout = 10 * time.Minute
+
 // query fetches one official endpoint into target. It returns why it failed,
 // empty on success, and the time a 429 asked to be left alone until.
 func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (string, time.Time) {
@@ -205,7 +208,9 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	req.Header.Set("Originator", "codex_cli_rs")
 	req.Header.Set("Version", s.version)
 	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version+codexFallbackUserAgentSuffix)
-	client := &http.Client{Transport: s.transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	// The models catalog is hundreds of kilobytes. A slow link needs more than a
+	// minute; 5 seconds returns a truncated body that cannot be decoded.
+	client := &http.Client{Transport: s.transport, Timeout: officialCapabilityQueryTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
 		return capabilityTransportFailure(err), time.Time{}

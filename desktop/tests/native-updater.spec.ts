@@ -101,12 +101,15 @@ test('current version says current and never invents recovery success in English
 test('settings About has one version and one update action wired to the fixed native commands',async({page})=>{
  const {installAccountFixture,accountFixture}=await import('./fixtures/native-accounts.mjs');
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const value=await invoke(command,args);if(command==='bridge_status'&&value.metadata)value.metadata.bee_version='0.1.0';return value;};});
  await page.goto('/');
  await page.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();
+ await page.getByRole('tab',{name:'关于',exact:true}).click();
  const about=page.getByRole('region',{name:'关于 Bee',exact:true});
  const update=about.getByRole('region',{name:'应用更新',exact:true});
  await expect(update.getByText('Bee 0.1.0',{exact:true})).toBeVisible();
- await expect(about.getByText('版本',{exact:true})).toHaveCount(0);
+ await expect(about.getByText('桌面应用版本',{exact:true})).toHaveCount(0);
+ await expect(about.getByText('Bee 版本',{exact:true})).toHaveCount(0);
  await expect(update.getByRole('button')).toHaveCount(1);
  await expect(update.getByRole('button',{name:'检查更新',exact:true})).toBeVisible();
  await expect(about).toContainText('macOS · arm64');
@@ -118,7 +121,9 @@ test('settings About has one version and one update action wired to the fixed na
  await expect(notes).toContainText('Fixture release notes');
  await update.getByRole('button',{name:'下载更新',exact:true}).click();
  const install=update.getByRole('button',{name:'安装更新…',exact:true});await expect(install).toBeVisible();
- await page.getByLabel('外观',{exact:true}).selectOption('dark'); // parent rerender must preserve the verified client receipt
+ await page.getByRole('tab',{name:'通用',exact:true}).click();
+ await page.getByLabel('外观',{exact:true}).selectOption('dark'); // switching tabs and parent rerender must preserve the verified client receipt
+ await page.getByRole('tab',{name:'关于',exact:true}).click();
  await install.click();const dialog=page.getByRole('dialog');
  await expect(dialog.getByRole('button',{name:'取消',exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await expect(install).toBeFocused();

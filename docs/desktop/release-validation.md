@@ -1,10 +1,10 @@
 # Bee 安装、更新与发布验证记录
 
-更新日期：2026-10-28。当前状态：**待验收（pending），尚不具备八组合正式发布证据**。
+更新日期：2026-10-29。当前状态：**待验收（pending），尚不具备八组合正式发布证据**。
 
 本文件落实[已批准的 S3 设计](../superpowers/specs/2026-10-26-desktop-release-update-design.md)中的 P1–P6。代码和候选包准备、当前平台验证、八组合正式发布就绪分别记录。自动测试或构建通过不能填写真实安装验收为通过。
 
-当前已同步 S1-T6 的 owned 退出／恢复、S1-T7 原生贡献界面及 S2 偏好、诊断／网络服务和日常体验实现；S3 已将更新区接入 S2 正式设置页“关于 Bee”，消费真实退出、偏好与固定更新命令。S1/S2 最终原生验收尚未齐备。S3 不复制另一套账号、偏好或退出逻辑。生产 HTTPS 更新地址、生产更新签名密钥、Developer ID／公证、Authenticode、授权测试账号及八组合原生桌面资源尚未提供。本轮没有发布或上传资产，也没有运行用户的官方客户端或贡献流量。
+当前已同步 S1 的 owned 退出／恢复和原生贡献界面，以及 S2 最终提交 `2fdf13728e0fdf33173bbfac388ec1b87051df96` 的偏好、诊断／网络服务、分类设置页及公共壳；S3 将更新区接入“设置 → 关于”，消费真实退出、偏好与固定更新命令。S2 UI 完成的范围及其功能原生验收缺口见[原验收报告](../superpowers/reports/2026-10-28-desktop-s2-ui-verification.md)，不将 UI 完成等同于全部平台验收完成。S3 不复制另一套账号、偏好或退出逻辑。生产 HTTPS 更新地址、生产更新签名密钥、Developer ID／公证、Authenticode、授权测试账号及八组合原生桌面资源尚未提供。本轮没有发布或上传资产，也没有运行用户的官方客户端或贡献流量。
 
 ## 现有证据的适用范围
 
@@ -53,11 +53,30 @@
 
 ### 整合后的本机候选
 
-源码 `a34d9345e55db885f0754905417063bef2ea8ccd` 在干净工作树重建候选，已包含 S2 正式设置页和“关于内联”更新接线。产物为本工作树 `.cache/desktop-release/Bee_0.1.0_aarch64.dmg`，21,687,841 字节，SHA-256 `23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2`；App／Bee 均为 0.1.0，macOS 15.7.7／arm64，ad-hoc 签名。
+源码 `a34d9345e55db885f0754905417063bef2ea8ccd` 在干净工作树重建候选，包含当时的 S2 设置页和“关于内联”更新接线，早于 S2 最终分类 UI。该轮产物为本工作树 `.cache/desktop-release/Bee_0.1.0_aarch64.dmg`，21,687,841 字节，SHA-256 `23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2`；App／Bee 均为 0.1.0，macOS 15.7.7／arm64，ad-hoc 签名。该历史包不能证明下述最终 S2 UI 已打包。
 
 `node desktop/scripts/prepare-release.mjs --mode candidate --build` 退出 0，内含实际 DMG 提取、App／Bee 架构／版本／提交及签名封印校验。同一 DMG 再以只读方式挂载，设置 `BEE_TEST_APP_BUNDLE` 后运行两项包专用测试，退出 0、2 项通过：签名封印接受原包并拒绝篡改副本，包内真实 Bee 完成握手／ping／shutdown 并回收 owned 子进程。随后卸载挂载点。[新候选证据摘要](evidence/s3-2026-10-28-inline-macos-arm64/native-summary.json)保存对应来源、manifest、校验报告和日志摘要。
 
 没有安装到 Applications、启动该候选 GUI、调用安装器、使用真实账号或发布。候选缺少生产更新输入、更新资产签名及正式平台签名／公证；浏览器截图只证明页面布局，不证明该包已完成原生 GUI 验收。两个候选均为 0.1.0，不能冒充两个版本的升级证据。
+
+## S2 最终分类 UI 接入（2026-10-29）
+
+本轮使用真实 merge 导入 S2 `2fdf137`，其中实现整合提交为 `3d908fc`，S1 公共壳／概览／账号快照为 `27f5360`，包含官方慢查询期限修复 `dd8ef64`。保留 S2 唯一协调器与真实客户端，未导入其他工作树的未提交修改，也未另写 S1/S2 模块。共享启动点继续执行 S2 网络初始化 → S3 启动核验 → S1 唯一恢复；签名、安装回执、退出冻结与停止保护保持原 S3 实现。
+
+按已确认的“关于内联”方案，将更新区接入 S2 的“关于”页签，复用 S1 公共壳和 S2 设置样式。App／Bee 版本一致时只展示一次；核心版本未读到或不一致时保留诊断提示。普通页签切换不重读系统状态或丢代理草稿；更新区重挂载只读取原生更新快照，不自动发起检查、下载或安装。中英／明暗、窄窗布局及取消／Escape／焦点返回均已复核。独立合并审阅未发现 Critical／Important 问题。
+
+| 命令／范围 | 实际结果 | 本工作树 `.cache/` 日志 |
+| --- | --- | --- |
+| `npm --prefix desktop run test:device` | Node 33、Chromium 97 通过 | `s3-final-s2-device-green.log` |
+| `npm --prefix desktop run build` | typecheck／build 通过；既有主 chunk 大小提示保留 | `s3-final-s2-build-green.log` |
+| `cargo test --offline --locked --manifest-path desktop/src-tauri/Cargo.toml -- --test-threads=1` | 177 通过、2 包专用项 ignored；network contract 27 通过 | `s3-final-s2-rust-green.log` |
+| `go test ./...`／`go vet ./...` | 通过 | `s3-final-s2-go.log`／`s3-final-s2-vet.log` |
+| `node --test desktop/tests/*.test.ts desktop/tests/*.test.mjs` | 首轮 301 通过、1 平台项跳过、1 TEE 下载因 GitHub clone 120 秒超时失败；包含 bridge／tooling | `s3-final-s2-node.log` |
+| `node --test desktop/tests/tee-real.test.mjs` | 从本机固定源码缓存独立复制后复验：2 通过，固定归档及篡改拒绝均核对 | `s3-final-s2-tee-real.log` |
+
+TEE 复验仍使用固定提交 `a687f86d781e825c04c1d84d75b41bba5d862254`，归档 SHA-256 为 `4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38`，未跳过完整性检查或更换依赖版本。Rust 首轮因包内 Bee 来源仍指向旧提交被 build.rs 拒绝，按正常流程重建 Bee 后完整回归通过，未绕过来源约束。
+
+手动预览仍为 `http://127.0.0.1:1434/__s3-updater-preview`。预览等待模拟 bridge／设备就绪再导航，避免初始实例切换重置页签；刷新直接进入“关于”。实测中文浅色 1440×1000、英文深色 860×600 无横向溢出；安装框默认取消，Escape／取消后焦点返回主按钮，`update_install` 调用为零。截图为 `.cache/s3-final-s2-about-light.png`、`s3-final-s2-dialog-light.png`、`s3-final-s2-about-dark-en-860.png`、`s3-final-s2-dialog-dark-en-860.png`，均属正式组件／模拟 IPC 布局证据。此处不替代真实原生 GUI 安装升级；T4 最后联调项、T5 八组合仍未完成。
 
 ## 八组合原生矩阵
 

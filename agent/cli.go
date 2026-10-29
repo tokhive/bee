@@ -48,6 +48,9 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 
 func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
+	if command == "install-handoff" {
+		return installHandoff(ctx, args[1:], out)
+	}
 	if command == "login" {
 		if _, err := newInstallUI(out); err != nil {
 			return err

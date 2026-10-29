@@ -9,7 +9,7 @@ import (
 	"github.com/tokhive/bee/logx"
 )
 
-// installUI is local to login/setup: it never changes service configuration.
+// installUI formats login, setup and installer handoff prompts; it never changes service configuration.
 type installUI struct {
 	lang                       string
 	terminal, color, installer bool

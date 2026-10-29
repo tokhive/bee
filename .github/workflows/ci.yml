@@ -15,3 +15,13 @@ jobs:
           go-version-file: go.mod
       - run: shellcheck install.sh
       - run: make test
+      - name: Verify native installer handoff outside the runner service cgroup
+        run: |
+          mkdir -p "$RUNNER_TEMP/bee-handoff"
+          CGO_ENABLED=0 go build -o "$RUNNER_TEMP/bee-handoff/bee" ./cmd/bee
+          CGO_ENABLED=0 go test -c -o "$RUNNER_TEMP/bee-handoff/agent.test" ./agent
+          docker run --rm --init --user "$(id -u):$(id -g)" \
+            -v "$RUNNER_TEMP/bee-handoff:/qa:ro" \
+            -e BEE_HANDOFF_TEST_BINARY=/qa/bee ubuntu:24.04 \
+            /qa/agent.test -test.run 'Test(InstallHandoff|HandoffLockOwners|HandoffProcessMetadata)' \
+            -test.v -test.timeout=60s

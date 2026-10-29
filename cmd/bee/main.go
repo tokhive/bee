@@ -22,6 +22,9 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 	if err := bee.Run(ctx, os.Args[1:], os.Stdout); err != nil && !errors.Is(err, context.Canceled) {
+		if errors.Is(err, bee.ErrInstallHandoffCancelled) {
+			os.Exit(3)
+		}
 		if len(os.Args) > 1 && os.Args[1] == "run" {
 			// The long-running process ends on a line shaped like the rest
 			// of its log; one-shot commands keep the bare message.

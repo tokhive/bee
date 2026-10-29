@@ -125,6 +125,27 @@ import json, os, pathlib, sys
 args = sys.argv[1:]
 if args == ['version']:
     print('bee version test')
+elif args and args[0] == 'install-handoff':
+    root = pathlib.Path(os.environ['INSTALL_TEST_ROOT'])
+    with (root / 'commands.jsonl').open('a') as log:
+        log.write(json.dumps(['bee'] + args) + '\\n')
+    if os.environ.get('INSTALL_TEST_HANDOFF_OLD'):
+        print('unknown Bee command "install-handoff"; run bee help to list the commands', file=sys.stderr)
+        sys.exit(1)
+    if os.environ.get('INSTALL_TEST_HANDOFF_FAIL'):
+        print('pidfd_open PID 1234: Operation not permitted; stop it manually', file=sys.stderr)
+        sys.exit(7)
+    zh = os.environ.get('BEE_LANG') == 'zh'
+    print('是否停止此 Bee 并改由 systemd 在后台运行？[y/N]: ' if zh else 'Stop this Bee and switch to systemd background operation? [y/N]: ', end='', flush=True)
+    answer = sys.stdin.readline()
+    if not answer.endswith('\\n') or answer.strip().lower() not in ('y', 'yes'):
+        print('已保留原 Bee 进程' if zh else 'Existing Bee kept')
+        sys.exit(3)
+    (root / 'handoff-done').write_text('stopped')
+    config = pathlib.Path(args[args.index('--config') + 1])
+    if os.environ.get('INSTALL_TEST_HANDOFF_REVOKED'):
+        config.write_text('revoked-device-config')
+    print('旧 Bee 已停止' if zh else 'Previous Bee stopped')
 elif args and args[0] in ('login', 'setup'):
     root = pathlib.Path(os.environ['INSTALL_TEST_ROOT'])
     with (root / 'commands.jsonl').open('a') as log:
@@ -135,6 +156,10 @@ elif args and args[0] in ('login', 'setup'):
         print('bee: injected ' + args[0] + ' failure', file=sys.stderr)
         sys.exit(7)
     config = pathlib.Path(args[args.index('--config') + 1])
+    if args[0] == 'login' and os.environ.get('INSTALL_TEST_HANDOFF'):
+        if not (root / 'handoff-done').exists() or os.environ.get('INSTALL_TEST_HANDOFF_RELOCK'):
+            print('a Bee process is already running with this configuration', file=sys.stderr)
+            sys.exit(1)
     if args[0] == 'login' and os.environ.get('INSTALL_TEST_REVOKED'):
         if config.exists() and config.read_text() == 'revoked-device-config':
             print('bound device credential is invalid; silent pairing is not allowed', file=sys.stderr)
@@ -271,8 +296,10 @@ else:
 
     def test_existing_configuration_shows_all_three_steps(self):
         self.existing_configuration()
-        result = self.run_terminal_install([('Set up and start Bee now?', '\n')])
+        result = self.run_terminal_install([('Set up and start Bee now?', '\n')],
+                                           BEE_LANG='', LC_ALL='zh_CN.UTF-8')
         self.assert_success(result)
+        self.assertNotIn('Select [1-2]:', result.stdout)
         for step in ('[1/3]', '[2/3]', '[3/3]'):
             self.assertIn(step, result.stdout)
         positions = [result.stdout.index(step) for step in ('[1/3]', '[2/3]', '[3/3]')]
@@ -281,31 +308,33 @@ else:
         self.assertNotIn('Pair or validate:', result.stdout)
         self.assertIn(['bee-env', 'login', 'en', '1'], self.commands())
 
-    def test_chinese_language_menu_and_complete_existing_configuration(self):
+    def test_explicit_chinese_completes_existing_configuration_without_language_menu(self):
         self.existing_configuration()
         result = self.run_terminal_install([
-            ('Select [1-2]:', '1\n'), ('现在配置并启动 Bee？', '\n'),
-        ], BEE_LANG='')
+            ('现在配置并启动 Bee？', '\n'),
+        ], BEE_LANG='zh')
         self.assert_success(result)
+        self.assertNotIn('Select [1-2]:', result.stdout)
         for text in ('程序已安装', '[1/3]', '[2/3]', '[3/3]', '使用已有供给配置', 'Bee 已在后台运行'):
             self.assertIn(text, result.stdout)
         self.assertIn(['bee-env', 'login', 'zh', '1'], self.commands())
 
-    def test_english_language_menu_reprompts_and_declines_setup(self):
+    def test_default_english_skips_language_menu_and_declines_setup(self):
         result = self.run_terminal_install([
-            ('Select [1-2]:', '3\n'), ('Select [1-2]:', '2\n'),
             ('Set up and start Bee now?', 'n\n'),
         ], BEE_LANG='')
         self.assert_success(result)
-        self.assertIn('Select 1 or 2', result.stdout)
+        self.assertNotIn('Select [1-2]:', result.stdout)
+        self.assertNotIn('Choose a language', result.stdout)
         self.assertIn('Bee was not started', result.stdout)
         self.assertNotIn('[3/3]', result.stdout)
 
-    def test_language_menu_eof_skips_further_interaction(self):
-        result = self.run_terminal_install([('Select [1-2]:', '\x04')], BEE_LANG='')
+    def test_default_english_setup_eof_skips_further_interaction(self):
+        result = self.run_terminal_install([('Set up and start Bee now?', '\x04')], BEE_LANG='')
         self.assert_success(result)
         self.assertTrue(self.unit.exists())
-        self.assertNotIn('Set up and start Bee now?', result.stdout)
+        self.assertNotIn('Select [1-2]:', result.stdout)
+        self.assertIn('Bee was not started', result.stdout)
         self.assertFalse(any(c[0] == 'bee' for c in self.commands()))
 
     def test_noninteractive_chinese_output_is_plain(self):
@@ -317,16 +346,19 @@ else:
         for decoration in ('\x1b', '🐝', '✅', '━', '─'):
             self.assertNotIn(decoration, result.stdout)
 
-    def test_locale_precedence_selects_language_without_a_menu(self):
-        for environment, expected in (
-            ({'LC_ALL': 'zh_CN.UTF-8', 'LANG': 'en_US.UTF-8'}, '程序已安装'),
-            ({'LC_ALL': '', 'LC_MESSAGES': 'zh_TW.UTF-8'}, '程序已安装'),
-            ({'LC_ALL': 'C', 'LANG': 'zh_CN.UTF-8'}, 'Installed'),
+    def test_default_language_is_english_regardless_of_locale(self):
+        for environment in (
+            {'LC_ALL': 'zh_CN.UTF-8', 'LANG': 'en_US.UTF-8'},
+            {'LC_ALL': '', 'LC_MESSAGES': 'zh_TW.UTF-8'},
+            {'LC_ALL': '', 'LC_MESSAGES': '', 'LANG': 'zh_CN.UTF-8'},
+            {'LC_ALL': 'C', 'LANG': 'zh_CN.UTF-8'},
         ):
             with self.subTest(environment=environment):
                 result = self.run_install(BEE_LANG='', **environment)
                 self.assert_success(result)
-                self.assertIn(expected, result.stdout)
+                self.assertIn('Installed', result.stdout)
+                self.assertNotIn('程序已安装', result.stdout)
+                self.assertNotIn('Select [1-2]:', result.stdout)
 
     def test_invalid_language_fails_before_installation(self):
         result = self.run_install(BEE_LANG='fr')
@@ -364,6 +396,78 @@ else:
         self.assertIn('当前 Bee 继续运行', result.stdout)
         self.assertNotIn('[1/3]', result.stdout)
         self.assertNotIn(['systemctl', 'restart', 'tokhive-bee'], self.commands())
+
+    def test_manual_bee_handoff_accepts_in_both_languages(self):
+        self.existing_configuration()
+        for lang in ('en', 'zh'):
+            with self.subTest(lang=lang):
+                if self.log.exists():
+                    self.log.unlink()
+                (self.root / 'handoff-done').unlink(missing_ok=True)
+                (self.root / 'service-state').unlink(missing_ok=True)
+                setup = '现在配置并启动 Bee？' if lang == 'zh' else 'Set up and start Bee now?'
+                handoff = '是否停止此 Bee' if lang == 'zh' else 'Stop this Bee'
+                result = self.run_terminal_install([(setup, '\n'), (handoff, 'y\n')],
+                    BEE_LANG=lang, INSTALL_TEST_HANDOFF='1')
+                self.assert_success(result)
+                commands = self.commands()
+                logins = [i for i, c in enumerate(commands) if c[:2] == ['bee', 'login']]
+                takeover = next(i for i, c in enumerate(commands) if c[:2] == ['bee', 'install-handoff'])
+                self.assertEqual(len(logins), 2, result.stdout)
+                self.assertLess(logins[0], takeover)
+                self.assertLess(takeover, logins[1])
+                self.assertLess(logins[1], commands.index(['systemctl', 'start', 'tokhive-bee']))
+
+    def test_manual_bee_handoff_decline_default_and_eof_keep_process(self):
+        self.existing_configuration()
+        for answer in ('n\n', '\n', '\x04'):
+            with self.subTest(answer=answer):
+                if self.log.exists():
+                    self.log.unlink()
+                result = self.run_terminal_install([('Set up and start Bee now?', '\n'),
+                    ('Stop this Bee', answer)], INSTALL_TEST_HANDOFF='1')
+                self.assert_success(result)
+                self.assertIn('Existing Bee kept', result.stdout)
+                self.assertFalse((self.root / 'handoff-done').exists())
+                self.assertNotIn(['systemctl', 'start', 'tokhive-bee'], self.commands())
+                self.assertEqual(len([c for c in self.commands() if c[:2] == ['bee', 'login']]), 1)
+
+    def test_manual_bee_handoff_failure_and_old_release_keep_evidence(self):
+        self.existing_configuration()
+        for option, evidence in (('INSTALL_TEST_HANDOFF_FAIL', 'pidfd_open PID 1234'),
+                                 ('INSTALL_TEST_HANDOFF_OLD', 'unknown Bee command "install-handoff"')):
+            with self.subTest(option=option):
+                if self.log.exists():
+                    self.log.unlink()
+                result = self.run_terminal_install([('Set up and start Bee now?', '\n')],
+                    INSTALL_TEST_HANDOFF='1', **{option: '1'})
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(evidence, result.stdout)
+                self.assertIn('stop', result.stdout.lower())
+                self.assertNotIn(['systemctl', 'start', 'tokhive-bee'], self.commands())
+                self.assertFalse((self.root / 'handoff-done').exists())
+
+    def test_manual_bee_handoff_only_retries_login_once(self):
+        self.existing_configuration()
+        result = self.run_terminal_install([('Set up and start Bee now?', '\n'),
+            ('Stop this Bee', 'y\n')], INSTALL_TEST_HANDOFF='1', INSTALL_TEST_HANDOFF_RELOCK='1')
+        self.assertNotEqual(result.returncode, 0)
+        commands = self.commands()
+        self.assertEqual(len([c for c in commands if c[:2] == ['bee', 'login']]), 2)
+        self.assertEqual(len([c for c in commands if c[:2] == ['bee', 'install-handoff']]), 1)
+        self.assertNotIn(['systemctl', 'start', 'tokhive-bee'], commands)
+
+    def test_manual_bee_handoff_refreshes_snapshot_before_pairing_repair(self):
+        self.existing_configuration()
+        result = self.run_terminal_install([('Set up and start Bee now?', '\n'),
+            ('Stop this Bee', 'y\n'), ('Pair this device again?', 'y\n'),
+            ('Hive address:', 'https://hive.example.com\n')], INSTALL_TEST_HANDOFF='1',
+            INSTALL_TEST_HANDOFF_REVOKED='1', INSTALL_TEST_REVOKED='1')
+        self.assert_success(result)
+        config = self.home / '.config/tokhive/bee.json'
+        backups = list(config.parent.glob('bee.json.backup.*/bee.json'))
+        self.assertEqual(len(backups), 1, result.stdout)
+        self.assertEqual(backups[0].read_text(), 'revoked-device-config')
 
     def revoked_configuration(self):
         self.existing_configuration()

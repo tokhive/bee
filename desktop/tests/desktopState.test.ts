@@ -16,18 +16,25 @@ test('coordinator refreshes stopped account and supply observations once for all
  assert.equal(accountReads,2);assert.equal(supplyReads,2);assert.equal(m.getSnapshot().runtime?.platforms.openai.account.revision,4);assert.ok(m.getSnapshot().supplies.claude);
  m.subscribe(()=>{});await tick();assert.equal(accountReads,2);m.dispose();
 });
-test('failed supply read stops the cycle until explicit refresh and never overlaps platforms',async t=>{
- const f=fixture();let active=0,max=0,reads=0,failed=true;f.deps.intervalMs=5;
+// S1's approved automatic read recovery now runs through the single S2 owner.
+test('failed platform reads retry after ten seconds without hiding the other platform or overlapping',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const f=fixture();let active=0,max=0,reads=0,failed=true;
+ f.deps.intervalMs=10000;
  f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:'device'}});
- f.deps.supply=()=>({status:async()=>{reads++;active++;max=Math.max(max,active);await new Promise(r=>setTimeout(r,2));active--;if(failed)throw new Error('SUPPLY_READ_FAILED: HTTP 503');return {checked_at:new Date().toISOString()};}});
- const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await new Promise(r=>setTimeout(r,30));
- assert.equal(reads,1);assert.equal(max,1);assert.match(m.getSnapshot().error,/HTTP 503/);
- failed=false;await m.refresh();assert.ok(m.getSnapshot().supplies.openai);assert.equal(m.getSnapshot().error,'');
+ f.deps.supply=()=>({status:async(platform:string)=>{reads++;active++;max=Math.max(max,active);await Promise.resolve();active--;if(failed&&platform==='openai')throw new Error('SUPPLY_READ_FAILED: HTTP 503');return {platform,checked_at:new Date().toISOString()};}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(reads,2);assert.equal(max,1);assert.match(m.getSnapshot().supplyErrors.openai??'',/HTTP 503/);
+ assert.ok(m.getSnapshot().supplies.claude);assert.equal(m.getSnapshot().error,'');
+ t.mock.timers.tick(9999);await tick();assert.equal(reads,2);
+ failed=false;t.mock.timers.tick(1);await tick();assert.equal(reads,4);assert.equal(max,1);
+ assert.ok(m.getSnapshot().supplies.openai);assert.deepEqual(m.getSnapshot().supplyErrors,{});
 });
-test('uncertain writes pause automatic observations until explicit refresh',async t=>{
- const f=fixture();f.deps.intervalMs=5;const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
- m.pause();const before=f.calls();await new Promise(r=>setTimeout(r,20));assert.equal(f.calls(),before);
- await m.refresh();assert.equal(f.calls(),before+1);
+test('uncertain writes invalidate late results and recover with one read after ten seconds',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const f=fixture();f.deps.intervalMs=10000;const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ m.pause();const before=f.calls();t.mock.timers.tick(9999);await tick();assert.equal(f.calls(),before);
+ t.mock.timers.tick(1);await tick();assert.equal(f.calls(),before+1);
 });
 test('one account snapshot failure stays on that platform and leaves the other readable',async t=>{
  const f=fixture();

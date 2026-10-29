@@ -3,19 +3,19 @@ import type {DeviceClient,DeviceView} from './device';
 import type {AccountFactory,AccountDefaults,AccountSnapshot} from './accounts';
 import type {SupplyFactory,SupplyView} from './supply';
 import type {RuntimeFactory,RuntimeSnapshot} from './runtime';
-export interface DesktopSnapshot {native:BridgeStatus;device?:DeviceView;deviceError:string;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;accounts:Partial<Record<'openai'|'claude',AccountSnapshot>>;accountErrors:Partial<Record<'openai'|'claude',string>>;supplies:Partial<Record<'openai'|'claude',SupplyView>>;error:string;busy:boolean}
+export interface DesktopSnapshot {native:BridgeStatus;device?:DeviceView;deviceError:string;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;accounts:Partial<Record<'openai'|'claude',AccountSnapshot>>;accountErrors:Partial<Record<'openai'|'claude',string>>;supplies:Partial<Record<'openai'|'claude',SupplyView>>;supplyErrors:Partial<Record<'openai'|'claude',string>>;supplyPlatform?:'openai'|'claude'|null;error:string;busy:boolean}
 export interface DesktopDeps{bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number}
 const failure=(e:unknown)=>e instanceof Error?e.message:typeof e==='object'&&e!==null&&'message'in e?String(e.message):'DESKTOP_REFRESH_FAILED: native snapshot lookup failed';
 /** One application owner. Pages subscribe without starting independent polling. */
 export function createDesktopState(deps:DesktopDeps){
- let state:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},error:'',busy:false};
+ let state:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:'',busy:false};
  let disposed=false,started=false,epoch=0,pendingEpoch=0,paused=false,unlisten:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
  const listeners=new Set<()=>void>();
  const publish=(next:Partial<DesktopSnapshot>)=>{if(disposed)return;state={...state,...next};listeners.forEach(fn=>fn());};
  function accept(status:BridgeStatus){
   if(disposed)return;
   const changed=status.metadata?.instance!==state.native.metadata?.instance||status.state!==state.native.state;
-  if(changed){epoch++;paused=false;clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;publish({native:status,device:undefined,deviceError:'',runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},error:'',busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
+  if(changed){epoch++;paused=false;clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;publish({native:status,device:undefined,deviceError:'',runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:'',busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
   else publish({native:status});
  }
  function begin(){if(started||disposed)return;started=true;let received=false;
@@ -36,33 +36,34 @@ export function createDesktopState(deps:DesktopDeps){
    if(!current())return;
    if(deviceError){publish({deviceError,defaults,error:''});throw new Error(deviceError);}
    if(state.runtime&&(next.revision<state.runtime.revision||next.network_revision<state.runtime.network_revision))throw new Error('DESKTOP_STALE_RESULT: runtime or network revision regressed');
-   const views:DesktopSnapshot['accounts']={},accountErrors:DesktopSnapshot['accountErrors']={},supplies:DesktopSnapshot['supplies']={};
+   const views:DesktopSnapshot['accounts']={},accountErrors:DesktopSnapshot['accountErrors']={},supplies:DesktopSnapshot['supplies']={},supplyErrors:DesktopSnapshot['supplyErrors']={};
    const supply=device?.state==='bound'&&device.hive&&device.identity?deps.supply?.({hive:device.hive,deviceId:device.identity.id}):undefined;
    for(const platform of ['openai','claude'] as const){
     if(!current())return;
     let account:AccountSnapshot|undefined;
     try{account=await accounts?.snapshot(platform,true);}catch(e){if(!current())return;accountErrors[platform]=failure(e);}
     let observedSupply:SupplyView|undefined;
-    try{observedSupply=await supply?.status(platform);}catch(e){if(current())publish({device,deviceError,error:failure(e),busy:false});return;}
+    publish({supplyPlatform:platform});
+    try{observedSupply=await supply?.status(platform);}catch(e){if(!current())return;supplyErrors[platform]=failure(e);}
     if(!current())return;
     const view=next.platforms[platform];
     const fresh=account&&(!view||account.revision>=view.account.revision)?account:view?.account;
     if(fresh){views[platform]=fresh;if(view)next.platforms[platform]={...view,account:fresh};}
-    if(observedSupply)supplies[platform]=observedSupply;else if(view?.supply)supplies[platform]=view.supply;
+    if(observedSupply)supplies[platform]=observedSupply;else if(!supply&&view?.supply)supplies[platform]=view.supply;else if(state.supplies[platform])supplies[platform]=state.supplies[platform];
    }
    if(!current())return;
-   publish({device,deviceError,runtime:next,defaults,accounts:views,accountErrors,supplies,error:''});
-  }catch(e){if(current()&&!deviceError)publish({device,deviceError,error:failure(e)});if(deviceError)throw e;}finally{pending=undefined;if(current()){
-   publish({busy:false});
+   publish({device,deviceError,runtime:next,defaults,accounts:views,accountErrors,supplies,supplyErrors,error:''});
+  }catch(e){if(current()&&!deviceError){const message=failure(e);if(message.startsWith('DESKTOP_STALE_RESULT:'))paused=true;publish({device,deviceError,error:message});};if(deviceError)throw e;}finally{pending=undefined;if(current()){
+   publish({busy:false,supplyPlatform:null});
    const operationPending=Object.values(state.accounts).some(v=>v.operation&&['pending','running'].includes(v.operation.state));
    const moving=state.runtime?.local==='starting'||state.runtime?.local==='stopping'||operationPending;
    const delay=moving?400:state.device?.state==='pending'||state.device?.state==='draining'?(state.device.poll_interval_seconds??2)*1000:deps.intervalMs??10000;
-   if(!paused&&!state.error)timer=setTimeout(()=>void refresh().catch(()=>undefined),delay);
+   if(!paused)timer=setTimeout(()=>void refresh().catch(()=>undefined),delay);
   }}})();
   pending=task;return task;
  }
  return {subscribe(fn:()=>void){if(disposed)return()=>{};listeners.add(fn);begin();return()=>{listeners.delete(fn);};},getSnapshot:()=>state,refresh,generation:()=>epoch,
-  pause(){paused=true;epoch++;clearTimeout(timer);publish({busy:false});},
+  pause(){paused=true;epoch++;clearTimeout(timer);publish({busy:false,supplyPlatform:null});const generation=epoch;timer=setTimeout(()=>{if(!disposed&&epoch===generation)void refresh().catch(()=>undefined);},10000);},
   dispose(){disposed=true;epoch++;clearTimeout(timer);unlisten?.();listeners.clear();}};
 }
 export type DesktopState=ReturnType<typeof createDesktopState>;

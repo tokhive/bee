@@ -1,7 +1,7 @@
 * { box-sizing: border-box; }
-body { margin: 0; }
+body { margin: 0; font: inherit; }
 button, select { font: inherit; color: inherit; }
-button { cursor: pointer; min-height: 32px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 7px; background: var(--paper); box-shadow: 0 1px 2px var(--shadow), inset 0 1px var(--sheen); font-size: 12px; }
+button { cursor: pointer; min-height: 32px; padding: 6px 11px; border: 1px solid var(--line); border-radius: 6px; background: var(--paper); box-shadow: 0 1px 2px var(--shadow); font-size: 12px; }
 button:hover:not(:disabled) { background: var(--faint); }
 button:disabled { cursor: not-allowed; opacity: .5; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
@@ -81,11 +81,11 @@ footer { min-height: 31px; border-top: 1px solid var(--line); display: flex; ali
 .operation-message { margin-top: 20px; padding: 12px; border-radius: 7px; background: var(--accent-soft); color: var(--accent-ink); font-size: 12px; }
 .dialog-overlay { position: fixed; inset: 0; z-index: 10; background: #151b294d; }
 .dialog-content, .detail-sheet { position: fixed; z-index: 11; background: var(--paper); color: var(--ink); border: 1px solid var(--line); box-shadow: 0 20px 60px var(--shadow); padding: 25px; }
-.dialog-content { top: 22%; left: 50%; transform: translateX(-50%); width: min(420px, calc(100vw - 32px)); border-radius: 12px; }
+.dialog-content { top: 22%; left: 50%; transform: translateX(-50%); width: min(400px, calc(100vw - 32px)); border-radius: 12px; }
 .dialog-content h2, .detail-sheet h2 { font-size: 17px; margin-bottom: 10px; }
 .dialog-content p, .detail-sheet p { color: var(--muted); font-size: 12px; }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 24px; }
-.detail-sheet { inset: 0 0 0 auto; width: min(420px, 100vw); }
+.detail-sheet { inset: 0 0 0 auto; width: min(430px, 100vw); }
 .detail-sheet header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
 dt { color: var(--muted); font-size: 12px; margin-top: 25px; }
 dd { margin: 7px 0 0; overflow-wrap: anywhere; }
@@ -223,3 +223,132 @@ dd { margin: 7px 0 0; overflow-wrap: anywhere; }
 .native-account input{border:1px solid var(--line);border-radius:6px;padding:7px 9px;background:var(--paper);color:var(--ink);font:inherit}.native-account-dependencies{margin:16px 0;max-width:75ch}.native-account-dependencies p{margin:5px 0}
 
 .native-runtime{margin-block:20px}.native-runtime .device-error{overflow-wrap:anywhere}.native-runtime input[type=checkbox]{margin-inline-end:7px}.native-runtime .supply-grid{margin-block:16px}
+
+/* shadcn/ui components adapted from the repository's theme comparison. */
+.ui-button { display:inline-flex; align-items:center; justify-content:center; gap:6px; flex-shrink:0; font-weight:500; white-space:nowrap; }
+.ui-button svg { width:13px; height:13px; pointer-events:none; }
+.ui-button[data-size=icon] { width:30px; padding:5px; }
+button.primary:hover:not(:disabled) { background:var(--primary); }
+.ui-badge { display:inline-flex; align-items:center; gap:4px; width:fit-content; max-width:100%; border:1px solid var(--line); border-radius:4px; padding:1px 5px; color:var(--muted); font-size:10px; font-weight:400; overflow-wrap:anywhere; }
+.ui-progress { height:4px; overflow:hidden; border-radius:4px; background:var(--faint); width:100%; }
+.ui-progress [data-slot=progress-indicator] { width:100%; height:100%; background:var(--accent); border-radius:inherit; transition:transform .15s ease; }
+@media(prefers-reduced-motion:reduce) { *,*::before,*::after { transition:none!important; animation:none!important; scroll-behavior:auto!important; } }
+
+/* Approved Bee layout: runtime, three device facts, one shared account list. */
+.toolbar-right { margin-left:auto; }
+.sidebar .identity>div { min-width:0; overflow-wrap:anywhere; }
+.side-note { overflow-wrap:anywhere; }
+nav button[aria-current=page] { border:1px solid var(--line); box-shadow:0 1px 3px var(--shadow); }
+nav button { border:1px solid transparent; }
+.native-runtime-summary { padding:0 0 20px; border-bottom:1px solid var(--line); }
+.native-runtime-row { display:flex; align-items:center; justify-content:space-between; gap:20px; }
+.native-runtime-title { display:flex; align-items:center; gap:14px; min-width:0; }
+.native-runtime-title h2 { font-size:16px; font-weight:550; }
+.native-runtime-title p { margin-top:4px; font-size:11px; color:var(--muted); }
+.run-mark { width:45px; height:45px; border-radius:12px; display:grid; place-items:center; color:var(--accent-ink); border:1px solid var(--line); background:var(--accent-soft); flex:none; }
+.run-mark svg { width:23px; height:23px; }
+.run-mark.active { color:var(--good); background:var(--good-soft); }
+.native-runtime-health { margin-top:16px; gap:23px; font-size:10px; }
+.native-runtime-health svg { color:var(--muted); }
+.native-runtime-row .ui-button { height:32px; padding:0 12px; font-size:11px; }
+.native-runtime-health .dot { margin:0; width:5px; height:5px; }
+.runtime-note { font-size:11px; color:var(--muted); margin-top:12px; overflow-wrap:anywhere; }
+.native-device-summary { margin-bottom:20px; border-bottom:1px solid var(--line); }
+.device-facts { display:grid; grid-template-columns:1fr 1.25fr 1fr; padding:19px 0 20px; }
+.device-facts>div { min-width:0; padding:0 19px; }
+.device-facts>div:first-child { padding-left:0; }
+.device-facts>div:last-child { padding-right:0; }
+.device-facts>div+div { border-left:1px solid var(--line); }
+.device-facts p { font-size:11px; color:var(--muted); margin-bottom:7px; }
+.device-facts strong { display:block; font-size:15px; font-weight:500; overflow-wrap:anywhere; }
+.device-facts small { margin-top:8px; font-size:10px; }
+.device-facts .device-url { font-size:11px; }
+.device-facts .ui-button { margin-top:5px; font-size:10px; }
+.device-fact-heading { display:flex; align-items:center; justify-content:space-between; height:16px; }
+.device-fact-heading .ui-button { min-height:24px; height:24px; margin:0; }
+.device-facts .pair-code { letter-spacing:.04em; }
+@media(max-width:960px) {
+ .native-runtime-title p { max-width:32ch; }
+ .device-facts>div { padding-inline:14px; }
+ .device-facts strong { font-size:13px; }
+}
+.native-accounts-section { min-width:0; }
+.account-list-status { display:flex; align-items:center; gap:14px; font-size:11px; color:var(--muted); }
+.account-check-status { color:var(--accent-ink); font-size:11px; }
+.native-account-list { border:1px solid var(--line); border-radius:9px; box-shadow:0 1px 3px var(--shadow); overflow:hidden; }
+.native-account-row { display:grid; grid-template-columns:minmax(245px,1.2fr) minmax(160px,1fr); align-items:center; gap:22px; padding:16px 18px; min-width:0; }
+.native-account-row+.native-account-row { border-top:1px solid var(--line); }
+.native-account-identity { display:flex; align-items:flex-start; gap:11px; min-width:0; }
+.native-account-identity .platform-mark { width:33px; height:33px; border-radius:8px; flex:none; background:var(--panel); }
+.native-account-identity .platform-mark svg { width:19px; height:19px; }
+.native-account-identity .platform-mark.claude { color:#ad765c; background:#faf3ef; border-color:#f0e4dc; }
+.native-account-identity .platform-mark.claude>span { font-size:26px; line-height:1; }
+.native-account-copy { min-width:0; }
+.native-platform-name { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.native-platform-name h3 { font-size:13px; font-weight:550; }
+.native-platform-name .ui-badge { font-size:9px; padding:0 4px; border-radius:3px; }
+.native-account-fingerprint { color:var(--muted); font-size:10px; margin-top:4px; overflow-wrap:anywhere; }
+.native-account-condition { margin-top:7px; font-size:10px; color:var(--muted); display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
+.native-account-condition svg { width:12px; height:12px; }
+.native-account-condition.is-ready { color:var(--good); }
+.account-paused { margin-left:5px; }
+.native-account-reasons { list-style:none; padding:0; margin:4px 0 0; }
+.native-account-reasons li,.native-account-reason { font-size:10px; color:var(--muted); line-height:1.7; overflow-wrap:anywhere; margin-top:0; }
+.account-operation-status { font-size:11px; color:var(--muted); overflow-wrap:anywhere; }
+.account-operation-status:not(:empty) { margin-top:6px; }
+.native-account-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; grid-column:2; justify-self:end; margin-top:-4px; }
+.native-account-row-actions:empty { display:none; }
+.native-account-row-actions .account-actions { display:contents; }
+.native-account-row-actions .ui-button { font-size:10px; min-height:25px; height:25px; padding:0 12px; background:var(--panel); }
+.native-account-row-actions .ui-button.primary { background:var(--primary); }
+.native-account-row-actions .ui-button.quiet { background:transparent; padding:0; }
+.native-account-row-actions .ui-button.primary { min-width:70px; }
+.native-account-quota { min-width:0; display:grid; gap:10px; }
+.native-account-quota .quota-label { font-size:10px; color:var(--muted); gap:10px; margin-bottom:6px; }
+.native-account-quota .quota-value { font-size:11px; color:var(--ink); }
+.quota-unconfirmed .ui-progress [data-slot=progress-indicator] { background:var(--muted); }
+.quota-history,.quota-reset { margin-top:5px; color:var(--muted); font-size:10px; overflow-wrap:anywhere; }
+.native-accounts-footnote { display:flex; align-items:center; gap:6px; color:var(--muted); font-size:10px; margin-top:17px; }
+.native-accounts-footnote svg { width:13px; height:13px; }
+.account-detail-facts { margin:22px 0; }
+.account-detail-facts>div { display:grid; grid-template-columns:100px minmax(0,1fr); gap:14px; margin:15px 0; }
+.account-detail-facts dt,.account-detail-facts dd { margin:0; font-size:12px; overflow-wrap:anywhere; }
+.account-detail-quota { border-block:1px solid var(--line); padding:18px 0; }
+.account-detail-quota h3 { margin-bottom:16px; font-size:12px; }
+.account-source { padding:20px 0; border-bottom:1px solid var(--line); }
+.account-source summary { font-size:12px; cursor:pointer; }
+.account-source p { margin:10px 0; font-size:11px; }
+.account-source label { display:grid; gap:7px; font-size:11px; margin:15px 0; }
+.account-source input,.account-source select { width:100%; min-width:0; background:var(--paper); color:var(--ink); border:1px solid var(--line); border-radius:6px; min-height:32px; padding:7px 9px; font:inherit; }
+.account-detail-actions { margin-top:20px; }
+.account-detail-actions .account-actions { display:flex; flex-wrap:wrap; gap:8px; }
+.detail-sheet header button { box-shadow:none; }
+.dialog-content { max-height:calc(100dvh - 32px); overflow:auto; top:50%; transform:translate(-50%,-50%); z-index:12; }
+@media(max-width:1000px) {
+ .native-account-row { grid-template-columns:minmax(0,1fr); gap:15px; }
+ .native-account-row>.native-account-quota { grid-row:2; grid-column:1; padding-left:44px; }
+ .native-account-row-actions { grid-row:3; grid-column:1; }
+}
+
+.native-diagnostic-evidence { margin:20px 0; font-size:12px; }
+.native-diagnostic-evidence pre { white-space:pre-wrap; overflow-wrap:anywhere; font-size:11px; }
+
+/* Match the approved shadcn canvas while keeping the native window chrome. */
+.native-shell { height:100dvh; min-height:0; }
+.native-shell .workspace { min-height:0; }
+.native-shell main { padding:25px 29px 18px; min-height:0; overflow:auto; scrollbar-width:thin; scrollbar-color:var(--line) transparent; }
+.native-shell .toolbar { height:52px; min-height:52px; padding-inline:28px; }
+.native-shell .page-heading { margin-bottom:23px; }
+.native-shell h1 { font-size:24px; font-weight:550; line-height:1.3; letter-spacing:-.9px; }
+.native-shell .brand { font-weight:600; line-height:1; }
+.native-shell nav button { height:37px; line-height:1; }
+.native-shell .section-heading { margin-bottom:13px; }
+.native-shell .sidebar { min-height:0; padding-bottom:0; }
+.native-shell .sidebar-bottom { padding:28px 5px 0; }
+.native-shell .side-note { padding:0; font-size:10px; }
+.native-shell .identity { margin-top:19px; padding:17px 0; font-size:11px; }
+.native-shell .identity small { font-size:10px; margin-top:1px; }
+.native-shell .avatar { width:29px; height:29px; border-radius:8px; }
+.native-shell footer { height:29px; min-height:29px; padding:0 27px; font-size:10px; background:var(--panel); }
+:root[data-theme='dark'] .platform-mark.claude { color:#d4a18a; background:#372f2a; border-color:#493b31; }
+@media(prefers-color-scheme:dark) { :root:not([data-theme='light']) .platform-mark.claude { color:#d4a18a; background:#372f2a; border-color:#493b31; } }

@@ -40,8 +40,9 @@ test('normal native build pairs and verifies without demo balances or starting s
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
  await expect(page.getByText('real@example.test',{exact:true})).toBeVisible({timeout:10000});
  await expect(page.getByText('设备已绑定。')).toBeVisible();
- await page.getByRole('button',{name:'收益',exact:true}).click();
- await expect(page.getByText('真实收益尚未接通。')).toBeVisible();
+ await expect(page.getByRole('button',{name:'收益',exact:true})).toHaveCount(0);
+ await expect(page.getByText('设备 ID',{exact:true})).toHaveCount(0);
+ await expect(page.locator('.device-facts>div')).toHaveCount(3);
  expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply_set_paused|run/.test(c)))).toBe(false);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
@@ -87,4 +88,24 @@ test('English device entry and settings have complete translations',async({page}
  await expect(page.getByText('Device binding does not automatically start contribution')).toBeVisible();
  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Connect this device'})).toBeVisible();
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+});
+
+test('diagnostics preserve runtime operation and platform authorization failure evidence',async({page})=>{
+ await page.addInitScript(()=>{
+  const internals=(window as any).__TAURI_INTERNALS__,invoke=internals.invoke;
+  internals.invoke=async(command:string,args:unknown)=>{
+   const reply=await invoke(command,args);
+   if(command==='runtime_snapshot'){
+    const view=reply.result.runtime;view.revision=1;
+    view.operation={id:'c'.repeat(48),kind:'start',platform:null,state:'failed',revision:1,error:{code:'source_unavailable',check:'runtime_start_check',platform:'openai',message:'Fixture runtime failure',evidence:{permission_denied:'true'}}};
+    view.platforms.openai.account.authorization.error={code:'source_unavailable',check:'source_read',platform:'openai',message:'Fixture authorization failure',evidence:{path:'/fixture/source'}};
+   }
+   return reply;
+  };
+ });
+ await page.goto('/');await page.getByRole('button',{name:'诊断',exact:true}).click();
+ await page.getByText('核对诊断',{exact:true}).click();
+ const evidence=page.locator('.native-diagnostic-evidence pre');
+ await expect(evidence).toContainText('runtime_start_check');await expect(evidence).toContainText('permission_denied');
+ await expect(evidence).toContainText('source_read');await expect(evidence).toContainText('/fixture/source');
 });

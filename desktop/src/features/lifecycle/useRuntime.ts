@@ -16,8 +16,8 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean){
  },[client]);
  useEffect(()=>{if(!enabled)return;void read();},[enabled,read]);
  useEffect(()=>{
-  if(!enabled||busy||error||uncertain)return;
-  const timer=setTimeout(()=>void read(),view?.local==='starting'||view?.local==='stopping'?300:2000);
+  if(!enabled||busy)return;
+  const timer=setTimeout(()=>void read(),!error&&!uncertain&&(view?.local==='starting'||view?.local==='stopping')?300:2000);
   return()=>clearTimeout(timer);
  },[enabled,busy,error,uncertain,view,read]);
  const write=async(action:()=>Promise<RuntimeOperation>)=>{

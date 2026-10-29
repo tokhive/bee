@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "status": "candidate",
+  "mode": "candidate",
+  "version": "0.1.0",
+  "channel": "candidate",
+  "target": "aarch64-apple-darwin",
+  "format": "dmg",
+  "revision": "b7b49da4b4bafe0220de3645d721dd574d25b90d",
+  "workingTreeDirty": false,
+  "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+  "endpoint": "",
+  "publicKey": "",
+  "assetBase": "",
+  "configSha256": "a9d9ae48ba1a42b8d4bfeee4b6b54d677ccb18a441d789aa56622e1489718f88",
+  "blockers": [
+    "BEE_RELEASE_VERSION missing",
+    "BEE_RELEASE_CHANNEL missing",
+    "BEE_UPDATE_ENDPOINT missing",
+    "BEE_UPDATER_PUBLIC_KEY missing",
+    "BEE_RELEASE_ASSET_BASE_URL missing",
+    "native signing and platform installation evidence not yet verified"
+  ],
+  "assets": [
+    {
+      "name": "Bee_0.1.0_aarch64.dmg",
+      "size": 21700054,
+      "sha256": "601568ec767377dbca5204007b7481e341134bad56a56a7ea77ca0c2ca7529f5",
+      "role": "installer"
+    }
+  ]
+}

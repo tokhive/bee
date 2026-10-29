@@ -53,7 +53,7 @@
 
 ### 整合后的本机候选
 
-源码 `a34d9345e55db885f0754905417063bef2ea8ccd` 在干净工作树重建候选，包含当时的 S2 设置页和“关于内联”更新接线，早于 S2 最终分类 UI。该轮产物为本工作树 `.cache/desktop-release/Bee_0.1.0_aarch64.dmg`，21,687,841 字节，SHA-256 `23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2`；App／Bee 均为 0.1.0，macOS 15.7.7／arm64，ad-hoc 签名。该历史包不能证明下述最终 S2 UI 已打包。
+源码 `a34d9345e55db885f0754905417063bef2ea8ccd` 在干净工作树重建候选，包含当时的 S2 设置页和“关于内联”更新接线，早于 S2 最终分类 UI。该轮产物现归档于本工作树 `.cache/desktop-release-a34d934-before-final-s2/Bee_0.1.0_aarch64.dmg`，21,687,841 字节，SHA-256 `23a89f321eb8b2196c721b94c886433a4cb6d6f9a8a55fbaa35fbe82bcacade2`；App／Bee 均为 0.1.0，macOS 15.7.7／arm64，ad-hoc 签名。该历史包不能证明下述最终 S2 UI 已打包。
 
 `node desktop/scripts/prepare-release.mjs --mode candidate --build` 退出 0，内含实际 DMG 提取、App／Bee 架构／版本／提交及签名封印校验。同一 DMG 再以只读方式挂载，设置 `BEE_TEST_APP_BUNDLE` 后运行两项包专用测试，退出 0、2 项通过：签名封印接受原包并拒绝篡改副本，包内真实 Bee 完成握手／ping／shutdown 并回收 owned 子进程。随后卸载挂载点。[新候选证据摘要](evidence/s3-2026-10-28-inline-macos-arm64/native-summary.json)保存对应来源、manifest、校验报告和日志摘要。
 
@@ -77,6 +77,14 @@
 TEE 复验仍使用固定提交 `a687f86d781e825c04c1d84d75b41bba5d862254`，归档 SHA-256 为 `4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38`，未跳过完整性检查或更换依赖版本。Rust 首轮因包内 Bee 来源仍指向旧提交被 build.rs 拒绝，按正常流程重建 Bee 后完整回归通过，未绕过来源约束。
 
 手动预览仍为 `http://127.0.0.1:1434/__s3-updater-preview`。预览等待模拟 bridge／设备就绪再导航，避免初始实例切换重置页签；刷新直接进入“关于”。实测中文浅色 1440×1000、英文深色 860×600 无横向溢出；安装框默认取消，Escape／取消后焦点返回主按钮，`update_install` 调用为零。截图为 `.cache/s3-final-s2-about-light.png`、`s3-final-s2-dialog-light.png`、`s3-final-s2-about-dark-en-860.png`、`s3-final-s2-dialog-dark-en-860.png`，均属正式组件／模拟 IPC 布局证据。此处不替代真实原生 GUI 安装升级；T4 最后联调项、T5 八组合仍未完成。
+
+### 最终 S2 UI 整合后的本机候选
+
+整合提交为 `b7b49da4b4bafe0220de3645d721dd574d25b90d`，保留 S3 原 HEAD 和 S2 `2fdf137` 两个 merge 父提交。候选在该提交的干净工作树构建，App／Bee 均为 0.1.0，目标 `aarch64-apple-darwin`；产物为 `.cache/desktop-release/Bee_0.1.0_aarch64.dmg`，21,700,054 字节，SHA-256 `601568ec767377dbca5204007b7481e341134bad56a56a7ea77ca0c2ca7529f5`。历史 `a34d934` 和 `10a1e6d` 两包分别归档保留，未覆盖旧证据。
+
+候选构建命令退出 0，内含实际 DMG 提取校验，App／Bee 架构、版本、源码及 ad-hoc 封印均相符。同一 DMG 只读挂载后，两项包专用 Rust 测试通过：封印接受原包并拒绝篡改副本；包内 Bee 完成 hello／ping／shutdown 并等待 owned 子进程回收。测试退出 0，挂载点已卸载。[本轮候选证据摘要](evidence/s3-2026-10-29-final-s2-macos-arm64/native-summary.json)绑定实际来源、manifest、校验报告及日志摘要；归档日志仅清理行尾空白和末尾多余空行，原始输出仍在 `.cache/`。
+
+该包尚未安装到 Applications、未启动 GUI、未调用实际安装器、未使用真实账号或发布。无生产更新源／公钥及更新资产签名，无 Developer ID／公证；同为 0.1.0 的历史候选不能作两版本升级证据。发布证据校验仍按预期退出 1 并列出 pending 缺口（`.cache/s3-final-s2-release-readiness.log`），没有改写八组合状态。
 
 ## 八组合原生矩阵
 

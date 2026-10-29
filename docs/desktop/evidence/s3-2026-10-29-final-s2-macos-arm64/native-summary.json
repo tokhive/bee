@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "recorded_on": "2026-10-29",
+  "scope": "S2 最终分类 UI 接入后的本机候选补充验证；不能替代 macOS 13 或八组合正式验收",
+  "environment": {
+    "os": "macos",
+    "version": "15.7.7",
+    "arch": "arm64"
+  },
+  "source_revision": "b7b49da4b4bafe0220de3645d721dd574d25b90d",
+  "s2_source_revision": "2fdf13728e0fdf33173bbfac388ec1b87051df96",
+  "version": "0.1.0",
+  "mode": "candidate",
+  "working_tree_dirty": false,
+  "installer": {
+    "name": "Bee_0.1.0_aarch64.dmg",
+    "size": 21700054,
+    "sha256": "601568ec767377dbca5204007b7481e341134bad56a56a7ea77ca0c2ca7529f5",
+    "role": "installer"
+  },
+  "platform_signature": "ad-hoc 封印校验通过；无 Developer ID 或公证证据",
+  "native_tests": {
+    "passed": 2,
+    "failed": 0,
+    "cases": [
+      "签名封印接受原包并拒绝篡改副本",
+      "同一 DMG 内实际 Bee hello/ping/shutdown 与 owned 子进程回收"
+    ]
+  },
+  "commands": [
+    {
+      "command": "node desktop/scripts/prepare-release.mjs --mode candidate --build",
+      "exit_code": 0
+    },
+    {
+      "command": "cargo test --offline --locked --manifest-path desktop/src-tauri/Cargo.toml -- --ignored --test-threads=1",
+      "exit_code": 0,
+      "environment": "BEE_TEST_APP_BUNDLE 指向同一 DMG 的只读挂载 Bee.app"
+    }
+  ],
+  "ui": "源码包含 S2 最终公共壳及分类设置页，S3 位于设置 → 关于；中英／明暗／窄窗及安装取消使用正式组件／浏览器模拟 IPC 验证，未运行该候选 GUI",
+  "did_install_application": false,
+  "did_start_gui": false,
+  "did_use_real_accounts_or_contribution": false,
+  "did_publish": false,
+  "pending": [
+    "生产更新源、渠道、正式版本及签名输入",
+    "真实原生 GUI 两版本安装升级",
+    "八个受支持系统／架构原生验收",
+    "授权测试账号与贡献范围"
+  ],
+  "files": {
+    "bee.source.json": "30ee78c3d06d187716993d237c117a5bab3160c631e4618d67b6c58bb9338de4",
+    "release-manifest.json": "228e7ec04150a47d25ee84bda671fb85bb2ad9f068dd2da4482acf6b2d3dfeb2",
+    "verification.json": "2a22115d6d1d5c33f0b4505518b6a6dc32e69927d60fc153db8b10c521fcf2b9",
+    "candidate-build.log": "6a677edc684e4fa465e91786a7b9f1c0599d56e8b9c6865316bc21fe1903904b",
+    "readonly-mount.log": "d997d9fa49769d7d3cf6245100a1d0f3b40ec870cae0480b18ba367a9b890535",
+    "signed-bundle-tests.log": "16b96eeeccd011003382e37abd51105b7589b3479036bb31597599bfd1b64a18"
+  },
+  "log_format": "归档日志仅清理行尾空白及末尾多余空行；原始输出保留在本工作树 .cache/s3-final-s2-candidate-*.log。"
+}

@@ -1,0 +1,45 @@
+✔ official login uses fixed start/status/cancel requests and platform/revision checks (2.047333ms)
+✔ official login rejects stale instance and private payload without exposing values (0.266166ms)
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (12.927208ms)
+✔ old child and network revision results never replace current state (5.431708ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (4.222875ms)
+✔ failed supply read stops the cycle until explicit refresh and never overlaps platforms (36.487125ms)
+✔ uncertain writes pause automatic observations until explicit refresh (22.674125ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (1.455959ms)
+✔ device read failure stays on the device and still publishes account defaults (0.740833ms)
+✔ replacement refresh starts after the status listener returns (0.64525ms)
+✔ a superseded initial status rejection cannot block a ready event (0.503542ms)
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (9.397375ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (1.364625ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (1.37225ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.683792ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (1.316958ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (0.959708ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.864167ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (0.432833ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (10.675708ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (0.8495ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (2.504792ms)
+✔ network snapshot decodes the seven fixed saved and effective fields (12.226584ms)
+✔ network tests accept exactly the three fixed checks and preserve HTTP evidence (7.417708ms)
+✔ network client uses fixed native commands and revisioned scope-free save input (1.603416ms)
+✔ network client rejects unsafe proxy, origin, revision, scope and unconfirmed restart before invocation (0.389667ms)
+✔ network client preserves failed save and failed apply snapshots (0.207583ms)
+✔ OS permission decoder rejects unknown and autostart never infers registration from desire (13.56375ms)
+✔ permission is requested only at explicit enable and no arbitrary notification payload is exposed (0.805542ms)
+✔ delivery failure remains observable and retry is an explicit fixed action (0.406334ms)
+✔ native preferences defaults and strict public schema exclude demo state and secrets (2.278709ms)
+✔ proxy validation accepts only explicit loopback IP HTTP with port and no credentials (0.516916ms)
+✔ native preferences client sends revisioned commands and preserves failure snapshot (0.515083ms)
+✔ runtime uses the shared Go/Rust contract and preserves absent supply (10.712875ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (1.727458ms)
+✔ runtime client sends only fixed typed commands and rejects older snapshots (1.333166ms)
+✔ runtime operation receipts advance the same revision gate as snapshots (0.941333ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 218.380084

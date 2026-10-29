@@ -27,6 +27,11 @@ const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:strin
 async function mount() {
   const root = createRoot(document.getElementById('root')!);
   const params = new URLSearchParams(location.search);
+  if (import.meta.env.DEV && params.get('prototype') === 'accounts') {
+    const {AccountsPrototype} = await import('./prototype/accounts-ui/AccountsPrototype');
+    root.render(<React.StrictMode><AccountsPrototype /></React.StrictMode>);
+    return;
+  }
   if (debugToolsEnabled && params.get('p0') === '1') {
     const [{ P0Page }] = await Promise.all([import('./P0Page'), import('./p0.css')]);
     root.render(

@@ -1,0 +1,596 @@
+{
+  "scope": "real isolated macOS adapters and synthetic safe reports; not paired-device acceptance",
+  "identifier": "dev.tokhive.bee.s2-probe",
+  "visible_notification_confirmed": false,
+  "notification_click_confirmed": false,
+  "redaction": "probe directory replaced, native blob URLs consistently labeled, repeated report bodies omitted",
+  "events": [
+    {
+      "action": "started",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart_changed": false,
+        "bridge_started": false,
+        "identifier": "dev.tokhive.bee.s2-probe",
+        "notice_submitted": false,
+        "permission_requested": false,
+        "state_directory": "<probe-state>"
+      },
+      "sequence": 1,
+      "unix_millis": "1793169977481"
+    },
+    {
+      "action": "info",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart_registration": "dev.tokhive.bee.s2-probe",
+        "bridge_started": false,
+        "fixed_notice_identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "identifier": "dev.tokhive.bee.s2-probe",
+        "preferences": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "system",
+            "notifications_enabled": false,
+            "proxies": [],
+            "revision": 0,
+            "theme": "system",
+            "version": 1
+          }
+        },
+        "real_os": true,
+        "smoke_requested": true,
+        "state_directory": "<probe-state>"
+      },
+      "sequence": 2,
+      "unix_millis": "1793169977713"
+    },
+    {
+      "action": "verify_preferences",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "fresh_readback_matches": true,
+        "fresh_store_readback": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "zh",
+            "notifications_enabled": false,
+            "proxies": [],
+            "revision": 1,
+            "theme": "dark",
+            "version": 1
+          }
+        },
+        "restored": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "system",
+            "notifications_enabled": false,
+            "proxies": [],
+            "revision": 2,
+            "theme": "system",
+            "version": 1
+          }
+        },
+        "saved": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "zh",
+            "notifications_enabled": false,
+            "proxies": [],
+            "revision": 1,
+            "theme": "dark",
+            "version": 1
+          }
+        }
+      },
+      "sequence": 3,
+      "unix_millis": "1793169977758"
+    },
+    {
+      "action": "verify_safe_logs",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "directory": "<probe-state>/diagnostic-logs",
+        "first_page": {
+          "entries": [
+            {
+              "code": "runtime_stopped",
+              "evidence": {
+                "connection": "disconnected",
+                "local": "stopped"
+              },
+              "level": "info",
+              "module": "runtime",
+              "platform": null,
+              "time": "2026-10-28T00:00:00Z"
+            },
+            {
+              "code": "runtime_stopped",
+              "evidence": {
+                "connection": "disconnected",
+                "local": "stopped"
+              },
+              "level": "info",
+              "module": "runtime",
+              "platform": null,
+              "time": "2026-10-28T00:00:00Z"
+            }
+          ],
+          "next_cursor": "v1:000000000000000018e29e97fd9626c8:3:2:93b8f964cfea7cd1",
+          "truncated": false
+        },
+        "second_page": {
+          "entries": [
+            {
+              "code": "runtime_stopped",
+              "evidence": {
+                "connection": "disconnected",
+                "local": "stopped"
+              },
+              "level": "info",
+              "module": "runtime",
+              "platform": null,
+              "time": "2026-10-28T00:00:00Z"
+            }
+          ],
+          "next_cursor": null,
+          "truncated": false
+        },
+        "stored_safe_events": [
+          {
+            "code": "runtime_stopped",
+            "evidence": {
+              "connection": "disconnected",
+              "local": "stopped"
+            },
+            "level": "info",
+            "module": "runtime",
+            "platform": null,
+            "time": "2026-10-28T00:00:00Z"
+          },
+          {
+            "code": "runtime_stopped",
+            "evidence": {
+              "connection": "disconnected",
+              "local": "stopped"
+            },
+            "level": "info",
+            "module": "runtime",
+            "platform": null,
+            "time": "2026-10-28T00:00:00Z"
+          },
+          {
+            "code": "runtime_stopped",
+            "evidence": {
+              "connection": "disconnected",
+              "local": "stopped"
+            },
+            "level": "info",
+            "module": "runtime",
+            "platform": null,
+            "time": "2026-10-28T00:00:00Z"
+          }
+        ],
+        "synthetic_input_only": true
+      },
+      "sequence": 4,
+      "unix_millis": "1793169977799"
+    },
+    {
+      "action": "query_permission",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "permission": "prompt"
+      },
+      "sequence": 5,
+      "unix_millis": "1793169977836"
+    },
+    {
+      "action": "query_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": false,
+          "error": null,
+          "registered": false
+        }
+      },
+      "sequence": 6,
+      "unix_millis": "1793169977847"
+    },
+    {
+      "action": "enable_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": true,
+          "error": null,
+          "registered": true
+        }
+      },
+      "sequence": 7,
+      "unix_millis": "1793169977869"
+    },
+    {
+      "action": "query_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": true,
+          "error": null,
+          "registered": true
+        }
+      },
+      "sequence": 8,
+      "unix_millis": "1793169977878"
+    },
+    {
+      "action": "disable_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": false,
+          "error": null,
+          "registered": false
+        }
+      },
+      "sequence": 9,
+      "unix_millis": "1793169977899"
+    },
+    {
+      "action": "query_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": false,
+          "error": null,
+          "registered": false
+        }
+      },
+      "sequence": 10,
+      "unix_millis": "1793169977911"
+    },
+    {
+      "action": "restore_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": false,
+          "error": null,
+          "registered": false
+        },
+        "original_registered": false,
+        "restored": true
+      },
+      "sequence": 11,
+      "unix_millis": "1793169977937"
+    },
+    {
+      "action": "query_autostart",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart": {
+          "desired": false,
+          "error": null,
+          "registered": false
+        }
+      },
+      "sequence": 12,
+      "unix_millis": "1793169977949"
+    },
+    {
+      "action": "prepare_report_save",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "destination": "<probe-state>/report-1793169977961687000.json",
+        "mode": "save",
+        "prepared_only": true,
+        "synthetic_input_only": true
+      },
+      "sequence": 13,
+      "unix_millis": "1793169977961"
+    },
+    {
+      "action": "download_requested",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "allowed": true,
+        "destination": "<probe-state>/report-1793169977961687000.json",
+        "mode": "save",
+        "probe_destination_override": true,
+        "source": "actual_webview_download_requested",
+        "url": "blob:<native-download-1>"
+      },
+      "sequence": 14,
+      "unix_millis": "1793169977977"
+    },
+    {
+      "action": "download_finished",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "mode": "save",
+        "native_path": null,
+        "probe_destination": "<probe-state>/report-1793169977961687000.json",
+        "saved_file_verification": {
+          "byte_count": 1237,
+          "bytes_match_expected": true
+        },
+        "source": "actual_webview_download_finished",
+        "success": true,
+        "url": "blob:<native-download-1>"
+      },
+      "sequence": 15,
+      "unix_millis": "1793169977986"
+    },
+    {
+      "action": "prepare_report_cancel",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "destination": "<probe-state>/report-1793169977999727000.json",
+        "mode": "cancel",
+        "prepared_only": true,
+        "synthetic_input_only": true
+      },
+      "sequence": 16,
+      "unix_millis": "1793169977999"
+    },
+    {
+      "action": "download_requested",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "allowed": false,
+        "destination": "<probe-state>/report-1793169977999727000.json",
+        "mode": "cancel",
+        "probe_destination_override": true,
+        "source": "actual_webview_download_requested",
+        "url": "blob:<native-download-2>"
+      },
+      "sequence": 17,
+      "unix_millis": "1793169978014"
+    },
+    {
+      "action": "download_cancelled",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "destination_exists": false,
+        "finished_expected": false,
+        "mode": "cancel",
+        "source": "actual_webview_requested_return_false",
+        "url": "blob:<native-download-2>"
+      },
+      "sequence": 18,
+      "unix_millis": "1793169978025"
+    },
+    {
+      "action": "prepare_report_write_failure",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "destination": "<probe-state>/download-readonly-target/must-not-be-written.json",
+        "mode": "write_failure",
+        "prepared_only": true,
+        "synthetic_input_only": true
+      },
+      "sequence": 19,
+      "unix_millis": "1793169978037"
+    },
+    {
+      "action": "download_requested",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "allowed": true,
+        "destination": "<probe-state>/download-readonly-target/must-not-be-written.json",
+        "mode": "write_failure",
+        "probe_destination_override": true,
+        "source": "actual_webview_download_requested",
+        "url": "blob:<native-download-3>"
+      },
+      "sequence": 20,
+      "unix_millis": "1793169978051"
+    },
+    {
+      "action": "download_finished",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "mode": "write_failure",
+        "native_path": null,
+        "probe_destination": "<probe-state>/download-readonly-target/must-not-be-written.json",
+        "saved_file_verification": {
+          "cause": "No such file or directory (os error 2)",
+          "read_error_kind": "NotFound",
+          "read_error_os_code": 2
+        },
+        "source": "actual_webview_download_finished",
+        "success": false,
+        "url": "blob:<native-download-3>"
+      },
+      "sequence": 21,
+      "unix_millis": "1793169978065"
+    },
+    {
+      "action": "smoke_complete",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "autostart_restored": true,
+        "notification_permission_requested": false,
+        "notification_submitted": false,
+        "passed": true,
+        "real_webview_download_modes": [
+          "save",
+          "cancel",
+          "write_failure"
+        ]
+      },
+      "sequence": 22,
+      "unix_millis": "1793169978078"
+    },
+    {
+      "action": "enable_notifications",
+      "error": {
+        "code": "NOTIFICATION_NATIVE",
+        "message": "UNUserNotificationCenter requestAuthorization rejected: NSError domain=UNErrorDomain code=1"
+      },
+      "pid": 83047,
+      "result": null,
+      "sequence": 23,
+      "unix_millis": "1793170185257"
+    },
+    {
+      "action": "submit_notice",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "notifications_enabled": false,
+        "receipt_semantics": "accepted means OS API accepted submission; display/read requires separate visual evidence",
+        "recovery_outcomes": [],
+        "submission_outcomes": []
+      },
+      "sequence": 24,
+      "unix_millis": "1793170207353"
+    },
+    {
+      "action": "submit_notice",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "notifications_enabled": false,
+        "receipt_semantics": "accepted means OS API accepted submission; display/read requires separate visual evidence",
+        "recovery_outcomes": [],
+        "submission_outcomes": []
+      },
+      "sequence": 25,
+      "unix_millis": "1793170208867"
+    },
+    {
+      "action": "query_permission",
+      "error": null,
+      "pid": 83047,
+      "result": {
+        "permission": "granted"
+      },
+      "sequence": 26,
+      "unix_millis": "1793170468315"
+    },
+    {
+      "action": "started",
+      "error": null,
+      "pid": 47417,
+      "result": {
+        "autostart_changed": false,
+        "bridge_started": false,
+        "identifier": "dev.tokhive.bee.s2-probe",
+        "notice_submitted": false,
+        "permission_requested": false,
+        "state_directory": "<probe-state>"
+      },
+      "sequence": 27,
+      "unix_millis": "1793171841735"
+    },
+    {
+      "action": "info",
+      "error": null,
+      "pid": 47417,
+      "result": {
+        "autostart_registration": "dev.tokhive.bee.s2-probe",
+        "bridge_started": false,
+        "fixed_notice_identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "identifier": "dev.tokhive.bee.s2-probe",
+        "notification_smoke_requested": true,
+        "preferences": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "system",
+            "notifications_enabled": false,
+            "proxies": [],
+            "revision": 5,
+            "theme": "system",
+            "version": 1
+          }
+        },
+        "real_os": true,
+        "smoke_requested": false,
+        "state_directory": "<probe-state>"
+      },
+      "sequence": 28,
+      "unix_millis": "1793171842020"
+    },
+    {
+      "action": "query_permission",
+      "error": null,
+      "pid": 47417,
+      "result": {
+        "permission": "granted"
+      },
+      "sequence": 29,
+      "unix_millis": "1793171842044"
+    },
+    {
+      "action": "enable_notifications",
+      "error": null,
+      "pid": 47417,
+      "result": {
+        "permission": "granted",
+        "preferences": {
+          "error": null,
+          "preferences": {
+            "autostart_desired": false,
+            "language": "system",
+            "notifications_enabled": true,
+            "proxies": [],
+            "revision": 6,
+            "theme": "system",
+            "version": 1
+          }
+        }
+      },
+      "sequence": 30,
+      "unix_millis": "1793171842076"
+    },
+    {
+      "action": "submit_notice",
+      "error": null,
+      "pid": 47417,
+      "result": {
+        "notifications_enabled": true,
+        "receipt_semantics": "accepted means OS API accepted submission; display/read requires separate visual evidence",
+        "recovery_outcomes": [],
+        "submission_outcomes": [
+          {
+            "error": null,
+            "identity": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "state": "accepted"
+          }
+        ]
+      },
+      "sequence": 31,
+      "unix_millis": "1793171842115"
+    }
+  ]
+}

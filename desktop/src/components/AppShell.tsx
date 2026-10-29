@@ -1,6 +1,6 @@
 import { t } from '../i18n/index';
 import type { ReactNode } from 'react';
-import { ChevronRight, Monitor } from 'lucide-react';
+import { Monitor } from 'lucide-react';
 import { navigation } from '../app/navigation';
 import type { Page } from '../client/types';
 import logo from '../assets/app-icon-dark.svg';
@@ -9,6 +9,7 @@ export function AppShell({
   onNavigate,
   demo,
   deviceMode = false,
+  deviceName, hive, connected = false,
   children,
   debug,
 }: {
@@ -16,19 +17,20 @@ export function AppShell({
   onNavigate: (page: Page) => void;
   demo: boolean;
   deviceMode?: boolean;
+  deviceName?: string; hive?: string; connected?: boolean;
   children: ReactNode;
   debug?: ReactNode;
 }) {
-  const current = navigation.find((item) => item.id === page)!;
+  const current = navigation.find((item) => item.id === page) ?? navigation[0];
   return (
-    <div className="app-shell">
+    <div className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <img src={logo} alt="" />
           <span>Bee</span>
         </div>
         <nav aria-label={t("主导航")}>
-          {navigation.filter(item=>!deviceMode||item.id!=='earnings').map(({ id, label, icon: Icon }) => (
+          {navigation.map(({ id, label, icon: Icon }) => (
             <button key={id} aria-current={id === page ? 'page' : undefined} onClick={() => onNavigate(id)}>
               <Icon aria-hidden="true" />
               {t(label)}
@@ -37,22 +39,17 @@ export function AppShell({
         </nav>
         <div className="sidebar-bottom">
           <div className="side-note">
-            <span className="dot muted-dot" />{t(deviceMode ? '平台状态由 Hive 核对' : '尚未接通真实供给')}<p>{t("关窗后可从托盘找回")}</p>
+            <span className={`dot ${connected ? '' : 'muted-dot'}`} />{hive ? new URL(hive).host : t(deviceMode ? '尚未连接 Hive' : '尚未接通真实供给')}<p>{t(connected ? 'Hive 已连接' : 'Hive 未连接')}</p>
           </div>
           <div className="identity">
-            <span className="avatar">B</span>
-            <div>{t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : deviceMode ? '设备与平台控制' : '等待业务接入')}</small>
+            <span className="avatar"><Monitor aria-hidden="true" /></span>
+            <div>{deviceName || t("Bee 桌面端")}<small>{t(demo ? '本地演示空间' : deviceMode ? '设备与平台控制' : '等待业务接入')}</small>
             </div>
           </div>
         </div>
       </aside>
       <div className="workspace">
         <header className="toolbar">
-          <div className="breadcrumb">
-            <span>{t("工作空间")}</span>
-            <ChevronRight aria-hidden="true" />
-            <span>{t(current.label)}</span>
-          </div>
           <div className="toolbar-right">
             <span className="device">
               <Monitor aria-hidden="true" />{t("本机设备")}</span>
@@ -63,7 +60,7 @@ export function AppShell({
           <div className="page-heading">
             <div>
               <h1>{t(current.label)}</h1>
-              <p>{t(current.description)}</p>
+              {!(deviceMode && page === 'overview') && <p>{t(current.description)}</p>}
             </div>
             {debug}
           </div>

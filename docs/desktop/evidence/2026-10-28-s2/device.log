@@ -1,0 +1,107 @@
+
+> bee-desktop@0.1.0 test:device
+> node --test tests/device.test.ts tests/supply.test.ts tests/nativeAccounts.test.ts && playwright test --config playwright.device.config.ts
+
+✔ device replies only expose validated public binding data (10.321834ms)
+✔ business rejection preserves operation evidence (0.643917ms)
+✔ native device client uses fixed commands and no frontend config path (1.593833ms)
+✔ account decoder accepts full public DTO and nanosecond UTC timestamps, preserving unknowns and 120% (4.125417ms)
+✔ account decoder rejects missing, unknown, unsafe identity/time/quota fields without echoing payload (3.30425ms)
+✔ defaults decode both platform store capabilities and reject unknown fields (0.6455ms)
+✔ typed client sends fixed commands, never replays writes, and invalidates old source promises (1.240166ms)
+✔ selected account and asynchronous operation are strictly decoded (1.150625ms)
+✔ clearing a saved selection uses its revision without a detected credential (0.770042ms)
+✔ an older account read cannot replace a newer operation receipt (1.115875ms)
+✔ supply decoder accepts explicit false, both platforms and all matching reasons (2.781ms)
+✔ supply decoder rejects missing, null, incorrect types, owner mismatch and invariants without leaking payload (2.584ms)
+✔ business failures retain method and HTTP evidence; failed writes are never replayed (2.509792ms)
+✔ clients serialize even across replacement bindings and validate before IPC (7.258459ms)
+✔ decoder independently enforces the platform whitelist (0.292125ms)
+✔ invalid paused undefined reports its actual type before IPC (0.120584ms)
+✔ invalid paused null reports its actual type before IPC (0.345875ms)
+✔ invalid paused string reports its actual type before IPC (0.159958ms)
+✔ shared supply model preserves per-platform failures and never repeats an uncertain write (19.121167ms)
+✔ pending account confirmation blocks writes in the shared supply model (0.734625ms)
+✔ coordinated supply consumes adopted snapshots and routes every read through the shared refresh (1.525792ms)
+✔ coordinated supply preserves an uncertain write until an explicit refreshed adoption (0.568667ms)
+✔ a stopped supply owner cannot pause a newer coordinator when its write fails late (0.62575ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late success (0.645875ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late failure (0.284917ms)
+ℹ tests 25
+ℹ suites 0
+ℹ pass 25
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 213.271375
+[WebServer] (node:9618) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 53 tests using 5 workers
+
+(node:9623) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9625) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9624) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9621) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:9622) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   4 [chromium] › tests/device.spec.ts:79:1 › an old native status rejection cannot overwrite a newer ready event (1.4s)
+  ✓   3 [chromium] › tests/device.spec.ts:56:1 › failed verification blocks success and remains retryable (1.4s)
+  ✓   2 [chromium] › tests/device.spec.ts:85:1 › opening after website confirmation consumes the latest bound result (1.5s)
+  ✓   6 [chromium] › tests/device.spec.ts:93:1 › English device entry and settings have complete translations (726ms)
+  ✓   7 [chromium] › tests/native-accounts.spec.ts:6:1 › only explicit detection reads sources; details preserve 120%, unknown quota, market and keyboard focus (1.3s)
+  ✓   9 [chromium] › tests/native-accounts.spec.ts:22:1 › overview and accounts share pause state and bulk action results (743ms)
+  ✓   5 [chromium] › tests/device.spec.ts:38:1 › normal native build pairs and verifies without demo balances or starting supply (2.9s)
+  ✓   1 [chromium] › tests/device.spec.ts:65:1 › retrying a failed bound-device check does not revive cached success (3.0s)
+  ✓  11 [chromium] › tests/native-accounts.spec.ts:31:1 › bulk pause keeps the other platform success when one write is uncertain (712ms)
+  ✓  10 [chromium] › tests/native-accounts.spec.ts:26:1 › official scope failure stays visible beside the local candidate, expiry does not retain verified status (940ms)
+  ✓   8 [chromium] › tests/native-accounts.spec.ts:15:1 › source edits reject late results; independent failures, English and dark theme (2.2s)
+  ✓  12 [chromium] › tests/native-accounts.spec.ts:35:1 › device verification failure permits local detection and preserves historical Hive rate limit status (983ms)
+  ✓  13 [chromium] › tests/native-experience.spec.ts:17:1 › four native pages share one poller; diagnostics starts only on click and survives navigation (1.5s)
+  ✓  15 [chromium] › tests/native-experience.spec.ts:41:1 › management startup failure keeps safe native logs accessible without enabling diagnostics (898ms)
+  ✓  14 [chromium] › tests/native-experience.spec.ts:30:1 › safe logs load manually with module/platform/level filters and native cursors (945ms)
+  ✓  17 [chromium] › tests/native-experience.spec.ts:62:1 › Hive entry asks native code to open only the saved origin root without frontend URL input (934ms)
+  ✓  16 [chromium] › tests/native-experience.spec.ts:50:1 › failed preference save keeps the saved appearance; recovery and English copy stay usable (1.2s)
+  ✓  18 [chromium] › tests/native-experience.spec.ts:67:44 › late Hive open success from the previous instance cannot refresh the new owner (857ms)
+  ✓  19 [chromium] › tests/native-experience.spec.ts:67:44 › late Hive open failure from the previous instance cannot refresh the new owner (972ms)
+  ✓  20 [chromium] › tests/native-experience.spec.ts:77:1 › notification delivery failures stay visible and retry requires an explicit action (1.3s)
+  ✓  21 [chromium] › tests/native-experience.spec.ts:89:44 › a delayed initial preference success cannot roll back a newer saved appearance (1.2s)
+  ✓  22 [chromium] › tests/native-experience.spec.ts:89:44 › a delayed initial preference failure cannot roll back a newer saved appearance (1.1s)
+  ✓  24 [chromium] › tests/native-experience.spec.ts:126:1 › new management instance discards a pending diagnostic from the previous instance (1.0s)
+  ✓  25 [chromium] › tests/native-runtime.spec.ts:6:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (829ms)
+  ✓  23 [chromium] › tests/native-experience.spec.ts:104:1 › export confirms scope and waits for matched native success/failure/unknown receipts (1.8s)
+  ✓  26 [chromium] › tests/native-runtime.spec.ts:17:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot (1.2s)
+  ✓  27 [chromium] › tests/native-runtime.spec.ts:39:1 › a successful account write still requires explicit reconciliation when central readback fails (1.4s)
+  ✓  28 [chromium] › tests/native-runtime.spec.ts:47:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart (1.4s)
+  ✓  29 [chromium] › tests/native-runtime.spec.ts:58:100 › late account_action success from the previous owner cannot refresh or pause the current instance (1.3s)
+  ✓  31 [chromium] › tests/native-runtime.spec.ts:58:100 › late runtime_start success from the previous owner cannot refresh or pause the current instance (1.1s)
+  ✓  30 [chromium] › tests/native-runtime.spec.ts:58:100 › late account_action failure from the previous owner cannot refresh or pause the current instance (1.2s)
+  ✓  32 [chromium] › tests/native-runtime.spec.ts:58:100 › late runtime_start failure from the previous owner cannot refresh or pause the current instance (1.0s)
+  ✓  34 [chromium] › tests/native-runtime.spec.ts:82:1 › uncertain account writes only refresh; confirmation still leaves platform paused (1.3s)
+  ✓  33 [chromium] › tests/native-runtime.spec.ts:73:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (1.4s)
+  ✓  36 [chromium] › tests/native-runtime.spec.ts:94:1 › uncertain runtime start is never replayed and requires a fresh query (1.0s)
+  ✓  35 [chromium] › tests/native-runtime.spec.ts:89:1 › official login warns about official account, can cancel, and successful login remains a candidate (1.9s)
+  ✓  40 [chromium] › tests/native-runtime.spec.ts:132:1 › English runtime and login confirmation support keyboard at minimum window size (1.0s)
+  ✓  39 [chromium] › tests/native-runtime.spec.ts:124:1 › only proven unsubmitted confirmation can continue after reconciliation (1.1s)
+  ✓  38 [chromium] › tests/native-runtime.spec.ts:114:1 › account change remains paused and a platform failure leaves the other platform visible (1.1s)
+  ✓  37 [chromium] › tests/native-runtime.spec.ts:101:1 › completed login cannot clear a later source edit, and write admission locks the source (2.5s)
+  ✓  41 [chromium] › tests/native-runtime.spec.ts:140:1 › runtime account revisions reach an open confirmation without changing its candidate (1.2s)
+  ✓  42 [chromium] › tests/native-runtime.spec.ts:150:1 › runtime observations preserve newer candidates and edited sources (1.0s)
+  ✓  43 [chromium] › tests/supply.spec.ts:42:1 › two verified platform cards show real reasons and explicit pause/resume semantics at 860x600 (1.1s)
+  ✓  44 [chromium] › tests/supply.spec.ts:55:1 › an uncertain write stops polling and only explicit GET rechecks, without flashing cached success (1.1s)
+  ✓  45 [chromium] › tests/supply.spec.ts:67:1 › serial polling waits ten seconds after successful completion, never overlaps slow reads, and stops on failure (762ms)
+  ✓  46 [chromium] › tests/supply.spec.ts:75:1 › expired snapshots never show a current successful state or enable writes (644ms)
+  ✓  47 [chromium] › tests/supply.spec.ts:79:1 › a running read hides previous success and becomes expired after thirty seconds (753ms)
+  ✓  50 [chromium] › tests/supply.spec.ts:100:1 › unverified devices never issue supply IPC (876ms)
+  ✓  49 [chromium] › tests/supply.spec.ts:92:1 › English platform controls and reason copy are complete at minimum width (1.2s)
+  ✓  48 [chromium] › tests/supply.spec.ts:84:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance (1.2s)
+  ✓  51 [chromium] › tests/supply.spec.ts:104:1 › an old in-flight successful read cannot overwrite replacement-instance failure or continue its next platform (959ms)
+  ✓  52 [chromium] › tests/supply.spec.ts:114:1 › a delayed expiry timer cannot authorize a write from a stale rendered button (899ms)
+  ✓  53 [chromium] › tests/supply.spec.ts:121:1 › manager replacement invalidates device data while preserving this run’s language and navigation (715ms)
+
+  53 passed (15.1s)

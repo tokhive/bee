@@ -1,0 +1,54 @@
+{
+  "product": "Bee",
+  "app_version": "0.1.0",
+  "bee_version": "dev",
+  "os": "macos",
+  "arch": "aarch64",
+  "report": {
+    "id": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "instance": "cccccccccccccccccccccccccccccccc",
+    "run_id": null,
+    "network_revision": 0,
+    "started_at": "2026-10-28T00:00:00Z",
+    "finished_at": "2026-10-28T00:00:01Z",
+    "state": "completed",
+    "checks": []
+  },
+  "logs": [
+    {
+      "time": "2026-10-28T00:00:00Z",
+      "level": "info",
+      "module": "runtime",
+      "platform": null,
+      "code": "runtime_stopped",
+      "evidence": {
+        "connection": "disconnected",
+        "local": "stopped"
+      }
+    },
+    {
+      "time": "2026-10-28T00:00:00Z",
+      "level": "info",
+      "module": "runtime",
+      "platform": null,
+      "code": "runtime_stopped",
+      "evidence": {
+        "connection": "disconnected",
+        "local": "stopped"
+      }
+    },
+    {
+      "time": "2026-10-28T00:00:00Z",
+      "level": "info",
+      "module": "runtime",
+      "platform": null,
+      "code": "runtime_stopped",
+      "evidence": {
+        "connection": "disconnected",
+        "local": "stopped"
+      }
+    }
+  ],
+  "truncated": false,
+  "truncated_sections": []
+}

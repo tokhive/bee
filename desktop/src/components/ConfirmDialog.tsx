@@ -8,6 +8,7 @@ export function ConfirmDialog({
   confirmLabel,
   busy,
   onConfirm,
+  destructive = false,
 }: {
   trigger: ReactNode;
   /** Already translated by the caller; interpolated business values stay literal. */
@@ -16,6 +17,7 @@ export function ConfirmDialog({
   confirmLabel: string;
   busy: boolean;
   onConfirm: () => Promise<void>;
+  destructive?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return (
@@ -36,7 +38,7 @@ export function ConfirmDialog({
               <button disabled={busy}>{t("取消")}</button>
             </Dialog.Close>
             <button
-              className="primary"
+              className={destructive ? 'dialog-confirm-danger' : 'primary'}
               disabled={busy}
               onClick={() => {
                 void onConfirm().then(() => setOpen(false));

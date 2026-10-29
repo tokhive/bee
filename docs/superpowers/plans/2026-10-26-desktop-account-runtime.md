@@ -1,6 +1,6 @@
 # Bee 桌面：AI 账号接入与贡献运行实施计划（S1）
 
-> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5／T6／T7 已通过自动验证，继续 S1-T8 全量回归与原生包验证。
+> **执行状态（2026-10-27）：** 用户最新调整为三个会话分工：本会话仅执行 S1，继续使用 `executing-plans`；用户另开会话实施 S2、S3。复选框只记录有验证证据的完成项。S1-T1／T2／T3 已验证；T4 代码及自动验证完成，真实登录验收待授权测试环境；S1-T5／T6／T7 已通过自动验证；S1-T8 全量回归和本机隔离包验证通过。两平台真实官方登录及真实 Hive 受控贡献仍未验收，不标完整完成。详见[交付证据](../../desktop/account-runtime-validation.md)。
 
 **目标：** 用户能从已有登录或官方登录接入两平台，真正贡献、维护授权、换号和重启恢复，完整交付 R1–R6。
 
@@ -21,7 +21,7 @@
 
 ## 三份计划的执行分工（2026-10-27 更新）
 
-用户最新指示覆盖此前三份 spec 串行安排：当前会话仅实施 S1；用户另开会话并行实施 [S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md) 和 [S3 安装更新](2026-10-26-desktop-release-update.md)。各会话使用独立分支及工作树，从包含 S1 已提交基础的 `feat/bee-desktop-p0` 分支建立，不能同时修改当前工作树。2026-10-27 此次调整时已提交基础为 `6dd2f4b`；S1-T5 尚未提交，不得假定新工作树已经包含它。
+用户最新指示覆盖此前三份 spec 串行安排：当前会话仅实施 S1；用户另开会话并行实施 [S2 诊断与体验](2026-10-26-desktop-diagnostics-experience.md) 和 [S3 安装更新](2026-10-26-desktop-release-update.md)。各会话使用独立分支及工作树，从包含 S1 已提交基础的 `feat/bee-desktop-p0` 分支建立，不能同时修改当前工作树。2026-10-27 此次调整时已提交基础为 `6dd2f4b`；当时 S1-T5 尚未提交，不得假定新工作树已经包含它。当前可集成的已提交基础已更新到 `636daa4`；T6 退出交接在 `73f3c54`，T7 原生页面在 `b4f9d8c`，账号运行快照修订同步修复在 `636daa4`。
 
 每份计划内部继续按 Task 依赖实施。S2 可先做偏好、OS 适配、诊断和独立页面；S3 可先做发布构建、更新检查／下载／验签。S1 负责真实运行、账号状态、恢复与 `prepare_owned_exit` 的唯一实现；S2/S3 消费这些接口，不自行复制状态机。S2-T4／S3-T3 需同步 S1-T6 后集成；S2-T5 需 S1-T7，S3-T4 需 S2-T5。共用注册点、`NativeApp.tsx`、生命周期、依赖锁文件及协议文档在合并时逐项整合，不能覆盖其他会话实现；完整验收须使用整合后的代码。
 
@@ -156,10 +156,14 @@ T7 验证：20项 Node 账号／设备／供给测试、29项完整浏览器用�
 
 **依赖：** T1–T7。**文件：** 修改 `desktop/scripts/smoke-accounts.mjs`、`docs/desktop/ai-accounts.md`、`docs/desktop/bridge-protocol.md`；新增 `docs/desktop/account-runtime-validation.md`；所发现缺陷在所属Task路径修复，不以文档标记代替代码。
 
-- [ ] 跑 `go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:device`、`npm --prefix desktop run build`，只补受新变更影响的验证，不重复无关历史包。
+- [x] 跑 `go test ./...`、`go vet ./...`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml`、`npm --prefix desktop run test:bridge`、`npm --prefix desktop run test:device`、`npm --prefix desktop run build`，只补受新变更影响的验证，不重复无关历史包。
 - [ ] 用 `node desktop/scripts/build-bee.mjs` 构建当前主机内置Bee，按既有原生构建脚本启动；至少一套可用原生环境完成两平台登录/接入、真实Hive握手及受控贡献、暂停/恢复、换号、断网、退出/重启。真实账号/流量需已有明确授权；缺失时准备完整测试步骤，准确列为未完成验收，继续其他任务。
-- [ ] 在证据中记录源码、App/Bee版本、OS/架构、官方客户端版本、操作和结果；检验CLI配置及未授权官方来源无变动、无秘密进入前端/日志。当前主机通过不替代S3八组合。
-- [ ] 完成 `verification-before-completion`、`consistency-check`、`post-verification-check`；只有每项有证据才勾选，真实环境阻塞不能标“完整完成”。提交文档：`docs(desktop): record account runtime acceptance`。
+- [x] 在证据中记录源码、App/Bee版本、OS/架构、官方客户端版本、操作和结果；检验CLI配置及未授权官方来源无变动、无秘密进入前端/日志。当前主机通过不替代S3八组合。
+- [x] 完成 `verification-before-completion`、`consistency-check`、`post-verification-check`；只有每项有证据才勾选，真实环境阻塞不能标“完整完成”。提交文档：`docs(desktop): record account runtime acceptance`。
+
+最终整体审阅补修：运行快照中的较新账号修订现在同步到账号模型，打开确认弹窗期间的后台更新不再让提交长期使用旧修订；旧快照、来源编辑及未知写门禁仍受保护。失败回归（期望5／实际3）、完整33项浏览器通过及独立专项复核记录在验收证据中。
+
+T8 自动与隔离验证：Go 7包／vet、Rust 68项及打包后2项签名包专项、10项桥接、最终20项 Node／33项浏览器、13项 typed客户端、typecheck／构建均通过。当前 `636daa4` 已构建 macOS arm64 ad-hoc 开发包；包内18项能力、首次恢复保持停止、完整停止回执、子进程回收及 CLI／官方来源 canary 未变通过。真实官方登录及实际 Hive／上游流量仍无明确授权测试环境，保留 T4 和 T8 两项真实验收复选框；可复现步骤已记录，不把缺口转成 S2 待办。
 
 | Spec验收 | 实施／证明 |
 | --- | --- |

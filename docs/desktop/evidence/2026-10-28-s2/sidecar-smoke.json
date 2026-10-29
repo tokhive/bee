@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "scope": "real sidecar read-only protocol; not native OS acceptance",
+  "started_at": "2026-10-28T07:08:39.853Z",
+  "host": {
+    "os": "darwin",
+    "arch": "arm64",
+    "node": "v24.22.1"
+  },
+  "binary_sha256": "b64e8f7309e0149b9732e34cd64d085bdd94f622e506f4a262baba69cb8d7cbd",
+  "configuration": "no configuration-dependent command; empty working directory; HOME unchanged",
+  "checks": [
+    {
+      "check": "complete capabilities and owned instance",
+      "outcome": "pass"
+    },
+    {
+      "check": "TypeScript defaults/public account snapshots; no source or Hive read",
+      "outcome": "pass"
+    },
+    {
+      "check": "S1 runtime snapshot starts stopped without restore/start",
+      "outcome": "pass"
+    },
+    {
+      "check": "in-memory effective network policy; no connectivity request",
+      "outcome": "pass"
+    },
+    {
+      "check": "diagnostics_start strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "diagnostics_snapshot strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "diagnostics_cancel strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "network_test strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "network_test strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "network_test strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "network_test strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "notification_snapshot strict parameters",
+      "outcome": "pass"
+    },
+    {
+      "check": "unknown diagnostic report fails without opening a device session",
+      "outcome": "pass"
+    },
+    {
+      "check": "configuration-dependent diagnostics/notification snapshots",
+      "outcome": "skipped",
+      "reason": "darwin UserConfigDir cannot be isolated by XDG_CONFIG_HOME/APPDATA; HOME redirection forbidden"
+    },
+    {
+      "check": "healthy ping after rejected requests; owned child shutdown/wait",
+      "outcome": "pass"
+    }
+  ],
+  "not_covered": [
+    "paired doctor and authenticated Hive/official requests",
+    "real HTTP CONNECT or environment-proxy routing",
+    "Rust log rotation/export and actual download receipt",
+    "preferences persistence and system language/theme",
+    "native notification permission, delivery and click",
+    "native autostart registration, close/reopen and application exit"
+  ],
+  "stderr_bytes": 0,
+  "metadata": {
+    "bee_version": "dev+bdfbb846d695-dirty",
+    "os": "darwin",
+    "arch": "arm64",
+    "capabilities": [
+      "ping",
+      "shutdown",
+      "device_status",
+      "device_begin",
+      "supply_status",
+      "supply_set_paused",
+      "account_defaults",
+      "account_detect",
+      "account_snapshot",
+      "account_action",
+      "runtime_snapshot",
+      "runtime_start",
+      "runtime_stop",
+      "runtime_configure_network",
+      "runtime_restore",
+      "authorize_start",
+      "authorize_status",
+      "authorize_cancel",
+      "diagnostics_start",
+      "diagnostics_snapshot",
+      "diagnostics_cancel",
+      "network_status",
+      "network_test",
+      "notification_snapshot"
+    ]
+  },
+  "child_exit": {
+    "code": 0,
+    "signal": null
+  },
+  "finished_at": "2026-10-28T07:08:40.943Z"
+}

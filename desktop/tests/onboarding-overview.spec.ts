@@ -22,9 +22,9 @@ test('首次接入可中断继续，只接入所选平台，绑定检测不会�
   expect(requests).toEqual([]);
 });
 
-test('未登录能修改 Hive/代理/外观，账号与收益受接入门槛保护', async ({ page }) => {
+test('未登录能修改 Hive/代理/外观，账号受接入门槛保护', async ({ page }) => {
   await page.goto('/?scene=onboarding');
-  for (const name of ['AI 账号', '收益']) {
+  for (const name of ['AI 账号']) {
     await page.getByRole('navigation').getByRole('button', { name, exact: true }).click();
     await expect(page.getByText('请先完成 Hive 登录与设备绑定')).toBeVisible();
     await expect(page.getByText('128.56', { exact: true })).toHaveCount(0);

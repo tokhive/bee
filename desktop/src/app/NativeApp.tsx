@@ -1,5 +1,5 @@
 import {useRuntime} from '../features/lifecycle/useRuntime';
-import {NativeRuntimeControls} from '../features/lifecycle/NativeRuntimeControls';
+import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
 import type {RuntimeFactory} from '../system/runtime';
 import type {AuthorizeFactory} from '../system/authorize';
 import {useSupply} from '../features/supply/useSupply';
@@ -9,9 +9,7 @@ import type {AccountFactory} from '../system/accounts';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppShell } from '../components/AppShell';
 import { StatusView } from '../components/StatusView';
-import { SupplyPanel } from '../features/supply/SupplyPanel';
 import type { SupplyFactory } from '../system/supply';
-import { DevicePairingPage } from '../features/device/DevicePairingPage';
 import type { DeviceClient, DeviceView } from '../system/device';
 import type { BridgeStatus, SystemBridge } from '../system/bridge';
 import type { Page, Preferences } from '../client/types';
@@ -48,16 +46,15 @@ function NativeWorkspace({client,supply,accountFactory,runtimeFactory,authorizeF
  const runtimeClient=useMemo(()=>native.metadata?runtimeFactory(native.metadata.instance):undefined,[runtimeFactory,native.metadata?.instance]);
  const authorizeClient=useMemo(()=>native.metadata?authorizeFactory(native.metadata.instance):undefined,[authorizeFactory,native.metadata?.instance]);
  const runtime=useRuntime(runtimeClient,native.state==='ready');
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view);
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts');
  const sharedSupply=useSupply(supplyClient,native.state==='ready'&&(page==='overview'||page==='accounts'),busy||!!error,Object.values(accounts.views).filter(s=>s.hive.state==='confirmation_required').map(s=>s.platform));
- return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode>
+ return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode deviceName={!error?view?.identity?.name:undefined} hive={view?.hive} connected={!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'}>
   {native.state!=='ready'?<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>
    {native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}
   </StatusView>:<>
-   {page==='overview'&&<><DevicePairingPage view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/><NativeRuntimeControls runtime={runtime}/>{sharedSupply&&<SupplyPanel supply={sharedSupply}/>}</>}
+   {page==='overview'&&<NativeOverviewPage accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy} error={error} begin={(hive,name)=>void run(()=>client.begin(hive,name))} refresh={()=>void refresh()} open={()=>void run(()=>client.open())}/>}
    {page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error}/>}
-   {page==='earnings'&&<StatusView kind="unavailable" title={t('收益')}>{t('真实收益尚未接通。')}</StatusView>}
-   {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{runtime.view?.local??t('未知')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div></section>}
+   {page==='diagnostics'&&<section className="settings-list"><div><strong>{t('原生管理进程')}</strong><span>{native.state}</span></div><div><strong>{t('版本')}</strong><span>{native.metadata?.bee_version}</span></div><div><strong>{t('真实贡献')}</strong><span>{runtime.view?.local??t('未知')}</span></div><div><strong>{t('设备核对')}</strong><span>{error||view?.state||t('未知')}</span></div><details className="native-diagnostic-evidence"><summary>{t('核对诊断')}</summary><pre>{JSON.stringify({runtime:runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></section>}
    {page==='settings'&&<div className="settings-page"><section className="settings-form">
     <label>{t('语言')}<select aria-label={t('语言')} value={language} onChange={e=>updateUi({language:e.target.value as Preferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></label>
     <label>{t('外观')}<select aria-label={t('外观')} value={theme} onChange={e=>updateUi({theme:e.target.value as Preferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></label>

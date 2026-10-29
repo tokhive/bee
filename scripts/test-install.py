@@ -814,6 +814,47 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
         self.assertEqual(self.unit.read_text(), first)
         self.assertEqual(self.commands().count(["systemctl", "enable", "tokhive-bee"]), 2)
 
+    def local_bee(self, name="local-bee"):
+        path = self.root / name
+        path.write_text("#!/bin/sh\nprintf 'bee local-binary\\n'\n")
+        path.chmod(0o644)
+        return path
+
+    def test_bee_binary_installs_local_file_without_download(self):
+        local = self.local_bee()
+        (self.root / "archive.tar.gz").unlink()
+        (self.root / "checksums.txt").unlink()
+        result = self.run_install(BEE_BINARY=str(local))
+        self.assert_success(result)
+        installed = self.home / ".local/bin/bee"
+        self.assertEqual(installed.read_text(), local.read_text())
+        self.assertIn("bee local-binary", result.stdout)
+        self.assertNotIn("bee version test", result.stdout)
+        content = self.unit.read_text()
+        self.assertIn(f'"{installed}" run', content)
+        self.assertNotIn("BEE_BINARY", content)
+        self.assertNotIn(str(local), content)
+
+    def test_bee_binary_rejects_symlink(self):
+        local = self.local_bee()
+        link = self.root / "linked-bee"
+        link.symlink_to(local)
+        result = self.run_install(BEE_BINARY=str(link))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(str(link), result.stderr)
+        self.assertIn("symbolic link", result.stderr)
+        self.assertFalse((self.home / ".local/bin/bee").exists())
+        self.assertFalse(self.unit.exists())
+
+    def test_bee_binary_rejects_missing_file(self):
+        missing = self.root / "missing-bee"
+        result = self.run_install(BEE_BINARY=str(missing))
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(str(missing), result.stderr)
+        self.assertIn("not a regular file", result.stderr)
+        self.assertNotIn("symbolic link", result.stderr)
+        self.assertFalse((self.home / ".local/bin/bee").exists())
+
     def test_binary_only_installation_does_not_require_systemd_or_sudo(self):
         result = self.run_install(BEE_INSTALL_SERVICE="0", INSTALL_TEST_SYSTEMD_FAIL="1", INSTALL_TEST_SUDO_FAIL="1")
         self.assert_success(result)

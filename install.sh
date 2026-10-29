@@ -4,8 +4,9 @@
 #   curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
 #
 # BEE_VERSION=v0.1.0 picks a release; BEE_INSTALL_DIR (default ~/.local/bin)
-# picks where bee goes. Linux also enables a systemd service for the installing
-# user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
+# picks where bee goes. BEE_BINARY=/path/to/bee installs that regular file
+# instead of downloading a release. Linux also enables a systemd service for
+# the installing user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
 # Set BEE_INSTALL_INTERACTIVE=0 to skip the setup/start prompts.
 # Installation uses English by default; set BEE_LANG=zh for Chinese.
 set -eu
@@ -412,31 +413,43 @@ if [ "$install_service" = 1 ]; then
 	fi
 fi
 
-if [ -n "${BEE_VERSION:-}" ]; then
-	base="https://github.com/$repository/releases/download/$BEE_VERSION"
-else
-	base="https://github.com/$repository/releases/latest/download"
-fi
-archive="bee_${os}_${arch}.tar.gz"
-
-if command -v sha256sum >/dev/null 2>&1; then
-	sha256() { sha256sum "$1" | cut -d' ' -f1; }
-elif command -v shasum >/dev/null 2>&1; then
-	sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
-else
-	fail "$(message 'need sha256sum or shasum to verify the download' '未找到 sha256sum 或 shasum，无法校验下载文件')"
-fi
-
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-line wait "$(message 'Downloading %s' '正在下载 %s' "$base/$archive")"
-curl -fsSL -o "$work/$archive" "$base/$archive" || fail "$(message 'download failed: %s' '下载失败：%s' "$base/$archive")"
-curl -fsSL -o "$work/checksums.txt" "$base/checksums.txt" || fail "$(message 'checksum download failed: %s' '校验清单下载失败：%s' "$base/checksums.txt")"
-expected=$(awk -v name="$archive" '$2 == name { print $1 }' "$work/checksums.txt")
-[ -n "$expected" ] || fail "$(message '%s is not listed in checksums.txt' 'checksums.txt 中未列出 %s' "$archive")"
-[ "$(sha256 "$work/$archive")" = "$expected" ] || fail "$(message 'checksum mismatch for %s' '%s 的校验和不匹配' "$archive")"
+if [ -n "${BEE_BINARY:-}" ]; then
+	if [ -L "$BEE_BINARY" ]; then
+		fail "$(message 'BEE_BINARY=%s is a symbolic link; a regular file is required' 'BEE_BINARY=%s 是符号链接；需要普通文件' "$BEE_BINARY")"
+	fi
+	if [ ! -f "$BEE_BINARY" ]; then
+		fail "$(message 'BEE_BINARY=%s is not a regular file' 'BEE_BINARY=%s 不是普通文件' "$BEE_BINARY")"
+	fi
+	line wait "$(message 'Using local binary %s' '使用本地程序 %s' "$BEE_BINARY")"
+	cp "$BEE_BINARY" "$work/bee" || fail "$(message 'could not copy BEE_BINARY=%s' '无法复制 BEE_BINARY=%s' "$BEE_BINARY")"
+	chmod 755 "$work/bee"
+else
+	if [ -n "${BEE_VERSION:-}" ]; then
+		base="https://github.com/$repository/releases/download/$BEE_VERSION"
+	else
+		base="https://github.com/$repository/releases/latest/download"
+	fi
+	archive="bee_${os}_${arch}.tar.gz"
 
-tar -xzf "$work/$archive" -C "$work" bee
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256() { sha256sum "$1" | cut -d' ' -f1; }
+	elif command -v shasum >/dev/null 2>&1; then
+		sha256() { shasum -a 256 "$1" | cut -d' ' -f1; }
+	else
+		fail "$(message 'need sha256sum or shasum to verify the download' '未找到 sha256sum 或 shasum，无法校验下载文件')"
+	fi
+
+	line wait "$(message 'Downloading %s' '正在下载 %s' "$base/$archive")"
+	curl -fsSL -o "$work/$archive" "$base/$archive" || fail "$(message 'download failed: %s' '下载失败：%s' "$base/$archive")"
+	curl -fsSL -o "$work/checksums.txt" "$base/checksums.txt" || fail "$(message 'checksum download failed: %s' '校验清单下载失败：%s' "$base/checksums.txt")"
+	expected=$(awk -v name="$archive" '$2 == name { print $1 }' "$work/checksums.txt")
+	[ -n "$expected" ] || fail "$(message '%s is not listed in checksums.txt' 'checksums.txt 中未列出 %s' "$archive")"
+	[ "$(sha256 "$work/$archive")" = "$expected" ] || fail "$(message 'checksum mismatch for %s' '%s 的校验和不匹配' "$archive")"
+
+	tar -xzf "$work/$archive" -C "$work" bee
+fi
 mkdir -p "$directory"
 # Replace through a rename, so a running bee keeps its old file.
 cp "$work/bee" "$directory/.bee.new"

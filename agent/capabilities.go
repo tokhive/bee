@@ -42,6 +42,29 @@ type capabilitySource struct {
 	// failure is why the last observation came out unknown, empty when it
 	// did not; logged is the failure the operator was last told about.
 	failure, logged string
+	// stalePlan is the revision of the authorization whose plan the usage
+	// report contradicted: the plan changed upstream after the token was
+	// issued. planRefreshRevision and planRefreshAt record the last time Bee
+	// asked Hive to refresh for that, so one stale token asks once, and a
+	// refresh that still disagrees cannot turn into a refresh loop.
+	stalePlan           string
+	planRefreshRevision string
+	planRefreshAt       time.Time
+}
+
+// planRefreshInterval bounds how often a plan disagreement asks for a refresh.
+const planRefreshInterval = time.Hour
+
+// wantsPlanRefresh reports whether the authorization with revision should be
+// refreshed because its plan is stale and Bee has not asked for it yet.
+func (s *capabilitySource) wantsPlanRefresh(revision string, now time.Time) bool {
+	return s != nil && s.stalePlan != "" && s.stalePlan == revision && s.planRefreshRevision != revision &&
+		(s.planRefreshAt.IsZero() || !now.Before(s.planRefreshAt.Add(planRefreshInterval)))
+}
+
+// askedPlanRefresh records that Hive took a refresh request for revision.
+func (s *capabilitySource) askedPlanRefresh(revision string, now time.Time) {
+	s.planRefreshRevision, s.planRefreshAt = revision, now
 }
 
 // reusable avoids extra upstream queries on reconnect while the observation
@@ -315,7 +338,7 @@ func wallNow() time.Time { return time.Now().Round(0) }
 func (s *capabilitySource) observe(ctx context.Context, credential codexCredential, sequence int64) beewire.Capabilities {
 	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
-	s.failure = ""
+	s.failure, s.stalePlan = "", ""
 	fail := func(reason string) beewire.Capabilities {
 		s.failure = reason
 		return unknown
@@ -405,6 +428,11 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 	}
 	single := beewire.OpenAISingleWindow(credential.Plan)
 	if usage.Plan != "" && usage.Plan != credential.Plan || single != 0 && usage.Plan != credential.Plan {
+		if usage.Plan != "" {
+			// The account changed plan after this token was issued; a
+			// refreshed token carries the current one.
+			s.stalePlan = credential.metadata().CredentialRevision
+		}
 		return fail(fmt.Sprintf("usage plan %q does not match authorization plan %q", usage.Plan, credential.Plan))
 	}
 	excluded, known := excludedQuotaModels(usage.Additional)

@@ -94,6 +94,9 @@ type MaintenanceTask struct {
 	Key                tee.InboxPublic `json:"key"`
 }
 
+// MaintenanceRequest is a Bee's observation of its authorization source.
+// RefreshRequired asks Hive to refresh now: Claude's profile rejected the
+// token, or OpenAI's usage report names a plan the token does not.
 type MaintenanceRequest struct {
 	RefreshSupported   bool               `json:"refresh_supported,omitempty"`
 	RefreshRequired    bool               `json:"refresh_required,omitempty"`

@@ -21,6 +21,8 @@ type openaiControlFixture struct {
 	models, usage  int
 	plan, excluded string
 	fail           bool
+	// rejected answers usage with the 401 a token upstream no longer honours.
+	rejected bool
 	// primary overrides the length of the primary window when set.
 	primary int
 	// extra are further top-level usage fields.
@@ -45,6 +47,9 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	f.usage++
 	if f.fail {
 		return claudeProfileResponse(503, `{}`), nil
+	}
+	if f.rejected {
+		return claudeProfileResponse(401, `{"error":{"code":"token_expired"}}`), nil
 	}
 	window := func(seconds int) map[string]any {
 		return map[string]any{"limit_window_seconds": seconds, "used_percent": 20, "reset_after_seconds": 3600, "reset_at": time.Now().Add(time.Hour).Unix()}
@@ -478,29 +483,45 @@ func TestOpenAIStalePlanAsksForOneRefresh(t *testing.T) {
 	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
 	revision := c.metadata().CredentialRevision
 	s := &capabilitySource{transport: &openaiControlFixture{plan: "free"}}
-	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.stalePlan != revision {
-		t.Fatalf("stale plan not noticed: status=%s stale=%q", got.Status, s.stalePlan)
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.staleToken != revision {
+		t.Fatalf("stale plan not noticed: status=%s stale=%q", got.Status, s.staleToken)
 	}
 	now := time.Now()
-	if !s.wantsPlanRefresh(revision, now) || s.wantsPlanRefresh("other", now) {
+	if !s.wantsRefresh(revision, now) || s.wantsRefresh("other", now) {
 		t.Fatal("refresh request does not follow the stale token")
 	}
-	s.askedPlanRefresh(revision, now)
-	if s.wantsPlanRefresh(revision, now.Add(2*planRefreshInterval)) {
+	s.askedRefresh(revision, now)
+	if s.wantsRefresh(revision, now.Add(2*staleRefreshInterval)) {
 		t.Fatal("the same token asked twice")
 	}
 	// The refreshed token still disagrees: it waits out the interval.
-	s.stalePlan = "refreshed"
-	if s.wantsPlanRefresh("refreshed", now.Add(time.Minute)) || !s.wantsPlanRefresh("refreshed", now.Add(planRefreshInterval)) {
+	s.staleToken = "refreshed"
+	if s.wantsRefresh("refreshed", now.Add(time.Minute)) || !s.wantsRefresh("refreshed", now.Add(staleRefreshInterval)) {
 		t.Fatal("a token that stays stale is not limited to one request an hour")
 	}
 	// Once the plans agree, nothing is asked.
 	s.transport = &openaiControlFixture{plan: "pro"}
-	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || s.stalePlan != "" || s.wantsPlanRefresh(revision, now.Add(3*planRefreshInterval)) {
-		t.Fatalf("plans agree but a refresh is still wanted: status=%s stale=%q", got.Status, s.stalePlan)
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || s.staleToken != "" || s.wantsRefresh(revision, now.Add(3*staleRefreshInterval)) {
+		t.Fatalf("plans agree but a refresh is still wanted: status=%s stale=%q", got.Status, s.staleToken)
 	}
 	var none *capabilitySource
-	if none.wantsPlanRefresh(revision, now) {
+	if none.wantsRefresh(revision, now) {
 		t.Fatal("a Bee without capability queries asked for a refresh")
+	}
+}
+
+// A plan change can also revoke the token outright: usage answers 401
+// token_expired long before the token's own expiry, and only a refresh helps.
+func TestOpenAIRejectedTokenAsksForRefresh(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "free", ExpiresAt: time.Now().Add(time.Hour)}
+	revision := c.metadata().CredentialRevision
+	s := &capabilitySource{transport: &openaiControlFixture{plan: "free", rejected: true}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || !s.wantsRefresh(revision, time.Now()) {
+		t.Fatalf("rejected token not marked stale: status=%s stale=%q", got.Status, s.staleToken)
+	}
+	// Any other failure is upstream's, and a refresh would not fix it.
+	s = &capabilitySource{transport: &openaiControlFixture{plan: "free", fail: true}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.staleToken != "" {
+		t.Fatalf("a 503 asked for a refresh: status=%s stale=%q", got.Status, s.staleToken)
 	}
 }

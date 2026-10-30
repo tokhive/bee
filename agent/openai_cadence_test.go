@@ -471,3 +471,36 @@ func TestNewerVersion(t *testing.T) {
 		t.Fatal("a release is not newer than itself")
 	}
 }
+
+// A plan changed upstream leaves the token claiming the old one; Bee asks Hive
+// for one refresh of that token, and never more than once an hour.
+func TestOpenAIStalePlanAsksForOneRefresh(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	revision := c.metadata().CredentialRevision
+	s := &capabilitySource{transport: &openaiControlFixture{plan: "free"}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.stalePlan != revision {
+		t.Fatalf("stale plan not noticed: status=%s stale=%q", got.Status, s.stalePlan)
+	}
+	now := time.Now()
+	if !s.wantsPlanRefresh(revision, now) || s.wantsPlanRefresh("other", now) {
+		t.Fatal("refresh request does not follow the stale token")
+	}
+	s.askedPlanRefresh(revision, now)
+	if s.wantsPlanRefresh(revision, now.Add(2*planRefreshInterval)) {
+		t.Fatal("the same token asked twice")
+	}
+	// The refreshed token still disagrees: it waits out the interval.
+	s.stalePlan = "refreshed"
+	if s.wantsPlanRefresh("refreshed", now.Add(time.Minute)) || !s.wantsPlanRefresh("refreshed", now.Add(planRefreshInterval)) {
+		t.Fatal("a token that stays stale is not limited to one request an hour")
+	}
+	// Once the plans agree, nothing is asked.
+	s.transport = &openaiControlFixture{plan: "pro"}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || s.stalePlan != "" || s.wantsPlanRefresh(revision, now.Add(3*planRefreshInterval)) {
+		t.Fatalf("plans agree but a refresh is still wanted: status=%s stale=%q", got.Status, s.stalePlan)
+	}
+	var none *capabilitySource
+	if none.wantsPlanRefresh(revision, now) {
+		t.Fatal("a Bee without capability queries asked for a refresh")
+	}
+}

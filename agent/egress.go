@@ -314,10 +314,16 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		return nil
 	}
 	var result beewire.MaintenanceResponse
+	revision := credential.metadata().CredentialRevision
+	stalePlan := cfg.Capabilities.wantsPlanRefresh(revision, time.Now())
 	err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential,
-		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision}, &result)
+		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: stalePlan}, &result)
 	if err != nil {
 		return err
+	}
+	if stalePlan {
+		cfg.Capabilities.askedPlanRefresh(revision, time.Now())
+		slog.Info("openai plan changed; authorization refresh requested", "module", "maintenance")
 	}
 	if result.Account.Status == "confirmation_required" {
 		cfg.accountMessage(out, "confirmation_required", "different OpenAI account detected; new jobs paused; run bee account-status --platform openai and explicitly confirm with bee confirm-account")

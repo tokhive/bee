@@ -52,6 +52,9 @@ type egressConfig struct {
 	metadataLease           string
 	metadataModels          []string
 	capabilityReportPending bool
+	// announceReady is a capability recovery whose readiness line waits for
+	// Hive to accept the report.
+	announceReady bool
 	// capabilityWanted and claudeCapabilityWanted are Hive asking for a
 	// capability report now.
 	capabilityWanted       atomic.Bool
@@ -373,6 +376,10 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		cfg.capabilityReportPending = true
 		if err := cfg.synchronizeCapabilities(ctx, state, lease, force); err != nil {
 			return err
+		}
+		if cfg.announceReady {
+			cfg.announceReady = false
+			go reportReadiness(ctx, state, "openai", out)
 		}
 	}
 	// A cycle that handled a task leaves Hive in a state worth confirming at

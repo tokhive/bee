@@ -260,10 +260,13 @@ func capabilityTransportFailure(err error) string {
 
 // logCapabilityFailure tells the operator once why a platform's capabilities
 // are unknown, and once when they recover. Hive only ever sees "unknown"; the
-// reason exists nowhere but here.
-func logCapabilityFailure(platform string, logged *string, failure string) {
+// reason exists nowhere but here. It reports whether this observation is the
+// recovery, so the caller can announce readiness once Hive has the report: a
+// terminal shows only warnings from this log, and the readiness line printed
+// after the first synchronization would otherwise be the last word.
+func logCapabilityFailure(platform string, logged *string, failure string) bool {
 	if failure == *logged {
-		return
+		return false
 	}
 	if failure != "" {
 		slog.Warn("capability query unknown", "module", "capabilities", "platform", platform, "reason", failure)
@@ -271,6 +274,7 @@ func logCapabilityFailure(platform string, logged *string, failure string) {
 		slog.Info("capability query recovered", "module", "capabilities", "platform", platform)
 	}
 	*logged = failure
+	return failure == ""
 }
 
 type usageWindow struct {
@@ -506,7 +510,9 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 	cfg.capabilitySequence++
 	cfg.Capabilities.home = cfg.Codex.Home
 	snapshot := cfg.Capabilities.observe(ctx, credential, cfg.capabilitySequence)
-	logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure)
+	if logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure) {
+		cfg.announceReady = true
+	}
 	current, err := cfg.Codex.read(ctx)
 	if err != nil || !current.sameAuthorization(credential) {
 		// Do not publish a query from a source that changed while the requests ran.

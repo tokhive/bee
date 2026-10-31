@@ -525,3 +525,21 @@ func TestOpenAIRejectedTokenAsksForRefresh(t *testing.T) {
 		t.Fatalf("a 503 asked for a refresh: status=%s stale=%q", got.Status, s.staleToken)
 	}
 }
+
+// Only the observation that ends an unknown spell counts as a recovery, so
+// readiness is announced once and not on every healthy report.
+func TestCapabilityRecoveryIsReportedOnce(t *testing.T) {
+	logged := ""
+	if logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("a healthy start is not a recovery")
+	}
+	if logCapabilityFailure("openai", &logged, "stale plan") || logCapabilityFailure("openai", &logged, "other reason") {
+		t.Fatal("a failure was reported as a recovery")
+	}
+	if !logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("the recovery was not reported")
+	}
+	if logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("a healthy report after the recovery was reported again")
+	}
+}

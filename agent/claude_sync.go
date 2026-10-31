@@ -32,6 +32,9 @@ type claudeSource struct {
 	capabilityRevision    string
 	lastCapabilitySync    time.Time
 	lastCapabilityAttempt time.Time
+	// announceReady is a capability recovery whose readiness line waits for
+	// Hive to accept the report.
+	announceReady bool
 	// capabilityWanted is Hive asking for a Claude capability report now; it
 	// lives on the egress configuration, which control streams reach.
 	capabilityWanted   *atomic.Bool
@@ -234,7 +237,9 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		source.capabilitySequence++
 		snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, source.capabilitySequence, source.transport)
 		source.capabilities.announce(out)
-		logCapabilityFailure("claude", &source.capabilities.logged, source.capabilities.failure)
+		if logCapabilityFailure("claude", &source.capabilities.logged, source.capabilities.failure) {
+			source.announceReady = true
+		}
 		if errors.Is(err, errClaudeProfileRejected) {
 			source.verifiedAt = time.Time{}
 			return stop(err)
@@ -261,6 +266,10 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		source.metadataReportedAt = snapshot.MetadataObservedAt
 		source.metadataGeneration, source.metadataLease = result.Account.Generation, lease
 		source.capabilityRevision = auth.CredentialRevision
+		if source.announceReady {
+			source.announceReady = false
+			go reportReadiness(ctx, state, "claude", out)
+		}
 	}
 	// A cycle that handled a task leaves Hive in a state worth confirming at
 	// once, so only a quiet one may idle, and only until the observation needs

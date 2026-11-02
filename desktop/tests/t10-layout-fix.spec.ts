@@ -72,18 +72,29 @@ for(const [id,code,check,message]of [
  ['S05-config-invalid','DEVICE_CONTEXT_INVALID','device_context','configuration decode failed: invalid JSON at byte=19; file retained=true'],
  ['S05-protocol-mismatch','VERSION_MISMATCH','bridge_hello','reply protocol=2; required=1'],
  ['S05-integrity-blocked','BUNDLED_BEE_INVALID','sidecar_verify','bundled Bee SHA256 mismatch at /isolated/qa/bee: actual='+ 'a'.repeat(64)+'; required='+ 'b'.repeat(64)]
-])test(id,async({page},info)=>{
- await install(page);await page.addInitScript(({id,code,check,message})=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+])for(const locale of id==='S05-config-invalid'?['zh']:['zh','en'])test(id+(locale==='en'?'-en':''),async({page},info)=>{
+ await install(page);await page.addInitScript(({id,code,check,message,locale})=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
   if((id==='S05-config-invalid'&&command==='device_context')||(id!=='S05-config-invalid'&&command==='bridge_status')){
    w.calls.push({command,args});const error={code,message,details:{check,observed_at:new Date().toISOString(),evidence:{actual:id==='S05-config-invalid'?'invalid JSON':id==='S05-protocol-mismatch'?'2':'qa-tampered',required:id==='S05-config-invalid'?'valid saved configuration':id==='S05-protocol-mismatch'?'1':'sealed-sha256'}}};
    return id==='S05-config-invalid'?{result:{binding_revision:1,error}}:{state:'failed',error:{code,message}};
-  }return invoke(command,args);
- };},{id,code,check,message});
+  }const reply=await invoke(command,args);if(command==='preferences_read')reply.preferences.language=locale;return reply;
+ };},{id,code,check,message,locale});
  await page.goto('/');await expect(page.locator('main')).toContainText(code);
- const failure=page.locator('main .problem-notice').first();await failure.getByText('查看失败详情',{exact:true}).click();await expect(failure).toContainText(message);
+ const failure=page.locator('main .problem-notice').first();
+ if(id!=='S05-config-invalid'){
+  const protocol=id==='S05-protocol-mismatch';
+  const summary=locale==='zh'?(protocol?'Bee 管理协议版本与当前应用不兼容。':'随附的 Bee 程序未通过完整性校验。'):(protocol?'The Bee management protocol version is incompatible with this app.':'The bundled Bee program failed integrity verification.');
+  const impact=locale==='zh'?(protocol?'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee 后重新打开；若仍不兼容，请使用可信来源的匹配安装包处理。':'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee，使用可信来源的安装包重新安装后再打开。'):(protocol?'Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu and reopen it. If it remains incompatible, use a matching installer from a trusted source.':'Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu, reinstall it with an installer from a trusted source, then reopen it.');
+  await expect(failure.getByText(summary,{exact:true})).toBeVisible();await expect(failure.getByText(impact,{exact:true})).toBeVisible();
+  await expect(failure.getByRole('button')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:locale==='zh'?'开始贡献':'Start contributing',exact:true})).toHaveCount(0);
+  for(const command of ['runtime_snapshot','device_status','account_snapshot','account_detect','supply_status','startup_recheck'])expect(await calls(page,command)).toEqual([]);
+ }
+ await failure.getByText(locale==='zh'?'查看失败详情':'View failure details',{exact:true}).click();await expect(failure).toContainText(message);
+ await expect(failure).toContainText(code);await expect(failure).not.toContainText('FAILURE_DETAILS_INVALID');
  if(id==='S05-config-invalid')await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
  else expect(await calls(page,'runtime_snapshot')).toEqual([]);
- await zeroWrites(page);await evidence(page,info,id,{code,check,message,syntheticFailure:true},failure);
+ await zeroWrites(page);await evidence(page,info,id+(locale==='en'?'-en':''),{code,check,message,locale,syntheticFailure:true,nativeOperationsBlocked:id!=='S05-config-invalid'},failure);
 });
 
 test('L02-running-login-stop-entry',async({page},info)=>{

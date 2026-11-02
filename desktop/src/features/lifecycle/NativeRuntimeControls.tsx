@@ -26,7 +26,7 @@ export function NativeRuntimeControls({runtime,deviceReady=true}:{runtime:Runtim
     :<Button disabled={blocked||!selected||!deviceReady||starting} onClick={()=>void runtime.start([])}><Play aria-hidden="true"/>{t(starting?'正在启动贡献':'开始贡献')}</Button>}
   </div>
   <div className="health native-runtime-health"><span>{confirmed&&running?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?running?'Bee 运行中':'Bee 未运行':'Bee 状态待确认')}</span><span>{confirmed&&view.connection==='connected'?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?connectionCopy[view.connection]:'Hive 状态待确认')}</span></div>
-  {(uncertain||error||runtime.stalled)&&<p role="status" className="runtime-note">{t('贡献状态待确认，正在自动核对…')}</p>}
+  {(uncertain||error||runtime.stalled)&&<p role="status" className="runtime-note">{t(runtime.refreshStatus?.state==='blocked'?'贡献状态待确认，核对已暂停。':runtime.refreshStatus?.state==='scheduled'?'贡献状态待确认，等待已安排的核对。':runtime.refreshStatus?.state==='reading'||runtime.refreshing?'贡献状态待确认，正在核对…':'贡献状态待确认。')}</p>}
   {error&&<FailureNotice failure={error} check="runtime_operation"/>}
   {confirmed&&view.operation?.error&&<FailureNotice failure={view.operation.error} check="runtime_operation"/>}
   {view?.stop_receipt&&<p className="runtime-note">{t(view.stop_receipt.workers_stopped&&view.stop_receipt.intent_saved&&view.stop_receipt.session_clean?'停止已确认，下次打开保持停止。':'本机已尝试停止，但保存或清理结果未确认。')}</p>}

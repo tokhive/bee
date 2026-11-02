@@ -22,7 +22,7 @@ try{
   const names={'start-unknown':'开始贡献',login:'登录 OpenAI',select:'接入',stop:'停止贡献',change:'换号',clear:'取消接入'};
   if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(names[scene.action]))).click();}
   if(scene.action!=='detail'&&scene.action!=='start-unknown')await until(()=>document.querySelector('.dialog-content'));
-  if(scene.action==='start-unknown')await until(()=>document.body.textContent.includes('贡献状态待确认，正在自动核对'));
+  if(scene.action==='start-unknown')await until(()=>document.body.textContent.includes('贡献状态待确认'));
  }
  window.__beePreviewReady=true;
 }catch(cause){

@@ -1,6 +1,7 @@
 import {FailureNotice} from '../components/ProblemNotice';
 import {normalizeFailure,type UiFailure} from '../system/failures';
-import type {NavigationTarget} from './navigation';
+import {validNavigationTarget,type NavigationTarget,type RecoveryContext,type NavigationRequest} from './navigation';
+import {deriveDesktopStatus} from '../presentation/desktopStatus';
 import {NativeUpdateControls} from '../features/settings/NativeUpdateControls';
 import type {UpdateClient} from '../system/updater';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
@@ -12,8 +13,8 @@ import {useAccounts} from '../features/accounts/useAccounts';
 import {useRuntime} from '../features/lifecycle/useRuntime';
 import {useSupply} from '../features/supply/useSupply';
 import {NativeDiagnosticsPage} from '../features/diagnostics/NativeDiagnosticsPage';
-import {NativeSettingsPage} from '../features/settings/NativeSettingsPage';
-import {createDesktopState,type DesktopSnapshot,type DesktopState} from '../system/desktopState';
+import {NativeSettingsPage,type NativeSettingsDraft} from '../features/settings/NativeSettingsPage';
+import {createDesktopState,type DesktopSnapshot,type DesktopState,idleRefresh} from '../system/desktopState';
 import {defaultPreferences,type PreferencesClient,type PreferencesSnapshot} from '../system/preferences';
 import type {createNotificationsClient} from '../system/notifications';
 import type {NetworkClient} from '../system/network';
@@ -37,17 +38,35 @@ const failure=(cause:unknown)=>normalizeFailure(cause,'device_status');
 function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'openai'|'claude',string>>={}){
  return Object.fromEntries((['openai','claude'] as const).map(p=>{
   const account=snapshot.accounts[p],runtime=snapshot.runtime;
-  return [p,JSON.stringify([runtime?.local,runtime?.run_id,runtime?.platforms[p].selection_revision,!!snapshot.error,account?.selection.state,account?.selection.fingerprint,account?.hive.state,account?.hive.fingerprint,account?.hive.generation,!!snapshot.accountErrors[p],local[p]])];
+  return [p,JSON.stringify([runtime?.local,runtime?.run_id,runtime?.platforms[p]?.selection_revision,!!snapshot.error,account?.selection.state,account?.selection.fingerprint,account?.hive.state,account?.hive.fingerprint,account?.hive.generation,!!snapshot.accountErrors[p],local[p]])];
  }));
 }
-const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false};
+const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
+const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
 function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void}){
  const {native,device:view}=snapshot;
+ const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
+ const [recovery,setRecovery]=useState<RecoveryContext|null>(null);
+ const [settingsDraft,setSettingsDraft]=useState<NativeSettingsDraft>({});
+ const [sourceDirectories,setSourceDirectories]=useState<Partial<Record<'openai'|'claude',string>>>({});
+ const setSourceDirectory=useCallback((platform:'openai'|'claude',value:string)=>setSourceDirectories(v=>({...v,[platform]:value})),[]);
+ const presentation=deriveDesktopStatus(snapshot,Date.now());
+ const requestNavigation=(target:NavigationTarget)=>{setPage(target.page);setNavigationRequest(v=>({target,sequence:v.sequence+1}));};
+ const navigate=(target:NavigationTarget)=>{
+  if(!validNavigationTarget(target))return;
+  const element=document.activeElement?.closest<HTMLElement>('[data-nav-section]');
+  const section=element?.dataset.navSection,platform=element?.dataset.navPlatform;
+  const from={...navigationRequest.target,page,...(section?{section}:{}),...(platform?{platform}:{})};
+  setRecovery({from:validNavigationTarget(from)?from:{page:'overview'},target});requestNavigation(target);
+ };
+ const returnFromRecovery=()=>{if(recovery){requestNavigation(recovery.from);setRecovery(null);}};
+ const navigatePage=(next:Page)=>{const target={page:next};if(validNavigationTarget(target)){setRecovery(null);requestNavigation(target);}};
+ useEffect(()=>{const target={page};if(navigationRequest.target.page!==page&&validNavigationTarget(target)){setRecovery(null);setNavigationRequest(v=>({target,sequence:v.sequence+1}));}},[page,navigationRequest.target.page]);
  const [busy,setBusy]=useState(false),[error,setError]=useState<UiFailure|null>(null);const working=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  const refresh=useCallback(()=>model?.refresh()??Promise.resolve(),[model]);
  const pause=useCallback(()=>model?.pause(),[model]);
- const run=async(action?:()=>Promise<DeviceView|unknown>)=>{
+ const run=async(action?:()=>Promise<DeviceView|unknown>,refreshAfter=true)=>{
   if(working.current)return;working.current=true;setBusy(true);setError(null);
   const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;
   try{
@@ -58,7 +77,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
     const next=model?.getSnapshot();
     if(next?.error||next?.deviceError||binding(intent)!==binding(next?.device))return;
    }
-   await action?.();if(current())await refresh();
+   await action?.();if(current()&&refreshAfter)await refresh();
   }catch(cause){if(current())setError(failure(cause));}
   finally{working.current=false;if(mounted.current)setBusy(false);}
  };
@@ -70,25 +89,29 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
  const generation=useCallback(()=>model?.generation()??0,[model]);
  const supplyLocal=useRef<Partial<Record<'openai'|'claude',string>>>({});
  const currentSnapshot=useCallback(()=>model?.getSnapshot()??initial,[model]);
- const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error,busy:s.busy};},[currentSnapshot]);
- const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error,busy:s.busy,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
- const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,busy:snapshot.busy,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,error:snapshot.error,deviceError:snapshot.deviceError,accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:currentSnapshot});
+ const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh};},[currentSnapshot]);
+ const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error,busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
+ const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
- const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error,Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error,busy:snapshot.busy,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
+ const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!snapshot.deviceError||!!snapshot.diagnosticFailure||snapshot.startup?.state==='blocked',Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error,busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
  const ready=native.state==='ready';
- const navigate=(target:NavigationTarget)=>setPage(target.page);
- return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode deviceName={!snapshot.deviceError?view?.identity?.name:undefined} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
-  {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>{native.error?<FailureNotice failure={native.error} check="bridge_startup" onNavigate={navigate}/>:t('正在读取 Bee…')}</StatusView>}
-  {ready&&snapshot.startup?.state==='blocked'&&<div><FailureNotice failure={snapshot.startup.failure} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve())}>{t('重新检查设备')}</button></div>}
+ const sharedProblem=snapshot.error??snapshot.deviceError??snapshot.diagnosticFailure??snapshot.startup?.failure??null;
+ const showSharedProblem=ready&&!!sharedProblem;
+ useEffect(()=>{diagnostics.setContext(snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0);},[diagnostics,snapshot.runtime?.network_revision,snapshot.runtime?.run_id,snapshot.bindingRevision]);
+ return <AppShell desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={!snapshot.deviceError?view?.identity?.name:undefined} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
+  {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')} announceError={!native.error}>{native.error?<FailureNotice failure={native.error} check="bridge_startup" onNavigate={navigate}/>:t('正在读取 Bee…')}</StatusView>}
+  {showSharedProblem&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
   {ready&&snapshot.startup?.state==='checking'&&<p role="status">{t('正在重新检查设备…')}</p>}
   {ready&&snapshot.deviceError&&snapshot.deviceContext&&page==='overview'&&<p>{t('上次保存的设备信息')}：{snapshot.deviceContext.name} · {snapshot.deviceContext.hive}</p>}
+  {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}
   {error&&page!=='overview' &&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
-  {ready&&page==='overview'&&<NativeOverviewPage onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||!view&&snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve())} open={()=>void run(()=>props.client.open())}/>}
-  {ready&&page==='accounts'&&<NativeAccountsPage onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
-  {page==='diagnostics'&&<><NativeDiagnosticsPage client={diagnostics} onNavigate={setPage} instance={instance} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('核对诊断')}</summary><pre>{JSON.stringify({runtime:runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
-  {page==='settings'&&<NativeSettingsPage onNavigate={navigate} updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
+  {ready&&page==='overview'&&<NativeOverviewPage onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||!view&&snapshot.busy} error={error||(showSharedProblem?null:snapshot.deviceError)} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)} open={()=>void run(()=>props.client.open())}/>}
+  {ready&&page==='accounts'&&<NativeAccountsPage navigationRequest={navigationRequest} onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||(showSharedProblem?null:snapshot.deviceError)}/>}
+  {page==='diagnostics'&&<><NativeDiagnosticsPage navigationRequest={navigationRequest} onReport={model?.acceptDiagnosticReport} client={diagnostics} onNavigate={navigate} instance={instance} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('核对诊断')}</summary><pre>{JSON.stringify({runtime:snapshot.error??runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
+  {page==='settings'&&<NativeSettingsPage navigationRequest={navigationRequest} draft={settingsDraft} onDraftChange={setSettingsDraft} onNavigate={navigate} updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive??snapshot.deviceContext?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
  </AppShell>;
 }
 export function NativeApp(props:NativeProps){

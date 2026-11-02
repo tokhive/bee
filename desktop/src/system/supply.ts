@@ -63,17 +63,18 @@ export function decodeSupplyReply(reply: unknown, binding: SupplyBinding, platfo
  if (parsed > now) return invalid(`supply.checked_at is in the future; delta_ms=${parsed-now}; required=not later than now`);
  return view as unknown as SupplyView;
 }
-// One queue per transport also serializes StrictMode/remount and replacement clients.
-const queues = new WeakMap<DeviceInvoke, Promise<unknown>>();
+// Preserve same-platform ordering across remounts and replacement clients without blocking the other platform.
+const queues = new WeakMap<DeviceInvoke, Partial<Record<SupplyPlatform,Promise<unknown>>>>();
 export function createSupplyClient(invoke: DeviceInvoke, binding: SupplyBinding): SupplyClient {
  async function request(platform: SupplyPlatform, paused?: boolean) {
   if (platform !== 'openai' && platform !== 'claude') return invalid('request platform rejected; required=openai,claude');
   if (paused !== undefined && typeof paused !== 'boolean') return invalid(`request paused actual_type=${kind(paused)}; required=boolean`);
-  const operation = (queues.get(invoke) ?? Promise.resolve()).then(async () => {
+  const transportQueues=queues.get(invoke)??{};queues.set(invoke,transportQueues);
+  const operation = (transportQueues[platform] ?? Promise.resolve()).then(async () => {
    const reply = paused === undefined ? await invoke('supply_status', {platform}) : await invoke('supply_set_paused', {platform,paused});
    return decodeSupplyReply(reply, binding, platform, paused);
   });
-  queues.set(invoke, operation.catch(() => {}));
+  transportQueues[platform]=operation.catch(() => {});
   return operation;
  }
  return {status: platform => request(platform), setPaused: async (platform,paused) => {

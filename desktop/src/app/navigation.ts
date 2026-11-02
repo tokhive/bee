@@ -17,3 +17,15 @@ export function validNavigationTarget(value:unknown):value is NavigationTarget {
  if(v.section!==undefined&&(typeof v.section!=='string'||!sections[v.page as NavigationTarget['page']].includes(v.section)))return false;
  return v.platform===undefined||(typeof v.platform==='string'&&['openai','claude'].includes(v.platform)&&(v.page==='accounts'||v.page==='diagnostics')&&(v.section===undefined||v.section==='account'||v.section==='source'));
 }
+
+export interface NavigationRequest {target:NavigationTarget;sequence:number}
+export const settingsTabForSection={network:'network',notifications:'system',appearance:'general',about:'about'} as const;
+export function navigationSelector(target:NavigationTarget):string {
+ if(!validNavigationTarget(target))return '';
+ if(target.page==='settings'&&target.section)return '[data-settings-section="'+target.section+'"]';
+ if(target.page==='accounts'&&target.section==='source')return '[data-account-source="'+(target.platform??'openai')+'"] input';
+ if(target.page==='accounts'&&target.platform)return '[data-account-platform="'+target.platform+'"]';
+ if(target.page==='diagnostics'&&target.platform)return '[data-nav-section="'+(target.section??'account')+'"][data-nav-platform="'+target.platform+'"]';
+ if(target.section)return '[data-nav-section="'+target.section+'"]';
+ return '.page-heading h1';
+}

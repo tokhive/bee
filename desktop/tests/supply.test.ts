@@ -29,11 +29,11 @@ test('business failures retain method and HTTP evidence; failed writes are never
  assert.deepEqual(calls,[['supply_set_paused',{platform:'openai',paused:false}]]);
  await assert.rejects(client.status('openai'),/HTTP 503/);assert.equal(calls.length,2);
 });
-test('clients serialize even across replacement bindings and validate before IPC',async()=>{
+test('same-platform clients serialize across replacement bindings and validate before IPC',async()=>{
  let release!:()=>void;let active=0,max=0;const calls:string[]=[];
  const invoke=async(command:string,args?:Record<string,unknown>)=>{calls.push(command);max=Math.max(max,++active);if(calls.length===1)await new Promise<void>(r=>release=r);active--;return reply({...good,platform:args?.platform,checked_at:new Date().toISOString()});};
  const first=createSupplyClient(invoke,binding),second=createSupplyClient(invoke,binding);
- const a=first.status('openai'),b=second.status('claude');await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);release();await Promise.all([a,b]);assert.equal(max,1);
+ const a=first.status('openai'),b=second.status('openai');await new Promise(r=>setImmediate(r));assert.equal(calls.length,1);release();await Promise.all([a,b]);assert.equal(max,1);
  await assert.rejects(first.status('bad' as 'openai'),/platform/);await assert.rejects(first.setPaused('openai','false' as unknown as boolean),/paused/);await assert.rejects(first.setPaused('openai',undefined as unknown as boolean),/paused/);assert.equal(calls.length,2);
 });
 
@@ -248,4 +248,11 @@ test('detailed supply reasons are accepted without relaxing platform or readines
    {...supply,reasons:[reason,'unrecognized_reason']},
   ])assert.throws(()=>decodeSupplyReply(reply(invalid),binding,platform,undefined,now),/SUPPLY_REPLY_INVALID/);
  }
+});
+
+test('independent platform reads reach the transport before a slow platform completes',async()=>{
+ let release!:()=>void;const invoked:string[]=[];
+ const client=createSupplyClient(async(_command,args)=>{const platform=args!.platform as 'openai'|'claude';invoked.push(platform);if(platform==='openai')await new Promise<void>(resolve=>release=resolve);return reply({...good,platform,checked_at:new Date().toISOString()});},binding);
+ const slow=client.status('openai'),fast=client.status('claude');await new Promise(resolve=>setImmediate(resolve));
+ try{assert.deepEqual([...invoked],['openai','claude']);}finally{release();await Promise.all([slow,fast]);}
 });

@@ -6,15 +6,17 @@ export function DetailSheet({
   title,
   description,
   children,
+  open,onOpenChange,
 }: {
   trigger: ReactNode;
   /** Already translated by the caller; interpolated business values stay literal. */
   title: string;
   description: string;
   children: ReactNode;
+  open?:boolean;onOpenChange?:(open:boolean)=>void;
 }) {
   return (
-    <Dialog.Root>
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />

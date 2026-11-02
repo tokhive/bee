@@ -82,6 +82,32 @@ test('saved context rejection has a known local impact and an available diagnost
  }
  const absent=presentFailure({...value,code:'DEVICE_CONTEXT_UNCONFIGURED'},'zh');assert.match(absent.summary,/尚未配置/);assert.deepEqual(absent.action,{page:'overview',section:'device'});
 });
+
+const nativeStartupFailures=[
+ {code:'VERSION_MISMATCH',message:'reply protocol=2; required=1',
+  zh:{summary:'Bee 管理协议版本与当前应用不兼容。',impact:'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee 后重新打开；若仍不兼容，请使用可信来源的匹配安装包处理。'},
+  en:{summary:'The Bee management protocol version is incompatible with this app.',impact:'Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu and reopen it. If it remains incompatible, use a matching installer from a trusted source.'}},
+ {code:'BUNDLED_BEE_INVALID',message:'bundled Bee SHA256 mismatch at /isolated/qa/bee: actual='+ 'a'.repeat(64)+'; required='+ 'b'.repeat(64),
+  zh:{summary:'随附的 Bee 程序未通过完整性校验。',impact:'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee，使用可信来源的安装包重新安装后再打开。'},
+  en:{summary:'The bundled Bee program failed integrity verification.',impact:'Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu, reinstall it with an installer from a trusted source, then reopen it.'}},
+] as const;
+for(const value of nativeStartupFailures)for(const locale of ['zh','en'] as const)test('native startup '+value.code+' explains the known failure and available next step in '+locale,()=>{
+ // Rust BridgeError omits details when None; do not synthesize a nullable DTO.
+ const failure=normalizeFailure({code:value.code,message:value.message},'bridge_startup');
+ const problem=presentFailure(failure,locale);
+ assert.equal(problem.summary,value[locale].summary);assert.equal(problem.impact,value[locale].impact);
+ assert.equal(problem.action,null);assert.ok(problem.details.includes(value.code));assert.ok(problem.details.includes('bridge_startup'));assert.ok(problem.details.includes(value.message));
+ if(locale==='en')assert.doesNotMatch(problem.summary+problem.impact,/\p{Script=Han}/u);
+ assert.equal(normalizeFailure({code:value.code,message:value.message,details:null},'bridge_startup').code,'FAILURE_DETAILS_INVALID');
+});
+test('unknown bridge failures are not classified by a known code or English cause in their message',()=>{
+ for(const value of nativeStartupFailures)for(const locale of ['zh','en'] as const){
+  const problem=presentFailure(normalizeFailure({code:'FUTURE_BRIDGE_FAILURE',message:value.code+'; '+value.message},'bridge_startup'),locale);
+  assert.equal(problem.summary,locale==='zh'?'本次操作失败，原因尚未确认。':'This operation failed; its cause is unconfirmed.');
+  assert.equal(problem.impact,locale==='zh'?'本次操作未能完成；后续状态以重新核对的结果为准。':'This operation could not complete. Check again to confirm its state.');
+  assert.equal(problem.action,null);assert.ok(problem.details.includes(value.code+'; '+value.message));
+ }
+});
 test('network apply blocker explains the explicit settings action before recheck without guessing from messages',()=>{
  for(const locale of ['zh','en'] as const){
   const value=normalizeFailure({code:'NETWORK_APPLY_REQUIRED',message:'saved network revision=4 effective=2'},'startup_check');

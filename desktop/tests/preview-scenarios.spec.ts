@@ -10,9 +10,9 @@ const commands=(page:Page)=>page.evaluate(()=>(window as unknown as {calls:{comm
 const writes=new Set(['account_action','authorize_start','supply_set_paused','runtime_start','runtime_stop']);
 
 const cases:[string,string|RegExp][]=[
- ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','配对码已过期'],['device-bound','设备已绑定。'],['device-error','设备核对失败'],
- ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','贡献已启动'],['runtime-stopping','正在停止贡献'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','贡献状态待确认，正在自动核对'],
- ['account-reading','正在读取已有登录'],['account-empty','还没有 OpenAI 登录'],['account-candidate','已有登录，尚未接入'],['account-selected','已用 3%'],['account-error','permission_denied'],['account-expired','历史数据，已过期'],['account-change','尚未核对'],
+ ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
+ ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
+ ['account-reading','正在读取已有登录'],['account-empty','所选来源未找到登录'],['account-candidate','已有登录，尚未接入'],['account-selected','已用 3%'],['account-error','permission_denied'],['account-expired','历史数据，已过期'],['account-change','尚未核对'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
  ['check-background','可接单'],['check-expired','核对中…'],['check-waiting','等待自动重试…'],['check-retrying','重试中…'],['check-recovered','可接单'],['check-sequence','可接单'],
  ['quota-normal','已用 3%'],['quota-unknown','尚未核对'],['quota-expired','历史数据，已过期'],['quota-multiple','7 日 · opus'],['quota-over','已用 120%'],
@@ -38,24 +38,28 @@ for(const [scene,copy] of cases)test('scene renders formal state without invalid
 
 test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
  await page.goto('/.cache/bee-shadcn-review.html?scene=running&theme=light&size=normal');
- await expect(page.locator('#scene optgroup')).toHaveCount(7);
- await expect(page.locator('#scene option')).toHaveCount(39);
+ await expect(page.locator('#scene optgroup')).toHaveCount(10);
+ await expect(page.locator('#scene option')).toHaveCount(74);
  await page.locator('#scene').selectOption('confirm-change');
  const app=page.frameLocator('iframe');
- await expect(app.getByRole('dialog').last()).toContainText('要换成');
+ await expect(app.getByRole('dialog').last()).toContainText('目标账号');
  await page.locator('#theme').selectOption('dark');
  await page.locator('#size').selectOption('narrow');
  await expect(page.locator('#scene')).toHaveValue('confirm-change');
- await expect(app.getByRole('dialog').last()).toContainText('要换成');
+ await expect(app.getByRole('dialog').last()).toContainText('目标账号');
  await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>({width:el.contentWindow!.innerWidth,height:el.contentWindow!.innerHeight,theme:el.contentDocument!.documentElement.dataset.theme}))).toEqual({width:860,height:600,theme:'dark'});
 });
 
 test('automatic recovery traverses stale, failed, retrying and recovered states using read requests only',async({page})=>{
  await openScene(page,'check-sequence');
  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible();
- await expect(page.locator('.account-check-status')).toHaveText('核对中…',{timeout:6000});
+ test.setTimeout(45000);
+ await expect(page.locator('.account-check-status')).toHaveText('等待自动重试…',{timeout:6000});
  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(card(page).getByRole('button',{name:'暂停接单'})).toBeDisabled();
+ expect(await page.evaluate(()=>(window as any).__beePreviewPhase)).toBe('current');
+ expect((await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='openai')).toHaveLength(1);
+ await expect(page.locator('.account-check-status')).toHaveText('核对中…',{timeout:15000});
  await expect(page.locator('.account-check-status')).toHaveText('等待自动重试…');
  await expect(page.locator('.account-check-status')).toHaveText('重试中…',{timeout:15000});
  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
@@ -72,6 +76,8 @@ test('preview pairing remains pending after a poll and simulated website confirm
  await expect.poll(async()=>(await commands(page)).filter(c=>c.command==='device_status').length).toBeGreaterThan(1);
  await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
+ await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as unknown as {__beePreviewApprove:()=>void}).__beePreviewApprove());
  await expect(page.getByText('设备已绑定。',{exact:true})).toBeVisible();
  expect((await commands(page)).filter(call=>writes.has(call.command))).toEqual([]);
 });
@@ -79,7 +85,7 @@ test('preview pairing remains pending after a poll and simulated website confirm
 test('confirmed account actions update only the fixture and preserve pause semantics',async({page})=>{
  await openScene(page,'confirm-select');
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+ await expect(card(page).getByText('接入已完成，该平台保持暂停。')).toBeVisible();
  expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['account_action']);
  expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(true);
  await page.getByRole('button',{name:'概览',exact:true}).click();
@@ -100,7 +106,7 @@ for(const scene of ['confirm-change','account-change'])test('confirmed changed i
  }
  await page.getByRole('button',{name:'确认更换',exact:true}).click();
  await page.getByRole('button',{name:'关闭',exact:true}).click();
- await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+ await expect(card(page).getByText('换号已完成，该平台保持暂停。')).toBeVisible();
  const state=await page.evaluate(()=>{const w=window as unknown as {accounts:{openai:{candidate:{fingerprint:string};selection:{fingerprint:string};authorization:{fingerprint:string};capabilities:{windows:unknown[]}[]}};paused:{openai:boolean}};return {account:w.accounts.openai,paused:w.paused.openai};});
  expect(state.account.selection.fingerprint).toBe('f'.repeat(64));
  expect(state.account.authorization.fingerprint).toBe(state.account.candidate.fingerprint);
@@ -108,4 +114,23 @@ for(const scene of ['confirm-change','account-change'])test('confirmed changed i
  expect(state.paused).toBe(true);
  await expect(card(page).getByText('尚未核对',{exact:true})).toBeVisible();
  expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['account_action']);
+});
+
+for(const [scene,copy] of [
+ ['settings-general','通用'],['settings-network','本机 HTTP 代理'],['settings-system','通知与启动'],['settings-about','关于'],
+ ['diagnostics-running','诊断进行中'],['diagnostics-results','诊断'],['diagnostics-read-failed','报告读取已暂停'],['diagnostics-export-unknown','报告下载结果未确认'],
+ ['update-downloading','下载'],['update-verified','安装'],['update-unknown','安装'],['update-failed','signature'],
+ ['bridge-starting','正在读取 Bee'],['bridge-failed','exit=17'],['startup-blocked','本机设备'],
+] as const)test('additional formal page accepts current DTO without invalid reply: '+scene,async({page})=>{
+ test.setTimeout(50000);await openScene(page,scene);await expect(page.locator('body')).toContainText(copy,{timeout:35000});
+ await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+ expect((await commands(page)).filter(c=>writes.has(c.command))).toEqual([]);
+});
+
+test('English preview navigates the formal account and settings pages',async({page})=>{
+ await page.goto('/tests/fixtures/bee-preview/app.html?scene=account-detail&locale=en');
+ await page.waitForFunction(()=>(window as any).__beePreviewReady||(window as any).__beePreviewError);
+ expect(await page.evaluate(()=>(window as any).__beePreviewError)).toBeUndefined();
+ await expect(page.getByRole('dialog')).toHaveAccessibleName('OpenAI account details');await page.keyboard.press('Escape');
+ await page.getByRole('navigation').getByRole('button',{name:'Settings',exact:true}).click();await expect(page.getByRole('heading',{level:1,name:'Settings',exact:true})).toBeFocused();
 });

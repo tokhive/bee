@@ -258,8 +258,9 @@ test('T9 background status reads do not disable an update action between pointer
 });
 
 test('T9 StrictMode keeps one background read pending and an unmounted read cannot overwrite a new check',async({page})=>{
+ await page.clock.install();await page.clock.pauseAt(new Date());
  await mount(page,snapshot(),'zh','&strict=1&lifecycle=1');
- expect(await calls(page,'update_snapshot')).toHaveLength(1);
+ expect(await calls(page,'update_snapshot')).toHaveLength(1);await page.clock.resume();
  await page.evaluate(()=>{const w=window as any;w.normalInvoke=w.updaterInvoke;w.pendingReads=0;w.updaterInvoke=async(command:string,args:any)=>{if(command==='update_snapshot'){w.pendingReads++;return new Promise((_resolve,reject)=>{w.rejectOldPoll=reject;});}return w.normalInvoke(command,args);};});
  await expect.poll(()=>page.evaluate(()=>(window as any).pendingReads)).toBe(1);
  await page.waitForTimeout(260);expect(await page.evaluate(()=>(window as any).pendingReads)).toBe(1);

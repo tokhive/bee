@@ -18,9 +18,9 @@ export async function installPreviewFixture(id){
   return a;
  };
  const accounts={openai:seeded('openai'),claude:accountFixture('claude')};
- accounts.claude.candidate.state='missing';
+ accounts.claude.candidate.state='source_missing';
  const empty=['account-empty','account-reading','confirm-login'].includes(id);
- if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state='missing';}
+ if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state=id==='account-reading'?'not_checked':'source_missing';}
  if(['account-candidate','confirm-select'].includes(id))accounts.openai=seeded('openai',false);
  if(['account-change','confirm-change'].includes(id)){
   accounts.openai.candidate.fingerprint='f'.repeat(64);
@@ -37,9 +37,11 @@ export async function installPreviewFixture(id){
  if(id==='account-error')accounts.openai.candidate={...accountFixture('openai').candidate,state:'unavailable',error:{code:'source_unavailable',check:'file_read',platform:'openai',message:'无法读取 OpenAI 登录：file_read permission_denied=true；预览模拟权限拒绝。',evidence:{permission_denied:'true',path:'/preview/codex/auth.json'}}};
  installAccountFixture({accounts,runtimeEnabled:true});
  w.paused={openai:id==='supply-paused',claude:false};
- let local=['stopped','runtime-unknown','confirm-login','confirm-select','confirm-change','confirm-clear','account-candidate','account-empty','account-change'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
+ let local=['device-revoked-source-missing','startup-blocked','stopped','runtime-unknown','confirm-login','confirm-select','confirm-change','confirm-clear','account-candidate','account-empty','account-change'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
  if(id==='runtime-starting')local='starting';if(id==='runtime-stopping')local='stopping';
  if(local==='stopped'&&w.accounts.openai.selection.state==='selected')w.paused.openai=true;
+ let previewReport=null;
+ if(id==='diagnostics-export-unknown'){w.previewDownloads=[];HTMLAnchorElement.prototype.click=function(){w.previewDownloads.push(this.download);};}
  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
  let deviceStage=id==='device-unbound'?'unbound':id==='device-pending'?'pending':id==='device-expired'?'expired':'bound';
  let pairingExpiresAt=stamp(600000);
@@ -51,7 +53,8 @@ export async function installPreviewFixture(id){
  if(recovery||id==='device-recovery-confirm')local='stopped';
  const finishRecovery=()=>{for(const p of ['openai','claude']){const features=accounts[p].features;accounts[p]={...accountFixture(p),features};w.paused[p]=true;}local='stopped';revision++;runtimeOperation=null;};
  if(isRecovery&&recovery?.phase==='completed')finishRecovery();
- w.__beePreviewApprove=()=>{if(recovery){recovery={...recovery,revision:recovery.revision+1,phase:isRecovery?'awaiting_owner_confirmation':'completed',new_identity:newIdentity};}else deviceStage='bound';};
+ w.__beePreviewApprove=()=>{if(recovery){recovery={...recovery,revision:recovery.revision+1,phase:recovery.old_identity?'awaiting_owner_confirmation':'completed',new_identity:newIdentity};}else deviceStage='bound';};
+ if(id==='device-revoked-source-missing')accounts.openai.candidate={...accounts.openai.candidate,state:'source_missing',error:{code:'source_missing',check:'source_read',platform:'openai',message:'selected file missing: /isolated/qa/codex/auth.json',evidence:{not_found:'true',path:'/isolated/qa/codex/auth.json'}}};
  const original=w.__TAURI_INTERNALS__.invoke;
  const instance=(await original('bridge_status')).metadata.instance;
  const reads={openai:0,claude:0};
@@ -76,6 +79,13 @@ export async function installPreviewFixture(id){
  };
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
   if(command==='preferences_read'){const result=await original(command,args);result.preferences.language=new URLSearchParams(location.search).get('locale')==='en'?'en':'zh';result.preferences.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';return result;}
+  if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
+  if((command==='startup_status'||command==='startup_recheck')&&['startup-blocked','device-revoked-source-missing'].includes(id)){w.calls.push({command,args});return {state:'blocked',failure:{code:'device_replaced',message:'GET identity HTTP 401 device_replaced'},instance,binding_revision:1,network_revision:0,observed_at:stamp(0),revision:1};}
+  if(command.startsWith('update_')&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
+  if(command==='notification_permission'&&id==='settings-system'){w.calls.push({command,args});return 'denied';}
+  if(command==='autostart_status'&&id==='settings-system'){w.calls.push({command,args});return {desired:true,registered:null,error:{code:'AUTOSTART_QUERY_FAILED',message:'QA registration read denied'}};}
+  if(command==='diagnostics_export'&&id==='diagnostics-export-unknown'){const result=await original(command,args);result.report=clone(previewReport);return result;}
+  if((command==='diagnostics_start'||command==='diagnostics_snapshot')&&id.startsWith('diagnostics-')){const result=await original(command,args);if(command==='diagnostics_snapshot'&&id==='diagnostics-read-failed')throw {code:'REPORT_READ_FAILED',message:'QA original report read failed'};const r=result.result.report;r.run_id=local==='stopped'?null:'a'.repeat(32);r.state=id==='diagnostics-running'||id==='diagnostics-read-failed'?'running':'completed';r.finished_at=r.state==='completed'?stamp(0):null;r.checks=[{id:'device',platform:null,status:'fail',code:'http_rejected',observed_at:stamp(0),evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'invalid_device_credential'},next_action:'diagnostics'},{id:'source',platform:'openai',status:'fail',code:'source_missing',observed_at:stamp(0),evidence:{source_type:'file'},next_action:'accounts'},{id:'proxy',platform:null,status:'pass',code:'network_policy_observed',observed_at:stamp(0),evidence:{},next_action:'settings'}];previewReport=clone(r);return result;}
   if(command==='device_context'){
    w.calls.push({command,args});
    if(id==='device-unbound'||id==='device-loading')return {result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved configuration'}}};
@@ -95,7 +105,7 @@ export async function installPreviewFixture(id){
   if(command==='device_status'||command==='device_begin'||command==='device_open'){
    w.calls.push({command,args});
    if(id==='device-loading')return hold();
-   if(id==='device-recovery-confirm'&&!recovery||isRecovery&&recovery?.phase!=='completed')return businessError('device_replaced','GET /api/bee/identity HTTP 401 device_replaced');
+   if(id==='device-revoked-source-missing'||id==='device-recovery-confirm'&&!recovery||isRecovery&&recovery?.phase!=='completed')return businessError('device_replaced','GET /api/bee/identity HTTP 401 device_replaced');
    if(id==='device-error')return {result:{error:{code:'http_rejected',message:'GET /api/bee/identity HTTP 503; preview upstream unavailable'+(long?'; '+('retry-after observation unavailable; '.repeat(12)):''),details:{check:'device_identity',observed_at:stamp(0),evidence:{target_origin:origin,path:'/api/bee/identity',http_status:'503',response_body:'Hive upstream temporarily unavailable'}}}}};
    if(command==='device_begin'){deviceStage='pending';pairingExpiresAt=stamp(600000);}
    if(command==='device_open'&&recovery?.old_identity)return {result:{recovery:clone(recovery)}};
@@ -122,7 +132,7 @@ export async function installPreviewFixture(id){
   if(command==='runtime_snapshot'){
    w.calls.push({command,args});
    if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
-   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?({'runtime-disconnected':'reconnecting','runtime-connecting':'connecting','runtime-rejected':'rejected','runtime-occupied':'occupied'}[id]??'connected'):local==='starting'?'connecting':'disconnected',connection_detail:['runtime-disconnected','runtime-connecting','runtime-rejected','runtime-occupied'].includes(id)?{failure:{code:'http_rejected',stage:'connect',occurred_at:stamp(-2000),message:'Hive returned HTTP 503: capacity unavailable',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:id==='runtime-connecting'?'attempting':id==='runtime-disconnected'?'scheduled':'halted',next_retry_at:id==='runtime-disconnected'?stamp(12000):null}:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?({'runtime-disconnected':'reconnecting','runtime-connecting':'connecting','runtime-rejected':'rejected','runtime-occupied':'occupied'}[id]??'connected'):local==='starting'?'connecting':'disconnected',connection_detail:['runtime-disconnected','runtime-connecting','runtime-rejected','runtime-occupied'].includes(id)?{failure:{code:id==='runtime-disconnected'?'connection_closed':id==='runtime-connecting'?'timeout':'http_rejected',stage:id==='runtime-disconnected'?'heartbeat':'connect',occurred_at:stamp(-2000),message:({'runtime-rejected':'Hive rejected QA device credential: HTTP 401','runtime-occupied':'Hive reports an active QA session: HTTP 409','runtime-disconnected':'QA websocket heartbeat connection closed','runtime-connecting':'QA connection attempt is in flight'}[id]),evidence:{...(['runtime-rejected','runtime-occupied'].includes(id)?{http_status:id==='runtime-rejected'?'401':'409'}:{}),path:'/api/bee/connect'}},retry:id==='runtime-connecting'?'attempting':id==='runtime-disconnected'?'scheduled':'halted',next_retry_at:id==='runtime-disconnected'?stamp(12000):null}:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(command==='account_detect'||command==='account_snapshot'){
    w.calls.push({command,args});const p=args.request?.platform??args.platform;

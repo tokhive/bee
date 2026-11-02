@@ -1,4 +1,4 @@
-import {throwBridgeError} from './failures.ts';
+import {throwBridgeError,safeOrigin} from './failures.ts';
 export interface DeviceIdentity { id: string; name: string; owner_id: string; owner_email: string }
 export interface DeviceView {
   state: 'unbound' | 'pending' | 'draining' | 'expired' | 'bound';
@@ -10,7 +10,9 @@ export interface DeviceView {
   poll_interval_seconds?: number;
   identity?: DeviceIdentity;
 }
+export interface DeviceContext {hive:string;name:string;device_id:string|null;owner_id:string|null;binding_revision:number}
 export interface DeviceClient {
+ context?():Promise<DeviceContext>;
   status(): Promise<DeviceView>;
   begin(hive: string, name: string): Promise<DeviceView>;
   open(): Promise<DeviceView>;
@@ -49,8 +51,21 @@ export function decodeDeviceReply(reply: unknown): DeviceView {
   }
   return view as unknown as DeviceView;
 }
+export function decodeDeviceContext(reply:unknown):DeviceContext {
+ if(!record(reply)||!record(reply.result))return invalid('context requires result');
+ if('error'in reply.result){if(Object.keys(reply.result).length!==1)return invalid('context failure fields rejected');throwBridgeError(reply.result.error,'DEVICE_CONTEXT_INVALID');}
+ if(Object.keys(reply.result).length!==1||!record(reply.result.context))return invalid('context result requires only context');
+ const c=reply.result.context;
+ if(Object.keys(c).length!==5||!['hive','name','device_id','owner_id','binding_revision'].every(k=>Object.hasOwn(c,k)))return invalid('context fields missing or unknown');
+ if(typeof c.hive!=='string'||typeof c.name!=='string'||!c.name.trim()||[...c.name].length>80||/[\p{Cc}]/u.test(c.name)||!Number.isSafeInteger(c.binding_revision)||Number(c.binding_revision)<=0)return invalid('context metadata or revision rejected');
+ if(!safeOrigin(c.hive))return invalid('context requires canonical secure origin');
+ const id=(v:unknown)=>v===null||typeof v==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(v);
+ if(!id(c.device_id)||!id(c.owner_id)||(c.device_id===null)!==(c.owner_id===null))return invalid('context requires paired public identifiers');
+ return structuredClone(c) as unknown as DeviceContext;
+}
 export function createDeviceClient(invoke: DeviceInvoke): DeviceClient {
   return {
+    async context() {return decodeDeviceContext(await invoke('device_context'));},
     async status() { return decodeDeviceReply(await invoke('device_status')); },
     async begin(hive, name) { return decodeDeviceReply(await invoke('device_begin', {hive, name})); },
     async open() { return decodeDeviceReply(await invoke('device_open')); },

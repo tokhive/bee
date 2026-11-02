@@ -47,7 +47,7 @@ async function waitForClose(){
 }
 try{
  const hello=await request('hello');instance=hello.instance;
- assert.deepEqual(hello.result.capabilities,['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore','authorize_start','authorize_status','authorize_cancel','diagnostics_start','diagnostics_snapshot','diagnostics_cancel','network_status','network_test','notification_snapshot']);
+ assert.deepEqual(hello.result.capabilities,['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore','authorize_start','authorize_status','authorize_cancel','diagnostics_start','diagnostics_snapshot','diagnostics_cancel','network_status','network_test','notification_snapshot','device_context','runtime_verify']);
  const defaults=decodeAccountDefaults(await request('account_defaults'),instance);assert.equal(defaults.platforms.length,2);
  for(const platform of ['openai','claude']){const account=decodeAccountReply(await request('account_snapshot',{platform,refresh:false}),platform,instance);assert.equal(account.candidate.state,'not_checked');assert.equal(account.selection.state,'not_selected');assert.equal(account.hive.state,'not_checked');}
  let snapshot=decodeRuntimeSnapshot(await request('runtime_snapshot'),instance);assert.equal(snapshot.local,'stopped');assert.equal(snapshot.run_id,null);

@@ -28,7 +28,8 @@ fn notification_join_failure(code: &str, operation: &str, error: tauri::Error) -
         ),
         other => other.to_string(),
     };
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: code.into(),
         message: format!("{operation} worker failed to join: {evidence}"),
     }
@@ -38,7 +39,8 @@ fn check_method(method: &str) -> Result<(), BridgeError> {
     if method == "ping" {
         return Ok(());
     }
-    Err(BridgeError { details: None,
+    Err(BridgeError {
+        details: None,
         code: "METHOD_NOT_ALLOWED".into(),
         message: format!(
             "frontend method rejected: actual bytes={}; required=ping",
@@ -57,11 +59,8 @@ pub async fn bridge_request(
 }
 
 #[tauri::command]
-pub fn bridge_status(
-    bridge: tauri::State<'_, Bridge>,
-    gate: tauri::State<'_, crate::experience::StartupGate>,
-) -> BridgeStatus {
-    gate.status(bridge.status())
+pub fn bridge_status(bridge: tauri::State<'_, Bridge>) -> BridgeStatus {
+    bridge.status()
 }
 
 #[tauri::command]
@@ -120,9 +119,13 @@ pub async fn supply_status(
 #[tauri::command]
 pub async fn supply_set_paused(
     bridge: tauri::State<'_, Bridge>,
+    gate: tauri::State<'_, crate::experience::StartupGate>,
     platform: SupplyPlatform,
     paused: bool,
 ) -> Result<BridgeReply, BridgeError> {
+    if !paused {
+        gate.check()?;
+    }
     bridge.supply_set_paused(platform, paused).await
 }
 
@@ -194,17 +197,20 @@ async fn wait_opener(
         .stdout(std::process::Stdio::null())
         .stderr(std::process::Stdio::null())
         .kill_on_drop(true);
-    let mut child = command.spawn().map_err(|cause| BridgeError { details: None,
+    let mut child = command.spawn().map_err(|cause| BridgeError {
+        details: None,
         code: "BROWSER_OPEN_FAILED".into(),
         message: format!("start system browser launcher: {cause}"),
     })?;
     let status = match tokio::time::timeout(duration, child.wait()).await {
-        Ok(result) => result.map_err(|cause| BridgeError { details: None,
+        Ok(result) => result.map_err(|cause| BridgeError {
+            details: None,
             code: "BROWSER_OPEN_FAILED".into(),
             message: format!("wait for system browser launcher: {cause}"),
         })?,
         Err(_) => {
-            child.kill().await.map_err(|cause| BridgeError { details: None,
+            child.kill().await.map_err(|cause| BridgeError {
+                details: None,
                 code: "BROWSER_OPEN_CLEANUP_FAILED".into(),
                 message: format!(
                     "browser launcher exceeded {}ms; terminate and reap failed: {cause}",
@@ -373,9 +379,7 @@ pub async fn runtime_stop(
 pub async fn authorize_start(
     bridge: tauri::State<'_, Bridge>,
     request: crate::authorize_protocol::AuthorizeRequest,
-    gate: tauri::State<'_, crate::experience::StartupGate>,
 ) -> Result<BridgeReply, BridgeError> {
-    gate.check()?;
     bridge.authorize_start(request).await
 }
 #[tauri::command]
@@ -415,7 +419,8 @@ pub fn autostart_set(
     lock: tauri::State<'_, crate::autostart::AutostartLock>,
     enabled: bool,
 ) -> Result<crate::autostart::AutostartSnapshot, BridgeError> {
-    let _guard = lock.0.lock().map_err(|_| BridgeError { details: None,
+    let _guard = lock.0.lock().map_err(|_| BridgeError {
+        details: None,
         code: "AUTOSTART_LOCK_FAILED".into(),
         message: "autostart operation mutex poisoned; registration not changed".into(),
     })?;
@@ -486,7 +491,8 @@ pub async fn diagnostics_export(
     let reply = bridge
         .diagnostics_action("diagnostics_snapshot", Some(report_id))
         .await?;
-    let metadata = bridge.status().metadata.ok_or_else(|| BridgeError { details: None,
+    let metadata = bridge.status().metadata.ok_or_else(|| BridgeError {
+        details: None,
         code: "DIAGNOSTICS_METADATA_UNAVAILABLE".into(),
         message: "diagnostic export requires current bundled build metadata".into(),
     })?;
@@ -597,7 +603,8 @@ pub async fn network_save_proxy(
         return Err(error);
     }
     if saved.preferences.revision != expected_revision {
-        return Err(BridgeError { details: None,
+        return Err(BridgeError {
+            details: None,
             code: "PREFERENCES_REVISION_CONFLICT".into(),
             message: format!(
                 "proxy save rejected: expected_revision={expected_revision} current_revision={}",
@@ -613,7 +620,8 @@ pub async fn network_save_proxy(
             Some(scope.device_scope().to_owned()),
         )
     } else {
-        let origin = origin.ok_or_else(|| BridgeError { details: None,
+        let origin = origin.ok_or_else(|| BridgeError {
+            details: None,
             code: "PREFERENCES_ORIGIN".into(),
             message: "an unpaired proxy draft requires the chosen canonical Hive origin".into(),
         })?;
@@ -640,20 +648,25 @@ fn hive_root(value: &serde_json::Value) -> Result<tauri::Url, BridgeError> {
     let origin = value
         .pointer("/device/hive")
         .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| BridgeError { details: None,
+        .ok_or_else(|| BridgeError {
+            details: None,
             code: "HIVE_ORIGIN_UNAVAILABLE".into(),
             message: "saved Hive origin is absent; configure or pair this device first".into(),
         })?;
-    crate::preferences::validate_origin(origin)?;
-    tauri::Url::parse(&format!("{origin}/")).map_err(|_| BridgeError { details: None,
+    if !crate::protocol::failure_origin(origin) {
+        return Err(BridgeError::new("HIVE_ORIGIN_INVALID","saved Hive origin rejected; required=secure root origin without credentials, path, query or fragment".into()));
+    }
+    tauri::Url::parse(&format!("{origin}/")).map_err(|_| BridgeError {
+        details: None,
         code: "HIVE_ORIGIN_INVALID".into(),
         message: "saved canonical Hive root URL parsing failed".into(),
     })
 }
 #[tauri::command]
 pub async fn hive_open(bridge: tauri::State<'_, Bridge>) -> Result<(), BridgeError> {
-    let device = bridge.device_status().await?;
-    let url = hive_root(&device.result)?;
+    let context = bridge.device_context().await?;
+    let value = serde_json::json!({"device":{"hive":crate::protocol::device_context(&context.result)?.hive}});
+    let url = hive_root(&value)?;
     #[cfg(target_os = "macos")]
     let mut command = tokio::process::Command::new("/usr/bin/open");
     #[cfg(target_os = "linux")]
@@ -684,4 +697,22 @@ mod hive_root_tests {
             assert!(hive_root(&serde_json::json!({"device":{"hive":hive}})).is_err());
         }
     }
+}
+
+#[tauri::command]
+pub async fn device_context(bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
+    bridge.device_context().await
+}
+#[tauri::command]
+pub fn startup_status(
+    gate: tauri::State<'_, crate::experience::StartupGate>,
+) -> crate::experience::StartupStatus {
+    gate.snapshot()
+}
+#[tauri::command]
+pub async fn startup_recheck(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<crate::experience::StartupStatus, BridgeError> {
+    Ok(crate::experience::recheck(&app, &bridge).await)
 }

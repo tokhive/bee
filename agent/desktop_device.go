@@ -345,3 +345,46 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 	}
 	return nil
 }
+
+// DesktopDeviceContext is saved local information, never verified Hive identity.
+type DesktopDeviceContext struct {
+	Hive            string  `json:"hive"`
+	Name            string  `json:"name"`
+	DeviceID        *string `json:"device_id"`
+	OwnerID         *string `json:"owner_id"`
+	BindingRevision int64   `json:"binding_revision"`
+}
+
+func (d *DesktopDevice) Context(ctx context.Context) (DesktopDeviceContext, error) {
+	session, release, err := d.acquireSession(ctx)
+	if err != nil {
+		return DesktopDeviceContext{}, err
+	}
+	defer release()
+	state, revision, err := session.readBinding()
+	fail := func(code string, cause error) (DesktopDeviceContext, error) {
+		return DesktopDeviceContext{}, &DesktopFailure{Code: code, Message: cause.Error(), Cause: cause, Details: &DesktopFailureDetails{Check: "device_context", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano), Evidence: map[string]string{}}}
+	}
+	if err != nil {
+		return fail("DEVICE_CONTEXT_INVALID", fmt.Errorf("read saved desktop binding: %w", err))
+	}
+	if state.Hive == "" && state.Name == "" && state.Credential == "" && state.Identity == nil && state.Pairing == nil {
+		return fail("DEVICE_CONTEXT_UNCONFIGURED", errors.New("saved desktop binding is absent; required=configured Hive and device"))
+	}
+	origin, err := hiveOrigin(state.Hive)
+	if err != nil || origin != state.Hive {
+		return fail("DEVICE_CONTEXT_INVALID", errors.New("saved Hive origin rejected; required=canonical secure origin"))
+	}
+	if !deviceCredentialPattern.MatchString(state.Credential) || strings.TrimSpace(state.Name) == "" || utf8.RuneCountInString(state.Name) > 80 || strings.IndexFunc(state.Name, unicode.IsControl) >= 0 {
+		return fail("DEVICE_CONTEXT_INVALID", errors.New("saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls"))
+	}
+	result := DesktopDeviceContext{Hive: origin, Name: state.Name, BindingRevision: revision}
+	if state.Identity != nil {
+		if err := validateDesktopIdentity(state, *state.Identity); err != nil {
+			return fail("DEVICE_CONTEXT_INVALID", err)
+		}
+		result.DeviceID = accountString(state.Identity.ID)
+		result.OwnerID = accountString(state.Identity.OwnerID)
+	}
+	return result, nil
+}

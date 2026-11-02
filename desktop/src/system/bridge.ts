@@ -1,4 +1,4 @@
-import type {FailureDetails} from './failures';
+import {normalizeFailure,decodeBridgeError,validFailureTime,type UiFailure,type FailureDetails} from './failures.ts';
 export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
   state: 'starting' | 'ready' | 'failed' | 'stopped';
@@ -9,7 +9,21 @@ export interface BridgeReply { protocol: 1; id: string; instance: string; result
 export interface DownloadResult { url: string; success: boolean }
 export type Unlisten = () => void;
 export type NotificationPage = 'overview'|'accounts'|'diagnostics'|'settings';
+export interface StartupStatus {state:'checking'|'ready'|'blocked';failure:UiFailure|null;instance:string|null;binding_revision:number|null;network_revision:number|null;observed_at:string|null;revision:number}
+export function decodeStartupStatus(value:unknown):StartupStatus {
+ const invalid=():never=>{throw new Error('STARTUP_STATUS_INVALID: required=bounded status, raw failure and current context');};
+ if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
+ const v=value as Record<string,unknown>,fields=['state','failure','instance','binding_revision','network_revision','observed_at','revision'];
+ if(Object.keys(v).length!==fields.length||!fields.every(k=>Object.hasOwn(v,k))||!['checking','ready','blocked'].includes(String(v.state)))return invalid();
+ const revision=(n:unknown)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
+ if(!revision(v.revision)||v.instance!==null&&(typeof v.instance!=='string'||!/^[a-f0-9]{32}$/.test(v.instance))||['binding_revision','network_revision'].some(k=>v[k]!==null&&!revision(v[k]))||v.observed_at!==null&&!validFailureTime(v.observed_at)||(v.state==='blocked')!==(v.failure!==null))return invalid();
+ const failure=v.failure===null?null:normalizeFailure(decodeBridgeError(v.failure,'STARTUP_STATUS_INVALID'),'startup_check');
+ return {...v,failure} as unknown as StartupStatus;
+}
 export interface SystemBridge {
+ startupStatus?():Promise<StartupStatus>;
+ startupRecheck?():Promise<StartupStatus>;
+ onStartup?(listener:(status:StartupStatus)=>void):Promise<Unlisten>;
   status(): Promise<BridgeStatus>;
   ping(): Promise<BridgeReply>;
   onStatus(listener: (status: BridgeStatus) => void): Promise<Unlisten>;
@@ -28,6 +42,9 @@ export function createSystemBridge(): SystemBridge {
   };
   return {
     status: () => invoke<BridgeStatus>('bridge_status'),
+ startupStatus: async()=>decodeStartupStatus(await invoke('startup_status')),
+ startupRecheck: async()=>decodeStartupStatus(await invoke('startup_recheck')),
+ async onStartup(listener){let active=true;const off=await listen<unknown>('bee://startup-status',event=>{if(active)listener(decodeStartupStatus(event.payload));});return()=>{active=false;off();};},
     ping: () => invoke<BridgeReply>('bridge_request', { method: 'ping' }),
     async onNotification(listener) {
       let active=true;

@@ -2,6 +2,8 @@ package bee
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/json"
 	"fmt"
 	"sync"
 )
@@ -9,13 +11,16 @@ import (
 // The OS lock belongs to the management process, not an individual HTTP call.
 // mu protects only local configuration access; no network work runs under it.
 type desktopDeviceSession struct {
-	mu      sync.Mutex
-	path    string
-	unlock  func()
-	pairing chan struct{}
-	active  sync.WaitGroup
-	closed  bool
-	close   sync.Once
+	mu              sync.Mutex
+	path            string
+	unlock          func()
+	pairing         chan struct{}
+	active          sync.WaitGroup
+	closed          bool
+	close           sync.Once
+	bindingRevision int64
+	bindingDigest   [32]byte
+	bindingKnown    bool
 }
 
 func (d *DesktopDevice) acquireSession(ctx context.Context) (*desktopDeviceSession, func(), error) {
@@ -48,13 +53,19 @@ func (d *DesktopDevice) acquireSession(ctx context.Context) (*desktopDeviceSessi
 func (s *desktopDeviceSession) read() (localState, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return readState(s.path)
+	state, err := readState(s.path)
+	s.observeBinding(state, err)
+	return state, err
 }
 
 func (s *desktopDeviceSession) save(state localState) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	return saveState(s.path, state)
+	if err := saveState(s.path, state); err != nil {
+		return err
+	}
+	s.observeBinding(state, nil)
+	return nil
 }
 
 // Only pairing may change the device configuration. Its own gate serializes
@@ -85,4 +96,36 @@ func (d *DesktopDevice) Close() error {
 		}
 	})
 	return nil
+}
+
+// Called under mu; credentials affect the digest but never leave this session.
+func (s *desktopDeviceSession) observeBinding(state localState, err error) {
+	value := struct {
+		Hive, Name, Credential string
+		Identity               any
+		Invalid                bool
+	}{state.Hive, state.Name, state.Credential, state.Identity, err != nil}
+	raw, _ := json.Marshal(value)
+	digest := sha256.Sum256(raw)
+	if !s.bindingKnown || digest != s.bindingDigest {
+		s.bindingRevision++
+		s.bindingDigest = digest
+		s.bindingKnown = true
+	}
+}
+func (s *desktopDeviceSession) readBinding() (localState, int64, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	state, err := readState(s.path)
+	s.observeBinding(state, err)
+	return state, s.bindingRevision, err
+}
+func (d *DesktopDevice) bindingRevision(ctx context.Context) (int64, error) {
+	session, release, err := d.acquireSession(ctx)
+	if err != nil {
+		return 0, err
+	}
+	defer release()
+	_, revision, err := session.readBinding()
+	return revision, err
 }

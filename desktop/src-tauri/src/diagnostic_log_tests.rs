@@ -158,7 +158,7 @@ fn diagnostic_log_rejects_linked_and_public_files_without_exposing_paths() {
 }
 
 fn report() -> crate::diagnostics_protocol::DiagnosticReport {
-    crate::diagnostics_protocol::validate_report(&json!({"report":{"id":"a".repeat(48),"instance":"b".repeat(32),"run_id":null,"network_revision":2,"started_at":"2026-10-27T03:30:00Z","finished_at":"2026-10-27T03:31:00Z","state":"completed","checks":[{"id":"hive","platform":null,"status":"fail","observed_at":"2026-10-27T03:30:00Z","code":"http_rejected","evidence":{"http_status":"401"},"next_action":"diagnostics"}]}}),&"b".repeat(32)).unwrap()
+    crate::diagnostics_protocol::validate_report(&json!({"report":{"id":"a".repeat(48),"instance":"b".repeat(32),"run_id":null,"network_revision":2,"binding_revision":0,"started_at":"2026-10-27T03:30:00Z","finished_at":"2026-10-27T03:31:00Z","state":"completed","checks":[{"id":"hive","platform":null,"status":"fail","observed_at":"2026-10-27T03:30:00Z","code":"http_rejected","evidence":{"http_status":"401"},"next_action":"diagnostics"}]}}),&"b".repeat(32)).unwrap()
 }
 #[test]
 fn diagnostic_log_export_is_safe_bounded_and_explicit_about_truncation() {

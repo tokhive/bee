@@ -50,7 +50,7 @@ test('a newer diagnostic identity rejection blocks account submission and runtim
  await open(page);await nav(page,'AI 账号').click();const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot'){result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'device_replaced'},next_action:'overview'};}return result;};});
  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);
- await expect(page.getByText('此设备已被替换，原设备凭据已撤销。',{exact:true})).toBeVisible();await nav(page,'AI 账号').click();await expect(card.getByRole('button',{name:'接入',exact:true})).toBeDisabled();
+ await expect(page.locator('.nd-issues').getByText('此设备已被替换，原设备凭据已撤销。',{exact:true})).toBeVisible();await nav(page,'AI 账号').click();await expect(card.getByRole('button',{name:'接入',exact:true})).toBeDisabled();
  expect(await calls(page,'account_action')).toBe(0);expect(await calls(page,'runtime_start')).toBe(0);
 });
 
@@ -59,7 +59,7 @@ test('a diagnostic target absent from a partial report focuses its summary once 
  import React from '/node_modules/.vite/deps/react.js';import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';
  import {AppShell} from '/src/components/AppShell.tsx';import {NativeDiagnosticsPage} from '/src/features/diagnostics/NativeDiagnosticsPage.tsx';import '/src/styles/app.css';
  const report={id:'b'.repeat(48),instance:'a'.repeat(32),binding_revision:1,network_revision:0,run_id:null,state:'completed',started_at:new Date().toISOString(),finished_at:new Date().toISOString(),checks:[]};
- window.starts=0;const client={getSnapshot:()=>structuredClone(report),setContext:()=>{},start:async()=>{window.starts++;return report;}};
+ window.starts=0;const client={getSnapshot:()=>structuredClone(report),setContext:()=>{},getSession:()=>({start:'idle',cancel:'idle',read:'idle',failure:null,readFailure:null,download:'idle',downloadFailure:null}),subscribe:()=>()=>{},start:async()=>{window.starts++;return report;}};
  function Harness(){const [request,setRequest]=React.useState({target:{page:'diagnostics'},sequence:0}),[version,setVersion]=React.useState(0);window.addCheck=()=>{report.checks.push({id:'source',platform:'claude',status:'skipped',code:'not_checked',observed_at:new Date().toISOString(),evidence:{},next_action:'accounts'});setVersion(v=>v+1);};return React.createElement(AppShell,{page:'diagnostics',deviceMode:true,onNavigate:()=>{},navigationRequest:request},React.createElement('button',{onClick:()=>setRequest({target:{page:'diagnostics',section:'source',platform:'claude'},sequence:1})},'Locate Claude source'),React.createElement(NativeDiagnosticsPage,{key:version,client,instance:report.instance,bindingRevision:1,networkRevision:0,runId:null,navigationRequest:request,onNavigate:()=>{}}));}
  ReactDOM.createRoot(document.getElementById('harness')).render(React.createElement(Harness));</script>`}));
  await page.goto('/diagnostic-target-harness');await page.getByRole('button',{name:'Locate Claude source',exact:true}).click();
@@ -75,7 +75,15 @@ test('Claude inline source recovery keeps its platform, drafts and return focus 
  }
  const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'检查凭证来源',exact:true}).first().click();
  const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
- await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/openai-draft');
  for(const command of ['account_action','authorize_start','authorize_cancel','runtime_start','supply_set_paused'])expect(await calls(page,command)).toBe(0);
+});
+
+test('T8 diagnostic source recovery targets Claude credentials and returns focus to its original check without writes',async({page})=>{
+ await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='diagnostics_start'){const r=value.result.report;r.state='completed';r.finished_at=r.started_at;r.checks=[{id:'source',platform:'claude',status:'fail',code:'source_missing',observed_at:r.started_at,evidence:{source_type:'file'},next_action:'accounts'}];}return value;};});
+ await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();const check=page.locator('.nd-checks>li[data-nav-platform="claude"]');await check.getByRole('button',{name:'前往账号',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'Claude 账号详情'});await expect(dialog).toBeVisible();await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(check).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
+ expect(await calls(page,'diagnostics_start')).toBe(1);for(const command of ['account_action','authorize_start','runtime_start','network_save_proxy'])expect(await calls(page,command)).toBe(0);
 });

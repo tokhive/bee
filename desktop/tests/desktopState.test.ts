@@ -129,6 +129,19 @@ test('diagnostic identity observations are scoped and cannot turn HTTP success i
  m.acceptDiagnosticReport({...report,checks:[{...report.checks[0],status:'pass',code:'hive_identity_verified'}]});assert.equal(m.getSnapshot().runtime?.local,'stopped');assert.equal(m.getSnapshot().startup,undefined);
 });
 
+test('diagnostic credential recovery requires exact Hive identity evidence and retains the original cause',async t=>{
+ for(const variant of [{},{evidence:{method:'GET',path:'/api/bee/platforms/openai/account',http_status:'401',server_code:'invalid_device_credential'}},{evidence:{method:'GET',path:'/api/bee/identity',http_status:'403',server_code:'invalid_device_credential'}},{evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'unavailable'}},{evidence:{path:'/api/bee/identity',http_status:'401',server_code:'invalid_device_credential'}},{id:'account',platform:'openai'},{platform:'openai'},{status:'pass'}]){
+  const f=fixture();f.deps.device.context=async()=>({hive:'https://hive.example',name:'Mac',device_id:'device',owner_id:'owner',binding_revision:1});
+  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+  const observed_at=new Date(Date.now()+1).toISOString(),check:any={id:'hive',platform:null,status:'fail',code:'http_rejected',observed_at,evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'invalid_device_credential'},next_action:'diagnostics',...variant};
+  m.acceptDiagnosticReport({instance:'a',binding_revision:1,network_revision:0,run_id:null,checks:[check]} as any);
+  const failure=m.getSnapshot().diagnosticFailure;
+  if(!Object.keys(variant).length){assert.equal(failure?.code,'invalid_device_credential');assert.equal(failure?.observedAt,observed_at);assert.deepEqual(failure?.evidence,{http_status:'401',path:'/api/bee/identity',remote_code:'invalid_device_credential'});assert.match(failure!.message,/http_rejected.*401/);}
+  else assert.notEqual(failure?.code,'invalid_device_credential');
+  assert.equal(m.getSnapshot().runtime?.local,'stopped');assert.equal(m.getSnapshot().startup,undefined);m.dispose();
+ }
+});
+
 test('supply progress follows its platform request rather than another platform busy flag',async()=>{
  const {supplyProgress}=await import('../src/features/supply/useSupply.ts');
  const now=Date.now(),view={checked_at:new Date(now-31000).toISOString()};

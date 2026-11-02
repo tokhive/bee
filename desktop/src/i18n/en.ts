@@ -1141,4 +1141,11 @@ export const en: Record<string, string> = {
   "退出 Bee 并安装更新？": "Quit Bee and install the update?",
   "退出并安装可能中断正在处理的任务。确认后 Bee 将停止并交给安装程序；安装结果将在重新启动后核验。": "Quitting to install may interrupt tasks in progress. After confirmation, Bee will stop and hand off to the installer. The installation result will be verified after restart.",
   "退出并安装": "Quit and install",
+  "查看诊断": "View diagnostics",
+  "已保存的本机设备配置未通过校验。": "The saved local device configuration failed validation.",
+  "尚未配置本机设备。": "This device has not been configured.",
+  "已保存的网络设置尚未应用。": "The saved network settings have not been applied.",
+  "依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。": "Actions requiring device identity remain unavailable. Export a diagnostic report and contact support to repair the local device configuration, then recheck the device.",
+  "请在概览连接本机设备；配对不会自动开始贡献。": "Connect this device from Overview. Pairing does not automatically start contribution.",
+  "请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。": "Open Settings, choose Network, apply the saved network settings, then recheck the device. Rechecking does not automatically apply network settings.",
 };

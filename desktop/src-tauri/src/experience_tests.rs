@@ -31,6 +31,7 @@ fn fixture(
     let bridge = Bridge::start(spec);
     let app = tauri::test::mock_builder()
         .manage(StartupGate::default())
+        .manage(bridge.clone())
         .manage(PreferencesStore::new(dir.path().join("preferences.json")))
         .manage(NetworkController::default())
         .manage(
@@ -122,9 +123,198 @@ async fn unbound_recheck_is_ready_but_bridge_failure_cannot_be_cleared() {
     let (_dir, bridge, app) = fixture(serde_json::json!({"unbound":true}));
     let status = recheck(app.handle(), &bridge).await;
     assert_eq!(status.state, "ready");
-    assert_eq!(status.binding_revision, None);
+    assert_eq!(status.binding_revision, Some(1));
     bridge.stop().await.unwrap();
     let status = recheck(app.handle(), &bridge).await;
     assert_eq!(status.state, "blocked");
     assert!(app.state::<StartupGate>().check().is_err());
+}
+
+#[tokio::test]
+async fn saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready() {
+    for held in [false, true] {
+        let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"runtime_revision":5}));
+        wait_bridge(&bridge).await.unwrap();
+        // Established readiness before the user saves a different proxy.
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let store = app.state::<PreferencesStore>();
+        let device = bridge.device_status().await.unwrap();
+        let scope = crate::network::trusted_scope(&device.result)
+            .unwrap()
+            .unwrap();
+        let mut prefs = store.read().preferences;
+        prefs.proxies.push(crate::preferences::ProxyPreference {
+            origin: scope.origin().into(),
+            device_scope: Some(scope.device_scope().into()),
+            connect_proxy: "http://127.0.0.1:18080".into(),
+        });
+        assert!(store.save(prefs.revision, prefs).error.is_none());
+        if held {
+            bridge.0.startup_verified.store(false, Ordering::SeqCst);
+        }
+        let blocked = recheck(app.handle(), &bridge).await;
+        assert_eq!(blocked.failure.unwrap().code, "NETWORK_APPLY_REQUIRED");
+        let before = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(!before.contains("runtime_restore"));
+        assert!(!before.contains("runtime_start"));
+        let applied = crate::commands::network_apply_saved(
+            app.state::<Bridge>(),
+            store,
+            app.state::<NetworkController>(),
+            app.state::<StartupGate>(),
+            app.state::<UpdateManager>(),
+            true,
+        )
+        .await;
+        // Invoke the same command through managed states; command recovery must not unlock readiness.
+        let applied = applied.unwrap();
+        assert!(applied.error.is_none(), "{:?}", applied.error);
+        assert!(!applied.pending_restart);
+        assert!(app.state::<StartupGate>().check().is_err());
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert_eq!(calls.matches("runtime_restore").count(), usize::from(!held));
+        assert!(!calls.contains("runtime_start"));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let after = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert_eq!(after.matches("runtime_restore").count(), usize::from(!held));
+        assert_eq!(
+            bridge.runtime_snapshot().await.unwrap().result["runtime"]["local"],
+            "stopped"
+        );
+        assert!(!bridge.0.restored.load(Ordering::SeqCst));
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime() {
+    let (dir, bridge, app) = fixture(serde_json::json!({}));
+    wait_bridge(&bridge).await.unwrap();
+    let store = app.state::<PreferencesStore>();
+    let scope = crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+        .unwrap()
+        .unwrap();
+    let mut prefs = store.read().preferences;
+    prefs.proxies.push(crate::preferences::ProxyPreference {
+        origin: scope.origin().into(),
+        device_scope: Some(scope.device_scope().into()),
+        connect_proxy: "http://127.0.0.1:18080".into(),
+    });
+    assert!(store.save(prefs.revision, prefs).error.is_none());
+    let status = recheck(app.handle(), &bridge).await;
+    assert_eq!(status.state, "blocked");
+    assert_eq!(status.failure.unwrap().code, "NETWORK_APPLY_REQUIRED");
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    for method in [
+        "runtime_restore",
+        "runtime_start",
+        "runtime_stop",
+        "runtime_configure_network",
+    ] {
+        assert!(!calls.contains(method), "recheck dispatched {method}");
+    }
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn network_recovery_keeps_update_identity_data_and_owned_exit_protections() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"runtime_revision":5}));
+    wait_bridge(&bridge).await.unwrap();
+    let gate = app.state::<StartupGate>();
+    gate.finish(Ok(context(&bridge, &app.state::<PreferencesStore>())
+        .await
+        .unwrap()));
+    bridge.0.startup_verified.store(false, Ordering::SeqCst);
+    assert_eq!(
+        apply_saved_network(
+            &bridge,
+            &app.state::<PreferencesStore>(),
+            &app.state::<NetworkController>(),
+            &gate,
+            &app.state::<UpdateManager>(),
+            true
+        )
+        .await
+        .err()
+        .unwrap()
+        .code,
+        "STARTUP_VERIFICATION_PENDING"
+    );
+    bridge.0.startup_verified.store(true, Ordering::SeqCst);
+    gate.finish(Err(BridgeError::new(
+        "NETWORK_APPLY_REQUIRED",
+        "saved proxy differs from effective proxy".into(),
+    )));
+    let store = app.state::<PreferencesStore>();
+    let controller = app.state::<NetworkController>();
+    let manager = app.state::<UpdateManager>();
+    manager.lock().unwrap().persistent.pending_update = Some(crate::updater::PendingUpdate {
+        from_version: "0.1.0".into(),
+        to_version: "0.2.0".into(),
+        channel: "stable".into(),
+        stage: "prepared".into(),
+        target_digest: "a".repeat(64),
+    });
+    assert_eq!(
+        apply_saved_network(&bridge, &store, &controller, &gate, &manager, true)
+            .await
+            .unwrap_err()
+            .code,
+        "UPDATE_RECOVERY_PENDING"
+    );
+    assert!(manager.has_pending().unwrap());
+    manager.lock().unwrap().persistent.pending_update = None;
+    for (config, code) in [
+        (
+            serde_json::json!({"rejected":true,"apply":true}),
+            "device_replaced",
+        ),
+        (
+            serde_json::json!({"bad_data":true,"apply":true}),
+            "STARTUP_DATA_INVALID",
+        ),
+    ] {
+        std::fs::write(
+            dir.path().join("context.json"),
+            serde_json::to_vec(&config).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            apply_saved_network(&bridge, &store, &controller, &gate, &manager, true)
+                .await
+                .unwrap_err()
+                .code,
+            code
+        );
+    }
+    bridge.0.frozen.store(true, Ordering::SeqCst);
+    assert_eq!(
+        apply_saved_network(&bridge, &store, &controller, &gate, &manager, true)
+            .await
+            .unwrap_err()
+            .code,
+        "OWNED_EXIT_PENDING"
+    );
+    bridge.0.frozen.store(false, Ordering::SeqCst);
+    gate.finish(Err(BridgeError::new("device_replaced", "HTTP 401".into())));
+    assert_eq!(
+        apply_saved_network(&bridge, &store, &controller, &gate, &manager, true)
+            .await
+            .unwrap_err()
+            .code,
+        "device_replaced"
+    );
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    for method in [
+        "runtime_restore",
+        "runtime_start",
+        "runtime_stop",
+        "runtime_configure_network",
+    ] {
+        assert!(
+            !calls.contains(method),
+            "rejected recovery dispatched {method}"
+        );
+    }
+    bridge.stop().await.unwrap();
 }

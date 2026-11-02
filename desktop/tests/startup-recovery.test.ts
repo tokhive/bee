@@ -1,6 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {createDesktopState} from '../src/system/desktopState.ts';
+import {createDeviceClient} from '../src/system/device.ts';
+import {createDiagnosticsClient} from '../src/system/diagnostics.ts';
+const diagnosticReport=()=>({id:'b'.repeat(48),instance:'a'.repeat(32),run_id:null,network_revision:2,binding_revision:1,started_at:'2026-10-26T03:30:00Z',finished_at:null,state:'running',checks:[]});
 import {decodeStartupStatus} from '../src/system/bridge.ts';
 const tick=()=>new Promise<void>(resolve=>setImmediate(resolve));
 const startup=(instance:string,revision=1)=>({state:'blocked' as const,failure:{code:'device_replaced',check:'device_identity',observedAt:null,evidence:{},message:'HTTP 401'},instance,binding_revision:1,network_revision:0,observed_at:null,revision});
@@ -35,4 +38,20 @@ test('rejected identity retains local runtime and context without resuming old a
  assert.deepEqual((model.getSnapshot() as any).deviceContext,context);
  assert.equal(model.getSnapshot().deviceError?.code,'device_replaced');
  assert.equal(calls.includes('snapshot'),false);
+});
+
+
+test('absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state',async t=>{
+ const instance='a'.repeat(32);let binding=1,kind='absent',resolve!:(v:any)=>void;
+ const device=createDeviceClient(async command=>command==='device_context'?{result:kind==='valid'?{context:{hive:'https://hive.example',name:'Mac',device_id:'device',owner_id:'owner',binding_revision:binding}}:{error:{code:kind==='absent'?'DEVICE_CONTEXT_UNCONFIGURED':'DEVICE_CONTEXT_INVALID',message:'saved local record rejected'},binding_revision:binding}}:{result:{device:{state:'unbound'}}});
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{}} as any,device,runtime:()=>({snapshot:async()=>({revision:1,network_revision:2,local:'stopped',run_id:null,platforms:{}})}) as any,intervalMs:100000});t.after(()=>model.dispose());model.subscribe(()=>{});await tick();
+ const client=createDiagnosticsClient(async()=>new Promise(r=>{resolve=r;}),instance,2,null,(model.getSnapshot() as any).bindingRevision??0);
+ const start=client.start();await tick();resolve({instance,result:{report:{...diagnosticReport(),instance,run_id:null,binding_revision:1}}});assert.equal((await start).binding_revision,1);
+ for(const next of ['corrupt','valid','corrupt','valid']) {
+  const generation=model.generation();kind=next;binding++;await model.refresh();
+  assert.equal((model.getSnapshot() as any).bindingRevision,binding);assert.ok(model.generation()>generation);
+  assert.equal(!!model.getSnapshot().deviceContext,next==='valid');assert.equal(model.getSnapshot().deviceError?.code,next==='valid'?undefined:'DEVICE_CONTEXT_INVALID');
+  client.setContext(2,null,binding);assert.equal(client.getSnapshot(),null);
+ }
+ const pending=client.start();await tick();kind='corrupt';binding++;await model.refresh();client.setContext(2,null,(model.getSnapshot() as any).bindingRevision);resolve({instance,result:{report:{...diagnosticReport(),instance,run_id:null,binding_revision:binding-1}}});await assert.rejects(pending,/context changed/);
 });

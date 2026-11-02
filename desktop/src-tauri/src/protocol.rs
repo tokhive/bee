@@ -947,7 +947,49 @@ pub(crate) fn result_error(value: &Value) -> Result<(), BridgeError> {
     }
     Ok(())
 }
+pub(crate) struct DeviceContextState {
+    pub binding_revision: u64,
+    pub failure: Option<BridgeError>,
+}
+pub(crate) fn device_context_state(value: &Value) -> Result<DeviceContextState, BridgeError> {
+    if value.get("error").is_some() {
+        if value.get("binding_revision").is_none() {
+            result_error(value)?;
+        }
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct FailedContext {
+            error: BridgeError,
+            binding_revision: u64,
+        }
+        let failed: FailedContext = serde_json::from_value(value.clone())
+            .map_err(|e| invalid_json("device context state", e))?;
+        if failed.binding_revision == 0
+            || failed.binding_revision > 9_007_199_254_740_991
+            || !matches!(
+                failed.error.code.as_str(),
+                "DEVICE_CONTEXT_INVALID" | "DEVICE_CONTEXT_UNCONFIGURED"
+            )
+        {
+            return Err(BridgeError::new("DEVICE_CONTEXT_INVALID",format!("context failure observation rejected: binding_revision={} local_failure={}; required=positive safe session revision and local configuration failure",failed.binding_revision,matches!(failed.error.code.as_str(), "DEVICE_CONTEXT_INVALID" | "DEVICE_CONTEXT_UNCONFIGURED"))));
+        }
+        return Ok(DeviceContextState {
+            binding_revision: failed.binding_revision,
+            failure: Some(failed.error),
+        });
+    }
+    let context = device_context(value)?;
+    Ok(DeviceContextState {
+        binding_revision: context.binding_revision,
+        failure: None,
+    })
+}
 pub(crate) fn device_context(value: &Value) -> Result<DeviceContext, BridgeError> {
+    if value.get("error").is_some() && value.get("binding_revision").is_some() {
+        return Err(device_context_state(value)?
+            .failure
+            .expect("validated context failure"));
+    }
     result_error(value)?;
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
@@ -1029,5 +1071,30 @@ mod device_context_tests {
             assert!(device_context(&serde_json::json!({"context":c})).is_err());
         }
         assert_eq!(device_context(&serde_json::json!({"error":{"code":"DEVICE_CONTEXT_INVALID","message":"saved JSON invalid"}})).unwrap_err().code,"DEVICE_CONTEXT_INVALID");
+    }
+}
+
+#[cfg(test)]
+mod device_context_state_tests {
+    use super::*;
+    #[test]
+    fn observed_binding_failure_is_strict_and_retains_revision() {
+        let failure = serde_json::json!({"error":{"code":"DEVICE_CONTEXT_INVALID","message":"saved JSON rejected"},"binding_revision":7});
+        assert_eq!(device_context_state(&serde_json::json!({"error":{"code":"DEVICE_CONTEXT_FAILED","message":"configuration ownership unavailable"}})).err().unwrap().code,"DEVICE_CONTEXT_FAILED");
+        let state = device_context_state(&failure).unwrap();
+        assert_eq!(state.binding_revision, 7);
+        assert_eq!(state.failure.unwrap().code, "DEVICE_CONTEXT_INVALID");
+
+        for value in [
+            serde_json::json!({"error":{"code":"DEVICE_CONTEXT_INVALID","message":"bad"},"binding_revision":0}),
+            serde_json::json!({"error":{"code":"DEVICE_CONTEXT_INVALID","message":"bad"},"binding_revision":1,"context":{}}),
+            serde_json::json!({"error":{"code":"DEVICE_CONTEXT_FAILED","message":"bad"},"binding_revision":1}),
+        ] {
+            assert!(device_context(&value).is_err());
+        }
+        assert_eq!(
+            device_context(&failure).unwrap_err().code,
+            "DEVICE_CONTEXT_INVALID"
+        );
     }
 }

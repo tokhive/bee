@@ -4,7 +4,7 @@ import type {DeviceClient,DeviceView,DeviceContext} from './device';
 import type {AccountFactory,AccountDefaults,AccountSnapshot} from './accounts';
 import type {SupplyFactory,SupplyView} from './supply';
 import type {RuntimeFactory,RuntimeSnapshot} from './runtime';
-export interface DesktopSnapshot {native:BridgeStatus;startup?:StartupStatus;deviceContext?:DeviceContext;device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;accounts:Partial<Record<'openai'|'claude',AccountSnapshot>>;accountErrors:Partial<Record<'openai'|'claude',UiFailure>>;supplies:Partial<Record<'openai'|'claude',SupplyView>>;supplyErrors:Partial<Record<'openai'|'claude',UiFailure>>;supplyPlatform?:'openai'|'claude'|null;error:UiFailure|null;busy:boolean}
+export interface DesktopSnapshot {native:BridgeStatus;startup?:StartupStatus;deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;accounts:Partial<Record<'openai'|'claude',AccountSnapshot>>;accountErrors:Partial<Record<'openai'|'claude',UiFailure>>;supplies:Partial<Record<'openai'|'claude',SupplyView>>;supplyErrors:Partial<Record<'openai'|'claude',UiFailure>>;supplyPlatform?:'openai'|'claude'|null;error:UiFailure|null;busy:boolean}
 export interface DesktopDeps{bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number}
 const failure=(e:unknown,check='desktop_refresh')=>normalizeFailure(e,check);
 /** One application owner. Pages subscribe without starting independent polling. */
@@ -16,7 +16,7 @@ export function createDesktopState(deps:DesktopDeps){
  const acceptStartup=(status:StartupStatus)=>{
   if(disposed||status.instance&&state.native.metadata?.instance&&status.instance!==state.native.metadata.instance)return;
   if(status.state!=='checking'){
-   if(state.deviceContext&&status.binding_revision!==null&&status.binding_revision!==state.deviceContext.binding_revision)return;
+   if(state.bindingRevision!==undefined&&status.binding_revision!==null&&status.binding_revision!==state.bindingRevision)return;
    if(state.runtime&&status.network_revision!==null&&status.network_revision!==state.runtime.network_revision)return;
   }
   if(state.startup&&status.revision<state.startup.revision)return;
@@ -27,7 +27,7 @@ export function createDesktopState(deps:DesktopDeps){
  function accept(status:BridgeStatus){
   if(disposed)return;
   const changed=status.metadata?.instance!==state.native.metadata?.instance||status.state!==state.native.state;
-  if(changed){epoch++;paused=false;runtimeReceiptRevision=-1;accountReceiptRevisions={};clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;const startup=status.state==='ready'&&state.startup?.instance===instance?state.startup:undefined;publish({native:status,device:undefined,deviceContext:undefined,startup,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
+  if(changed){epoch++;paused=false;runtimeReceiptRevision=-1;accountReceiptRevisions={};clearTimeout(timer);const generation=epoch,instance=status.metadata?.instance;const startup=status.state==='ready'&&state.startup?.instance===instance?state.startup:undefined;publish({native:status,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,startup,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false});if(status.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance)void refresh().catch(()=>undefined);});}
   else publish({native:status});
  }
  function begin(){if(started||disposed)return;started=true;let received=false;
@@ -44,13 +44,17 @@ export function createDesktopState(deps:DesktopDeps){
   const current=()=>!disposed&&epoch===generation&&state.native.metadata?.instance===instance;
   const task=(async()=>{let device:DeviceView|undefined,deviceError:UiFailure|null=null;try{
    const runtime=deps.runtime(instance),accounts=deps.accounts?.(instance);
-   let deviceContext:DeviceContext|undefined;
-   if(deps.device.context)try{deviceContext=await deps.device.context();}catch(e){const cause=failure(e,'device_context');if(cause.code!=='DEVICE_CONTEXT_UNCONFIGURED')deviceError=cause;}
+   let deviceContext:DeviceContext|undefined,bindingRevision:number|undefined,deviceContextFailure:UiFailure|undefined;
+   if(deps.device.context)try{
+    const local=await deps.device.context();bindingRevision=local.binding_revision;
+    if('failure'in local){deviceContextFailure=local.failure;if(local.failure.code!=='DEVICE_CONTEXT_UNCONFIGURED')deviceError=local.failure;}
+    else deviceContext=local;
+   }catch(e){deviceContextFailure=deviceError=failure(e,'device_context');}
    if(!current())return;
-   const bindingChanged=state.deviceContext&&deviceContext?.binding_revision!==state.deviceContext.binding_revision;
-   if(bindingChanged){epoch++;generation=epoch;pendingEpoch=generation;runtimeReceiptRevision=-1;accountReceiptRevisions={};publish({deviceContext,device:undefined,startup:undefined,runtime:undefined,defaults:undefined,accounts:{},supplies:{},accountErrors:{},supplyErrors:{},error:null});}
-   else if(deviceContext)publish({deviceContext});
-   try{device=await deps.device.status();}catch(e){if(!current())return;deviceError=failure(e,'device_status');}
+   const bindingChanged=state.bindingRevision!==undefined&&bindingRevision!==state.bindingRevision;
+   if(bindingChanged){epoch++;generation=epoch;pendingEpoch=generation;runtimeReceiptRevision=-1;accountReceiptRevisions={};publish({deviceContext,bindingRevision,deviceContextFailure,device:undefined,startup:undefined,runtime:undefined,defaults:undefined,accounts:{},supplies:{},accountErrors:{},supplyErrors:{},error:null});}
+   else publish({deviceContext,bindingRevision,deviceContextFailure});
+   try{device=await deps.device.status();}catch(e){if(!current())return;deviceError??=failure(e,'device_status');}
    if(!current())return;
    const [next,defaults]=await Promise.all([runtime.snapshot(),!state.defaults&&accounts?accounts.defaults():Promise.resolve(state.defaults)]);
    if(!current())return;

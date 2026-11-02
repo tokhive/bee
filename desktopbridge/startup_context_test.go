@@ -14,12 +14,13 @@ import (
 
 type startupContextDevice struct {
 	fakeSupply
-	reads int
+	reads   int
+	failure error
 }
 
 func (d *startupContextDevice) Context(context.Context) (bee.DesktopDeviceContext, error) {
 	d.reads++
-	return bee.DesktopDeviceContext{Hive: "https://hive.example", Name: "Saved Mac", BindingRevision: 3}, nil
+	return bee.DesktopDeviceContext{Hive: "https://hive.example", Name: "Saved Mac", BindingRevision: 3}, d.failure
 }
 
 type startupContextRuntime struct {
@@ -58,5 +59,19 @@ func TestDeviceContextBridgeAndStartupVerificationUseStrictReadOnlyMethods(t *te
 		if device.reads != 1 || runtime.checks != 1 || runtime.restores != 0 || runtime.starts != 0 || frames[3].Error == nil || frames[4].Error == nil || frames[5].Error != nil || strings.Contains(out.String(), "SECRET") {
 			t.Fatalf("read-only method boundary changed: %s", out.String())
 		}
+	}
+}
+
+func TestDeviceContextBridgePreservesRevisionOnlyForObservedFailure(t *testing.T) {
+	device := &startupContextDevice{failure: &bee.DesktopFailure{Code: "DEVICE_CONTEXT_INVALID", Message: "saved record rejected"}}
+	accounts := bee.NewDesktopAccounts(nil)
+	defer accounts.Close()
+	var out bytes.Buffer
+	if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(hello+request("context", "device_context")), &out, io.Discard, "test", device, accounts, &startupContextRuntime{}); err != nil {
+		t.Fatal(err)
+	}
+	frames := replies(t, out.String())
+	if string(frames[1].Result) != `{"error":{"code":"DEVICE_CONTEXT_INVALID","message":"DEVICE_CONTEXT_INVALID: saved record rejected"},"binding_revision":3}` {
+		t.Fatalf("observed failure revision lost: %s", frames[1].Result)
 	}
 }

@@ -363,7 +363,7 @@ func (d *DesktopDevice) Context(ctx context.Context) (DesktopDeviceContext, erro
 	defer release()
 	state, revision, err := session.readBinding()
 	fail := func(code string, cause error) (DesktopDeviceContext, error) {
-		return DesktopDeviceContext{}, &DesktopFailure{Code: code, Message: cause.Error(), Cause: cause, Details: &DesktopFailureDetails{Check: "device_context", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano), Evidence: map[string]string{}}}
+		return DesktopDeviceContext{BindingRevision: revision}, &DesktopFailure{Code: code, Message: cause.Error(), Cause: cause, Details: &DesktopFailureDetails{Check: "device_context", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano), Evidence: map[string]string{}}}
 	}
 	if err != nil {
 		return fail("DEVICE_CONTEXT_INVALID", fmt.Errorf("read saved desktop binding: %w", err))
@@ -371,12 +371,68 @@ func (d *DesktopDevice) Context(ctx context.Context) (DesktopDeviceContext, erro
 	if state.Hive == "" && state.Name == "" && state.Credential == "" && state.Identity == nil && state.Pairing == nil {
 		return fail("DEVICE_CONTEXT_UNCONFIGURED", errors.New("saved desktop binding is absent; required=configured Hive and device"))
 	}
-	origin, err := hiveOrigin(state.Hive)
-	if err != nil || origin != state.Hive {
-		return fail("DEVICE_CONTEXT_INVALID", errors.New("saved Hive origin rejected; required=canonical secure origin"))
+	facts := func(check, actual, required string, cause error) (DesktopDeviceContext, error) {
+		value, err := fail("DEVICE_CONTEXT_INVALID", fmt.Errorf("%s; actual=%s; required=%s: %w", check, actual, required, cause))
+		err.(*DesktopFailure).Details.Evidence = map[string]string{"actual": actual, "required": required}
+		return value, err
 	}
-	if !deviceCredentialPattern.MatchString(state.Credential) || strings.TrimSpace(state.Name) == "" || utf8.RuneCountInString(state.Name) > 80 || strings.IndexFunc(state.Name, unicode.IsControl) >= 0 {
-		return fail("DEVICE_CONTEXT_INVALID", errors.New("saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls"))
+	parsed, parseErr := url.Parse(state.Hive)
+	if parseErr != nil {
+		// url.Error includes the entire input; only its safe parser category may leave this boundary.
+		category := "URL syntax rejected"
+		cause := parseErr
+		if wrapped, ok := parseErr.(*url.Error); ok {
+			cause = wrapped.Err
+		}
+		switch text := cause.Error(); {
+		case strings.HasPrefix(text, "invalid port "):
+			category = "invalid port"
+		case strings.Contains(text, "invalid control character"):
+			category = "invalid control character"
+		case strings.HasPrefix(text, "invalid URL escape"):
+			category = "invalid URL escape"
+		case strings.Contains(text, "missing ']' in host"):
+			category = "missing closing IPv6 bracket"
+		}
+		return facts("saved Hive origin parse failed", "parsed=false", "valid HTTPS origin", errors.New(category))
+	}
+	if parsed.Opaque != "" {
+		return facts("saved Hive origin opaque URL rejected", "opaque_present=true", "opaque_present=false", errors.New("Hive origin requires hierarchical URL"))
+	}
+	if parsed.Host == "" {
+		return facts("saved Hive origin host missing", "host_present=false", "host_present=true", errors.New("Hive address must be a valid HTTPS origin"))
+	}
+	if parsed.User != nil {
+		return facts("saved Hive origin credentials rejected", "credentials_present=true", "credentials_present=false", errors.New("Hive origin must not include user information"))
+	}
+	if parsed.RawQuery != "" || parsed.ForceQuery {
+		return facts("saved Hive origin query rejected", "query_present=true", "query_present=false", errors.New("Hive origin must not include query parameters"))
+	}
+	if parsed.Fragment != "" || strings.Contains(state.Hive, "#") {
+		return facts("saved Hive origin fragment rejected", "fragment_present=true", "fragment_present=false", errors.New("Hive origin must not include a fragment"))
+	}
+
+	if parsed.Path != "" && parsed.Path != "/" {
+		return facts("saved Hive origin path rejected", "path_present=true", "empty origin path", errors.New("Hive address must be a valid HTTPS origin"))
+	}
+	origin, err := hiveOrigin(state.Hive)
+	if err != nil {
+		return facts("saved Hive origin security rejected", "secure_or_loopback=false", "HTTPS or loopback HTTP", err)
+	}
+	if origin != state.Hive {
+		return facts("saved Hive origin is not canonical", "canonical_match=false", "saved origin equals validated origin", errors.New("saved origin differs from validated scheme and authority"))
+	}
+	if !deviceCredentialPattern.MatchString(state.Credential) {
+		return facts("saved device credential format rejected", "format_valid=false", "bee_ followed by 43 URL-safe characters", errors.New("saved credential does not match the device credential format"))
+	}
+	if strings.TrimSpace(state.Name) == "" {
+		return facts("saved device name is empty", "trimmed_characters=0", "nonempty device name", errors.New("device name contains only whitespace"))
+	}
+	if length := utf8.RuneCountInString(state.Name); length > 80 {
+		return facts("saved device name length rejected", fmt.Sprintf("characters=%d", length), "characters<=80", errors.New("device name exceeds character limit"))
+	}
+	if strings.IndexFunc(state.Name, unicode.IsControl) >= 0 {
+		return facts("saved device name contains control characters", "control_present=true", "control_present=false", errors.New("device name must contain printable characters"))
 	}
 	result := DesktopDeviceContext{Hive: origin, Name: state.Name, BindingRevision: revision}
 	if state.Identity != nil {

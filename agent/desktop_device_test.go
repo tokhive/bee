@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -544,5 +545,65 @@ func TestDesktopAccountsStartupVerificationNeverStartsRuntime(t *testing.T) {
 	}
 	if method.Call([]reflect.Value{reflect.ValueOf(context.Background())})[0].IsNil() {
 		t.Fatal("corrupt account state passed verification")
+	}
+}
+
+func TestDesktopDeviceContextFailuresKeepObservedBindingRevision(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	var previous int64
+	for _, raw := range []string{"", `{"bad":true}`, `{"hive":"https://hive.example","name":"Mac","credential":"bee_` + strings.Repeat("a", 43) + `"}`, `{"bad":true}`} {
+		if raw != "" {
+			if err := os.WriteFile(d.path, []byte(raw), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		value, _ := d.Context(context.Background())
+		revision, _ := d.bindingRevision(context.Background())
+		if value.BindingRevision != revision || revision <= previous {
+			t.Fatalf("context revision=%d actual session=%d previous=%d", value.BindingRevision, revision, previous)
+		}
+		previous = revision
+	}
+}
+
+func TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts(t *testing.T) {
+	valid := localState{Hive: "https://hive.example", Name: "Mac", Credential: "bee_" + strings.Repeat("a", 43)}
+	tests := []struct {
+		name                   string
+		edit                   func(*localState)
+		want, actual, required string
+	}{
+		{"credential", func(s *localState) { s.Credential = "SECRET-CREDENTIAL" }, "credential format", "format_valid=false", "bee_ followed by 43 URL-safe characters"},
+		{"empty", func(s *localState) { s.Name = "  " }, "name is empty", "trimmed_characters=0", "nonempty device name"},
+		{"length", func(s *localState) { s.Name = strings.Repeat("界", 81) }, "name length", "characters=81", "characters<=80"},
+		{"controls", func(s *localState) { s.Name = "Mac\n" }, "name contains control", "control_present=true", "control_present=false"},
+		{"origin_parse", func(s *localState) { s.Hive = "https://host:bad?token=SECRET-ORIGIN" }, "origin parse", "parsed=false", "valid HTTPS origin"},
+		{"origin_host", func(s *localState) { s.Hive = "https:///SECRET-ORIGIN" }, "origin host missing", "host_present=false", "host_present=true"},
+		{"origin_opaque", func(s *localState) { s.Hive = "https:SECRET-ORIGIN" }, "origin opaque", "opaque_present=true", "opaque_present=false"},
+		{"origin_fragment", func(s *localState) { s.Hive = "https://hive.example#SECRET-ORIGIN" }, "origin fragment", "fragment_present=true", "fragment_present=false"},
+		{"origin_auth", func(s *localState) { s.Hive = "https://user:SECRET-ORIGIN@hive.example" }, "origin credentials", "credentials_present=true", "credentials_present=false"},
+		{"origin_query", func(s *localState) { s.Hive = "https://hive.example?token=SECRET-ORIGIN" }, "origin query", "query_present=true", "query_present=false"},
+		{"origin_path", func(s *localState) { s.Hive = "https://hive.example/path/SECRET-ORIGIN" }, "origin path", "path_present=true", "empty origin path"},
+		{"origin_slash", func(s *localState) { s.Hive = "https://hive.example/" }, "origin is not canonical", "canonical_match=false", "saved origin equals validated origin"},
+		{"origin_http", func(s *localState) { s.Hive = "http://hive.example" }, "HTTP is allowed only for loopback", "secure_or_loopback=false", "HTTPS or loopback HTTP"},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+			s := valid
+			tc.edit(&s)
+			if err := saveState(d.path, s); err != nil {
+				t.Fatal(err)
+			}
+			_, err := d.Context(context.Background())
+			var f *DesktopFailure
+			if !errors.As(err, &f) || !strings.Contains(f.Message, tc.want) || !strings.Contains(f.Message, tc.actual) || !strings.Contains(f.Message, tc.required) || f.Details.Evidence["actual"] != tc.actual || f.Details.Evidence["required"] != tc.required || errors.Unwrap(f) == nil {
+				t.Fatalf("failure lacks specific facts: %+v", f)
+			}
+			raw, _ := json.Marshal(f)
+			if strings.Contains(string(raw), "SECRET") || strings.Contains(string(raw), s.Credential) {
+				t.Fatalf("failure leaked secret: %s", raw)
+			}
+		})
 	}
 }

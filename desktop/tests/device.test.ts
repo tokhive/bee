@@ -34,3 +34,13 @@ test('native device client uses fixed commands and no frontend config path', asy
  await client.status();await client.begin('https://hive.example','Mac');await client.open();
  assert.deepEqual(calls,[['device_status',undefined],['device_begin',{hive:'https://hive.example',name:'Mac'}],['device_open',undefined]]);
 });
+
+
+test('native context failures retain only a validated observed binding revision',async()=>{
+ for(const code of ['DEVICE_CONTEXT_UNCONFIGURED','DEVICE_CONTEXT_INVALID']) {
+  const state=await createDeviceClient(async()=>({result:{error:{code,message:'saved record rejected'},binding_revision:7}})).context!();
+  assert.equal(state.binding_revision,7);assert.equal((state as any).failure.code,code);
+ }
+ for(const result of [{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:0},{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:1,context:{}},{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:Number.MAX_SAFE_INTEGER+1}])await assert.rejects(createDeviceClient(async()=>({result})).context!());
+ await assert.rejects(createDeviceClient(async()=>({result:{error:{code:'DEVICE_CONTEXT_FAILED',message:'session ownership unavailable'}}})).context!());
+});

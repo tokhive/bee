@@ -586,3 +586,35 @@ func TestDesktopDiagnosticsBindingChangeInvalidatesReportWithoutRelabelling(t *t
 		t.Fatal("old binding report remained usable after replacement")
 	}
 }
+
+func TestDesktopDiagnosticsAbsentAndCorruptRecordsShareContextRevision(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	r := NewDesktopRuntime(context.Background(), d, a)
+	defer r.Close()
+	diagnostics := NewDesktopDiagnostics(context.Background(), d, a, r)
+	defer diagnostics.Close()
+	for _, raw := range []string{"", `{"unexpected":true}`} {
+		if raw != "" {
+			if err := os.WriteFile(d.path, []byte(raw), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		local, err := d.Context(context.Background())
+		if err == nil || local.BindingRevision <= 0 {
+			t.Fatalf("expected observed local failure: %+v %v", local, err)
+		}
+		report, err := diagnostics.Start(context.Background(), strings.Repeat("a", 32))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if report.BindingRevision != local.BindingRevision {
+			t.Fatalf("diagnostic binding revision=%d context=%d", report.BindingRevision, local.BindingRevision)
+		}
+		final := waitDiagnostics(t, diagnostics, report.ID)
+		if final.BindingRevision != local.BindingRevision {
+			t.Fatal("diagnostic lost observed revision")
+		}
+	}
+}

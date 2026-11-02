@@ -575,19 +575,11 @@ pub async fn network_apply_saved(
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
     gate: tauri::State<'_, crate::experience::StartupGate>,
+    manager: tauri::State<'_, crate::updater::UpdateManager>,
     confirmed: bool,
 ) -> Result<crate::network::NetworkSnapshot, BridgeError> {
-    gate.check()?;
-    let device = bridge.device_status().await?;
-    let scope=controller.bind_verified_device(&store,&device.result)?.ok_or_else(||BridgeError{ details: None,code:"NETWORK_DEVICE_REQUIRED".into(),message:"applying a contribution proxy requires a verified paired device; unpaired drafts can be tested read-only".into()})?;
-    Ok(controller
-        .apply_saved(
-            &store,
-            &crate::network_native::BridgeNetworkRuntime(&bridge),
-            &scope,
-            confirmed,
-        )
-        .await)
+    crate::experience::apply_saved_network(&bridge, &store, &controller, &gate, &manager, confirmed)
+        .await
 }
 #[tauri::command]
 pub async fn network_save_proxy(

@@ -3,10 +3,6 @@ package bee
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"crypto/sha256"
-	"encoding/base64"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -35,14 +31,15 @@ type DesktopDevice struct {
 func NewDesktopDevice() *DesktopDevice { return &DesktopDevice{} }
 
 type DeviceView struct {
-	State           string            `json:"state"`
-	Hive            string            `json:"hive,omitempty"`
-	Name            string            `json:"name,omitempty"`
-	VerificationURL string            `json:"verification_url,omitempty"`
-	UserCode        string            `json:"user_code,omitempty"`
-	ExpiresAt       *time.Time        `json:"expires_at,omitempty"`
-	PollInterval    int               `json:"poll_interval_seconds,omitempty"`
-	Identity        *beewire.Identity `json:"identity,omitempty"`
+	State           string              `json:"state"`
+	Recovery        *DeviceRecoveryView `json:"recovery,omitempty"`
+	Hive            string              `json:"hive,omitempty"`
+	Name            string              `json:"name,omitempty"`
+	VerificationURL string              `json:"verification_url,omitempty"`
+	UserCode        string              `json:"user_code,omitempty"`
+	ExpiresAt       *time.Time          `json:"expires_at,omitempty"`
+	PollInterval    int                 `json:"poll_interval_seconds,omitempty"`
+	Identity        *beewire.Identity   `json:"identity,omitempty"`
 }
 
 func (d *DesktopDevice) configPath() (string, error) {
@@ -73,16 +70,11 @@ func (d *DesktopDevice) Begin(ctx context.Context, hive, name string) (DeviceVie
 func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (DeviceView, error) {
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	session, release, err := d.acquireSession(ctx)
+	session, end, err := d.recoverySession(ctx)
 	if err != nil {
 		return DeviceView{}, err
 	}
-	defer release()
-	endPairing, err := session.beginPairing(ctx)
-	if err != nil {
-		return DeviceView{}, err
-	}
-	defer endPairing()
+	defer end()
 	state, err := session.read()
 	if err != nil {
 		return DeviceView{}, err
@@ -90,36 +82,48 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	if origin != "" && state.Hive != "" && state.Hive != origin {
 		return DeviceView{}, errors.New("desktop Hive change rejected: configuration already belongs to another Hive; existing device preserved")
 	}
-	if state.Credential == "" {
-		if state.Hive != "" || state.Pairing != nil || state.Identity != nil {
-			return DeviceView{}, errors.New("desktop configuration has identity metadata without a device credential; preserve configuration for recovery")
+	r, err := readDesktopRecovery(session)
+	if err != nil {
+		return DeviceView{}, err
+	}
+	if r != nil {
+		if err = d.checkRecoveryBinding(session, r); err != nil {
+			return DeviceView{}, err
 		}
-		if origin == "" {
-			return DeviceView{State: "unbound"}, nil
+	}
+	fresh := state.Credential == "" && state.Hive == "" && state.Pairing == nil && state.Identity == nil
+	if fresh && origin == "" {
+		return DeviceView{State: "unbound"}, nil
+	}
+	if fresh {
+		credential, e := recoveryCredential()
+		if e != nil {
+			return DeviceView{}, e
 		}
-		raw := make([]byte, 32)
-		if _, err = rand.Read(raw); err != nil {
-			return DeviceView{}, fmt.Errorf("generate desktop device credential: %w", err)
-		}
-		state = localState{Hive: origin, Name: name, Credential: "bee_" + base64.RawURLEncoding.EncodeToString(raw)}
+		state = localState{Hive: origin, Name: name, Credential: credential}
 		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
 	}
 	validOrigin, err := hiveOrigin(state.Hive)
-	if err != nil {
-		return DeviceView{}, fmt.Errorf("validate stored desktop Hive: %w", err)
-	}
-	if validOrigin != state.Hive {
-		return DeviceView{}, errors.New("stored desktop Hive is not a canonical origin; configuration preserved")
-	}
-	if !deviceCredentialPattern.MatchString(state.Credential) {
-		return DeviceView{}, errors.New("stored desktop credential format rejected; required=bee_ followed by 43 URL-safe characters")
+	if err != nil || validOrigin != state.Hive || !deviceCredentialPattern.MatchString(state.Credential) {
+		return DeviceView{}, errors.New("stored desktop configuration rejected; required=canonical Hive origin and valid device credential; preserve configuration for recovery")
 	}
 	var identity beewire.Identity
-	err = desktopCall(ctx, state, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err = desktopCall(ctx, state, "/api/bee/identity", http.MethodGet, state.Credential, nil, &identity)
 	if err == nil {
-		return finishDesktopDevice(session, state, identity)
+		if r != nil && r.Purpose == "initial_pairing" && r.Phase != "completed" {
+			if err = d.acceptRecoveryIdentity(ctx, session, r, identity); err != nil {
+				return DeviceView{}, err
+			}
+			return initialRecoveryView(r, state), nil
+		}
+		view, err := finishDesktopDevice(session, state, identity)
+		if err == nil && r != nil && r.Purpose == "initial_pairing" && r.Phase == "completed" {
+			recovery := r.view()
+			view.Recovery = &recovery
+		}
+		return view, err
 	}
 	var failure *apiFailure
 	if !errors.As(err, &failure) || failure.Status != 401 {
@@ -128,89 +132,7 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	if state.Identity != nil || failure.Code == "device_replaced" {
 		return DeviceView{}, fmt.Errorf("bound desktop device rejected; automatic pairing forbidden: %w", err)
 	}
-	uncertain := state.Pairing != nil && state.Pairing.Status == "redeeming"
-	if !uncertain && (state.Pairing == nil || !time.Now().Before(state.Pairing.ExpiresAt)) {
-		if origin == "" {
-			return DeviceView{State: "expired", Hive: state.Hive, Name: state.Name}, nil
-		}
-		hash := sha256.Sum256([]byte(state.Credential))
-		var pair beewire.Pairing
-		if err = desktopCall(ctx, state, "/api/bee/pairings", "POST", "", beewire.StartPairing{Name: state.Name, CredentialHash: hex.EncodeToString(hash[:])}, &pair); err != nil {
-			return DeviceView{}, err
-		}
-		if err = validateDesktopPairing(state, pair, true); err != nil {
-			return DeviceView{}, err
-		}
-		state.Pairing = &pair
-		if err = session.save(state); err != nil {
-			return DeviceView{}, err
-		}
-		return desktopPairingView(state, "pending"), nil
-	}
-	if err = validateDesktopPairing(state, *state.Pairing, false); err != nil {
-		return DeviceView{}, err
-	}
-	var pair beewire.Pairing
-	if err = desktopCall(ctx, state, "/api/bee/pairings", "GET", state.Pairing.PairingToken, nil, &pair); err != nil {
-		if errors.As(err, &failure) && failure.Code == "pairing_expired" {
-			if uncertain {
-				return DeviceView{}, fmt.Errorf("pairing exchange remains unconfirmed after expiry; original transaction preserved: %w", err)
-			}
-			// Persist the authoritative Hive expiry even if the local clock differs.
-			state.Pairing.ExpiresAt = time.Time{}
-			if saveErr := session.save(state); saveErr != nil {
-				return DeviceView{}, saveErr
-			}
-			return DeviceView{State: "expired", Hive: state.Hive, Name: state.Name}, nil
-		}
-		return DeviceView{}, err
-	}
-	switch pair.Status {
-	case "pending", "draining":
-		return desktopPairingView(state, pair.Status), nil
-	case "approved":
-		// Persist intent before the external exchange. A missing response must
-		// never become an apparently fresh, replaceable pairing after restart.
-		state.Pairing.Status = "redeeming"
-		if err = session.save(state); err != nil {
-			return DeviceView{}, err
-		}
-		err = desktopCall(ctx, state, "/api/bee/pairings/redeem", "POST", state.Pairing.PairingToken, struct{}{}, &identity)
-		if err == nil {
-			return finishDesktopDevice(session, state, identity)
-		}
-		if !uncertain && errors.As(err, &failure) && failure.Status == 410 && failure.Code == "pairing_expired" {
-			// Hive rolls back an expired first exchange. A later expiry cannot
-			// disprove an earlier unknown commit, so only clear a fresh intent.
-			state.Pairing.Status = "pending"
-			state.Pairing.ExpiresAt = time.Time{}
-			if saveErr := session.save(state); saveErr != nil {
-				return DeviceView{}, saveErr
-			}
-			return DeviceView{State: "expired", Hive: state.Hive, Name: state.Name}, nil
-		}
-		if errors.As(err, &failure) && failure.Code == "device_draining" {
-			state.Pairing.Status = "pending"
-			if saveErr := session.save(state); saveErr != nil {
-				return DeviceView{}, saveErr
-			}
-			return desktopPairingView(state, "draining"), nil
-		}
-	case "redeemed":
-		state.Pairing.Status = "redeeming"
-		if err = session.save(state); err != nil {
-			return DeviceView{}, err
-		}
-		err = errors.New("pairing reports redeemed but device identity is not yet confirmed")
-	default:
-		return DeviceView{}, fmt.Errorf("pairing status rejected: status=%q; required=pending,draining,approved,redeemed", safeCode(pair.Status))
-	}
-	// Never replace the credential after an uncertain remote write.
-	if recovery := desktopCall(ctx, state, "/api/bee/identity", "GET", state.Credential, nil, &identity); recovery == nil {
-		return finishDesktopDevice(session, state, identity)
-	} else {
-		return DeviceView{}, fmt.Errorf("pairing result unconfirmed; original transaction preserved: %w; identity recovery: %w", err, recovery)
-	}
+	return d.initialRecoveryOperate(ctx, session, state, r, fresh, origin != "")
 }
 
 var deviceCredentialPattern = regexp.MustCompile(`^bee_[A-Za-z0-9_-]{43}$`)

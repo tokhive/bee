@@ -357,3 +357,66 @@ pub(crate) async fn apply_saved_network(
 #[cfg(test)]
 #[path = "experience_tests.rs"]
 mod tests;
+
+// Recovery is available during an identity block. It retains package/update
+// checks and serializes against startup results; completion never restores intent.
+pub(crate) async fn recover_device<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    decision: Option<crate::protocol::DeviceRecoveryConfirm>,
+    prepare: bool,
+) -> Result<crate::sidecar::BridgeReply, BridgeError> {
+    let gate = app.state::<StartupGate>();
+    let _serial = gate.serial.lock().await;
+    let store = app.state::<PreferencesStore>();
+    crate::update_install::verify_recheck(
+        &app.state::<crate::updater::UpdateManager>(),
+        bridge,
+        store.read(),
+    )
+    .await?;
+    let before = gate.snapshot();
+    let status_only = !prepare && decision.is_none();
+    if !status_only {
+        gate.checking(bridge.status().metadata.map(|v| v.instance));
+        emit(app, &gate);
+    }
+    let result = if prepare {
+        bridge.device_recovery_prepare().await
+    } else if let Some(decision) = decision {
+        bridge.device_recovery_confirm(decision).await
+    } else {
+        bridge.device_recovery_status().await
+    };
+    // A completed transaction can be observed after an explicit recheck. Keep
+    // readiness only when this same instance/binding/network was verified.
+    if status_only
+        && before.state == "ready"
+        && result
+            .as_ref()
+            .is_ok_and(|reply| reply.result["recovery"]["phase"] == "completed")
+    {
+        if let Ok(current) = context(bridge, &store).await {
+            if before.instance.as_ref() == Some(&current.instance)
+                && before.binding_revision == current.binding
+                && before.network_revision == Some(current.network)
+            {
+                return result;
+            }
+        }
+    }
+    gate.checking(bridge.status().metadata.map(|v| v.instance));
+    app.state::<NetworkController>()
+        .invalidate_device_scope()
+        .await;
+    let cause = match &result {
+        Ok(reply) => BridgeError::new("DEVICE_RECOVERY_RECHECK_REQUIRED", format!(
+            "device recovery phase={}; contribution remains stopped; recheck startup prerequisites after recovery completes",
+            reply.result["recovery"]["phase"].as_str().unwrap_or("unknown"),
+        )),
+        Err(cause) => cause.clone(),
+    };
+    gate.finish(Err(cause));
+    emit(app, &gate);
+    result
+}

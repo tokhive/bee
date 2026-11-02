@@ -15,6 +15,8 @@ type desktopDeviceSession struct {
 	path            string
 	unlock          func()
 	pairing         chan struct{}
+	recoveryBusy    bool
+	deviceWrites    int
 	active          sync.WaitGroup
 	closed          bool
 	close           sync.Once

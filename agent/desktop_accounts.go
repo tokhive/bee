@@ -352,6 +352,11 @@ func (a *DesktopAccounts) Action(ctx context.Context, request DesktopAccountActi
 	fail := func(code, check, message string) (DesktopAccountSnapshot, error) {
 		return accountSnapshotCopy(p.snapshot), accountFailure(request.Platform, code, check, message)
 	}
+	if a.device != nil {
+		if err := a.device.recoveryWriteBarrier(); err != nil {
+			return fail("device_recovery_active", "device_recovery_admission", err.Error())
+		}
+	}
 	a.expireCandidate(p, request.Platform)
 	if !request.Confirmed {
 		return fail("confirmation_required", "confirmed", "explicit confirmed=true required")

@@ -65,7 +65,7 @@ test('pairing polling keeps the website action stable',async({page})=>{
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=page.getByRole('button',{name:'打开 Hive 确认网页',exact:true});await expect(button).toBeEnabled();
  await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();
- await page.evaluate(()=>(window as any).release());await expect(page.getByText('设备已绑定。',{exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as any).release());await expect(button).toBeEnabled();await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();expect(await calls(page,'device_open')).toHaveLength(1);expect(await calls(page,'device_begin')).toHaveLength(0);
 });
 
 test('account status polling never disables cancel login and the explicit cancel is not lost',async({page})=>{
@@ -84,7 +84,7 @@ test('account status polling never disables cancel login and the explicit cancel
  await expect(page.getByText('正在读取已有登录…',{exact:true})).toHaveCount(0);
  await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();expect(await calls(page,'authorize_cancel')).toHaveLength(0);
  await page.evaluate(()=>(window as any).release());await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
- await expect(page.getByRole('dialog').getByText('操作已取消',{exact:true})).toBeVisible();
+ await expect(page.getByRole('dialog').getByText('官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。',{exact:true})).toBeVisible();
 });
 
 test('repeated runtime read failures retain feedback and continue read-only recovery',async({page})=>{
@@ -138,9 +138,9 @@ test('a coordinated account read recovers at the same revision and accepts the n
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
- await page.evaluate(()=>(window as any).fail='openai');await page.clock.runFor(10100);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.snapshotFail=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_snapshot'&&args.platform==='openai'&&w.snapshotFail)throw new Error('GET account_snapshot fixture HTTP 503');return invoke(command,args);};});await page.clock.runFor(10100);
  await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();
- await page.evaluate(()=>(window as any).fail='');await page.clock.runFor(10100);
+ await page.evaluate(()=>(window as any).snapshotFail=false);await page.clock.runFor(10100);
  await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
  await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);
@@ -154,7 +154,7 @@ test('an account confirmation waiting for a failed device read is cancelled with
  const confirm=page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true});await expect(confirm).toBeEnabled();
  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await confirm.click();await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
- await expect(page.getByText('本次设备状态不可确认，依赖设备身份的操作保持不可用。',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:'接入',exact:true})).toBeDisabled();await expect(page.locator('.problem-notice pre').first()).toContainText('GET fixture HTTP 503');expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
+ const sharedProblem=page.getByRole('alert').filter({hasText:'本次设备状态不可确认，依赖设备身份的操作保持不可用。'});await expect(sharedProblem).toHaveCount(1);await expect(sharedProblem).toBeVisible();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:'接入',exact:true})).toBeDisabled();await expect(sharedProblem.locator('pre')).toContainText('GET fixture HTTP 503');expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
 });
 
 for(const kind of ['start','stop'])test('central readback rejects runtime revision below the '+kind+' receipt',async({page})=>{

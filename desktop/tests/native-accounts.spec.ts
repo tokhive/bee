@@ -5,7 +5,7 @@ const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).c
 function selected(platform:string){const a=accountFixture(platform) as any;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};return a;}
 async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
 async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
-async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('pre')).toContainText(message);}
+async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
 test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
@@ -19,7 +19,7 @@ test('source edits reject late automatic results; platform failures remain indep
  const dialog=await details(page);await dialog.getByLabel('自定义目录').fill('/tmp/edited');await dialog.getByLabel('自定义目录').press('Enter');
  await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.platform==='openai').at(-1)?.args.request.directory).toBe('/tmp/edited');
  await expect(dialog.getByText('正在读取已有登录…')).toHaveCount(0);await expect(dialog.getByLabel('自定义目录')).toHaveValue('/tmp/edited');await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();expect(await calls(page,'account_action')).toEqual([]);
- await details(page);await page.evaluate(()=>{(window as any).delay=0;(window as any).fail='openai';});await page.getByRole('dialog').getByLabel('自定义目录').fill('/tmp/denied');await page.getByRole('dialog').getByLabel('自定义目录').press('Enter');await expect(page.getByRole('dialog').getByRole('alert')).toContainText('无法读取凭证来源');await page.keyboard.press('Escape');await expect(card(page,'Claude').getByText('已有登录，尚未接入')).toBeVisible();
+ await details(page);await page.evaluate(()=>{(window as any).delay=0;(window as any).fail='openai';});await page.getByRole('dialog').getByLabel('自定义目录').fill('/tmp/denied');await page.getByRole('dialog').getByLabel('自定义目录').press('Enter');await expect(page.getByRole('dialog').locator('.account-source').getByRole('alert')).toContainText('没有读取所选凭证来源的权限');await page.keyboard.press('Escape');await expect(card(page,'Claude').getByText('已有登录，尚未接入')).toBeVisible();
  await diagnostics(page,'permission_denied=true');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');await page.getByLabel('Appearance',{exact:true}).selectOption('dark');await page.getByRole('button',{name:'AI accounts',exact:true}).click();await page.getByRole('button',{name:'Claude details',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('Custom directory')).toBeVisible();await page.keyboard.press('Tab');await page.keyboard.press('Escape');expect(await page.evaluate(()=>document.documentElement.dataset.theme)).toBe('dark');
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);await page.screenshot({path:'../.cache/device-pairing/accounts-en-dark.png',fullPage:true});
 });
@@ -53,4 +53,52 @@ test('approved shared rows show saved identity and a keyboard-accessible compact
  await expect(detail.getByText('模型能力与市场开放')).toHaveCount(0);
  await expect(detail.getByText('Hive 账号代次')).toHaveCount(0);
  await page.keyboard.press('Escape');await expect(trigger).toBeFocused();
+});
+
+test('unconnected candidate shows its target and exact pause impact before connecting',async({page})=>{
+ await fixture(page,{runtime:true});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByText('已有登录，尚未接入')).toBeVisible();await expect(card(page).getByText('未知套餐',{exact:true})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'接入',exact:true}).click();const dialog=page.getByRole('dialog');
+ await expect(dialog.getByText('目标账号',{exact:true})).toBeVisible();await expect(dialog.getByText('b'.repeat(16),{exact:true})).toBeVisible();
+ await expect(dialog).toContainText('Hive');await expect(dialog).toContainText('不会开始贡献');
+ await dialog.getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByText('接入已完成，该平台保持暂停。',{exact:true})).toBeVisible();
+ expect(await calls(page,'runtime_start')).toHaveLength(0);expect((await calls(page,'account_action'))[0].args.request.action).toBe('select');
+});
+
+test('running official login explains its stopped precondition and provides the runtime location',async({page})=>{
+ await fixture(page,{selected:true,runtime:true});await page.goto('/');await page.getByRole('button',{name:'开始贡献',exact:true}).click();await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ const dialog=await details(page);await expect(dialog.getByRole('button',{name:'重新登录',exact:true})).toBeDisabled();
+ await expect(dialog).toContainText('官方登录前请先停止贡献');await dialog.getByRole('button',{name:'查看贡献运行',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();expect(await calls(page,'runtime_stop')).toHaveLength(0);expect(await calls(page,'authorize_start')).toHaveLength(0);
+});
+
+test('candidate expiring at the safety boundary explains zero-write refusal',async({page})=>{
+ await fixture(page,{runtime:true});await page.addInitScript(()=>{(window as any).expiry=new Date(Date.now()+60000).toISOString();});await page.clock.install();await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();await page.clock.runFor(31001);
+ await expect(card(page)).toContainText('候选授权即将过期');expect(await calls(page,'account_action')).toHaveLength(0);
+});
+
+for(const code of ['source_missing','permission_denied','expired','source_changed'])test(`selected source ${code} stays scoped and leaves the other platform usable`,async({page})=>{
+ const error={code,check:'source_read',platform:'openai',message:`selected file ${code}; safe source evidence`,evidence:{confirmed:'false'}};
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{candidates:{openai:{state:code,source:null,reference:null,fingerprint:null,error}}},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).locator('.problem-notice pre').first()).toContainText(code);
+ await expect(card(page,'Claude').getByText('已有登录，尚未接入')).toBeVisible();await expect(card(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
+ await card(page).getByRole('button',{name:'检查凭证来源',exact:true}).last().click();const dialog=page.getByRole('dialog');await expect(dialog.getByLabel('自定义目录')).toBeFocused();expect(await calls(page,'account_action')).toHaveLength(0);
+});
+
+test('confirmation invalidates a changed candidate while retaining the original target and zero writes',async({page})=>{
+ await page.clock.install();await fixture(page,{runtime:true});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await card(page).getByRole('button',{name:'接入',exact:true}).click();
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.revision++;a.candidate.reference='f'.repeat(48);a.candidate.fingerprint='f'.repeat(64);});await page.clock.runFor(10100);
+ const dialog=page.getByRole('dialog');await expect(dialog.getByRole('alert')).toContainText('本次未提交');await expect(dialog.getByText('b'.repeat(16),{exact:true})).toBeVisible();await expect(dialog.getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();expect(await calls(page,'account_action')).toHaveLength(0);await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeFocused();
+});
+
+for(const [code,summary]of [['client_missing','未找到已安装的官方客户端。'],['client_version_unsupported','官方客户端版本不在支持范围内。'],['authorization_source_unchanged','官方登录已退出，但所选来源没有改变。'],['authorization_timeout','官方登录已超时。'],['authorization_namespace_mismatch','所选登录位置与官方客户端登录位置不一致。']])test(`official login ${code} is actionable without automatically connecting`,async({page})=>{
+ await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{loginOutcome:{state:'failed',error:{code,check:'official_source_recheck',platform:'openai',message:'safe official evidence; verified=false',evidence:{confirmed:'false'}}}},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();const dialog=await details(page);await dialog.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await page.evaluate(()=>(window as any).loginComplete=true);await page.clock.runFor(10001);
+ await expect(dialog.getByText(summary,{exact:true})).toBeVisible();await expect(dialog.locator('.problem-notice pre').last()).toContainText('verified=false');expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'runtime_start')).toHaveLength(0);
+});
+
+test('unknown cancel only queries the same official operation and late success remains an unconnected candidate',async({page})=>{
+ await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{cancelUnknown:true},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();const dialog=await details(page);await dialog.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await dialog.getByRole('button',{name:'取消官方登录',exact:true}).click();await expect(dialog).toContainText('取消请求结果未确认');await page.keyboard.press('Escape');
+ await page.evaluate(()=>(window as any).loginComplete=true);await page.clock.runFor(10100);await expect(card(page).getByText('登录已核验，尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(1);expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
 });

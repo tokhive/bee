@@ -35,3 +35,26 @@ fn diagnostics_protocol_rejects_inconsistent_completion_and_missing_nullable() {
     v["report"].as_object_mut().unwrap().remove("run_id");
     assert!(validate_report(&v, &"b".repeat(32)).is_err());
 }
+
+#[test]
+fn diagnostic_detailed_supply_reason_evidence_is_preserved() {
+    for platform in ["openai", "claude"] {
+        for reason in [
+            "account_not_registered",
+            "market_not_open",
+            "supply_not_enabled",
+            "supply_device_restricted",
+            "account_not_admitted",
+        ] {
+            let mut v = report();
+            v["report"]["checks"][0] = serde_json::json!({"id":"supply","platform":platform,"status":"fail","observed_at":"2026-10-27T00:00:00Z","code":"supply_blocked","evidence":{"reason":reason},"next_action":"overview"});
+            let decoded = validate_report(&v, &"b".repeat(32))
+                .expect("defined detailed supply reason rejected");
+            assert_eq!(decoded.checks[0].evidence["reason"], reason);
+            let mut unknown = v;
+            unknown["report"]["checks"][0]["evidence"]["reason"] =
+                serde_json::json!("unrecognized_reason");
+            assert!(validate_report(&unknown, &"b".repeat(32)).is_err());
+        }
+    }
+}

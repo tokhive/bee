@@ -224,6 +224,11 @@ impl RuntimeSupply {
             ));
         }
         let reasons = [
+            "account_not_registered",
+            "market_not_open",
+            "supply_not_enabled",
+            "supply_device_restricted",
+            "account_not_admitted",
             "manually_paused",
             "banned",
             "device_draining",
@@ -450,5 +455,50 @@ mod tests {
         crate::protocol::hello(hello.clone(), "v1", "darwin", "arm64").unwrap();
         hello["capabilities"][13] = json!("runtime_restore");
         assert!(crate::protocol::hello(hello, "v1", "darwin", "arm64").is_err());
+    }
+    #[test]
+    fn runtime_supply_detailed_reasons_preserve_strict_contract() {
+        for platform in [SupplyPlatform::Openai, SupplyPlatform::Claude] {
+            for reason in [
+                "account_not_registered",
+                "market_not_open",
+                "supply_not_enabled",
+                "supply_device_restricted",
+                "account_not_admitted",
+            ] {
+                let base = json!({"hive":"https://hive.example","device_id":"device-1","platform":platform,"paused":false,"ready":false,"reasons":[reason],"checked_at":"2026-10-27T00:00:00Z"});
+                let supply: RuntimeSupply = serde_json::from_value(base.clone()).unwrap();
+                assert!(
+                    supply.validate(platform).is_ok(),
+                    "defined detailed reason rejected: {reason}"
+                );
+                for (field, value) in [
+                    ("reasons", json!([reason, reason])),
+                    ("ready", json!(true)),
+                    ("paused", json!(true)),
+                    ("reasons", json!([reason, "manually_paused"])),
+                    (
+                        "reasons",
+                        json!([
+                            reason,
+                            if platform == SupplyPlatform::Openai {
+                                "claude_source_unavailable"
+                            } else {
+                                "codex_source_unavailable"
+                            }
+                        ]),
+                    ),
+                    ("reasons", json!([reason, "unrecognized_reason"])),
+                ] {
+                    let mut bad = base.clone();
+                    bad[field] = value;
+                    let supply: RuntimeSupply = serde_json::from_value(bad).unwrap();
+                    assert!(
+                        supply.validate(platform).is_err(),
+                        "invalid detailed supply accepted: reason={reason} field={field}"
+                    );
+                }
+            }
+        }
     }
 }

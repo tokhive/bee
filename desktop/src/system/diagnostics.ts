@@ -1,3 +1,4 @@
+import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
 export type DiagnosticPlatform='openai'|'claude';
@@ -31,7 +32,7 @@ const boolKeys=new Set('identity_valid identity_present credential_valid selecte
 const evidenceEnums:Record<string,string[]>={
  method:['GET'],response_limit:['65536'],safety_seconds:['30'],
  path:['/api/bee/identity','/api/bee/platforms/openai/account','/api/bee/platforms/claude/account','/api/bee/platforms/openai/capabilities','/api/bee/platforms/claude/capabilities','/api/bee/platforms/openai','/api/bee/platforms/claude','/backend-api/codex/models','/backend-api/wham/usage','/api/oauth/profile','/api/oauth/usage','/v1/models'],
- reason:'manually_paused banned device_draining offline not_configured model_unavailable authorization_unavailable capabilities_unknown rate_limited quota_unknown quota_exhausted plan_not_configured concurrency_full codex_source_unavailable codex_confirmation_required codex_authorization_rejected claude_source_unavailable claude_confirmation_required claude_authorization_rejected'.split(' '),
+ reason:supplyReasons,
  source_type:['desktop_device','file','keyring','keychain','auto'],stage:['session','device_configuration','selected_source','persisted_selection','account_readback'],local:['stopped','starting','running','stopping','failed','unknown'],connection:['connected','disconnected','connecting','reconnecting','occupied','rejected','unknown'],status:['ready','not_configured','confirmation_required','authorization_rejected','expired','unknown'],
  server_code:'pending draining approved redeemed device_exists device_draining replacement_pending pairing_expired pairing_redeemed invalid_device_credential device_replaced rate_limited invalid_pairing invalid_pairing_token unavailable device_changed pairing_pending unrecognized_code'.split(' '),
 };

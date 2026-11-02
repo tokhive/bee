@@ -113,3 +113,16 @@ test('native fixtures use real instance/runtime/preferences contracts and isolat
  await invoke('plugin:event|listen',{event:'bee://bridge-status',handler:bridgeHandler});await invoke('plugin:event|listen',{event:'bee://download-finished',handler:downloadHandler});
  windowFixture.emit('d'.repeat(32));windowFixture.emitDownload('blob:test',true);assert.equal(bridgeEvents,1);assert.equal(downloads,1);
 });
+
+test('diagnostic reports logs and exports retain defined detailed supply reason evidence',()=>{
+ for(const platform of ['openai','claude'])for(const reason of ['account_not_registered','market_not_open','supply_not_enabled','supply_device_restricted','account_not_admitted']){
+  const r={...diagnosticReport(),checks:[{id:'supply',platform,status:'fail',observed_at:'2026-10-26T03:30:01Z',code:'supply_blocked',evidence:{reason},next_action:'overview'}]};
+  assert.deepEqual(decodeDiagnosticReport({instance,result:{report:r}},instance),r);
+  const event={...log(),platform,code:'supply_blocked',evidence:{reason}};
+  const page={entries:[event],next_cursor:null,truncated:false};
+  assert.deepEqual(decodeLogPage(page),page);
+  const data={...exported(),report:r,logs:[event]};
+  assert.deepEqual(decodeDiagnosticExport(data,instance),data);
+  assert.throws(()=>decodeDiagnosticReport({instance,result:{report:{...r,checks:[{...r.checks[0],evidence:{reason:'unrecognized_reason'}}]}}},instance),/DIAGNOSTICS_REPLY_INVALID/);
+ }
+});

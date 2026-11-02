@@ -338,7 +338,7 @@ func TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations(t *testing.T) 
 
 func TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons(t *testing.T) {
 	for _, platform := range []string{"openai", "claude"} {
-		for _, reason := range append([]string{""}, beewire.SupplyReasons()...) {
+		for _, reason := range append([]string{""}, beewire.DetailedSupplyReasons()...) {
 			if (platform == "openai" && strings.HasPrefix(reason, "claude_")) || (platform == "claude" && strings.HasPrefix(reason, "codex_")) {
 				continue
 			}
@@ -484,5 +484,31 @@ func TestDesktopSupplyLockAndCallerDeadlineBlockWrites(t *testing.T) {
 	}
 	if time.Since(start) > time.Second || calls.Load() != 1 {
 		t.Fatal("caller deadline was ignored or write escaped failed identity check")
+	}
+}
+
+func TestDesktopSupplyDetailedReasonsPreserveStrictContract(t *testing.T) {
+	for _, platform := range []string{"openai", "claude"} {
+		for _, reason := range []string{"account_not_registered", "market_not_open", "supply_not_enabled", "supply_device_restricted", "account_not_admitted"} {
+			t.Run(platform+"/"+reason, func(t *testing.T) {
+				payload, _ := json.Marshal(beewire.PlatformSupply{Platform: platform, Reasons: []string{reason}})
+				if _, err := decodeDesktopSupply(payload, platform); err != nil {
+					t.Fatalf("defined detailed reason rejected: %v", err)
+				}
+				for name, supply := range map[string]beewire.PlatformSupply{
+					"duplicate":                  {Platform: platform, Reasons: []string{reason, reason}},
+					"ready_with_blocker":         {Platform: platform, Ready: true, Reasons: []string{reason}},
+					"paused_without_reason":      {Platform: platform, Paused: true, Reasons: []string{reason}},
+					"pause_reason_without_pause": {Platform: platform, Reasons: []string{reason, "manually_paused"}},
+					"cross_platform":             {Platform: platform, Reasons: []string{reason, beewire.AccountReason(map[string]string{"openai": "claude", "claude": "openai"}[platform], "source_unavailable")}},
+					"unknown":                    {Platform: platform, Reasons: []string{reason, "unrecognized_reason"}},
+				} {
+					payload, _ := json.Marshal(supply)
+					if _, err := decodeDesktopSupply(payload, platform); err == nil {
+						t.Errorf("invalid detailed supply accepted: case=%s", name)
+					}
+				}
+			})
+		}
 	}
 }

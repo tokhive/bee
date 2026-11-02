@@ -252,8 +252,12 @@ func (d *DesktopDevice) recoveryAdmission(s *desktopDeviceSession) (func(), erro
 		d.runtime.mu.Lock()
 		defer d.runtime.mu.Unlock()
 		r := d.runtime
-		if r.closed || r.snapshot.Local != "stopped" || len(a.activeActions) > 0 || len(a.accountWorkers) > 0 || r.runCancel != nil && r.runDone != nil && !channelClosed(r.runDone) || r.controlDone != nil && !channelClosed(r.controlDone) {
-			return nil, fmt.Errorf("device recovery admission rejected: local=%s active_actions=%d account_workers=%d; required=stopped and all workers exited", r.snapshot.Local, len(a.activeActions), len(a.accountWorkers))
+		runExited := r.runDone != nil && channelClosed(r.runDone)
+		controlExited := r.controlDone != nil && channelClosed(r.controlDone)
+		runPending := r.runCancel != nil && r.runDone != nil && !runExited
+		controlPending := r.controlDone != nil && !controlExited
+		if r.closed || r.snapshot.Local != "stopped" || len(a.activeActions) > 0 || len(a.accountWorkers) > 0 || runPending || controlPending {
+			return nil, fmt.Errorf("device recovery admission rejected: runtime_closed=%t local=%s active_actions=%d account_workers=%d run_cancel_present=%t run_done_present=%t run_done_closed=%t run_worker_pending=%t control_done_present=%t control_done_closed=%t control_worker_pending=%t; required=live runtime, stopped and all workers exited", r.closed, r.snapshot.Local, len(a.activeActions), len(a.accountWorkers), r.runCancel != nil, r.runDone != nil, runExited, runPending, r.controlDone != nil, controlExited, controlPending)
 		}
 	}
 	s.mu.Lock()
@@ -541,7 +545,17 @@ func (d *DesktopDevice) advanceRecovery(ctx context.Context, s *desktopDeviceSes
 		return d.saveRecoveryIdentity(ctx, s, r)
 	}
 	if r.CreateAttempted && r.Pairing == nil {
-		return r.change(s, "creation_unknown", errors.New("pairing creation result unknown without token; verify the original request in the Hive console and export diagnostics; existing protocol cannot retrieve its token"))
+		// No request or new observation occurred. Preserve the original failure
+		// (including its timestamp) instead of replacing it on every read.
+		if r.Phase == "creation_unknown" && r.Failure != nil {
+			return nil
+		}
+		r.Phase = "creation_unknown"
+		r.Revision++
+		if r.Failure == nil {
+			r.fail(errors.New("pairing creation result unknown without token; verify the original request in the Hive console and export diagnostics; existing protocol cannot retrieve its token"))
+		}
+		return saveDesktopRecovery(s, r)
 	}
 	if !r.CreateAttempted {
 		return r.change(s, "blocked", errors.New("pairing creation was not authorized by a current explicit confirmation; no POST sent"))
@@ -691,7 +705,11 @@ func (d *DesktopDevice) saveRecoveryIdentity(ctx context.Context, s *desktopDevi
 	return r.change(s, "completed", nil)
 }
 
-func (d *DesktopDevice) initialRecoveryOperate(ctx context.Context, s *desktopDeviceSession, state localState, r *desktopRecoveryRecord, fresh, begin bool) (DeviceView, error) {
+func (r *desktopRecoveryRecord) initialUnsubmitted() bool {
+	return r.Purpose == "initial_pairing" && r.Phase == "awaiting_confirmation" && !r.CreateAttempted && !r.RedeemAttempted && r.Pairing == nil && r.NewIdentity == nil && r.ConfirmedOwner == "" && len(r.Accepted) == 0
+}
+
+func (d *DesktopDevice) initialRecoveryOperate(ctx context.Context, s *desktopDeviceSession, state localState, r *desktopRecoveryRecord, begin bool) (DeviceView, error) {
 	if r != nil && r.Purpose != "initial_pairing" {
 		return DeviceView{}, errors.New("credential recovery already occupies the device transaction")
 	}
@@ -713,7 +731,7 @@ func (d *DesktopDevice) initialRecoveryOperate(ctx context.Context, s *desktopDe
 				r.RedeemAttempted = true
 				r.Phase = "redemption_unknown"
 			}
-		} else if !fresh {
+		} else {
 			r.CreateAttempted = true
 			r.Phase = "creation_unknown"
 		}

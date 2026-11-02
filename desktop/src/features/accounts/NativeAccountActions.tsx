@@ -15,6 +15,7 @@ const actions={select:{label:'接入',confirm:'确认接入',description:'将目
 export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure}){
  const op=accounts.views[platform]?.operation;
  const error=accounts.errors[platform],submissionChanged=error?.code==='ACCOUNT_CONTEXT_CHANGED';
+ const cancellation=accounts.cancelUnconfirmed[platform];
  const showError=error&&!sameAccountFailure(error,accounts.sharedFailure)&&!sameAccountFailure(error,sourceFailure);
  const refresh=accounts.accountRefresh?.[platform];
  const unconfirmed=accounts.uncertain[platform]||op?.state==='reconciling';
@@ -25,14 +26,14 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
   {(unconfirmed||error&&!requestNotSent(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>}
   {op?.error&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
   {showError&&<FailureNotice failure={error} check="account_operation" onNavigate={onNavigate}/>}
-  {error&&!requestNotSent(error)&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>}
+  {cancellation&&cancellation.operationId===op?.id&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<><p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>{!sameAccountFailure(cancellation.failure,error)&&<FailureNotice failure={cancellation.failure} check="authorize_cancel" onNavigate={onNavigate}/>}</>}
  </div>;
 }
 export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotSent(accounts.errors[platform]!);
- const context={view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
+ const context={view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);
  const candidate=!dirty&&view?.candidate.state==='available'&&!!view.candidate.reference;
  const offered:AccountAction[]=placement==='row'?(selected?[]:[candidate?'select':'authorize']):[

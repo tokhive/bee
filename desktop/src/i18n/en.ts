@@ -1354,4 +1354,11 @@ export const en: Record<string, string> = {
   "账号问题通知的本机去重记录保存未确认。": "Saving the local notification deduplication record is unconfirmed.",
   "重新登录": "Sign in again",
   "额度未知；以实际来源读取和报告为准，不能按零额度处理。": "Quota is unknown. Use actual source reads and reports; unknown does not mean zero.",
+  "共享状态读取未确认，暂不能提交账号操作；请先核对当前读取问题。": "The shared state read is unconfirmed. Account changes are unavailable; check the current read failure.",
+  "上次确认的账号事实；当前状态待核对。": "Previously confirmed account facts; current status needs verification.",
+  "历史事实不能支持当前可接单结论或账号写操作。": "Historical facts cannot confirm current request availability or permit account changes.",
+  "上次确认的额度；当前待核对。": "Previously confirmed quota; current quota needs verification.",
+  "Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。": "Hive records have not been reconfirmed and are for reference. Local credential read results are shown separately.",
+  "上次 Hive 观测": "Last Hive observation",
+  "上次确认": "Last confirmed",
 };

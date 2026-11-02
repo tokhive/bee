@@ -170,6 +170,26 @@ test('settings categories preserve the proxy draft and test result without query
  expect(await reads()).toEqual(before);expect(await calls(page,'notification_enable')).toEqual([]);expect(await calls(page,'autostart_set')).toEqual([]);expect(await calls(page,'network_save_proxy')).toEqual([]);
 });
 
+test('settings device replacement offers overview navigation without replaying the proxy write',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   if(command!=='network_save_proxy')return invoke(command,args);
+   w.calls.push({command,args});
+   throw {code:'device_replaced',message:'device credential revoked after replacement',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',path:'/api/bee/identity',target_origin:'https://hive.example'}}};
+  };
+ });
+ await nav(page,'设置').click();await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:7900');
+ await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ const failure=page.getByRole('alert');await expect(failure).toContainText('此设备已被替换，原设备凭据已撤销。');
+ expect((await calls(page,'network_save_proxy')).length).toBe(1);
+ const viewDevice=failure.getByRole('button',{name:'查看设备',exact:true});await expect(viewDevice).toBeVisible();await viewDevice.click();
+ await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();await expect(page.getByTestId('native-settings')).toHaveCount(0);
+ await page.clock.runFor(10000);expect((await calls(page,'network_save_proxy')).length).toBe(1);
+ expect(await calls(page,'network_apply_saved')).toEqual([]);
+});
+
 test('problem-first sections retain every platform reason and its original safe evidence',async({page})=>{
  await setup(page);await page.evaluate(()=>{
   const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;

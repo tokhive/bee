@@ -15,6 +15,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -303,30 +304,80 @@ func TestDesktopConnectionSynchronizationObservationIsScoped(t *testing.T) {
 	current := &desktopRuntimeConnection{ctx: live, active: true, state: localState{Hive: "https://hive.test"}}
 	r.connection = current
 	r.snapshot.Platforms["claude"] = DesktopRuntimePlatform{Supply: &DesktopSupply{Ready: true}}
-	r.synchronizationObserved(current, &run, errors.New("openai authorization readback differs"))
+	observe := func(platform string, err error) {
+		r.synchronizationObserved(current, &run, platform, "authorization_readback", err)
+	}
+	trace := func(label string) {
+		raw, _ := json.Marshal(r.snapshot.ConnectionDetail)
+		t.Logf("transition_%s=%s", label, raw)
+	}
+	observe("openai", errors.New("openai authorization readback differs"))
 	if r.snapshot.ConnectionDetail == nil || r.snapshot.ConnectionDetail.Failure.Stage != "synchronize" || r.snapshot.ConnectionDetail.Retry != "idle" || r.snapshot.Connection != "connected" || r.snapshot.Platforms["claude"].Supply == nil {
 		t.Fatalf("sync failure misrepresented link/other platform: %+v", r.snapshot)
 	}
 	first := r.snapshot.ConnectionDetail
-	r.synchronizationObserved(current, &run, nil)
+	trace("openai_failed")
+	observe("claude", nil)
 	if r.snapshot.ConnectionDetail != first {
-		t.Fatal("another platform's success cleared unproved recovery")
+		t.Fatal("another platform success cleared unproved recovery")
+	}
+	observe("claude", errors.New("claude supply readback HTTP 503"))
+	second := r.snapshot.ConnectionDetail
+	trace("both_failed")
+	observe("claude", nil)
+	trace("claude_recovered")
+	if r.snapshot.ConnectionDetail != first {
+		t.Fatal("recovering latest platform lost remaining openai failure")
+	}
+	observe("claude", errors.New("claude supply still unavailable"))
+	second = r.snapshot.ConnectionDetail
+	observe("openai", nil)
+	if r.snapshot.ConnectionDetail != second {
+		t.Fatal("openai recovery cleared remaining claude failure")
 	}
 	oldRun := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-	r.synchronizationObserved(current, &oldRun, errors.New("late run A rejection"))
-	if r.snapshot.ConnectionDetail != first {
-		t.Fatal("old run failure replaced current failure")
-	}
 	old := &desktopRuntimeConnection{ctx: live, active: true, state: current.state}
-	r.synchronizationObserved(old, &run, errors.New("late connection A rejection"))
-	if r.snapshot.ConnectionDetail != first {
-		t.Fatal("old connection replaced current failure")
+	assertIgnored := func(label string, connection *desktopRuntimeConnection, observationRun *string) {
+		t.Helper()
+		before, snapshotErr := r.Snapshot(context.Background())
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		for _, err := range []error{nil, errors.New("late failure")} {
+			r.synchronizationObserved(connection, observationRun, "claude", "authorization_sync", err)
+		}
+		after, snapshotErr := r.Snapshot(context.Background())
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		after.ObservedAt = before.ObservedAt
+		if !reflect.DeepEqual(before, after) {
+			t.Fatalf("%s changed current runtime/account revision, authorization or supply: before=%+v after=%+v", label, before, after)
+		}
 	}
-	r.snapshot.Local = "stopping"
-	r.synchronizationObserved(current, &run, errors.New("late stop failure"))
-	if r.snapshot.ConnectionDetail != first {
-		t.Fatal("stopping accepted sync failure")
+	v := r.snapshot.Platforms["claude"]
+	v.Supply = &DesktopSupply{Paused: true, Reasons: []string{"manually_paused"}}
+	r.snapshot.Platforms["claude"] = v
+	assertIgnored("old run", current, &oldRun)
+	assertIgnored("old connection", old, &run)
+	current.active = false
+	assertIgnored("inactive connection", current, &run)
+	current.active = true
+	observe("claude", nil)
+	trace("all_recovered")
+	if r.snapshot.ConnectionDetail != nil {
+		t.Fatal("same-platform recovery retained resolved failure")
 	}
+	observe("openai", errors.New("current outage"))
+	for _, phase := range []string{"stopping", "stopped"} {
+		r.snapshot.Local = phase
+		assertIgnored(phase, current, &run)
+	}
+	r.snapshot.Local = "running"
+	cancel()
+	assertIgnored("cancelled connection", current, &run)
+	r.closed = true
+	assertIgnored("closed runtime", current, &run)
 }
 
 func TestDesktopConnectionStrictDetailDecoding(t *testing.T) {

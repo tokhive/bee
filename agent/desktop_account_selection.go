@@ -47,22 +47,24 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 	if p.snapshot.Candidate.Fingerprint != nil {
 		op.ToFingerprint = *p.snapshot.Candidate.Fingerprint
 	}
-	if !a.launchAccountOperation(p, r.Platform, op, false, r.Action == "clear_selection", false) {
-		return accountSnapshotCopy(p.snapshot), accountFailure(r.Platform, "closed", "account_service", "management account service has closed")
+	if err := a.launchAccountOperation(p, r.Platform, op, false, r.Action == "clear_selection", false); err != nil {
+		return accountSnapshotCopy(p.snapshot), err
 	}
 	return accountSnapshotCopy(p.snapshot), nil
 }
 
 // Caller holds only this platform's short gate. Network/disk work runs without
 // it; duplicate writes remain fenced by working/pending and the durable ID.
-func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection, allowConfirm bool) bool {
+func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection, allowConfirm bool) error {
 	a.lifecycleMu.Lock()
 	defer a.lifecycleMu.Unlock()
-	if a.device != nil && a.device.recoveryWriteBarrier() != nil {
-		return false
+	if a.device != nil {
+		if err := a.device.recoveryWriteBarrier(); err != nil {
+			return accountFailure(platform, "device_recovery_active", "device_recovery_admission", err.Error())
+		}
 	}
 	if a.closed {
-		return false
+		return accountFailure(platform, "closed", "account_service", "management account service is closed; worker requires a live account service")
 	}
 	expectedSelectionRevision := int64(0)
 	if clearSelection && p.selected != nil {
@@ -70,10 +72,13 @@ func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, plat
 	}
 	if a.runtime != nil {
 		a.runtime.mu.Lock()
-		busy := a.runtime.closed || a.runtime.snapshot.Local == "starting" || a.runtime.snapshot.Local == "stopping"
+		closed, local := a.runtime.closed, a.runtime.snapshot.Local
 		a.runtime.mu.Unlock()
-		if busy {
-			return false
+		if closed {
+			return accountFailure(platform, "closed", "runtime_ownership", "runtime owner is closed; account worker requires a live runtime")
+		}
+		if local == "starting" || local == "stopping" {
+			return accountFailure(platform, "runtime_dependency", "runtime_state", fmt.Sprintf("runtime state blocks account worker: local=%s; required=runtime outside starting/stopping transition", local))
 		}
 	}
 	ctx, cancel := context.WithTimeout(a.ctx, 12*time.Second)
@@ -141,7 +146,7 @@ func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, plat
 			}
 		}
 	}()
-	return true
+	return nil
 }
 
 func (a *DesktopAccounts) verifiedSelectionDevice(ctx context.Context, session *desktopDeviceSession) (localState, error) {

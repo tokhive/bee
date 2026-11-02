@@ -31,8 +31,8 @@ func (a *DesktopAccounts) beginAccountChange(p *desktopAccountPlatform, request 
 		if op.Kind != "confirm_change" || !sameDesktopAuthorizationSource(op.Source, *p.source) || (p.snapshot.Candidate.Fingerprint != nil && *p.snapshot.Candidate.Fingerprint != op.ToFingerprint) || (op.Stage != "committed" && p.credentialRevision != op.CredentialRevision) {
 			return fail("operation_pending", "account_change_binding", "confirmed candidate differs from the original unresolved account change")
 		}
-		if !a.launchAccountOperation(p, request.Platform, op, true, false, true) {
-			return fail("closed", "account_service", "management is closed or changing runtime state")
+		if err := a.launchAccountOperation(p, request.Platform, op, true, false, true); err != nil {
+			return accountSnapshotCopy(p.snapshot), err
 		}
 		return accountSnapshotCopy(p.snapshot), nil
 	}
@@ -47,8 +47,8 @@ func (a *DesktopAccounts) beginAccountChange(p *desktopAccountPlatform, request 
 	if p.snapshot.Candidate.Fingerprint != nil {
 		op.ToFingerprint = *p.snapshot.Candidate.Fingerprint
 	}
-	if !a.launchAccountOperation(p, request.Platform, op, false, false, true) {
-		return fail("closed", "account_service", "management is closed or changing runtime state")
+	if err := a.launchAccountOperation(p, request.Platform, op, false, false, true); err != nil {
+		return accountSnapshotCopy(p.snapshot), err
 	}
 	return accountSnapshotCopy(p.snapshot), nil
 }

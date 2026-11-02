@@ -1,4 +1,4 @@
-import {throwBridgeError,safeOrigin} from './failures.ts';
+import {throwBridgeError,safeOrigin,decodeBridgeError,normalizeFailure,type UiFailure} from './failures.ts';
 export interface DeviceIdentity { id: string; name: string; owner_id: string; owner_email: string }
 export interface DeviceView {
   state: 'unbound' | 'pending' | 'draining' | 'expired' | 'bound';
@@ -11,8 +11,9 @@ export interface DeviceView {
   identity?: DeviceIdentity;
 }
 export interface DeviceContext {hive:string;name:string;device_id:string|null;owner_id:string|null;binding_revision:number}
+export interface DeviceContextFailure {binding_revision:number;failure:UiFailure}
 export interface DeviceClient {
- context?():Promise<DeviceContext>;
+ context?():Promise<DeviceContext|DeviceContextFailure>;
   status(): Promise<DeviceView>;
   begin(hive: string, name: string): Promise<DeviceView>;
   open(): Promise<DeviceView>;
@@ -65,7 +66,17 @@ export function decodeDeviceContext(reply:unknown):DeviceContext {
 }
 export function createDeviceClient(invoke: DeviceInvoke): DeviceClient {
   return {
-    async context() {return decodeDeviceContext(await invoke('device_context'));},
+    async context() {
+     const reply=await invoke('device_context');
+     if(record(reply)&&record(reply.result)&&'error'in reply.result&&'binding_revision'in reply.result){
+       const r=reply.result;
+       if(Object.keys(r).length!==2||!Number.isSafeInteger(r.binding_revision)||Number(r.binding_revision)<=0)return invalid('context failure requires only error and positive safe binding revision');
+       const error=decodeBridgeError(r.error,'DEVICE_CONTEXT_INVALID');
+       if(!['DEVICE_CONTEXT_UNCONFIGURED','DEVICE_CONTEXT_INVALID'].includes(error.code))return invalid('context revision requires local binding observation failure');
+       return {binding_revision:Number(r.binding_revision),failure:normalizeFailure(error,'device_context')};
+     }
+     return decodeDeviceContext(reply);
+   },
     async status() { return decodeDeviceReply(await invoke('device_status')); },
     async begin(hive, name) { return decodeDeviceReply(await invoke('device_begin', {hive, name})); },
     async open() { return decodeDeviceReply(await invoke('device_open')); },

@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline';
-import { writeFileSync, readFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, appendFileSync } from 'node:fs';
 
 const mode = process.argv[2];
 if (process.argv[3]) writeFileSync(process.argv[3], String(process.pid));
@@ -9,6 +9,7 @@ if (mode === 'diagnostic-exit') {
   process.stderr.write('management initialization failed: E42 Authorization=MARKER-A Cookie=MARKER-C token=MARKER-T confirmation_id=MARKER-I /Users/MARKER-P model_input=MARKER-IN model_output=MARKER-OUT\n', () => process.exit(9));
 }
 let exitSnapshot;
+let startupOperation=null,startupRuntimeRevision;
 let bootstrapProxy='',bootstrapRevision=0;
 let restores=0;
 let restoreSnapshots=0;
@@ -17,15 +18,23 @@ input.on('line', line => {
   const request = JSON.parse(line);
   if(mode.startsWith('startup-')&&request.method!=='hello') {
     const config=JSON.parse(readFileSync(process.argv[4],'utf8'));
+    appendFileSync(`${process.argv[4]}.calls`,request.method+'\n');
+    startupRuntimeRevision??=config.runtime_revision??0;
     const reply=result=>process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');
     const networkRevision=config.network_revision??bootstrapRevision;
-    const runtime={...JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,revision:bootstrapRevision,network_revision:networkRevision};
+    const runtime={...JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,revision:config.apply?startupRuntimeRevision:bootstrapRevision,network_revision:networkRevision,...(config.apply?{operation:startupOperation,stop_receipt:startupOperation?{workers_stopped:true,intent_saved:true,session_clean:true}:null}:{})};
     switch(request.method){
-      case 'device_context': reply(config.corrupt?{error:{code:'DEVICE_CONTEXT_INVALID',message:'saved local configuration JSON rejected'}}:config.unbound?{error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved binding'}}:{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:config.binding_revision??1}});return;
+      case 'device_context': reply(config.corrupt?{error:{code:'DEVICE_CONTEXT_INVALID',message:'saved local configuration JSON rejected'},binding_revision:config.binding_revision??1}:config.unbound?{error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved binding'},binding_revision:config.binding_revision??1}:{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:config.binding_revision??1}});return;
       case 'device_status': reply(config.rejected?{error:{code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',target_origin:'https://hive.example'}}}}:config.unbound?{device:{state:'unbound'}}:{device:{state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',owner_id:'owner'}}});return;
       case 'runtime_snapshot':reply({runtime});return;
       case 'runtime_verify':writeFileSync(`${process.argv[4]}.verify`,'entered');setTimeout(()=>reply(config.bad_data?{error:{code:'STARTUP_DATA_INVALID',message:'protected account schema rejected'}}:{verified:true}),config.delay??0);return;
-      case 'runtime_restore': throw new Error('startup recheck repeated runtime restore');
+      case 'runtime_stop':
+        if(!config.apply||request.params.reason!=='network_change'||request.params.expected_revision!==startupRuntimeRevision)throw new Error('invalid network stop');
+        startupOperation={id:'b'.repeat(48),kind:'stop',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
+      case 'runtime_restore':
+        if(!config.apply)throw new Error('startup recheck repeated runtime restore');
+        startupOperation={id:'c'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
+      case 'runtime_start': throw new Error('recovery must not call runtime_start');
       case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;reply({configured:true});return;
       case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
       case 'account_detect':reply({account:{platform:request.params.platform,operation:null}});return;

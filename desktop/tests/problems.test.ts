@@ -65,3 +65,23 @@ test('explicit locale formatting and placeholders follow the App language',()=>{
  }
  assert.notEqual(formatDate(date,'zh'),formatDate(date,'en'));
 });
+
+test('saved context rejection has a known local impact and an available diagnostic next step in both locales',()=>{
+ const original='saved device name length rejected; actual=characters=81; required=characters<=80';
+ const value=normalizeFailure({code:'DEVICE_CONTEXT_INVALID',message:original,details:{check:'device_context',observed_at:observed,evidence:{actual:'characters=81',required:'characters<=80'}}},'startup_check');
+ for(const locale of ['zh','en'] as const){
+  const problem=presentFailure(value,locale);
+  assert.doesNotMatch(problem.summary,/尚未确认|cause is unconfirmed/i);assert.match(problem.summary,locale==='zh'?/本机.*配置.*校验/:/saved.*device.*configuration.*validation/i);
+  assert.match(problem.impact,locale==='zh'?/诊断报告.*支持.*修复.*重新检查/:/diagnostic report.*support.*repair.*recheck/i);
+  assert.deepEqual(problem.action,{page:'diagnostics'});if(locale==='en')assert.doesNotMatch(problem.actionLabel!,/\p{Script=Han}/u);assert.match(problem.details,/characters=81/);assert.match(problem.details,/characters<=80/);assert.ok(problem.details.includes(original));
+ }
+ const absent=presentFailure({...value,code:'DEVICE_CONTEXT_UNCONFIGURED'},'zh');assert.match(absent.summary,/尚未配置/);assert.deepEqual(absent.action,{page:'overview',section:'device'});
+});
+test('network apply blocker explains the explicit settings action before recheck without guessing from messages',()=>{
+ for(const locale of ['zh','en'] as const){
+  const value=normalizeFailure({code:'NETWORK_APPLY_REQUIRED',message:'saved network revision=4 effective=2'},'startup_check');
+  const problem=presentFailure(value,locale);
+  assert.match(problem.summary,locale==='zh'?/网络.*尚未应用/:/network.*not.*applied/i);assert.match(problem.impact,locale==='zh'?/设置.*网络.*应用.*重新检查/:/settings.*network.*apply.*recheck/i);assert.deepEqual(problem.action,{page:'settings',section:'network'});assert.match(problem.details,/revision=4 effective=2/);
+  const unknown=presentFailure({...value,code:'future_reason',message:'NETWORK_APPLY_REQUIRED'},locale);assert.equal(unknown.action,null);
+ }
+});

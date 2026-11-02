@@ -143,13 +143,10 @@ async fn wait_bridge(bridge: &Bridge) -> Result<(), BridgeError> {
     }
 }
 async fn binding(bridge: &Bridge) -> Result<Option<u64>, BridgeError> {
-    match bridge.device_context().await {
-        Ok(reply) => Ok(Some(
-            crate::protocol::device_context(&reply.result)?.binding_revision,
-        )),
-        Err(cause) if cause.code == "DEVICE_CONTEXT_UNCONFIGURED" => Ok(None),
-        Err(cause) => Err(cause),
-    }
+    let reply = bridge.device_context().await?;
+    Ok(Some(
+        crate::protocol::device_context_state(&reply.result)?.binding_revision,
+    ))
 }
 async fn context(bridge: &Bridge, store: &PreferencesStore) -> Result<CheckContext, BridgeError> {
     let binding = binding(bridge).await?;
@@ -177,8 +174,15 @@ async fn prerequisites(
     bridge: &Bridge,
     store: &PreferencesStore,
     controller: &NetworkController,
+    bootstrap: bool,
 ) -> Result<CheckContext, BridgeError> {
     wait_bridge(bridge).await?;
+    let local = bridge.device_context().await?;
+    if let Some(cause) = crate::protocol::device_context_state(&local.result)?.failure {
+        if cause.code != "DEVICE_CONTEXT_UNCONFIGURED" {
+            return Err(cause);
+        }
+    }
     let before = context(bridge, store).await?;
     let device = bridge.device_status().await?;
     let scope = controller.bind_verified_device(store, &device.result)?;
@@ -194,7 +198,7 @@ async fn prerequisites(
         let fresh = runtime.result["runtime"]["local"] == "stopped"
             && runtime.result["runtime"]["revision"] == 0
             && runtime.result["runtime"]["network_revision"] == 0;
-        let network = if fresh {
+        let network = if fresh && bootstrap {
             controller
                 .bootstrap_saved(store, &BridgeNetworkRuntime(bridge), &scope)
                 .await
@@ -220,7 +224,7 @@ pub(crate) async fn startup<R: tauri::Runtime>(app: tauri::AppHandle<R>, bridge:
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
     let result = async {
-        let checked = prerequisites(&bridge, &store, &controller).await?;
+        let checked = prerequisites(&bridge, &store, &controller, true).await?;
         // The only automatic runtime recovery path belongs to initial startup.
         crate::update_install::verify_startup(
             &app.state::<crate::updater::UpdateManager>(),
@@ -268,7 +272,7 @@ pub(crate) async fn recheck<R: tauri::Runtime>(
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
     let result = async {
-        let checked = prerequisites(bridge, &store, &controller).await?;
+        let checked = prerequisites(bridge, &store, &controller, false).await?;
         crate::update_install::verify_recheck(
             &app.state::<crate::updater::UpdateManager>(),
             bridge,
@@ -299,6 +303,56 @@ pub(crate) async fn recheck<R: tauri::Runtime>(
     gate.finish(result);
     emit(app, &gate);
     gate.snapshot()
+}
+/// An explicit apply can resolve this one startup blocker without releasing the gate.
+pub(crate) async fn apply_saved_network(
+    bridge: &Bridge,
+    store: &PreferencesStore,
+    controller: &NetworkController,
+    gate: &StartupGate,
+    manager: &crate::updater::UpdateManager,
+    confirmed: bool,
+) -> Result<crate::network::NetworkSnapshot, BridgeError> {
+    let _serial = gate.serial.lock().await;
+    let recovering = match gate.check() {
+        Ok(()) => false,
+        Err(cause)
+            if gate.snapshot().state == "blocked" && cause.code == "NETWORK_APPLY_REQUIRED" =>
+        {
+            true
+        }
+        Err(cause) => return Err(cause),
+    };
+    if !recovering && !bridge.0.startup_verified.load(Ordering::SeqCst) {
+        return Err(BridgeError::new("STARTUP_VERIFICATION_PENDING", "network apply rejected: current management instance is held for startup package/data/runtime verification; required=verified startup or explicit network recovery blocker".into()));
+    }
+    let before = if recovering {
+        wait_bridge(bridge).await?;
+        let before = context(bridge, store).await?;
+        crate::update_install::verify_recheck(manager, bridge, store.read()).await?;
+        Some(before)
+    } else {
+        None
+    };
+    let device = bridge.device_status().await?;
+    let scope = controller.bind_verified_device(store, &device.result)?.ok_or_else(|| BridgeError::new("NETWORK_DEVICE_REQUIRED", "applying a contribution proxy requires a verified paired device; unpaired drafts can be tested read-only".into()))?;
+    if let Some(before) = before {
+        let local = bridge.device_context().await?;
+        crate::protocol::device_context(&local.result)?;
+        if context(bridge, store).await? != before {
+            return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "network apply context changed during identity verification; required=same instance, binding, network and preferences".into()));
+        }
+    }
+    let restore_intent = !recovering || bridge.0.startup_verified.load(Ordering::SeqCst);
+    Ok(controller
+        .apply_saved_with_restore(
+            store,
+            &BridgeNetworkRuntime(bridge),
+            &scope,
+            confirmed,
+            restore_intent,
+        )
+        .await)
 }
 #[cfg(test)]
 #[path = "experience_tests.rs"]

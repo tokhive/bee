@@ -220,8 +220,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				value, err := contexts.Context(ctx)
 				if err != nil {
 					answer.Result = struct {
-						Error *protocolError `json:"error"`
-					}{operationFailure("DEVICE_CONTEXT_FAILED", err)}
+						Error           *protocolError `json:"error"`
+						BindingRevision int64          `json:"binding_revision,omitempty"`
+					}{operationFailure("DEVICE_CONTEXT_FAILED", err), value.BindingRevision}
 				} else {
 					answer.Result = struct {
 						Context bee.DesktopDeviceContext `json:"context"`

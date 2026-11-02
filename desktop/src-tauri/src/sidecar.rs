@@ -509,7 +509,7 @@ impl Bridge {
                 Duration::from_secs(15),
             )
             .await?;
-        crate::protocol::device_context(&reply.result)?;
+        crate::protocol::device_context_state(&reply.result)?;
         Ok(reply)
     }
     pub(crate) async fn verify_local_startup(&self) -> Result<(), BridgeError> {
@@ -612,7 +612,8 @@ impl Bridge {
                 | "runtime_snapshot"
                 | "network_status"
                 | "runtime_configure_network"
-        );
+        ) || (method == "runtime_stop"
+            && params["reason"] == "network_change");
         if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request && !startup_network {
             return Err(error("STARTUP_VERIFICATION_PENDING", "request rejected: startup package/data/runtime verification has not succeeded; contribution remains blocked"));
         }

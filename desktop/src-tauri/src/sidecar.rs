@@ -230,6 +230,50 @@ fn error(code: &str, message: impl Into<String>) -> BridgeError {
     }
 }
 
+/// This request emitted no bytes. Retain the terminal cause without inheriting
+/// another request's uncertain submission, and keep the public error bounded.
+fn request_not_sent(method: &str, cause: &BridgeError) -> BridgeError {
+    let original = if protocol::safe_failure_text(&cause.message) {
+        cause.message.clone()
+    } else {
+        format!(
+            "unsafe cause text omitted; original bytes={}",
+            cause.message.len()
+        )
+    };
+    let mut message = format!(
+        "{method} rejected before any bytes were sent; cause={}: {original}",
+        cause.code
+    );
+    let details = match &cause.details {
+        Some(value) => match value.validate() {
+            Ok(()) => Some(value.clone()),
+            Err(reason) => {
+                message.push_str(&format!("; cause details rejected: {reason}"));
+                None
+            }
+        },
+        None => None,
+    };
+    if message.len() > 32768 {
+        let suffix = format!(
+            "; cause text truncated; actual bytes={}; maximum=32768",
+            message.len()
+        );
+        let mut end = 32768 - suffix.len();
+        while !message.is_char_boundary(end) {
+            end -= 1;
+        }
+        message.truncate(end);
+        message.push_str(&suffix);
+    }
+    BridgeError {
+        code: "REQUEST_NOT_SENT".into(),
+        message,
+        details,
+    }
+}
+
 fn with_cleanup(original: Option<BridgeError>, cleanup: BridgeError) -> BridgeError {
     match original {
         None => cleanup,
@@ -1140,13 +1184,7 @@ async fn session(
         let failure = if sent {
             cause.clone()
         } else {
-            error(
-                "REQUEST_NOT_SENT",
-                format!(
-                    "{} rejected before any bytes were sent because owned session ended; cause={}",
-                    request.method, cause.code
-                ),
-            )
+            request_not_sent(request.method, &cause)
         };
         let _ = request.reply.send(Err(failure));
     }
@@ -1322,13 +1360,14 @@ async fn supervise(
     statuses.send_replace(terminal);
     requests.close();
     while let Some(request) = requests.recv().await {
-        let _ = request.reply.send(Err(error(
-            "REQUEST_NOT_SENT",
-            format!(
-                "{} rejected before any bytes were sent because owned Bee stopped",
-                request.method
-            ),
-        )));
+        let cause = run
+            .as_ref()
+            .err()
+            .cloned()
+            .unwrap_or_else(|| error("BRIDGE_STOPPED", "owned Bee stopped"));
+        let _ = request
+            .reply
+            .send(Err(request_not_sent(request.method, &cause)));
     }
     // A protocol failure is reported through status; stop reports cleanup/join
     // errors independently instead of treating a failed handshake as failed quit.

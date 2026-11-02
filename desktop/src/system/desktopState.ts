@@ -92,8 +92,20 @@ export function createDesktopState(deps:DesktopDeps){
     };
     const networkChanged=state.runtime&&state.runtime.network_revision!==next.network_revision;
     if(networkChanged){diagnosticObservedAt=null;publish({diagnosticFailure:null});}
-    publish({device,deviceError,runtime:next,defaults,error:null,refresh:deviceError?status(state.refresh,'idle'):confirmed()});
-    if(deviceError){publish({accountRefresh:mapStatus(state.accountRefresh,'blocked'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});return;}
+    if(deviceError){
+     // Local runtime observations may confirm login/cancellation, but never resume an old Hive write worker.
+     const localAccounts={...state.accounts},errors={...state.accountErrors},refreshes={...state.accountRefresh};
+     for(const platform of platforms){
+      const account=next.platforms[platform]?.account;
+      const minimum=Math.max(accountReceiptRevisions[platform]??-1,state.accounts[platform]?.revision??-1);
+      if(!account||account.revision<minimum){
+       errors[platform]=failure({code:'DESKTOP_STALE_RESULT',evidence:{actual:String(account?.revision??'missing'),required:'account revision >='+minimum},message:'local account revision platform='+platform+' actual='+(account?.revision??'missing')+'; required>='+minimum+' from last confirmed observation'},'account_snapshot');
+       refreshes[platform]=status(refreshes[platform],'blocked');
+      }else{localAccounts[platform]=account;delete errors[platform];refreshes[platform]=status(refreshes[platform],'blocked');}
+     }
+     publish({device,deviceError,runtime:next,defaults,error:null,accounts:localAccounts,accountErrors:errors,accountRefresh:refreshes,refresh:status(state.refresh,'idle'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});return;
+    }
+    publish({device,deviceError,runtime:next,defaults,error:null,refresh:confirmed()});
     const supply=device?.state==='bound'&&device.hive&&device.identity?deps.supply?.({hive:device.hive,deviceId:device.identity.id}):undefined;
     await Promise.all(platforms.map(async platform=>{
      const readAccount=async()=>{
@@ -131,7 +143,7 @@ export function createDesktopState(deps:DesktopDeps){
      publish({busy:false,supplyPlatform:null});
      if(blocked)publish({refresh:status(state.refresh,'blocked'),accountRefresh:mapStatus(state.accountRefresh,'blocked'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});
      else{
-      const moving=state.runtime?.local==='starting'||state.runtime?.local==='stopping'||Object.values(state.accounts).some(v=>v.operation&&['pending','running','reconciling'].includes(v.operation.state));
+      const moving=state.runtime?.local==='starting'||state.runtime?.local==='stopping'||Object.values(state.accounts).some(v=>v.operation&&['pending','running'].includes(v.operation.state));
       schedule(moving?400:state.device?.state==='pending'||state.device?.state==='draining'?(state.device.poll_interval_seconds??2)*1000:deps.intervalMs??10000);
      }
     }

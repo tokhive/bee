@@ -85,3 +85,19 @@ test('network apply blocker explains the explicit settings action before recheck
   const unknown=presentFailure({...value,code:'future_reason',message:'NETWORK_APPLY_REQUIRED'},locale);assert.equal(unknown.action,null);
  }
 });
+
+test('known unsent failures use the App locale and retain evidence without guessing from messages',()=>{
+ for(const code of ['REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED'])for(const locale of ['zh','en']as const){
+  const problem=presentFailure(normalizeFailure({code,message:'fixture queue expired before first byte; actual=16 required<16'},'account_operation'),locale);
+  assert.match(problem.summary,locale==='zh'?/未发送.*未提交/:/not sent.*not submitted/i);
+  assert.match(problem.impact,locale==='zh'?/不会自动重试.*确认/:/not.*automatically.*confirm/i);assert.match(problem.details,/actual=16 required<16/);
+ }
+ const unknown=presentFailure(normalizeFailure({code:'RESPONSE_TIMEOUT',message:'REQUEST_NOT_SENT'},'account_operation'),'en');assert.doesNotMatch(unknown.summary,/not submitted/i);
+});
+
+test('unsent classification uses validated codes and rejects malformed details',async()=>{
+ const {requestNotSent}=await import('../src/system/failures.ts');
+ assert.equal(requestNotSent(normalizeFailure(new Error('REQUEST_NOT_SENT: not sent'),'write')),false);
+ assert.equal(requestNotSent(normalizeFailure({code:'REQUEST_NOT_SENT',message:'safe',details:{check:'write',observed_at:observed,evidence:{token:'secret'}}},'write')),false);
+ assert.equal(requestNotSent(normalizeFailure({code:'RESPONSE_TIMEOUT',message:'no bytes sent'},'write')),false);
+});

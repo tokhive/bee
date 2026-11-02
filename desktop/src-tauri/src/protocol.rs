@@ -123,7 +123,7 @@ fn public_identifier(value: &str, max: usize) -> bool {
             .bytes()
             .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
 }
-fn safe_failure_text(value: &str) -> bool {
+pub(crate) fn safe_failure_text(value: &str) -> bool {
     if value
         .chars()
         .any(|c| c.is_control() && !"\n\r\t".contains(c))

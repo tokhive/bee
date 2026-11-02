@@ -1,6 +1,7 @@
 const groups = [
- ['设备绑定', [['device-unbound','尚未绑定'],['device-pending','等待网页确认'],['device-expired','配对已过期'],['device-bound','设备已绑定'],['device-error','设备核对失败']]],
- ['贡献运行', [['stopped','尚未开始'],['runtime-starting','正在启动'],['running','贡献运行中'],['runtime-stopping','正在停止'],['runtime-disconnected','连接断开'],['runtime-unknown','启动结果未确认','start-unknown']]],
+ ['设备绑定', [['device-loading','初次读取'],['device-draining','等待旧设备收尾'],['device-awaiting-confirmation','首次未提交确认'],['device-creating','正在创建请求'],['device-creation-unknown','创建结果未知'],['device-redeeming','兑换后身份核对'],['device-redemption-unknown','兑换结果未知'],['device-saving','本机保存失败'],['device-unbound','尚未绑定'],['device-pending','等待网页确认'],['device-expired','配对已过期'],['device-bound','设备已绑定'],['device-error','设备核对失败']]],
+ ['设备恢复', [['device-recovery-confirm','凭据撤销确认'],['recovery-pending','恢复等待网页'],['recovery-draining','恢复等待旧设备'],['recovery-creation-unknown','恢复创建未知'],['recovery-redemption-unknown','恢复兑换未知'],['recovery-owner','新归属确认'],['recovery-saving','恢复保存失败'],['recovery-completed','恢复完成仍停止']]],
+ ['贡献运行', [['runtime-connecting','首次连接'],['runtime-rejected','身份拒绝'],['runtime-occupied','连接占用'],['stopped','尚未开始'],['runtime-starting','正在启动'],['running','贡献运行中'],['runtime-stopping','正在停止'],['runtime-disconnected','连接断开'],['runtime-unknown','启动结果未确认','start-unknown']]],
  ['AI 账号', [['account-reading','正在读取登录'],['account-empty','没有已有登录'],['account-candidate','候选尚未接入'],['account-selected','账号已接入'],['account-error','登录读取失败'],['account-expired','登录已过期'],['account-change','候选账号已变化']]],
  ['接单条件', [['supply-ready','满足接单条件'],['supply-paused','手动暂停'],['supply-blocked','多个阻塞原因'],['supply-partial','单平台未就绪']]],
  ['自动核对', [['check-background','后台正常核对'],['check-expired','报告已过期'],['check-waiting','等待自动重试'],['check-retrying','重试中'],['check-recovered','核对已恢复'],['check-sequence','完整自动恢复过程']]],

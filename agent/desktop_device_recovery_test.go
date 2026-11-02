@@ -1019,3 +1019,45 @@ func TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence(t *testing.T)
 		})
 	}
 }
+
+func TestDeviceRecoveryAbsentIsTypedOnlyForStatus(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "bee-desktop.json")
+	d := newDesktopTestDevice(t, path)
+	defer closeDesktopTestDevice(t, d)
+	_, err := d.RecoveryStatus(context.Background())
+	var failure *DesktopFailure
+	if !errors.As(err, &failure) || failure.Code != "DEVICE_RECOVERY_NONE" || failure.Details.Check != "device_recovery_status" {
+		t.Fatalf("absent transaction status actual=%#v error=%v; required=typed DEVICE_RECOVERY_NONE", failure, err)
+	}
+	_, err = d.RecoveryConfirm(context.Background(), strings.Repeat("d", 48), 1, "begin_pairing")
+	failure = nil
+	if errors.As(err, &failure) && failure.Code == "DEVICE_RECOVERY_NONE" {
+		t.Fatalf("confirmation with no transaction must remain a failed precondition: %v", err)
+	}
+	if err == nil {
+		t.Fatal("confirmation with no transaction unexpectedly succeeded")
+	}
+	s, release, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	record := &desktopRecoveryRecord{Version: 1, Purpose: "initial_pairing", OperationID: strings.Repeat("a", 48), Revision: 1, Phase: "awaiting_confirmation", Hive: "https://hive.example", Name: "Mac", Credential: "bee_" + strings.Repeat("n", 43), Accepted: []desktopRecoveryDecision{}}
+	err = saveDesktopRecovery(s, record)
+	release()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.RecoveryStatus(context.Background())
+	failure = nil
+	if !errors.As(err, &failure) || failure.Code != "DEVICE_RECOVERY_NONE" {
+		t.Fatalf("initial transaction is not a credential recovery: actual=%v", err)
+	}
+	if err = os.WriteFile(filepath.Join(filepath.Dir(path), "bee-desktop-recovery.json"), []byte("{"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	_, err = d.RecoveryStatus(context.Background())
+	failure = nil
+	if err == nil || errors.As(err, &failure) && failure.Code == "DEVICE_RECOVERY_NONE" {
+		t.Fatalf("corrupt recovery record cannot be absent: %v", err)
+	}
+}

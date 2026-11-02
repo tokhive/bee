@@ -15,6 +15,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
  const [writeBusy,setWriteBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({});
+ const [cancelUnconfirmed,setCancelUnconfirmed]=useState<Partial<Record<AccountPlatform,{operationId:string;failure:UiFailure}>>>({});
  // An ignored old reply or unchanged error must still schedule the next poll.
  const [settled,setSettled]=useState({openai:0,claude:0});
  const [sourceReadFailed,setSourceReadFailed]=useState<Partial<Record<AccountPlatform,UiFailure>>>({});
@@ -29,7 +30,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const deviceError=coordinated?.deviceError;
  const currentRuntime=useRef(runtime);currentRuntime.current=runtime;
  const observedRuntime=useRef(runtime);
- const resolutions=useRef<Partial<Record<AccountPlatform,{previous:RuntimeSnapshot|undefined;detected:boolean;local:boolean}>>>({});
+ const resolutions=useRef<Partial<Record<AccountPlatform,{previous:RuntimeSnapshot|undefined;detected:boolean;local:boolean;generation:number|undefined;operation?:AccountOperation}>>>({});
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  const publish=useCallback((platform:AccountPlatform,view:AccountSnapshot,detected=false)=>{
   if(view.revision<revisions.current[platform])return false;
@@ -46,14 +47,17 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(running.current[p])continue;
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
    if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
-   const resolved=resolution&&runtime!==resolution.previous;
+   const resolved=resolution&&runtime!==resolution.previous&&resolution.generation===coordinated?.generation?.();
    if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
    const minimum=unconfirmedRevisions.current[p];
-   if(external&&(!deviceError||resolution?.local||localUnconfirmed.current[p])&&!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum)){
+   const receipt=resolution?.operation,observed=next.operation;
+   const ownedTerminal=!!resolved&&!!receipt&&observed?.id===receipt.id&&observed.kind===receipt.kind&&observed.platform===p&&['succeeded','failed','cancelled'].includes(observed.state)&&next.revision>=Math.max(receipt.revision,revisions.current[p])&&observed.revision>=receipt.revision;
+   const confirmed=receipt?ownedTerminal:!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum);
+   if(external&&(!deviceError||resolution?.local||localUnconfirmed.current[p])&&confirmed){
     delete unconfirmedRevisions.current[p];delete localUnconfirmed.current[p];setUncertain(v=>({...v,[p]:false}));
    }
    if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]&&v[p]?.code!=='ACCOUNT_CONTEXT_CHANGED'?{...v,[p]:undefined}:v);
-   if(resolved&&(!deviceError||resolution.local))delete resolutions.current[p];
+   if(resolved&&(!receipt||ownedTerminal)&&(!deviceError||resolution.local))delete resolutions.current[p];
   }
   observedRuntime.current=runtime;
  },[enabled,runtime,busy,dirty,publish,centralError,deviceError,accountErrors,external,sourceReadFailed]);
@@ -67,14 +71,17 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    running.current[platform]=true;const epoch=++epochs.current[platform];setBusy(v=>({...v,[platform]:true}));
    const current=()=>active.current&&epoch===epochs.current[platform]&&central.current?.generation?.()===started;
    const request=(async()=>{
+    let receiptOperation:AccountOperation|undefined;
     try{
      const result=await operation(latest.current[platform]);
      if(!current())return;
      if(result)central.current?.recordReceipt?.(platform,result.revision);
      const view=result&&'selection'in result?result:undefined;
+     if(write&&result)receiptOperation='selection'in result?result.operation??undefined:result;
      if(view&&publish(platform,view,detected))setErrors(v=>({...v,[platform]:undefined}));
      if(refreshCentral){
-      resolutions.current[platform]={previous:currentRuntime.current,detected,local:local||!write};
+      const previous=resolutions.current[platform];
+      resolutions.current[platform]={previous:currentRuntime.current,detected,local:write?local:previous?.operation?previous.local:true,generation:receiptOperation?started:previous?.operation?previous.generation:started,operation:receiptOperation??previous?.operation};
       if(write)setUncertain(v=>({...v,[platform]:true}));
       if(central.current?.snapshot?.().busy)await refreshCentral();
       if(!current())return;
@@ -83,9 +90,14 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
       delete unconfirmedRevisions.current[platform];setUncertain(v=>({...v,[platform]:false}));
      }
     }catch(cause){if(current()){
-     const problem=failure(cause,'account_operation');
+     const problem=failure(cause,cancel?'authorize_cancel':'account_operation');
      verified.current[platform]=false;setErrors(v=>({...v,[platform]:problem}));
-     if(write&&!requestNotSent(problem)){localUnconfirmed.current[platform]=local;unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));pauseCentral?.();}
+     if(write&&!requestNotSent(problem)){
+      localUnconfirmed.current[platform]=local;unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));
+      const owned=receiptOperation??(cancel?latest.current[platform]?.operation:undefined);
+      pauseCentral?.();
+      if(owned)resolutions.current[platform]={previous:currentRuntime.current,detected,local,generation:central.current?.generation?.(),operation:owned};
+     }
     }}finally{if(active.current&&epoch===epochs.current[platform]){running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSettled(v=>({...v,[platform]:v[platform]+1}));}}
    })().finally(()=>{if(requests.current[platform]===request)delete requests.current[platform];});
    requests.current[platform]=request;return request;
@@ -182,7 +194,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   }
  },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
  const sourceFor=(p:AccountPlatform)=>sources[p]??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
- return {submissionBlocked:!!centralError||!!deviceError,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
+ return {submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
   edit(platform:AccountPlatform,source:AccountSource){
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;
@@ -197,11 +209,23 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   },
   authorize(platform:AccountPlatform){
    const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError)return;
-   void run(platform,async current=>{const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true);
+   void run(platform,async current=>{setCancelUnconfirmed(v=>({...v,[platform]:undefined}));const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true);
   },
   cancelAuthorize(platform:AccountPlatform){
    const id=views[platform]?.operation?.id;if(!client||!authorizer||!id)return;
-   void run(platform,async current=>{if(current?.operation?.id!==id||!['pending','running'].includes(current.operation.state))return current;const receipt=await authorizer.cancel(id);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,true,true);
+   void run(platform,async current=>{
+    if(current?.operation?.id!==id||!['pending','running'].includes(current.operation.state))return current;
+    const epoch=epochs.current[platform],generation=central.current?.generation?.();
+    setCancelUnconfirmed(v=>({...v,[platform]:undefined}));
+    let receipt:AccountOperation;
+    try{receipt=await authorizer.cancel(id);}
+    catch(cause){
+     const problem=failure(cause,'authorize_cancel');
+     if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation&&!requestNotSent(problem))setCancelUnconfirmed(v=>({...v,[platform]:{operationId:id,failure:problem}}));
+     throw cause;
+    }
+    return refreshCentral?receipt:client.snapshot(platform,false);
+   },false,true,false,true,true);
   }
  };
 }

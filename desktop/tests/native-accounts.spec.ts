@@ -102,3 +102,29 @@ test('unknown cancel only queries the same official operation and late success r
  await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{cancelUnknown:true},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();const dialog=await details(page);await dialog.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await dialog.getByRole('button',{name:'取消官方登录',exact:true}).click();await expect(dialog).toContainText('取消请求结果未确认');await page.keyboard.press('Escape');
  await page.evaluate(()=>(window as any).loginComplete=true);await page.clock.runFor(10100);await expect(card(page).getByText('登录已核验，尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(1);expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
 });
+
+test('background snapshot failure during official login never invents a cancel request',async({page},testInfo)=>{
+ await page.clock.install();await fixture(page,{runtime:true});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.accountTimeline=[];w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{try{const reply=await invoke(command,args);if(['authorize_start','runtime_snapshot','account_snapshot'].includes(command))w.accountTimeline.push({at:new Date().toISOString(),command,platform:args?.platform??args?.request?.platform,receipt:reply?.result?.operation,account:reply?.result?.account??reply?.result?.runtime?.platforms.openai.account});return reply;}catch(error){w.accountTimeline.push({at:new Date().toISOString(),command,error});throw error;}};});
+ await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();const dialog=await details(page);
+ await dialog.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await expect(dialog.getByRole('button',{name:'取消官方登录',exact:true})).toBeEnabled();
+ await page.evaluate(()=>(window as any).accountScenarios.snapshotFailure='openai');await page.clock.runFor(450);
+ await expect(dialog.locator('.problem-notice pre').last()).toContainText('account_snapshot');await expect(dialog.locator('.problem-notice pre').last()).toContainText('openai snapshot unavailable');
+ expect(await calls(page,'authorize_cancel')).toHaveLength(0);await expect(dialog).not.toContainText('取消请求结果未确认');
+ await page.evaluate(()=>{const w=window as any;w.accountScenarios.snapshotFailure='';w.loginComplete=true;});await page.clock.runFor(10100);
+ await testInfo.attach('account-operation-timeline',{body:JSON.stringify(await page.evaluate(()=>(window as any).accountTimeline),null,2),contentType:'application/json'});
+ await expect(dialog.getByText('登录已核验，尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(1);expect(await calls(page,'account_action')).toHaveLength(0);
+});
+
+for(const failure of ['runtime','openai'] as const)test(`${failure} read failure marks retained account facts until recovery without automatic writes`,async({page})=>{
+ await page.clock.install();await fixture(page,{selected:true,runtime:true});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+ await page.evaluate(failure=>{const w=window as any;if(failure==='runtime')w.accountScenarios.runtimeReadFailure=true;else w.accountScenarios.snapshotFailure='openai';},failure);await page.clock.runFor(10100);
+ await expect(card(page).getByText('上次确认的账号事实；当前状态待核对。',{exact:true})).toBeVisible();await expect(card(page).locator('.account-read-history time')).toHaveAttribute('datetime',/.+/);
+ await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();await expect(card(page).getByText('上次确认的额度；当前待核对。',{exact:true})).toBeVisible();
+ if(failure==='openai'){await expect(card(page,'Claude').locator('.account-read-history')).toHaveCount(0);await expect(card(page,'Claude').getByText('b'.repeat(16),{exact:true})).toBeVisible();}
+ else {await expect(card(page,'Claude').locator('.account-read-history')).toBeVisible();}
+ const dialog=await details(page);await expect(dialog.locator('.account-read-history time')).toHaveAttribute('datetime',/.+/);await expect(dialog.getByRole('button',{name:'重新登录',exact:true})).toBeDisabled();await expect(dialog).not.toContainText('接入前需先恢复设备身份');await page.keyboard.press('Escape');
+ for(const command of ['account_action','authorize_start','authorize_cancel','supply_set_paused','runtime_start'])expect(await calls(page,command)).toHaveLength(0);
+ await page.evaluate(()=>{const w=window as any;w.accountScenarios.runtimeReadFailure=false;w.accountScenarios.snapshotFailure='';});await page.clock.runFor(10100);
+ await expect(card(page).locator('.account-read-history')).toHaveCount(0);await expect(card(page).getByText('上次确认的额度；当前待核对。',{exact:true})).toHaveCount(0);await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+});

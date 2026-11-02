@@ -1,3 +1,4 @@
+import type {AccountSnapshot} from '../src/system/accounts';
 import {test,expect,type Page} from '@playwright/test';
 import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
 const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
@@ -165,4 +166,14 @@ for(const state of ['running','succeeded','replaced'])test('waiting login cancel
  await page.evaluate(state=>{const w=window as any;if(state==='replaced')w.data.openai.operation.id='d'.repeat(48);else w.data.openai.operation.state=state;w.releaseSnapshot();},state);
  await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(false);
  expect(await page.evaluate(()=>(window as any).cancelIds)).toEqual(state==='running'?['c'.repeat(48)]:[]);
+});
+
+test('NativeApp reconciling coordinator waits exactly ten seconds without replaying writes',async({page})=>{
+ await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
+ const openai=accountFixture('openai') as AccountSnapshot;openai.operation={id:'e'.repeat(48),kind:'select',state:'reconciling',platform:'openai',revision:openai.revision,error:null};
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai,claude:accountFixture('claude')}});await page.goto('/');
+ await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(2);
+ await page.clock.runFor(9999);expect(await calls(page,'account_snapshot')).toHaveLength(2);
+ await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(4);
+ for(const command of ['account_action','authorize_start','runtime_start','supply_set_paused'])expect(await calls(page,command)).toHaveLength(0);
 });

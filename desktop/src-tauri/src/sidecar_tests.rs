@@ -1271,3 +1271,107 @@ async fn device_recovery_methods_keep_fixed_contract_and_startup_hold_exit_bound
 
 #[path = "sidecar_native_concurrency_tests.rs"]
 mod native_concurrency;
+
+#[tokio::test]
+async fn unsent_waiters_keep_the_sent_request_terminal_evidence() {
+    let (_dir, bridge, control) =
+        controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
+    let b = bridge.clone();
+    let sent = tokio::spawn(async move { b.account_snapshot(SupplyPlatform::Openai, false).await });
+    observed_requests(&control, 1).await;
+    let b = bridge.clone();
+    let queued = tokio::spawn(async move { b.ping().await });
+    timeout(Duration::from_secs(1), async {
+        while bridge.0.capacity.available_permits() != 14 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let cause = BridgeError::with_details("PIPE_READ_FAILED", "read owned stdout: fixture pipe error 13".into(), serde_json::from_value(serde_json::json!({"check":"pipe_read","observed_at":"2026-10-30T12:00:00Z","evidence":{"actual":"read returned error 13","required":"complete reply"}})).unwrap()).unwrap();
+    bridge
+        .0
+        .status_tx
+        .send_replace(status(BridgePhase::Failed, None, Some(cause.clone())));
+    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+    let sent_error = sent.await.unwrap().unwrap_err();
+    let unsent_error = queued.await.unwrap().unwrap_err();
+    assert_eq!(sent_error, cause);
+    assert_eq!(unsent_error.code, "REQUEST_NOT_SENT");
+    assert!(
+        unsent_error.message.contains(&cause.message),
+        "missing cause: {}",
+        unsent_error.message
+    );
+    assert_eq!(unsent_error.details, cause.details);
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn unsent_mpsc_requests_keep_terminal_evidence() {
+    let mut spec = fixture("timeout");
+    spec.timeout = Duration::from_millis(150);
+    let bridge = Bridge::start(spec);
+    let (reply, receive) = oneshot::channel();
+    bridge
+        .0
+        .requests
+        .send(Request {
+            exit_request: false,
+            method: "ping",
+            params: serde_json::json!({}),
+            deadline: Instant::now() + Duration::from_secs(5),
+            phase: Arc::new(StdMutex::new(RequestPhase::Queued)),
+            _permit: bridge.0.capacity.clone().acquire_owned().await.unwrap(),
+            reply,
+        })
+        .await
+        .unwrap();
+    let unsent = receive.await.unwrap().unwrap_err();
+    let cause = bridge.status().error.unwrap();
+    assert_eq!(unsent.code, "REQUEST_NOT_SENT");
+    assert!(
+        unsent.message.contains(&cause.code),
+        "missing code: {}",
+        unsent.message
+    );
+    assert!(
+        unsent.message.contains(&cause.message),
+        "missing cause: {}",
+        unsent.message
+    );
+    bridge.stop().await.unwrap();
+}
+
+#[test]
+fn unsent_error_preserves_safe_details_and_enforces_public_limits() {
+    let details: protocol::FailureDetails = serde_json::from_value(serde_json::json!({"check":"pipe_read","observed_at":"2026-10-30T12:00:00Z","evidence":{"actual":"fixture error 13"}})).unwrap();
+    let mut cause =
+        BridgeError::with_details("PIPE_READ_FAILED", "界".repeat(10922), details.clone()).unwrap();
+    let bounded = request_not_sent("ping", &cause);
+    assert!(bounded.message.len() <= 32768);
+    assert!(bounded
+        .message
+        .contains("cause text truncated; actual bytes="));
+    assert_eq!(bounded.details, Some(details.clone()));
+    let decoded: BridgeError =
+        serde_json::from_value(serde_json::to_value(&bounded).unwrap()).unwrap();
+    assert_eq!(decoded, bounded);
+    cause.message = "Bearer TEST_SECRET".into();
+    let safe = request_not_sent("ping", &cause);
+    assert!(!safe.message.contains("TEST_SECRET"));
+    assert!(safe.message.contains("unsafe cause text omitted"));
+    assert_eq!(safe.details, Some(details));
+    cause
+        .details
+        .as_mut()
+        .unwrap()
+        .evidence
+        .insert("token".into(), "TEST_SECRET".into());
+    let invalid = request_not_sent("ping", &cause);
+    assert_eq!(invalid.details, None);
+    assert!(invalid.message.contains("cause details rejected"));
+    assert!(!serde_json::to_string(&invalid)
+        .unwrap()
+        .contains("TEST_SECRET"));
+}

@@ -1,5 +1,5 @@
 import type {RefreshStatus} from '../../system/desktopState';
-import {normalizeFailure,type UiFailure} from '../../system/failures.ts';
+import {normalizeFailure,requestNotSent,type UiFailure} from '../../system/failures.ts';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {SupplyClient,SupplyPlatform,SupplyView} from '../../system/supply';
 export const platforms:SupplyPlatform[]=['openai','claude'];
@@ -74,7 +74,7 @@ export function createSupplyModel(client:SupplyClient){
     const write=writes?.find(w=>w.platform===platform);
     if(write&&write.version!==writeVersions[platform])continue;
     try{if(write&&!usable(platform,write.paused))throw new Error('SUPPLY_WRITE_BLOCKED: platform snapshot is no longer writable; required=fresh verified state without pending account change');const result=write?await client.setPaused(platform,write.paused):await client.status(platform);if(!coordinatedRefresh)views[platform]=result;delete errors[platform];}
-    catch(cause){errors[platform]=failure(cause,writes?'supply_write':'supply_read');if(writes&&active&&generation===epoch){writeFailed=true;uncertainViews=observedViews;coordinatedPause?.();}}
+    catch(cause){errors[platform]=failure(cause,writes?'supply_write':'supply_read');if(writes&&active&&generation===epoch){writeFailed=true;uncertainViews=observedViews;if(!requestNotSent(errors[platform]!))coordinatedPause?.();}}
     if(!active||generation!==epoch)return;
     if(coordinatedRefresh){writeErrors={...errors};publish({errors:adoptedErrors(),now:Date.now()});}
     else publish({views:{...views},errors:{...errors},now:Date.now()});

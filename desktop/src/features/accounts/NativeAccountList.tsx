@@ -21,6 +21,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
  return <section className="native-accounts-section" aria-label={t('平台账号列表')}>
   <div className="section-heading"><h2>{t('AI 账号')}</h2><div className="account-list-status"><AccountCheckStatus supply={supply}/><span>{countCopy}</span></div></div>
   <div className="native-account-list">{platforms.map(platform=>{
+   const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];
    const presentation=accountPresentation(snapshot,dirty,now),selected=snapshot?.selection.state==='selected';
    const view=supply?.state.views[platform];
@@ -40,10 +41,10 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
      <p className={`native-account-condition ${ready?'is-ready':''}`}>{ready?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(copy)}{context==='accounts'&&selected&&!running&&current&&paused&&<span className="account-paused">{t('已暂停')}</span>}</p>
      {localReason&&<p className="native-account-reason">{localReason}</p>}
      {reasons.length>0&&<ul className="native-account-reasons">{reasons.map((reason,i)=><li key={`${reason}:${i}`}>{reason}</li>)}</ul>}
-     {[...new Map([...localErrors,snapshot?.hive.error].filter(e=>!!e).map(e=>[`${e.code}:${e.message}`,e])).values()].map(e=><FailureNotice key={`${e.code}:${e.message}`} failure={e} check="source_read" onNavigate={onNavigate}/>)}
+     {[...new Map([...localErrors,snapshot?.hive.error].filter(e=>!!e).map(e=>[`${e.code}:${e.message}`,e])).values()].map(e=><FailureNotice key={`${e.code}:${e.message}`} failure={e} check="source_read" onNavigate={navigate}/>)}
      {snapshot?.issues.map((issue,i)=><p className="native-account-reason" role={issue.notify?'alert':undefined} key={`${issue.code}:${i}`}>{issue.message}</p>)}
-     <AccountOperationStatus accounts={accounts} platform={platform} onNavigate={onNavigate}/>
-     {supply?.state.errors[platform]&&<FailureNotice failure={supply.state.errors[platform]} check="supply_read" onNavigate={onNavigate}/>}
+     <AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate}/>
+     {supply?.state.errors[platform]&&<FailureNotice failure={supply.state.errors[platform]} check="supply_read" onNavigate={navigate}/>}
     </div></div>
     <AccountQuota presentation={presentation}/>
     <div className="native-account-row-actions">

@@ -89,9 +89,9 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
  const generation=useCallback(()=>model?.generation()??0,[model]);
  const supplyLocal=useRef<Partial<Record<'openai'|'claude',string>>>({});
  const currentSnapshot=useCallback(()=>model?.getSnapshot()??initial,[model]);
- const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh};},[currentSnapshot]);
+ const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error,identityError:identityFailure(s),busy:s.busy,refreshStatus:s.refresh};},[currentSnapshot]);
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error,busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
- const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
  const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));

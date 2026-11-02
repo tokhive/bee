@@ -1,5 +1,5 @@
 import type {UiFailure} from '../system/failures';
-import {safeFailureText} from '../system/failures.ts';
+import {safeFailureText,requestNotSent} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
 import {translate,formatDate} from '../i18n/index.ts';
 export interface PresentedProblem {summary:string;impact:string;details:string;action:NavigationTarget|null;actionLabel?:string;detailsLabel?:string}
@@ -11,12 +11,13 @@ export function presentFailure(failure:UiFailure,locale:'zh'|'en'):PresentedProb
  const tr=(s:string,p?:Record<string,string|number>)=>translate(s,locale,p);
  const status=failure.evidence.http_status??tr('未知');
  const reason=failure.code==='source_unavailable'&&failure.evidence.permission_denied==='true'?'permission_denied':failure.code==='source_unavailable'&&failure.evidence.not_found==='true'?'source_missing':failure.code;
- const summary=tr(copy[reason]??'本次操作失败，原因尚未确认。',{status});
+ const unsent=requestNotSent(failure);
+ const summary=tr(unsent?'本次请求未发送，操作未提交。':copy[reason]??'本次操作失败，原因尚未确认。',{status});
  const device=failure.check.startsWith('device_')||failure.check.startsWith('pairing_');
  const account=['source_missing','permission_denied','source_unavailable','source_changed','invalid_credentials','expired','missing_scope','unsupported_store'].includes(failure.code);
  const revoked=['device_replaced','invalid_device_credential'].includes(failure.code);
  const invalidContext=failure.code==='DEVICE_CONTEXT_INVALID',unconfigured=failure.code==='DEVICE_CONTEXT_UNCONFIGURED',networkApply=failure.code==='NETWORK_APPLY_REQUIRED';
- const impact=tr(failure.code==='ACCOUNT_CONTEXT_CHANGED'?'请核对当前设备、运行与账号状态；确认后可重新提交。':invalidContext?'依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。':unconfigured?'请在概览连接本机设备；配对不会自动开始贡献。':networkApply?'请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。':revoked?'设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。':account?'本次只确认了所选来源的读取结果，其他登录状态仍未知。':device?'本次设备状态不可确认，依赖设备身份的操作保持不可用。':failure.check.startsWith('supply_')?'本次平台接单状态不可确认；修改结果未知时只核对，不自动重放。':'本次操作未能完成；后续状态以重新核对的结果为准。');
+ const impact=tr(unsent?'不会自动重试本次操作。核对当前状态后，请再次确认提交。':failure.code==='ACCOUNT_CONTEXT_CHANGED'?'请核对当前设备、运行与账号状态；确认后可重新提交。':invalidContext?'依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。':unconfigured?'请在概览连接本机设备；配对不会自动开始贡献。':networkApply?'请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。':revoked?'设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。':account?'本次只确认了所选来源的读取结果，其他登录状态仍未知。':device?'本次设备状态不可确认，依赖设备身份的操作保持不可用。':failure.check.startsWith('supply_')?'本次平台接单状态不可确认；修改结果未知时只核对，不自动重放。':'本次操作未能完成；后续状态以重新核对的结果为准。');
  let action:NavigationTarget|null=null;
  if(revoked||failure.code==='pairing_expired')action={page:'overview',section:'device'};
  if(account)action={page:'accounts',section:'source'};

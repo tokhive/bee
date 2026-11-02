@@ -66,3 +66,16 @@ test('a diagnostic target absent from a partial report focuses its summary once 
  const summary=page.locator('.nd-report-meta');await expect(summary).toBeFocused();expect(await page.evaluate(()=>(window as any).starts)).toBe(0);
  const heading=page.getByRole('heading',{level:1});await heading.focus();await page.evaluate(()=>(window as any).addCheck());await expect(page.locator('[data-nav-section="source"][data-nav-platform="claude"]')).toBeAttached();await expect(heading).toBeFocused();expect(await page.evaluate(()=>(window as any).starts)).toBe(0);
 });
+
+test('Claude inline source recovery keeps its platform, drafts and return focus without writes',async({page})=>{
+ await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_detect'&&args.request.platform==='claude'){result.result.account.candidate.error={code:'permission_denied',check:'source_read',platform:'claude',message:'Claude fixture directory read denied',evidence:{permission_denied:'true'}};w.accounts.claude=result.result.account;}return result;};});
+ await nav(page,'AI 账号').click();
+ for(const [platform,draft] of [['OpenAI','/tmp/openai-draft'],['Claude','/tmp/claude-draft']]){
+  await page.getByRole('button',{name:platform+' 详情',exact:true}).click();await page.getByRole('dialog').getByLabel('自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
+ }
+ const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'检查凭证来源',exact:true}).first().click();
+ const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
+ await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();
+ await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/openai-draft');
+ for(const command of ['account_action','authorize_start','authorize_cancel','runtime_start','supply_set_paused'])expect(await calls(page,command)).toBe(0);
+});

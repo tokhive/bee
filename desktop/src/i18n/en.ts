@@ -1160,4 +1160,6 @@ export const en: Record<string, string> = {
   "账号提交条件已经变化，本次未提交。": "Account submission conditions changed. This request was not submitted.",
   "请核对当前设备、运行与账号状态；确认后可重新提交。": "Check the current device, runtime and account state before submitting again.",
   "账号状态待核对。": "Account state awaits verification.",
+  "本次请求未发送，操作未提交。": "This request was not sent; the operation was not submitted.",
+  "不会自动重试本次操作。核对当前状态后，请再次确认提交。": "This operation will not be retried automatically. Check the current state, then confirm submission again.",
 };

@@ -1,2 +1,19 @@
-import { en } from './en.ts';
-export const zh: Record<string, string> = Object.fromEntries(Object.keys(en).map(key => [key, key]));
+import {en} from './en.ts';
+export const zh: Record<string, string> = {...Object.fromEntries(Object.keys(en).map(key => [key, key])),
+ "desktop.status.loading":"正在读取设备与账号状态",
+ "desktop.status.unconfirmed":"状态待确认",
+ "desktop.status.failed":"贡献未启动或已中断",
+ "desktop.status.rejected":"设备身份被拒绝",
+ "desktop.status.occupied":"设备连接已被占用",
+ "desktop.status.unbound":"尚未绑定本机设备",
+ "desktop.status.pairing":"等待完成设备配对",
+ "desktop.status.starting":"正在启动贡献",
+ "desktop.status.stopping":"正在停止贡献",
+ "desktop.status.no_accounts":"尚未接入 AI 账号",
+ "desktop.status.stopped":"贡献尚未启动",
+ "desktop.status.connecting":"正在连接 Hive",
+ "desktop.status.disconnected":"Hive 连接已中断",
+ "desktop.status.paused":"接单已暂停",
+ "desktop.status.ready":"可接单",
+ "desktop.status.blocked":"接单条件尚未满足",
+};

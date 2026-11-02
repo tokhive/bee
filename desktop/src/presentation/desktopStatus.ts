@@ -17,14 +17,14 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number):Desktop
  const selected=platforms.filter(p=>s.accounts[p]?.selection.state==='selected');
  const accountKnown=(p:AccountPlatform)=>!!s.accounts[p]&&!s.accountErrors[p]&&!!s.accountRefresh[p]?.lastConfirmedAt;
  const readyPlatforms=selected.filter(p=>{
-  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
+  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
  });
  const blockedPlatforms=platforms.filter(p=>!readyPlatforms.includes(p)&&(!!s.accountErrors[p]||!!s.supplyErrors[p]||selected.includes(p)));
  const result=(kind:DesktopPresentation['kind'],problem:UiFailure|null=null,primaryTarget:NavigationTarget|null=null,preparationStep:DesktopPresentation['preparationStep']=null):DesktopPresentation=>({kind,severity:severities[kind],readyPlatforms:kind==='ready'?readyPlatforms:[],blockedPlatforms,problem,primaryTarget,preparationStep});
  if(s.native.state==='starting')return result('loading');
  if(s.native.state==='failed'||s.native.state==='stopped')return result('failed',s.native.error?normalizeFailure(s.native.error,'bridge_startup'):null,{page:'diagnostics'});
  if(s.error)return result('unconfirmed',s.error,{page:'diagnostics'});
- const problem=s.deviceError??s.diagnosticFailure??startup?.failure??null;
+ const problem=s.deviceError??s.recoveryError??s.diagnosticFailure??startup?.failure??null;
  const rejected=problem&&(['device_replaced','invalid_device_credential','identity_mismatch'].includes(problem.code)||problem.check==='device_identity'&&problem.evidence.http_status==='401');
  if(rejected)return result('rejected',problem,{page:'overview',section:'device'});
  if(r?.local==='failed')return result('failed',r.operation?.error?normalizeFailure(r.operation.error,'runtime_operation'):problem,{page:'diagnostics',section:'runtime'});

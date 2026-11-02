@@ -406,7 +406,10 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 		return DeviceRecoveryView{}, err
 	}
 	if r == nil || r.Purpose != "credential_recovery" {
-		return DeviceRecoveryView{}, errors.New("no credential recovery transaction exists; prepare explicitly first")
+		if decision == nil {
+			return DeviceRecoveryView{}, recoveryFailure("DEVICE_RECOVERY_NONE", "device_recovery_status", errors.New("no credential recovery transaction exists; prepare explicitly first"))
+		}
+		return DeviceRecoveryView{}, recoveryFailure("DEVICE_RECOVERY_PRECONDITION", "device_recovery_confirm", errors.New("no credential recovery transaction exists; confirmation requires a prepared transaction"))
 	}
 	if r.Phase == "completed" {
 		if err = d.checkRecoveryBinding(s, r); err != nil {

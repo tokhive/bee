@@ -155,3 +155,47 @@ test('identity failure still fences each local account receipt before publishing
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();m.recordAccountReceipt('openai',4);await m.refresh();
  assert.equal(m.getSnapshot().accountErrors.openai?.code,'DESKTOP_STALE_RESULT');assert.equal(m.getSnapshot().accountErrors.claude,undefined);assert.equal(m.getSnapshot().accounts.claude?.revision,3);assert.equal(refreshed,0);
 });
+
+const recovery=(phase='pending',revision=3)=>({operation_id:'d'.repeat(48),revision,phase,old_identity:{id:'old',name:'Old',owner_id:'owner',owner_email:'old@example.test'},new_identity:phase==='completed'?{id:'new',name:'New',owner_id:'new-owner',owner_email:'new@example.test'}:null,pairing:phase==='pending'?{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'}:null,failure:null});
+test('recovery failure with successful identity permits only fenced local account observations',async t=>{
+ const f=fixture();let accountReads=0,supplyReads=0;
+ f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:'device'}});
+ f.deps.device.recoveryStatus=async()=>{throw {code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'};};
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async()=>{accountReads++;return {revision:99};}});
+ f.deps.supply=()=>({status:async()=>{supplyReads++;return {};}});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:3}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();m.recordAccountReceipt('openai',4);await m.refresh();
+ assert.equal(m.getSnapshot().deviceError,null);assert.equal(m.getSnapshot().recoveryError?.code,'DEVICE_RECOVERY_FAILED');
+ assert.equal(accountReads,0);assert.equal(supplyReads,0);assert.equal(m.getSnapshot().accountErrors.openai?.code,'DESKTOP_STALE_RESULT');assert.equal(m.getSnapshot().accounts.claude?.revision,3);assert.equal(m.getSnapshot().supplyRefresh.claude?.state,'blocked');
+});
+test('existing credential recovery is discovered by the shared reader and stale revisions are rejected',async t=>{
+ const f=fixture();let reads=0,view=recovery();f.deps.device.recoveryStatus=async()=>{reads++;return view;};const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal((m.getSnapshot() as any).recovery?.phase,'pending');assert.equal(reads,1);m.subscribe(()=>{});await tick();assert.equal(reads,1);
+ view=recovery('pending',2);await m.refresh();assert.equal((m.getSnapshot() as any).recovery?.revision,3);assert.equal((m.getSnapshot() as any).recoveryError?.code,'DESKTOP_STALE_RESULT');
+});
+test('only a typed absent recovery is ignored; corrupt records remain visible',async t=>{
+ const f=fixture();f.deps.device.recoveryStatus=async()=>{throw {code:'DEVICE_RECOVERY_NONE',message:'no credential transaction'};};const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();assert.equal((m.getSnapshot() as any).recoveryError,null);
+ f.deps.device.recoveryStatus=async()=>{throw {code:'DEVICE_RECOVERY_FAILED',message:'recovery record JSON unexpected EOF'};};await m.refresh();assert.equal((m.getSnapshot() as any).recoveryError?.message,'recovery record JSON unexpected EOF');
+});
+test('recovery completion changes binding within the same refresh before publishing new scoped facts',async t=>{
+ const f=fixture();let revision=1,device='old',complete=false;const observed:any[]=[];
+ f.deps.device.context=async()=>({hive:'https://hive.example',name:device,device_id:device,owner_id:device,binding_revision:revision});
+ f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',name:device,identity:{id:device,name:device,owner_id:device,owner_email:device+'@example.test'}});
+ f.deps.device.recoveryStatus=async()=>{if(complete){revision=2;device='new';return recovery('completed',4);}return recovery();};
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>({platform,revision:1,scope:device})});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>observed.push(structuredClone(m.getSnapshot())));await tick();complete=true;await m.refresh();
+ const s=m.getSnapshot();assert.equal(s.bindingRevision,2);assert.equal(s.device?.identity?.id,'new');assert.equal((s.accounts.openai as any).scope,'new');
+ assert.ok(observed.every(s=>s.bindingRevision!==2||Object.values(s.accounts).every((a:any)=>a.scope!=='old')),'new binding must never publish old accounts');
+});
+for(const advancing of ['recoveryStatus','status'] as const)test(`binding is isolated when ${advancing} saves config but its response fails`,async t=>{
+ const f=fixture();let revision=1,device='old',advance=false;const observed:any[]=[];
+ f.deps.device.context=async()=>({hive:'https://hive.example',name:device,device_id:device,owner_id:device,binding_revision:revision});
+ f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:device}});
+ f.deps.device.recoveryStatus=async()=>{throw {code:'DEVICE_RECOVERY_NONE',message:'no transaction'};};
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>({platform,revision:1,scope:device})});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const original=f.deps.device[advancing];f.deps.device[advancing]=async()=>{if(advance){revision=2;device='new';throw {code:'DEVICE_RECOVERY_FAILED',message:'active configuration saved; recovery journal write permission denied'};}return original();};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>observed.push(structuredClone(m.getSnapshot())));await tick();advance=true;await m.refresh();
+ const s=m.getSnapshot();assert.equal(s.bindingRevision,2);assert.equal(s.deviceContext?.device_id,'new');assert.ok(observed.every(s=>s.bindingRevision!==2||Object.values(s.accounts).every((a:any)=>a.scope!=='old')));assert.match((advancing==='status'?s.deviceError:(s as any).recoveryError)?.message??'',/journal write permission denied/);
+});

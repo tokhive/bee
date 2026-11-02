@@ -9,7 +9,7 @@ import {Dialog} from 'radix-ui';
 import {Copy,ExternalLink,RefreshCw} from 'lucide-react';
 import {Button} from '../../components/ui';
 type Decision='begin_pairing'|'adopt_owner'|'renew_expired';
-const phaseCopy={awaiting_confirmation:'等待确认后生成配对码',creating:'正在创建配对请求',creation_unknown:'创建结果未知',pending:'等待网页确认',draining:'等待旧设备完成任务和结算',redeeming:'兑换已提交，正在核对新设备身份',redemption_unknown:'兑换结果未知，正在核对新设备身份',awaiting_owner_confirmation:'新设备归属与原设备不同',saving:'新设备身份已核对，正在保存本机配置',completed:'重新绑定已完成，贡献保持停止。',expired:'Hive 已确认配对码过期',blocked:'设备配对暂时无法继续'};
+const phaseCopy={awaiting_confirmation:'等待确认后生成配对码',creating:'正在创建配对请求',creation_unknown:'创建结果未知',pending:'等待网页确认',draining:'等待旧设备完成任务和结算',redeeming:'兑换已提交，正在核对新设备身份',redemption_unknown:'兑换结果未知，正在核对新设备身份',awaiting_owner_confirmation:'新设备归属与原设备不同',saving:'新设备身份已核对，正在保存本机配置',completed:'上次重新绑定已完成，未自动开始贡献。',expired:'Hive 已确认配对码过期',blocked:'设备配对暂时无法继续'};
 export function DevicePairingPage({view,context,recovery,recoveryError,refreshStatus,busy,error,begin,refresh,open,recover,onNavigate}:{
  view?:DeviceView;context?:DeviceContext;recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;refreshStatus?:RefreshStatus;busy:boolean;error:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;
  begin:(hive:string,name:string)=>void;refresh:()=>void;open:()=>void;recover?:(decision:Decision,transaction?:DeviceRecoveryView)=>void;
@@ -28,7 +28,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
  const confirmed=!!knownIdentity&&!error&&!busy;
  const phase=transaction?.phase??(view?.state==='pending'||view?.state==='draining'||view?.state==='expired'?view.state:null);
  const waiting=phase==='pending'||phase==='draining';
- const canRecover=!!recover&&!recoveryError&&!transaction&&!!context&&['device_replaced','invalid_device_credential'].includes(error?.code??'');
+ const canRecover=!!recover&&!recoveryError&&(!transaction||transaction.phase==='completed')&&!!context&&['device_replaced','invalid_device_credential'].includes(error?.code??'');
  const copy=async(value:string,label:string)=>{
   setCopyError(null);setCopied('');try{if(!navigator.clipboard?.writeText)throw new Error('clipboard.writeText unavailable; manual selection required');await navigator.clipboard.writeText(value);setCopied(label);}catch(cause){setCopyError(normalizeFailure(cause,'clipboard_write'));}
  };
@@ -58,7 +58,6 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
    </div><p className="device-url">{pairing.verification_url}</p><div className="inline-actions"><Button variant="outline" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}><Copy aria-hidden="true"/>{t('复制确认网址')}</Button></div><p className="device-note">{t('完成网页确认后，请回到 Bee。')}{' '}{t('网页无法打开时，可手动复制上方网址；当前请求会保留。')}</p></>}
    {phase==='expired'&&<><p>{t('旧配对已确认过期；重新生成需由你发起。')}</p><Button disabled={busy||!!recoveryError} onClick={event=>credentialRecovery?ask(event.currentTarget,'renew_expired',transaction):begin(view!.hive!,view!.name!)}>{t('重新生成配对码')}</Button></>}
    {transaction?.failure&&<FailureNotice failure={transaction.failure} check="device_recovery" onNavigate={onNavigate}/>}
-   {phase==='completed'&&credentialRecovery&&<><p>{t('请重新准备账号；旧账号选择与运行意图不会迁移。')}</p><Button onClick={()=>onNavigate?.({page:'accounts',section:'account'})}>{t('前往准备账号')}</Button></>}
   </div>:view?.state==='unbound'&&!error&&!recoveryError?<><p>{t('在 Hive 网页确认这台设备的归属；绑定不会开始贡献。')}</p><form className="settings-form" onSubmit={event=>{event.preventDefault();if(!busy)begin(hive.trim(),name.trim());}}>
    <label>{t('Hive 地址')}<input type="url" required placeholder="https://hive.example" value={hive} disabled={busy} onChange={event=>setHive(event.target.value)}/></label>
    <label>{t('设备名称')}<input required maxLength={80} value={name} disabled={busy} onChange={event=>setName(event.target.value)}/></label>

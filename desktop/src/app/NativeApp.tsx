@@ -90,7 +90,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
    if(transaction){
     const next=observed?.recovery;
     if(!next||next.operation_id!==transaction.operation_id||next.revision!==transaction.revision||next.phase!==transaction.phase||observed?.recoveryError)throw {code:'DEVICE_RECOVERY_PRECONDITION',message:'recovery confirmation no longer matches current observation; actual='+String(next?.revision)+' expected='+transaction.revision+' phase='+String(next?.phase),details:{check:'device_recovery_confirm',observed_at:new Date().toISOString(),evidence:{actual:String(next?.revision),required:String(transaction.revision)}}};
-   }else if(observed?.recovery||observed?.recoveryError||!['device_replaced','invalid_device_credential'].includes(identityFailure(observed??initial)?.code??''))throw {code:'DEVICE_RECOVERY_PRECONDITION',message:'credential recovery requires current confirmed revoked credentials and no unresolved recovery observation'};
+   }else if(observed?.recovery&&observed.recovery.phase!=='completed'||observed?.recoveryError||!['device_replaced','invalid_device_credential'].includes(identityFailure(observed??initial)?.code??''))throw {code:'DEVICE_RECOVERY_PRECONDITION',message:'credential recovery requires current confirmed revoked credentials and no unresolved recovery observation'};
    const prepared=transaction??await props.client.recoveryPrepare();if(!current())return;
    await props.client.recoveryConfirm(prepared.operation_id,prepared.revision,decision);if(current())await refresh();
   }catch(cause){if(current()){setError(normalizeFailure(cause,'device_recovery_confirm'));await refresh();}}

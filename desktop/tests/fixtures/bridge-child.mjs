@@ -45,6 +45,7 @@ input.on('line', line => {
       case 'device_recovery_status': {
         const keys=Object.keys(request.params).sort().join(',');
         if(keys!==(request.method==='device_recovery_confirm'?'decision,expected_revision,operation_id':''))throw new Error('invalid recovery params');
+        if(config.recovery_error){reply({error:{code:config.recovery_error,message:'fixture recovery read rejected: '+config.recovery_error}});return;}
         const phase=config.recovery_phase??'awaiting_confirmation';
         const identity={id:'new-device',name:'Recovered Mac',owner_id:'owner',owner_email:'owner@example.com'};
         reply({recovery:{operation_id:'a'.repeat(48),revision:1,phase,old_identity:{...identity,id:'device',name:'Saved Mac'},new_identity:phase==='completed'?identity:null,pairing:['pending','draining'].includes(phase)?{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2030-01-01T00:00:00Z'}:null,failure:null,...(config.recovery_extra?{credential:'SECRET'}:{})}});return;

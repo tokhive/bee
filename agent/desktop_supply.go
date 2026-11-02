@@ -118,7 +118,7 @@ func (d *DesktopDevice) operateSupply(ctx context.Context, platform string, paus
 
 func desktopSupplyCall(ctx context.Context, state localState, platform string, paused *bool) (beewire.PlatformSupply, error) {
 	method := http.MethodGet
-	path := "/api/bee/platforms/" + platform
+	path := "/api/bee/platforms/" + platform + "?reason_detail=1"
 	var body io.Reader
 	if paused != nil {
 		method = http.MethodPut

@@ -68,3 +68,17 @@ test('runtime rejects malformed or unsafe connection details',()=>{
 test('runtime connection origin rejects lookalike loopback domains',()=>{
  assert.throws(()=>decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:{...detail,failure:{...failure,evidence:{target_origin:'http://127.evil.example'}}}}),'current'),/origin/);
 });
+
+const originFixture=JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/connection-origin-contract.json',import.meta.url),'utf8'));
+for(const sample of originFixture.accepted){
+ test(`runtime consumes the actual Go connection origin ${sample.hive}`,()=>{
+  const snapshot={...fixture.snapshot,connection_detail:sample.connection_detail};
+  assert.deepEqual(decodeRuntimeSnapshot(reply(snapshot),'current'),snapshot);
+ });
+}
+test('runtime rejects unsafe original origin structures and non-loopback HTTP hosts',()=>{
+ for(const origin of originFixture.rejected){
+  const d={...detail,failure:{...failure,evidence:{target_origin:origin}}};
+  assert.throws(()=>decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:d}),'current'),/origin/,origin);
+ }
+});

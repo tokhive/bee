@@ -86,12 +86,28 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	if err != nil {
 		return DeviceView{}, err
 	}
+	fresh := state.Credential == "" && state.Hive == "" && state.Pairing == nil && state.Identity == nil
+	if fresh && r != nil && r.initialUnsubmitted() {
+		// The record is committed before the initial configuration. Only an
+		// unattempted initialization can repair this interruption; pending or
+		// unknown transactions still require their saved binding below.
+		if origin != "" && origin != r.Hive {
+			return DeviceView{}, fmt.Errorf("desktop initialization Hive conflict: requested=%s recorded=%s; original transaction preserved", origin, r.Hive)
+		}
+		if origin == "" {
+			return initialRecoveryView(r, state), nil
+		}
+		state = localState{Hive: r.Hive, Name: r.Name, Credential: r.Credential}
+		if err = session.save(state); err != nil {
+			return DeviceView{}, err
+		}
+		fresh = false
+	}
 	if r != nil {
 		if err = d.checkRecoveryBinding(session, r); err != nil {
 			return DeviceView{}, err
 		}
 	}
-	fresh := state.Credential == "" && state.Hive == "" && state.Pairing == nil && state.Identity == nil
 	if fresh && origin == "" {
 		return DeviceView{State: "unbound"}, nil
 	}
@@ -100,7 +116,21 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 		if e != nil {
 			return DeviceView{}, e
 		}
+		id, e := desktopOperationID()
+		if e != nil {
+			return DeviceView{}, e
+		}
+		_, revision, e := session.readBinding()
+		if e != nil {
+			return DeviceView{}, e
+		}
 		state = localState{Hive: origin, Name: name, Credential: credential}
+		r = &desktopRecoveryRecord{Version: 1, Purpose: "initial_pairing", OperationID: id, Revision: 1, Phase: "awaiting_confirmation", Hive: origin, Name: name, Credential: credential, BindingRevision: revision, Accepted: []desktopRecoveryDecision{}}
+		// Never persist a bare new credential: a subsequent failed identity
+		// read must retain durable proof that creation has not been attempted.
+		if err = saveDesktopRecovery(session, r); err != nil {
+			return DeviceView{}, err
+		}
 		if err = session.save(state); err != nil {
 			return DeviceView{}, err
 		}
@@ -127,12 +157,17 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 	}
 	var failure *apiFailure
 	if !errors.As(err, &failure) || failure.Status != 401 {
+		if r != nil && r.initialUnsubmitted() {
+			if persistErr := r.change(session, "awaiting_confirmation", err); persistErr != nil {
+				return DeviceView{}, errors.Join(err, persistErr)
+			}
+		}
 		return DeviceView{}, err
 	}
 	if state.Identity != nil || failure.Code == "device_replaced" {
 		return DeviceView{}, fmt.Errorf("bound desktop device rejected; automatic pairing forbidden: %w", err)
 	}
-	return d.initialRecoveryOperate(ctx, session, state, r, fresh, origin != "")
+	return d.initialRecoveryOperate(ctx, session, state, r, origin != "")
 }
 
 var deviceCredentialPattern = regexp.MustCompile(`^bee_[A-Za-z0-9_-]{43}$`)

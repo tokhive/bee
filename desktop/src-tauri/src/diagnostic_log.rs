@@ -140,6 +140,11 @@ fn safe_path(value: &str) -> bool {
 }
 fn public_reason(value: &str) -> bool {
     [
+        "account_not_registered",
+        "market_not_open",
+        "supply_not_enabled",
+        "supply_device_restricted",
+        "account_not_admitted",
         "manually_paused",
         "banned",
         "device_draining",

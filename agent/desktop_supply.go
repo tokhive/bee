@@ -242,7 +242,7 @@ func decodeDesktopSupply(data []byte, platform string) (beewire.PlatformSupply, 
 	}
 	seen := map[string]bool{}
 	for index, reason := range result.Reasons {
-		if !slices.Contains(beewire.SupplyReasons(), reason) {
+		if !slices.Contains(beewire.DetailedSupplyReasons(), reason) {
 			return result, fmt.Errorf("unknown supply reason rejected: index=%d; required=known supply reason", index)
 		}
 		if (platform == "openai" && strings.HasPrefix(reason, "claude_")) || (platform == "claude" && strings.HasPrefix(reason, "codex_")) {

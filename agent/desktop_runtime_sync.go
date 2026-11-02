@@ -49,6 +49,7 @@ type desktopRuntimeSlot struct {
 	workerConnection *desktopRuntimeConnection
 }
 type desktopRuntimeConnection struct {
+	run      *string
 	ctx      context.Context
 	cancel   context.CancelFunc
 	state    localState
@@ -176,6 +177,14 @@ func (r *DesktopRuntime) preparePlatform(ctx context.Context, session *desktopDe
 func (r *DesktopRuntime) startSynchronization(ctx context.Context, state localState, lease string, out io.Writer) (<-chan error, func()) {
 	live, cancel := context.WithCancel(ctx)
 	connection := &desktopRuntimeConnection{ctx: live, cancel: cancel, state: state, lease: lease, out: out, failures: make(chan error, 1), active: true}
+	r.mu.Lock()
+	var run *string
+	if r.snapshot.RunID != nil {
+		value := *r.snapshot.RunID
+		run = &value
+	}
+	r.mu.Unlock()
+	connection.run = run
 	r.syncMu.Lock()
 	r.connection = connection
 	// Register gate waiters before publishing shutdown's Wait boundary.
@@ -241,6 +250,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 			}
 			if err != nil {
 				r.platformFailure(platform, "authorization_sync", err)
+				r.synchronizationObserved(connection, connection.run, err)
 				var api *apiFailure
 				if errors.Is(err, errInboxIdentity) || errors.As(err, &api) && (api.Status == 401 || api.Status == 403) {
 					select {
@@ -251,6 +261,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 				}
 			} else if err = r.observeSynchronizedPlatform(ctx, connection.state, platform, slot); err != nil {
 				r.platformFailure(platform, "authorization_readback", err)
+				r.synchronizationObserved(connection, connection.run, err)
 			}
 			first = false
 			if pause(ctx, 2*time.Second) != nil {
@@ -573,4 +584,21 @@ func (r *DesktopRuntime) validateManualResume(ctx context.Context, platform stri
 	}
 	_, err = r.accounts.selectionSource(ctx, platform, desktopPendingOperation{Source: selected.Source, ToFingerprint: selected.Fingerprint, CredentialRevision: selected.CredentialRevision})
 	return err
+}
+
+// A platform worker does not schedule core reconnects. Success on another
+// platform cannot prove this failure recovered; a new connected observation can.
+func (r *DesktopRuntime) synchronizationObserved(connection *desktopRuntimeConnection, run *string, err error) {
+	if err == nil {
+		return
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.syncMu.Lock()
+	defer r.syncMu.Unlock()
+	if r.closed || run == nil || r.snapshot.RunID == nil || *run != *r.snapshot.RunID || r.connection != connection || !connection.active || connection.ctx.Err() != nil || r.snapshot.Local != "running" || r.snapshot.Connection != "connected" {
+		return
+	}
+	r.snapshot.ConnectionDetail = &DesktopConnectionDetail{Failure: observedConnectionFailure(err, nil, connection.state, "/api/bee/agent", "synchronize"), Retry: "idle"}
+	r.snapshot.Revision++
 }

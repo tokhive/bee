@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -605,5 +606,77 @@ func TestDeviceRecoveryRejectsAnAlreadyAdmittedSupplyWrite(t *testing.T) {
 	}
 	if _, err = d.RecoveryPrepare(context.Background()); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure(t *testing.T) {
+	for _, caller := range []string{"select", "confirm", "reconcile_confirm", "snapshot"} {
+		for _, reason := range []string{"recovery", "account_closed", "runtime_closed", "starting", "stopping"} {
+			t.Run(caller+"/"+reason, func(t *testing.T) {
+				h, d, _ := newRecoveryHive(t)
+				if reason == "recovery" {
+					if _, err := d.RecoveryPrepare(context.Background()); err != nil {
+						t.Fatal(err)
+					}
+				}
+				a := NewDesktopAccounts(d)
+				runtime := NewDesktopRuntime(context.Background(), d, a)
+				t.Cleanup(func() { runtime.Close(); a.Close() })
+				switch reason {
+				case "account_closed":
+					a.closed = true
+				case "runtime_closed":
+					runtime.closed = true
+				case "starting", "stopping":
+					runtime.snapshot.Local = reason
+				}
+				p, release, err := a.acquire(context.Background(), "openai")
+				if err != nil {
+					t.Fatal(err)
+				}
+				source := DesktopAccountSource{Directory: accountString(t.TempDir()), Store: "file"}
+				p.source = &source
+				p.credentialRevision = strings.Repeat("c", 64)
+				p.selected = &desktopAccountSelection{Source: source, Fingerprint: strings.Repeat("a", 64), Generation: 1}
+				p.snapshot.Candidate.Fingerprint = accountString(strings.Repeat("b", 64))
+				if caller == "reconcile_confirm" || caller == "snapshot" {
+					p.pending = &desktopPendingOperation{ID: strings.Repeat("d", 48), Kind: "confirm_change", Stage: "intent", Source: source, ToFingerprint: strings.Repeat("b", 64), CredentialRevision: p.credentialRevision, StartedAt: time.Now().UTC()}
+				}
+				var view DesktopAccountSnapshot
+				switch caller {
+				case "select":
+					view, err = a.beginSelection(p, DesktopAccountActionRequest{Platform: "openai", Action: "select"})
+					release()
+				case "confirm", "reconcile_confirm":
+					view, err = a.beginAccountChange(p, DesktopAccountActionRequest{Platform: "openai", Action: "confirm_change"})
+					release()
+				case "snapshot":
+					release()
+					view, err = a.Snapshot(context.Background(), "openai", true)
+				}
+				var failure *DesktopAccountError
+				if !errors.As(err, &failure) {
+					t.Fatalf("admission failure missing: caller=%s reason=%s err=%v view=%+v", caller, reason, err, view)
+				}
+				code, check, observed := "closed", "account_service", "account service"
+				switch reason {
+				case "recovery":
+					code, check, observed = "device_recovery_active", "device_recovery_admission", "phase=awaiting_confirmation"
+				case "runtime_closed":
+					check, observed = "runtime_ownership", "runtime owner"
+				case "starting", "stopping":
+					code, check, observed = "runtime_dependency", "runtime_state", "local="+reason
+				}
+				if failure.Code != code || failure.Check != check || !strings.Contains(failure.Message, observed) {
+					t.Fatalf("actual admission reason lost: caller=%s reason=%s got=%+v required code=%s check=%s evidence=%s", caller, reason, failure, code, check, observed)
+				}
+				if p.working || len(a.activeActions) != 0 || len(a.accountWorkers) != 0 || view.Operation != nil || h.creates != 0 || h.redeems != 0 {
+					t.Fatalf("rejected admission launched work: working=%t active=%d workers=%d operation=%+v creates=%d redeems=%d", p.working, len(a.activeActions), len(a.accountWorkers), view.Operation, h.creates, h.redeems)
+				}
+				if (caller == "reconcile_confirm" || caller == "snapshot") && p.pending == nil {
+					t.Fatal("rejected admission erased pending operation")
+				}
+			})
+		}
 	}
 }

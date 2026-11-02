@@ -252,13 +252,14 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	if refresh && !p.working {
 		a.refreshAccountHive(ctx, p, platform)
 	}
+	var admissionErr error
 	if refresh && !p.working && p.pending != nil && (p.pending.Kind == "select" || p.pending.Kind == "confirm_change") {
-		a.launchAccountOperation(p, platform, *p.pending, true, false, false)
+		admissionErr = a.launchAccountOperation(p, platform, *p.pending, true, false, false)
 	}
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
 	}
-	return accountSnapshotCopy(p.snapshot), nil
+	return accountSnapshotCopy(p.snapshot), admissionErr
 }
 func (a *DesktopAccounts) expireCandidate(p *desktopAccountPlatform, platform string) {
 	c := &p.snapshot.Candidate

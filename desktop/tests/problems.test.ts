@@ -112,3 +112,24 @@ test('official client failures use stable codes, keep safe evidence and never in
  for(const [code,check,zh,en]of cases){const value=normalizeFailure({code,check,platform:'openai',message:'safe process evidence; exit_code=7',evidence:{confirmed:'false'}},'account_operation');for(const locale of ['zh','en']as const){const p=presentFailure(value,locale);assert.match(p.summary,locale==='zh'?zh:en,code);assert.ok(p.details.includes('exit_code=7'));assert.ok(p.details.includes(check));assert.doesNotMatch(p.summary,/\{client\}/);}}
  const unknown=presentFailure(normalizeFailure({code:'future_reason',check:'official_version',message:'client_version_unsupported'},'account_operation'),'zh');assert.doesNotMatch(unknown.summary,/版本/);
 });
+
+test('verified trusted previous recovery permits a fresh update without claiming target installation or losing evidence',()=>{
+ const original='running trusted previous version=0.1.0; pending target=0.2.0 was not installed; data and runtime verified; update may be retried';
+ const value=normalizeFailure({code:'UPDATE_PREVIOUS_NOT_INSTALLED',message:original,details:{check:'update_recovery',observed_at:observed,evidence:{source_type:'native_updater',actual:original}}},'update_operation');
+ for(const locale of ['zh','en'] as const){
+  const problem=presentFailure(value,locale);
+  assert.match(problem.summary,locale==='zh'?/目标更新.*未安装/:/target update.*not installed/i);
+  assert.match(problem.impact,locale==='zh'?/可信.*检查已通过.*重新检查.*下载/:/trusted.*checks passed.*check.*again.*download/i);
+  assert.doesNotMatch(problem.impact,/保护仍保留|protection remains active|Restart Bee/);
+  for(const fact of [value.code,value.check,'native_updater',original,formatDate(observed,locale)])assert.ok(problem.details.includes(fact),fact);
+ }
+});
+
+test('unproven recovery and identity failures retain protection even if the message mentions a retryable previous version',()=>{
+ for(const code of ['UPDATE_RECOVERY_PENDING','UPDATE_RECOVERY_UNPROVEN','UPDATE_RECOVERY_IDENTITY_MISMATCH','UPDATE_PREFERENCES_UNVERIFIED','FUTURE_RECOVERY_FAILURE'])for(const locale of ['zh','en'] as const){
+  const value=normalizeFailure({code,message:'UPDATE_PREVIOUS_NOT_INSTALLED; update may be retried',details:{check:'update_recovery',observed_at:observed,evidence:{actual:'recovery proof missing'}}},'update_operation');
+  const problem=presentFailure(value,locale);
+  assert.match(problem.impact,locale==='zh'?/保护仍保留.*重新启动.*普通更新检查不能解除保护/:/protection remains active.*Restart Bee.*normal update check cannot release/i);
+  assert.ok(problem.details.includes(code));assert.ok(problem.details.includes('recovery proof missing'));
+ }
+});

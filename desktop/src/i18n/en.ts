@@ -1471,6 +1471,7 @@ export const en: Record<string, string> = {
  '更新检查请求回执尚未确认。':'The update check request receipt is unconfirmed.',
  '更新状态读取失败。':'Update status could not be read.',
  '更新保护仍保留；请重新启动 Bee 核验原更新。若仍受阻，请保留记录并使用可信安装包处理，普通更新检查不能解除保护。':'Update protection remains active. Restart Bee to verify the original update. If still blocked, preserve the records and use a trusted installer; a normal update check cannot release this protection.',
+ '目标更新尚未安装；当前可信版本及数据、运行恢复检查已通过。可重新检查并下载更新。':'The target update was not installed. The current trusted version, data and runtime recovery checks passed. You can check for updates again and download.',
  '现有数据与更新保护记录已保留。请使用可信安装包处理；重新读取状态不会重新安装。':'Existing data and update protection records are preserved. Use a trusted installer; reading the status will not install again.',
  '当前更新包不可安装。可重新检查并下载；若仍无法核验，请使用可信来源的安装包。':'This update package cannot be installed. Check and download again; if verification still fails, use an installer from a trusted source.',
  '安装完成只在重新启动并核验后确认。请求回执未知时只读取原更新，不重复提交。':'Installation is confirmed only after restart and verification. When a receipt is unknown, only read the original update; do not resubmit.',

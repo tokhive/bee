@@ -163,6 +163,38 @@ test('T9 known update failure is localized with the original evidence in the sam
  const alert=page.getByRole('alert');await expect(alert).toContainText('更新签名验证失败');await expect(alert).toContainText('signed=0.2.0; announced=0.3.0');await expect(page.getByRole('button',{name:'安装更新…',exact:true})).toHaveCount(0);
 });
 
+for(const locale of ['zh','en'] as const)test(`T9 trusted previous recovery explains and permits a new explicit check and download in ${locale}`,async({page})=>{
+ const original='running trusted previous version=0.1.0; pending target=0.2.0 was not installed; data and runtime verified; update may be retried';
+ const observed='2026-11-02T12:00:00Z';
+ await mount(page,available({state:'failed',revision:9,error:{code:'UPDATE_PREVIOUS_NOT_INSTALLED',message:original,details:{check:'update_recovery',observed_at:observed,evidence:{source_type:'native_updater',actual:original}}}}),locale);
+ const alert=page.getByRole('alert'),impact=alert.locator('p').nth(1);
+ await expect(alert.locator('p').first()).toContainText(locale==='zh'?/目标更新.*未安装/:/target update.*not installed/i);
+ await expect(impact).toContainText(locale==='zh'?/可信.*检查已通过.*重新检查.*下载/:/trusted.*checks passed.*check.*again.*download/i);
+ await expect(impact).not.toContainText(/保护仍保留|protection remains active|Restart Bee/);
+ await alert.getByText(locale==='zh'?'查看失败详情':'View failure details',{exact:true}).click();
+ const details=alert.locator('pre');
+ const displayTime=await page.evaluate(({locale,observed})=>new Intl.DateTimeFormat(locale==='zh'?'zh-CN':'en-US',{dateStyle:'medium',timeStyle:'medium'}).format(new Date(observed)),{locale,observed});
+ for(const fact of ['UPDATE_PREVIOUS_NOT_INSTALLED','update_recovery','native_updater',original,displayTime])await expect(details).toContainText(fact);
+ expect(await calls(page,'update_check')).toHaveLength(0);expect(await calls(page,'update_download')).toHaveLength(0);expect(await calls(page,'update_install')).toHaveLength(0);
+ await page.getByRole('button',{name:locale==='zh'?'检查更新':'Check for updates',exact:true}).click();
+ await expect(page.getByText(locale==='zh'?'正在检查更新…':'Checking for updates…',{exact:true})).toBeVisible();
+ await replace(page,available({operation_id:'retry-check',revision:11}));
+ await page.getByRole('button',{name:locale==='zh'?'下载更新':'Download update',exact:true}).click();
+ await expect(page.getByText(locale==='zh'?'正在下载并验证更新…':'Downloading and verifying the update…',{exact:true})).toBeVisible();
+ expect(await calls(page,'update_check')).toHaveLength(1);expect(await calls(page,'update_download')).toHaveLength(1);expect(await calls(page,'update_install')).toHaveLength(0);
+});
+
+for(const locale of ['zh','en'] as const)test(`T9 unproven recovery preserves protection and allows only readback in ${locale}`,async({page})=>{
+ const original='recovery evidence runtime_intent_restored=false; required=true; pending update preserved';
+ await mount(page,available({state:'failed',revision:9,error:{code:'UPDATE_RECOVERY_UNPROVEN',message:original,details:{check:'update_recovery',observed_at:'2026-11-02T12:00:00Z',evidence:{actual:'runtime_intent_restored=false',required:'true'}}}}),locale);
+ const alert=page.getByRole('alert');
+ await expect(alert.locator('p').nth(1)).toContainText(locale==='zh'?/保护仍保留.*普通更新检查不能解除保护/:/protection remains active.*normal update check cannot release/i);
+ await expect(alert).toContainText(original);
+ await page.getByRole('button',{name:locale==='zh'?'重新读取更新状态':'Read update status again',exact:true}).click();
+ await expect(alert).toContainText('UPDATE_RECOVERY_UNPROVEN');
+ for(const command of ['update_check','update_download','update_install'])expect(await calls(page,command)).toHaveLength(0);
+});
+
 test('T9 an unknown install receipt survives leaving settings and permits only reading that operation',async({page})=>{
  const {installAccountFixture,accountFixture}=await import('./fixtures/native-accounts.mjs');
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});

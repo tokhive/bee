@@ -1,5 +1,138 @@
 //! Desktop window decisions; native adapters are deliberately kept outside the policy.
+use crate::preferences::{Language, PreferencesSnapshot};
+use crate::protocol::BridgeError;
+use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum NativeLocale {
+    Zh,
+    En,
+}
+impl NativeLocale {
+    fn labels(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Zh => ("打开 Bee", "退出 Bee"),
+            Self::En => ("Open Bee", "Quit Bee"),
+        }
+    }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LocaleRequest {
+    pub locale: NativeLocale,
+    pub revision: u64,
+    pub sequence: u64,
+}
+#[derive(Default)]
+struct LocaleRecord {
+    locale: Option<NativeLocale>,
+    revision: u64,
+    sequence: u64,
+}
+#[derive(Default)]
+pub struct NativeLanguage(Mutex<LocaleRecord>);
+impl NativeLanguage {
+    pub fn initialize(preferences: &PreferencesSnapshot) -> Self {
+        let locale = if preferences.error.is_some() {
+            None
+        } else {
+            match preferences.preferences.language {
+                Language::Zh => Some(NativeLocale::Zh),
+                Language::En => Some(NativeLocale::En),
+                Language::System => None,
+            }
+        };
+        Self(Mutex::new(LocaleRecord {
+            locale,
+            revision: preferences.preferences.revision,
+            sequence: 0,
+        }))
+    }
+    pub fn current(&self) -> Option<NativeLocale> {
+        self.0.lock().ok().and_then(|state| state.locale)
+    }
+    fn synchronize(
+        &self,
+        request: LocaleRequest,
+        preferences: &PreferencesSnapshot,
+        apply: impl FnOnce(NativeLocale) -> Result<(), BridgeError>,
+    ) -> Result<(), BridgeError> {
+        let mut state = self.0.lock().map_err(|_| {
+            BridgeError::new(
+                "NATIVE_LOCALE_LOCK",
+                "native language mutex poisoned; current metadata not changed".into(),
+            )
+        })?;
+        if let Some(cause) = &preferences.error {
+            return Err(BridgeError::new(
+                "NATIVE_LOCALE_PREFERENCES",
+                format!(
+                    "native language preferences read failed: {}: {}; revision={}",
+                    cause.code, cause.message, preferences.preferences.revision
+                ),
+            ));
+        }
+        if request.revision != preferences.preferences.revision
+            || request.revision < state.revision
+            || request.sequence <= state.sequence
+            || request.sequence > 9_007_199_254_740_991
+        {
+            return Err(BridgeError::new("NATIVE_LOCALE_STALE",format!("native language metadata rejected: revision={} sequence={}; required=saved revision {}, at least accepted revision {}, sequence>{}",request.revision,request.sequence,preferences.preferences.revision,state.revision,state.sequence)));
+        }
+        let expected = match preferences.preferences.language {
+            Language::Zh => Some(NativeLocale::Zh),
+            Language::En => Some(NativeLocale::En),
+            Language::System => None,
+        };
+        if expected.is_some_and(|locale| locale != request.locale) {
+            return Err(BridgeError::new(
+                "NATIVE_LOCALE_MISMATCH",
+                format!(
+                    "native language actual={:?}; required=saved preference {:?} at revision={}",
+                    request.locale, preferences.preferences.language, request.revision
+                ),
+            ));
+        }
+        // Reserve sequence even on menu failure: a delayed older System event must
+        // never overwrite this newer request. An explicit retry has a new sequence.
+        state.sequence = request.sequence;
+        state.revision = request.revision;
+        apply(request.locale)?;
+        state.locale = Some(request.locale);
+        Ok(())
+    }
+}
+struct NativeMenu {
+    open: tauri::menu::MenuItem<tauri::Wry>,
+    quit: tauri::menu::MenuItem<tauri::Wry>,
+}
+#[tauri::command]
+pub fn native_locale_sync(
+    app: tauri::AppHandle,
+    request: LocaleRequest,
+) -> Result<(), BridgeError> {
+    let preferences = app.state::<crate::preferences::PreferencesStore>().read();
+    app.state::<Arc<NativeLanguage>>()
+        .synchronize(request, &preferences, |locale| {
+            let menu = app.state::<NativeMenu>();
+            let (open, quit) = locale.labels();
+            for (id, item, text) in [
+                ("bee-open", &menu.open, open),
+                ("bee-quit", &menu.quit, quit),
+            ] {
+                item.set_text(text).map_err(|cause| {
+                    BridgeError::new(
+                        "NATIVE_LOCALE_MENU_FAILED",
+                        format!("native menu set_text failed: item={id}; actual={cause}"),
+                    )
+                })?;
+            }
+            Ok(())
+        })
+}
 
 pub const CALLBACK_SCHEME: &str = "tokhive-bee-dev";
 
@@ -101,8 +234,13 @@ pub fn background_should_hide(background: bool, tray_available: bool) -> bool {
 
 pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
     use tauri::menu::{Menu, MenuItem, Submenu};
-    let open = MenuItem::with_id(app, "bee-open", "打开 Bee", true, Some("CmdOrCtrl+O"))?;
-    let quit = MenuItem::with_id(app, "bee-quit", "退出", true, Some("CmdOrCtrl+Q"))?;
+    let (open_text, quit_text) = app
+        .state::<Arc<NativeLanguage>>()
+        .current()
+        .map(NativeLocale::labels)
+        .unwrap_or(("打开 Bee / Open Bee", "退出 Bee / Quit Bee"));
+    let open = MenuItem::with_id(app, "bee-open", open_text, true, Some("CmdOrCtrl+O"))?;
+    let quit = MenuItem::with_id(app, "bee-quit", quit_text, true, Some("CmdOrCtrl+Q"))?;
     let app_menu = Submenu::with_items(app, "Bee", true, &[&open, &quit])?;
     app.set_menu(Menu::with_items(app, &[&app_menu])?)?;
     app.on_menu_event(|app, event| match event.id().as_ref() {
@@ -111,6 +249,7 @@ pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
         _ => {}
     });
     let tray_menu = Menu::with_items(app, &[&open, &quit])?;
+    app.manage(NativeMenu { open, quit });
     let mut tray = tauri::tray::TrayIconBuilder::with_id("bee")
         .tooltip("Bee")
         .menu(&tray_menu)

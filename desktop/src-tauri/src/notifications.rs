@@ -1,5 +1,6 @@
 //! Native notification submission is separate from S1's application reminder gate.
 //! The caller supplies S1's stable problem identity, eligibility and explicit recovery.
+use crate::lifecycle::{NativeLanguage, NativeLocale};
 use crate::protocol::BridgeError;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -401,7 +402,8 @@ fn write_ledger(path: &Path, ledger: &Ledger) -> Result<(), BridgeError> {
     Ok(())
 }
 fn failure(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: code.into(),
         message: message.into(),
     }
@@ -420,10 +422,20 @@ impl Notice {
             NotificationPlatform::Claude => "Bee · Claude",
         }
     }
-    fn body(&self) -> &'static str {
+    fn body(&self, locale: NativeLocale) -> &'static str {
+        if locale == NativeLocale::Zh {
+            return match self.problem {
+                NotificationProblem::AuthorizationRejected => {
+                    "账号授权被拒绝，请打开 AI 账号核对。"
+                }
+                NotificationProblem::ConfirmationRequired => "账号变更待确认，请打开 AI 账号核对。",
+                NotificationProblem::Offline => "Bee 持续离线，请打开诊断核对。",
+                NotificationProblem::QuotaExhausted => "账号订阅额度已耗尽，请打开 AI 账号核对。",
+            };
+        }
         match self.problem {
             NotificationProblem::AuthorizationRejected => {
-                "Account authorization needs attention. Open AI Accounts to review."
+                "Account authorization was rejected. Open AI Accounts to review."
             }
             NotificationProblem::ConfirmationRequired => {
                 "Account confirmation is required. Open AI Accounts to review."
@@ -460,13 +472,19 @@ fn parse_click_route(route: &str) -> Option<NotificationPage> {
 type Navigate = Arc<dyn Fn(NotificationPage) + Send + Sync>;
 pub struct NativeNotificationAdapter {
     inner: native::Adapter,
+    language: Arc<NativeLanguage>,
 }
 impl NativeNotificationAdapter {
     /// Construction is inert. Native permission queries and submissions happen only
     /// through the service on a blocking worker, never on the WebView's event loop.
-    pub fn new(app_identifier: String, on_navigate: Navigate) -> Self {
+    pub fn new(
+        app_identifier: String,
+        on_navigate: Navigate,
+        language: Arc<NativeLanguage>,
+    ) -> Self {
         Self {
             inner: native::Adapter::new(app_identifier, on_navigate),
+            language,
         }
     }
 }
@@ -479,7 +497,8 @@ impl NotificationAdapter for NativeNotificationAdapter {
     }
     fn submit(&self, notice: &Notice) -> Result<SubmissionReceipt, SubmissionFailure> {
         validate_identity(&notice.identity).map_err(SubmissionFailure::rejected)?;
-        self.inner.submit(notice)
+        let locale=self.language.current().ok_or_else(||SubmissionFailure::rejected(failure("NATIVE_LOCALE_UNCONFIRMED","notification submission requires confirmed App language; no OS submission performed")))?;
+        self.inner.submit(notice, locale)
     }
 }
 
@@ -617,11 +636,12 @@ mod native {
         pub(super) fn submit(
             &self,
             notice: &Notice,
+            locale: NativeLocale,
         ) -> Result<SubmissionReceipt, SubmissionFailure> {
             let center = self.center().map_err(SubmissionFailure::rejected)?;
             let content = UNMutableNotificationContent::new();
             content.setTitle(&NSString::from_str(notice.title()));
-            content.setBody(&NSString::from_str(notice.body()));
+            content.setBody(&NSString::from_str(notice.body(locale)));
             let request = UNNotificationRequest::requestWithIdentifier_content_trigger(
                 &NSString::from_str(&click_route(notice)),
                 &content,
@@ -835,6 +855,7 @@ mod linux_native {
         pub(super) fn submit(
             &self,
             notice: &Notice,
+            locale: NativeLocale,
         ) -> Result<SubmissionReceipt, SubmissionFailure> {
             let bus = self.bus().map_err(SubmissionFailure::rejected)?;
             let owner = server_owner(&bus.connection).map_err(SubmissionFailure::rejected)?;
@@ -866,7 +887,7 @@ mod linux_native {
                 zbus::zvariant::Value::from(self.app_identifier.as_str()),
             )]);
             // Hold the routes lock until insertion so a fast signal cannot beat the receipt.
-            let reply=bus.connection.call_method(Some(owner.as_str()),PATH,Some(DEST),"Notify",&("Bee",0u32,"",notice.title(),notice.body(),actions,hints,60_000i32)).map_err(|e| {
+            let reply=bus.connection.call_method(Some(owner.as_str()),PATH,Some(DEST),"Notify",&("Bee",0u32,"",notice.title(),notice.body(locale),actions,hints,60_000i32)).map_err(|e| {
                 let definite=matches!(&e,zbus::Error::MethodError(name,_,_) if matches!(name.as_str(),"org.freedesktop.DBus.Error.AccessDenied"|"org.freedesktop.DBus.Error.InvalidArgs"|"org.freedesktop.DBus.Error.UnknownMethod"|"org.freedesktop.DBus.Error.ServiceUnknown"|"org.freedesktop.DBus.Error.NameHasNoOwner"));
                 let error=db_error("Notify",e);
                 if definite { SubmissionFailure::rejected(error) } else { SubmissionFailure::uncertain(error) }
@@ -1018,8 +1039,9 @@ mod native {
         pub(super) fn submit(
             &self,
             notice: &Notice,
+            locale: NativeLocale,
         ) -> Result<SubmissionReceipt, SubmissionFailure> {
-            self.submit_inner(notice).map_err(|error| {
+            self.submit_inner(notice, locale).map_err(|error| {
                 if error.code == "NOTIFICATION_SUBMISSION_UNCERTAIN" {
                     SubmissionFailure::uncertain(error)
                 } else {
@@ -1027,12 +1049,16 @@ mod native {
                 }
             })
         }
-        fn submit_inner(&self, notice: &Notice) -> Result<SubmissionReceipt, BridgeError> {
+        fn submit_inner(
+            &self,
+            notice: &Notice,
+            locale: NativeLocale,
+        ) -> Result<SubmissionReceipt, BridgeError> {
             let _apartment = Apartment::enter()?;
             let notifier = self.notifier()?;
             let document = XmlDocument::new().map_err(|e| win_error("XmlDocument.new", e))?;
             // All text comes from fixed enums, and the route contains only a hex digest.
-            let xml=format!("<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text></binding></visual></toast>",click_route(notice),notice.title(),notice.body());
+            let xml=format!("<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text></binding></visual></toast>",click_route(notice),notice.title(),notice.body(locale));
             document
                 .LoadXml(&HSTRING::from(xml))
                 .map_err(|e| win_error("XmlDocument.LoadXml", e))?;

@@ -139,4 +139,5 @@ export const zh: Record<string, string> = {...Object.fromEntries(Object.keys(en)
   "Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。": "Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。",
   "上次 Hive 观测": "上次 Hive 观测",
   "上次确认": "上次确认",
+ '重新同步原生语言':'重新同步原生语言',
 };

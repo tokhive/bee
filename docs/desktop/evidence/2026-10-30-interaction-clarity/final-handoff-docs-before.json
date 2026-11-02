@@ -1,0 +1,15 @@
+{
+  "observed_at": "2026-11-02T21:35:01.032975+00:00",
+  "files": {
+    "docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md": {
+      "size": 71386,
+      "sha256": "fedbfd7263c476ee95eaca64729e93d6c4f53b294c068430bdcf9254ea0d32e0",
+      "copy": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.superpowers/sdd/final-docs-before/2026-10-30-desktop-interaction-clarity.md"
+    },
+    "docs/desktop/interaction-clarity-validation.md": {
+      "size": 113760,
+      "sha256": "ae376adde5189c97ec6d8fc5dc257c3367150c4112dde2dfe5d6a885ab071814",
+      "copy": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.superpowers/sdd/final-docs-before/interaction-clarity-validation.md"
+    }
+  }
+}

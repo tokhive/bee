@@ -1,0 +1,298 @@
+{
+  "observed_at": "2026-11-02T21:31:08.276782+00:00",
+  "bee_head": "815365835c90953a9cc0b49db922fb504504cfb5",
+  "bee_product_commit": "843e3fff557d723ed8626c081f8cecf2567856a5",
+  "preservation": {
+    "complete_preexisting_dirty_untracked": {
+      "count": 1040,
+      "differences": [],
+      "exclusions": []
+    },
+    "current_round_dirty_baseline": {
+      "count": 934,
+      "differences": [],
+      "exclusions": []
+    },
+    "current_round_historical_evidence": {
+      "count": 2143,
+      "differences": [],
+      "exclusions": []
+    }
+  },
+  "product_sources": {
+    "agent/desktop_connection_test.go": {
+      "size": 21552,
+      "sha256": "4d2326f497d47649c47b9719f8c00514649237ffdd70eeffe1bd0113345bc4fe",
+      "commit_blob_sha256": "4d2326f497d47649c47b9719f8c00514649237ffdd70eeffe1bd0113345bc4fe"
+    },
+    "agent/desktop_runtime_sync.go": {
+      "size": 24322,
+      "sha256": "81cbb481be3e25930ddcf6beaf1f7b1a2efe46949357b7fbd87ae32d602bb887",
+      "commit_blob_sha256": "81cbb481be3e25930ddcf6beaf1f7b1a2efe46949357b7fbd87ae32d602bb887"
+    },
+    "agent/desktop_runtime_test.go": {
+      "size": 33040,
+      "sha256": "9e7ce8af7890d5445e56452c769a8d9dbb5b68855c27aa9f333aa3bba015572c",
+      "commit_blob_sha256": "9e7ce8af7890d5445e56452c769a8d9dbb5b68855c27aa9f333aa3bba015572c"
+    },
+    "desktop/playwright.final-fix.config.ts": {
+      "size": 357,
+      "sha256": "c8d121ce2114d5ded30b4ef8e9bfaeacfbce232de09e5e68158eed54f8afa3d9",
+      "commit_blob_sha256": "c8d121ce2114d5ded30b4ef8e9bfaeacfbce232de09e5e68158eed54f8afa3d9"
+    },
+    "desktop/tests/fixtures/bee-preview/fixture.mjs": {
+      "size": 19566,
+      "sha256": "5931ee04b2c72e9ff928e6a000ce207be1a183b8c94fb6fc35540b349701b131",
+      "commit_blob_sha256": "5931ee04b2c72e9ff928e6a000ce207be1a183b8c94fb6fc35540b349701b131"
+    },
+    "desktop/tests/fixtures/synchronization-recovery.json": {
+      "size": 1358,
+      "sha256": "dfcde1dd82f97679d22504e37d1dcb41fc9d17c3f27f044823e0bdb6b062339c",
+      "commit_blob_sha256": "dfcde1dd82f97679d22504e37d1dcb41fc9d17c3f27f044823e0bdb6b062339c"
+    },
+    "desktop/tests/t10-layout-fix.spec.ts": {
+      "size": 31761,
+      "sha256": "02ba63ed7f61758d0ba8af0b5e3980d74731a0c65911e201510e317ddd1b40bb",
+      "commit_blob_sha256": "02ba63ed7f61758d0ba8af0b5e3980d74731a0c65911e201510e317ddd1b40bb"
+    }
+  },
+  "verification_source_coverage": {
+    "green-runtime-worker": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-green-runtime-worker.json"
+    },
+    "affected-go-race": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-affected-go-race.json"
+    },
+    "affected-go-vet": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-affected-go-vet.json"
+    },
+    "scope-barriers-race": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-scope-barriers-race.json"
+    },
+    "green-components-final": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-green-components-final.json"
+    },
+    "fixture-direct-consumers-final": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-fixture-direct-consumers-final.json"
+    },
+    "typecheck-committed": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-typecheck-committed.json"
+    },
+    "linux-core-build": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-linux-core-build.json"
+    }
+  },
+  "behavior_red_inputs_match_base": true,
+  "binary_build_sources_unchanged": true,
+  "hive": {
+    "head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+    "gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+    "status": ""
+  },
+  "new_validation_links": {
+    "count": 10,
+    "targets": [
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.png",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.png",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json",
+      "evidence/2026-10-30-interaction-clarity/final-fix-affected-go-race.log",
+      "evidence/2026-10-30-interaction-clarity/final-fix-scope-barriers-race.log",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.png",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.png",
+      "evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.json",
+      "evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.log"
+    ],
+    "all_exist": true
+  },
+  "ports": {
+    "1518": {
+      "argv": [
+        "lsof",
+        "-nP",
+        "-iTCP:1518",
+        "-sTCP:LISTEN"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": ""
+    },
+    "1519": {
+      "argv": [
+        "lsof",
+        "-nP",
+        "-iTCP:1519",
+        "-sTCP:LISTEN"
+      ],
+      "exit": 1,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "docker": {
+    "containers": {
+      "argv": [
+        "docker",
+        "ps",
+        "-a",
+        "--filter",
+        "name=bee-final-fix-",
+        "--format",
+        "{{.Names}}"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    },
+    "networks": {
+      "argv": [
+        "docker",
+        "network",
+        "ls",
+        "--filter",
+        "name=bee-final-fix-",
+        "--format",
+        "{{.Name}}"
+      ],
+      "exit": 0,
+      "stdout": "",
+      "stderr": ""
+    }
+  },
+  "ego_finish": {
+    "spaceId": 43,
+    "observed_at": "2026-11-02T21:14:58.137Z",
+    "receipt": {
+      "spaceId": 43,
+      "closedSpace": true,
+      "keptManagedLabels": [],
+      "closedManagedLabels": [
+        "p1"
+      ],
+      "preservedUnmanagedCount": 0
+    },
+    "completedFinishCalls": 1,
+    "previousAttempt": "Browser.getVersion rejected before finish was invoked; no replayed finish"
+  },
+  "visual_layers": {
+    "ego": {
+      "viewport": {
+        "width": 1512,
+        "height": 833
+      },
+      "reducedMotion": false
+    },
+    "playwright": {
+      "viewport": {
+        "width": 860,
+        "height": 600
+      },
+      "reducedMotion": true,
+      "records": [
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.json",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.json",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.json"
+      ]
+    }
+  },
+  "external_binaries": {
+    "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux/bee-final-fix": {
+      "size": 30965181,
+      "sha256": "313a32810ac16b5fa9d640c8fdfb41995817d14da2d2cb49d1840151caa5329c"
+    },
+    "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux/hive-integration-final-fix.test": {
+      "size": 71859248,
+      "sha256": "148825231574ecc350bfa890d8c5b36bf69ab3793e2df7a2e8f726aaea599706"
+    }
+  },
+  "git_diff_check": {
+    "exit": 0,
+    "stdout": "",
+    "stderr": ""
+  },
+  "passed": true
+}

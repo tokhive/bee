@@ -1,0 +1,666 @@
+{
+  "observed_at": "2026-11-02T21:42:45.223739+00:00",
+  "bee_source_head": "815365835c90953a9cc0b49db922fb504504cfb5",
+  "bee_product_commit": "843e3fff557d723ed8626c081f8cecf2567856a5",
+  "total": 92,
+  "checked_before": 76,
+  "newly_checked_ids": [
+    79,
+    81,
+    82,
+    90,
+    91,
+    92
+  ],
+  "newly_checked": 6,
+  "checked_now": 82,
+  "remaining_count": 10,
+  "remaining": [
+    {
+      "id": 75,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": false,
+      "text": "按 U01–U05/X01–X04 分别验证正常退出重开、明确停止后重开、不洁会话、停止保存失败、第二次启动、通知／登录返回、安装失败及升级后迁移；每条恢复判断对应真实意图和回执，不以同一“恢复正常”提示替代。"
+    },
+    {
+      "id": 76,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": false,
+      "text": "逐路径检查正式 App 的按钮、禁用原因、空态、进度、确认窗、托盘、菜单、系统通知、日期及数字；已有状态随语言切换。更新发布说明标识来源，不将上游英文伪称为中文版本。"
+    },
+    {
+      "id": 80,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "更新预览为正式组件和实际 DTO；场景覆盖 spec §9 每行及用户最初列举的问题，不用静态截图冒充真实行为。增加当前已保存绑定＋401/device_replaced＋stopped＋所选OpenAI文件缺失组合，同一场景的概览／账号／诊断／设置事实一致；删除原型固定503、固定重连等与场景无关的结论。补全860×600／1000×700／常规尺寸、中英／明暗和长错误；交互用代表性路径，避免无意义笛卡尔积测试。"
+    },
+    {
+      "id": 83,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "用本地测试 Hive 和独立测试状态目录运行真实核心，复现连接拒绝、503、401／403、409、断线退避／恢复与暂停保留；校验可见原因来自该次失败，真实事件覆盖旧 run 迟到。合成账号测试不发送真实模型请求。"
+    },
+    {
+      "id": 84,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "在本地 Hive 和隔离桌面状态中完成真实设备恢复：撤销测试凭据 → 四页可达且原因明确 → 本机确认 → Hive 网页确认／替换确认 → 身份回读有效且贡献仍停止。覆盖重复点击、重启续查、创建／兑换未知和本地保存失败，核对实际请求次数；不把 UI 模拟成功当作恢复回执。"
+    },
+    {
+      "id": 85,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用明确用于验收的真实官方账号，继续修复所选登录来源 → 确认接入且暂停 → 开始贡献仍暂停 → 用户恢复平台接单 → Hive 实际报告 ready。沿用既有 `docs/desktop/account-runtime-validation.md` 的受控请求验收，在专用环境及明确请求范围内分别验证两平台实际请求经本 Bee 到达官方上游并返回，再验证暂停阻止新派发、停止后不可继续接单；记录脱敏关联证据，不仅截取 ready。核对全链路无旧账号迁移、自动接入或自动解除暂停；测试 Hive 需具备对应平台市场／准入条件。缺账号或平台条件则明确记录未完成的环节，不用合成候选冒充全链路通过；不得隐式重绑用户当前设备、替换其他 Bee 或恢复真实接单。"
+    },
+    {
+      "id": 86,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "当前故障之外，分别真实走通首次配对到接单、网络中断恢复、官方登录／取消、换号未知结果核对、代理应用部分失败后继续、诊断读取失败恢复、正常／异常退出重开和更新失败／重启核验。两平台及目标OS差异单独记录；未验证项留待验，不能用39个预览代表全部路径通过。"
+    },
+    {
+      "id": 87,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用 `ego-browser` 检查正式页面、恢复入口、键盘焦点、Escape、对比度、溢出、滚动与无闪烁，按 `web-design-guidelines` 复核。关键截图包括等待网页确认、设备核对失败间距、断线原因、凭据撤销及确认重绑、启动受阻的账号页面、所选文件缺失、恢复后剩余问题和双平台部分可用；导航到诊断及返回后焦点落到目标。"
+    },
+    {
+      "id": 88,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "同尺寸、同主题、同状态对照原批准方案与正式组件，逐项核对页面分区、设备信息顺序、贡献按钮、账号动作及详情入口的位置；暂停／恢复保持右侧且与额度同组。对必要移动记录实际可用性原因，不以预览已改变位置作为理由。"
+    },
+    {
+      "id": 89,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用工程现有打包／原生验收入口验证 macOS 壳的菜单、托盘、通知拒绝、关闭窗口与退出、更新确认及实际失败反馈；真实平台操作写明环境和回执。Linux／Windows 若本机无法运行，使用既有对应 CI／原生验收证据；未执行的路径标明阻塞，不将模拟或编译结果写成原生通过。"
+    }
+  ],
+  "all_checkboxes": [
+    {
+      "id": 1,
+      "task": "T1：供给原因的跨层契约",
+      "checked": true,
+      "text": "增加具体反例：新原因被旧桌面解码器拒绝；重复新原因、Claude 配 Codex 原因、ready=true 带阻塞、paused 与原因不符均拒绝。明确默认 `SupplyReasons()` 不新增元素。"
+    },
+    {
+      "id": 2,
+      "task": "T1：供给原因的跨层契约",
+      "checked": true,
+      "text": "运行 B：`go test ./beewire ./agent ./desktopbridge -run 'Supply|Reason' -count=1`；B/desktop：`node --test tests/supply.test.ts tests/diagnostics.test.ts`，确认预期断言失败。"
+    },
+    {
+      "id": 3,
+      "task": "T1：供给原因的跨层契约",
+      "checked": true,
+      "text": "同步上述注册表和白名单；为新码补齐 ExplainReason，使已有诊断不会因码未知而丢弃原因；默认 SupplyReasons 和旧请求仍不产生新码，不改变旧网页／CLI 输出。搜索其他原因消费者，补齐 Rust 的相同反例。"
+    },
+    {
+      "id": 4,
+      "task": "T1：供给原因的跨层契约",
+      "checked": true,
+      "text": "重跑定向测试；B：`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`；B/desktop：`npm run typecheck`，均须通过。"
+    },
+    {
+      "id": 5,
+      "task": "T1：供给原因的跨层契约",
+      "checked": true,
+      "text": "提交 `feat(protocol): define detailed desktop supply reasons`，记录协议提交 SHA 供 T2 使用。"
+    },
+    {
+      "id": 6,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "在 Hive 隔离树引入 T1 协议提交；记录旧 gitlink 与新 SHA，确认已有子模块变化未丢失。先增加数据库集成案例：未注册、无市场模型、无供给配置、其他设备静态绑定、指纹不准入、账号无可用模型、授权不可用；每例比较有／无选项的 ready 与 paused。"
+    },
+    {
+      "id": 7,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "覆盖两项原因共存、静态供给无需动态注册的既有路径、暂停且还有阻塞、目录模型全部关闭／价格不完整、市场已有模型但当前设备无绑定模型。不能将所有 nil supply 都当成账号缺失或市场关闭。"
+    },
+    {
+      "id": 8,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "使用现有账号记录、目录和供给选择条件解释原阻塞；从同一判断收集原因，避免复制一套准入逻辑。读原因失败仍失败关闭，暂停事务只执行一次。参数非法／重复时在写入前拒绝。"
+    },
+    {
+      "id": 9,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "Bee 请求加入选项。使用 httptest 覆盖旧 Hive 忽略选项、原 `not_configured`、新原因、未知原因、PUT 响应丢失后仅 GET；对 PUT 次数作断言。"
+    },
+    {
+      "id": 10,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "H：先 `make db`，再 `TEST_DATABASE_URL='postgres://hive:hive_local_dev@127.0.0.1:55432/hive?sslmode=disable' go test -race ./hive/internal/service ./hive/internal/integration -run 'Test(BeePlatform|BeePause|DetailedSupply|DynamicSupply|ProviderSelfOnboarding)' -count=1 -timeout=300s -v`。使用仓库本地测试库和逐测试 schema；不接生产 DSN。新测试统一 `TestDetailedSupply` 前缀，不能全部 SKIP。"
+    },
+    {
+      "id": 11,
+      "task": "T2：Hive 按真实条件细分原因，Bee 显式请求",
+      "checked": true,
+      "text": "B：`go test -race ./agent -run 'DesktopSupply' -count=1`。失败案例先红后绿，默认调用与旧测试均通过后分别提交 `feat(hive): explain desktop supply blockers on request`、`feat(desktop): request detailed supply reasons`。"
+    },
+    {
+      "id": 12,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "注入具体 DNS、TLS、拒绝连接、超时、HTTP 401／403／409／503、心跳失败和同步失败；验证分类来自错误类型／响应，包含安全原始原因，不能通过日志字符串恢复事实。"
+    },
+    {
+      "id": 13,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "B：`go test ./agent ./desktopbridge -run 'DesktopConnection|DesktopRuntime|RuntimeContract' -count=1`；B/desktop：`node --test tests/runtime.test.ts`，确认新增断言失败。"
+    },
+    {
+      "id": 14,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "改造观察回调和严格 DTO，保留原重连次数／退避算法；从实际 pause 定时器记录 next_retry_at。请求取消属于主动停止时不制造连接报警；真实断线没有底层错误时只说明连接结束，不猜原因。"
+    },
+    {
+      "id": 15,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "覆盖 run A 失败迟到、run B 已连接、停止中回调、恢复后错误清除、退避期间错误保留、401／403停止重试及既有409所有权规则。检查 supply 清空与 local 状态未被文案改造改变。"
+    },
+    {
+      "id": 16,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "重跑定向测试，并运行 B：`go test -race ./agent ./desktopbridge -run 'DesktopConnection|DesktopRuntime|RuntimeContract' -count=1`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`；更新运行契约 fixture 后 TS 解码测试通过。"
+    },
+    {
+      "id": 17,
+      "task": "T3：连接失败、退避与恢复的真实观察",
+      "checked": true,
+      "text": "提交 `feat(desktop): expose observed connection failures and retries`。"
+    },
+    {
+      "id": 18,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "建立反例：503设备核对失败在中文下显示具体事实、目标和原文；401/device_replaced 不降级为 NETWORK_DEVICE_SCOPE 或“结果未确认”；所选文件缺失不说全机无登录，权限失败不说未找到；未知码不猜原因；切换语言立即更新已有错误；敏感令牌／URL秘密参数不进入详情。"
+    },
+    {
+      "id": 19,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "B：`go test ./agent ./desktopbridge -run 'DesktopFailure|DesktopDevice|Supply' -count=1`；B/desktop：`node --test tests/problems.test.ts tests/device.test.ts tests/supply.test.ts`，确认新增断言失败。"
+    },
+    {
+      "id": 20,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "在丢失原因的设备／供给请求边界保留 typed cause、HTTP实际状态及安全响应，桥上逐层透传 details；保留现有领域码和错误链。用 errors.As 回归既有 apiFailure 判断，不能因新包装破坏配对过期、设备撤销或结果未知分支。扩展解析器时拒绝未知详情键和不安全 evidence；无 details 的既有错误仍有效。"
+    },
+    {
+      "id": 21,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "同步 Rust struct literal、各 TS 解码器及错误归一化，去掉仅为UI而拼接后丢弃结构的处理。现有 AccountError 不迁移协议；按已有 code/check/evidence 接入相同呈现组件。"
+    },
+    {
+      "id": 22,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "为已知原因提供中英词条和真实动作映射；新增显式 locale 的时间／数字格式函数。检查参数遗漏和词条两端对齐，不用“包含拉丁字母”判定翻译失败。"
+    },
+    {
+      "id": 23,
+      "task": "T4：保留结构化失败，统一本地化呈现",
+      "checked": true,
+      "text": "重跑上述命令及 B：`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`；B/desktop：`npm run typecheck`。提交 `feat(desktop): preserve failure evidence in localized feedback`。"
+    },
+    {
+      "id": 24,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "用已保存绑定、device_status.result.error=401/device_replaced、管理进程 Ready 和 runtime stopped 建立失败案例；断言本机上下文可读、四页仍可挂载，Hive 写入及运行启动仍拒绝。补充未绑定、损坏记录、桥不可用和待更新完整性失败，避免放宽硬性保护。"
+    },
+    {
+      "id": 25,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "B：`go test ./agent ./desktopbridge -run 'DesktopDevice|DesktopAccounts|DeviceContext' -count=1`；`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`；B/desktop：`node --test tests/startup-recovery.test.ts tests/device.test.ts`，确认新增行为断言先失败。"
+    },
+    {
+      "id": 26,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "分离真实 bridge 状态与业务启动检查，先透传设备错误再使用可信身份；实现只读 device_context 和受校验的固定控制台打开入口。梳理命令门禁：允许本机读取、诊断、语言外观及符合原条件的官方登录；接入、换号、开始贡献、恢复接单和有身份范围的代理应用继续校验。"
+    },
+    {
+      "id": 27,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "实现 startup_recheck，同一上下文串行重查、更新结果；不调用自动运行恢复，不绕过 update_install／sidecar 完整性门禁。验证反复点击、旧请求迟到、网络配置变化、设备恢复后同会话解锁；确认仅启动时允许的恢复最多执行一次。"
+    },
+    {
+      "id": 28,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "为本机设备上下文和诊断增加同一 binding_revision，补齐严格协议及既有 fixture；验证采集中更换绑定后旧报告不能被重新标为新绑定结果。B：`go test ./agent ./desktopbridge -run 'DesktopDiagnostics|Diagnostic' -count=1`；B/desktop：`node --test tests/diagnostics.test.ts`。"
+    },
+    {
+      "id": 29,
+      "task": "T4a：启动受阻时保留必要操作与同会话重查",
+      "checked": true,
+      "text": "重跑以上定向测试和 B/desktop：`npm run typecheck`；提交 `fix(desktop): keep recovery available during startup checks`。"
+    },
+    {
+      "id": 30,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "先覆盖允许的401领域码及明确拒绝条件：普通401、403、503、占用、配置损坏、贡献未停止、worker 未退出、旧账号／设备写入未决；在核心层验证，即使绕过按钮也不能执行恢复。"
+    },
+    {
+      "id": 31,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "B：`go test ./agent ./desktopbridge -run 'DesktopDevice|DeviceRecovery|DesktopSession' -count=1`；B/desktop：`node --test tests/device.test.ts`，确认新增契约及行为断言失败；新测试统一使用 DeviceRecovery 名称便于选中。"
+    },
+    {
+      "id": 32,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "实现单个受保护恢复记录、严格协议和互斥，创建及兑换前先持久化；取消确认不请求 Hive，重复点击／重启继续原事务。采用新身份前验证固定 Hive、新凭据和用户归属确认，首次配对继续沿用既有网页归属确认规则。"
+    },
+    {
+      "id": 33,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "用本地 Hive 协议服务及崩溃点注入覆盖创建响应丢失、token 保存失败、兑换响应丢失、远端成功后原子保存失败、配置已落盘而事务未收尾、轮询过期和旧回调迟到；逐步断言请求次数，无自动重建、重复兑换或回退旧凭据。"
+    },
+    {
+      "id": 34,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "将上述保护复用到首次配对：增加“创建已发但无token，再次Begin”“已redeeming而轮询仍approved，再次Status／重启”请求计数反例；分别检查明确 device_draining 拒绝、当前未决与已确认过期。迁移旧记录时无法证明未提交则保留阻塞，首次有效创建／兑换仍各执行一次。"
+    },
+    {
+      "id": 35,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "覆盖不同 owner 确认、同 owner 新 device 隔离、旧账号未决操作阻塞、运行／代理意图不迁移；完成后真实本机状态仍 stopped，账号必须重新接入。记录损坏及写盘失败保留可诊断事实，不清空继续。"
+    },
+    {
+      "id": 36,
+      "task": "T4b：设备恢复与所有配对路径的持久化保护",
+      "checked": true,
+      "text": "B：`go test -race ./agent ./desktopbridge -run 'DesktopDevice|DeviceRecovery|DesktopSession' -count=1`、`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`；B/desktop：`node --test tests/device.test.ts`、`npm run typecheck`。提交 `feat(desktop): recover revoked device credentials with confirmation`。"
+    },
+    {
+      "id": 37,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "表驱动测试覆盖 spec §3 顺序，包括共享失败压住旧成功、单平台失败不压住另一平台可接单、全部暂停仍保留其他阻塞、已有账号停止、准备提示收起、无数据计数待确认；补充当前401＋stopped＋source_missing组合，账号未知不能覆盖同一绑定下明确的设备拒绝。"
+    },
+    {
+      "id": 38,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "B/desktop：`node --test tests/desktopStatus.test.ts tests/desktopState.test.ts`，确认新增断言失败；修改协调器只记录实际调度，失败保留旧信息和不可信标记，明确 blocked 时不再声称自动核对。"
+    },
+    {
+      "id": 39,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "针对矩阵 S01/A01/P01/P03，先复现 account-reading 与 check-sequence：阶段性发布共享事实，隔离两平台慢请求；过期立即禁止旧报告写入，但只显示实际读取／等待调度。保留每请求期限、唯一协调器与revision屏障；断言不重复查询、不以旧成功解锁写操作。"
+    },
+    {
+      "id": 40,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "NativeApp 使用独立 bridge／startup 状态，不再用单一 ready 隐藏概览和账号页；建立受校验目标与单次返回上下文，保留来源／设置草稿，已提交操作继续由原模型核对。实现目标存在后聚焦和返回发起入口，普通轮询不重复聚焦。"
+    },
+    {
+      "id": 41,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "接入带上下文的诊断事实，401更新当前问题摘要但HTTP成功不改为已连接／ready；较旧结果、旧绑定／网络版本结果拒收。设备恢复后回读新状态并显示剩余账号问题，不直接变成可接单。"
+    },
+    {
+      "id": 42,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "浏览器场景断言“账号来源错误 → 设置目标 → 返回”保留平台和草稿；“接入结果未知 → 离开／返回”PUT 次数不增加；实例变化清除旧操作；导航到诊断不启动诊断。"
+    },
+    {
+      "id": 43,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "增加设置草稿“设置 → 概览／诊断／账号 → 设置”往返，保留未保存输入且保存／应用次数为0；绑定变化隔离旧草稿。只覆盖设置内部页签切换不足以通过 C01。"
+    },
+    {
+      "id": 44,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "B/desktop：`node --test tests/desktopStatus.test.ts tests/desktopState.test.ts`；`npx playwright test --config playwright.device.config.ts recovery-navigation.spec.ts polling-stability.spec.ts`；`npm run typecheck`。预期目标正确、无重复写入、无焦点抢占。"
+    },
+    {
+      "id": 45,
+      "task": "T5：主状态派生、刷新事实和恢复导航",
+      "checked": true,
+      "text": "提交 `feat(desktop): unify readiness state and recovery navigation`。"
+    },
+    {
+      "id": 46,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "扩充正式组件场景：初次读取、确认未绑定、网页等待、过期、设备核对失败、停止、首次连接、断线退避、身份拒绝、占用、双平台部分可用。先验证旧“贡献已启动”和布尔“Hive 未连接”会导致断言失败。"
+    },
+    {
+      "id": 47,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "概览接入共享主状态及轻量四步说明，只在缺少绑定／账号时展示；绑定完成后去实际下一步，正常暂停与断线不重放引导。"
+    },
+    {
+      "id": 48,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "配对主按钮高对比，次操作复制码／网址各有成功与失败反馈；剩余时间由 expires_at 计算，到期切换动作；打开网页失败保留请求与手动网址，不重新生成配对码。"
+    },
+    {
+      "id": 49,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "按 D03–D07 分别呈现 pending、draining、正在兑换、身份待回读、保存失败和未知结果；到期先核对，再按核心确认结果决定重新生成可用性。首次绑定也使用真实恢复结果，不仅给新重绑流程增加这些提示。"
+    },
+    {
+      "id": 50,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "设备核对失败保留已知设备与表单草稿，禁止回退成未绑定；设备表单／错误卡与运行区留24px空白。连接详情展示实际失败、重试状态和已有检查入口，不提供不存在的一键重启或绑定地址编辑。"
+    },
+    {
+      "id": 51,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "设备失效时展示匹配的重新绑定确认、网页等待、重查、保存失败及结果未知；取消弹窗不请求，导航／重启不重复提交。跨 owner 采用新绑定需明确确认；完成后指向账号准备，贡献仍停止。控制台与重新检查设备入口在可恢复启动错误下可用，禁用操作给出具体前置条件。"
+    },
+    {
+      "id": 52,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "B/desktop：`npx playwright test --config playwright.device.config.ts device.spec.ts native-runtime.spec.ts`；`npm run typecheck`。人工检查长网址、最小窗口、主按钮、复制反馈及中英布局；截图留待 T10 汇总。"
+    },
+    {
+      "id": 53,
+      "task": "T6：概览与设备绑定流程",
+      "checked": true,
+      "text": "提交 `feat(desktop): guide device setup and connection recovery`。"
+    },
+    {
+      "id": 54,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "为来源读取中、未找到、所选文件缺失、缺客户端、权限不足、过期、候选改变、已找到未接入、接入／换号完成和结果未知建立场景；已知一个平台、另一个未知时计数不得显示确定总数。身份受阻时可读本机候选、调整来源草稿及按前置条件官方登录，接入按钮仍说明需先恢复设备。"
+    },
+    {
+      "id": 55,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "B/desktop：`node --test tests/accountPresentation.test.ts tests/nativeAccounts.test.ts tests/supply.test.ts`，先确认新增断言失败，再替换固定的“接入和换号仍需确认”为按阶段出现的说明与动作。"
+    },
+    {
+      "id": 56,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "接入、换号、官方登录的确认分别说明目标账号、暂停影响及官方客户端登录变化；保留当前／目标标识。无邮箱只显示账号标识；未接入不展示无意义套餐标签，已接入但套餐未知说待确认。"
+    },
+    {
+      "id": 57,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "遍历 A01–A08、L01–L06、W01–W06 的主要按钮，按实际 features.reason／本地前置条件展示禁用说明和定位动作；候选过期、运行中登录、未决操作、提交时revision变化均不能无解释。官方登录测试覆盖缺客户端／版本不支持、退出成功但来源不符、超时／取消未知／迟到成功；取消接入仅限未注册选择。"
+    },
+    {
+      "id": 58,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "本地未选择显示“尚未接入 {平台} 账号”；本地已选择但 Hive 未注册显示注册未完成及实际同步事实；只有 market_not_open 才显示“Hive 尚未开放 {平台} 模型交易”。旧 not_configured 明说 Hive 未提供更具体原因；管理员问题不提供反复登录／恢复的假修复入口。"
+    },
+    {
+      "id": 59,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "额度未知／过期／耗尽分别展示，旧值标时间；保留全部窗口、重置时刻及超过100%的真实数值。问题去重不丢独立阻塞，暂停／恢复按钮及账号动作保持原右侧额度区下方靠右与原动作顺序；窄窗口与额度同组，不照搬方案1预览中的左对齐位置。"
+    },
+    {
+      "id": 60,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "按 P04–P08 遍历所有旧原因、五个新增原因及两平台专属原因，逐项断言具体影响和实际处理对象；管理员／等待型问题不提供无效登录或恢复按钮。旧Hive、多个原因、暂停叠加其他阻塞分别验收。"
+    },
+    {
+      "id": 61,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "来源详情保持默认展开；修改来源／完成授权后恢复自动读取，读取失败原位给准确入口，不新增日常“检测账号”按钮。身份受阻时用本机读取路径，不启动旧写操作；新设备重新读取后要求重新确认接入。离开再返回不丢失核对，不自动接入或恢复接单。"
+    },
+    {
+      "id": 62,
+      "task": "T7：AI 账号、平台接单和额度",
+      "checked": true,
+      "text": "重跑单元测试；B/desktop：`npx playwright test --config playwright.device.config.ts native-accounts.spec.ts account-auto-read.spec.ts supply.spec.ts polling-stability.spec.ts`。提交 `feat(desktop): clarify account setup and platform availability`。"
+    },
+    {
+      "id": 63,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "建立保存成功但未应用、应用失败、测试上游成功但 Hive 不可达、通知偏好开启但 OS 拒绝、自启期望与登记不一致、诊断部分未完成、日志导出结果未知场景，断言不能统一显示成功。"
+    },
+    {
+      "id": 64,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "条件式解释本机代理，显示实际测试目标和当前／待生效配置；失败保留输入。网络应用涉及停止时沿用原确认，不能只改文字就绕过运行前置条件。"
+    },
+    {
+      "id": 65,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "通知期望与系统授权并列；拒绝时给实际系统设置路径，应用内问题仍保留。自启说明既有恢复意图和手动暂停边界。"
+    },
+    {
+      "id": 66,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "诊断“安全证据”改为“检查详情”，“核对诊断”改为“运行详情”；保留全部检查、未知、过滤和导出。处理入口准确定位概览绑定区／账号平台／设置页签，错误恢复后可返回；不因进入或返回诊断页自动执行检查。"
+    },
+    {
+      "id": 67,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "复现 G02 的单次 diagnostics_snapshot 失败；保留原报告ID和读取失败状态，提供重新读取原报告并按真实策略恢复查询，断言 diagnostics_start 仍为1、无需离页重进。继续覆盖开始／取消回执未知、报告已终态或上下文变化；无报告ID不伪造可查询动作，明确仍未知及可用日志／管理进程恢复路径。"
+    },
+    {
+      "id": 68,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "按 N03–N06 核对保存、停止、应用、恢复、权限与系统登记各自回执；网络应用部分失败／响应丢失后只读当前状态，不自动重复停止重启。草稿和错误在修复返回后保留。"
+    },
+    {
+      "id": 69,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "将本机记录完整与远端身份有效分别命名；device_replaced 和 source_missing 在主提示中给出最具体原因和入口。设置在远端身份未知时显示上次绑定／待核对，不误标“尚未配对”；诊断返回概览后使用同上下文的新事实，焦点落实际目标而非 BODY。"
+    },
+    {
+      "id": 70,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "B/desktop：`node --test tests/network.test.ts tests/diagnostics.test.ts tests/diagnostic-presentation.test.ts tests/preferences.test.ts tests/notifications.test.ts`；`npx playwright test --config playwright.device.config.ts native-experience.spec.ts recovery-navigation.spec.ts`，确认实际保存／权限／导出回执驱动反馈。"
+    },
+    {
+      "id": 71,
+      "task": "T8：设置与诊断的具体反馈、定位和返回",
+      "checked": true,
+      "text": "提交 `feat(desktop): make settings and diagnostics recovery actionable`。"
+    },
+    {
+      "id": 72,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": true,
+      "text": "覆盖更新检查、下载、签名验证、启动安装、重启后核验各阶段失败；失败和结果未知分别提示，只有真实确认回执显示完成。"
+    },
+    {
+      "id": 73,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": true,
+      "text": "回归 T4a 后更新 hold／verify 及 sidecar 完整性边界：身份检查受阻可处理不代表未验证二进制可运行；设备重查和恢复完成均不得再次执行启动恢复或自动开始贡献。"
+    },
+    {
+      "id": 74,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": true,
+      "text": "清楚区分暂停接单、开始／停止贡献、关闭窗口、退出 Bee、退出并安装；关闭确认窗不撤销已提交动作，停止／退出的任务中断影响保留。无可用原生入口时给真实菜单指引，不伪造按钮。"
+    },
+    {
+      "id": 75,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": false,
+      "text": "按 U01–U05/X01–X04 分别验证正常退出重开、明确停止后重开、不洁会话、停止保存失败、第二次启动、通知／登录返回、安装失败及升级后迁移；每条恢复判断对应真实意图和回执，不以同一“恢复正常”提示替代。"
+    },
+    {
+      "id": 76,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": false,
+      "text": "逐路径检查正式 App 的按钮、禁用原因、空态、进度、确认窗、托盘、菜单、系统通知、日期及数字；已有状态随语言切换。更新发布说明标识来源，不将上游英文伪称为中文版本。"
+    },
+    {
+      "id": 77,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": true,
+      "text": "B/desktop：`node --test tests/updater.test.ts tests/lifecycle.test.ts tests/notifications.test.ts`；`npx playwright test --config playwright.device.config.ts native-updater.spec.ts native-experience.spec.ts`；B：`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`。对已知错误与必要技术原文分别断言。"
+    },
+    {
+      "id": 78,
+      "task": "T9：更新、原生菜单、通知与语言收口",
+      "checked": true,
+      "text": "提交 `fix(desktop): localize native actions and update outcomes`。"
+    },
+    {
+      "id": 79,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "将76项矩阵作为验收台账，逐行登记最终提交、测试环境、断言／截图／原生回执、状态和未通过原因。当前测试基线为 TS 105通过、正式浏览器126通过、预览43通过2失败；两失败单独重跑仍失败。修复失败的行为或场景时序契约后再验，不能删断言或只对当前401截图验收。"
+    },
+    {
+      "id": 80,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "更新预览为正式组件和实际 DTO；场景覆盖 spec §9 每行及用户最初列举的问题，不用静态截图冒充真实行为。增加当前已保存绑定＋401/device_replaced＋stopped＋所选OpenAI文件缺失组合，同一场景的概览／账号／诊断／设置事实一致；删除原型固定503、固定重连等与场景无关的结论。补全860×600／1000×700／常规尺寸、中英／明暗和长错误；交互用代表性路径，避免无意义笛卡尔积测试。"
+    },
+    {
+      "id": 81,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "B：`go vet ./...`、`go test -race -timeout=600s ./...`；B/desktop：`node --test tests/*.test.ts`、`npm run build`、`npx playwright test --config playwright.device.config.ts`、`npx playwright test --config playwright.preview.config.ts`；B：`cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib`。保留输出，不因此前任务已绿而跳过最终受影响集成验证。"
+    },
+    {
+      "id": 82,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "H 在最终 Bee gitlink 下运行 T2 的数据库集成命令，并增加实际 HTTP 三组合：新 Bee／新 Hive、旧请求／新 Hive、新 Bee／旧响应处理器。校验选择详细原因不会改变准入，旧请求仍可被旧严格解码器解析；后者使用固定旧 schema 回归 fixture，禁止为了兼容放宽现行校验。"
+    },
+    {
+      "id": 83,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "用本地测试 Hive 和独立测试状态目录运行真实核心，复现连接拒绝、503、401／403、409、断线退避／恢复与暂停保留；校验可见原因来自该次失败，真实事件覆盖旧 run 迟到。合成账号测试不发送真实模型请求。"
+    },
+    {
+      "id": 84,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "在本地 Hive 和隔离桌面状态中完成真实设备恢复：撤销测试凭据 → 四页可达且原因明确 → 本机确认 → Hive 网页确认／替换确认 → 身份回读有效且贡献仍停止。覆盖重复点击、重启续查、创建／兑换未知和本地保存失败，核对实际请求次数；不把 UI 模拟成功当作恢复回执。"
+    },
+    {
+      "id": 85,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用明确用于验收的真实官方账号，继续修复所选登录来源 → 确认接入且暂停 → 开始贡献仍暂停 → 用户恢复平台接单 → Hive 实际报告 ready。沿用既有 `docs/desktop/account-runtime-validation.md` 的受控请求验收，在专用环境及明确请求范围内分别验证两平台实际请求经本 Bee 到达官方上游并返回，再验证暂停阻止新派发、停止后不可继续接单；记录脱敏关联证据，不仅截取 ready。核对全链路无旧账号迁移、自动接入或自动解除暂停；测试 Hive 需具备对应平台市场／准入条件。缺账号或平台条件则明确记录未完成的环节，不用合成候选冒充全链路通过；不得隐式重绑用户当前设备、替换其他 Bee 或恢复真实接单。"
+    },
+    {
+      "id": 86,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "当前故障之外，分别真实走通首次配对到接单、网络中断恢复、官方登录／取消、换号未知结果核对、代理应用部分失败后继续、诊断读取失败恢复、正常／异常退出重开和更新失败／重启核验。两平台及目标OS差异单独记录；未验证项留待验，不能用39个预览代表全部路径通过。"
+    },
+    {
+      "id": 87,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用 `ego-browser` 检查正式页面、恢复入口、键盘焦点、Escape、对比度、溢出、滚动与无闪烁，按 `web-design-guidelines` 复核。关键截图包括等待网页确认、设备核对失败间距、断线原因、凭据撤销及确认重绑、启动受阻的账号页面、所选文件缺失、恢复后剩余问题和双平台部分可用；导航到诊断及返回后焦点落到目标。"
+    },
+    {
+      "id": 88,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "同尺寸、同主题、同状态对照原批准方案与正式组件，逐项核对页面分区、设备信息顺序、贡献按钮、账号动作及详情入口的位置；暂停／恢复保持右侧且与额度同组。对必要移动记录实际可用性原因，不以预览已改变位置作为理由。"
+    },
+    {
+      "id": 89,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": false,
+      "text": "使用工程现有打包／原生验收入口验证 macOS 壳的菜单、托盘、通知拒绝、关闭窗口与退出、更新确认及实际失败反馈；真实平台操作写明环境和回执。Linux／Windows 若本机无法运行，使用既有对应 CI／原生验收证据；未执行的路径标明阻塞，不将模拟或编译结果写成原生通过。"
+    },
+    {
+      "id": 90,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "文档写入协议参数、细分原因、操作边界、验证命令和结果，保留日志脱敏。T2 后若 Bee 还有契约改动，Hive 子模块指向包含全部契约的最终提交后重跑受影响联调；不覆盖 H 原工作树的已有 gitlink 变化。"
+    },
+    {
+      "id": 91,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "执行 `verification-before-completion`，再做全分支 `affected-path-review`（由 global-conventions 明确要求）、`consistency-check`；发现问题修复后只重跑受影响验证。按执行技能完成检查项核对与 `finishing-a-development-branch`，记录未完成原生路径，不将有阻塞的整体验收勾为完成。"
+    },
+    {
+      "id": 92,
+      "task": "T10：完整流程、协议组合与桌面验收",
+      "checked": true,
+      "text": "证据与文档提交 `test(desktop): verify interaction clarity and recovery paths`；未经授权不推送、发布、部署或合并。"
+    }
+  ],
+  "scenario_count": 76,
+  "all_scenario_rows_still_partial": true,
+  "link_counts": {
+    "docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md": 7,
+    "docs/desktop/interaction-clarity-validation.md": 318,
+    "docs/superpowers/reports/2026-11-03-desktop-interaction-clarity-delivery.md": 0
+  },
+  "missing_links": [],
+  "preservation_after_document_updates": {
+    "original1040": {
+      "count": 1040,
+      "intentional_document_changes": [
+        "docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md"
+      ],
+      "other_differences": []
+    },
+    "round934": {
+      "count": 934,
+      "intentional_document_changes": [
+        "docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md"
+      ],
+      "other_differences": []
+    },
+    "history2143": {
+      "count": 2143,
+      "intentional_document_changes": [],
+      "other_differences": []
+    }
+  },
+  "user_instruction_for_remaining": "用户已明确暂不具备真实资源，按实际缺口记录；不重复请求批准。其余本轮未执行补充项保持未验。",
+  "passed_for_accounting": true,
+  "whole_plan_acceptance": false
+}

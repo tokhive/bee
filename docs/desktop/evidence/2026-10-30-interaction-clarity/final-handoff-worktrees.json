@@ -1,0 +1,24 @@
+{
+  "bee": {
+    "root": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+    "branch": "feat/bee-desktop-p0",
+    "head": "815365835c90953a9cc0b49db922fb504504cfb5",
+    "git_dir": "/Users/dayong/myspace/mywork/tokenhive/bee/.git/worktrees/bee-desktop-p0",
+    "git_common": "/Users/dayong/myspace/mywork/tokenhive/bee/.git"
+  },
+  "hive_worktree": {
+    "root": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/hive-desktop-interaction",
+    "branch": "feat/desktop-interaction-clarity",
+    "head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+    "git_dir": "/Users/dayong/myspace/mywork/tokenhive/hive/.git/worktrees/hive-desktop-interaction",
+    "git_common": "/Users/dayong/myspace/mywork/tokenhive/hive/.git"
+  },
+  "hive_original": {
+    "root": "/Users/dayong/myspace/mywork/tokenhive/hive",
+    "branch": "main",
+    "head": "ae6573b5e116793a8d954a9aba956be8a4f4a2e7",
+    "git_dir": "/Users/dayong/myspace/mywork/tokenhive/hive/.git",
+    "git_common": "/Users/dayong/myspace/mywork/tokenhive/hive/.git",
+    "status": ""
+  }
+}

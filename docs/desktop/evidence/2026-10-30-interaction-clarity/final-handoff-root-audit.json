@@ -1,0 +1,66 @@
+{
+  "observed_at": "2026-11-02T21:30:59.691293+00:00",
+  "bee_head": "815365835c90953a9cc0b49db922fb504504cfb5",
+  "bee_product_commit": "843e3fff557d723ed8626c081f8cecf2567856a5",
+  "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+  "hive_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+  "artifact_count_excluding_manifest": 147,
+  "evidence_commit_path_count": 149,
+  "final_command_sources": {
+    "green-components-final": {
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "final-fix-runtime|D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output"
+      ],
+      "source_count": 946,
+      "differences": [],
+      "exit": 0
+    },
+    "fixture-direct-consumers-final": {
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.final-fix.config.ts",
+        "--grep",
+        "revoked credential recovery requires|preview pairing remains pending",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final-output"
+      ],
+      "source_count": 946,
+      "differences": [],
+      "exit": 0
+    },
+    "typecheck-committed": {
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "source_count": 946,
+      "differences": [],
+      "exit": 0
+    }
+  },
+  "preservation": {
+    "original_dirty_and_untracked": 1040,
+    "round_dirty_and_untracked": 934,
+    "historical_evidence": 2143,
+    "exclusions": []
+  },
+  "errors": [],
+  "passed": true
+}

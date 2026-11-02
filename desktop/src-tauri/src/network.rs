@@ -420,6 +420,17 @@ impl NetworkController {
         scope: &TrustedNetworkScope,
         confirmed: bool,
     ) -> NetworkSnapshot {
+        self.apply_saved_with_restore(store, runtime, scope, confirmed, true)
+            .await
+    }
+    pub(crate) async fn apply_saved_with_restore(
+        &self,
+        store: &PreferencesStore,
+        runtime: &impl NetworkRuntime,
+        scope: &TrustedNetworkScope,
+        confirmed: bool,
+        restore_intent: bool,
+    ) -> NetworkSnapshot {
         let mut state = self.state.lock().await;
         let saved = store.read();
         if let Some(error) = saved.error {
@@ -510,6 +521,9 @@ impl NetworkController {
         }
         capture(&mut state, configured, Some(scope));
         state.applied_scope = Some(scope.device_scope.clone());
+        if !restore_intent {
+            return render(&state, &fresh.preferences, Some(scope), None);
+        }
         match runtime.restore().await.and_then(|view| {
             view.validate()?;
             Ok(view)

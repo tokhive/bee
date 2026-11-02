@@ -116,7 +116,7 @@ impl Bridge {
     }
 
     pub async fn prepare_owned_exit(&self, reason: OwnedExitReason) -> ExitResult {
-        self.0.frozen.store(true, Ordering::SeqCst);
+        self.freeze_for_exit();
         let mut exit = self.0.exit.lock().await;
         if let Some(result) = &exit.result {
             return result.clone();

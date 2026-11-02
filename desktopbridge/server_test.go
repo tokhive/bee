@@ -1,6 +1,7 @@
 package desktopbridge_test
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -16,6 +17,52 @@ import (
 )
 
 const hello = `{"protocol":1,"id":"hello-1","method":"hello","params":{}}` + "\n"
+
+// A successful read fixture must keep stdin alive until the response arrives.
+// EOF instead means cancellation of all outstanding management reads.
+func runDeviceFrames(t *testing.T, device desktopbridge.Devices, frames []string, accounts ...desktopbridge.Accounts) string {
+	t.Helper()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	in, feed := io.Pipe()
+	out, writer := io.Pipe()
+	stop := context.AfterFunc(ctx, func() { in.Close(); feed.Close(); out.Close(); writer.Close() })
+	defer stop()
+	defer in.Close()
+	defer feed.Close()
+	defer out.Close()
+	defer writer.Close()
+	done := make(chan error, 1)
+	go func() {
+		if len(accounts) == 0 {
+			done <- desktopbridge.RunWithDevices(ctx, in, writer, io.Discard, "test", device)
+		} else {
+			done <- desktopbridge.RunWithAccounts(ctx, in, writer, io.Discard, "test", device, accounts[0])
+		}
+		writer.Close()
+	}()
+	reader := bufio.NewReader(out)
+	var result strings.Builder
+	for _, frame := range append(frames, request("fixture-shutdown", "shutdown")) {
+		if frame == "" {
+			continue
+		}
+		if _, err := io.WriteString(feed, frame); err != nil {
+			t.Fatal(err)
+		}
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !strings.Contains(frame, `"fixture-shutdown"`) {
+			result.WriteString(line)
+		}
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+	return result.String()
+}
 
 func request(id, method string) string {
 	return `{"protocol":1,"id":"` + id + `","method":"` + method + `","params":{}}` + "\n"

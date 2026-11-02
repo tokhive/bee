@@ -7,7 +7,9 @@ import (
 	"errors"
 	"io"
 	"reflect"
+	"sort"
 	"strings"
+	"sync"
 	"testing"
 
 	bee "github.com/tokhive/bee/agent"
@@ -16,12 +18,15 @@ import (
 
 type fakeSupply struct {
 	fakeDevice
+	mu     sync.Mutex
 	calls  []string
 	paused []bool
 	fail   bool
 }
 
 func (s *fakeSupply) SupplyStatus(_ context.Context, platform string) (bee.DesktopSupply, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.calls = append(s.calls, platform)
 	if s.fail {
 		return bee.DesktopSupply{}, errors.New("GET /api/bee/platforms/openai: HTTP 503, code=unavailable")
@@ -29,6 +34,8 @@ func (s *fakeSupply) SupplyStatus(_ context.Context, platform string) (bee.Deskt
 	return bee.DesktopSupply{Platform: platform}, nil
 }
 func (s *fakeSupply) SetPaused(_ context.Context, platform string, paused bool) (bee.DesktopSupply, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.calls = append(s.calls, platform)
 	s.paused = append(s.paused, paused)
 	return bee.DesktopSupply{Platform: platform, Paused: paused}, nil
@@ -90,34 +97,34 @@ func TestSupplyCallsPreservePlatformAndExplicitFalse(t *testing.T) {
 	d := &fakeSupply{}
 	var out bytes.Buffer
 	input := hello + supplyRequest("o", "supply_status", `{"platform":"openai"}`) + supplyRequest("c", "supply_status", `{"platform":"claude"}`) + supplyRequest("f", "supply_set_paused", `{"platform":"claude","paused":false}`) + supplyRequest("t", "supply_set_paused", `{"platform":"openai","paused":true}`)
-	if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(input), &out, io.Discard, "test", d); err != nil {
-		t.Fatal(err)
-	}
-	if !reflect.DeepEqual(d.calls, []string{"openai", "claude", "claude", "openai"}) || !reflect.DeepEqual(d.paused, []bool{false, true}) {
-		t.Fatalf("calls=%v paused=%v output=%s", d.calls, d.paused, out.String())
+	out.WriteString(runDeviceFrames(t, d, strings.SplitAfter(input, "\n")))
+	first := append([]string(nil), d.calls[:2]...)
+	sort.Strings(first)
+	if !reflect.DeepEqual(first, []string{"claude", "openai"}) || !reflect.DeepEqual(d.calls[2:], []string{"claude", "openai"}) || !reflect.DeepEqual(d.paused, []bool{false, true}) {
+		t.Fatalf("calls=%v paused=%v", d.calls, d.paused)
 	}
 	frames := replies(t, out.String())
-	for i, platform := range d.calls {
+	for _, frame := range frames[1:] {
 		var result struct {
 			Supply bee.DesktopSupply `json:"supply"`
 		}
-		if frames[i+1].Error != nil {
-			t.Fatal(frames[i+1].Error)
+		if frame.Error != nil {
+			t.Fatal(frame.Error)
 		}
-		if err := json.Unmarshal(frames[i+1].Result, &result); err != nil {
+		if err := json.Unmarshal(frame.Result, &result); err != nil {
 			t.Fatal(err)
 		}
-		if result.Supply.Platform != platform {
-			t.Fatalf("platform=%q want=%q", result.Supply.Platform, platform)
+		want := map[string]string{"o": "openai", "c": "claude", "f": "claude", "t": "openai"}[frame.ID]
+		if result.Supply.Platform != want {
+			t.Fatalf("id=%s platform=%s want=%s", frame.ID, result.Supply.Platform, want)
 		}
 	}
+
 }
 func TestSupplyBusinessFailureDoesNotBreakManagement(t *testing.T) {
 	d := &fakeSupply{fail: true}
 	var out bytes.Buffer
-	if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("s", "supply_status", `{"platform":"openai"}`)+request("p", "ping")), &out, io.Discard, "test", d); err != nil {
-		t.Fatal(err)
-	}
+	out.WriteString(runDeviceFrames(t, d, []string{hello, supplyRequest("s", "supply_status", `{"platform":"openai"}`), request("p", "ping")}))
 	frames := replies(t, out.String())
 	var result struct {
 		Error struct{ Code, Message string } `json:"error"`
@@ -179,9 +186,7 @@ func TestSupplyDetailedReasonsSurviveBridgeEnvelope(t *testing.T) {
 	for _, platform := range []string{"openai", "claude"} {
 		d := &detailedSupply{}
 		var out bytes.Buffer
-		if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("s", "supply_status", `{"platform":"`+platform+`"}`)), &out, io.Discard, "test", d); err != nil {
-			t.Fatal(err)
-		}
+		out.WriteString(runDeviceFrames(t, d, []string{hello, supplyRequest("s", "supply_status", `{"platform":"`+platform+`"}`)}))
 		frame := replies(t, out.String())[1]
 		if frame.Error != nil {
 			t.Fatal(frame.Error)

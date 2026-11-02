@@ -1,0 +1,519 @@
+{
+  "id": "W05-original-operation-unconfirmed",
+  "observed_at": "2026-11-02T19:46:52.541Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "operation": {
+      "id": "cccccccccccccccccccccccccccccccccccccccccccccccc",
+      "kind": "select",
+      "platform": "openai",
+      "state": "reconciling",
+      "revision": 3,
+      "error": null
+    },
+    "submittedWrites": 1,
+    "readOnlyReconciliation": true
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n尚未接入 AI 账号\n\nFixture\n设备与平台控制\n本机设备\nAI 账号\n\n管理这台设备用于贡献的 AI 账号。\n\n打开 Hive 控制台\nAI 账号\n0 个已接入\nOpenAI\n\n尚未接入 OpenAI 账号\n\n不能接单\n\n已有登录，尚未接入\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n\n账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。\n\n等待自动重试… 2026年11月3日 03:47:12\n\n额度\n尚未核对\n接入\n\n已有账号操作待核对；只查询原操作，不会重复提交。\n\n✳\nClaude\n\n尚未接入 Claude 账号\n\n不能接单\n\n已有登录，尚未接入\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n接入\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献",
+    "main": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号0 个已接入OpenAI尚未接入 OpenAI 账号不能接单已有登录，尚未接入Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。等待自动重试… 2026年11月3日 03:47:12额度尚未核对接入已有账号操作待核对；只查询原操作，不会重复提交。✳Claude尚未接入 Claude 账号不能接单已有登录，尚未接入已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对接入授权信息保留在本机",
+    "status": "no_accounts",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "rect": {
+          "x": 715.25,
+          "y": 0.59375,
+          "width": 115.75,
+          "height": 32,
+          "top": 0.59375,
+          "right": 831,
+          "bottom": 32.59375,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 267.859375,
+          "width": 50,
+          "height": 34.390625,
+          "top": 267.859375,
+          "right": 326,
+          "bottom": 302.25,
+          "left": 276
+        }
+      },
+      {
+        "text": "接入",
+        "disabled": true,
+        "rect": {
+          "x": 736,
+          "y": 386.25,
+          "width": 70,
+          "height": 32,
+          "top": 386.25,
+          "right": 806,
+          "bottom": 418.25,
+          "left": 736
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 484.625,
+          "width": 30,
+          "height": 32,
+          "top": 484.625,
+          "right": 806,
+          "bottom": 516.625,
+          "left": 776
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 786.96875,
+          "width": 50,
+          "height": 34.390625,
+          "top": 786.96875,
+          "right": 326,
+          "bottom": 821.359375,
+          "left": 276
+        }
+      },
+      {
+        "text": "接入",
+        "disabled": false,
+        "rect": {
+          "x": 698,
+          "y": 845.359375,
+          "width": 70,
+          "height": 32,
+          "top": 845.359375,
+          "right": 768,
+          "bottom": 877.359375,
+          "left": 698
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 845.359375,
+          "width": 30,
+          "height": 32,
+          "top": 845.359375,
+          "right": 806,
+          "bottom": 877.359375,
+          "left": 776
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": {
+          "id": "cccccccccccccccccccccccccccccccccccccccccccccccc",
+          "kind": "select",
+          "platform": "openai",
+          "state": "reconciling",
+          "revision": 3,
+          "error": null
+        },
+        "revision": 3,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "plan": "plus",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": false,
+          "observed_at": "2026-11-02T19:46:51.766Z",
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "local_structure_only",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 2,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": null,
+          "plan": "pro",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": false,
+          "observed_at": "2026-11-02T19:46:51.766Z",
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "local_structure_only",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "account_action",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "action": "select",
+            "revision": 2,
+            "candidate_ref": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "confirmed": true
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.png"
+}

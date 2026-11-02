@@ -7,6 +7,12 @@ async function capture(page:Page,info:TestInfo,c:typeof cases[number],long=false
  await page.goto('/tests/fixtures/bee-preview/app.html?'+new URLSearchParams({scene:c.scene,locale:c.locale,theme:c.theme,...long?{long:'1'}:{}}));
  await page.waitForFunction(()=>(window as any).__beePreviewReady||(window as any).__beePreviewError);
  expect(await page.evaluate(()=>(window as any).__beePreviewError)).toBeUndefined();
+ if(c.id==='R01'){
+  expect(await page.evaluate(()=>Object.values((window as any).accounts).map((a:any)=>a.selection.state))).toEqual(['not_selected','not_selected']);
+  await expect(page.getByRole('button',{name:c.locale==='en'?'Start contribution':'开始贡献',exact:true})).toBeDisabled();
+  await expect(page.getByRole('region',{name:c.locale==='en'?'Contribution runtime':'贡献运行',exact:true})).toContainText(c.locale==='en'?'Connect at least one AI account first.':'请先接入至少一个 AI 账号。');
+  await expect(page.getByRole('button',{name:c.locale==='en'?'Prepare accounts':'前往准备账号',exact:true})).toBeVisible();
+ }
  if(c.scene==='diagnostics-export-unknown')await expect(page.locator('body')).toContainText(c.locale==='en'?'Report download result unconfirmed':'报告下载结果未确认',{timeout:35000});
  if(c.scene==='check-expired')await expect(page.locator('.account-check-status')).toHaveCount(1);
  if(c.scene==='diagnostics-read-failed')await expect(page.locator('body')).toContainText('报告读取已暂停');

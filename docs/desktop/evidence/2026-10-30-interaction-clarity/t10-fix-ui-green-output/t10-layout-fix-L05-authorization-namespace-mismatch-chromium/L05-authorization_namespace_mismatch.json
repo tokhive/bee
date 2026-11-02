@@ -1,0 +1,635 @@
+{
+  "id": "L05-authorization_namespace_mismatch",
+  "observed_at": "2026-11-02T19:46:51.508Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "operation": "authorize",
+    "state": "failed",
+    "code": "authorization_namespace_mismatch"
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n尚未接入 AI 账号\n\nFixture\n设备与平台控制\n本机设备\nAI 账号\n\n管理这台设备用于贡献的 AI 账号。\n\n打开 Hive 控制台\nAI 账号\n0 个已接入\nOpenAI\n\n尚未接入 OpenAI 账号\n\n不能接单\n\n已有登录，尚未接入\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n\n账号操作失败\n\n所选登录位置与官方客户端登录位置不一致。\n\n本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。\n\n检查凭证来源\n查看失败详情\n额度\n尚未核对\n接入\n✳\nClaude\n\n尚未接入 Claude 账号\n\n不能接单\n\n已有登录，尚未接入\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n接入\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献\nOpenAI 账号详情\n关闭\n\n查看账号与额度，管理凭证读取方式。\n\n当前账号标识\n尚未接入 OpenAI 账号\n候选账号标识\nbbbbbbbbbbbbbbbb\n\n已有登录，尚未接入\n\n额度与重置\n额度\n尚未核对\n凭证读取方式\n\n读取官方客户端已保存的登录；目录留空使用默认位置。\n\n自定义目录\n存储方式\n自动\n文件\n钥匙串\n\n修改读取位置不会自动更换已接入账号。\n\n账号操作失败\n\n所选登录位置与官方客户端登录位置不一致。\n\n本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。\n\n检查凭证来源\n查看失败详情\n接入\n登录 OpenAI",
+    "main": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号0 个已接入OpenAI尚未接入 OpenAI 账号不能接单已有登录，尚未接入Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接账号操作失败所选登录位置与官方客户端登录位置不一致。本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。检查凭证来源查看失败详情错误码: authorization_namespace_mismatch\n失败环节: official_source_recheck\nconfirmed: false\n原始原因: official process exited; source verification failed; verified=false额度尚未核对接入✳Claude尚未接入 Claude 账号不能接单已有登录，尚未接入已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对接入授权信息保留在本机",
+    "status": "no_accounts",
+    "dialogs": [
+      {
+        "text": "OpenAI 账号详情关闭查看账号与额度，管理凭证读取方式。当前账号标识尚未接入 OpenAI 账号候选账号标识bbbbbbbbbbbbbbbb已有登录，尚未接入额度与重置额度尚未核对凭证读取方式读取官方客户端已保存的登录；目录留空使用默认位置。自定义目录存储方式自动文件钥匙串修改读取位置不会自动更换已接入账号。账号操作失败所选登录位置与官方客户端登录位置不一致。本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。检查凭证来源查看失败详情错误码: authorization_namespace_mismatch\n失败环节: official_source_recheck\nconfirmed: false\n原始原因: official process exited; source verification failed; verified=false接入登录 OpenAI",
+        "rect": {
+          "x": 430,
+          "y": 0,
+          "width": 430,
+          "height": 600,
+          "top": 0,
+          "right": 860,
+          "bottom": 600,
+          "left": 430
+        }
+      }
+    ],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "rect": {
+          "x": 715.25,
+          "y": 87.59375,
+          "width": 115.75,
+          "height": 32,
+          "top": 87.59375,
+          "right": 831,
+          "bottom": 119.59375,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 354.859375,
+          "width": 50,
+          "height": 34.390625,
+          "top": 354.859375,
+          "right": 326,
+          "bottom": 389.25,
+          "left": 276
+        }
+      },
+      {
+        "text": "检查凭证来源",
+        "disabled": false,
+        "rect": {
+          "x": 289,
+          "y": 555.75,
+          "width": 102,
+          "height": 33.5,
+          "top": 555.75,
+          "right": 391,
+          "bottom": 589.25,
+          "left": 289
+        }
+      },
+      {
+        "text": "接入",
+        "disabled": false,
+        "rect": {
+          "x": 698,
+          "y": 682.25,
+          "width": 70,
+          "height": 32,
+          "top": 682.25,
+          "right": 768,
+          "bottom": 714.25,
+          "left": 698
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 682.25,
+          "width": 30,
+          "height": 32,
+          "top": 682.25,
+          "right": 806,
+          "bottom": 714.25,
+          "left": 776
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 984.59375,
+          "width": 50,
+          "height": 34.390625,
+          "top": 984.59375,
+          "right": 326,
+          "bottom": 1018.984375,
+          "left": 276
+        }
+      },
+      {
+        "text": "接入",
+        "disabled": false,
+        "rect": {
+          "x": 698,
+          "y": 1042.984375,
+          "width": 70,
+          "height": 32,
+          "top": 1042.984375,
+          "right": 768,
+          "bottom": 1074.984375,
+          "left": 698
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 1042.984375,
+          "width": 30,
+          "height": 32,
+          "top": 1042.984375,
+          "right": 806,
+          "bottom": 1074.984375,
+          "left": 776
+        }
+      },
+      {
+        "text": "关闭",
+        "disabled": false,
+        "rect": {
+          "x": 786,
+          "y": -67.25,
+          "width": 48,
+          "height": 32,
+          "top": -67.25,
+          "right": 834,
+          "bottom": -35.25,
+          "left": 786
+        }
+      },
+      {
+        "text": "检查凭证来源",
+        "disabled": false,
+        "rect": {
+          "x": 719,
+          "y": 563.078125,
+          "width": 102,
+          "height": 33.5,
+          "top": 563.078125,
+          "right": 821,
+          "bottom": 596.578125,
+          "left": 719
+        }
+      },
+      {
+        "text": "接入",
+        "disabled": false,
+        "rect": {
+          "x": 456,
+          "y": 738.078125,
+          "width": 48,
+          "height": 32,
+          "top": 738.078125,
+          "right": 504,
+          "bottom": 770.078125,
+          "left": 456
+        }
+      },
+      {
+        "text": "登录 OpenAI",
+        "disabled": false,
+        "rect": {
+          "x": 512,
+          "y": 738.078125,
+          "width": 93.96875,
+          "height": 32,
+          "top": 738.078125,
+          "right": 605.96875,
+          "bottom": 770.078125,
+          "left": 512
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": {
+          "id": "dddddddddddddddddddddddddddddddddddddddddddddddd",
+          "kind": "authorize",
+          "platform": "openai",
+          "state": "failed",
+          "revision": 4,
+          "error": {
+            "code": "authorization_namespace_mismatch",
+            "check": "official_source_recheck",
+            "platform": "openai",
+            "message": "official process exited; source verification failed; verified=false",
+            "evidence": {
+              "confirmed": "false"
+            }
+          }
+        },
+        "revision": 4,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "plan": "plus",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": false,
+          "observed_at": "2026-11-02T19:46:50.949Z",
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "local_structure_only",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 2,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": null,
+          "plan": "pro",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": false,
+          "observed_at": "2026-11-02T19:46:50.949Z",
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "local_structure_only",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "authorize_start",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "source": {
+              "directory": null,
+              "store": "file"
+            },
+            "expected_revision": 2
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-L05-authorization-namespace-mismatch-chromium/L05-authorization_namespace_mismatch.png"
+}

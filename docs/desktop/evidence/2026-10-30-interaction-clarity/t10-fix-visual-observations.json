@@ -1,0 +1,112 @@
+{
+  "recorded_at": "2026-11-02T20:00:01.421278+00:00",
+  "method": "Actual tools.view_image calls; no inferred claim that all collected screenshots were manually opened.",
+  "count": 21,
+  "images": [
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-R01-no-selection-chromium/R01-no-selection.png",
+      "sha256": "f9b94d274ff8fe39a4d889462c3445646a43ebc2bc8e0884db23ac91059bb3d5",
+      "observation": "开始禁用、先接入说明与前往准备账号入口可见。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-R01-accounts-unconfirmed-chromium/R01-accounts-unconfirmed.png",
+      "sha256": "4c37a8d8447e931b514411c69e513a63f6792e9ea62dc25d73dd6749b1835b85",
+      "observation": "共享读取失败；贡献/账号未知，未假造零账号。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.png",
+      "sha256": "f9352cdc053315bf967afe1fd5e000b5765f6ad79e16dacd3d9e3d8441449f2b",
+      "observation": "滚动至登录操作；禁用登录和先停止说明/停止入口可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.png",
+      "sha256": "bf87e1ae2d7ff4d1cebbd59f9ed1906dd32e929bcd2f014439f5a1fe8783ba0e",
+      "observation": "具体配置失败及JSON byte19原始证据可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation.png",
+      "sha256": "aa556872c76ec31827dda50fa08c841f8c56b6de994f041560d97712a2fdb7f4",
+      "observation": "旧换号确认disabled，条件变化说明、当前/目标账号同时可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.png",
+      "sha256": "05c900cbcb8a2d188b07412a5e7416df3f379cadaafdc141fea943de23b3ebd4",
+      "observation": "原账号操作未知及只核对不重提说明、禁用接入可见。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-G05-logs-empty-chromium/G05-logs-empty.png",
+      "sha256": "aa1e3308b3c31ac79c89d40be818544b59c1b3d3c96afd23cc6d59471c797db1",
+      "observation": "日志空状态对象明确，筛选和刷新可见。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more.png",
+      "sha256": "10e49f98e1d79943f4634d5a569564698b715c887b4132738db003b557310696",
+      "observation": "实际账号/OpenAI/提醒筛选、轮转说明和加载更多入口可见。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-U05-recovery-unproven-protected-chromium/U05-unproven-protected.png",
+      "sha256": "020d11e7cd1db7f9a7a2dd1cd21289a0274962ab2df7ecdaf3137461afcf7c96",
+      "observation": "恢复保护保留、重新读取入口与具体缺失runtime证据可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-account_not_admitted.png",
+      "sha256": "b75646c7a2b7165c8d5950625c8c911b568ff976601dce0af8374e8b4793dfb8",
+      "observation": "准入原因可见；最终各原因完整处理说明改用reasons-visible-final。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.png",
+      "sha256": "0adcab59a4d5a3982ce5438056fafcc51eb26cf358fbd38fe9b7e55d08d0f02b",
+      "observation": "限流摘要与本地账号保留可见；最终HTTP429展开细节改用frozen。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-green-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported.png",
+      "sha256": "3123e854cc3158ecb2343b8eaf1869cd6b0b588fb01ea47941556c0a6305774c",
+      "observation": "keyring不可用和真实reason可读，当前存储仍file。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending.png",
+      "sha256": "c302e3b7e259b3e00027d28dbaeba3fec3c7d4381633cc1294b2165c86158590",
+      "observation": "bound/stopped可信，开始禁用，count待确认且非零；说明基于runtime not_selected。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts.png",
+      "sha256": "84235f88bdfb05210db97bc51fad8aaebcc21cdaf5be8b39dc802de39f4a1d9a",
+      "observation": "账号页真实来源读取中，count待确认，详情入口可见。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.png",
+      "sha256": "cee18a21c4785ad437fc331cdc2d9aa90e41c8676cddefb842c84399bfbe4bec",
+      "observation": "Rust实际VERSION_MISMATCH与protocol=2/required=1可读；摘要仍通用。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked.png",
+      "sha256": "114012a381770a11a95908375d5c69ad1fa59d17efe9b978fbb6d7a7dfdee45b",
+      "observation": "Rust实际BUNDLED_BEE_INVALID、路径和actual/required SHA换行可读；摘要仍通用。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.png",
+      "sha256": "e4eebc74f7b83fff1a307f0c3546a27fb043e8625dd2b6128460dfee9a276d42",
+      "observation": "official_capability_query、HTTP429、路径及retry_after_seconds=25完整可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-supply_device_restricted.png",
+      "sha256": "bcb66c20d4621ac4c8aca0ff01173390801dc3e02c1ecdd4a8b59d0d379287a9",
+      "observation": "供给设备限制标题及管理员处理说明均位于固定栏之间。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-plan_not_configured.png",
+      "sha256": "8e037c0769bb139efbc351ac7dfbb478e78d1419f4f7fe40dc675a99a6651495",
+      "observation": "套餐并发上限原因及处理说明完整可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-concurrency_full.png",
+      "sha256": "6dbfd5671566af2f663ae92139d67b0c27f1a032fb7c4cea2940bcdcf40c7306",
+      "observation": "并发满的等待条件与无可承诺恢复时刻说明完整可读。"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-claude_authorization_rejected.png",
+      "sha256": "200c2e168eba1ffab85c858d19d3cef6f1f8de1ef972125e79e0178a745ec33a",
+      "observation": "Claude授权拒绝及重新登录前先停贡献说明/详情入口完整可读。"
+    }
+  ]
+}

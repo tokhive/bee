@@ -1,0 +1,156 @@
+{
+  "spaceId": 41,
+  "observed_at": "2026-11-02T19:47:21.458Z",
+  "states": [
+    {
+      "facts": {
+        "scene": "runtime-accounts-unconfirmed",
+        "width": 860,
+        "body": "概览\n打开 Hive 控制台\n状态待确认\n\n开始后建立连接；接单需单独恢复。\n\n开始贡献\n\n请先核对本机贡献状态。\n\nBee 状态待确认\nHive 状态待确认\n\n贡献状态待确认，等待已安排的核对。\n\n本机设备\n重新核对设备\n\n本机设备\n\nBee Desktop\n上次确认的设备，当前待核对。\n\n归属账号\n\nowner@example.test\n设备所属账号\n\nHive\n\nhttps://hive.example\n配对不会自动开始贡献\n\n本次操作失败，原因尚未确认。\n\n本次操作未能完成；后续状态以重新核对的结果为准。\n\n查看失败详情\nAI 账号\n等待自动重试…\n接入数量待确认\nOpenAI\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:47:32\n\n额度\n尚未核对\n✳\nClaude\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:47:32\n\n额度\n尚未核对\n\n授权信息保留在本机",
+        "start": [
+          {
+            "disabled": true,
+            "describedBy": "_r_0_"
+          }
+        ],
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "device_context",
+            "args": {}
+          },
+          {
+            "command": "device_recovery_status",
+            "args": {}
+          },
+          {
+            "command": "device_status",
+            "args": {}
+          },
+          {
+            "command": "device_context",
+            "args": {}
+          },
+          {
+            "command": "runtime_snapshot",
+            "args": {}
+          },
+          {
+            "command": "account_defaults",
+            "args": {}
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "zh",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ]
+      },
+      "navigation": {
+        "heading": "AI 账号",
+        "focused": true,
+        "writes": []
+      }
+    },
+    {
+      "facts": {
+        "scene": "runtime-no-accounts",
+        "width": 860,
+        "body": "概览\n打开 Hive 控制台\n尚未接入 AI 账号\n\n开始后建立连接；接单需单独恢复。\n\n开始贡献\n\n请先接入至少一个 AI 账号。\n\nBee 未运行\n尚未建立 Hive 连接\n准备贡献\n绑定本机设备\n在 Hive 网页确认\n接入 AI 账号\n开始贡献并按平台恢复接单\n前往准备账号\n本机设备\n重新核对设备\n\n本机设备\n\nBee Desktop\n设备已绑定。\n\n归属账号\n\nowner@example.test\n设备所属账号\n\nHive\n\nhttps://hive.example\n配对不会自动开始贡献\nAI 账号\n0 个已接入\nOpenAI\n\n尚未接入 OpenAI 账号\n\n不能接单\n\n所选来源未找到登录；可调整读取位置或使用官方登录。\n\n此 Hive 未提供更具体的接单原因\n\n请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n✳\nClaude\n\n尚未接入 Claude 账号\n\n不能接单\n\n所选来源未找到登录；可调整读取位置或使用官方登录。\n\n此 Hive 未提供更具体的接单原因\n\n请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n\n授权信息保留在本机",
+        "start": [
+          {
+            "disabled": true,
+            "describedBy": "_r_0_"
+          }
+        ],
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "device_context",
+            "args": {}
+          },
+          {
+            "command": "device_recovery_status",
+            "args": {}
+          },
+          {
+            "command": "device_status",
+            "args": {}
+          },
+          {
+            "command": "device_context",
+            "args": {}
+          },
+          {
+            "command": "runtime_snapshot",
+            "args": {}
+          },
+          {
+            "command": "account_defaults",
+            "args": {}
+          },
+          {
+            "command": "account_snapshot",
+            "args": {
+              "platform": "openai",
+              "refresh": true
+            }
+          },
+          {
+            "command": "account_snapshot",
+            "args": {
+              "platform": "claude",
+              "refresh": true
+            }
+          },
+          {
+            "command": "supply_status",
+            "args": {
+              "platform": "openai"
+            }
+          },
+          {
+            "command": "supply_status",
+            "args": {
+              "platform": "claude"
+            }
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "zh",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ]
+      },
+      "navigation": {
+        "heading": "AI 账号",
+        "focused": true,
+        "writes": []
+      }
+    }
+  ]
+}

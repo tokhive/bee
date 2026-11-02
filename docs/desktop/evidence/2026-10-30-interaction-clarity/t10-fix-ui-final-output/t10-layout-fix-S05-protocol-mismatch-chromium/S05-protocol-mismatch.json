@@ -1,0 +1,266 @@
+{
+  "id": "S05-protocol-mismatch",
+  "observed_at": "2026-11-02T19:45:57.032Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "code": "PROTOCOL_VERSION_MISMATCH",
+    "check": "bridge_hello",
+    "message": "hello protocol actual=2 required=1; child rejected=true",
+    "syntheticFailure": true
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\n尚未连接 Hive\n\n贡献未启动或已中断\n\nBee 桌面端\n设备与平台控制\n本机设备\n概览\n打开 Hive 控制台\n原生管理进程\n\n本次操作失败，原因尚未确认。\n\n本次操作未能完成；后续状态以重新核对的结果为准。\n\n查看失败详情\n错误码: PROTOCOL_VERSION_MISMATCH\n失败环节: bridge_hello\n观察时间: 2026年11月3日 03:45:56\n实际值: 2\n要求: 1\n原始原因: hello protocol actual=2 required=1; child rejected=true\nBee\n设备绑定不自动开始贡献",
+    "main": "概览打开 Hive 控制台原生管理进程本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: PROTOCOL_VERSION_MISMATCH\n失败环节: bridge_hello\n观察时间: 2026年11月3日 03:45:56\n实际值: 2\n要求: 1\n原始原因: hello protocol actual=2 required=1; child rejected=true",
+    "status": "failed",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": true,
+        "rect": {
+          "x": 715.25,
+          "y": 77,
+          "width": 115.75,
+          "height": 32,
+          "top": 77,
+          "right": 831,
+          "bottom": 109,
+          "left": 715.25
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "bridge_status",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "bridge_status",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-final-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.png"
+}

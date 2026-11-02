@@ -1,0 +1,635 @@
+{
+  "id": "L02-running-login-disabled",
+  "observed_at": "2026-11-02T19:45:57.750Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "local": "running",
+    "selectedPlatforms": [
+      "openai",
+      "claude"
+    ]
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n接单条件尚未满足\n\nFixture\n设备与平台控制\n本机设备\nAI 账号\n\n管理这台设备用于贡献的 AI 账号。\n\n打开 Hive 控制台\nAI 账号\n2 个已接入\nOpenAI\nPlus\n\n账号标识: bbbbbbbbbbbbbbbb\n\n不能接单\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n5 小时\n已用 120%\n7 日\n尚未核对\n\n有额度窗口已耗尽；请查看各窗口重置时间。\n\n暂停接单\n✳\nClaude\n套餐待确认\n\n账号标识: bbbbbbbbbbbbbbbb\n\n不能接单\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n恢复接单\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献\nOpenAI 账号详情\n关闭\n\n查看账号与额度，管理凭证读取方式。\n\n当前账号标识\nbbbbbbbbbbbbbbbb\n订阅套餐\nplus\n授权到期\n2099年1月1日 08:00:00\n候选账号标识\nbbbbbbbbbbbbbbbb\n\n额度与重置\n5 小时\n已用 120%\n\n重置时间: 2099年1月1日 08:00:00\n\n7 日\n尚未核对\n\n重置时间: 未知\n\n有额度窗口已耗尽；请查看各窗口重置时间。\n\n凭证读取方式\n\n读取官方客户端已保存的登录；目录留空使用默认位置。\n\n自定义目录\n存储方式\n自动\n文件\n钥匙串\n\n修改读取位置不会自动更换已接入账号。\n\n重新登录\n取消接入\n\n官方登录前请先停止贡献；前往概览停止后再返回。\n\n查看贡献运行",
+    "main": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号2 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb不能接单Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接5 小时已用 120%7 日尚未核对有额度窗口已耗尽；请查看各窗口重置时间。暂停接单✳Claude套餐待确认账号标识: bbbbbbbbbbbbbbbb不能接单已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对恢复接单授权信息保留在本机",
+    "status": "blocked",
+    "dialogs": [
+      {
+        "text": "OpenAI 账号详情关闭查看账号与额度，管理凭证读取方式。当前账号标识bbbbbbbbbbbbbbbb订阅套餐plus授权到期2099年1月1日 08:00:00候选账号标识bbbbbbbbbbbbbbbb额度与重置5 小时已用 120%重置时间: 2099年1月1日 08:00:007 日尚未核对重置时间: 未知有额度窗口已耗尽；请查看各窗口重置时间。凭证读取方式读取官方客户端已保存的登录；目录留空使用默认位置。自定义目录存储方式自动文件钥匙串修改读取位置不会自动更换已接入账号。重新登录取消接入官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行",
+        "rect": {
+          "x": 430,
+          "y": 0,
+          "width": 430,
+          "height": 600,
+          "top": 0,
+          "right": 860,
+          "bottom": 600,
+          "left": 430
+        }
+      }
+    ],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "rect": {
+          "x": 715.25,
+          "y": 87.59375,
+          "width": 115.75,
+          "height": 32,
+          "top": 87.59375,
+          "right": 831,
+          "bottom": 119.59375,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 334.46875,
+          "width": 50,
+          "height": 34.390625,
+          "top": 334.46875,
+          "right": 326,
+          "bottom": 368.859375,
+          "left": 276
+        }
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "rect": {
+          "x": 694,
+          "y": 392.859375,
+          "width": 74,
+          "height": 32,
+          "top": 392.859375,
+          "right": 768,
+          "bottom": 424.859375,
+          "left": 694
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 392.859375,
+          "width": 30,
+          "height": 32,
+          "top": 392.859375,
+          "right": 806,
+          "bottom": 424.859375,
+          "left": 776
+        }
+      },
+      {
+        "text": "查看连接",
+        "disabled": false,
+        "rect": {
+          "x": 276,
+          "y": 674.8125,
+          "width": 50,
+          "height": 34.390625,
+          "top": 674.8125,
+          "right": 326,
+          "bottom": 709.203125,
+          "left": 276
+        }
+      },
+      {
+        "text": "恢复接单",
+        "disabled": false,
+        "rect": {
+          "x": 694,
+          "y": 733.203125,
+          "width": 74,
+          "height": 32,
+          "top": 733.203125,
+          "right": 768,
+          "bottom": 765.203125,
+          "left": 694
+        }
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "rect": {
+          "x": 776,
+          "y": 733.203125,
+          "width": 30,
+          "height": 32,
+          "top": 733.203125,
+          "right": 806,
+          "bottom": 765.203125,
+          "left": 776
+        }
+      },
+      {
+        "text": "关闭",
+        "disabled": false,
+        "rect": {
+          "x": 786,
+          "y": -287.25,
+          "width": 48,
+          "height": 32,
+          "top": -287.25,
+          "right": 834,
+          "bottom": -255.25,
+          "left": 786
+        }
+      },
+      {
+        "text": "重新登录",
+        "disabled": true,
+        "rect": {
+          "x": 456,
+          "y": 477.28125,
+          "width": 72,
+          "height": 32,
+          "top": 477.28125,
+          "right": 528,
+          "bottom": 509.28125,
+          "left": 456
+        }
+      },
+      {
+        "text": "取消接入",
+        "disabled": false,
+        "rect": {
+          "x": 536,
+          "y": 477.28125,
+          "width": 72,
+          "height": 32,
+          "top": 477.28125,
+          "right": 608,
+          "bottom": 509.28125,
+          "left": 536
+        }
+      },
+      {
+        "text": "查看贡献运行",
+        "disabled": false,
+        "rect": {
+          "x": 456,
+          "y": 540.46875,
+          "width": 84,
+          "height": 33.1875,
+          "top": 540.46875,
+          "right": 540,
+          "bottom": 573.65625,
+          "left": 456
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": null,
+        "revision": 3,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "plan": "plus",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": true,
+          "observed_at": "2026-11-02T19:45:57.372Z",
+          "error": null
+        },
+        "selection": {
+          "state": "selected",
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "observed_at": "2026-11-02T19:45:56.570Z",
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "official_identity_verified",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "ready",
+            "observed_at": "2026-11-02T19:45:57.372Z",
+            "metadata_observed_at": "2026-11-02T19:45:57.372Z",
+            "valid_until": "2026-11-02T19:51:57.372Z",
+            "retry_at": null,
+            "plan": null,
+            "windows": [
+              {
+                "scope": "",
+                "seconds": 18000,
+                "used_percent": 120,
+                "reset_at": "2099-01-01T00:00:00Z"
+              },
+              {
+                "scope": "",
+                "seconds": 604800,
+                "used_percent": null,
+                "reset_at": null
+              }
+            ],
+            "models": [
+              {
+                "id": "gpt-5.4",
+                "account_supported": true,
+                "market_open": null,
+                "accepting": null
+              }
+            ],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 2,
+        "candidate": {
+          "state": "available",
+          "reference": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "fingerprint": null,
+          "plan": "pro",
+          "expires_at": "2099-01-01T00:00:00Z",
+          "identity_verified": false,
+          "observed_at": "2026-11-02T19:45:57.337Z",
+          "error": null
+        },
+        "selection": {
+          "state": "selected",
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "observed_at": "2026-11-02T19:45:56.570Z",
+          "error": null
+        },
+        "hive": {
+          "state": "unconfirmed",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "local_structure_only",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "runtime_start",
+        "args": {
+          "request": {
+            "expected_revision": 0,
+            "resume_platforms": []
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "official"
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-final-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.png"
+}

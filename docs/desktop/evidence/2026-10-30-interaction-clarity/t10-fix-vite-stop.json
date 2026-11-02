@@ -1,0 +1,12 @@
+{
+  "session_id": 13683,
+  "action": "write_stdin Ctrl-C",
+  "ownership": "this task started Vite at B/desktop port 1519",
+  "result": {
+    "chunk_id": "4e083f",
+    "wall_time_seconds": 0.02458075,
+    "exit_code": 130,
+    "original_token_count": 59,
+    "output": "3:41:10 AM [vite] (client) page reload tests/fixtures/bee-preview/scenarios.mjs\n3:41:10 AM [vite] (client) page reload tests/fixtures/bee-preview/fixture.mjs\n3:44:50 AM [vite] (client) page reload tests/fixtures/bee-preview/fixture.mjs\n"
+  }
+}

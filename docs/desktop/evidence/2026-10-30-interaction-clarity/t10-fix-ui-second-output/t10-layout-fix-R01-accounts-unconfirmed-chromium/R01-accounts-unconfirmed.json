@@ -1,0 +1,309 @@
+{
+  "id": "R01-accounts-unconfirmed",
+  "observed_at": "2026-11-02T19:44:55.353Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "scene": "runtime-accounts-unconfirmed",
+    "accountFactsConfirmed": false
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n状态待确认\n\nBee Desktop\n设备与平台控制\n本机设备\n概览\n打开 Hive 控制台\n状态待确认\n\n开始后建立连接；接单需单独恢复。\n\n开始贡献\n\n请先核对本机贡献状态。\n\nBee 状态待确认\nHive 状态待确认\n\n贡献状态待确认，等待已安排的核对。\n\n本机设备\n重新核对设备\n\n本机设备\n\nBee Desktop\n上次确认的设备，当前待核对。\n\n归属账号\n\nowner@example.test\n设备所属账号\n\nHive\n\nhttps://hive.example\n配对不会自动开始贡献\n\n本次操作失败，原因尚未确认。\n\n本次操作未能完成；后续状态以重新核对的结果为准。\n\n查看失败详情\nAI 账号\n等待自动重试…\n接入数量待确认\nOpenAI\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:45:05\n\n额度\n尚未核对\n✳\nClaude\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:45:05\n\n额度\n尚未核对\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献",
+    "main": "概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先核对本机贡献状态。Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本机设备重新核对设备本机设备Bee Desktop上次确认的设备，当前待核对。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: RUNTIME_OPERATION_FAILED\n失败环节: desktop_refresh\n原始原因: runtime snapshot unavailable; account facts not confirmedAI 账号等待自动重试…接入数量待确认OpenAI账号状态尚未确认状态待更新等待自动重试… 2026年11月3日 03:45:05额度尚未核对✳Claude账号状态尚未确认状态待更新等待自动重试… 2026年11月3日 03:45:05额度尚未核对授权信息保留在本机",
+    "status": "unconfirmed",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "rect": {
+          "x": 715.25,
+          "y": 77,
+          "width": 115.75,
+          "height": 32,
+          "top": 77,
+          "right": 831,
+          "bottom": 109,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "rect": {
+          "x": 734,
+          "y": 132,
+          "width": 97,
+          "height": 32,
+          "top": 132,
+          "right": 831,
+          "bottom": 164,
+          "left": 734
+        }
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "rect": {
+          "x": 710,
+          "y": 322.5,
+          "width": 121,
+          "height": 33.5,
+          "top": 322.5,
+          "right": 831,
+          "bottom": 356,
+          "left": 710
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "source_missing",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "source_missing",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "runtime-accounts-unconfirmed",
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-second-output/t10-layout-fix-R01-accounts-unconfirmed-chromium/R01-accounts-unconfirmed.png"
+}

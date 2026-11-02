@@ -1,0 +1,308 @@
+{
+  "id": "S05-config-invalid",
+  "observed_at": "2026-11-02T19:55:10.756Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "code": "DEVICE_CONTEXT_INVALID",
+    "check": "device_context",
+    "message": "configuration decode failed: invalid JSON at byte=19; file retained=true",
+    "syntheticFailure": true
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n状态待确认\n\nFixture\n设备与平台控制\n本机设备\n概览\n打开 Hive 控制台\n状态待确认\n\n开始后建立连接；接单需单独恢复。\n\n开始贡献\n\n请先核对本机贡献状态。\n\nBee 状态待确认\nHive 状态待确认\n\n贡献状态待确认，等待已安排的核对。\n\n本机设备\n重新核对设备\n\n本机设备\n\nFixture\n上次确认的设备，当前待核对。\n\n归属账号\n\nowner@example.test\n设备所属账号\n\nHive\n\nhttps://hive.example\n配对不会自动开始贡献\n\n已保存的本机设备配置未通过校验。\n\n依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。\n\n查看诊断\n查看失败详情\n错误码: DEVICE_CONTEXT_INVALID\n失败环节: device_context\n观察时间: 2026年11月3日 03:55:10\n实际值: invalid JSON\n要求: valid saved configuration\n原始原因: configuration decode failed: invalid JSON at byte=19; file retained=true\nAI 账号\n等待自动重试…\n接入数量待确认\nOpenAI\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:55:20\n\n额度\n尚未核对\n✳\nClaude\n\n账号状态尚未确认\n\n状态待更新\n\n等待自动重试… 2026年11月3日 03:55:20\n\n额度\n尚未核对\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献",
+    "main": "概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先核对本机贡献状态。Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本机设备重新核对设备本机设备Fixture上次确认的设备，当前待核对。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献已保存的本机设备配置未通过校验。依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。查看诊断查看失败详情错误码: DEVICE_CONTEXT_INVALID\n失败环节: device_context\n观察时间: 2026年11月3日 03:55:10\n实际值: invalid JSON\n要求: valid saved configuration\n原始原因: configuration decode failed: invalid JSON at byte=19; file retained=trueAI 账号等待自动重试…接入数量待确认OpenAI账号状态尚未确认状态待更新等待自动重试… 2026年11月3日 03:55:20额度尚未核对✳Claude账号状态尚未确认状态待更新等待自动重试… 2026年11月3日 03:55:20额度尚未核对授权信息保留在本机",
+    "status": "unconfirmed",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": true,
+        "rect": {
+          "x": 715.25,
+          "y": -99,
+          "width": 115.75,
+          "height": 32,
+          "top": -99,
+          "right": 831,
+          "bottom": -67,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "rect": {
+          "x": 734,
+          "y": -44,
+          "width": 97,
+          "height": 32,
+          "top": -44,
+          "right": 831,
+          "bottom": -12,
+          "left": 734
+        }
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "rect": {
+          "x": 710,
+          "y": 146.5,
+          "width": 121,
+          "height": 33.5,
+          "top": 146.5,
+          "right": 831,
+          "bottom": 180,
+          "left": 710
+        }
+      },
+      {
+        "text": "查看诊断",
+        "disabled": false,
+        "rect": {
+          "x": 742,
+          "y": 295.5,
+          "width": 76,
+          "height": 33.5,
+          "top": 295.5,
+          "right": 818,
+          "bottom": 329,
+          "left": 742
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.png"
+}

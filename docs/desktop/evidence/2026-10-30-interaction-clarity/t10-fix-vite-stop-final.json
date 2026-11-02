@@ -1,0 +1,12 @@
+{
+  "session_id": 77867,
+  "action": "write_stdin Ctrl-C",
+  "ownership": "this task restarted Vite port 1519 only for requested P04-P07 screenshot verification",
+  "result": {
+    "chunk_id": "fcc236",
+    "wall_time_seconds": 0.034708792,
+    "exit_code": 130,
+    "original_token_count": 0,
+    "output": ""
+  }
+}

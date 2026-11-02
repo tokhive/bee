@@ -1,0 +1,1979 @@
+[
+  {
+    "id": "S01",
+    "scene": "bridge-starting",
+    "scope": "T4a/T5；首次打开、管理进程启动中",
+    "expectation": "加载有对象；无未绑定、零账号或可接单的提前结论",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S01-T4a-T5；首次打开、管理进程启动中-chromium/S01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S01-T4a-T5；首次打开、管理进程启动中-chromium/S01.png",
+    "observed_at": "2026-11-02T18:58:02.046Z",
+    "verified_scope": "bridge-starting 加载画面；正式 device/recovery-navigation 回归无提前写入。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "S02",
+    "scene": "device-bound",
+    "scope": "T5/T6；管理进程可通信、启动检查通过",
+    "expectation": "进入四页并按真实缺项引导",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S02-T5-T6；管理进程可通信、启动检查通过-chromium/S02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S02-T5-T6；管理进程可通信、启动检查通过-chromium/S02.png",
+    "observed_at": "2026-11-02T18:58:03.389Z",
+    "verified_scope": "已绑定概览入口；四页导航由 recovery-navigation 回归；真实 GUI 待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "S03",
+    "scene": "bridge-failed",
+    "scope": "T4a/T9；管理进程缺失、崩溃、被占用",
+    "expectation": "说明失败环节；可用日志和菜单恢复入口；不假造重启按钮",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S03-T4a-T9；管理进程缺失、崩溃、被占用-chromium/S03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S03-T4a-T9；管理进程缺失、崩溃、被占用-chromium/S03.png",
+    "observed_at": "2026-11-02T18:58:03.154Z",
+    "verified_scope": "sidecar exit=17 组件画面；原生 seal/handshake/reap 两专项通过；真实菜单恢复待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "S04",
+    "scene": "startup-blocked",
+    "scope": "T4a/T4b；身份／网络前置检查受阻",
+    "expectation": "四页可达、本地读取可用、Hive 写入受保护",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S04-T4a-T4b；身份／网络前置检查受阻-chromium/S04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S04-T4a-T4b；身份／网络前置检查受阻-chromium/S04.png",
+    "observed_at": "2026-11-02T18:58:02.666Z",
+    "verified_scope": "startup blocked 画面；正式 native-runtime 的 device/recovery 失败仍允许本地登录且禁止账号写入。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "S05",
+    "scene": "S05-config-invalid",
+    "scope": "T4a/T9；配置损坏、版本／协议／签名不符",
+    "expectation": "保留文件和证据，禁止自动贡献，不当作首次使用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.png",
+    "observed_at": "2026-11-02T19:55:10.756Z",
+    "verified_scope": "正式组件分别呈现DEVICE_CONTEXT_INVALID、Rust实际VERSION_MISMATCH及BUNDLED_BEE_INVALID；展开本次JSON字节/协议版本/SHA原始原因，零写。仅模拟IPC故障DTO，不证明真实损坏文件保留或签名安装；两桥错误的当前摘要仍为通用文案，具体原因在展开详情。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "bridge-failed",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S05-T4a-T9；配置损坏、版本／协议／签名不符-chromium/S05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S05-T4a-T9；配置损坏、版本／协议／签名不符-chromium/S05.png",
+      "observed_at": "2026-11-02T18:58:03.834Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图仅 bridge failed 关联表面，非损坏配置/所有协议/签名异常全画面；Rust seal 篡改拒绝通过。",
+      "limitation": "历史bridge-failed只关联管理进程退出，未呈现配置/协议/完整性受阻。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "S05-config-invalid",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-config-invalid-chromium/S05-config-invalid-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "S05-protocol-mismatch",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "S05-integrity-blocked",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "S06",
+    "scene": "startup-blocked",
+    "scope": "T5/T10；旧启动事件迟到、新实例接管 UI",
+    "expectation": "清除旧可操作依据、保留语言导航，不接受旧成功",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S06-T5-T10；旧启动事件迟到、新实例接管-UI-chromium/S06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S06-T5-T10；旧启动事件迟到、新实例接管-UI-chromium/S06.png",
+    "observed_at": "2026-11-02T18:58:04.299Z",
+    "verified_scope": "当前图为 startup blocked 关联表面；supply 的新实例回归证明旧响应隔离并保留导航/语言。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D01",
+    "scene": "device-unbound",
+    "scope": "T6；真正未绑定，输入 Hive／名称",
+    "expectation": "就地校验；有效输入才生成配对，保留草稿",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D01-T6；真正未绑定，输入-Hive／名称-chromium/D01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D01-T6；真正未绑定，输入-Hive／名称-chromium/D01.png",
+    "observed_at": "2026-11-02T18:58:04.986Z",
+    "verified_scope": "未绑定表单；device 回归有效输入、草稿和就地校验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D02",
+    "scene": "device-creating",
+    "scope": "T4b/T6；正在创建配对、重复点击",
+    "expectation": "单个动作；明确进度，重复点击不新增远端请求",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D02-T4b-T6；正在创建配对、重复点击-chromium/D02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D02-T4b-T6；正在创建配对、重复点击-chromium/D02.png",
+    "observed_at": "2026-11-02T18:58:05.695Z",
+    "verified_scope": "首次 creating 阶段画面；device-recovery 回归单次确认与阶段；真实 POST 数由 broker 断言。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D03",
+    "scene": "device-pending",
+    "scope": "T6；pending、打开网页／复制",
+    "expectation": "主按钮明显；打开／复制失败保留原配对和手动路径",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D03-T6；pending、打开网页／复制-chromium/D03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D03-T6；pending、打开网页／复制-chromium/D03.png",
+    "observed_at": "2026-11-02T18:58:06.535Z",
+    "verified_scope": "pending 画面；device 回归打开/复制失败仍保留请求；Ego 真实 Hive 网页取消/确认另有回执。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D04",
+    "scene": "device-draining",
+    "scope": "T4b/T6；draining，等待替换旧设备",
+    "expectation": "单独解释 Hive 正在等待的条件；不承诺任务完成时间，不自动强制替换",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D04-T4b-T6；draining，等待替换旧设备-chromium/D04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D04-T4b-T6；draining，等待替换旧设备-chromium/D04.png",
+    "observed_at": "2026-11-02T18:58:06.775Z",
+    "verified_scope": "首次 draining 画面；device-recovery 回归独立文案与禁止重建。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D05",
+    "scene": "device-expired",
+    "scope": "T4b/T6；本地有效期结束、Hive 确认过期",
+    "expectation": "到期只读核对；确认终态且无未知写入才允许重新生成",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D05-T4b-T6；本地有效期结束、Hive-确认过期-chromium/D05.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D05-T4b-T6；本地有效期结束、Hive-确认过期-chromium/D05.png",
+    "observed_at": "2026-11-02T18:58:07.587Z",
+    "verified_scope": "Hive expired 画面；device 回归本机到期只读、可信终态才解锁。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D06",
+    "scene": "D06-bound-stopped-no-selection",
+    "scope": "T4b/T6；网页批准、兑换、身份回读成功",
+    "expectation": "验证身份并保存，贡献保持停止，进入账号步骤",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png",
+    "observed_at": "2026-11-02T19:55:13.781Z",
+    "verified_scope": "首次pending经模拟网页批准并只读核对后bound、stopped、两平台not_selected、开始禁用且零写；历史真实网页v2的POST/DB增量与最终核心stopped证据仍按其原来源保留。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "device-bound",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D06-T4b-T6；网页批准、兑换、身份回读成功-chromium/D06.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D06-T4b-T6；网页批准、兑换、身份回读成功-chromium/D06.png",
+      "observed_at": "2026-11-02T18:58:08.108Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "bound 画面；真实网页 v2 confirm/redeem/device增量受硬断言，绑定后最终核心 stopped。",
+      "limitation": "历史device-bound图实际running/selected，不能支持绑定完成后停止且不自动接入。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "D06-bound-stopped-no-selection",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "D07",
+    "scene": "device-creation-unknown",
+    "scope": "T4b/T10；创建／兑换响应丢失、写盘失败、重启",
+    "expectation": "续查同一操作；无明确未提交证明不重建／重兑",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D07-T4b-T10；创建／兑换响应丢失、写盘失败、重启-chromium/D07.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D07-T4b-T10；创建／兑换响应丢失、写盘失败、重启-chromium/D07.png",
+    "observed_at": "2026-11-02T18:58:08.864Z",
+    "verified_scope": "本图只 creation_unknown；device-recovery 另验兑换未知/保存阶段，真实 broker 验提交丢失、重启2次、chmod保存失败；无token查回及人工恢复闭环待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D08",
+    "scene": "device-error",
+    "scope": "T4/T6；绑定有效但临时核对失败／身份不一致",
+    "expectation": "保留上次信息，明确未知／拒绝，不出现首次绑定表单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D08-T4-T6；绑定有效但临时核对失败／身份不一致-chromium/D08.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D08-T4-T6；绑定有效但临时核对失败／身份不一致-chromium/D08.png",
+    "observed_at": "2026-11-02T18:58:08.692Z",
+    "verified_scope": "临时503保留当前设备画面；device 回归身份失败不回退未绑定；真实503 DTO含本次时间与origin/path。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "D09",
+    "scene": "recovery-owner",
+    "scope": "T4b/T10；撤销后重绑，同／不同所有者",
+    "expectation": "本机确认＋网页确认；新归属再确认，旧选择与运行意图隔离",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D09-T4b-T10；撤销后重绑，同／不同所有者-chromium/D09.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D09-T4b-T10；撤销后重绑，同／不同所有者-chromium/D09.png",
+    "observed_at": "2026-11-02T18:58:09.471Z",
+    "verified_scope": "owner 新归属画面；device-recovery 验显式 adopt；真实 broker 同owner/不同owner/未知/保存失败均保持停止。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A01",
+    "scene": "account-reading",
+    "scope": "T5/T7；两平台初次读取／一平台迟缓",
+    "expectation": "分平台加载；已确认设备、运行和另一平台仍可见",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A01-T5-T7；两平台初次读取／一平台迟缓-chromium/A01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A01-T5-T7；两平台初次读取／一平台迟缓-chromium/A01.png",
+    "observed_at": "2026-11-02T18:58:10.210Z",
+    "verified_scope": "OpenAI 挂起/Claude独立的正在读取画面；account-auto-read 验平台互不阻塞。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A02",
+    "scene": "account-empty",
+    "scope": "T7；真正未找到官方登录",
+    "expectation": "明确哪个客户端、下一步登录；不假称已接入",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A02-T7；真正未找到官方登录-chromium/A02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A02-T7；真正未找到官方登录-chromium/A02.png",
+    "observed_at": "2026-11-02T18:58:11.057Z",
+    "verified_scope": "source_missing 空来源画面；native-accounts 验候选存在与未接入区别。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A03",
+    "scene": "account-error",
+    "scope": "T4/T7；所选文件缺失、权限拒绝、解析失败",
+    "expectation": "区分具体失败，定位读取位置；修复后自动读取",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A03-T4-T7；所选文件缺失、权限拒绝、解析失败-chromium/A03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A03-T4-T7；所选文件缺失、权限拒绝、解析失败-chromium/A03.png",
+    "observed_at": "2026-11-02T18:58:10.985Z",
+    "verified_scope": "permission_denied 画面；正式 source replacement/denied 回归；device-recovery combined另验实际not_found DTO。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A04",
+    "scene": "A04-keyring-unsupported",
+    "scope": "T7/T10；文件／Keychain／Keyring／auto 不支持或有冲突",
+    "expectation": "显示实际支持限制及可选读取方式，不自动改来源",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported.png",
+    "observed_at": "2026-11-02T19:55:15.962Z",
+    "verified_scope": "实际unsupported store reason=keyring_not_supported_on_this_os，keyring选项disabled、可读说明、当前file保留且零写；真实目标OS读取仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "account-detail",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A04-T7-T10；文件／Keychain／Keyring／auto-不支持或有冲突-chromium/A04.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A04-T7-T10；文件／Keychain／Keyring／auto-不支持或有冲突-chromium/A04.png",
+      "observed_at": "2026-11-02T18:58:11.702Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "来源选择详情画面；真实Keychain/Keyring/auto权限交互未执行；三端OS路径待验。",
+      "limitation": "历史普通来源设置未建立unsupported store前提。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "A04-keyring-unsupported",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A04-unsupported-store-real-reason-chromium/A04-keyring-unsupported-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "A05",
+    "scene": "account-candidate",
+    "scope": "T7；候选有效、尚未接入",
+    "expectation": "显示平台及可核对身份，提供明确接入确认",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A05-T7；候选有效、尚未接入-chromium/A05.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A05-T7；候选有效、尚未接入-chromium/A05.png",
+    "observed_at": "2026-11-02T18:58:12.042Z",
+    "verified_scope": "候选未接入画面；native-accounts 接入目标/暂停说明与单次动作。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A06",
+    "scene": "account-expired",
+    "scope": "T5/T7；候选过期／离提交期限过近",
+    "expectation": "说明待重新读取，刷新候选后重新确认，不留下无原因禁用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A06-T5-T7；候选过期／离提交期限过近-chromium/A06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A06-T5-T7；候选过期／离提交期限过近-chromium/A06.png",
+    "observed_at": "2026-11-02T18:58:13.324Z",
+    "verified_scope": "过期候选画面；native-accounts/auto-read 验临近期限和回读屏障；新鲜候选重新确认。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A07",
+    "scene": "account-change",
+    "scope": "T5/T7；来源修改、候选变化、旧读取迟到",
+    "expectation": "保留草稿；旧回调不覆盖新来源，不自动换号",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A07-T5-T7；来源修改、候选变化、旧读取迟到-chromium/A07.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A07-T5-T7；来源修改、候选变化、旧读取迟到-chromium/A07.png",
+    "observed_at": "2026-11-02T18:58:13.137Z",
+    "verified_scope": "候选变化画面；native-runtime/auto-read 验来源草稿和旧候选迟到不覆盖。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "A08",
+    "scene": "A08-official-query-failed",
+    "scope": "T3/T7；官方查询失败、retry_at／授权维护失败",
+    "expectation": "本地候选与远端查询分开；实际调度才显示等待，不反复弹系统权限",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.png",
+    "observed_at": "2026-11-02T19:55:17.268Z",
+    "verified_scope": "official capability=rate_limited、HTTP429、retry_after_seconds=25及真实retry_at字段；展开失败环节与原始原因、本地候选保留且零授权/接入/开始。仅模拟官方查询结果，不是实际官方请求。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "check-waiting",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A08-T3-T7；官方查询失败、retry-at／授权维护失败-chromium/A08.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A08-T3-T7；官方查询失败、retry-at／授权维护失败-chromium/A08.png",
+      "observed_at": "2026-11-02T18:58:13.887Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "只读失败等待实际重试画面；auto-read retry_at用例验证不反复启动官方查询。",
+      "limitation": "历史supply503关联图不是official查询失败或retry_at。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "A08-official-query-failed",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-A08-official-query-failure-with-retry-at-chromium/A08-official-query-failed-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "L01",
+    "scene": "confirm-login",
+    "scope": "T4/T7；官方客户端缺失／不支持版本",
+    "expectation": "明确缺项及支持版本指引，不显示空泛登录失败",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L01-T4-T7；官方客户端缺失／不支持版本-chromium/L01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L01-T4-T7；官方客户端缺失／不支持版本-chromium/L01.png",
+    "observed_at": "2026-11-02T18:58:14.443Z",
+    "verified_scope": "补充最终正式组件860×600图分别呈现 client_missing 与 client_version_unsupported，错误正文、影响、处理指引、滚动顶端/错误区均留证；零account_action/runtime_start。真实官方CLI环境仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "supplemental_layout": [
+      {
+        "case": "L01-client-missing",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-client-missing-chromium/L01-client-missing.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-client-missing-chromium/L01-client-missing-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-client-missing-chromium/L01-client-missing.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json"
+      },
+      {
+        "case": "L01-version",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-version-chromium/L01-version.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-version-chromium/L01-version-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L01-version-chromium/L01-version.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json"
+      }
+    ]
+  },
+  {
+    "id": "L02",
+    "scene": "L02-running-login-disabled",
+    "scope": "T5/T7；运行中请求登录",
+    "expectation": "明确需停止贡献，直接定位停止入口",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.png",
+    "observed_at": "2026-11-02T19:55:12.394Z",
+    "verified_scope": "真实运行中组件重新登录disabled、明确先停止说明；查看贡献运行跳转实际runtime目标获焦且停止按钮可用，零自动停止/登录/接入。真实官方进程仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "confirm-login",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L02-T5-T7；运行中请求登录-chromium/L02.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L02-T5-T7；运行中请求登录-chromium/L02.png",
+      "observed_at": "2026-11-02T18:58:15.269Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前仅确认入口图；native-accounts 运行中登录直接定位停止入口回归，实际官方登录待验。",
+      "limitation": "历史account-candidate不是运行中登录禁用。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "L02-running-login-disabled",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-running-login-disabled-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "L02-stop-entry",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-stop-entry.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-stop-entry.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L02-running-login-stop-entry-chromium/L02-stop-entry-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "L03",
+    "scene": "confirm-login",
+    "scope": "T7/T10；启动官方登录，等待用户／回到 Bee",
+    "expectation": "说明在何处完成，等待与超时可区分，完成后核对所选来源",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L03-T7-T10；启动官方登录，等待用户／回到-Bee-chromium/L03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L03-T7-T10；启动官方登录，等待用户／回到-Bee-chromium/L03.png",
+    "observed_at": "2026-11-02T18:58:16.227Z",
+    "verified_scope": "官方登录确认组件；native-runtime 模拟完成只成候选；专用官方登录及真实来源落点待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "L04",
+    "scene": "confirm-login",
+    "scope": "T7/T10；用户取消、超时、进程启动失败",
+    "expectation": "只结束本次创建的进程；取消失败／未知不说已取消",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L04-T7-T10；用户取消、超时、进程启动失败-chromium/L04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L04-T7-T10；用户取消、超时、进程启动失败-chromium/L04.png",
+    "observed_at": "2026-11-02T18:58:16.926Z",
+    "verified_scope": "补充最终正式组件分别呈现 authorization_timeout、authorization_process_failed 与取消响应未知，原操作仅核对、不接入/启动；Go受控进程回收通过。真实官方取消及来源落点仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "supplemental_layout": [
+      {
+        "case": "L04-timeout",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-timeout-chromium/L04-timeout.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-timeout-chromium/L04-timeout-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-timeout-chromium/L04-timeout.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json"
+      },
+      {
+        "case": "L04-process-failed",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-process-failed-chromium/L04-process-failed.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-process-failed-chromium/L04-process-failed-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-process-failed-chromium/L04-process-failed.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json"
+      },
+      {
+        "case": "L04-cancel-unknown",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-cancel-unknown-chromium/L04-cancel-unknown.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-cancel-unknown-chromium/L04-cancel-unknown-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-L04-cancel-unknown-chromium/L04-cancel-unknown.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json"
+      }
+    ]
+  },
+  {
+    "id": "L05",
+    "scene": "L05-authorization_source_unchanged",
+    "scope": "T7/T10；官方退出成功但来源未变化／身份不符",
+    "expectation": "不能仅按退出码报登录成功；保留候选及具体原因",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-source-unchanged-chromium/L05-authorization_source_unchanged.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-source-unchanged-chromium/L05-authorization_source_unchanged.png",
+    "observed_at": "2026-11-02T19:55:14.629Z",
+    "verified_scope": "实际authorize操作failed分别为来源未变/namespace不符，显示具体失败、一次authorize_start、零接入/开始；真实官方客户端及文件落点仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "account-error",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L05-T7-T10；官方退出成功但来源未变化／身份不符-chromium/L05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L05-T7-T10；官方退出成功但来源未变化／身份不符-chromium/L05.png",
+      "observed_at": "2026-11-02T18:58:17.189Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图为来源读取错误关联表面；模拟身份不符不接入；真实官方退出/来源比对待验。",
+      "limitation": "历史permission_denied不是来源未变或namespace不符的authorize失败。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "L05-authorization_source_unchanged",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-source-unchanged-chromium/L05-authorization_source_unchanged.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-source-unchanged-chromium/L05-authorization_source_unchanged.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-source-unchanged-chromium/L05-authorization_source_unchanged-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "L05-authorization_namespace_mismatch",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-namespace-mismatch-chromium/L05-authorization_namespace_mismatch.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-namespace-mismatch-chromium/L05-authorization_namespace_mismatch.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-L05-authorization-namespace-mismatch-chromium/L05-authorization_namespace_mismatch-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "L06",
+    "scene": "account-candidate",
+    "scope": "T5/T7/T10；取消与成功竞态、页面离开／重启",
+    "expectation": "迟到成功不自动接入；关闭面板不是取消登录",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L06-T5-T7-T10；取消与成功竞态、页面离开／重启-chromium/L06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-L06-T5-T7-T10；取消与成功竞态、页面离开／重启-chromium/L06.png",
+    "observed_at": "2026-11-02T18:58:18.075Z",
+    "verified_scope": "当前图为未接入候选；模拟取消成功竞态/导航回归，不证明真实登录重启。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "W01",
+    "scene": "confirm-select",
+    "scope": "T7；确认接入",
+    "expectation": "说明账号及平台暂停影响；接入后仍停止／暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W01-T7；确认接入-chromium/W01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W01-T7；确认接入-chromium/W01.png",
+    "observed_at": "2026-11-02T18:58:18.580Z",
+    "verified_scope": "确认接入目标与影响画面；组件确认后paused、runtime_start=0；真实账号接入待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "W02",
+    "scene": "confirm-change",
+    "scope": "T7；确认换号",
+    "expectation": "当前／目标身份可核对，完成后暂停，不继承旧额度",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W02-T7；确认换号-chromium/W02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W02-T7；确认换号-chromium/W02.png",
+    "observed_at": "2026-11-02T18:58:19.336Z",
+    "verified_scope": "当前/目标身份确认画面；组件换号后暂停且旧额度清空；真实账号换号待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "W03",
+    "scene": "confirm-clear",
+    "scope": "T7；取消尚未注册的本地选择",
+    "expectation": "明确取消对象和边界；已注册账号不伪造完整移除功能",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W03-T7；取消尚未注册的本地选择-chromium/W03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W03-T7；取消尚未注册的本地选择-chromium/W03.png",
+    "observed_at": "2026-11-02T18:58:20.053Z",
+    "verified_scope": "取消本地选择确认画面；native-runtime严格 select/clear_selection 两次明确动作，无runtime_start。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "W04",
+    "scene": "W04-stale-confirmation",
+    "scope": "T5/T7；弹窗期间候选／revision／运行条件变化",
+    "expectation": "提交前重新验证；过时确认失效并解释，不静默无反应",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation.png",
+    "observed_at": "2026-11-02T19:55:15.024Z",
+    "verified_scope": "打开换号确认后真实增加revision，旧确认disabled并显示条件变化，account_action=0、runtime_start=0；关闭重开后新revision确认沿用既有native-runtime回归来源。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "confirm-change",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W04-T5-T7；弹窗期间候选／revision／运行条件变化-chromium/W04.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W04-T5-T7；弹窗期间候选／revision／运行条件变化-chromium/W04.png",
+      "observed_at": "2026-11-02T18:58:21.344Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图为有效换号确认；native-runtime 新断言revision变更后旧确认禁用且零写，重开才写同candidate与最新revision。",
+      "limitation": "历史confirm-change是有效确认，不支持revision变化后旧确认禁用。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "W04-stale-confirmation",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W04-stale-confirmation-disabled-zero-write-chromium/W04-stale-confirmation-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "W05",
+    "scene": "W05-original-operation-unconfirmed",
+    "scope": "T7/T10；暂停／换号提交未知、远端成功本地保存失败",
+    "expectation": "保存原操作，查询指纹＋代次，不重复写入／恢复接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.png",
+    "observed_at": "2026-11-02T19:55:15.733Z",
+    "verified_scope": "接入提交回执未知，原operation.id及reconciling跨诊断/账号页保留；仅核对原操作，account_action始终1、runtime_start=0。不同于旧supply PUT503关联图；真实官方接入回执丢失仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "check-waiting",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W05-T7-T10；暂停／换号提交未知、远端成功本地保存失败-chromium/W05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W05-T7-T10；暂停／换号提交未知、远端成功本地保存失败-chromium/W05.png",
+      "observed_at": "2026-11-02T18:58:21.972Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图仅等待读取；组件原未知写锁与GET-only断言通过；真实账号未知/保存失败待验。",
+      "limitation": "历史check-waiting为supply PUT503，不支持account operation未知。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "W05-original-operation-unconfirmed",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-unconfirmed-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "W05-original-operation-diagnostics",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-diagnostics.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-diagnostics.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-W05-account-5f622-wn-keeps-original-operation-chromium/W05-original-operation-diagnostics-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "W06",
+    "scene": "account-detail",
+    "scope": "T5/T7；关闭弹窗／离页／重启、另一平台操作",
+    "expectation": "原操作可继续核对，另一平台事实不丢失，不创建替代操作",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W06-T5-T7；关闭弹窗／离页／重启、另一平台操作-chromium/W06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-W06-T5-T7；关闭弹窗／离页／重启、另一平台操作-chromium/W06.png",
+    "observed_at": "2026-11-02T18:58:22.266Z",
+    "verified_scope": "当前详情关联图；auto-read/runtime/polling回归离页不重放，另一平台事实保留；账号进程重启实际段待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "R01",
+    "scene": "R01-account-reads-pending",
+    "scope": "T5/T6；没有账号／账号未确认时开始贡献",
+    "expectation": "具体禁用原因与账号入口；不将未知显示零账号",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending.png",
+    "observed_at": "2026-11-02T19:55:10.691Z",
+    "verified_scope": "无已选账号：开始禁用、具体接入说明与账号入口；独立账号读取未完成：设备bound/运行stopped可信、两平台account_snapshot未完成，数量待确认不显示零，账号页来源读取中且导航零写。runtime提供可信not_selected，不把后续账号读取未完成等同运行未知；共享runtime读取失败另作附加路径。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "stopped",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R01-T5-T6；没有账号／账号未确认时开始贡献-chromium/R01.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R01-T5-T6；没有账号／账号未确认时开始贡献-chromium/R01.png",
+      "observed_at": "2026-11-02T18:58:23.100Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "停止且未接入平台画面；native-runtime验证开始禁用原因与账号入口。",
+      "limitation": "历史stopped图实际selected OpenAI、开始可用，是前提反例，不能支持R01无账号/未确认。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "R01-account-reads-pending",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-entry.png",
+        "reason_screenshots": [
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts-entry.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts.png"
+        ]
+      },
+      {
+        "id": "R01-account-reads-pending-accounts",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-account-7a397-ding-shared-state-confirmed-chromium/R01-account-reads-pending-accounts-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "R01-no-selection",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-no-selection-chromium/R01-no-selection.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-no-selection-chromium/R01-no-selection.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-no-selection-chromium/R01-no-selection-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "R01-accounts-unconfirmed",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-accounts-unconfirmed-chromium/R01-accounts-unconfirmed.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-accounts-unconfirmed-chromium/R01-accounts-unconfirmed.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-R01-accounts-unconfirmed-chromium/R01-accounts-unconfirmed-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "R01",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-R01-T5-T6；没有账号／账号未确认时开始贡献-chromium/R01.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-R01-T5-T6；没有账号／账号未确认时开始贡献-chromium/R01.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "R02",
+    "scene": "runtime-connecting",
+    "scope": "T3/T6；开始贡献、首次连接、重复点击",
+    "expectation": "一次启动，连接中不等于可接单；开始不解除暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R02-T3-T6；开始贡献、首次连接、重复点击-chromium/R02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R02-T3-T6；开始贡献、首次连接、重复点击-chromium/R02.png",
+    "observed_at": "2026-11-02T18:58:24.168Z",
+    "verified_scope": "首次连接组件画面；native-runtime一次runtime_start且resume_platforms为空；最终可执行核心用真实Hive WS连接，自动恢复不解除手动暂停。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "runtime_evidence": [
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.log",
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.json"
+    ]
+  },
+  {
+    "id": "R03",
+    "scene": "running",
+    "scope": "T5/T6/T7/T10；运行连接正常、平台部分可用",
+    "expectation": "主状态基于平台；两平台分别有受控请求实际返回，暂停阻止新派发、停止后不可继续接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R03-T5-T6-T7-T10；运行连接正常、平台部分可用-chromium/R03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R03-T5-T6-T7-T10；运行连接正常、平台部分可用-chromium/R03.png",
+    "observed_at": "2026-11-02T18:58:24.471Z",
+    "verified_scope": "贡献运行/部分平台组件画面；专用OpenAI/Claude上游请求、暂停阻止真实派发及真实停止后准入待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "R04",
+    "scene": "runtime-disconnected",
+    "scope": "T3/T4/T6；DNS/TLS/拒绝/超时/5xx、心跳或同步失败",
+    "expectation": "本次具体原因、真实退避、恢复后剩余阻塞",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R04-T3-T4-T6；DNS-TLS-拒绝-超时-5xx、心跳或同步失败-chromium/R04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R04-T3-T4-T6；DNS-TLS-拒绝-超时-5xx、心跳或同步失败-chromium/R04.png",
+    "observed_at": "2026-11-02T18:58:25.266Z",
+    "verified_scope": "当前布局为心跳断连及实际scheduled时间；最终可执行/race真实401/403/409/503/EOF、真实connection_refused与同run恢复连接均通过，暂停保留、resume PUT=0、停止回执完整。DNS/TLS/timeout/心跳/同步分类及旧run迟到另有最终Go受控回归；这些仍不作为所有故障的最终可执行复现。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "runtime_evidence": [
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.log",
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.json"
+    ]
+  },
+  {
+    "id": "R05",
+    "scene": "runtime-occupied",
+    "scope": "T3/T4b/T6；401/403、409占用、持续冲突",
+    "expectation": "区分授权与所有权；停止不适用的重试，不自动抢占",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R05-T3-T4b-T6；401-403、409占用、持续冲突-chromium/R05.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R05-T3-T4b-T6；401-403、409占用、持续冲突-chromium/R05.png",
+    "observed_at": "2026-11-02T18:58:25.516Z",
+    "verified_scope": "当前布局为409占用；最终可执行/race真实401/403进入rejected/halted、409进入occupied/halted且仅一次agent请求，附本次时间/path/HTTP证据；持续冲突阈值与旧run迟到用Go受控回归，未声称最终可执行重复冲突全矩阵。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "runtime_evidence": [
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.log",
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.json"
+    ]
+  },
+  {
+    "id": "R06",
+    "scene": "confirm-stop",
+    "scope": "T6/T9；停止、取消停止确认、停止部分成功",
+    "expectation": "workers/intent/session 逐项证据；保存失败不声称下次保持停止",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R06-T6-T9；停止、取消停止确认、停止部分成功-chromium/R06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R06-T6-T9；停止、取消停止确认、停止部分成功-chromium/R06.png",
+    "observed_at": "2026-11-02T18:58:26.227Z",
+    "verified_scope": "停止确认画面；native-runtime停止回执与取消焦点回归；最终可执行重连后真实stop_receipt三项true；真实原生退出/保存失败待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "runtime_evidence": [
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.log",
+      "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-linux-runtime-isolated-v9.json"
+    ]
+  },
+  {
+    "id": "R07",
+    "scene": "runtime-unknown",
+    "scope": "T3/T5/T10；启停结果未知、旧 run 迟到",
+    "expectation": "只读核对原操作；失效回执不能解锁新操作",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R07-T3-T5-T10；启停结果未知、旧-run-迟到-chromium/R07.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R07-T3-T5-T10；启停结果未知、旧-run-迟到-chromium/R07.png",
+    "observed_at": "2026-11-02T18:58:26.843Z",
+    "verified_scope": "实际一次模拟开始后未知画面；auto-read/polling 保持只读核对且旧run不解锁；真实runtime结果丢失待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "P01",
+    "scene": "check-expired",
+    "scope": "T5/T7；无报告、过期、读取失败／正在读取",
+    "expectation": "显示新鲜度及真实调度，不能继续可接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P01-T5-T7；无报告、过期、读取失败／正在读取-chromium/P01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P01-T5-T7；无报告、过期、读取失败／正在读取-chromium/P01.png",
+    "observed_at": "2026-11-02T18:58:27.398Z",
+    "verified_scope": "过期后核对画面；supply严格30秒失效、禁写和失败重试回归。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "P02",
+    "scene": "supply-paused",
+    "scope": "T7；手动暂停／恢复；全部暂停仍有别的阻塞",
+    "expectation": "恢复仅解除暂停，不承诺立即接单，展示独立问题",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P02-T7；手动暂停／恢复；全部暂停仍有别的阻塞-chromium/P02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P02-T7；手动暂停／恢复；全部暂停仍有别的阻塞-chromium/P02.png",
+    "observed_at": "2026-11-02T18:58:27.725Z",
+    "verified_scope": "手动暂停画面；supply/native-accounts恢复只解除平台暂停、不开始贡献且保留其他阻塞。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "P03",
+    "scene": "supply-partial",
+    "scope": "T5/T7；一平台失败、另一平台正常／慢请求",
+    "expectation": "失败和加载局部化，正常平台保持可见",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P03-T5-T7；一平台失败、另一平台正常／慢请求-chromium/P03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P03-T5-T7；一平台失败、另一平台正常／慢请求-chromium/P03.png",
+    "observed_at": "2026-11-02T18:58:28.674Z",
+    "verified_scope": "单平台失败另一平台正常画面；独立10秒调度、同平台不重叠与慢请求回归通过。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "P04",
+    "scene": "P04-detailed-reasons",
+    "scope": "T1/T2/T7；not_configured及五个新细分原因",
+    "expectation": "区分本机未接入、Hive未注册、市场未开放、供给未启用、设备受限、账号未准入",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons.png",
+    "observed_at": "2026-11-02T19:57:56.388Z",
+    "verified_scope": "分别断言五详细原因account_not_registered/market_not_open/supply_not_enabled/supply_device_restricted/account_not_admitted，每个原因滚动至可见后独立截图；零写，不据合成已确认供给事实证明真实上游。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+    "historical_evidence": {
+      "scene": "supply-blocked",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P04-T1-T2-T7；not-configured及五个新细分原因-chromium/P04.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P04-T1-T2-T7；not-configured及五个新细分原因-chromium/P04.png",
+      "observed_at": "2026-11-02T18:58:29.796Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图只多阻塞关联表面；五新码各独立正式浏览器回归通过，真实供给三组合验证detail opt-in与旧schema。",
+      "limitation": "历史组合图只支持其实际显示原因，不能支持五原因全画面。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "P04-detailed-reasons",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-entry.png",
+        "reason_screenshots": [
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-account_not_admitted.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-account_not_registered.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-market_not_open.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-supply_device_restricted.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P04-detailed-reasons-chromium/P04-detailed-reasons-supply_not_enabled.png"
+        ]
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "P05",
+    "scene": "P05-existing-reasons",
+    "scope": "T1/T2/T7；banned、device_draining、offline、model_unavailable、authorization_unavailable、capabilities_unknown、plan_not_configured",
+    "expectation": "按原准入事实逐码解释；管理员问题不让用户循环登录",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons.png",
+    "observed_at": "2026-11-02T19:57:56.498Z",
+    "verified_scope": "分别断言banned/device_draining/offline/model_unavailable/authorization_unavailable/capabilities_unknown/plan_not_configured，每个原因独立视口截图；零写，真实Hive/数据库语义沿用原定向证据。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+    "historical_evidence": {
+      "scene": "supply-blocked",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P05-T1-T2-T7；ba-65735-unknown、plan-not-configured-chromium/P05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P05-T1-T2-T7；ba-65735-unknown、plan-not-configured-chromium/P05.png",
+      "observed_at": "2026-11-02T18:58:30.484Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图含authorization/quota/plan_not_configured，非所有旧码单独画面；Go/TS严格原因表回归通过。",
+      "limitation": "历史组合图只支持其实际显示原因，不能支持七原因全画面。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "P05-existing-reasons",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-entry.png",
+        "reason_screenshots": [
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-authorization_unavailable.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-banned.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-capabilities_unknown.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-device_draining.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-model_unavailable.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-offline.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P05-existing-reasons-chromium/P05-existing-reasons-plan_not_configured.png"
+        ]
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "P06",
+    "scene": "P06-limit-reasons",
+    "scope": "T3/T7；rate_limited、quota_unknown、quota_exhausted、concurrency_full",
+    "expectation": "可证明的恢复条件和时间；无根据不倒计时",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons.png",
+    "observed_at": "2026-11-02T19:57:56.204Z",
+    "verified_scope": "分别断言rate_limited/quota_unknown/quota_exhausted/concurrency_full原因与处理说明，每个原因独立视口截图；零写，真实额度及请求仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+    "historical_evidence": {
+      "scene": "quota-over",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P06-T3-T7；rate--5c12e--exhausted、concurrency-full-chromium/P06.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P06-T3-T7；rate--5c12e--exhausted、concurrency-full-chromium/P06.png",
+      "observed_at": "2026-11-02T18:58:31.068Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "超过100%与quota_exhausted画面；Go/TS额度/恢复条件回归，不据无证时间倒计时。",
+      "limitation": "历史组合图未展开全部额度/限流/并发原因。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "P06-limit-reasons",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-entry.png",
+        "reason_screenshots": [
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-concurrency_full.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-quota_exhausted.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-quota_unknown.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P06-limit-reasons-chromium/P06-limit-reasons-rate_limited.png"
+        ]
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "P07",
+    "scene": "P07-source-authorization-reasons",
+    "scope": "T4/T7；Codex／Claude 的 source_unavailable、confirmation_required、authorization_rejected",
+    "expectation": "两平台分别定位来源／换号确认／登录；不混为市场未开放",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons.png",
+    "observed_at": "2026-11-02T19:57:56.416Z",
+    "verified_scope": "OpenAI与Claude分别断言source_unavailable/confirmation_required/authorization_rejected六个真实reason码对应文案与处理入口，每个原因独立视口截图且零写；真实来源和官方授权仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+    "historical_evidence": {
+      "scene": "account-change",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P07-T4-T7；Codex-6b47b-ired、authorization-rejected-chromium/P07.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P07-T4-T7；Codex-6b47b-ired、authorization-rejected-chromium/P07.png",
+      "observed_at": "2026-11-02T18:58:31.804Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "候选与已选不同画面；来源/确认/授权拒绝的两平台Go/TS回归；真实账号维护待验。",
+      "limitation": "历史图未逐项呈现两平台全部来源/授权原因。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "P07-source-authorization-reasons",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-entry.png",
+        "reason_screenshots": [
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-claude_authorization_rejected.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-claude_confirmation_required.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-claude_source_unavailable.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-codex_authorization_rejected.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-codex_confirmation_required.png",
+          "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-reasons-visible-final-output/t10-layout-fix-P07-source-authorization-reasons-chromium/P07-source-authorization-reasons-codex_source_unavailable.png"
+        ]
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "P08",
+    "scene": "quota-multiple",
+    "scope": "T1/T2/T7/T10；多额度窗口、未知、过期、超过100%；旧Hive兼容",
+    "expectation": "保留原值与时间；旧原因不猜测，矛盾响应失败关闭",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P08-T1-T2-T7-T10；多额度窗口、未知、过期、超过100-；旧Hive兼容-chromium/P08.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P08-T1-T2-T7-T10；多额度窗口、未知、过期、超过100-；旧Hive兼容-chromium/P08.png",
+    "observed_at": "2026-11-02T18:58:32.093Z",
+    "verified_scope": "多窗口与原值画面；正式120%/unknown/expired和真实旧Hive处理器组合通过。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "N01",
+    "scene": "settings-general",
+    "scope": "T4/T8/T9；语言主题读取／保存成功或失败",
+    "expectation": "UI按已确认偏好更新；错误可重读，切语言更新已有提示",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N01-T4-T8-T9；语言主题读取／保存成功或失败-chromium/N01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N01-T4-T8-T9；语言主题读取／保存成功或失败-chromium/N01.png",
+    "observed_at": "2026-11-02T18:58:32.674Z",
+    "verified_scope": "语言外观设置画面；native-experience/native-updater locale回执与失败回归，真实菜单/系统语言待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "N02",
+    "scene": "settings-network",
+    "scope": "T8；代理草稿、无效输入、测试成功／失败",
+    "expectation": "就地校验，保留输入；测试不保存、不代表 Hive 可达",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N02-T8；代理草稿、无效输入、测试成功／失败-chromium/N02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N02-T8；代理草稿、无效输入、测试成功／失败-chromium/N02.png",
+    "observed_at": "2026-11-02T18:58:33.065Z",
+    "verified_scope": "代理页面画面；native-runtime无效loopback输入不network_test，测试不保存/应用。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "N03",
+    "scene": "settings-network",
+    "scope": "T8；代理保存但未应用，重启应用",
+    "expectation": "区分保存／生效；停止、配置、恢复各阶段独立反馈",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N03-T8；代理保存但未应用，重启应用-chromium/N03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N03-T8；代理保存但未应用，重启应用-chromium/N03.png",
+    "observed_at": "2026-11-02T18:58:33.481Z",
+    "verified_scope": "补充正式组件保存未生效画面，真实已保存/当前生效字段和应用入口分别留证；未确认时network_apply_saved=0。真实原生代理重启应用仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "supplemental_layout": [
+      {
+        "case": "N03-N04-saved-not-effective",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-not-effective-chromium/N03-N04-saved-not-effective.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-not-effective-chromium/N03-N04-saved-not-effective-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-not-effective-chromium/N03-N04-saved-not-effective.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json",
+        "screenshot_scope": "主图为已保存18393与当前生效代理未启用；entry图另显示配置已保存但仍用上次生效配置"
+      }
+    ]
+  },
+  {
+    "id": "N04",
+    "scene": "settings-network",
+    "scope": "T8/T10；应用部分失败／响应未知、导航／重启",
+    "expectation": "先读当前revision及运行状态，不能重复“停止并重启”",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N04-T8-T10；应用部分失败／响应未知、导航／重启-chromium/N04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N04-T8-T10；应用部分失败／响应未知、导航／重启-chromium/N04.png",
+    "observed_at": "2026-11-02T18:58:34.145Z",
+    "verified_scope": "补充正式组件分别呈现恢复失败、应用响应未知、保存后读取失败；一次network_apply_saved、零额外runtime_start/stop，未知只读保锁；真实原生重启应用仍待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+    "supplemental_layout": [
+      {
+        "case": "N03-N04-restore-failed",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-restore-failed-chromium/N03-N04-restore-failed-entry.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-restore-failed-chromium/N03-N04-restore-failed-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-restore-failed-chromium/N03-N04-restore-failed.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json",
+        "configuration_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-restore-failed-chromium/N03-N04-restore-failed.png",
+        "screenshot_scope": "主图为entry反馈视口；configuration_screenshot为下方保存/生效路径表视口，不用于证明失败提示可读"
+      },
+      {
+        "case": "N03-N04-apply-unknown",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-apply-unknown-chromium/N03-N04-apply-unknown-entry.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-apply-unknown-chromium/N03-N04-apply-unknown-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-apply-unknown-chromium/N03-N04-apply-unknown.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json",
+        "configuration_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-apply-unknown-chromium/N03-N04-apply-unknown.png",
+        "screenshot_scope": "主图为entry反馈视口；configuration_screenshot为下方保存/生效路径表视口，不用于证明失败提示可读"
+      },
+      {
+        "case": "N03-N04-saved-read-failed",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-read-failed-chromium/N03-N04-saved-read-failed.png",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-read-failed-chromium/N03-N04-saved-read-failed-entry.png",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6-output/t10-layout-supplement-N03-N04-saved-read-failed-chromium/N03-N04-saved-read-failed.json",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-supplement-final-v6.json",
+        "screenshot_scope": "主图为上次确认生效/实际路径及重新核对失败，entry图为保存后生效未知反馈"
+      }
+    ]
+  },
+  {
+    "id": "N05",
+    "scene": "settings-system",
+    "scope": "T8/T9；通知拒绝／未询问／未知、发送失败",
+    "expectation": "偏好≠系统授权≠投递成功；有真实设置路径及显式重试",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N05-T8-T9；通知拒绝／未询问／未知、发送失败-chromium/N05.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N05-T8-T9；通知拒绝／未询问／未知、发送失败-chromium/N05.png",
+    "observed_at": "2026-11-02T18:58:34.515Z",
+    "verified_scope": "通知拒绝设置画面；native-experience模拟权限/投递未知；真实OS授权和系统设置入口待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "N06",
+    "scene": "settings-system",
+    "scope": "T8/T9；自启期望与实际登记不同／查询失败",
+    "expectation": "分别显示，不假成功；重新核对而非自动改用户选择",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N06-T8-T9；自启期望与实际登记不同／查询失败-chromium/N06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-N06-T8-T9；自启期望与实际登记不同／查询失败-chromium/N06.png",
+    "observed_at": "2026-11-02T18:58:35.037Z",
+    "verified_scope": "自启实际查询失败画面；native-experience模拟期望/实际分离；真实OS登记待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "G01",
+    "scene": "diagnostics-results",
+    "scope": "T8；未运行、显式开始、部分检查／全部通过",
+    "expectation": "导航不启动诊断；完成≠全通过≠可接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G01-T8；未运行、显式开始、部分检查／全部通过-chromium/G01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G01-T8；未运行、显式开始、部分检查／全部通过-chromium/G01.png",
+    "observed_at": "2026-11-02T18:58:35.594Z",
+    "verified_scope": "显式诊断结果画面；native-experience/diagnostic回归导航不启动、完成不等于全过。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "G02",
+    "scene": "diagnostics-read-failed",
+    "scope": "T8；诊断进行中读失败／临时中断",
+    "expectation": "原报告可重读，说明查询停滞；不永久“进行中”",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G02-T8；诊断进行中读失败／临时中断-chromium/G02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G02-T8；诊断进行中读失败／临时中断-chromium/G02.png",
+    "observed_at": "2026-11-02T18:58:37.026Z",
+    "verified_scope": "原报告读取暂停画面；重新读取原report回归，未重建报告。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "G03",
+    "scene": "diagnostics-running",
+    "scope": "T8/T10；取消／取消未知、报告超时／跳过",
+    "expectation": "保留已返回事实；按实际回执确认取消，不重建报告",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G03-T8-T10；取消／取消未知、报告超时／跳过-chromium/G03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G03-T8-T10；取消／取消未知、报告超时／跳过-chromium/G03.png",
+    "observed_at": "2026-11-02T18:58:36.351Z",
+    "verified_scope": "正在诊断画面；native-experience取消未知等回归；本图非所有cancel/skip画面。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "G04",
+    "scene": "diagnostics-results",
+    "scope": "T4a/T5/T8；离开再返回、换绑定／网络／run",
+    "expectation": "同一报告可继续；旧上下文不污染概览",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G04-T4a-T5-T8；离开再返回、换绑定／网络／run-chromium/G04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G04-T4a-T5-T8；离开再返回、换绑定／网络／run-chromium/G04.png",
+    "observed_at": "2026-11-02T18:58:37.019Z",
+    "verified_scope": "结果画面；recovery-navigation诊断来源跳转与返回焦点、上下文失效回归。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "G05",
+    "scene": "G05-logs-filtered-more",
+    "scope": "T8；日志未读／空／过滤／加载更多／轮转",
+    "expectation": "明确各状态，旧过滤响应丢弃，不主动读取全部日志",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more.png",
+    "observed_at": "2026-11-02T19:55:13.348Z",
+    "verified_scope": "安全日志未读取/空/读取中/筛选与轮转、手动刷新及分页cursor均有实际画面与调用，未读前diagnostic_logs=0；仅手动读取、零业务写、零诊断启动。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "diagnostics-results",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G05-T8；日志未读／空／过滤／加载更多／轮转-chromium/G05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G05-T8；日志未读／空／过滤／加载更多／轮转-chromium/G05.png",
+      "observed_at": "2026-11-02T18:58:37.318Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "当前图为结果页关联表面，非日志tab空/过滤/轮转全画面；native-experience日志受控回归。",
+      "limitation": "历史diagnostics入口未呈现安全日志的空/筛选/读取中子状态。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "G05-logs-filtered-more",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-more-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "G05-logs-filtered-rotation",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-rotation.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-rotation.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-filtered-rotation-chromium/G05-logs-filtered-rotation-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "G05-logs-unread",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-unread-chromium/G05-logs-unread.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-unread-chromium/G05-logs-unread.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-unread-chromium/G05-logs-unread-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "G05-logs-empty",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-empty-chromium/G05-logs-empty.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-empty-chromium/G05-logs-empty.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-empty-chromium/G05-logs-empty-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "G05-logs-loading",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-loading-chromium/G05-logs-loading.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-loading-chromium/G05-logs-loading.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-G05-logs-loading-chromium/G05-logs-loading-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "G06",
+    "scene": "diagnostics-export-unknown",
+    "scope": "T8/T10；导出范围、取消、失败／完成／下载未知",
+    "expectation": "真实下载回执；未知给核对位置，不重复导出",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G06-T8-T10；导出范围、取消、失败／完成／下载未知-chromium/G06.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G06-T8-T10；导出范围、取消、失败／完成／下载未知-chromium/G06.png",
+    "observed_at": "2026-11-02T18:59:08.222Z",
+    "verified_scope": "实际30秒无下载回执后unknown画面；previewDownloads记录曾明确导出且不重复，组件成功/取消/失败另有回归；OS下载投递待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "U01",
+    "scene": "settings-about",
+    "scope": "T9；idle/checking/current/available、后台失败",
+    "expectation": "只读检查不影响贡献；可显式重试，有当前版本",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U01-T9；idle-checking-current-available、后台失败-chromium/U01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U01-T9；idle-checking-current-available、后台失败-chromium/U01.png",
+    "observed_at": "2026-11-02T18:58:38.557Z",
+    "verified_scope": "当前关于页入口；native-updater检查状态、失败/重试和贡献不受影响回归。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "U02",
+    "scene": "update-downloading",
+    "scope": "T9；下载中、总大小未知、网络／磁盘／签名失败",
+    "expectation": "不假100%，验证通过才安装，原版本可用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U02-T9；下载中、总大小未知、网络／磁盘／签名失败-chromium/U02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U02-T9；下载中、总大小未知、网络／磁盘／签名失败-chromium/U02.png",
+    "observed_at": "2026-11-02T18:58:38.726Z",
+    "verified_scope": "下载中总大小未知画面；组件签名失败与字节回归；真实签名安装包缺失。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "U03",
+    "scene": "update-verified",
+    "scope": "T9；verified，打开／取消／过时安装确认",
+    "expectation": "默认取消焦点，确认绑定精确版本／revision",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U03-T9；verified，打开／取消／过时安装确认-chromium/U03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U03-T9；verified，打开／取消／过时安装确认-chromium/U03.png",
+    "observed_at": "2026-11-02T18:58:39.228Z",
+    "verified_scope": "verified待安装画面；native-updater取消默认焦点、过时revision零安装；真实包待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "U04",
+    "scene": "update-unknown",
+    "scope": "T9/T10；stopping/installing、回执丢失、停止不完整",
+    "expectation": "不重复安装，不说已成功；查原操作／可信包恢复",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U04-T9-T10；stopping-installing、回执丢失、停止不完整-chromium/U04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U04-T9-T10；stopping-installing、回执丢失、停止不完整-chromium/U04.png",
+    "observed_at": "2026-11-02T18:58:39.498Z",
+    "verified_scope": "installing尚无成功结论画面；native-updater回执丢失保锁/不重复安装；真实停止和安装待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "U05",
+    "scene": "U05-trusted-previous",
+    "scope": "T4a/T9/T10；重启核验成功／失败、数据迁移失败",
+    "expectation": "核对包、设备、选择和运行意图；不绕过完整性或丢暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-trusted-previous-chromium/U05-trusted-previous.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-trusted-previous-chromium/U05-trusted-previous.png",
+    "observed_at": "2026-11-02T19:55:17.813Z",
+    "verified_scope": "复用现有更新recovery DTO：可信旧版本未安装目标与恢复证据不足继续保护两分支；显示可重试检查/只读回读入口，零自动检查/下载/安装。不是实际签名安装或重启验收。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+    "historical_evidence": {
+      "scene": "update-failed",
+      "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U05-T4a-T9-T10；重启核验成功／失败、数据迁移失败-chromium/U05.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U05-T4a-T9-T10；重启核验成功／失败、数据迁移失败-chromium/U05.png",
+      "observed_at": "2026-11-02T18:58:39.720Z",
+      "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json",
+      "verified_scope": "签名失败画面；Rust seal拒绝篡改与owned sidecar回收通过；真实升级重启/迁移待验。",
+      "limitation": "历史update-failed签名失败支持U02，不能支持U05恢复两分支。"
+    },
+    "fix_subpaths": [
+      {
+        "id": "U05-trusted-previous",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-trusted-previous-chromium/U05-trusted-previous.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-trusted-previous-chromium/U05-trusted-previous.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-trusted-previous-chromium/U05-trusted-previous-entry.png",
+        "reason_screenshots": []
+      },
+      {
+        "id": "U05-unproven-protected",
+        "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-unproven-protected-chromium/U05-unproven-protected.json",
+        "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-unproven-protected-chromium/U05-unproven-protected.png",
+        "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen.json",
+        "entry_screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-ui-frozen-output/t10-layout-fix-U05-recovery-unproven-protected-chromium/U05-unproven-protected-entry.png",
+        "reason_screenshots": []
+      }
+    ],
+    "fix_archive_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix-source-manifest.json"
+  },
+  {
+    "id": "X01",
+    "scene": "running",
+    "scope": "T9/T10；关窗、菜单／托盘重开、第二次启动",
+    "expectation": "保持当前运行，回到同一窗口，不启动第二套贡献",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X01-T9-T10；关窗、菜单／托盘重开、第二次启动-chromium/X01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X01-T9-T10；关窗、菜单／托盘重开、第二次启动-chromium/X01.png",
+    "observed_at": "2026-11-02T18:58:39.990Z",
+    "verified_scope": "仅关联运行页面图；Rust生命周期逻辑通过，三端真实关窗/菜单/托盘/二次启动待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "X02",
+    "scene": "confirm-stop",
+    "scope": "T9/T10；退出、停止超时／强制回收",
+    "expectation": "区分停止贡献与退出意图，只处理本App进程",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X02-T9-T10；退出、停止超时／强制回收-chromium/X02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X02-T9-T10；退出、停止超时／强制回收-chromium/X02.png",
+    "observed_at": "2026-11-02T18:58:40.269Z",
+    "verified_scope": "仅关联停止确认图；Rust owned退出逻辑通过，真实OS退出/超时/强制回收待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "X03",
+    "scene": "stopped",
+    "scope": "T9/T10；正常重开、异常退出／断电后重开",
+    "expectation": "正常按既有意图核验；不洁会话保持停止",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X03-T9-T10；正常重开、异常退出／断电后重开-chromium/X03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X03-T9-T10；正常重开、异常退出／断电后重开-chromium/X03.png",
+    "observed_at": "2026-11-02T18:58:40.436Z",
+    "verified_scope": "仅关联停止页面图；Go/Rust不洁会话/运行意图回归，真实OS正常/异常重开待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "X04",
+    "scene": "device-bound",
+    "scope": "T5/T9/T10；通知点击、登录返回、无托盘环境",
+    "expectation": "定位当前可用页／窗口，旧事件不自动提交或启动",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X04-T5-T9-T10；通知点击、登录返回、无托盘环境-chromium/X04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-X04-T5-T9-T10；通知点击、登录返回、无托盘环境-chromium/X04.png",
+    "observed_at": "2026-11-02T18:58:40.732Z",
+    "verified_scope": "仅关联设备已绑定页面图；Rust回跳路由逻辑，真实通知/登录返回/无托盘待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "C01",
+    "scene": "account-detail",
+    "scope": "T5/T8；跨四页修复、返回、未保存草稿",
+    "expectation": "保留平台、目标、草稿与操作；返回焦点正确",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C01-T5-T8；跨四页修复、返回、未保存草稿-chromium/C01.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C01-T5-T8；跨四页修复、返回、未保存草稿-chromium/C01.png",
+    "observed_at": "2026-11-02T18:58:41.124Z",
+    "verified_scope": "详情来源草稿画面；recovery-navigation全路径与焦点回归，Ego双Escape返回触发器后设置标题y77。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "C02",
+    "scene": "device-pending",
+    "scope": "T6–T10；860×600／常规尺寸，长URL／错误／标识",
+    "expectation": "主操作可发现、纵向可滚动、无横向溢出；同尺寸对照原布局，暂停／恢复保留右侧额度区下方靠右",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C02-T6–T10；860×600／常规尺寸，长URL／错误／标识-chromium/C02.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C02-T6–T10；860×600／常规尺寸，长URL／错误／标识-chromium/C02.png",
+    "observed_at": "2026-11-02T18:58:41.156Z",
+    "verified_scope": "长URL关联图；12代表图覆盖860×600/1000×700/1512×833中英明暗/长错误，几何无横溢；右侧动作坐标保存，未逐88图人工细看。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "C03",
+    "scene": "settings-general",
+    "scope": "T4/T6–T10；中英、明暗、系统语言不同",
+    "expectation": "全部可达路径本地化；技术原文只在合适详情",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C03-T4-T6–T10；中英、明暗、系统语言不同-chromium/C03.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C03-T4-T6–T10；中英、明暗、系统语言不同-chromium/C03.png",
+    "observed_at": "2026-11-02T18:58:41.469Z",
+    "verified_scope": "中文设置画面＋中英明暗代表路径；missingTranslations检查通过；真实OS不同系统语言待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "C04",
+    "scene": "confirm-change",
+    "scope": "T5/T6–T10；键盘、Escape、屏幕阅读、减少动态效果",
+    "expectation": "正确名称、焦点、状态播报；轮询不抢焦点",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C04-T5-T6–T10；键盘、Escape、屏幕阅读、减少动态效果-chromium/C04.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C04-T5-T6–T10；键盘、Escape、屏幕阅读、减少动态效果-chromium/C04.png",
+    "observed_at": "2026-11-02T18:58:41.872Z",
+    "verified_scope": "换号嵌套弹窗；Ego Enter/Escape焦点、自动reduced-motion几何；真实屏幕阅读器和三端系统键盘待验。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  },
+  {
+    "id": "C05",
+    "scene": "recovery-owner",
+    "scope": "T4b/T5/T10；双击、导航、旧实例／revision、身份变化、结果未知组合",
+    "expectation": "显式操作只提交一次；读取恢复不得变成写入重放",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light",
+    "layout_json": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C05-T4b-T5-T10；双击、导航、旧实例／revision、身份变化、结果未知组合-chromium/C05.json",
+    "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C05-T4b-T5-T10；双击、导航、旧实例／revision、身份变化、结果未知组合-chromium/C05.png",
+    "observed_at": "2026-11-02T18:58:41.893Z",
+    "verified_scope": "新owner确认画面；device-recovery/auto-read/polling旧revision/实例/候选屏障和真实重启单次POST通过。",
+    "status": "已验所列子路径；复合行未全验",
+    "source_manifest": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1.json"
+  }
+]

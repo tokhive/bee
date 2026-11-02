@@ -180,13 +180,35 @@ impl ConnectionDetail {
             }
             let valid = match key.as_str() {
                 "target_origin" => tauri::Url::parse(value).is_ok_and(|u| {
-                    let local = u.host_str() == Some("localhost")
-                        || u.host_str().is_some_and(|h| {
-                            h.trim_matches(['[', ']'])
-                                .parse::<std::net::IpAddr>()
-                                .is_ok_and(|ip| ip.is_loopback())
+                    // Preserve the producer's spelling, but check the original
+                    // authority before URL parsing normalizes hosts and ports.
+                    let authority = value
+                        .strip_prefix("https://")
+                        .or_else(|| value.strip_prefix("http://"));
+                    let shape = authority.is_some_and(|a| {
+                        !a.is_empty()
+                            && !a.chars().any(|c| c.is_whitespace() || "/?#@\\".contains(c))
+                    });
+                    let host = authority
+                        .map(|a| {
+                            if a.starts_with('[') {
+                                a.split_once(']').map_or(a, |(host, _)| &host[1..])
+                            } else {
+                                a.split_once(':').map_or(a, |(host, _)| host)
+                            }
+                        })
+                        .unwrap_or("");
+                    let local = host == "localhost"
+                        || host.parse::<std::net::IpAddr>().is_ok_and(|ip| {
+                            ip.is_loopback()
+                                || match ip {
+                                    std::net::IpAddr::V6(ip) => {
+                                        ip.to_ipv4_mapped().is_some_and(|ip| ip.is_loopback())
+                                    }
+                                    _ => false,
+                                }
                         });
-                    u.origin().ascii_serialization() == *value
+                    shape
                         && u.username().is_empty()
                         && u.password().is_none()
                         && u.query().is_none()
@@ -685,6 +707,28 @@ mod connection_tests {
             check(json!({"failure":null,"retry":retry,"next_retry_at":null})).unwrap();
         }
         check(Value::Null).unwrap();
+    }
+    #[test]
+    fn runtime_connection_details_consume_go_origin_contract() {
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../../../desktopbridge/testdata/connection-origin-contract.json"
+        ))
+        .unwrap();
+        let mut rejected = Vec::new();
+        for sample in fixture["accepted"].as_array().unwrap() {
+            if let Err(error) = check(sample["connection_detail"].clone()) {
+                rejected.push(format!("hive={} error={}", sample["hive"], error.message));
+            }
+        }
+        assert!(
+            rejected.is_empty(),
+            "Go observer origins rejected: {rejected:?}"
+        );
+        for origin in fixture["rejected"].as_array().unwrap() {
+            let mut d = detail();
+            d["failure"]["evidence"]["target_origin"] = origin.clone();
+            assert!(check(d).is_err(), "unsafe origin accepted: {origin}");
+        }
     }
     #[test]
     fn runtime_connection_rejects_unsafe_and_contradictory_details() {

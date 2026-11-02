@@ -47,8 +47,15 @@ function connectionDetail(value:unknown):void {
   if(!allowed.includes(key)||typeof v!=='string'||bytes(v)>32768)invalid('connection failure evidence key or value rejected');
   if(key==='target_origin'){
    let u:URL;try{u=new URL(v);}catch{invalid('connection target_origin requires safe origin');}
-   const loopback=u.hostname==='localhost'||u.hostname==='[::1]'||/^127\.(?:\d{1,3}\.){2}\d{1,3}$/.test(u.hostname);
-   if(u.origin!==v||u.username||u.password||u.search||u.hash||(u.protocol!=='https:'&&!(u.protocol==='http:'&&loopback)))invalid('connection target_origin requires safe origin');
+   // Evidence preserves Go's origin spelling; validate its original authority
+   // before URL parsing can normalize host case, ports or numeric IP forms.
+   if(!/^https?:\/\/[^/?#@\\\s]+$/.test(v))invalid('connection target_origin shape rejected: safe_scheme_and_authority=false; required=HTTP(S) scheme and authority only');
+   const authority=v.slice(v.indexOf('://')+3);
+   const hostname=authority.startsWith('[')?authority.slice(0,authority.indexOf(']')+1):authority.split(':')[0];
+   const ipv4=/^127\.(?:0|[1-9]\d{0,2})\.(?:0|[1-9]\d{0,2})\.(?:0|[1-9]\d{0,2})$/.test(hostname)&&hostname.split('.').every(part=>Number(part)<=255);
+   const ipv6=hostname.startsWith('[')&&(u.hostname==='[::1]'||/^\[::ffff:7f[0-9a-f]{2}:[0-9a-f]{1,4}\]$/.test(u.hostname));
+   const loopback=hostname==='localhost'||ipv4||ipv6;
+   if(u.username||u.password||u.search||u.hash||(u.protocol!=='https:'&&!(u.protocol==='http:'&&loopback)))invalid('connection target_origin requires safe origin');
   }
   if(key==='path'&&!/^\/api\/bee\/[a-z0-9/_-]+$/.test(v))invalid('connection path rejected');
   if(key==='http_status'&&!/^[1-5]\d{2}$/.test(v))invalid('connection HTTP rejection status rejected');

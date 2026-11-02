@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -386,5 +387,46 @@ func TestDesktopConnectionMalformedUpgradeKeepsConnectStage(t *testing.T) {
 	})
 	if err != nil || last.Detail.Failure == nil || last.Detail.Failure.Stage != "connect" || last.Detail.Failure.Code != "http_rejected" || last.Detail.Failure.Evidence["http_status"] != "101" {
 		t.Fatalf("malformed handshake misclassified: %+v err=%v", last.Detail.Failure, err)
+	}
+}
+
+// The fixture is produced by the real observer and consumed by Rust and TS.
+func TestDesktopConnectionOriginContract(t *testing.T) {
+	var cases struct {
+		Accepted []struct {
+			Hive   string                  `json:"hive"`
+			Detail DesktopConnectionDetail `json:"connection_detail"`
+		} `json:"accepted"`
+		Rejected []string `json:"rejected"`
+	}
+	raw, err := os.ReadFile("../desktopbridge/testdata/connection-origin-contract.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range cases.Accepted {
+		t.Run(tc.Hive, func(t *testing.T) {
+			failure := observedConnectionFailure(errors.New("connection origin fixture"), nil, localState{Hive: tc.Hive}, "/api/bee/agent", "connect")
+			failure.OccurredAt = "2026-10-26T00:00:00Z"
+			detail := DesktopConnectionDetail{Failure: failure, Retry: "halted"}
+			got, _ := json.Marshal(detail)
+			want, _ := json.Marshal(tc.Detail)
+			if string(got) != string(want) {
+				t.Fatalf("Go observer contract changed: hive=%s actual=%s required=%s", tc.Hive, got, want)
+			}
+		})
+	}
+	for _, origin := range cases.Rejected {
+		t.Run("reject "+origin, func(t *testing.T) {
+			failure := observedConnectionFailure(io.EOF, nil, localState{Hive: "https://hive.test"}, "/api/bee/agent", "connect")
+			failure.Evidence["target_origin"] = origin
+			raw, _ := json.Marshal(DesktopConnectionDetail{Failure: failure, Retry: "halted"})
+			var detail DesktopConnectionDetail
+			if err := json.Unmarshal(raw, &detail); err == nil {
+				t.Fatalf("unsafe target_origin accepted: %q", origin)
+			}
+		})
 	}
 }

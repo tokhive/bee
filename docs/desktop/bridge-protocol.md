@@ -182,7 +182,7 @@ go run ./cmd/bee help
 
 `failure` 可空；非空时严格包含 `code,stage,occurred_at,message,evidence`。`code` 固定为 `dns_failed|tls_failed|connection_refused|timeout|http_rejected|connection_closed|synchronization_failed|ownership_unconfirmed|unknown_failure`；`stage` 为 `connect|heartbeat|synchronize`；`occurred_at` 为本次失败的 UTC RFC3339 时间。分类只依赖实际错误类型、HTTP 响应与所属调用环节，不解析日志或英文句子。`message` 保留脱敏原因链，最多32768字节；超限明确报告实际字节数和限额。
 
-`evidence` 是字符串映射，键仅允许 `target_origin,path,http_status,remote_code,response_body,owned_session,consecutive_conflicts`，每值最多32768字节。origin 必须无凭据、查询和片段；path 仅为固定 Bee API 路径。当前生产者只提取 Hive 已知公开错误码，不复制可能包含凭据／账号数据的任意响应正文，也不从 HTTP 401/403 推断远端领域码。缺少远端码时保留实际 HTTP 状态与脱敏底层错误。Go、Rust、TS 同步拒绝未知字段、枚举、无效日期及重试／时间矛盾。
+`evidence` 是字符串映射，键仅允许 `target_origin,path,http_status,remote_code,response_body,owned_session,consecutive_conflicts`，每值最多32768字节。origin 只包含 `http(s)://authority`，不得带凭据、路径（包括根路径 `/`）、查询、片段、反斜杠或空白；HTTPS 允许远端主机，HTTP 仅允许原始主机为 `localhost` 或标准回环 IP（包括 IPv4 映射的 IPv6 回环）。证据保留 Go 生产者的原始主机大小写、显式默认端口及合法 IPv6／国际域名拼写，消费者不得要求 WHATWG 规范化结果与原文相等；不改写绑定及身份配置。三层共享 `desktopbridge/testdata/connection-origin-contract.json`，Go 验证其中详情由真实观察函数产生，Rust／TS 直接消费。path 仅为固定 Bee API 路径。当前生产者只提取 Hive 已知公开错误码，不复制可能包含凭据／账号数据的任意响应正文，也不从 HTTP 401/403 推断远端领域码。缺少远端码时保留实际 HTTP 状态与脱敏底层错误。Go、Rust、TS 同步拒绝未知字段、枚举、无效日期及重试／时间矛盾。
 
 等待和下一次尝试保留最近失败，确认连接后清除，主动停止立即清除。详情跟随外层 run_id/revision，旧运行、旧连接和停止中的回调不能覆盖当前状态。非终端的平台同步失败使用 `retry=idle`，不改 WebSocket 的 connected 状态，不清除其他平台供给；另一平台同步成功也不能证明该错误恢复。现有平台读取／重试及核心退避策略不变。无底层错误的连接结束只报告连接已结束，不猜断线原因。CLI 的 nil 观察者仍沿用原有重连及409处理。
 

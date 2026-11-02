@@ -158,6 +158,17 @@ func (o *DesktopAuthorizer) Cancel(ctx context.Context, id string) (DesktopOpera
 }
 func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr error) {
 	request, ctx := job.request, job.ctx
+	check := "official_executable"
+	defer func() {
+		if ctx.Err() != nil {
+			code := "authorization_cancelled"
+			if errors.Is(ctx.Err(), context.DeadlineExceeded) {
+				code = "authorization_timeout"
+			}
+			cause := errors.Join(ctx.Err(), resultErr)
+			resultErr = desktopAuthorizationFailure(request.Platform, code, check, cause.Error(), map[string]string{"confirmed": "false"}, cause)
+		}
+	}()
 	program, err := o.resolve(request.Platform)
 	if err != nil {
 		return accountFailure(request.Platform, "client_missing", "official_executable", err.Error())
@@ -166,23 +177,25 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	if err != nil {
 		return err
 	}
+	check = "official_version"
 	version, err := o.probe(ctx, program, env, "--version")
 	if err != nil {
-		return fmt.Errorf("official version probe failed: %w", err)
+		return desktopAuthorizationFailure(request.Platform, "client_version_probe_failed", check, "official version probe failed: "+err.Error(), nil, err)
 	}
 	if !desktopAuthorizationVersion(request.Platform, version) {
-		return fmt.Errorf("official client version unsupported: platform=%s response_bytes=%d; supported=Codex 0.162.x/0.163.x or Claude Code 2.1.153+ within 2.1.x", request.Platform, len(version))
+		return desktopAuthorizationFailure(request.Platform, "client_version_unsupported", check, fmt.Sprintf("official client version unsupported: platform=%s response_bytes=%d; supported=Codex 0.162.x/0.163.x or Claude Code 2.1.153+ within 2.1.x", request.Platform, len(version)), map[string]string{"parsed": "false"}, nil)
 	}
 	helpArgs := []string{"login", "--help"}
 	if request.Platform == "claude" {
 		helpArgs = []string{"auth", "login", "--help"}
 	}
+	check = "official_capability"
 	help, err := o.probe(ctx, program, env, helpArgs...)
 	if err != nil {
-		return fmt.Errorf("official login capability probe failed: %w", err)
+		return desktopAuthorizationFailure(request.Platform, "client_capability_probe_failed", check, "official login capability probe failed: "+err.Error(), nil, err)
 	}
 	if !strings.Contains(help, "login") || request.Platform == "claude" && !strings.Contains(help, "--claudeai") {
-		return fmt.Errorf("official login help lacks required command capability: platform=%s response_bytes=%d", request.Platform, len(help))
+		return desktopAuthorizationFailure(request.Platform, "client_capability_missing", check, fmt.Sprintf("official login help lacks required command capability: platform=%s response_bytes=%d", request.Platform, len(help)), map[string]string{"confirmed": "false"}, nil)
 	}
 	detect := DesktopAccountDetectRequest{Platform: request.Platform, Directory: request.Source.Directory, Store: request.Source.Store, Mode: "local"}
 	// Freeze the source actually passed to the official command. In particular,
@@ -198,6 +211,7 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 		directory := env["CLAUDE_CONFIG_DIR"]
 		detect.Directory = &directory
 	}
+	check = "official_source_read"
 	before, failure := o.accounts.readAccountSource(ctx, detect)
 	defer before.clear()
 	if failure != nil && failure.Code != "source_missing" {
@@ -219,22 +233,24 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	command.Stdin = nil
 	command.Stdout = io.Discard
 	command.Stderr = io.Discard
+	check = "official_process"
 	if err := runDesktopAuthorization(ctx, command); err != nil {
-		return fmt.Errorf("official login process failed: %w", err)
+		return desktopAuthorizationFailure(request.Platform, "authorization_process_failed", check, "official login process failed: "+err.Error(), nil, err)
 	}
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	check = "official_source_recheck"
 	after, failed := o.accounts.readAccountSource(ctx, detect)
 	defer after.clear()
 	if failed != nil {
 		return failed
 	}
 	if !sameDesktopAuthorizationSource(after.source, DesktopAccountSource{Directory: detect.Directory, Store: detect.Store}) {
-		return fmt.Errorf("official login source namespace differs from the started command; detect the intended source again")
+		return desktopAuthorizationFailure(request.Platform, "authorization_namespace_mismatch", "official_namespace", "official login source namespace differs from the started command; detect the intended source again", map[string]string{"source_revision_match": "false"}, nil)
 	}
 	if failure == nil && before.revision == after.revision {
-		return fmt.Errorf("official login exited successfully but selected source revision is unchanged; recheck official account before retrying")
+		return desktopAuthorizationFailure(request.Platform, "authorization_source_unchanged", "official_source_revision", "official login exited successfully but selected source revision is unchanged; recheck official account before retrying", map[string]string{"source_revision_match": "true"}, nil)
 	}
 	fingerprint, err := o.accounts.selectionSource(ctx, request.Platform, desktopPendingOperation{Source: after.source, CredentialRevision: after.revision})
 	if err != nil {
@@ -261,10 +277,10 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 		return err
 	}
 	if p.credentialRevision != after.revision || p.source == nil || !sameDesktopAuthorizationSource(*p.source, after.source) {
-		return fmt.Errorf("official login source changed during final verification; detect the current account again")
+		return desktopAuthorizationFailure(request.Platform, "source_changed", "official_source_recheck", "official login source changed during final verification; detect the current account again", map[string]string{"source_revision_match": "false"}, nil)
 	}
 	if snapshot.Candidate.Reference == nil {
-		return fmt.Errorf("official login source recheck did not produce a selectable candidate: state=%s", snapshot.Candidate.State)
+		return desktopAuthorizationFailure(request.Platform, "authorization_candidate_unconfirmed", "official_source_recheck", fmt.Sprintf("official login source recheck did not produce a selectable candidate: state=%s", snapshot.Candidate.State), map[string]string{"confirmed": "false"}, nil)
 	}
 	if err := ctx.Err(); err != nil {
 		return err
@@ -277,6 +293,19 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	return nil
 }
 func operationPointer(op DesktopOperation) *DesktopOperation { return &op }
+
+// Keep the machine cause and safe process chain together. Official output and
+// executable paths are excluded by the existing supervisor/probe boundary.
+func desktopAuthorizationFailure(platform, code, check, message string, evidence map[string]string, cause error) error {
+	failure := accountFailure(platform, code, check, message)
+	for key, value := range evidence {
+		failure.Evidence[key] = value
+	}
+	if cause != nil {
+		return errors.Join(failure, cause)
+	}
+	return failure
+}
 func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
 	p, release, _ := o.accounts.acquire(context.Background(), job.request.Platform)
 	defer release()
@@ -289,8 +318,13 @@ func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
 	p.snapshot.Revision++
 	job.operation.Revision = p.snapshot.Revision
 	job.operation.State = "succeeded"
-	if job.ctx.Err() != nil {
-		err = job.ctx.Err()
+	if job.ctx.Err() != nil && !errors.Is(err, job.ctx.Err()) {
+		code := "authorization_cancelled"
+		if errors.Is(job.ctx.Err(), context.DeadlineExceeded) {
+			code = "authorization_timeout"
+		}
+		cause := errors.Join(job.ctx.Err(), err)
+		err = desktopAuthorizationFailure(job.request.Platform, code, "official_source_recheck", cause.Error(), map[string]string{"confirmed": "false"}, cause)
 	}
 	if err != nil {
 		job.operation.State = "failed"
@@ -358,7 +392,7 @@ func desktopAuthorizationArgs(request DesktopAuthorizeRequest, goos string) ([]s
 			store = "file"
 		}
 		if store == "keyring" && goos != "darwin" {
-			return nil, nil, fmt.Errorf("official Codex keyring source unsupported on OS=%s", goos)
+			return nil, nil, accountFailure(request.Platform, "unsupported_store", "official_namespace", fmt.Sprintf("official Codex keyring source unsupported on OS=%s", goos))
 		}
 		env["CODEX_HOME"] = directory
 		return []string{"login", "-c", "cli_auth_credentials_store=\"" + store + "\""}, env, nil
@@ -368,7 +402,7 @@ func desktopAuthorizationArgs(request DesktopAuthorizeRequest, goos string) ([]s
 		expected = "keychain"
 	}
 	if request.Source.Store != expected {
-		return nil, nil, fmt.Errorf("official Claude login namespace mismatch: selected_store=%s required_store=%s OS=%s", request.Source.Store, expected, goos)
+		return nil, nil, accountFailure(request.Platform, "authorization_namespace_mismatch", "official_namespace", fmt.Sprintf("official Claude login namespace mismatch: selected_store=%s required_store=%s OS=%s", request.Source.Store, expected, goos))
 	}
 	if expected == "file" {
 		directory := resolveClaudeKeychain(request.Source.Directory).directory

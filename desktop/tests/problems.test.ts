@@ -101,3 +101,9 @@ test('unsent classification uses validated codes and rejects malformed details',
  assert.equal(requestNotSent(normalizeFailure({code:'REQUEST_NOT_SENT',message:'safe',details:{check:'write',observed_at:observed,evidence:{token:'secret'}}},'write')),false);
  assert.equal(requestNotSent(normalizeFailure({code:'RESPONSE_TIMEOUT',message:'no bytes sent'},'write')),false);
 });
+
+test('official client failures use stable codes, keep safe evidence and never infer reasons from English',()=>{
+ const cases=[['client_missing','official_executable',/客户端.*未安装|未找到.*客户端/,/client.*not found/i],['client_version_unsupported','official_version',/版本.*支持/,/version.*supported/i],['client_capability_missing','official_capability',/登录命令/,/login command/i],['authorization_namespace_mismatch','official_namespace',/登录位置.*不一致/,/namespace.*match/i],['authorization_source_unchanged','official_source_revision',/来源.*没有改变/,/source.*unchanged/i],['authorization_process_failed','official_process',/登录进程.*失败/,/login process.*failed/i],['authorization_timeout','official_version',/登录.*超时/,/(?:login|sign-in).*timed out/i],['authorization_cancelled','official_process',/登录.*取消/,/(?:login|sign-in).*cancelled/i]] as const;
+ for(const [code,check,zh,en]of cases){const value=normalizeFailure({code,check,platform:'openai',message:'safe process evidence; exit_code=7',evidence:{confirmed:'false'}},'account_operation');for(const locale of ['zh','en']as const){const p=presentFailure(value,locale);assert.match(p.summary,locale==='zh'?zh:en,code);assert.ok(p.details.includes('exit_code=7'));assert.ok(p.details.includes(check));assert.doesNotMatch(p.summary,/\{client\}/);}}
+ const unknown=presentFailure(normalizeFailure({code:'future_reason',check:'official_version',message:'client_version_unsupported'},'account_operation'),'zh');assert.doesNotMatch(unknown.summary,/版本/);
+});

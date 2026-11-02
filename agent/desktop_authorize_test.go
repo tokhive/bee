@@ -25,6 +25,11 @@ func TestDesktopAuthorizeProcessHelper(t *testing.T) {
 	args = args[1:]
 	mode := os.Getenv("BEE_AUTHORIZE_MODE")
 	if len(args) == 1 && args[0] == "--version" {
+		if mode == "version_wait" {
+			for {
+				time.Sleep(time.Second)
+			}
+		}
 		if mode == "unsupported" {
 			fmt.Print("codex-cli 0.1.0")
 		} else {
@@ -37,6 +42,10 @@ func TestDesktopAuthorizeProcessHelper(t *testing.T) {
 		os.Exit(0)
 	}
 	if args[len(args)-1] == "--help" {
+		if mode == "help_missing" {
+			fmt.Print("Usage: unsupported")
+			os.Exit(0)
+		}
 		fmt.Print("Usage: login --config --device-auth --claudeai")
 		os.Exit(0)
 	}
@@ -103,7 +112,7 @@ func waitAuthorize(t *testing.T, owner *DesktopAuthorizer, id string) DesktopOpe
 	return DesktopOperation{}
 }
 func TestDesktopAuthorizeRequiresVerifiedNewSource(t *testing.T) {
-	for _, mode := range []string{"success", "unchanged", "exit_error", "unsupported"} {
+	for _, mode := range []string{"success", "unchanged", "exit_error", "unsupported", "help_missing"} {
 		t.Run(mode, func(t *testing.T) {
 			owner, a, request, _ := authorizeFixture(t, mode)
 			op, err := owner.Start(context.Background(), request)
@@ -117,6 +126,13 @@ func TestDesktopAuthorizeRequiresVerifiedNewSource(t *testing.T) {
 			}
 			if result.State != want {
 				t.Fatalf("mode=%s state=%s error=%v", mode, result.State, result.Error)
+			}
+			codes := map[string]string{"unchanged": "source_missing", "exit_error": "authorization_process_failed", "unsupported": "client_version_unsupported", "help_missing": "client_capability_missing"}
+			if code := codes[mode]; code != "" && (result.Error == nil || result.Error.Code != code) {
+				t.Fatalf("mode=%s required_code=%s actual=%+v", mode, code, result.Error)
+			}
+			if mode == "unsupported" && (result.Error.Check != "official_version" || result.Error.Evidence["parsed"] != "false") {
+				t.Fatalf("unsupported version lacks safe check evidence: %+v", result.Error)
 			}
 			raw, _ := json.Marshal(result)
 			if strings.Contains(string(raw), "PRIVATE_") {
@@ -135,12 +151,49 @@ func TestDesktopAuthorizeRequiresVerifiedNewSource(t *testing.T) {
 		})
 	}
 }
+
+// The deadline is triggered only after observing the owned child. This tests the
+// deadline/join path without assuming two race-instrumented probes finish in 150ms.
+type authorizeObservedDeadline struct {
+	context.Context
+	done chan struct{}
+}
+
+func (c *authorizeObservedDeadline) Done() <-chan struct{} { return c.done }
+func (c *authorizeObservedDeadline) Err() error {
+	select {
+	case <-c.done:
+		return context.DeadlineExceeded
+	default:
+		return nil
+	}
+}
+func (c *authorizeObservedDeadline) Deadline() (time.Time, bool) { return time.Time{}, false }
+
+func TestDesktopAuthorizeTimeoutBeforeOwnedProcessStarts(t *testing.T) {
+	owner, _, request, started := authorizeFixture(t, "version_wait")
+	owner.timeout = 150 * time.Millisecond
+	op, err := owner.Start(context.Background(), request)
+	if err != nil {
+		t.Fatal(err)
+	}
+	done := waitAuthorize(t, owner, op.ID)
+	if done.State != "failed" || done.Error == nil || done.Error.Code != "authorization_timeout" || done.Error.Check != "official_version" {
+		t.Fatalf("preflight timeout actual=%+v error=%+v; required=authorization_timeout at official_version", done, done.Error)
+	}
+	if _, err := os.Stat(started); !os.IsNotExist(err) {
+		t.Fatalf("preflight timeout reached owned login: stat=%v", err)
+	}
+}
 func TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess(t *testing.T) {
 	for _, action := range []string{"cancel", "close", "timeout"} {
 		t.Run(action, func(t *testing.T) {
 			owner, _, request, started := authorizeFixture(t, "wait")
+			var deadlineContext *authorizeObservedDeadline
 			if action == "timeout" {
-				owner.timeout = 150 * time.Millisecond
+				deadlineContext = &authorizeObservedDeadline{Context: context.Background(), done: make(chan struct{})}
+				owner.cancel()
+				owner.ctx, owner.cancel = context.WithCancel(deadlineContext)
 			}
 			op, err := owner.Start(context.Background(), request)
 			if err != nil {
@@ -152,7 +205,8 @@ func TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess(t *testing.T) {
 					break
 				}
 				if time.Now().After(deadline) {
-					t.Fatal("owned login process did not start")
+					observed, _ := owner.Status(context.Background(), op.ID)
+					t.Fatalf("owned login start marker missing after 3s: action=%s state=%s error=%+v; deadline trigger not sent", action, observed.State, observed.Error)
 				}
 				time.Sleep(time.Millisecond)
 			}
@@ -167,9 +221,19 @@ func TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess(t *testing.T) {
 			if action == "close" {
 				owner.Close()
 			}
+			if action == "timeout" {
+				close(deadlineContext.done)
+			}
 			result := waitAuthorize(t, owner, op.ID)
 			if action == "timeout" && result.State != "failed" || action != "timeout" && result.State != "cancelled" {
 				t.Fatalf("action=%s result=%+v", action, result)
+			}
+			wantCode := "authorization_cancelled"
+			if action == "timeout" {
+				wantCode = "authorization_timeout"
+			}
+			if result.Error == nil || result.Error.Code != wantCode || result.Error.Check != "official_process" {
+				t.Fatalf("owned process terminal failure lacks stage: action=%s error=%+v", action, result.Error)
 			}
 			if _, err := owner.Status(context.Background(), strings.Repeat("f", 48)); err == nil {
 				t.Fatal("unowned operation accepted")
@@ -229,6 +293,9 @@ func TestDesktopAuthorizeUnchangedExistingSource(t *testing.T) {
 	result := waitAuthorize(t, owner, op.ID)
 	if result.State != "failed" || result.Error == nil || !strings.Contains(result.Error.Message, "unchanged") {
 		t.Fatalf("unchanged source accepted: %+v", result)
+	}
+	if result.Error.Code != "authorization_source_unchanged" || result.Error.Evidence["source_revision_match"] != "true" {
+		t.Fatalf("unchanged source failure=%+v", result.Error)
 	}
 }
 
@@ -325,6 +392,8 @@ func TestDesktopAuthorizeNamespaceAndEnvironment(t *testing.T) {
 	}
 	if _, _, err := desktopAuthorizationArgs(DesktopAuthorizeRequest{Platform: "claude", Source: DesktopAccountSource{Store: "file"}}, "darwin"); err == nil {
 		t.Fatal("wrong macOS namespace accepted")
+	} else if failure, ok := err.(*DesktopAccountError); !ok || failure.Code != "authorization_namespace_mismatch" || failure.Check != "official_namespace" {
+		t.Fatalf("wrong namespace lacks stable cause: %v", err)
 	}
 }
 func TestDesktopAuthorizeRejectsStaleAndRunningBeforeSourceAccess(t *testing.T) {

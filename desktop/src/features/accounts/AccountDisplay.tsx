@@ -36,5 +36,7 @@ export function AccountQuota({presentation,resets=false}:{presentation:AccountPr
    {resets&&<p className="quota-reset">{t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>}
   </div>)}
   {quotaState==='stale'&&<p className="quota-history">{t('历史数据，已过期')}</p>}
+  {quotaState==='stale'&&presentation.observedAt&&<p className="quota-history">{t('上次额度观测')}: <time dateTime={presentation.observedAt}>{formatDate(presentation.observedAt,currentLocale())}</time></p>}
+  {quotaState==='current'&&windows.some(w=>w.used_percent!==null&&w.used_percent>=100)&&<p className="quota-exhausted">{t('有额度窗口已耗尽；请查看各窗口重置时间。')}</p>}
  </div>;
 }

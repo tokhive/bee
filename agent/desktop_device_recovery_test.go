@@ -5,12 +5,15 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -73,6 +76,7 @@ func TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays(t *testing.T) {
 
 type recoveryHive struct {
 	origin, oldCredential, newCredential                       string
+	createFailureStatus                                        int
 	creates, redeems                                           int
 	approved, bound, lostCreate, lostRedeem, draining, expired bool
 	hideNewIdentity                                            bool
@@ -102,6 +106,10 @@ func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 			reject(h.status, h.code)
 		case "POST /api/bee/pairings":
 			h.creates++
+			if h.createFailureStatus != 0 {
+				reject(h.createFailureStatus, "unavailable")
+				return
+			}
 			if h.lostCreate {
 				w.Write([]byte(`{`))
 				return
@@ -678,5 +686,336 @@ func TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure(t *testing.T
 				}
 			})
 		}
+	}
+}
+
+// A failed identity read must not erase proof that this version has sent no POST.
+func TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof(t *testing.T) {
+	for _, failure := range []string{"503", "disconnect", "timeout"} {
+		for _, restart := range []bool{false, true} {
+			t.Run(fmt.Sprintf("%s/restart=%t", failure, restart), func(t *testing.T) {
+				var creates atomic.Int32
+				var fail atomic.Bool
+				fail.Store(true)
+				var origin string
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+					if req.Method == "POST" {
+						creates.Add(1)
+						json.NewEncoder(w).Encode(beewire.Pairing{PairingToken: "beep_" + strings.Repeat("t", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"})
+						return
+					}
+					if fail.Load() {
+						switch failure {
+						case "503":
+							w.WriteHeader(503)
+							w.Write([]byte(`{"error":{"code":"unavailable"}}`))
+						case "disconnect":
+							conn, _, err := w.(http.Hijacker).Hijack()
+							if err == nil {
+								conn.Close()
+							}
+						case "timeout":
+							<-req.Context().Done()
+						}
+						return
+					}
+					w.WriteHeader(401)
+					w.Write([]byte(`{"error":{"code":"invalid_device_credential"}}`))
+				}))
+				defer server.Close()
+				origin = server.URL
+				path := filepath.Join(t.TempDir(), "bee-desktop.json")
+				d := newDesktopTestDevice(t, path)
+				ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+				defer cancel()
+				if _, err := d.Begin(ctx, origin, "Mac"); err == nil || creates.Load() != 0 {
+					t.Fatalf("identity failure err=%v POST=%d required=error and zero", err, creates.Load())
+				}
+				r, err := readDesktopRecovery(&d.session)
+				if err != nil || r == nil || r.CreateAttempted || r.Phase != "awaiting_confirmation" {
+					t.Fatalf("lost durable unsubmitted proof: record=%+v err=%v", r, err)
+				}
+				if restart {
+					closeDesktopTestDevice(t, d)
+					d = newDesktopTestDevice(t, path)
+				}
+				fail.Store(false)
+				if view, err := d.Status(context.Background()); err != nil || creates.Load() != 0 || view.Recovery == nil || view.Recovery.Phase != "awaiting_confirmation" {
+					t.Fatalf("Status lost waiting state or accepted submission: view=%+v err=%v POST=%d", view, err, creates.Load())
+				}
+				v, err := d.Begin(context.Background(), origin, "Mac")
+				if err != nil || v.State != "pending" || creates.Load() != 1 {
+					t.Fatalf("explicit retry failed: view=%+v err=%v POST=%d required=1", v, err, creates.Load())
+				}
+			})
+		}
+	}
+}
+
+func TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("requires Unix directory write protection")
+	}
+	h, d, path := newRecoveryHive(t)
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	h.code = "invalid_device_credential"
+	// Acquire the process lock before refusing all subsequent atomic writes.
+	s, release, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	release()
+	if err := os.Chmod(filepath.Dir(path), 0500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Dir(path), 0700) })
+	_, err = d.Begin(context.Background(), h.origin, "Mac")
+	if err == nil || !strings.Contains(err.Error(), "persist recovery") {
+		t.Fatalf("required record write failure before config: %v", err)
+	}
+	if _, err = os.Stat(s.path); !os.IsNotExist(err) {
+		t.Fatalf("failed initialization left credential: %v", err)
+	}
+	if h.creates != 0 {
+		t.Fatalf("POST before durable initialization=%d", h.creates)
+	}
+	if err = os.Chmod(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	closeDesktopTestDevice(t, d)
+	d = newDesktopTestDevice(t, path)
+	v, err := d.Begin(context.Background(), h.origin, "Mac")
+	if err != nil || v.State != "pending" || h.creates != 1 {
+		t.Fatalf("retry %+v %v POST=%d", v, err, h.creates)
+	}
+}
+
+func TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
+		t.Skip("requires Unix directory write protection")
+	}
+	h, d, path := newRecoveryHive(t)
+	h.code = "invalid_device_credential"
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	s, release, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	credential := "bee_" + strings.Repeat("n", 43)
+	r := &desktopRecoveryRecord{Version: 1, Purpose: "initial_pairing", OperationID: strings.Repeat("a", 48), Revision: 1, Phase: "awaiting_confirmation", Hive: h.origin, Name: "Mac", Credential: credential, Accepted: []desktopRecoveryDecision{}}
+	// Durable disk image of interruption/config-write failure after record commit.
+	if err = saveDesktopRecovery(s, r); err != nil {
+		t.Fatal(err)
+	}
+	release()
+	closeDesktopTestDevice(t, d)
+	d = newDesktopTestDevice(t, path)
+	v, err := d.Status(context.Background())
+	if err != nil || v.Recovery == nil || h.creates != 0 {
+		t.Fatalf("record-only Status %+v %v POST=%d", v, err, h.creates)
+	}
+	if _, err = os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("Status created config: %v", err)
+	}
+	if _, err = d.Begin(context.Background(), "https://different.example", "Mac"); err == nil {
+		t.Fatal("changed Hive accepted for durable initialization")
+	}
+	// Re-enter the exact record-committed/config-absent boundary with a real
+	// configuration write failure, then prove a second process can continue.
+	if err = os.Chmod(filepath.Dir(path), 0500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(filepath.Dir(path), 0700) })
+	if _, err = d.Begin(context.Background(), h.origin, "Mac"); err == nil || !strings.Contains(err.Error(), "save Bee configuration") || h.creates != 0 {
+		t.Fatalf("config failure err=%v POST=%d", err, h.creates)
+	}
+	persisted, err := readDesktopRecovery(&d.session)
+	if err != nil || persisted == nil || persisted.CreateAttempted || persisted.Credential != credential {
+		t.Fatalf("config failure lost original proof %+v %v", persisted, err)
+	}
+	if err = os.Chmod(filepath.Dir(path), 0700); err != nil {
+		t.Fatal(err)
+	}
+	closeDesktopTestDevice(t, d)
+	d = newDesktopTestDevice(t, path)
+	v, err = d.Begin(context.Background(), h.origin, "Mac")
+	if err != nil || v.State != "pending" || h.creates != 1 {
+		t.Fatalf("record-only Begin %+v %v POST=%d", v, err, h.creates)
+	}
+	state, err := readState(path)
+	if err != nil || state.Credential != credential {
+		t.Fatalf("initial credential changed: err=%v", err)
+	}
+}
+
+func TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence(t *testing.T) {
+	for _, initial := range []bool{true, false} {
+		t.Run(fmt.Sprintf("initial=%t", initial), func(t *testing.T) {
+			h, d, path := newRecoveryHive(t)
+			h.createFailureStatus = 503
+			var v DeviceRecoveryView
+			if initial {
+				if err := os.Remove(path); err != nil {
+					t.Fatal(err)
+				}
+				h.code = "invalid_device_credential"
+				view, err := d.Begin(context.Background(), h.origin, "Mac")
+				if err != nil || view.Recovery == nil {
+					t.Fatalf("initial %+v %v", view, err)
+				}
+				v = *view.Recovery
+			} else {
+				var err error
+				v, err = d.RecoveryPrepare(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				v, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "begin_pairing")
+				if err != nil {
+					t.Fatal(err)
+				}
+			}
+			if v.Failure == nil || v.Failure.Details == nil {
+				t.Fatalf("missing original failure %+v", v)
+			}
+			if v.Failure.Code != "unavailable" || v.Failure.Details.Check != "pairing_create" || v.Failure.Details.Evidence["http_status"] != "503" || v.Failure.Details.Evidence["remote_code"] != "unavailable" || !strings.Contains(v.Failure.Details.Evidence["response_body"], "unavailable") {
+				t.Fatalf("missing HTTP creation evidence: %+v", v.Failure)
+			}
+			original, _ := json.Marshal(v.Failure)
+			recordPath := filepath.Join(filepath.Dir(path), "bee-desktop-recovery.json")
+			before, err := os.ReadFile(recordPath)
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i < 5; i++ {
+				closeDesktopTestDevice(t, d)
+				d = newDesktopTestDevice(t, path)
+				var err error
+				if initial {
+					var view DeviceView
+					if i%2 == 0 {
+						view, err = d.Begin(context.Background(), h.origin, "Mac")
+					} else {
+						view, err = d.Status(context.Background())
+					}
+					if view.Recovery == nil {
+						t.Fatalf("missing recovery %+v %v", view, err)
+					}
+					v = *view.Recovery
+				} else {
+					v, err = d.RecoveryStatus(context.Background())
+				}
+				got, _ := json.Marshal(v.Failure)
+				if err != nil || v.Phase != "creation_unknown" || !bytes.Equal(got, original) {
+					t.Fatalf("original failure replaced: got=%s want=%s err=%v", got, original, err)
+				}
+				after, err := os.ReadFile(recordPath)
+				if err != nil || len(after) > len(before) {
+					t.Fatalf("observation grew record: before=%d after=%d err=%v", len(before), len(after), err)
+				}
+			}
+			if h.creates != 1 {
+				t.Fatalf("creation replayed POST=%d", h.creates)
+			}
+		})
+	}
+}
+
+func TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts(t *testing.T) {
+	for _, condition := range []string{"closed", "run", "control"} {
+		t.Run(condition, func(t *testing.T) {
+			h, d, _ := newRecoveryHive(t)
+			a := NewDesktopAccounts(d)
+			r := NewDesktopRuntime(context.Background(), d, a)
+			t.Cleanup(func() { r.Close(); a.Close() })
+			r.mu.Lock()
+			switch condition {
+			case "closed":
+				r.closed = true
+			case "run":
+				r.runCancel = func() {}
+				r.runDone = make(chan struct{})
+			case "control":
+				r.controlDone = make(chan struct{})
+			}
+			r.mu.Unlock()
+			_, err := d.RecoveryPrepare(context.Background())
+			want := map[string]string{"closed": "runtime_closed=true", "run": "run_worker_pending=true", "control": "control_worker_pending=true"}[condition]
+			if err == nil || !strings.Contains(err.Error(), want) || !strings.Contains(err.Error(), "local=stopped") || h.creates != 0 {
+				t.Errorf("admission lacks actual cause: err=%v required=%s POST=%d", err, want, h.creates)
+			}
+			r.mu.Lock()
+			r.closed = false
+			if r.runDone != nil {
+				close(r.runDone)
+			}
+			if r.controlDone != nil {
+				close(r.controlDone)
+			}
+			r.mu.Unlock()
+		})
+	}
+}
+
+func TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence(t *testing.T) {
+	for _, attemptSaved := range []bool{false, true} {
+		t.Run(fmt.Sprintf("attempt_saved=%t", attemptSaved), func(t *testing.T) {
+			h, d, path := newRecoveryHive(t)
+			h.code = "invalid_device_credential"
+			state, err := readState(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			state.Identity = nil
+			if err = saveState(path, state); err != nil {
+				t.Fatal(err)
+			}
+			if attemptSaved {
+				session, release, err := d.acquireSession(context.Background())
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Crash after committing the attempt but before receiving any response:
+				// the restarted process must never infer that the POST was not sent.
+				record := &desktopRecoveryRecord{Version: 1, Purpose: "initial_pairing", OperationID: strings.Repeat("c", 48), Revision: 2, Phase: "creating", Hive: h.origin, Name: state.Name, Credential: state.Credential, CreateAttempted: true, Accepted: []desktopRecoveryDecision{}}
+				if err = saveDesktopRecovery(session, record); err != nil {
+					t.Fatal(err)
+				}
+				release()
+				closeDesktopTestDevice(t, d)
+				d = newDesktopTestDevice(t, path)
+			}
+			v, err := d.Begin(context.Background(), h.origin, "Mac")
+			if err != nil || v.Recovery == nil || v.Recovery.Phase != "creation_unknown" || v.Recovery.Failure == nil {
+				t.Fatalf("legacy unknown %+v %v", v, err)
+			}
+			failure := v.Recovery.Failure
+			if failure.Details == nil || len(failure.Details.Evidence) != 0 || !strings.Contains(failure.Message, "without token") {
+				t.Fatalf("legacy invented remote evidence: %+v", failure)
+			}
+			original, _ := os.ReadFile(filepath.Join(filepath.Dir(path), "bee-desktop-recovery.json"))
+			for i := 0; i < 3; i++ {
+				closeDesktopTestDevice(t, d)
+				d = newDesktopTestDevice(t, path)
+				if _, err = d.Status(context.Background()); err != nil {
+					t.Fatal(err)
+				}
+				if _, err = d.Begin(context.Background(), h.origin, "Mac"); err != nil {
+					t.Fatal(err)
+				}
+				after, err := os.ReadFile(filepath.Join(filepath.Dir(path), "bee-desktop-recovery.json"))
+				if err != nil || !bytes.Equal(original, after) {
+					t.Fatalf("legacy observation changed record: err=%v", err)
+				}
+			}
+			if h.creates != 0 {
+				t.Fatalf("legacy unknown creation replayed: POST=%d", h.creates)
+			}
+
+		})
 	}
 }

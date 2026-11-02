@@ -1,0 +1,1725 @@
+{
+  "observed_at": "2026-11-02T21:25:28.366739+00:00",
+  "scope": "最终审查I1/I2增量；不覆盖旧manifest，不宣称T10/76行/全部Plan完成",
+  "bee_base": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+  "bee_product_commit": "843e3fff557d723ed8626c081f8cecf2567856a5",
+  "hive": {
+    "head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+    "gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+    "status": ""
+  },
+  "product_sources": {
+    "agent/desktop_connection_test.go": {
+      "size": 21552,
+      "sha256": "4d2326f497d47649c47b9719f8c00514649237ffdd70eeffe1bd0113345bc4fe",
+      "commit_blob_sha256": "4d2326f497d47649c47b9719f8c00514649237ffdd70eeffe1bd0113345bc4fe"
+    },
+    "agent/desktop_runtime_sync.go": {
+      "size": 24322,
+      "sha256": "81cbb481be3e25930ddcf6beaf1f7b1a2efe46949357b7fbd87ae32d602bb887",
+      "commit_blob_sha256": "81cbb481be3e25930ddcf6beaf1f7b1a2efe46949357b7fbd87ae32d602bb887"
+    },
+    "agent/desktop_runtime_test.go": {
+      "size": 33040,
+      "sha256": "9e7ce8af7890d5445e56452c769a8d9dbb5b68855c27aa9f333aa3bba015572c",
+      "commit_blob_sha256": "9e7ce8af7890d5445e56452c769a8d9dbb5b68855c27aa9f333aa3bba015572c"
+    },
+    "desktop/playwright.final-fix.config.ts": {
+      "size": 357,
+      "sha256": "c8d121ce2114d5ded30b4ef8e9bfaeacfbce232de09e5e68158eed54f8afa3d9",
+      "commit_blob_sha256": "c8d121ce2114d5ded30b4ef8e9bfaeacfbce232de09e5e68158eed54f8afa3d9"
+    },
+    "desktop/tests/fixtures/bee-preview/fixture.mjs": {
+      "size": 19566,
+      "sha256": "5931ee04b2c72e9ff928e6a000ce207be1a183b8c94fb6fc35540b349701b131",
+      "commit_blob_sha256": "5931ee04b2c72e9ff928e6a000ce207be1a183b8c94fb6fc35540b349701b131"
+    },
+    "desktop/tests/fixtures/synchronization-recovery.json": {
+      "size": 1358,
+      "sha256": "dfcde1dd82f97679d22504e37d1dcb41fc9d17c3f27f044823e0bdb6b062339c",
+      "commit_blob_sha256": "dfcde1dd82f97679d22504e37d1dcb41fc9d17c3f27f044823e0bdb6b062339c"
+    },
+    "desktop/tests/t10-layout-fix.spec.ts": {
+      "size": 31761,
+      "sha256": "02ba63ed7f61758d0ba8af0b5e3980d74731a0c65911e201510e317ddd1b40bb",
+      "commit_blob_sha256": "02ba63ed7f61758d0ba8af0b5e3980d74731a0c65911e201510e317ddd1b40bb"
+    }
+  },
+  "validation_document": {
+    "path": "docs/desktop/interaction-clarity-validation.md",
+    "size": 113760,
+    "sha256": "ae376adde5189c97ec6d8fc5dc257c3367150c4112dde2dfe5d6a885ab071814"
+  },
+  "new_artifacts": {
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-race.json": {
+      "size": 192481,
+      "sha256": "ddf8ea25e64496233493ab0054b2b55eb56c8357529aecbfde8f2cb093d89bc9"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-race.log": {
+      "size": 130434,
+      "sha256": "70f734ad5725e6436ba3278675163696d46985131caee3862859690c932d725e"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-vet.json": {
+      "size": 192430,
+      "sha256": "acba4cabc71c7f6679a9be32b086b312956ce7713634fbd668f9b510d5e51a47"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-vet.log": {
+      "size": 85124,
+      "sha256": "7df50a99b6954f140a7a06659cf649d54310c62043e32336757deb1e7682b257"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.json": {
+      "size": 198096,
+      "sha256": "92dd3cdc8201c64bb4bd97fbaafafc0702f90a95e18c3474e9562bb4448deca7"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.log": {
+      "size": 102194,
+      "sha256": "4dd2500b77b391b9142e5ca42e7a3cfd0701f1aa35545adfa08b0ac1a7a82541"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.py": {
+      "size": 8712,
+      "sha256": "c3a15214f7881f19b5a2ac06ce767ce3acff0aeaf3e0017372dec5164a9effcb"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-baseline.json": {
+      "size": 771470,
+      "sha256": "1b82d5edeb572081d9589a5d4b0ecf8bc2d0be155949108589f2f1ede8c9ea60"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.json": {
+      "size": 195330,
+      "sha256": "36da4ef2b64a38b715be0b89e374c48efd6e0a402341799232b56a1c640b255c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.log": {
+      "size": 90982,
+      "sha256": "667342897669d73e9b407e82f81c34b04d9b4cac61de3c643f274d6fb30f275c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.mjs": {
+      "size": 647,
+      "sha256": "9baadcdc957735c4dccdcf15edee29df1685e184c67b52d70f53d8ab0a6566b3"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.json": {
+      "size": 196163,
+      "sha256": "04f7f0c6353d0ac110854c175dc88ee0deda290640a69e1e2055fbdbdc8f04a1"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.log": {
+      "size": 92757,
+      "sha256": "af13c112c465279f08a4d42ad24eac930312781bc97d87a5711b360b4eb825ab"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.mjs": {
+      "size": 3826,
+      "sha256": "f46f8d7f8553276dc46a9e8b2507d375918e65a5ecd8ff61b5be68d4eb13cd07"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.json": {
+      "size": 196735,
+      "sha256": "245ace419793834eddc0b72c2a595ff9e23a5d18179654e0e1a8ee4d9bff3035"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.log": {
+      "size": 93745,
+      "sha256": "db899be8f478d87fa74717584f72a030c3d8cfd456cee1430eb20afbf3901e24"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.mjs": {
+      "size": 3124,
+      "sha256": "f1a0d0ed0cc2e9a35bbd99a303384d869eab9b9553f573238e0839ca430e27a7"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-d06-claude.png": {
+      "size": 113765,
+      "sha256": "e679abe2d4d462a42890fd23bcaeb4a861d1790d387b98b961329541f1325dd7"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-d06-entry.png": {
+      "size": 98600,
+      "sha256": "8719aef6264c180907b85ca025de10bbef59c3e01f49c2fa955112cbaf0b660b"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-d06-openai.png": {
+      "size": 113069,
+      "sha256": "4bab74142b4a95fbaec9f8b1e2f23e781d9f5da5c58b249a6da90b33346aa239"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-d06.json": {
+      "size": 26443,
+      "sha256": "663cd52fc4187a983d980922313c6024c58aba2968ada4505578031ead243421"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-receipt.json": {
+      "size": 364,
+      "sha256": "76b1d4f368409aa6e8d9537ac889ce9ceb52c79c62a7fe12c8967edf78969aea"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.json": {
+      "size": 197525,
+      "sha256": "bcd972d39dfe23fe2803c54de564e83bd74f6ea18634b7967ef73c34d137972a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.log": {
+      "size": 90481,
+      "sha256": "155752484a7960f14e04ea1e3979cd6f0625ecf37ef3223e5bbb45cfd7549be0"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.mjs": {
+      "size": 560,
+      "sha256": "5d3b858162aba4c9a4dea2e5267ce596d0721a9be42baab80484529e83426840"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.json": {
+      "size": 197272,
+      "sha256": "3a783aaf31256e4468d5c0836fdfc8fac8d1b78ed0683d57a471e931936a5fd4"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.log": {
+      "size": 90196,
+      "sha256": "894a54bc916856f0ccaf91f0ed591fcac1564d5c0be6fe0a995e9e2e4b2557a8"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.mjs": {
+      "size": 571,
+      "sha256": "99225eb255b1d1f7422426b827d81fc24767114316320c6ee68d896d27b0ac35"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-runtime-openai-unrecovered.png": {
+      "size": 94198,
+      "sha256": "53686db6c4e4adfce1f753250c62d1215281c9e01e859deb56dee17eb9ba434d"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-runtime-recovered.png": {
+      "size": 93327,
+      "sha256": "7423d901011c3e6da664900f89a1ac864ba0f4ce816e7bf6b5cd5cf9f84acebb"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-runtime.json": {
+      "size": 9169,
+      "sha256": "a3de7f23d4e147a7cfc2ac9eeeed55b2c11b7290cfd59a55bd402c38aeedf4c6"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-finalize.py": {
+      "size": 17591,
+      "sha256": "511657a5079c5f3fc7298aa937bc6f6c1568e933e767b4ed90c35ab88f8a6bf3"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final-output/.last-run.json": {
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final.json": {
+      "size": 195648,
+      "sha256": "3dbeba30a278bb49c0bb878162a138fc5f858a8952cfe0ba5e26ef5331b33bc3"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final.log": {
+      "size": 88469,
+      "sha256": "9852f31b7e4186447bf9b9aa77b699c17c7ed39f51b04fef5d4f8169aca1df27"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-output/.last-run.json": {
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers.json": {
+      "size": 194406,
+      "sha256": "806a21d74fb478c2507dfadde259c288d7798109995625e22637bad0d79106ab"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers.log": {
+      "size": 87227,
+      "sha256": "7b43111ae5818d56677c898cf54524d399329852f58d8440a628bd141cba180a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/.last-run.json": {
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json": {
+      "size": 13113,
+      "sha256": "2cda1d69fa163d5e03311eaef7d845b24c1e2aabde9e584ace894c2844dc6a95"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.png": {
+      "size": 72443,
+      "sha256": "db662afb0dcdcfcfa8232eb490142f3398f61cb427deede2abe362845e5cbf06"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible-entry.png": {
+      "size": 72443,
+      "sha256": "db662afb0dcdcfcfa8232eb490142f3398f61cb427deede2abe362845e5cbf06"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.json": {
+      "size": 13024,
+      "sha256": "174847828bd192a3daa4322409389b896905aa33eb88461bd13394669a3b9a8a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.png": {
+      "size": 72735,
+      "sha256": "7261d94c82e7e4a99c899f573bca6427c9b5888d7a5bb6f84feef20e3e575920"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json": {
+      "size": 13070,
+      "sha256": "69642e82978c7ebb1109dd9a99259d5dc84187048f98213f8b2c74439a8b7e58"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered-entry.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.json": {
+      "size": 12181,
+      "sha256": "af5ef3ffc27c5164827c27cb9a33e41b341017c61e4c0231709fafce54c88ec9"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused-entry.png": {
+      "size": 66942,
+      "sha256": "8a55d407e2edd79a54bf60af726844713be844d1fb9d918a17ebd0eae75cc15c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.json": {
+      "size": 11764,
+      "sha256": "3f643d36c389170e05b305915ef820520a4dbd6366d6e84528e6b10fc3a54570"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.png": {
+      "size": 66942,
+      "sha256": "8a55d407e2edd79a54bf60af726844713be844d1fb9d918a17ebd0eae75cc15c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final.json": {
+      "size": 195632,
+      "sha256": "5d9ee7053dc8f6f03bce60dfe998bcab8254b7e173374e43eaf2244eb9c33064"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final.log": {
+      "size": 88354,
+      "sha256": "683daf75d4b32c1656bd9a4cda06a502b1b2155cf53abb60cae147b468c4cb79"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/.last-run.json": {
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json": {
+      "size": 13107,
+      "sha256": "d36ac124d8fd0e045001f07991eb5af8350d6486812c8b62a72131da2f92eacc"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.png": {
+      "size": 72443,
+      "sha256": "db662afb0dcdcfcfa8232eb490142f3398f61cb427deede2abe362845e5cbf06"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible-entry.png": {
+      "size": 72443,
+      "sha256": "db662afb0dcdcfcfa8232eb490142f3398f61cb427deede2abe362845e5cbf06"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.json": {
+      "size": 13018,
+      "sha256": "bff8805672c407e576d48653b26f27e8d594cd647fd704fc26f1ab33bc101c36"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-claude-visible.png": {
+      "size": 72735,
+      "sha256": "7261d94c82e7e4a99c899f573bca6427c9b5888d7a5bb6f84feef20e3e575920"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json": {
+      "size": 13064,
+      "sha256": "b41cc49530777f841ddf28b1de6365e8e203adcb5ef065794c951c8a2859f777"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered-entry.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.json": {
+      "size": 12175,
+      "sha256": "79fabe0050d3d75a5e34c21f53a157247bdc9f7560c45ab620c0e9236a8b89bf"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused-entry.png": {
+      "size": 66942,
+      "sha256": "8a55d407e2edd79a54bf60af726844713be844d1fb9d918a17ebd0eae75cc15c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.json": {
+      "size": 11758,
+      "sha256": "22e2c3949082f7724d1d69d212150e29e1c051b27f143ff44da4bd158d7e9e7d"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.png": {
+      "size": 66942,
+      "sha256": "8a55d407e2edd79a54bf60af726844713be844d1fb9d918a17ebd0eae75cc15c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components.json": {
+      "size": 194213,
+      "sha256": "acb23bc4919352533cb7047371c5d124bef27904cde73ab15cbb1161c02faf22"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components.log": {
+      "size": 86936,
+      "sha256": "30ca90deb74f0872afbc9233d117d4fa022c8a2fbd6e4a478273f5942efebac8"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/.last-run.json": {
+      "size": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json": {
+      "size": 13100,
+      "sha256": "43c3ae298263f9a10ce9ebfa20929e15afb614821f3efa8985ae587c7eebced9"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.png": {
+      "size": 72443,
+      "sha256": "db662afb0dcdcfcfa8232eb490142f3398f61cb427deede2abe362845e5cbf06"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection-entry.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.json": {
+      "size": 13057,
+      "sha256": "49c90a6553174008b7bf59fcb472b194f5858b9948fb7ac29c5a4748bafe216e"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-no-selection.png": {
+      "size": 70430,
+      "sha256": "3dde5c6b3acd1d50c9c451ea58eccbed8b4a7fd20f408c4b818adf3e511c6211"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06.json": {
+      "size": 192078,
+      "sha256": "ea4cfa5145916e83614ca55f72d601f40d458e9df767f0dc1f6c7b401a68fcdd"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06.log": {
+      "size": 84903,
+      "sha256": "081f0d5011c8bfce38c751892c11a7d5c404b2cd3bcacf1d181b593fc347b205"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/.last-run.json": {
+      "size": 96,
+      "sha256": "61451cd39946dd7ec764de115de37a0a7c65f55b3f24668b70cc17302f7bfcd1"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/error-context.md": {
+      "size": 29815,
+      "sha256": "03a0305294b0c787f9f32cd00ecd5aa48a6b517557a38efd3fef6043fec5dcf0"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered-entry.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.json": {
+      "size": 12181,
+      "sha256": "530ea974d173180f52a2f7975fe0910e755b70ce05795fbde0315d8e84e0b9fa"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-one-platform-unrecovered.png": {
+      "size": 68096,
+      "sha256": "354a1bf5c20dda83f69ef86ab2c3da796f0215e35dcad4298b2ed53a583f983a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/trace.zip": {
+      "size": 235737,
+      "sha256": "24e1d685b3582298313de4fd439594453c39dc36e204ebfcfdc349bdb21daa32"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.json": {
+      "size": 193413,
+      "sha256": "61a7c58aa7044ec7da7981f5169898e9c1a7f9676fedd9cf6715027d489cc2f1"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.log": {
+      "size": 89638,
+      "sha256": "cc5d94482d75bf61dafd7455b954fc411c9fafe4829be610783d8ece6dc1f8a6"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-worker.json": {
+      "size": 192197,
+      "sha256": "34aaf4029038c828dab88947337ce4cfd207a63eb9cac99280edff3d00c06389"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-worker.log": {
+      "size": 102460,
+      "sha256": "e367f365dde81eb63ed73200065cccc1aeefa7ec0ae7b69c28df0ce19ef0b224"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime.json": {
+      "size": 191104,
+      "sha256": "d5405988f48df00df37806b7a7f2b58e7fc65c15aa5df99e48de85bca30e21a2"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime.log": {
+      "size": 83976,
+      "sha256": "3b5768f922593709c3d63a2e89a331702cfd16cba934b7d902524d921c95ac24"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.json": {
+      "size": 192323,
+      "sha256": "8a6f24a9a3f247f07dae3f6a1a5ca5a13e1ae1031574c2bbc3589c30aeab7f46"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.log": {
+      "size": 86180,
+      "sha256": "d854a1ab845ae75c50fb7ce9335c03b8dc36c07949059a3a32255ea0948520b2"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-core-build.json": {
+      "size": 192528,
+      "sha256": "eb15d3c7652e60dce47cb979b48b07e30cd85efd0fed5a1d43669d3a2d8ce760"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-core-build.log": {
+      "size": 85206,
+      "sha256": "252ceee1d765968a193442e7dad9964d88731341b8c5f9358971b11d69da89bd"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-hive-test-build.json": {
+      "size": 194488,
+      "sha256": "278fd2438ae6bd52794e47f717b6b8d9814ddb9df6fc7fbe762e2a39820fa12f"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-hive-test-build.log": {
+      "size": 86942,
+      "sha256": "e076e7594c2aeafef80a8b5e2119aeebc33aef501a18cedac21ffc6e6528fc8e"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.json": {
+      "size": 194616,
+      "sha256": "a77ffcef481fd3a543a0e7939313eb607eeff3f0c4128639079873db72c10f75"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.log": {
+      "size": 109883,
+      "sha256": "cff814464c9ff106cbbf09147bdee42b93b3239573fbcc20f14e5d08ba156570"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-manifest-v2.py": {
+      "size": 4726,
+      "sha256": "9e16db4acf06c74215f703e36400af6fbf553e704faaa1528d1ea307118648e5"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-manifest.json": {
+      "size": 80857,
+      "sha256": "5fd973c62765d9937a217e4a1b901f1d6bb8f8d90d4c4a88eac4a51e66cd7c4e"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-preservation.json": {
+      "size": 11633,
+      "sha256": "b565ce7ae48af9947fe3fffb079f7d4ff8f78f43871749e788fb498df5c48c5e"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-product-commit.json": {
+      "size": 197204,
+      "sha256": "fe26f6a822d80236afc5b800f3378118de23879d0748c4048559cafcb15f6a1a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-product-commit.log": {
+      "size": 89939,
+      "sha256": "bfdd22ab949ce4d7abd4b9f538d3f7179663e5a95bd55f64311bc3fd6df962c0"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output/.last-run.json": {
+      "size": 96,
+      "sha256": "27ae0a72a33ad783fe7f3528f523b3c4bcb8c74740dd06e481b9b4ac7793bd1a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md": {
+      "size": 28153,
+      "sha256": "e0a2b73c3d25d7b30516e15330bd6580a826f15e63e4ec0d0566f7bf4af16068"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/trace.zip": {
+      "size": 113869,
+      "sha256": "08e4f01f518a21eab90173cef98cdedd84dfebb6b28f318e363344495711b55a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior.json": {
+      "size": 190840,
+      "sha256": "37b3dd06f8ba797744537543cf4c9bb097ebb8a650b070f9d2205383d8a00579"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior.log": {
+      "size": 86332,
+      "sha256": "e204ba72711ed81a3794940554469f87a42f98f0e6d975776066bc0c0b2f5c86"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output/.last-run.json": {
+      "size": 96,
+      "sha256": "27ae0a72a33ad783fe7f3528f523b3c4bcb8c74740dd06e481b9b4ac7793bd1a"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md": {
+      "size": 29808,
+      "sha256": "ee342bc307348da2e3931baf7cfb47eb8a9a51015cfce7d70a2c13cc7d4e276f"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/trace.zip": {
+      "size": 133286,
+      "sha256": "59af1bba4bd162528c9253832e77fbc3f9643108cfe77eae9862998c1cfa96bd"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native.json": {
+      "size": 191769,
+      "sha256": "9a5176e74e6b57b216f485d7af8558c391aba8ed25906a49b37a1a7d8864829d"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native.log": {
+      "size": 87406,
+      "sha256": "fe74dea9671578c084dc5f358a2245f81ea8de5ac50f47b6aa727cdd0123f67c"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-output/.last-run.json": {
+      "size": 45,
+      "sha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06.json": {
+      "size": 190583,
+      "sha256": "616789ce74024d1144244838422dc1a8b4c6b01a84939f27c720ee66b4122b4b"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06.log": {
+      "size": 83415,
+      "sha256": "a22961316c83331fd42a6e3bbe3f3823b720961c82721ddd7dce1840de096eea"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-runtime.json": {
+      "size": 190144,
+      "sha256": "74bbd2a83130cab00b7471f9d5dd215754f22f54647072fbd183c36a6e18d0a6"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-runtime.log": {
+      "size": 84693,
+      "sha256": "4d8eab3cf61a4297f8798052268d10cb00dcdc37ed3f1795d4f2468ea51c22c8"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-run.py": {
+      "size": 3457,
+      "sha256": "86b39e5724218b00eb9e34a369a81b82c830f02d461e449b8ac22507041bcf51"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-runtime-isolated.py": {
+      "size": 3102,
+      "sha256": "2fcf11945957e97d3475b08101b68c00738d28d9b80e1e535f60ad45302ddf22"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-scenario-ledger.json": {
+      "size": 915,
+      "sha256": "f722f55ff5e01be80c6b25433c4d1cf03a79711e7a938738e9657dc9094f2cd5"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-scope-barriers-race.json": {
+      "size": 194833,
+      "sha256": "2cb74d419388df2e9cd215c8055261000f1ad8d2c2e3c8a3650546426f89b5ca"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-scope-barriers-race.log": {
+      "size": 88444,
+      "sha256": "f5f2adc68b8c22fd04e85ffbb0c413dc3197451a6feb1e3bf41ecc3ce4322545"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-authored-check.json": {
+      "size": 208460,
+      "sha256": "c82350035264daae5f1744a952856792ee915baf66ecf8947f4c0d8c679e33cb"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-authored-check.log": {
+      "size": 100884,
+      "sha256": "c568e14d7fa54083558a09826ea7c72753760db69ba3b5ca9f80d9f5c6ad4c52"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.json": {
+      "size": 207394,
+      "sha256": "a7c5178bb6d5aae388684e98e2afe94e28df20ad7b6bd77af87a879c0a1740b7"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.log": {
+      "size": 109051,
+      "sha256": "38430bf15b1a2c3b4b72c7baf5cfc66d2490b78b64b7d7b358592cebff600932"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-final.json": {
+      "size": 197666,
+      "sha256": "b4681fa1812ee961fe0c4e69697dae613e36c52953c1bdaa9a27e06eb84df597"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-final.log": {
+      "size": 90372,
+      "sha256": "74e16d130d3a1d2b3a3d5a1549f0e8a4455d7f9cf735135e4694807d62eeaafa"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-mode.json": {
+      "size": 191196,
+      "sha256": "03255cb30db055338c584d87c0b47a91e1ecfdf171c2bc30e3e494e6c58cbbe3"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-mode.log": {
+      "size": 84154,
+      "sha256": "7f93fcd4c526c075d9c3bc746a8d1a92ee845b5ceb34252b506adaaff91b60c0"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite.py": {
+      "size": 827,
+      "sha256": "6c3d0f0f4fb5a55d4dfe4d4d3376b4d394b9f1740d16005c74fbbd36c82e436d"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-committed.json": {
+      "size": 197790,
+      "sha256": "a80f2423d832cb78973d1211145e5620241f456ebb4d71f1a416ef086fe13ec5"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-committed.log": {
+      "size": 90297,
+      "sha256": "a68c292008084130d82397c9ef84d989b56e112ebd7128f0aa8ad65455b5f894"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-final.json": {
+      "size": 194912,
+      "sha256": "7e2cc87ebd34d0943757b01520483f906e0ab35371b7fcf4612dfd468f4dc507"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-final.log": {
+      "size": 87419,
+      "sha256": "df73fbbe750bd8f27798942fb0d24ac375cab18fad8f969d9ca622da58c539f4"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck.json": {
+      "size": 193402,
+      "sha256": "fc6e80e98aaf6fafd3cc4057dca7c3d24fd135617d95d5db0bf5257cf3029b65"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck.log": {
+      "size": 86023,
+      "sha256": "66228b75a7d88a96290429c4732421f372c7803e28ae01b75711d2a6239b742f"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite-native.json": {
+      "size": 191407,
+      "sha256": "621ba58213fb21dc73f347645413e846d02642c665e4dfc417f8a50b75c23f48"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite-native.log": {
+      "size": 84321,
+      "sha256": "512a7cfb8a9e3ee4a5e842dbc4f2a8d5808595b142ed984348e7b284d803589f"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite.json": {
+      "size": 190106,
+      "sha256": "12f050e7c94095f2b14619a392355116edd70464ae4b1aa4d83966d22a0a512b"
+    },
+    "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite.log": {
+      "size": 82863,
+      "sha256": "e2b9e3a729e696372889928fcbe2070a7255a0b25ba465f189a841b0628c0f79"
+    }
+  },
+  "new_artifact_count": 147,
+  "commands": {
+    "final-fix-affected-go-race": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./agent",
+        "-run",
+        "TestDesktop(Connection|Runtime)",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:06:00.548781+00:00",
+      "finished_at": "2026-11-02T21:06:23.381506+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-race.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-race.log",
+      "source_count": 944,
+      "source_index_sha256": "66a7019d79a066a42751a4782a58d4a56e21376ba266df6d14b1c4e105617847"
+    },
+    "final-fix-affected-go-vet": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "vet",
+        "./agent",
+        "./desktopbridge",
+        "./cmd/bee"
+      ],
+      "started_at": "2026-11-02T21:06:00.548780+00:00",
+      "finished_at": "2026-11-02T21:06:02.369102+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-vet.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-affected-go-vet.log",
+      "source_count": 944,
+      "source_index_sha256": "66a7019d79a066a42751a4782a58d4a56e21376ba266df6d14b1c4e105617847"
+    },
+    "final-fix-audit": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "python3",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.py"
+      ],
+      "started_at": "2026-11-02T21:20:13.058851+00:00",
+      "finished_at": "2026-11-02T21:20:15.179442+00:00",
+      "exit": 0,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-audit.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-ego-01": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "ego-browser",
+        "nodejs",
+        "-e",
+        "await import('file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.mjs')"
+      ],
+      "started_at": "2026-11-02T21:11:14.235845+00:00",
+      "finished_at": "2026-11-02T21:11:16.308709+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-01.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-ego-02": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "ego-browser",
+        "nodejs",
+        "-e",
+        "await import('file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.mjs')"
+      ],
+      "started_at": "2026-11-02T21:12:15.950815+00:00",
+      "finished_at": "2026-11-02T21:12:18.345917+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-02.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-ego-03": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "ego-browser",
+        "nodejs",
+        "-e",
+        "await import('file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.mjs')"
+      ],
+      "started_at": "2026-11-02T21:13:06.698338+00:00",
+      "finished_at": "2026-11-02T21:13:18.364332+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-03.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-ego-finish-v2": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "ego-browser",
+        "nodejs",
+        "-e",
+        "await import('file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.mjs')"
+      ],
+      "started_at": "2026-11-02T21:14:57.777024+00:00",
+      "finished_at": "2026-11-02T21:14:58.162490+00:00",
+      "exit": 0,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish-v2.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-ego-finish": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "ego-browser",
+        "nodejs",
+        "-e",
+        "await import('file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.mjs')"
+      ],
+      "started_at": "2026-11-02T21:14:39.085876+00:00",
+      "finished_at": "2026-11-02T21:14:39.453717+00:00",
+      "exit": 1,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-ego-finish.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-fixture-direct-consumers-final": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.final-fix.config.ts",
+        "--grep",
+        "revoked credential recovery requires|preview pairing remains pending",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final-output"
+      ],
+      "started_at": "2026-11-02T21:11:27.152769+00:00",
+      "finished_at": "2026-11-02T21:11:33.490314+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-final.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-fixture-direct-consumers": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.final-fix.config.ts",
+        "--grep",
+        "revoked credential recovery requires|preview pairing remains pending",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers-output"
+      ],
+      "started_at": "2026-11-02T21:07:35.814899+00:00",
+      "finished_at": "2026-11-02T21:07:41.273294+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-fixture-direct-consumers.log",
+      "source_count": 946,
+      "source_index_sha256": "25bc165999cfb78b2efb1e8f79a308d22f361efa3189bda7e35acd277a20171b"
+    },
+    "final-fix-green-components-final": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "final-fix-runtime|D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output"
+      ],
+      "started_at": "2026-11-02T21:11:27.152768+00:00",
+      "finished_at": "2026-11-02T21:11:30.994974+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-green-components": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "final-fix-runtime|D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-output"
+      ],
+      "started_at": "2026-11-02T21:07:34.679050+00:00",
+      "finished_at": "2026-11-02T21:07:38.305624+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components.log",
+      "source_count": 946,
+      "source_index_sha256": "25bc165999cfb78b2efb1e8f79a308d22f361efa3189bda7e35acd277a20171b"
+    },
+    "final-fix-green-d06": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06-output"
+      ],
+      "started_at": "2026-11-02T21:04:38.848921+00:00",
+      "finished_at": "2026-11-02T21:04:42.313316+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-d06.log",
+      "source_count": 944,
+      "source_index_sha256": "943c833b16da6d0aa8922f92f3ca0f7220557604267d775bb31e31e2325bcab9"
+    },
+    "final-fix-green-runtime-consumer": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "final-fix-runtime",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output"
+      ],
+      "started_at": "2026-11-02T21:06:27.417210+00:00",
+      "finished_at": "2026-11-02T21:06:34.900639+00:00",
+      "exit": 1,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.log",
+      "source_count": 945,
+      "source_index_sha256": "ed5e932e260afa1040d88c66f9484d1e171b40a9c6685f2daa6b0fd557df2020"
+    },
+    "final-fix-green-runtime-worker": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "./agent",
+        "-run",
+        "TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/(synchronization_failure_recovery|readback_failure_recovery)",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:05:07.059307+00:00",
+      "finished_at": "2026-11-02T21:05:17.257933+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-worker.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-worker.log",
+      "source_count": 944,
+      "source_index_sha256": "943c833b16da6d0aa8922f92f3ca0f7220557604267d775bb31e31e2325bcab9"
+    },
+    "final-fix-green-runtime": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "./agent",
+        "-run",
+        "^(TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/(synchronization_failure_recovery|readback_failure_recovery)|TestDesktopConnectionSynchronizationObservationIsScoped)$",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:03:15.241416+00:00",
+      "finished_at": "2026-11-02T21:03:20.740984+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime.log",
+      "source_count": 944,
+      "source_index_sha256": "d2ae252abecec1ec9253b8eea0c0c1f41b450bd7e47e17722c832d51052092ca"
+    },
+    "final-fix-green-scopes": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "./agent",
+        "-run",
+        "TestDesktopConnectionSynchronizationObservationIsScoped",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:05:45.547948+00:00",
+      "finished_at": "2026-11-02T21:05:49.330259+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.log",
+      "source_count": 944,
+      "source_index_sha256": "66a7019d79a066a42751a4782a58d4a56e21376ba266df6d14b1c4e105617847"
+    },
+    "final-fix-linux-core-build": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "env",
+        "GOOS=linux",
+        "GOARCH=arm64",
+        "CGO_ENABLED=0",
+        "go",
+        "build",
+        "-o",
+        ".cache/interaction-clarity-linux/bee-final-fix",
+        "./cmd/bee"
+      ],
+      "started_at": "2026-11-02T21:06:00.548781+00:00",
+      "finished_at": "2026-11-02T21:06:04.108540+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-core-build.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-core-build.log",
+      "source_count": 944,
+      "source_index_sha256": "66a7019d79a066a42751a4782a58d4a56e21376ba266df6d14b1c4e105617847"
+    },
+    "final-fix-linux-hive-test-build": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "docker",
+        "run",
+        "--rm",
+        "--name",
+        "bee-final-fix-hive-build",
+        "--network",
+        "none",
+        "-v",
+        "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/toolchains/go1.27.3-linux-arm64-verified/go:/opt/go:ro",
+        "-v",
+        "/Users/dayong/go/pkg/mod:/gomod:ro",
+        "-v",
+        "/Users/dayong/myspace/mywork/tokenhive/.worktrees/hive-desktop-interaction:/hive:ro",
+        "-v",
+        "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux:/out",
+        "-v",
+        "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/t10-go-linux-race:/tmp/gocache",
+        "-w",
+        "/hive",
+        "-e",
+        "GOMODCACHE=/gomod",
+        "-e",
+        "GOCACHE=/tmp/gocache",
+        "-e",
+        "GOTOOLCHAIN=local",
+        "bee-linux-minimum-window-qa:20261023",
+        "/opt/go/bin/go",
+        "test",
+        "-race",
+        "-c",
+        "-o",
+        "/out/hive-integration-final-fix.test",
+        "./hive/internal/integration"
+      ],
+      "started_at": "2026-11-02T21:07:13.912675+00:00",
+      "finished_at": "2026-11-02T21:07:26.579239+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-hive-test-build.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-hive-test-build.log",
+      "source_count": 945,
+      "source_index_sha256": "56b8b3712044d8771fe5a34108dfe25e8412acb1425e9f5644bd42606c8acb51"
+    },
+    "final-fix-linux-runtime": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "python3",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-runtime-isolated.py"
+      ],
+      "started_at": "2026-11-02T21:08:02.714517+00:00",
+      "finished_at": "2026-11-02T21:08:13.674034+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.log",
+      "source_count": 946,
+      "source_index_sha256": "25bc165999cfb78b2efb1e8f79a308d22f361efa3189bda7e35acd277a20171b"
+    },
+    "final-fix-product-commit": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "git",
+        "commit",
+        "-m",
+        "fix(desktop): clear recovered platform synchronization failures"
+      ],
+      "started_at": "2026-11-02T21:13:58.285188+00:00",
+      "finished_at": "2026-11-02T21:13:58.592491+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-product-commit.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-product-commit.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-red-d06-behavior": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output"
+      ],
+      "started_at": "2026-11-02T21:02:13.518723+00:00",
+      "finished_at": "2026-11-02T21:02:20.433701+00:00",
+      "exit": 1,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior.log",
+      "source_count": 944,
+      "source_index_sha256": "4251a6f7b27a4bb376f50c98557b50d0b46dedfe00811036fb0683328046d7e1"
+    },
+    "final-fix-red-d06-native": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "D06-initial",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output"
+      ],
+      "started_at": "2026-11-02T21:03:48.945744+00:00",
+      "finished_at": "2026-11-02T21:03:56.160854+00:00",
+      "exit": 1,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native.log",
+      "source_count": 944,
+      "source_index_sha256": "d2ae252abecec1ec9253b8eea0c0c1f41b450bd7e47e17722c832d51052092ca"
+    },
+    "final-fix-red-d06": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/@playwright/test/cli.js",
+        "test",
+        "--config",
+        "playwright.t10-layout.config.ts",
+        "t10-layout-fix.spec.ts",
+        "--grep",
+        "^D06-",
+        "--workers",
+        "1",
+        "--output",
+        "../docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-output"
+      ],
+      "started_at": "2026-11-02T21:01:59.189085+00:00",
+      "finished_at": "2026-11-02T21:01:59.901013+00:00",
+      "exit": 1,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06.log",
+      "source_count": 944,
+      "source_index_sha256": "4251a6f7b27a4bb376f50c98557b50d0b46dedfe00811036fb0683328046d7e1"
+    },
+    "final-fix-red-runtime": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "./agent",
+        "-run",
+        "^TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/(synchronization_failure_recovery|readback_failure_recovery)$",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:01:51.984234+00:00",
+      "finished_at": "2026-11-02T21:02:03.953608+00:00",
+      "exit": 1,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-runtime.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-runtime.log",
+      "source_count": 944,
+      "source_index_sha256": "4251a6f7b27a4bb376f50c98557b50d0b46dedfe00811036fb0683328046d7e1"
+    },
+    "final-fix-scope-barriers-race": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "go",
+        "test",
+        "-race",
+        "./agent",
+        "-run",
+        "TestDesktopConnectionSynchronizationObservationIsScoped",
+        "-count=1",
+        "-v"
+      ],
+      "started_at": "2026-11-02T21:08:43.890048+00:00",
+      "finished_at": "2026-11-02T21:08:54.037568+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-scope-barriers-race.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-scope-barriers-race.log",
+      "source_count": 946,
+      "source_index_sha256": "2e5dc3638c5afd4b0833959bb13120bf6f0e2de43dee41dfadb5f71ce433d9ae"
+    },
+    "final-fix-stop-vite-final": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "python3",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite.py"
+      ],
+      "started_at": "2026-11-02T21:14:58.569574+00:00",
+      "finished_at": "2026-11-02T21:14:59.066315+00:00",
+      "exit": 0,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-final.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-final.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-stop-vite-mode": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "python3",
+        "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite.py"
+      ],
+      "started_at": "2026-11-02T21:03:35.381887+00:00",
+      "finished_at": "2026-11-02T21:03:35.903359+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-mode.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-stop-vite-mode.log",
+      "source_count": 944,
+      "source_index_sha256": "d2ae252abecec1ec9253b8eea0c0c1f41b450bd7e47e17722c832d51052092ca"
+    },
+    "final-fix-typecheck-committed": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "started_at": "2026-11-02T21:15:33.891512+00:00",
+      "finished_at": "2026-11-02T21:15:34.651249+00:00",
+      "exit": 0,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-committed.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-committed.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-typecheck-final": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "started_at": "2026-11-02T21:09:51.077278+00:00",
+      "finished_at": "2026-11-02T21:09:52.060418+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-final.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck-final.log",
+      "source_count": 946,
+      "source_index_sha256": "2e5dc3638c5afd4b0833959bb13120bf6f0e2de43dee41dfadb5f71ce433d9ae"
+    },
+    "final-fix-typecheck": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "started_at": "2026-11-02T21:06:41.172260+00:00",
+      "finished_at": "2026-11-02T21:06:41.906008+00:00",
+      "exit": 0,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-typecheck.log",
+      "source_count": 945,
+      "source_index_sha256": "ed5e932e260afa1040d88c66f9484d1e171b40a9c6685f2daa6b0fd557df2020"
+    },
+    "final-fix-vite-native": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/vite/bin/vite.js",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "1519",
+        "--strictPort"
+      ],
+      "started_at": "2026-11-02T21:03:47.723708+00:00",
+      "finished_at": "2026-11-02T21:14:59.075145+00:00",
+      "exit": 143,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite-native.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite-native.log",
+      "source_count": 944,
+      "source_index_sha256": "d2ae252abecec1ec9253b8eea0c0c1f41b450bd7e47e17722c832d51052092ca"
+    },
+    "final-fix-vite": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "argv": [
+        "node",
+        "node_modules/vite/bin/vite.js",
+        "--mode",
+        "e2e",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "1519",
+        "--strictPort"
+      ],
+      "started_at": "2026-11-02T21:01:51.984234+00:00",
+      "finished_at": "2026-11-02T21:03:35.918043+00:00",
+      "exit": 143,
+      "bee_head": "5aef32ebed973aa2827d38d0e004827060c28a4b",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-vite.log",
+      "source_count": 944,
+      "source_index_sha256": "4251a6f7b27a4bb376f50c98557b50d0b46dedfe00811036fb0683328046d7e1"
+    },
+    "final-fix-staged-diff-check": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check"
+      ],
+      "started_at": "2026-11-02T21:23:53.629573+00:00",
+      "finished_at": "2026-11-02T21:23:54.064994+00:00",
+      "exit": 2,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    },
+    "final-fix-staged-authored-check": {
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "argv": [
+        "git",
+        "diff",
+        "--cached",
+        "--check",
+        "--",
+        ".",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/error-context.md",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.log",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.log",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md",
+        ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.log"
+      ],
+      "started_at": "2026-11-02T21:24:41.455027+00:00",
+      "finished_at": "2026-11-02T21:24:41.695351+00:00",
+      "exit": 0,
+      "bee_head": "843e3fff557d723ed8626c081f8cecf2567856a5",
+      "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+      "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+      "node": "v24.22.1",
+      "go": "go version go1.27.3 darwin/arm64",
+      "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+      "metadata": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-authored-check.json",
+      "log": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-authored-check.log",
+      "source_count": 946,
+      "source_index_sha256": "b3a3d837eafca093519735305ed184405fc06905e8f381c68664969171b6bdc4"
+    }
+  },
+  "verification_source_coverage": {
+    "green-runtime-worker": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-green-runtime-worker.json"
+    },
+    "affected-go-race": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-affected-go-race.json"
+    },
+    "affected-go-vet": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-affected-go-vet.json"
+    },
+    "scope-barriers-race": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go"
+      ],
+      "other_product_path_differences": [
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-scope-barriers-race.json"
+    },
+    "green-components-final": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-green-components-final.json"
+    },
+    "fixture-direct-consumers-final": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-fixture-direct-consumers-final.json"
+    },
+    "typecheck-committed": {
+      "covered_final_paths": [
+        "agent/desktop_connection_test.go",
+        "agent/desktop_runtime_sync.go",
+        "agent/desktop_runtime_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "other_product_path_differences": [],
+      "metadata": "final-fix-typecheck-committed.json"
+    },
+    "linux-core-build": {
+      "covered_final_paths": [
+        "agent/desktop_runtime_sync.go"
+      ],
+      "other_product_path_differences": [
+        "agent/desktop_connection_test.go",
+        "desktop/playwright.final-fix.config.ts",
+        "desktop/tests/fixtures/bee-preview/fixture.mjs",
+        "desktop/tests/fixtures/synchronization-recovery.json",
+        "desktop/tests/t10-layout-fix.spec.ts"
+      ],
+      "metadata": "final-fix-linux-core-build.json"
+    }
+  },
+  "external_binaries": {
+    "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux/bee-final-fix": {
+      "size": 30965181,
+      "sha256": "313a32810ac16b5fa9d640c8fdfb41995817d14da2d2cb49d1840151caa5329c"
+    },
+    "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux/hive-integration-final-fix.test": {
+      "size": 71859248,
+      "sha256": "148825231574ecc350bfa890d8c5b36bf69ab3793e2df7a2e8f726aaea599706"
+    }
+  },
+  "binary_command_sources": {
+    "bee-final-fix": [
+      "final-fix-linux-core-build.json",
+      "final-fix-linux-runtime.json"
+    ],
+    "hive-integration-final-fix.test": [
+      "final-fix-linux-hive-test-build.json",
+      "final-fix-linux-runtime.json"
+    ]
+  },
+  "preservation": {
+    "complete_preexisting_dirty_untracked": {
+      "count": 1040,
+      "differences": [],
+      "exclusions": []
+    },
+    "current_round_dirty_baseline": {
+      "count": 934,
+      "differences": [],
+      "exclusions": []
+    },
+    "current_round_historical_evidence": {
+      "count": 2143,
+      "differences": [],
+      "exclusions": []
+    }
+  },
+  "old_baseline_sources": {
+    "final-fix-baseline.json": {
+      "size": 771470,
+      "sha256": "1b82d5edeb572081d9589a5d4b0ecf8bc2d0be155949108589f2f1ede8c9ea60"
+    },
+    "t10-fix2-initial-state.json": {
+      "size": 718662,
+      "sha256": "4d19e48f493b9cf301801de0aab9028cd3b17fc129f75f0dc04d51d98f015d29"
+    }
+  },
+  "self_exclusion": "本manifest不包含自身，避免递归散列；证据提交由实际Git提交对象及主控postcommit核证绑定。",
+  "report_boundary": "final-fix-report.md是本地忽略sidecar，在证据提交后写入该提交号；不作为冻结E artifact递归散列。",
+  "supersedes": {
+    "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-manifest.json",
+    "size": 80857,
+    "sha256": "5fd973c62765d9937a217e4a1b901f1d6bb8f8d90d4c4a88eac4a51e66cd7c4e",
+    "reason": "初版冻结后暂存检查发现机器原始输出尾随空格；保留原字节及失败检查，新增明确排除检查记录。"
+  },
+  "staged_whitespace_boundary": {
+    "original_exit": 2,
+    "trailing_whitespace_reports": 44,
+    "original_raw_artifacts": 5,
+    "rewritten_raw_artifacts": 0,
+    "authored_check_exit": 0,
+    "exclusions": [
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/error-context.md",
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-runtime-consumer.log",
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-linux-runtime.log",
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-behavior-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md",
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-red-d06-native-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/error-context.md",
+      ":(exclude)docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-staged-diff-check.log"
+    ],
+    "boundary": "仅排除明确的原始log/error-context及该失败检查的逐字输出；不清洗证据，不排除源码或手写文档。"
+  }
+}

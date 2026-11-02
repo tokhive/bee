@@ -1,0 +1,394 @@
+{
+  "id": "final-fix-runtime-recovered-paused",
+  "observed_at": "2026-11-02T21:11:29.882Z",
+  "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+  "preconditions": {
+    "source": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.log",
+    "source_sha256": "d854a1ab845ae75c50fb7ce9335c03b8dc36c07949059a3a32255ea0948520b2",
+    "coreReconnectsScheduled": 0,
+    "businessWrites": 0
+  },
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "width": 860,
+    "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n接单已暂停\n\nFixture\n设备与平台控制\n本机设备\n概览\n打开 Hive 控制台\n接单已暂停\n\n按平台管理接单；暂停后不再接收新任务。\n\n停止贡献\nBee 运行中\nHive 已连接\n本机设备\n重新核对设备\n\n本机设备\n\nFixture\n设备已绑定。\n\n归属账号\n\nowner@example.test\n设备所属账号\n\nHive\n\nhttps://hive.example\n配对不会自动开始贡献\nAI 账号\n1 个已接入\nOpenAI\n套餐待确认\n\n账号标识: bbbbbbbbbbbbbbbb\n\n不能接单\n\n所选来源的登录状态待确认。\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\n额度\n尚未核对\n恢复接单\n✳\nClaude\n\n尚未接入 Claude 账号\n\n不能接单\n\n所选来源的登录状态待确认。\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\n此 Hive 未提供更具体的接单原因\n\n请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。\n\n额度\n尚未核对\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献",
+    "main": "概览打开 Hive 控制台接单已暂停按平台管理接单；暂停后不再接收新任务。停止贡献Bee 运行中Hive 已连接本机设备重新核对设备本机设备Fixture设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAI套餐待确认账号标识: bbbbbbbbbbbbbbbb不能接单所选来源的登录状态待确认。已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。额度尚未核对恢复接单✳Claude尚未接入 Claude 账号不能接单所选来源的登录状态待确认。已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机",
+    "status": "paused",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "rect": {
+          "x": 715.25,
+          "y": 77,
+          "width": 115.75,
+          "height": 32,
+          "top": 77,
+          "right": 831,
+          "bottom": 109,
+          "left": 715.25
+        }
+      },
+      {
+        "text": "停止贡献",
+        "disabled": false,
+        "rect": {
+          "x": 734,
+          "y": 132,
+          "width": 97,
+          "height": 32,
+          "top": 132,
+          "right": 831,
+          "bottom": 164,
+          "left": 734
+        }
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "rect": {
+          "x": 710,
+          "y": 262.5,
+          "width": 121,
+          "height": 33.5,
+          "top": 262.5,
+          "right": 831,
+          "bottom": 296,
+          "left": 710
+        }
+      },
+      {
+        "text": "恢复接单",
+        "disabled": false,
+        "rect": {
+          "x": 732,
+          "y": 677.5625,
+          "width": 74,
+          "height": 32,
+          "top": 677.5625,
+          "right": 806,
+          "bottom": 709.5625,
+          "left": 732
+        }
+      }
+    ],
+    "accounts": {
+      "openai": {
+        "platform": "openai",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "selected",
+          "fingerprint": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+          "observed_at": "2026-11-02T21:11:28.833Z",
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      },
+      "claude": {
+        "platform": "claude",
+        "operation": null,
+        "revision": 1,
+        "candidate": {
+          "state": "not_checked",
+          "reference": null,
+          "source": null,
+          "fingerprint": null,
+          "plan": null,
+          "expires_at": null,
+          "identity_verified": false,
+          "observed_at": null,
+          "error": null
+        },
+        "selection": {
+          "state": "not_selected",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "hive": {
+          "state": "unbound",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null,
+          "pending_fingerprint": null,
+          "generation": null
+        },
+        "authorization": {
+          "state": "not_checked",
+          "fingerprint": null,
+          "observed_at": null,
+          "error": null
+        },
+        "capabilities": [
+          {
+            "origin": "official",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          },
+          {
+            "origin": "hive",
+            "status": "unknown",
+            "observed_at": null,
+            "metadata_observed_at": null,
+            "valid_until": null,
+            "retry_at": null,
+            "plan": null,
+            "windows": [],
+            "models": [],
+            "error": null
+          }
+        ],
+        "features": {
+          "detect": {
+            "available": true,
+            "reason": null
+          },
+          "check": {
+            "available": true,
+            "reason": null
+          },
+          "select": {
+            "available": true,
+            "reason": null
+          },
+          "confirm_change": {
+            "available": true,
+            "reason": null
+          },
+          "remove": {
+            "available": false,
+            "reason": "runtime_drain_and_detach_required"
+          },
+          "clear_selection": {
+            "available": true,
+            "reason": null
+          },
+          "authorize": {
+            "available": true,
+            "reason": null
+          },
+          "system_notifications": {
+            "available": false,
+            "reason": "runtime_ownership_and_source_barrier_required"
+          }
+        },
+        "issues": [],
+        "checked_at": null
+      }
+    },
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "reducedMotion": true
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-components-final-output/t10-layout-fix-final-fix-r-552b8-recovered-platform-failures-chromium/final-fix-runtime-recovered-paused.png"
+}

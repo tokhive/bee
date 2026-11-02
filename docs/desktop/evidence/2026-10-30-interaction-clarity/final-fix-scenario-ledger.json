@@ -1,0 +1,20 @@
+{
+  "scope": "最终审查I1/I2增量；旧76行ledger不覆盖",
+  "scenarios": [
+    {
+      "id": "D06",
+      "status": "子路径已验；整行待验",
+      "new_primary": "final-fix-green-components-final-output/t10-layout-fix-D06-initial-pairing-completed-stopped-chromium/D06-bound-stopped-accounts-visible.json",
+      "legacy_limit": "旧t10-fix fixture输入已清空但actual.body保留1账号；旧文件冻结，不继续证明账号渲染正确",
+      "remaining": "真实官方/原生/复合行待验"
+    },
+    {
+      "id": "R04",
+      "status": "子路径已验；整行待验",
+      "local_worker": "final-fix-green-runtime-worker.log",
+      "version_scope_barriers": "final-fix-scope-barriers-race.log",
+      "real_binary": "final-fix-linux-runtime.log",
+      "remaining": "真实二进制同平台成功链/其它尚未逐案故障与原生官方资源不由本轮外推"
+    }
+  ]
+}

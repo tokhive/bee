@@ -1,0 +1,15 @@
+{
+  "spaceId": 43,
+  "observed_at": "2026-11-02T21:14:58.137Z",
+  "receipt": {
+    "spaceId": 43,
+    "closedSpace": true,
+    "keptManagedLabels": [],
+    "closedManagedLabels": [
+      "p1"
+    ],
+    "preservedUnmanagedCount": 0
+  },
+  "completedFinishCalls": 1,
+  "previousAttempt": "Browser.getVersion rejected before finish was invoked; no replayed finish"
+}

@@ -1,0 +1,28 @@
+const fs=await import('node:fs/promises');
+const B='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0',E=B+'/docs/desktop/evidence/2026-10-30-interaction-clarity';
+const task=await taskSpace(43),page=task.page('p1');
+await page.evaluate(()=>window.__beePreviewApprove());
+await page.click('loc=role:button[name="重新核对设备"]',{label:'核对模拟批准后的设备'});
+await page.waitForFunction(()=>document.querySelector('main')?.textContent.includes('0 个已接入'));
+const actual=await page.evaluate(()=>({body:document.body.innerText,main:document.querySelector('main')?.textContent,calls:window.calls,bindingRevision:window.bindingRevision,viewport:{width:innerWidth,height:innerHeight},reducedMotion:matchMedia('(prefers-reduced-motion: reduce)').matches,accounts:[...document.querySelectorAll('[data-account-platform]')].map(e=>({platform:e.dataset.accountPlatform,text:e.innerText})),startDisabled:[...document.querySelectorAll('button')].find(e=>e.textContent.trim()==='开始贡献')?.disabled}));
+if(!actual.main.includes('Bee 未运行')||!actual.main.includes('0 个已接入')||!actual.startDisabled||actual.accounts.length!==2||actual.accounts.some(a=>!a.text.includes('尚未接入'))||['bbbbbbbbbbbbbbbb','Plus','3%','2%'].some(v=>actual.main.includes(v))||actual.calls.some(c=>['runtime_start','runtime_stop','device_begin','device_recovery_prepare','device_recovery_confirm','account_action','authorize_start','supply_set_paused'].includes(c.command)))throw Error('D06 actual page failed '+JSON.stringify(actual));
+await page.screenshot({path:E+'/final-fix-ego-d06-entry.png'});
+await page.evaluate(()=>document.querySelector('[data-account-platform=openai]').scrollIntoView({block:'start'}));
+await page.screenshot({path:E+'/final-fix-ego-d06-openai.png'});
+await page.evaluate(()=>document.querySelector('[data-account-platform=claude]').scrollIntoView({block:'start'}));
+await page.screenshot({path:E+'/final-fix-ego-d06-claude.png'});
+await fs.writeFile(E+'/final-fix-ego-d06.json',JSON.stringify({spaceId:43,observed_at:new Date().toISOString(),layer:'正式 NativeApp＋模拟 IPC；无真实账号或原生副作用',actual},null,2),{flag:'wx'});
+const fixture=(await fs.readFile(B+'/desktop/tests/fixtures/native-accounts.mjs','utf8')).replaceAll('export ','');
+const facts=JSON.parse(await fs.readFile(B+'/desktop/tests/fixtures/synchronization-recovery.json','utf8'));
+const init=fixture+`
+const account=accountFixture('openai');account.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};
+installAccountFixture({runtimeEnabled:true,accounts:{openai:account,claude:accountFixture('claude')},scenarios:{reasons:{openai:['manually_paused'],claude:['not_configured']}}});
+window.paused.openai=true;window.finalFixTransitions=${JSON.stringify(facts.transitions)};window.finalFixDetail=window.finalFixTransitions.both_failed;window.finalFixRevision=0;
+const invoke=window.__TAURI_INTERNALS__.invoke;
+window.__TAURI_INTERNALS__.invoke=async(command,args)=>{const result=await invoke(command,args);if(command==='preferences_read')result.preferences.language='zh';if(command==='runtime_snapshot')Object.assign(result.result.runtime,{run_id:'a'.repeat(32),revision:++window.finalFixRevision,local:'running',connection:'connected',connection_detail:structuredClone(window.finalFixDetail)});return result;};
+`;
+console.log(await page.cdp('Page.addScriptToEvaluateOnNewDocument',{source:init}));
+await page.goto('http://127.0.0.1:1519/');
+await page.waitForSelector('loc=css:.native-connection-detail',{state:'visible'});
+console.log(JSON.stringify({spaceId:43,d06:'passed actual rendered account facts/stopped/zero writes',runtime:'Go transitions installed; both platform failures pending'}));
+console.log(await page.snapshot());

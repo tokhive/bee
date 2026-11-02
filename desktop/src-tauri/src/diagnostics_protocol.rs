@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: "DIAGNOSTICS_REPLY_INVALID".into(),
         message: message.into(),
     }

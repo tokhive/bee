@@ -28,7 +28,7 @@ impl NativeDiagnostics {
     }
     pub fn capture(&self, reply: &BridgeReply) -> Result<DiagnosticReport, BridgeError> {
         let report = validate_report(&reply.result, &reply.instance)?;
-        let mut seen = self.seen.lock().map_err(|_| BridgeError {
+        let mut seen = self.seen.lock().map_err(|_| BridgeError { details: None,
             code: "DIAGNOSTICS_LOG_LOCK".into(),
             message: "diagnostic projection mutex poisoned".into(),
         })?;
@@ -39,7 +39,7 @@ impl NativeDiagnostics {
             let event = serde_json::json!({"time":check.observed_at,"level":match check.status.as_str(){"fail"=>"error","warning"=>"warning",_=>"info"},"module":"diagnostics","platform":check.platform,"code":check.code,"evidence":check.evidence});
             let hash = format!(
                 "{:x}",
-                Sha256::digest(serde_json::to_vec(&event).map_err(|_| BridgeError {
+                Sha256::digest(serde_json::to_vec(&event).map_err(|_| BridgeError { details: None,
                     code: "DIAGNOSTICS_LOG_ENCODING".into(),
                     message: "safe diagnostic event serialization failed".into()
                 })?)
@@ -95,7 +95,7 @@ impl NativeDiagnostics {
                 events.push((format!("supply:{platform}"), serde_json::json!({"time":runtime["observed_at"],"level":if ready{"info"}else{"warning"},"module":"runtime","platform":platform,"code":if ready{"taking_new_work"}else{"supply_blocked"},"evidence":{"ready":ready.to_string(),"paused":supply["paused"].to_string(),"reasons_count":supply["reasons"].as_array().expect("validated supply reasons").len().to_string()}})));
             }
         }
-        let mut previous = self.runtime_seen.lock().map_err(|_| BridgeError {
+        let mut previous = self.runtime_seen.lock().map_err(|_| BridgeError { details: None,
             code: "DIAGNOSTICS_LOG_LOCK".into(),
             message:
                 "runtime observation projection mutex poisoned; safe event persistence stopped"
@@ -113,7 +113,7 @@ impl NativeDiagnostics {
             let key = serde_json::json!([reply.instance, runtime["run_id"], signature]);
             let hash = format!(
                 "{:x}",
-                Sha256::digest(serde_json::to_vec(&key).map_err(|_| BridgeError {
+                Sha256::digest(serde_json::to_vec(&key).map_err(|_| BridgeError { details: None,
                     code: "DIAGNOSTICS_LOG_ENCODING".into(),
                     message: "runtime safe event projection serialization failed".into(),
                 })?)

@@ -1,3 +1,4 @@
+import {throwBridgeError} from './failures.ts';
 export interface DeviceIdentity { id: string; name: string; owner_id: string; owner_email: string }
 export interface DeviceView {
   state: 'unbound' | 'pending' | 'draining' | 'expired' | 'bound';
@@ -22,9 +23,9 @@ function invalid(check: string): never { throw new Error(`DEVICE_REPLY_INVALID: 
 export function decodeDeviceReply(reply: unknown): DeviceView {
   if (!record(reply) || !record(reply.result)) return invalid('missing result object');
   const { result } = reply;
-  if (record(result.error)) {
-    if (typeof result.error.code !== 'string' || typeof result.error.message !== 'string') return invalid('error code/message must be strings');
-    throw new Error(`${result.error.code}: ${result.error.message}`);
+  if ('error' in result) {
+    if(Object.keys(result).length!==1)return invalid('error result contains unexpected fields');
+    throwBridgeError(result.error,'DEVICE_REPLY_INVALID');
   }
   const view = result.device;
   if (!record(view)) return invalid('missing device object');

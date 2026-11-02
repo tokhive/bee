@@ -13,6 +13,7 @@ const SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 
 fn failure(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError {
+        details: None,
         code: code.into(),
         message: message.into(),
     }
@@ -120,6 +121,17 @@ impl TrustedNetworkScope {
     }
 }
 pub(crate) fn trusted_scope(result: &Value) -> Result<Option<TrustedNetworkScope>, BridgeError> {
+    if let Some(error) = result.get("error") {
+        if result.as_object().is_none_or(|v| v.len() != 1) {
+            return Err(failure(
+                "DEVICE_REPLY_INVALID",
+                "device failure result requires exactly one error",
+            ));
+        }
+        let error: BridgeError = serde_json::from_value(error.clone())
+            .map_err(|e| crate::protocol::invalid_json("device status error", e))?;
+        return Err(error);
+    }
     let rejected = || {
         failure("NETWORK_DEVICE_SCOPE","trusted device status did not provide bound Hive, owner and device identity; no scoped proxy may be applied")
     };
@@ -573,3 +585,18 @@ fn render(
 #[cfg(test)]
 #[path = "network_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod desktop_failure_tests {
+    use super::*;
+    #[test]
+    fn device_rejection_precedes_scope_validation() {
+        let result = serde_json::json!({"error":{"code":"device_replaced","message":"HTTP 401","details":{"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"http_status":"401","remote_code":"device_replaced"}}}});
+        let err = trusted_scope(&result).unwrap_err();
+        assert_eq!(err.code, "device_replaced");
+        assert_eq!(
+            serde_json::to_value(err).unwrap()["details"]["check"],
+            "device_identity"
+        );
+    }
+}

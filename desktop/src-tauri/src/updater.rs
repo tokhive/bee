@@ -18,7 +18,7 @@ pub const MAX_UPDATE_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_SAFE: u64 = 9_007_199_254_740_991;
 const MAX_STATE_BYTES: u64 = 16 * 1024;
 pub(crate) fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }

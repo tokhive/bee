@@ -1,3 +1,4 @@
+import {decodeBridgeError,throwBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {AccountOperation,AccountPlatform,AccountSource} from './accounts';
 import {decodeAuthorizeValue,validateAuthorizeRequest} from './accounts.ts';
@@ -15,7 +16,7 @@ export function decodeAuthorizeOperation(reply:unknown,instance:string):AccountO
  if(!reply||typeof reply!=='object'||(reply as {instance?:unknown}).instance!==instance)invalid('reply.instance differs from current child');
  const r=(reply as {result?:unknown}).result;
  if(!r||typeof r!=='object'||Array.isArray(r)||Object.keys(r).length!==1)invalid('result requires a single operation or error');
- if('error'in r){const e=r.error;if(!e||typeof e!=='object'||Array.isArray(e)||Object.keys(e).length!==2||!('code'in e)||e.code!=='AUTHORIZE_OPERATION_FAILED'||!('message'in e)||typeof e.message!=='string'||e.message.length>32768)invalid('authorization error envelope rejected');throw new Error(`${e.code}: ${e.message}`);}
+ if('error'in r){const e=decodeBridgeError(r.error,'AUTHORIZE_REPLY_INVALID');if(e.code!=='AUTHORIZE_OPERATION_FAILED')invalid('authorization error code rejected');throwBridgeError(e,'AUTHORIZE_REPLY_INVALID');}
  if(!('operation'in r))invalid('result.operation missing');
  return decodeAuthorizeValue(r.operation);
 }

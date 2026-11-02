@@ -6,7 +6,7 @@ use serde_json::Value;
 
 const SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: "RUNTIME_REPLY_INVALID".into(),
         message: message.into(),
     }

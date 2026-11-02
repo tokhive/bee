@@ -1,3 +1,6 @@
+import {formatDate,formatNumber,currentLocale} from '../../i18n/index';
+import {FailureNotice} from '../../components/ProblemNotice';
+import {normalizeFailure,type UiFailure} from '../../system/failures';
 import {useCallback, useEffect, useRef, useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {t} from '../../i18n';
@@ -10,16 +13,12 @@ const labels: Record<UpdateState,string> = {
   downloading:'正在下载并验证更新…', verified:'更新已下载并通过签名验证', stopping:'正在停止 Bee，准备安装…',
   installing:'正在安装更新…', failed:'更新操作失败',
 };
-function failure(cause: unknown): string {
-  if (cause instanceof Error) return cause.message;
-  if (typeof cause === 'object' && cause !== null && 'message' in cause) return `${'code' in cause ? String(cause.code) + ': ' : ''}${String(cause.message)}`;
-  return String(cause);
-}
+const failure=(cause:unknown)=>normalizeFailure(cause,'update_operation');
 
 /** Mount inside the S2 native settings page; this component never changes runtime or preferences. */
 export function NativeUpdateControls({client, currentVersion, platform, pollIntervalMs = 1000}: {client: UpdateClient; currentVersion?: string; platform?: string; pollIntervalMs?: number}) {
   const [snapshot, setSnapshot] = useState<UpdateSnapshot>();
-  const [error, setError] = useState('');
+  const [error, setError] = useState<UiFailure|null>(null);
   const [busy, setBusy] = useState(false);
   const [confirmation, setConfirmation] = useState<UpdateInstallRequest | null>(null);
   const mounted = useRef(false);
@@ -32,7 +31,7 @@ export function NativeUpdateControls({client, currentVersion, platform, pollInte
     if (working.current) return false;
     working.current = true;
     const request = ++serial.current;
-    setBusy(true); setError('');
+    setBusy(true); setError(null);
     try {
       const next = await operation();
       if (mounted.current && request === serial.current) setSnapshot(next);
@@ -58,7 +57,7 @@ export function NativeUpdateControls({client, currentVersion, platform, pollInte
     return () => clearTimeout(timer);
   }, [snapshot, busy, error, client, pollIntervalMs, run]);
   const active = snapshot && activeStates.includes(snapshot.state);
-  const diagnostic = error || (snapshot?.error ? `${snapshot.error.code}: ${snapshot.error.message}` : '');
+  const diagnostic = error || snapshot?.error;
   const verified = snapshot?.state === 'verified' && !diagnostic && !!snapshot.operation_id && !!snapshot.target_version;
   const receipt = snapshot ? `${snapshot.operation_id}:${snapshot.revision}` : '';
   const installable = verified && attemptedInstall.current !== receipt;
@@ -79,17 +78,15 @@ export function NativeUpdateControls({client, currentVersion, platform, pollInte
     {snapshot?.state === 'downloading' && <div className="nu-progress">
       <progress aria-label={t('更新下载进度')} {...(snapshot.total_bytes !== null && snapshot.total_bytes > 0 ? {max:snapshot.total_bytes,value:snapshot.downloaded_bytes} : {})}/>
       <span>{snapshot.total_bytes === null
-        ? t('已接收 {bytes} 字节；总大小未知', {bytes:snapshot.downloaded_bytes})
-        : t('已接收 {bytes} / {total} 字节', {bytes:snapshot.downloaded_bytes,total:snapshot.total_bytes})}</span>
+        ? t('已接收 {bytes} 字节；总大小未知', {bytes:formatNumber(snapshot.downloaded_bytes,currentLocale())})
+        : t('已接收 {bytes} / {total} 字节', {bytes:formatNumber(snapshot.downloaded_bytes,currentLocale()),total:formatNumber(snapshot.total_bytes,currentLocale())})}</span>
       <span>{t('只有签名验证通过后才能安装。')}</span>
     </div>}
-    {snapshot?.checked_at && <div className="nu-checked">{t('最后检查时间')}：<time dateTime={snapshot.checked_at}>{new Date(snapshot.checked_at).toLocaleString()}</time></div>}
+    {snapshot?.checked_at && <div className="nu-checked">{t('最后检查时间')}：<time dateTime={snapshot.checked_at}>{formatDate(snapshot.checked_at,currentLocale())}</time></div>}
     {snapshot?.release_notes && <details className="nu-details" aria-label={t('发布说明')}>
       <summary>{t('发布说明')}</summary><p>{snapshot.release_notes}</p>
     </details>}
-    {diagnostic && <div className="nu-error" role="alert"><details className="nu-details" aria-label={t('错误详情')}>
-      <summary>{t('错误详情')}</summary><p>{diagnostic}</p>
-    </details></div>}
+    {diagnostic && <FailureNotice failure={diagnostic} check="update_operation"/>}
     <div className="nu-note">{t('检查和下载不会退出 Bee。安装需要你确认退出，可能中断正在处理的任务。')}</div>
     <Dialog.Root open={confirmation !== null} onOpenChange={open => {if (!busy && !open) setConfirmation(null);}}>
       <Dialog.Portal>

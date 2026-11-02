@@ -401,7 +401,7 @@ fn write_ledger(path: &Path, ledger: &Ledger) -> Result<(), BridgeError> {
     Ok(())
 }
 fn failure(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }

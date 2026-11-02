@@ -54,7 +54,15 @@ Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`
 {"protocol":1,"id":"ping-1","instance":"0d957c72d63b4c06ae544c10f4c549799","error":{"code":"NOT_READY","message":"hello handshake has not succeeded; required=hello before other methods"}}
 ```
 
-设备、供给和账号业务失败返回 `result.error`；账号代码为 `ACCOUNT_OPERATION_FAILED`，供给代码为 `SUPPLY_OPERATION_FAILED`，如设备错误 `{"error":{"code":"DEVICE_OPERATION_FAILED","message":"…"}}`，保留 HTTP 方法、路径、状态码等诊断证据，不回显响应体或秘密；失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
+设备、供给和账号业务失败返回 `result.error`；账号沿用 `ACCOUNT_OPERATION_FAILED` 及现有 `AccountError`。设备／供给的实际 HTTP 请求失败保留具体领域码（例如 `device_replaced`）或网络分类码，只有没有结构化原因的旧边界继续使用 `DEVICE_OPERATION_FAILED`／`SUPPLY_OPERATION_FAILED`。失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
+
+所有私有 `protocolError`／Rust `BridgeError`／TS `BridgeError` 均支持可选 `details`，旧 `{code,message}` 错误仍有效。有详情时必须为 `{check,observed_at,evidence}` 对象，不接受 null、未知字段或重复字段；check 为 1–80 字符的小写公开标识，observed_at 为有效 UTC RFC3339，最多允许本机当前时间后 5 秒。evidence 仅允许字符串键 `target_origin,path,http_status,remote_code,response_body,source_type,actual,required`，逐值限制 32,768 UTF-8 字节，并验证公开 origin、路径、状态与代码格式。不得将任意异常对象序列化为证据。
+
+```json
+{"error":{"code":"unavailable","message":"GET /api/bee/identity: HTTP 503; response_body=…","details":{"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"target_origin":"https://hive.example","path":"/api/bee/identity","http_status":"503","remote_code":"unavailable","response_body":"{\"error\":{\"code\":\"unavailable\",\"message\":\"maintenance\"}}"}}}}
+```
+
+Go `DesktopFailure` 只用于设备／供给请求边界，内部 Cause 支持 Unwrap 且不序列化；既有配对过期、撤销、写入结果未知的 typed cause 判断继续有效。HTTP 正文仅投影公开 `error.code/message`，过滤凭据、配对令牌、Bearer、秘密赋值及 URL 用户信息、query、fragment，不传完整敏感响应。非公开 JSON／正文超限时报告实际观察长度与限额或投影要求，明确注明省略；HTTP 读取仍最多观察 65,537 字节并以 65,536 为限额。消息限额为 32,768 字节。TS 状态存储未翻译的 `UiFailure`，由呈现层按 App 语言显示具体原因、影响、已证实的处理入口和同一提示中的安全原始证据；未知码不猜原因。
 
 `DeviceView` 只含 `state`（unbound/pending/draining/expired/bound）及适用的 `hive`、`name`、`verification_url`、`user_code`、`expires_at`、`poll_interval_seconds`、公开 `identity`。身份字段为 `id/name/owner_id/owner_email`。凭证和配对令牌只留在 Go；配置路径固定为 `UserConfigDir()/tokhive/bee-desktop.json`，不接受前端传入路径。兑换结果未知时保留原事务和凭证，先重新核验身份，禁止用新事务覆盖。
 

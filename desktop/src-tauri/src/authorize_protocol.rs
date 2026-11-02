@@ -2,7 +2,7 @@ use crate::protocol::{validate_operation, AccountDetectRequest, BridgeError, Sup
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 fn invalid(message: &str) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: "AUTHORIZE_REPLY_INVALID".into(),
         message: message.into(),
     }

@@ -1,3 +1,4 @@
+import {decodeBridgeError} from './failures.ts';
 import type { BridgeError, BridgeStatus, SystemBridge, Unlisten } from './bridge.ts';
 
 export interface BridgeView { status: BridgeStatus; failure?: BridgeError; checking: boolean; alive: boolean }
@@ -65,6 +66,6 @@ export function createBridgeMonitor(bridge: SystemBridge, notify: (view: BridgeV
 
 function bridgeFailure(cause: unknown): BridgeError {
   if (typeof cause === 'object' && cause !== null && 'code' in cause && 'message' in cause
-    && typeof cause.code === 'string' && typeof cause.message === 'string') return { code: cause.code, message: cause.message };
+    && typeof cause.code === 'string' && typeof cause.message === 'string') return decodeBridgeError({code:cause.code,message:cause.message,...('details'in cause?{details:cause.details}:{})});
   return { code: 'NATIVE_CALL_FAILED', message: `桌面桥调用失败：${String(cause)}` };
 }

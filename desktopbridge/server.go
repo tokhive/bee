@@ -293,7 +293,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if operationErr != nil {
 					answer.Result = struct {
 						Error *protocolError `json:"error"`
-					}{rejected("DEVICE_OPERATION_FAILED", "%s", operationErr)}
+					}{operationFailure("DEVICE_OPERATION_FAILED", operationErr)}
 				} else {
 					answer.Result = struct {
 						Device bee.DeviceView `json:"device"`
@@ -310,7 +310,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if operationErr != nil {
 					answer.Result = struct {
 						Error *protocolError `json:"error"`
-					}{rejected("SUPPLY_OPERATION_FAILED", "%s", operationErr)}
+					}{operationFailure("SUPPLY_OPERATION_FAILED", operationErr)}
 				} else {
 					answer.Result = struct {
 						Supply bee.DesktopSupply `json:"supply"`

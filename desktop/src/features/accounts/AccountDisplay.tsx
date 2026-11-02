@@ -1,3 +1,4 @@
+import {formatDate,formatNumber,currentLocale} from '../../i18n/index';
 import {useEffect,useState} from 'react';
 import type {AccountPlatform} from '../../system/accounts';
 import type {AccountsModel} from './useAccounts';
@@ -27,12 +28,12 @@ export function AccountCheckStatus({supply,platform}:{supply?:SharedSupply;platf
 export function AccountQuota({presentation,resets=false}:{presentation:AccountPresentation;resets?:boolean}){
  const {windows,quotaState}=presentation;
  const ordered=[...windows].sort((a,b)=>a.seconds-b.seconds);
- const windowName=(seconds:number)=>seconds===18000?t('5 小时'):seconds===604800?t('7 日'):t('{hours} 小时',{hours:seconds/3600});
+ const windowName=(seconds:number)=>seconds===18000?t('5 小时'):seconds===604800?t('7 日'):t('{hours} 小时',{hours:formatNumber(seconds/3600,currentLocale())});
  return <div className={`native-account-quota ${quotaState==='current'?'':'quota-unconfirmed'}`}>
   {!ordered.length&&<div className="quota-window"><div className="quota-label"><span>{t('额度')}</span><span>{t('尚未核对')}</span></div><Progress value={null} aria-label={t('已用额度')}/></div>}
-  {ordered.map((w,i)=><div className="quota-window" key={`${w.scope}:${w.seconds}:${i}`}><div className="quota-label"><span>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''}</span><span className="quota-value">{w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:w.used_percent})}</span></div>
-   <Progress value={w.used_percent} aria-label={`${windowName(w.seconds)} ${w.scope} ${t('已用额度')}`} aria-valuetext={w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:w.used_percent})}/>
-   {resets&&<p className="quota-reset">{t('重置时间')}: {w.reset_at?new Date(w.reset_at).toLocaleString():t('未知')}</p>}
+  {ordered.map((w,i)=><div className="quota-window" key={`${w.scope}:${w.seconds}:${i}`}><div className="quota-label"><span>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''}</span><span className="quota-value">{w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}</span></div>
+   <Progress value={w.used_percent} aria-label={`${windowName(w.seconds)} ${w.scope} ${t('已用额度')}`} aria-valuetext={w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}/>
+   {resets&&<p className="quota-reset">{t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>}
   </div>)}
   {quotaState==='stale'&&<p className="quota-history">{t('历史数据，已过期')}</p>}
  </div>;

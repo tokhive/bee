@@ -1,3 +1,4 @@
+import {normalizeFailure} from '../src/system/failures.ts';
 import {test} from 'node:test';import assert from 'node:assert/strict';
 import {createDesktopState} from '../src/system/desktopState.ts';
 const ready=(instance:string)=>({state:'ready',metadata:{instance,bee_version:'test',os:'darwin',arch:'arm64'}});
@@ -24,8 +25,8 @@ test('failed platform reads retry after ten seconds without hiding the other pla
  f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:'device'}});
  f.deps.supply=()=>({status:async(platform:string)=>{reads++;active++;max=Math.max(max,active);await Promise.resolve();active--;if(failed&&platform==='openai')throw new Error('SUPPLY_READ_FAILED: HTTP 503');return {platform,checked_at:new Date().toISOString()};}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
- assert.equal(reads,2);assert.equal(max,1);assert.match(m.getSnapshot().supplyErrors.openai??'',/HTTP 503/);
- assert.ok(m.getSnapshot().supplies.claude);assert.equal(m.getSnapshot().error,'');
+ assert.equal(reads,2);assert.equal(max,1);assert.match(m.getSnapshot().supplyErrors.openai?.message??'',/HTTP 503/);
+ assert.ok(m.getSnapshot().supplies.claude);assert.equal(m.getSnapshot().error,null);
  t.mock.timers.tick(9999);await tick();assert.equal(reads,2);
  failed=false;t.mock.timers.tick(1);await tick();assert.equal(reads,4);assert.equal(max,1);
  assert.ok(m.getSnapshot().supplies.openai);assert.deepEqual(m.getSnapshot().supplyErrors,{});
@@ -43,8 +44,8 @@ test('one account snapshot failure stays on that platform and leaves the other r
  f.deps.supply=()=>({status:async(platform:string)=>({platform,checked_at:new Date().toISOString()})});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
- assert.equal(m.getSnapshot().error,'');
- assert.match(m.getSnapshot().accountErrors.openai??'',/permission_denied=true/);
+ assert.equal(m.getSnapshot().error,null);
+ assert.match(m.getSnapshot().accountErrors.openai?.message??'',/permission_denied=true/);
  assert.equal(m.getSnapshot().accountErrors.claude,undefined);
  assert.equal(m.getSnapshot().accounts.claude?.revision,2);
 });
@@ -54,8 +55,8 @@ test('device read failure stays on the device and still publishes account defaul
  f.deps.accounts=()=>({defaults:async()=>({platforms:[{platform:'openai'}]}),snapshot:async(platform:string)=>({platform,revision:1,issues:[]})});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
- assert.equal(m.getSnapshot().error,'');
- assert.match(m.getSnapshot().deviceError,/HTTP 503/);
+ assert.equal(m.getSnapshot().error,null);
+ assert.match(m.getSnapshot().deviceError?.message??'',/HTTP 503/);
  assert.equal(m.getSnapshot().defaults?.platforms.length,1);
  assert.equal(m.getSnapshot().accounts.claude,undefined);
 });
@@ -68,17 +69,19 @@ test('replacement refresh starts after the status listener returns',async t=>{
 });
 test('a superseded initial status rejection cannot block a ready event',async t=>{
  const f=fixture();let reject!:(e:Error)=>void;f.deps.bridge.status=()=>new Promise((_,no)=>{reject=no;});
- const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});f.emit(ready('a'));await tick();reject(new Error('STALE_INITIAL_STATUS_READ_REJECTED'));await tick();assert.equal(m.getSnapshot().error,'');assert.equal(m.getSnapshot().native.state,'ready');
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});f.emit(ready('a'));await tick();reject(new Error('STALE_INITIAL_STATUS_READ_REJECTED'));await tick();assert.equal(m.getSnapshot().error,null);assert.equal(m.getSnapshot().native.state,'ready');
 });
 
 test('an account receipt floor retains the failing read evidence and resets with its native instance',async t=>{
  const f=fixture();let fail=false;
- f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{if(fail&&platform==='openai')throw new Error('ACCOUNT_OPERATION_FAILED: GET account HTTP 503');return {platform,revision:1,issues:[]};}});
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{if(fail&&platform==='openai')throw {code:'http_rejected',message:'GET account HTTP 503',details:{check:'account_read',observed_at:'2026-10-30T12:00:00Z',evidence:{http_status:'503',target_origin:'https://hive.example'}}};return {platform,revision:1,issues:[]};}});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
  m.recordAccountReceipt('openai',9);fail=true;await m.refresh();
- assert.match(m.getSnapshot().accountErrors.openai??'',/GET account HTTP 503/);
- assert.match(m.getSnapshot().accountErrors.openai??'',/actual=1; required>=9/);
+ assert.match(m.getSnapshot().accountErrors.openai?.message??'',/GET account HTTP 503/);
+ assert.match(m.getSnapshot().accountErrors.openai?.message??'',/actual=1; required>=9/);
+ assert.equal(m.getSnapshot().accountErrors.openai?.code,'http_rejected');
+ assert.equal(m.getSnapshot().accountErrors.openai?.evidence.http_status,'503');
  assert.equal(m.getSnapshot().accountErrors.claude,undefined);
  fail=false;f.emit(ready('b'));await tick();assert.deepEqual(m.getSnapshot().accountErrors,{});assert.equal(m.getSnapshot().accounts.openai?.revision,1);
 });

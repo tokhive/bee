@@ -1,3 +1,4 @@
+import {throwBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {SupplyPlatform} from './supply';
 import {supplyReasons} from './supply.ts';
@@ -38,7 +39,7 @@ const available=shape({available:bool,reason:nullable(pattern(/^[a-z][a-z0-9_]{0
 function result(reply:unknown,instance:string,key:string):unknown {
  const o=object(reply,'reply');if(o.instance!==instance)invalid('reply.instance mismatch; required=current management instance');
  const r=object(o.result,'result');
- if('error'in r){shape({error:shape({code:oneOf(['ACCOUNT_OPERATION_FAILED']),message:text})})(r,'result');const e=r.error as {code:string;message:string};throw new Error(`${e.code}: ${e.message}`);}
+ if('error'in r){if(Object.keys(r).length!==1)invalid('error result requires exactly one field');throwBridgeError(r.error,'ACCOUNT_REPLY_INVALID');}
  shape({[key]:()=>{}})(r,'result');return r[key];
 }
 export function decodeAccountReply(reply:unknown,platform:AccountPlatform,instance:string):AccountSnapshot {

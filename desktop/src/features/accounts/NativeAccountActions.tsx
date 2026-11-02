@@ -12,22 +12,25 @@ const actions={select:{label:'接入',confirm:'确认接入',description:'保存
 type Action=keyof typeof actions;
 export function AccountOperationStatus({accounts,platform,onNavigate}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void}){
  const op=accounts.views[platform]?.operation;
+ const submissionChanged=accounts.errors[platform]?.code==='ACCOUNT_CONTEXT_CHANGED';
+ const refresh=accounts.accountRefresh?.[platform];
+ const progress=refresh?refresh.state==='reading'?'重试中…':refresh.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。':accounts.busy[platform]?'重试中…':'等待自动重试…';
  const unconfirmed=accounts.uncertain[platform]||!!accounts.errors[platform]||op?.state==='reconciling';
  return <div className="account-operation-status">
-  {unconfirmed?<p role="status">{t(accounts.busy[platform]?'重试中…':'等待自动重试…')}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成':'正在处理账号操作':op.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':'账号操作已完成，平台保持暂停':op.state==='cancelled'?'操作已取消':'账号操作失败')}</p>}
+  {unconfirmed&&!submissionChanged?<p role="status">{t(progress)}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成':'正在处理账号操作':op.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':'账号操作已完成，平台保持暂停':op.state==='cancelled'?'操作已取消':'账号操作失败')}</p>}
   {op?.error&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
   {accounts.errors[platform]&&<FailureNotice failure={accounts.errors[platform]} check="account_operation" onNavigate={onNavigate}/>}
  </div>;
 }
 export function NativeAccountActions({accounts,platform,runtime,placement='row'}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail'}){
  const [confirm,setConfirm]=useState<{action:Action;candidate:string|null}|null>(null);
- const view=accounts.views[platform],pending=accountPending(view),busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform],unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform];
+ const view=accounts.views[platform],pending=accountPending(view),busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform],unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED';
  const selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude';
  const transitioning=runtime.view?.local==='starting'||runtime.view?.local==='stopping';
  const candidate=!dirty&&!!view?.candidate.reference&&view.candidate.state==='available'&&!!view.candidate.expires_at&&Date.parse(view.candidate.expires_at)>Date.now()+30000;
  function disabled(action:Action){
   const continuation=action==='confirm_change'&&op?.state==='reconciling'&&op.error?.code==='confirmation_not_submitted';
-  if(!view||busy||pending&&!continuation||unknown||transitioning||!view.features[action].available)return true;
+  if(!view||accounts.submissionBlocked||busy||pending&&!continuation||unknown||transitioning||!view.features[action].available)return true;
   if(action==='authorize')return !accounts.defaults||runtime.uncertain||!!runtime.error||runtime.stalled||!runtime.view||!['stopped','failed'].includes(runtime.view.local);
   if(action==='clear_selection')return !selected;
   if(!candidate)return true;

@@ -22,7 +22,7 @@ export function useAccountClock(accounts:AccountsModel){
 }
 export function AccountCheckStatus({supply,platform}:{supply?:SharedSupply;platform?:AccountPlatform}){
  const progress=supply?(platform?[supplyProgress(supply.state,platform)]:platforms.map(p=>supplyProgress(supply.state,p))):[];
- const copy=progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':null;
+ const copy=progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
  return copy?<span className="account-check-status" role="status">{t(copy)}</span>:null;
 }
 export function AccountQuota({presentation,resets=false}:{presentation:AccountPresentation;resets?:boolean}){

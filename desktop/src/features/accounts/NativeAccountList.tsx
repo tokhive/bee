@@ -1,5 +1,5 @@
 import {FailureNotice} from '../../components/ProblemNotice';
-import type {NavigationTarget} from '../../app/navigation';
+import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {Sparkles,Check,Pause,ShieldCheck} from 'lucide-react';
 import {accountPending,type AccountsModel} from './useAccounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
@@ -10,14 +10,16 @@ import {NativeAccountActions,AccountOperationStatus} from './NativeAccountAction
 import {NativeAccountDetails} from './NativeAccountDetails';
 import {AccountQuota,AccountCheckStatus,useAccountClock} from './AccountDisplay';
 import {Badge,Button} from '../../components/ui';
-import {t} from '../../i18n/index';
+import {t,formatNumber,currentLocale} from '../../i18n/index';
 
-export function NativeAccountList({context,accounts,runtime,supply,onNavigate}:{context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
+export function NativeAccountList({context,accounts,runtime,supply,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
  const now=useAccountClock(accounts);
  const running=runtime.view?.local==='running'&&!runtime.error&&!runtime.uncertain;
- const selectedCount=platforms.filter(p=>accounts.views[p]?.selection.state==='selected').length;
+ const confirmedPlatforms=platforms.filter(p=>!!accounts.views[p]&&!accounts.errors[p]&&(!accounts.accountRefresh||!!accounts.accountRefresh[p]?.lastConfirmedAt));
+ const selectedCount=confirmedPlatforms.filter(p=>accounts.views[p]?.selection.state==='selected').length;
+ const countCopy=confirmedPlatforms.length===platforms.length?t('{count} 个已接入',{count:formatNumber(selectedCount,currentLocale())}):selectedCount?t('已确认接入 {count} 个，其余待确认',{count:formatNumber(selectedCount,currentLocale())}):t('接入数量待确认');
  return <section className="native-accounts-section" aria-label={t('平台账号列表')}>
-  <div className="section-heading"><h2>{t('AI 账号')}</h2><div className="account-list-status"><AccountCheckStatus supply={supply}/><span>{t('{count} 个已接入',{count:selectedCount})}</span></div></div>
+  <div className="section-heading"><h2>{t('AI 账号')}</h2><div className="account-list-status"><AccountCheckStatus supply={supply}/><span>{countCopy}</span></div></div>
   <div className="native-account-list">{platforms.map(platform=>{
    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];
    const presentation=accountPresentation(snapshot,dirty,now),selected=snapshot?.selection.state==='selected';
@@ -31,7 +33,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate}:{
    const copy=current?ready?'可接单':'不能接单':view||supply?.state.errors[platform]?'状态待更新':'状态待确认';
    const paused=view?.paused===true;
    const localErrors=!dirty?[candidate?.error,snapshot?.authorization.error,snapshot?.capabilities[0]?.error]:[];
-   return <section className="native-account-row" aria-label={t('{platform} 账号',{platform:label})} key={platform}>
+   return <section className="native-account-row" aria-label={t('{platform} 账号',{platform:label})} key={platform} data-account-platform={platform} data-nav-section="account" data-nav-platform={platform} tabIndex={-1}>
     <div className="native-account-identity"><span className={`platform-mark ${platform}`}>{platform==='openai'?<Sparkles aria-hidden="true"/>:<span aria-hidden="true">✳</span>}</span><div className="native-account-copy">
      <div className="native-platform-name"><h3>{label}</h3><Badge>{presentation.plan?presentation.plan[0].toUpperCase()+presentation.plan.slice(1):t('未知套餐')}</Badge></div>
      <p className="native-account-fingerprint">{presentation.identity??t('尚未接入')}</p>
@@ -47,7 +49,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate}:{
     <div className="native-account-row-actions">
      {context==='accounts'&&<NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="row"/>}
      {running&&selected&&supply&&<Button variant="outline" disabled={!current||!!accounts.uncertain[platform]||!supply.model.canWrite(platform,!paused)} onClick={()=>{if(current)void supply.model.write(platform,!paused);}}>{t(paused?'恢复接单':'暂停接单')}</Button>}
-     {context==='accounts'&&<NativeAccountDetails onNavigate={onNavigate} accounts={accounts} platform={platform} runtime={runtime} supply={supply}/>}
+     {context==='accounts'&&<NativeAccountDetails navigationRequest={navigationRequest} onNavigate={onNavigate} accounts={accounts} platform={platform} runtime={runtime} supply={supply}/>}
     </div>
    </section>;
   })}</div>

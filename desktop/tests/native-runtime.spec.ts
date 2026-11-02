@@ -23,6 +23,7 @@ test('unpaired proxy drafts save a Hive origin and survive an empty effective ne
   const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
   w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
    if(command==='device_status')return {result:{device:{state:'unbound'}}};
+   if(command==='device_context')return {result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved device configuration'}}};
    if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
    const result=await invoke(command,args);
    if(command==='network_save_proxy')result.preferences.proxies=result.preferences.proxies.map((entry:any)=>({...entry,device_scope:null}));
@@ -43,7 +44,7 @@ test('a successful account write still requires a verified read when central rea
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,native=w.__TAURI_INTERNALS__,invoke=native.invoke;native.invoke=async(command:string,args:unknown)=>{const result=await invoke(command,args);if(command==='account_action')w.deviceFail=true;return result;};});
  await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card(page).getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(card(page).getByText('核对已暂停，需先处理当前问题。',{exact:true})).toBeVisible();
  await page.evaluate(()=>{(window as any).deviceFail=false;});await reconcile(page);
  await expect(card(page).getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toHaveLength(1);
 });
@@ -97,7 +98,7 @@ test('official login warns about official account, supports cancellation, and co
 });
 test('uncertain runtime start is never replayed and requires a fresh query',async({page})=>{
  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;(window as any).runtimeUnknown=true;});
- await reconcile(page);await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('正在自动核对');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+ await reconcile(page);await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('等待已安排的核对');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
  await reconcile(page);await expect(page.getByText('贡献已启动',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(1);
 });
 
@@ -162,7 +163,7 @@ test('start preserves paused platforms and uncertain start recovers by reading o
  await expect(page.getByRole('checkbox',{name:'允许 OpenAI 恢复接单'})).toHaveCount(0);
  await page.evaluate(()=>{(window as any).runtimeUnknown=true;});
  await page.getByRole('button',{name:'开始贡献',exact:true}).click();
- await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('正在自动核对');
+ await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('等待已安排的核对');
  await page.clock.runFor(10001);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
  const starts=await calls(page,'runtime_start');expect(starts).toHaveLength(1);
  expect(starts[0].args.request.resume_platforms).toEqual([]);

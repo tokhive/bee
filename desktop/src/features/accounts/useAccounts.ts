@@ -1,3 +1,4 @@
+import type {RefreshStatus} from '../../system/desktopState';
 import type {UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
@@ -6,7 +7,7 @@ import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;busy:boolean}}
+export interface CoordinatedAccounts {refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -50,7 +51,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(external&&!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum)){
     delete unconfirmedRevisions.current[p];setUncertain(v=>({...v,[p]:false}));
    }
-   if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]?{...v,[p]:undefined}:v);
+   if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]&&v[p]?.code!=='ACCOUNT_CONTEXT_CHANGED'?{...v,[p]:undefined}:v);
    if(resolved)delete resolutions.current[p];
   }
   observedRuntime.current=runtime;
@@ -92,18 +93,25 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   const identity=(s:AccountSnapshot|undefined)=>JSON.stringify([s?.selection.state,s?.selection.fingerprint,s?.hive.fingerprint,s?.hive.generation,s?.candidate.reference,!!s?.candidate.expires_at&&Date.parse(s.candidate.expires_at)>Date.now()+30000,s?.features,s?.operation?.id,cancel&&s?.operation&&['pending','running'].includes(s.operation.state)?'cancellable':s?.operation?.state]);
   const expected=identity(intent);
   writing.current[platform]=true;setWriteBusy(v=>({...v,[platform]:true}));
+  const rejectSubmission=(check:string,actual:string,required:string)=>{
+   if(!active.current||central.current?.generation?.()!==started)return;
+   setErrors(v=>({...v,[platform]:failure({code:'ACCOUNT_CONTEXT_CHANGED',message:check+': actual='+actual+'; required='+required,details:{check,observed_at:new Date().toISOString(),evidence:{actual,required}}},check)}));
+  };
   return (async()=>{
    if(prior)await prior;
-   if(!active.current||epoch!==epochs.current[platform]||central.current?.generation?.()!==started)return;
+   if(!active.current||central.current?.generation?.()!==started)return;
+   if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
    if(central.current?.snapshot?.().busy&&refreshCentral)await refreshCentral();
-   if(!active.current||epoch!==epochs.current[platform]||central.current?.generation?.()!==started)return;
+   if(!active.current||central.current?.generation?.()!==started)return;
+   if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
    const observation=central.current?.snapshot?.();
    if(observation){
-    if(observation.error||observation.accountErrors[platform])return;
+    if(observation.error||observation.deviceError||observation.accountErrors[platform]){setErrors(v=>({...v,[platform]:observation.error??observation.deviceError??observation.accountErrors[platform]}));return;}
     const next=observation.runtime?.platforms[platform].account;
     if(next&&!dirtySource.current[platform]&&next.revision>=revisions.current[platform])publish(platform,next);
    }
-   if(!verified.current[platform]||expected!==identity(latest.current[platform]))return;
+   if(!verified.current[platform]){rejectSubmission('account_verification','verified=false','current verified account observation');return;}
+   if(expected!==identity(latest.current[platform])){rejectSubmission('account_submission_identity','account identity or candidate changed; revision='+revisions.current[platform],'same account identity and candidate as confirmed');return;}
    await execute();
   })().catch(cause=>{if(active.current&&epoch===epochs.current[platform]&&central.current?.generation?.()===started){verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause,'account_operation')}));}}).finally(()=>{writing.current[platform]=false;if(active.current)setWriteBusy(v=>({...v,[platform]:false}));});
  },[publish,refreshCentral,pauseCentral]);
@@ -167,7 +175,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   }
  },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
  const sourceFor=(p:AccountPlatform)=>sources[p]??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
- return {defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
+ return {submissionBlocked:!!centralError||!!deviceError,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
   edit(platform:AccountPlatform,source:AccountSource){
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;

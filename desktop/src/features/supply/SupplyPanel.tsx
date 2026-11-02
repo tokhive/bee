@@ -2,11 +2,8 @@ import {formatDate,currentLocale} from '../../i18n/index';
 import {FailureNotice} from '../../components/ProblemNotice';
 import {platforms,supplyFresh,supplyProgress,type SharedSupply} from './useSupply';
 import { t } from '../../i18n/index';
-export const reasonCopy: Record<string,string> = {
- manually_paused:'已手动暂停',banned:'管理员已禁用此平台供给',device_draining:'设备替换中，仅收尾已接请求',offline:'Hive 未看到此平台的 Bee 连接',
- not_configured:'尚未配置平台账号或市场未开放',model_unavailable:'账号没有可用的市场模型',authorization_unavailable:'Hive 没有可用的加密授权',capabilities_unknown:'账号模型和额度报告尚未确认',rate_limited:'上游平台限流中',quota_unknown:'账号额度窗口尚未确认',quota_exhausted:'账号订阅额度已耗尽',plan_not_configured:'管理员尚未配置套餐并发上限',concurrency_full:'账号并发请求已满',
- codex_source_unavailable:'无法读取 Codex 官方登录',codex_confirmation_required:'Codex 账号变更待确认',codex_authorization_rejected:'OpenAI 已拒绝此账号授权',claude_source_unavailable:'无法读取 Claude Code 官方登录',claude_confirmation_required:'Claude Code 账号变更待确认',claude_authorization_rejected:'Anthropic 已拒绝此账号授权',
-};
+import {reasonCopy,supplyProblem} from '../accounts/accountPresentation';
+export {reasonCopy} from '../accounts/accountPresentation';
 export function SupplyPanel({supply}: {supply:SharedSupply}) {
  const {model,state,blocked}=supply;
  const {views,errors}=state;
@@ -23,7 +20,7 @@ export function SupplyPanel({supply}: {supply:SharedSupply}) {
     <h3>{platform==='openai'?'OpenAI':'Claude'}</h3>
     <p className="supply-state" role={progress?'status':undefined}>{t(current ? view!.paused?'已手动暂停':view!.ready?'满足接单条件（Hive 报告）':'不满足接单条件' : progress?progressCopy:errors[platform]?'本次结果未确认':'核对已过期')}</p>
     {errors[platform]&&<FailureNotice failure={errors[platform]} check="supply_read"/>}
-    {current&&view!.reasons.length>0&&<ul className="supply-reasons">{view!.reasons.filter(reason=>reason!=='manually_paused').map(reason=><li key={reason}>{t(reasonCopy[reason])}</li>)}</ul>}
+    {current&&view!.reasons.length>0&&<ul className="supply-reasons">{view!.reasons.map(reason=><li key={reason}>{t(reasonCopy[reason],{platform:platform==='openai'?'OpenAI':'Claude'})}<p>{t(supplyProblem(reason,platform).impact)}</p></li>)}</ul>}
     <p className="muted supply-time">{t('最后核对时间')}: {view?<time dateTime={view.checked_at}>{formatDate(view.checked_at,currentLocale())}</time>:t('尚未核对')}</p>
     <button disabled={blocked||!current||!model.canWrite(platform,!view?.paused)} onClick={()=>{if(current)void model.write(platform,!view!.paused);}}>{t(view?.paused?'恢复':'暂停')}</button>
    </section>;

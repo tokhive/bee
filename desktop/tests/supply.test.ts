@@ -266,3 +266,18 @@ test('known unsent supply writes retain evidence without pausing the healthy coo
  model.adopt({views:{...views},error:{code:'BRIDGE_NOT_READY',message:'bridge failed',check:'desktop_refresh',observedAt:null,evidence:{}},busy:false});assert.equal(model.canWrite('openai',true),false);
  model.adopt({views:{...views},error:null,busy:false});assert.equal(model.canWrite('openai',true),true);assert.equal(writes,1);
 });
+import * as accountPresentation from '../src/features/accounts/accountPresentation.ts';
+
+test('all supply reasons identify their actual handling object without false login or resume repairs',()=>{
+ const present=(accountPresentation as any).supplyProblem;assert.equal(typeof present,'function');
+ const admin=['banned','market_not_open','supply_not_enabled','supply_device_restricted','account_not_admitted','model_unavailable','plan_not_configured'];
+ for(const reason of admin){const p=present(reason,'openai');assert.equal(p.target,null,reason);assert.equal(p.handler,'administrator',reason);assert.ok(p.impact.length>0,reason);}
+ for(const reason of ['device_draining','authorization_unavailable','capabilities_unknown','concurrency_full','rate_limited','quota_unknown','quota_exhausted','account_not_registered','not_configured','manually_paused'])assert.equal(present(reason,'claude').target,null,reason);
+ assert.match(present('market_not_open','openai').summary,/Hive.*开放/);
+ assert.doesNotMatch(present('not_configured','openai').summary,/市场未开放|尚未配置平台账号/);
+ assert.deepEqual(present('offline','openai').target,{page:'overview',section:'connection'});
+ for(const [platform,prefix]of [['openai','codex'],['claude','claude']] as const){
+  assert.deepEqual(present(prefix+'_source_unavailable',platform).target,{page:'accounts',section:'source',platform});
+  for(const suffix of ['confirmation_required','authorization_rejected'])assert.deepEqual(present(prefix+'_'+suffix,platform).target,{page:'accounts',section:'account',platform});
+ }
+});

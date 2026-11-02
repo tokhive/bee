@@ -182,7 +182,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   }
  },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
  const sourceFor=(p:AccountPlatform)=>sources[p]??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
- return {submissionBlocked:!!centralError||!!deviceError,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
+ return {submissionBlocked:!!centralError||!!deviceError,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
   edit(platform:AccountPlatform,source:AccountSource){
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;

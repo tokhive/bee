@@ -544,3 +544,45 @@ func TestDesktopDiagnosticsLocalReadFailureKeepsSafeCause(t *testing.T) {
 		t.Fatal("local read error exposed private path")
 	}
 }
+
+func TestDesktopDiagnosticsBindingChangeInvalidatesReportWithoutRelabelling(t *testing.T) {
+	entered, release := make(chan struct{}), make(chan struct{})
+	var once sync.Once
+	service, device, _, _ := diagnosticFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		once.Do(func() { close(entered) })
+		<-release
+		diagnosticReadyHandler(w, r)
+	}, false)
+	original, _ := os.ReadFile(device.path)
+	t.Cleanup(func() { _ = os.WriteFile(device.path, original, 0600) })
+	first, err := service.Start(context.Background(), strings.Repeat("1", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	<-entered
+	raw, _ := json.Marshal(first)
+	var public map[string]any
+	json.Unmarshal(raw, &public)
+	if _, ok := public["binding_revision"]; !ok {
+		close(release)
+		t.Fatal("diagnostic report has no captured binding_revision")
+	}
+	session, done, err := device.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := session.read()
+	if err != nil {
+		t.Fatal(err)
+	}
+	state.Identity.ID = "replacement"
+	err = session.save(state)
+	done()
+	if err != nil {
+		t.Fatal(err)
+	}
+	close(release)
+	if _, err = service.Snapshot(context.Background(), first.ID); err == nil {
+		t.Fatal("old binding report remained usable after replacement")
+	}
+}

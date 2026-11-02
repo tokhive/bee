@@ -3,7 +3,8 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::{BTreeMap, HashSet};
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: "DIAGNOSTICS_REPLY_INVALID".into(),
         message: message.into(),
     }
@@ -38,6 +39,7 @@ pub struct DiagnosticReport {
     #[serde(deserialize_with = "present")]
     pub run_id: Option<String>,
     pub network_revision: u64,
+    pub binding_revision: u64,
     pub started_at: String,
     #[serde(deserialize_with = "present")]
     pub finished_at: Option<String>,
@@ -74,6 +76,7 @@ pub fn validate_report(value: &Value, instance: &str) -> Result<DiagnosticReport
         || r.instance != instance
         || r.run_id.as_deref().is_some_and(|s| !digest(s, 32))
         || r.network_revision > 9_007_199_254_740_991
+        || r.binding_revision > 9_007_199_254_740_991
     {
         return Err(invalid("diagnostics identity or network revision rejected; required=current instance, safe revision and valid identifiers"));
     }

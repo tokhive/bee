@@ -25,6 +25,8 @@ export function installAccountFixture({accounts, runtimeEnabled=false}){
  const preferenceError=()=>({code:'PREFERENCES_WRITE_FAILED',message:'private file publish failed: kind=PermissionDenied os_code=13'});
  w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:id=>{callbacks.delete(id);},invoke:async(command,args={})=>{
   if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();
+  if(command==='device_context')return {instance,result:{context:{hive:'https://hive.example',name:'Fixture',device_id:'dev-1',owner_id:'owner-1',binding_revision:w.bindingRevision??1}}};
+  if(command==='startup_status'||command==='startup_recheck')return {state:w.deviceFail?'blocked':'ready',failure:w.deviceFail?{code:'device_replaced',message:'HTTP 401 device_replaced'}:null,instance,binding_revision:w.bindingRevision??1,network_revision:w.networkRevision??0,observed_at:new Date().toISOString(),revision:1};
   if(command==='device_status'&&w.deviceFail)return {result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET identity HTTP 503'}}};
   if(command==='device_status')return {result:{device:{state:'bound',hive:'https://hive.example',name:'Fixture',identity:{id:'dev-1',name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}}}};
   w.calls.push({command,args});
@@ -59,7 +61,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false}){
   if(command==='hive_open'){w.openedHive='https://hive.example/';return;}
   if(command.startsWith('diagnostics_')){
    if(command==='diagnostics_start'){
-    const now=new Date().toISOString();diagnostic={id:(++diagnosticSequence).toString(16).padStart(48,'0'),instance,run_id:local==='running'?'a'.repeat(32):null,network_revision:w.networkRevision??0,started_at:now,finished_at:null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:now,code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity',http_status:'200'},next_action:'diagnostics'},{id:'source',platform:'openai',status:'skipped',observed_at:now,code:'source_not_selected',evidence:{selected:'false'},next_action:'accounts'}]};
+    const now=new Date().toISOString();diagnostic={id:(++diagnosticSequence).toString(16).padStart(48,'0'),instance,run_id:local==='running'?'a'.repeat(32):null,network_revision:w.networkRevision??0,binding_revision:w.bindingRevision??1,started_at:now,finished_at:null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:now,code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity',http_status:'200'},next_action:'diagnostics'},{id:'source',platform:'openai',status:'skipped',observed_at:now,code:'source_not_selected',evidence:{selected:'false'},next_action:'accounts'}]};
     const captured=structuredClone(diagnostic);if(w.diagnosticDelay)await new Promise(resolve=>setTimeout(resolve,w.diagnosticDelay));return {instance:captured.instance,result:{report:captured}};
    }
    if(command==='diagnostics_snapshot'&&!w.diagnosticsStayRunning){diagnostic={...diagnostic,state:'completed',finished_at:new Date().toISOString()};}

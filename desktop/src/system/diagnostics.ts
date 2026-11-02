@@ -5,7 +5,7 @@ import type {DeviceInvoke} from './device';
 export type DiagnosticPlatform='openai'|'claude';
 export type DiagnosticPage='overview'|'accounts'|'diagnostics'|'settings';
 export interface DiagnosticCheck {id:'device'|'runtime'|'hive'|'proxy'|'source'|'authorization'|'quota'|'capabilities'|'account'|'supply';platform:DiagnosticPlatform|null;status:'pass'|'warning'|'fail'|'skipped';observed_at:string;code:string;evidence:Record<string,string>;next_action:DiagnosticPage}
-export interface DiagnosticReport {id:string;instance:string;run_id:string|null;network_revision:number;started_at:string;finished_at:string|null;state:'running'|'completed'|'cancelled';checks:DiagnosticCheck[]}
+export interface DiagnosticReport {id:string;instance:string;run_id:string|null;network_revision:number;binding_revision:number;started_at:string;finished_at:string|null;state:'running'|'completed'|'cancelled';checks:DiagnosticCheck[]}
 export type DiagnosticModule='diagnostics'|'runtime'|'network'|'accounts'|'device'|'bridge'|'lifecycle'|'export';
 export type DiagnosticLevel='info'|'warning'|'error';
 export interface DiagnosticEvent {time:string;level:DiagnosticLevel;module:DiagnosticModule;platform:DiagnosticPlatform|null;code:string;evidence:Record<string,string>}
@@ -49,8 +49,8 @@ function evidence(value:unknown){
  }
 }
 function report(value:unknown,instance:string):DiagnosticReport{
- const r=object(value,['id','instance','run_id','network_revision','started_at','finished_at','state','checks'],'report');
- digest(r.id,48,'report.id');digest(r.instance,32,'report.instance');if(r.instance!==instance)invalid('report instance differs from current child');if(r.run_id!==null)digest(r.run_id,32,'report.run_id');integer(r.network_revision,'report.network_revision');
+ const r=object(value,['id','instance','run_id','network_revision','binding_revision','started_at','finished_at','state','checks'],'report');
+ digest(r.id,48,'report.id');digest(r.instance,32,'report.instance');if(r.instance!==instance)invalid('report instance differs from current child');if(r.run_id!==null)digest(r.run_id,32,'report.run_id');integer(r.network_revision,'report.network_revision');integer(r.binding_revision,'report.binding_revision');
  enumValue(r.state,['running','completed','cancelled'],'report.state');timestamp(r.started_at,'report.started_at');if(r.finished_at!==null)timestamp(r.finished_at,'report.finished_at');if((r.state==='running')!==(r.finished_at===null))invalid('report state/finished_at mismatch');
  if(!Array.isArray(r.checks)||r.checks.length>16)invalid('report checks exceeds fixed count');
  const seen=new Set<string>();
@@ -90,12 +90,14 @@ export function decodeDiagnosticExport(value:unknown,instance:string):Diagnostic
  if(typeof e.truncated!=='boolean'||!Array.isArray(e.truncated_sections)||e.truncated_sections.some(s=>s!=='logs'&&s!=='checks')||new Set(e.truncated_sections).size!==e.truncated_sections.length||e.truncated!==(e.truncated_sections.length>0))invalid('export truncation explanation rejected');
  if(new TextEncoder().encode(JSON.stringify(e)).byteLength>DIAGNOSTIC_EXPORT_BYTES)invalid('export exceeds byte limit=5242880');return structuredClone(e) as unknown as DiagnosticExport;
 }
-export interface DiagnosticsClient {start():Promise<DiagnosticReport>;snapshot(id:string):Promise<DiagnosticReport>;cancel(id:string):Promise<DiagnosticReport>;logs(query:LogQuery):Promise<LogPage>;export(reportId:string,includeLogs:boolean):Promise<DiagnosticExport>;setContext(networkRevision:number,runId?:string|null):void;getSnapshot():DiagnosticReport|null}
-export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|undefined,initialNetworkRevision=0,initialRunId?:string|null):DiagnosticsClient{
+export interface DiagnosticsClient {start():Promise<DiagnosticReport>;snapshot(id:string):Promise<DiagnosticReport>;cancel(id:string):Promise<DiagnosticReport>;logs(query:LogQuery):Promise<LogPage>;export(reportId:string,includeLogs:boolean):Promise<DiagnosticExport>;setContext(networkRevision:number,runId?:string|null,bindingRevision?:number):void;getSnapshot():DiagnosticReport|null}
+export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|undefined,initialNetworkRevision=0,initialRunId?:string|null,initialBindingRevision=0):DiagnosticsClient{
  if(instance!==undefined)digest(instance,32,'instance');integer(initialNetworkRevision,'network revision');if(initialRunId!==undefined&&initialRunId!==null)digest(initialRunId,32,'run id');
+ integer(initialBindingRevision,'binding revision');
+ let bindingRevision=initialBindingRevision;
  let networkRevision=initialNetworkRevision,runId=initialRunId,epoch=0,cached:DiagnosticReport|null=null,starting=false;
  const current=(generation:number)=>{if(generation!==epoch)invalid('result context changed while request was pending');};
- const gate=(r:DiagnosticReport)=>{if(r.network_revision!==networkRevision)invalid('report network revision differs from current context');if(runId!==undefined&&r.run_id!==runId)invalid('report run differs from current context');};
+ const gate=(r:DiagnosticReport)=>{if(r.binding_revision!==bindingRevision)invalid('report binding revision differs from current context');if(r.network_revision!==networkRevision)invalid('report network revision differs from current context');if(runId!==undefined&&r.run_id!==runId)invalid('report run differs from current context');};
  async function request(command:string,args:Record<string,unknown>,id?:string){
   if(instance===undefined)invalid('management instance is missing; report actions require a verified current child');
   if(id!==undefined)digest(id,48,'report id');const generation=epoch;
@@ -109,7 +111,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
   snapshot(id){return request('diagnostics_snapshot',{id},id);},cancel(id){return request('diagnostics_cancel',{id},id);},
   async logs(query){object(query,['cursor','limit','module','platform','level'],'log query');cursor(query.cursor);if(!Number.isInteger(query.limit)||query.limit<1||query.limit>200)invalid('log query limit requires 1..200');enumValue(query.module,[null,...modules],'log query module');enumValue(query.platform,[null,'openai','claude'],'log query platform');enumValue(query.level,[null,...levels],'log query level');const generation=epoch;const page=decodeLogPage(await invoke('diagnostic_logs',{query}));current(generation);return page;},
   async export(reportId,includeLogs){if(instance===undefined)invalid('management instance is missing; report actions require a verified current child');digest(reportId,48,'report id');if(typeof includeLogs!=='boolean')invalid('includeLogs requires boolean');if(!cached||cached.id!==reportId)invalid('export report id requires current cached report');gate(cached);const generation=epoch;const e=decodeDiagnosticExport(await invoke('diagnostics_export',{reportId,includeLogs}),instance);current(generation);gate(e.report);if(e.report.id!==reportId)invalid('export report id differs from requested id');if(!includeLogs&&e.logs.length)invalid('report-only export unexpectedly contains logs');return e;},
-  setContext(nextRevision,nextRunId){integer(nextRevision,'network revision');if(nextRunId!==undefined&&nextRunId!==null)digest(nextRunId,32,'run id');if(nextRevision!==networkRevision||nextRunId!==runId){networkRevision=nextRevision;runId=nextRunId;epoch++;cached=null;}},
+  setContext(nextRevision,nextRunId,nextBindingRevision=bindingRevision){integer(nextBindingRevision,'binding revision');integer(nextRevision,'network revision');if(nextRunId!==undefined&&nextRunId!==null)digest(nextRunId,32,'run id');if(nextRevision!==networkRevision||nextRunId!==runId||nextBindingRevision!==bindingRevision){bindingRevision=nextBindingRevision;networkRevision=nextRevision;runId=nextRunId;epoch++;cached=null;}},
   getSnapshot(){return cached?structuredClone(cached):null;},
  };
 }

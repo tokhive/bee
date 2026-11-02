@@ -6,7 +6,7 @@ import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {defaults?:AccountDefaults;error:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;busy:boolean}}
+export interface CoordinatedAccounts {defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -24,6 +24,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const revisions=useRef({openai:-1,claude:-1}),unconfirmedRevisions=useRef<Partial<Record<AccountPlatform,number>>>({});
  const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??null,accountErrors=coordinated?.accountErrors??noAccountErrors;
  const savedDefaults=external?coordinated?.defaults:defaults;
+ const deviceError=coordinated?.deviceError;
  const currentRuntime=useRef(runtime);currentRuntime.current=runtime;
  const observedRuntime=useRef(runtime);
  const resolutions=useRef<Partial<Record<AccountPlatform,{previous:RuntimeSnapshot|undefined;detected:boolean}>>>({});
@@ -42,7 +43,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   for(const p of platforms){
    if(running.current[p])continue;
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
-   if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
+   if(centralError||deviceError||accountErrors[p]){verified.current[p]=false;continue;}
    const resolved=resolution&&runtime!==resolution.previous;
    if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
    const minimum=unconfirmedRevisions.current[p];
@@ -53,7 +54,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(resolved)delete resolutions.current[p];
   }
   observedRuntime.current=runtime;
- },[enabled,runtime,busy,dirty,publish,centralError,accountErrors,external,sourceReadFailed]);
+ },[enabled,runtime,busy,dirty,publish,centralError,deviceError,accountErrors,external,sourceReadFailed]);
  const central=useRef(coordinated);central.current=coordinated;
  const dirtySource=useRef(dirty);dirtySource.current=dirty;
  const run=useCallback((platform:AccountPlatform,operation:(current?:AccountSnapshot)=>Promise<AccountSnapshot|AccountOperation|void>,detected=false,write=false,confirm=false,cancel=false):Promise<void>=>{

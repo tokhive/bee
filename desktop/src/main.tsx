@@ -23,7 +23,7 @@ const runtimeFactory=(instance:string)=>createRuntimeClient(invoke,instance);
 const authorizeFactory=(instance:string)=>createAuthorizeClient(invoke,instance);
 const accountFactory=(instance:string)=>createAccountClient(invoke,instance);
 const supply = (binding:SupplyBinding) => createSupplyClient(invoke,binding);
-const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:string|null)=>createDiagnosticsClient(invoke,instance,revision,runId);
+const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:string|null,bindingRevision=0)=>createDiagnosticsClient(invoke,instance,revision,runId,bindingRevision);
 async function mount() {
   const root = createRoot(document.getElementById('root')!);
   const params = new URLSearchParams(location.search);

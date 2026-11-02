@@ -4,6 +4,8 @@ import type {NavigationTarget} from '../app/navigation';
 import {translate,formatDate} from '../i18n/index.ts';
 export interface PresentedProblem {summary:string;impact:string;details:string;action:NavigationTarget|null;actionLabel?:string;detailsLabel?:string}
 const copy:Record<string,string>={
+ VERSION_MISMATCH:'Bee 管理协议版本与当前应用不兼容。',
+ BUNDLED_BEE_INVALID:'随附的 Bee 程序未通过完整性校验。',
  UPDATE_BYTES_MISSING:'已验证的更新内容不可读取，本次未退出或安装。',
  UPDATE_IDENTITY_MISSING:'更新包身份资料缺失。',
  UPDATE_NATIVE_HANDLE_MISSING:'已验证的原生更新句柄不可用。',
@@ -86,7 +88,8 @@ export function presentFailure(failure:UiFailure,locale:'zh'|'en'):PresentedProb
  const invalidContext=failure.code==='DEVICE_CONTEXT_INVALID',unconfigured=failure.code==='DEVICE_CONTEXT_UNCONFIGURED',networkApply=failure.code==='NETWORK_APPLY_REQUIRED';
  const officialImpact=failure.code==='client_missing'?'请先安装该平台官方 CLI：OpenAI 使用 Codex，Claude 使用 Claude Code。':failure.code==='client_version_unsupported'?'支持 Codex 0.162.x／0.163.x，以及 Claude Code 2.1.153 以上的 2.1.x；请核对已安装版本。':failure.code==='client_capability_missing'?'当前客户端没有提供所需命令能力；请安装受支持的官方版本后再明确发起登录。':'本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。';
  const updateImpact=unsent?null:failure.code==='UPDATE_PREVIOUS_NOT_INSTALLED'?'目标更新尚未安装；当前可信版本及数据、运行恢复检查已通过。可重新检查并下载更新。':failure.check==='native_locale_sync'?'菜单和新系统通知的语言尚未同步；请重新读取偏好并同步。已有通知不会重发。':failure.check==='update_recovery'?'更新保护仍保留；请重新启动 Bee 核验原更新。若仍受阻，请保留记录并使用可信安装包处理，普通更新检查不能解除保护。':failure.code==='UPDATE_INSTALL_FAILED'?'现有数据与更新保护记录已保留。请使用可信安装包处理；重新读取状态不会重新安装。':failure.check==='update_signature'||failure.check==='update_digest'?'当前更新包不可安装。可重新检查并下载；若仍无法核验，请使用可信来源的安装包。':failure.check.startsWith('update_')?'安装完成只在重新启动并核验后确认。请求回执未知时只读取原更新，不重复提交。':null;
- const impact=tr(updateImpact??(unsent?'不会自动重试本次操作。核对当前状态后，请再次确认提交。':failure.code==='ACCOUNT_CONTEXT_CHANGED'?'请核对当前设备、运行与账号状态；确认后可重新提交。':invalidContext?'依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。':unconfigured?'请在概览连接本机设备；配对不会自动开始贡献。':networkApply?'请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。':revoked?'设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。':official?officialImpact:account?'本次只确认了所选来源的读取结果，其他登录状态仍未知。':device?'本次设备状态不可确认，依赖设备身份的操作保持不可用。':failure.check.startsWith('supply_')?'本次平台接单状态不可确认；修改结果未知时只核对，不自动重放。':'本次操作未能完成；后续状态以重新核对的结果为准。'));
+ const nativeImpact=failure.code==='VERSION_MISMATCH'?'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee 后重新打开；若仍不兼容，请使用可信来源的匹配安装包处理。':failure.code==='BUNDLED_BEE_INVALID'?'原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee，使用可信来源的安装包重新安装后再打开。':null;
+ const impact=tr(nativeImpact??updateImpact??(unsent?'不会自动重试本次操作。核对当前状态后，请再次确认提交。':failure.code==='ACCOUNT_CONTEXT_CHANGED'?'请核对当前设备、运行与账号状态；确认后可重新提交。':invalidContext?'依赖设备身份的操作保持不可用；请导出诊断报告并联系支持修复本机设备配置，修复后重新检查设备。':unconfigured?'请在概览连接本机设备；配对不会自动开始贡献。':networkApply?'请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。':revoked?'设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。':official?officialImpact:account?'本次只确认了所选来源的读取结果，其他登录状态仍未知。':device?'本次设备状态不可确认，依赖设备身份的操作保持不可用。':failure.check.startsWith('supply_')?'本次平台接单状态不可确认；修改结果未知时只核对，不自动重放。':'本次操作未能完成；后续状态以重新核对的结果为准。'));
  let action:NavigationTarget|null=null;
  if(revoked||failure.code==='pairing_expired')action={page:'overview',section:'device'};
  if(account)action={page:'accounts',section:'source'};

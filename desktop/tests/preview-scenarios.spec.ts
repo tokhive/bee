@@ -39,7 +39,9 @@ for(const [scene,copy] of cases)test('scene renders formal state without invalid
 test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
  await page.goto('/.cache/bee-shadcn-review.html?scene=running&theme=light&size=normal');
  await expect(page.locator('#scene optgroup')).toHaveCount(10);
- await expect(page.locator('#scene option')).toHaveCount(74);
+ expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
+ await expect(page.locator('#scene option')).toHaveCount(76);
+ for(const scene of ['runtime-no-accounts','runtime-accounts-unconfirmed','confirm-change'])await expect(page.locator('#scene option[value="'+scene+'"]')).toHaveCount(1);
  await page.locator('#scene').selectOption('confirm-change');
  const app=page.frameLocator('iframe');
  await expect(app.getByRole('dialog').last()).toContainText('目标账号');
@@ -48,6 +50,23 @@ test('review selector covers approved groups and preserves scene when theme or s
  await expect(page.locator('#scene')).toHaveValue('confirm-change');
  await expect(app.getByRole('dialog').last()).toContainText('目标账号');
  await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>({width:el.contentWindow!.innerWidth,height:el.contentWindow!.innerHeight,theme:el.contentDocument!.documentElement.dataset.theme}))).toEqual({width:860,height:600,theme:'dark'});
+ for(const scene of ['runtime-no-accounts','runtime-accounts-unconfirmed']){
+  await page.locator('#scene').selectOption(scene);
+  await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).__beePreviewReady&&(el.contentWindow as any).__beePreviewScene)).toBe(scene);
+  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+  const facts=await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{const w=el.contentWindow as any;return {selections:Object.values(w.accounts).map((a:any)=>a.selection.state),calls:w.calls};});
+  expect(facts.selections).toEqual(['not_selected','not_selected']);
+  if(scene==='runtime-no-accounts'){
+   await expect(app.getByRole('region',{name:'贡献运行',exact:true})).toContainText('请先接入至少一个 AI 账号。');
+   await expect(app.getByRole('button',{name:'前往准备账号',exact:true})).toBeVisible();
+  }else{
+   await expect(app.getByText('接入数量待确认',{exact:true})).toBeVisible();
+   await expect(app.getByRole('region',{name:'贡献运行',exact:true})).toContainText('请先核对本机贡献状态。');
+   await expect(app.locator('main')).not.toContainText('0 个已接入');
+   expect(facts.calls.filter((c:any)=>c.command==='account_snapshot')).toEqual([]);
+  }
+  expect(facts.calls.filter((c:any)=>['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','authorize_cancel','supply_set_paused','network_apply_saved','preferences_save'].includes(c.command))).toEqual([]);
+ }
 });
 
 test('automatic recovery traverses stale, failed, retrying and recovered states using read requests only',async({page})=>{

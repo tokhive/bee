@@ -20,6 +20,7 @@
     "observed_at": "2026-10-26T00:00:00Z",
     "local": "stopped",
     "connection": "disconnected",
+    "connection_detail": null,
     "platforms": {
       "openai": {
         "account": {

@@ -104,6 +104,22 @@ func TestDesktopRuntimeFirstConflictDoesNotTakeOverOrRetry(t *testing.T) {
 	if failed.Connection != "occupied" || failed.Operation.Error == nil || connects.Load() != 1 || registrations.Load() != 0 {
 		t.Fatalf("first conflict not fenced: %+v connects=%d", failed, connects.Load())
 	}
+	if failed.ConnectionDetail == nil || failed.ConnectionDetail.Failure.Code != "ownership_unconfirmed" || failed.ConnectionDetail.Failure.Evidence["owned_session"] != "false" || failed.ConnectionDetail.Failure.Evidence["consecutive_conflicts"] != "1" || failed.ConnectionDetail.Retry != "halted" || failed.ConnectionDetail.NextRetryAt != nil {
+		t.Fatalf("first conflict evidence missing: %+v", failed.ConnectionDetail)
+	}
+	oldRun := *failed.RunID
+	if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: failed.Revision, Reason: "user_stop"}); err != nil {
+		t.Fatal(err)
+	}
+	stopped := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
+	if stopped.ConnectionDetail != nil {
+		t.Fatalf("stop retained connection alert: %+v", stopped.ConnectionDetail)
+	}
+	r.connectionObserved(oldRun, DesktopConnectionObservation{Connection: "rejected", Detail: failed.ConnectionDetail})
+	after, _ := r.Snapshot(context.Background())
+	if after.Revision != stopped.Revision || after.Connection != "disconnected" || after.ConnectionDetail != nil {
+		t.Fatalf("late rejection overwrote stop: %+v", after)
+	}
 	time.Sleep(50 * time.Millisecond)
 	if connects.Load() != 1 {
 		t.Fatal("first conflict automatically retried")
@@ -764,6 +780,9 @@ func TestDesktopRuntimeOwnedReconnectStopsAfterPersistentConflict(t *testing.T) 
 		t.Fatal(err)
 	}
 	failed := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
+	if failed.ConnectionDetail == nil || failed.ConnectionDetail.Failure.Code != "ownership_unconfirmed" || failed.ConnectionDetail.Failure.Evidence["owned_session"] != "true" || failed.ConnectionDetail.Failure.Evidence["consecutive_conflicts"] != "2" || failed.ConnectionDetail.Retry != "halted" || failed.ConnectionDetail.NextRetryAt != nil {
+		t.Fatalf("bounded conflict evidence missing: %+v", failed.ConnectionDetail)
+	}
 	if failed.Connection != "occupied" || connects.Load() != 3 {
 		t.Fatalf("persistent conflict not bounded: connection=%s attempts=%d", failed.Connection, connects.Load())
 	}

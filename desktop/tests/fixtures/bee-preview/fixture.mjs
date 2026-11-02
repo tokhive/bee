@@ -91,7 +91,7 @@ export async function installPreviewFixture(id){
   if(command==='runtime_snapshot'){
    w.calls.push({command,args});
    if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
-   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?(id==='runtime-disconnected'?'disconnected':'connected'):local==='starting'?'connecting':'disconnected',platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?(id==='runtime-disconnected'?'disconnected':'connected'):local==='starting'?'connecting':'disconnected',connection_detail:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(command==='account_detect'||command==='account_snapshot'){
    w.calls.push({command,args});const p=args.request?.platform??args.platform;

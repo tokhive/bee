@@ -35,3 +35,36 @@ test('runtime operation receipts advance the same revision gate as snapshots',as
  next={instance:'current',result:{operation:{...fixture.operation,kind:'stop',revision:9}}};
  await assert.rejects(client.stop(10),/revision/);
 });
+
+test('runtime requires an explicit nullable connection detail',()=>{
+ const missing=structuredClone(fixture.snapshot);delete missing.connection_detail;
+ assert.throws(()=>decodeRuntimeSnapshot(reply(missing),'current'),/missing/);
+ const explicit={...fixture.snapshot,connection_detail:null};
+ assert.deepEqual(decodeRuntimeSnapshot(reply(explicit),'current'),explicit);
+});
+
+const failure={code:'dns_failed',stage:'connect',occurred_at:'2026-10-26T00:00:00Z',message:'lookup hive.test: no such host',evidence:{target_origin:'https://hive.test',path:'/api/bee/agent'}};
+const detail={failure,retry:'scheduled',next_retry_at:'2099-01-01T00:00:00Z'};
+test('runtime accepts observed failures and actual scheduled retry times',()=>{
+ for(const code of ['dns_failed','tls_failed','connection_refused','timeout','http_rejected','connection_closed','synchronization_failed','ownership_unconfirmed','unknown_failure'])
+  for(const stage of ['connect','heartbeat','synchronize'])
+   assert.equal(decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:{...detail,failure:{...failure,code,stage}}}),'current').connection_detail?.failure?.code,code);
+ for(const retry of ['idle','attempting','halted'])assert.equal(decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:{failure:null,retry,next_retry_at:null}}),'current').connection_detail?.retry,retry);
+ assert.equal(decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:{...detail,next_retry_at:'2026-10-26T00:00:00Z'}}),'current').connection_detail?.retry,'scheduled');
+});
+test('runtime rejects malformed or unsafe connection details',()=>{
+ for(const bad of [undefined,{}, {...detail,extra:true},{...detail,retry:'waiting'},{...detail,next_retry_at:null},{...detail,retry:'idle'}, {...detail,next_retry_at:'2026-02-30T00:00:00Z'},
+ {...detail,failure:{...failure,code:'guessed'}},{...detail,failure:{...failure,stage:'proxy'}},{...detail,failure:{...failure,occurred_at:'2099-01-01T00:00:00Z'}},
+ {...detail,failure:{...failure,message:'x'.repeat(32769)}},{...detail,failure:{...failure,evidence:{authorization:'secret'}}},{...detail,failure:{...failure,evidence:{http_status:401}}},
+ {...detail,failure:{...failure,evidence:{target_origin:'https://user:secret@hive.test/?token=secret'}}}, {...detail,failure:{...failure,evidence:{path:'/api/bee/agent?token=secret'}}},
+ {...detail,failure:{...failure,evidence:{response_body:'x'.repeat(32769)}}}, {...detail,failure:{...failure,evidence:{http_status:'600'}}}, {...detail,failure:{...failure,evidence:{owned_session:'yes'}}},
+ {...detail,failure:{...failure,evidence:{consecutive_conflicts:'-1'}}}, {...detail,failure:{...failure,evidence:{remote_code:'unsafe code'}}}, {...detail,failure:{...failure,evidence:null}},
+ {...detail,failure:{...failure,message:5}}, {...detail,failure:{...failure,extra:true}}]){
+ const snapshot={...fixture.snapshot,connection_detail:bad};if(bad===undefined)delete snapshot.connection_detail;
+ assert.throws(()=>decodeRuntimeSnapshot(reply(snapshot),'current'),/RUNTIME_REPLY_INVALID/);
+ }
+});
+
+test('runtime connection origin rejects lookalike loopback domains',()=>{
+ assert.throws(()=>decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:{...detail,failure:{...failure,evidence:{target_origin:'http://127.evil.example'}}}}),'current'),/origin/);
+});

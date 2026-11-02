@@ -3,6 +3,7 @@ package desktopbridge_test
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"io"
 	"strings"
 	"testing"
@@ -53,5 +54,25 @@ func TestDesktopRuntimeBridgeReturnsQueryableOperation(t *testing.T) {
 	frames := replies(t, out.String())
 	if !bytes.Contains(frames[0].Result, []byte(`"runtime_start"`)) || !bytes.Contains(frames[1].Result, []byte(`"state":"pending"`)) || !bytes.Contains(frames[2].Result, []byte(`"local":"stopped"`)) || frames[3].Error != nil || f.starts != 1 {
 		t.Fatalf("runtime bridge contract: %s", out.String())
+	}
+}
+
+func TestDesktopRuntimeBridgePreservesConnectionDetail(t *testing.T) {
+	var out bytes.Buffer
+	input := hello + supplyRequest("snapshot", "runtime_snapshot", `{}`)
+	if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}); err != nil {
+		t.Fatal(err)
+	}
+	frames := replies(t, out.String())
+	var result map[string]json.RawMessage
+	if err := json.Unmarshal(frames[1].Result, &result); err != nil {
+		t.Fatal(err)
+	}
+	var runtime map[string]json.RawMessage
+	if err := json.Unmarshal(result["runtime"], &runtime); err != nil {
+		t.Fatal(err)
+	}
+	if raw, ok := runtime["connection_detail"]; !ok || string(raw) != "null" {
+		t.Fatalf("runtime lost explicit nullable detail: %s", frames[1].Result)
 	}
 }

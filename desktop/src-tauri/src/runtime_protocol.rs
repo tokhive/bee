@@ -93,6 +93,143 @@ enum ConnectionState {
     Rejected,
     Occupied,
 }
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ConnectionFailureCode {
+    DnsFailed,
+    TlsFailed,
+    ConnectionRefused,
+    Timeout,
+    HttpRejected,
+    ConnectionClosed,
+    SynchronizationFailed,
+    OwnershipUnconfirmed,
+    UnknownFailure,
+}
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum ConnectionStage {
+    Connect,
+    Heartbeat,
+    Synchronize,
+}
+#[derive(Debug, Deserialize, PartialEq)]
+#[serde(rename_all = "snake_case")]
+enum ConnectionRetry {
+    Idle,
+    Attempting,
+    Scheduled,
+    Halted,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConnectionFailure {
+    code: ConnectionFailureCode,
+    stage: ConnectionStage,
+    occurred_at: String,
+    message: String,
+    evidence: std::collections::BTreeMap<String, String>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ConnectionDetail {
+    #[serde(deserialize_with = "present")]
+    failure: Option<ConnectionFailure>,
+    retry: ConnectionRetry,
+    #[serde(deserialize_with = "present")]
+    next_retry_at: Option<String>,
+}
+impl ConnectionDetail {
+    fn validate(&self) -> Result<(), BridgeError> {
+        if (self.retry == ConnectionRetry::Scheduled) != self.next_retry_at.is_some()
+            || self.next_retry_at.as_ref().is_some_and(|v| !timestamp(v))
+        {
+            return Err(invalid("connection retry timestamp rejected; required=valid UTC timestamp exactly when scheduled"));
+        }
+        let Some(f) = &self.failure else {
+            return Ok(());
+        };
+        let observed = time::OffsetDateTime::parse(
+            &f.occurred_at,
+            &time::format_description::well_known::Rfc3339,
+        );
+        if !timestamp(&f.occurred_at)
+            || observed.is_err()
+            || observed
+                .is_ok_and(|v| v > time::OffsetDateTime::now_utc() + time::Duration::seconds(5))
+            || f.message.len() > 32768
+        {
+            return Err(invalid(
+                "connection failure observation timestamp or message length rejected",
+            ));
+        }
+        let allowed = [
+            "target_origin",
+            "path",
+            "http_status",
+            "remote_code",
+            "response_body",
+            "owned_session",
+            "consecutive_conflicts",
+        ];
+        for (key, value) in &f.evidence {
+            if !allowed.contains(&key.as_str()) || value.len() > 32768 {
+                return Err(invalid(
+                    "connection failure evidence key or value length rejected",
+                ));
+            }
+            let valid = match key.as_str() {
+                "target_origin" => tauri::Url::parse(value).is_ok_and(|u| {
+                    let local = u.host_str() == Some("localhost")
+                        || u.host_str().is_some_and(|h| {
+                            h.trim_matches(['[', ']'])
+                                .parse::<std::net::IpAddr>()
+                                .is_ok_and(|ip| ip.is_loopback())
+                        });
+                    u.origin().ascii_serialization() == *value
+                        && u.username().is_empty()
+                        && u.password().is_none()
+                        && u.query().is_none()
+                        && u.fragment().is_none()
+                        && (u.scheme() == "https" || u.scheme() == "http" && local)
+                }),
+                "path" => {
+                    value.starts_with("/api/bee/")
+                        && value.len() > 9
+                        && value.bytes().all(|b| {
+                            b.is_ascii_lowercase() || b.is_ascii_digit() || b"/_-".contains(&b)
+                        })
+                }
+                "http_status" => {
+                    value.len() == 3 && value.parse::<u16>().is_ok_and(|n| (100..=599).contains(&n))
+                }
+                "remote_code" => {
+                    !value.is_empty()
+                        && value.len() <= 128
+                        && value.as_bytes()[0].is_ascii_lowercase()
+                        && value
+                            .bytes()
+                            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+                }
+                "owned_session" => value == "true" || value == "false",
+                "consecutive_conflicts" => {
+                    !value.is_empty()
+                        && (*value == "0" || !value.starts_with('0'))
+                        && value.bytes().all(|b| b.is_ascii_digit())
+                        && value.parse::<u64>().is_ok_and(|n| n <= SAFE_INTEGER)
+                }
+                _ => true,
+            };
+            if !valid {
+                return Err(invalid(format!(
+                    "connection failure evidence rejected at key={key}"
+                )));
+            }
+        }
+        let _ = (&f.code, &f.stage);
+        Ok(())
+    }
+}
 #[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct StopReceipt {
@@ -110,6 +247,8 @@ struct RuntimeSnapshot {
     observed_at: String,
     local: LocalState,
     connection: ConnectionState,
+    #[serde(deserialize_with = "present")]
+    connection_detail: Option<ConnectionDetail>,
     platforms: RuntimePlatforms,
     #[serde(deserialize_with = "present")]
     operation: Option<Value>,
@@ -321,6 +460,9 @@ pub fn validate_runtime_reply(result: &Value, kind: RuntimeReplyKind) -> Result<
             if s.run_id.as_ref().is_some_and(|id| !digest(id, 32)) || !timestamp(&s.observed_at) {
                 return Err(invalid("runtime run_id or observation timestamp rejected"));
             }
+            if let Some(detail) = &s.connection_detail {
+                detail.validate()?;
+            }
             for (platform, p) in [
                 (SupplyPlatform::Openai, &s.platforms.openai),
                 (SupplyPlatform::Claude, &s.platforms.claude),
@@ -500,5 +642,96 @@ mod tests {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod connection_tests {
+    use super::*;
+    use serde_json::json;
+    fn detail() -> Value {
+        json!({"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"lookup hive.test: no such host","evidence":{"target_origin":"https://hive.test","path":"/api/bee/agent"}},"retry":"scheduled","next_retry_at":"2099-01-01T00:00:00Z"})
+    }
+    fn check(d: Value) -> Result<(), BridgeError> {
+        let mut snapshot: Value = serde_json::from_str::<Value>(include_str!(
+            "../../../desktopbridge/testdata/runtime-contract.json"
+        ))
+        .unwrap()["snapshot"]
+            .clone();
+        snapshot["connection_detail"] = d;
+        validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot)
+    }
+    #[test]
+    fn runtime_connection_accepts_all_failure_stages_and_retry_states() {
+        for code in [
+            "dns_failed",
+            "tls_failed",
+            "connection_refused",
+            "timeout",
+            "http_rejected",
+            "connection_closed",
+            "synchronization_failed",
+            "ownership_unconfirmed",
+            "unknown_failure",
+        ] {
+            for stage in ["connect", "heartbeat", "synchronize"] {
+                let mut d = detail();
+                d["failure"]["code"] = json!(code);
+                d["failure"]["stage"] = json!(stage);
+                check(d).unwrap();
+            }
+        }
+        for retry in ["idle", "attempting", "halted"] {
+            check(json!({"failure":null,"retry":retry,"next_retry_at":null})).unwrap();
+        }
+        check(Value::Null).unwrap();
+    }
+    #[test]
+    fn runtime_connection_rejects_unsafe_and_contradictory_details() {
+        for (pointer, value) in [
+            ("/retry", json!("waiting")),
+            ("/next_retry_at", Value::Null),
+            ("/next_retry_at", json!("2026-02-30T00:00:00Z")),
+            ("/failure/code", json!("guessed")),
+            ("/failure/stage", json!("proxy")),
+            ("/failure/occurred_at", json!("2099-01-01T00:00:00Z")),
+            ("/failure/message", json!("x".repeat(32769))),
+            ("/failure/evidence", json!({"authorization":"secret"})),
+            ("/failure/evidence", json!({"http_status":401})),
+            ("/failure/evidence", json!({"http_status":"600"})),
+            (
+                "/failure/evidence",
+                json!({"target_origin":"https://user:secret@hive.test/?token=secret"}),
+            ),
+            (
+                "/failure/evidence",
+                json!({"path":"/api/bee/agent?token=secret"}),
+            ),
+            ("/failure/evidence", json!({"owned_session":"yes"})),
+            ("/failure/evidence", json!({"consecutive_conflicts":"-1"})),
+            ("/failure/evidence", json!({"remote_code":"unsafe code"})),
+            (
+                "/failure/evidence",
+                json!({"response_body":"x".repeat(32769)}),
+            ),
+        ] {
+            let mut d = detail();
+            *d.pointer_mut(pointer).unwrap() = value;
+            assert!(
+                check(d).is_err(),
+                "accepted invalid connection detail at {pointer}"
+            );
+        }
+        for key in ["failure", "retry", "next_retry_at"] {
+            let mut d = detail();
+            d.as_object_mut().unwrap().remove(key);
+            assert!(check(d).is_err(), "missing {key} accepted");
+        }
+        let mut d = detail();
+        d["retry"] = json!("idle");
+        assert!(check(d).is_err());
+        let mut d = detail();
+        d["extra"] = json!(true);
+        assert!(check(d).is_err());
     }
 }

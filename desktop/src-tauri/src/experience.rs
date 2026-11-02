@@ -388,6 +388,15 @@ pub(crate) async fn recover_device<R: tauri::Runtime>(
     } else {
         bridge.device_recovery_status().await
     };
+    // A successful status read with no transaction observes no recovery change.
+    // It neither revokes established readiness nor unlocks a blocked/checking gate.
+    if status_only
+        && result
+            .as_ref()
+            .is_err_and(|cause| cause.code == "DEVICE_RECOVERY_NONE")
+    {
+        return result;
+    }
     // A completed transaction can be observed after an explicit recheck. Keep
     // readiness only when this same instance/binding/network was verified.
     if status_only

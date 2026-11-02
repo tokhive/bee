@@ -320,6 +320,85 @@ async fn network_recovery_keeps_update_identity_data_and_owned_exit_protections(
 }
 
 #[tokio::test]
+async fn absent_device_recovery_status_preserves_startup_and_network_scope() {
+    for state in ["ready", "blocked", "checking"] {
+        let (dir, bridge, app) =
+            fixture(serde_json::json!({"recovery_error":"DEVICE_RECOVERY_NONE"}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let gate = app.state::<StartupGate>();
+        if state == "blocked" {
+            gate.finish(Err(BridgeError::new(
+                "device_replaced",
+                "GET identity HTTP 401".into(),
+            )));
+        } else if state == "checking" {
+            gate.checking(bridge.status().metadata.map(|v| v.instance));
+        }
+        let before = serde_json::to_value(gate.snapshot()).unwrap();
+        let store = app.state::<PreferencesStore>();
+        let controller = app.state::<NetworkController>();
+        // A second device scope exposes whether the original applied scope was
+        // retained: recapturing after invalidation would incorrectly accept it.
+        let probe_scope = crate::network::trusted_scope(&serde_json::json!({"device":{"state":"bound","hive":"https://hive.example","identity":{"id":"other-device","owner_id":"owner","name":"Other","owner_email":"owner@example.com"}}})).unwrap().unwrap();
+        let network_before = controller
+            .snapshot(&store, &BridgeNetworkRuntime(&bridge), Some(&probe_scope))
+            .await;
+        assert!(network_before.pending_restart);
+        assert_eq!(
+            recover_device(app.handle(), &bridge, None, false)
+                .await
+                .unwrap_err()
+                .code,
+            "DEVICE_RECOVERY_NONE"
+        );
+        assert_eq!(
+            serde_json::to_value(gate.snapshot()).unwrap(),
+            before,
+            "status-only absence changed {state} gate"
+        );
+        assert_eq!(gate.check().is_ok(), state == "ready");
+        let network_after = controller
+            .snapshot(&store, &BridgeNetworkRuntime(&bridge), Some(&probe_scope))
+            .await;
+        assert_eq!(
+            serde_json::to_value(network_after).unwrap(),
+            serde_json::to_value(network_before).unwrap()
+        );
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(!calls.contains("runtime_restore"));
+        assert!(!calls.contains("runtime_start"));
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn recovery_errors_and_absent_writes_still_block_startup() {
+    for (code, prepare, confirm) in [
+        ("DEVICE_RECOVERY_BLOCKED", false, false),
+        ("DEVICE_RECOVERY_NONE", true, false),
+        ("DEVICE_RECOVERY_NONE", false, true),
+    ] {
+        let (_dir, bridge, app) = fixture(serde_json::json!({"recovery_error":code}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let decision = confirm.then(|| crate::protocol::DeviceRecoveryConfirm {
+            operation_id: "a".repeat(48),
+            expected_revision: 1,
+            decision: "begin_pairing".into(),
+        });
+        assert_eq!(
+            recover_device(app.handle(), &bridge, decision, prepare)
+                .await
+                .unwrap_err()
+                .code,
+            code
+        );
+        assert_eq!(app.state::<StartupGate>().snapshot().state, "blocked");
+        assert!(app.state::<StartupGate>().check().is_err());
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn device_recovery_stays_stopped_until_explicit_recheck_and_completed_status_is_stable() {
     let (dir, bridge, app) = fixture(serde_json::json!({"rejected":true}));
     startup(app.handle().clone(), bridge.clone()).await;

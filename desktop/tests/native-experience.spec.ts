@@ -426,3 +426,87 @@ test('T8 lost autostart receipt keeps the last registration separate from the ne
  const desired=page.getByLabel('登录系统后启动 Bee',{exact:true});await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();await expect(page.locator('.ns-os-status').last()).toContainText('上次确认的系统登记');await expect(page.locator('.ns-os-status').last()).toContainText('未登记');
  await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(page.locator('.ns-os-status').last()).toContainText('已登记');await expect(desired).toBeEnabled();expect((await calls(page,'autostart_set')).length).toBe(1);
 });
+
+test('T8 failed autostart reads cannot confirm an unknown write or replace its evidence',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ const desired=page.getByLabel('登录系统后启动 Bee',{exact:true}),registration=page.locator('.ns-os-status').last(),settings=page.getByTestId('native-settings');
+ await expect(registration).toContainText('未登记');
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.autostartReadOutcome='null-error';w.loseAutostartReceipt=true;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   const value=await invoke(command,args);
+   if(command==='autostart_set'&&w.loseAutostartReceipt)throw {code:'IPC_TIMEOUT',message:'autostart accepted; receipt lost: enabled=true'};
+   if(command==='autostart_status'){
+    if(w.autostartReadOutcome==='trusted')return {desired:true,registered:false,error:null};
+    if(w.autostartReadOutcome==='rejected')throw {code:'IPC_TIMEOUT',message:'autostart query receipt lost: read_only=true'};
+    return {desired:false,registered:w.autostartReadOutcome==='bool-error'?false:null,error:w.autostartReadOutcome==='null-only'?null:w.autostartReadOutcome==='bool-error'?{code:'PREFERENCES_IO',message:'preferences read failed: kind=PermissionDenied os_code=13'}:{code:'AUTOSTART_QUERY_FAILED',message:'autostart query failed: kind=PermissionDenied os_code=13'}};
+   }
+   return value;
+  };
+ });
+ await desired.check();await expect(desired).toBeDisabled();
+ for(const outcome of ['null-error','bool-error','null-only','rejected']){
+  await page.evaluate(outcome=>{(window as any).autostartReadOutcome=outcome;},outcome);
+  await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();
+  await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+  await expect(registration).toContainText('上次确认的系统登记');await expect(registration).toContainText('未登记');
+  await expect(settings).toContainText('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。');
+  await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+  await expect(settings).not.toContainText('系统启动登记与期望不一致。');
+  await expect(settings.getByRole('alert')).toHaveCount(outcome==='null-only'?1:2);await expect(settings).toContainText('autostart accepted; receipt lost: enabled=true');
+  if(outcome==='null-error')await expect(settings).toContainText('autostart query failed: kind=PermissionDenied os_code=13');
+  if(outcome==='bool-error')await expect(settings).toContainText('preferences read failed: kind=PermissionDenied os_code=13');
+  if(outcome==='rejected')await expect(settings).toContainText('autostart query receipt lost: read_only=true');
+ }
+ await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通用').click();
+ await page.getByLabel('语言',{exact:true}).selectOption('en');await tab(page,'Notifications and startup').click();
+ const englishDesired=page.getByLabel('Start Bee after signing in to the system',{exact:true});
+ await expect(englishDesired).toBeChecked();await expect(englishDesired).toBeDisabled();
+ await expect(settings).toContainText('autostart accepted; receipt lost: enabled=true');
+ expect((await calls(page,'autostart_set')).length).toBe(1);
+ await page.evaluate(()=>{(window as any).autostartReadOutcome='trusted';});
+ await page.getByRole('button',{name:'Recheck system status',exact:true}).click();
+ await expect(englishDesired).toBeChecked();await expect(englishDesired).toBeEnabled();
+ await expect(registration).not.toContainText('Last confirmed');await expect(registration).toContainText('Not registered');
+ await expect(settings).toContainText('The desired startup option differs from system registration.');await expect(settings.getByRole('alert')).toHaveCount(0);
+ expect((await calls(page,'autostart_set')).length).toBe(1);
+ await page.evaluate(()=>{(window as any).loseAutostartReceipt=false;});await englishDesired.uncheck();
+ await expect(englishDesired).not.toBeChecked();await expect(englishDesired).toBeEnabled();
+ expect((await calls(page,'autostart_set')).map((call:any)=>call.args)).toEqual([{enabled:true},{enabled:false}]);
+});
+
+test('T8 null autostart set registration remains unknown without inventing a mismatch',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);return command==='autostart_set'?{desired:args.enabled,registered:null,error:null}:value;};});
+ const desired=page.getByLabel('登录系统后启动 Bee',{exact:true}),settings=page.getByTestId('native-settings');
+ await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+ await expect(settings).toContainText('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。');await expect(settings).not.toContainText('不一致');await expect(settings.getByRole('alert')).toHaveCount(0);
+ await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(desired).toBeEnabled();
+ expect((await calls(page,'autostart_set')).length).toBe(1);
+});
+
+test('T8 error-bearing autostart set receipt stays unknown with registration=null',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ const desired=page.getByLabel('登录系统后启动 Bee',{exact:true}),registration=page.locator('.ns-os-status').last(),settings=page.getByTestId('native-settings');
+ await expect(registration).toContainText('未登记');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='autostart_set')return {desired:args.enabled,registered:null,error:{code:'AUTOSTART_QUERY_FAILED',message:'autostart readback failed: desired=true registered=null; os_code=13'}};return value;};});
+ await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+ await expect(registration).toContainText('上次确认的系统登记');await expect(registration).toContainText('未登记');
+ await expect(settings).toContainText('autostart readback failed: desired=true registered=null; os_code=13');
+ await expect(settings).not.toContainText('已核对系统启动登记。');await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+ await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();
+ await expect(registration).toContainText('已登记');await expect(desired).toBeEnabled();await expect(settings.getByRole('alert')).toHaveCount(0);
+ expect((await calls(page,'autostart_set')).length).toBe(1);
+});
+
+for(const registered of [false,true])test(`T8 autostart set failure retains its proven boolean registration=${registered}`,async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.evaluate(registered=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='autostart_set')return {desired:args.enabled,registered,error:{code:registered?'AUTOSTART_REGISTER_FAILED':'AUTOSTART_UNCONFIRMED',message:registered?'autostart register failed: desired=Some(true); kind=PermissionDenied os_code=Some(13)':'autostart readback differs: desired=true registered=Some(false)'}};return value;};},registered);
+ const desired=page.getByLabel('登录系统后启动 Bee',{exact:true}),settings=page.getByTestId('native-settings');
+ await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeEnabled();
+ const registration=page.locator('.ns-os-status').last();await expect(registration).not.toContainText('上次确认');await expect(registration).toContainText(registered?'已登记':'未登记');
+ await expect(settings.getByRole('alert')).toContainText(registered?'AUTOSTART_REGISTER_FAILED':'AUTOSTART_UNCONFIRMED');
+ if(registered)await expect(settings).not.toContainText('期望启动选项与系统登记不一致');else await expect(settings).toContainText('期望启动选项与系统登记不一致');
+ await expect(settings).not.toContainText('已核对系统启动登记。');await expect(settings).not.toContainText('启动登记请求结果尚未确认');
+ expect((await calls(page,'autostart_set')).length).toBe(1);
+});

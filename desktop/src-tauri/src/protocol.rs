@@ -685,6 +685,13 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(local_candidates);
+    let recovery_candidates: Vec<_> = candidates.clone().into_iter()
+        .filter(|v| v.iter().any(|m| m == "device_status"))
+        .map(|mut v| {
+            v.extend(["device_recovery_prepare", "device_recovery_confirm", "device_recovery_status"].map(str::to_string));
+            v
+        }).collect();
+    candidates.extend(recovery_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
             .iter()
@@ -1097,4 +1104,241 @@ mod device_context_state_tests {
             "DEVICE_CONTEXT_INVALID"
         );
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DeviceRecoveryConfirm {
+    pub operation_id: String,
+    pub expected_revision: u64,
+    pub decision: String,
+}
+impl DeviceRecoveryConfirm {
+    pub fn validate(&self) -> Result<(), BridgeError> {
+        if self.operation_id.len() != 48
+            || !self
+                .operation_id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+            || self.expected_revision == 0
+            || self.expected_revision >= 9_007_199_254_740_991
+            || !["begin_pairing", "adopt_owner", "renew_expired"].contains(&self.decision.as_str())
+        {
+            return Err(BridgeError::new("DEVICE_RECOVERY_REQUEST_INVALID","recovery confirmation requires operation ID, positive safe revision and fixed decision".into()));
+        }
+        Ok(())
+    }
+}
+fn recovery_fields(value: &Value, fields: &[&str]) -> bool {
+    value
+        .as_object()
+        .is_some_and(|v| v.len() == fields.len() && fields.iter().all(|k| v.contains_key(*k)))
+}
+fn recovery_identity(value: &Value) -> bool {
+    if value.is_null() {
+        return true;
+    }
+    recovery_fields(value, &["id", "name", "owner_id", "owner_email"])
+        && ["id", "name", "owner_id", "owner_email"].iter().all(|k| {
+            value[*k]
+                .as_str()
+                .is_some_and(|s| !s.is_empty() && !s.chars().any(char::is_control))
+        })
+        && ["id", "owner_id"].iter().all(|k| {
+            value[*k].as_str().is_some_and(|s| {
+                s.len() <= 128
+                    && s.bytes()
+                        .all(|b| b.is_ascii_alphanumeric() || b"_-".contains(&b))
+            })
+        })
+        && value["name"]
+            .as_str()
+            .is_some_and(|s| s.chars().count() <= 80)
+        && value["owner_email"]
+            .as_str()
+            .is_some_and(|s| s.len() <= 320)
+}
+pub(crate) fn device_recovery(value: &Value) -> Result<&Value, BridgeError> {
+    result_error(value)?;
+    let rejected = || {
+        BridgeError::new("DEVICE_RECOVERY_INVALID","public recovery fields or phase facts rejected; required=bounded operation identity, safe public identities/pairing and structured failure".into())
+    };
+    if !recovery_fields(value, &["recovery"]) {
+        return Err(rejected());
+    }
+    let r = &value["recovery"];
+    if !recovery_fields(
+        r,
+        &[
+            "operation_id",
+            "revision",
+            "phase",
+            "old_identity",
+            "new_identity",
+            "pairing",
+            "failure",
+        ],
+    ) {
+        return Err(rejected());
+    }
+    if !r["operation_id"].as_str().is_some_and(|s| {
+        s.len() == 48
+            && s.bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    }) || !r["revision"]
+        .as_u64()
+        .is_some_and(|v| v > 0 && v < 9_007_199_254_740_991)
+        || ![
+            "awaiting_confirmation",
+            "creating",
+            "creation_unknown",
+            "pending",
+            "draining",
+            "redeeming",
+            "redemption_unknown",
+            "awaiting_owner_confirmation",
+            "saving",
+            "completed",
+            "expired",
+            "blocked",
+        ]
+        .contains(&r["phase"].as_str().unwrap_or(""))
+        || !recovery_identity(&r["old_identity"])
+        || !recovery_identity(&r["new_identity"])
+    {
+        return Err(rejected());
+    }
+    let p = &r["pairing"];
+    if !p.is_null() {
+        if !recovery_fields(p, &["code", "verification_url", "expires_at"]) {
+            return Err(rejected());
+        }
+        let code = p["code"].as_str().ok_or_else(rejected)?;
+        if code.len() != 9
+            || !code.bytes().enumerate().all(|(i, b)| {
+                if i == 4 {
+                    b == b'-'
+                } else {
+                    b"ABCDEFGHJKLMNPQRSTUVWXYZ23456789".contains(&b)
+                }
+            })
+            || !p["expires_at"].as_str().is_some_and(|s| {
+                time::OffsetDateTime::parse(s, &time::format_description::well_known::Rfc3339)
+                    .is_ok()
+            })
+        {
+            return Err(rejected());
+        }
+        let url = tauri::Url::parse(p["verification_url"].as_str().ok_or_else(rejected)?)
+            .map_err(|_| rejected())?;
+        let origin = url.origin().ascii_serialization();
+        let query: Vec<_> = url.query_pairs().collect();
+        if !failure_origin(&origin)
+            || !url.username().is_empty()
+            || url.password().is_some()
+            || url.fragment().is_some()
+            || url.path() != "/devices/pair"
+            || query.len() != 1
+            || query[0].0 != "code"
+            || query[0].1 != code
+        {
+            return Err(rejected());
+        }
+    }
+    let phase = r["phase"].as_str().unwrap_or("");
+    if ["pending", "draining", "redeeming", "redemption_unknown"].contains(&phase) && p.is_null()
+        || ["saving", "completed", "awaiting_owner_confirmation"].contains(&phase)
+            && r["new_identity"].is_null()
+    {
+        return Err(rejected());
+    }
+    if !r["failure"].is_null() {
+        let _: BridgeError = serde_json::from_value(r["failure"].clone())
+            .map_err(|e| invalid_json("device recovery failure", e))?;
+    }
+    Ok(r)
+}
+pub(crate) fn validate_device_recovery(value: &Value) -> Result<(), BridgeError> {
+    result_error(value)?;
+    let rejected = || {
+        BridgeError::new(
+            "DEVICE_REPLY_INVALID",
+            "initial pairing state conflicts with its public recovery transaction".into(),
+        )
+    };
+    let device = value.get("device").ok_or_else(rejected)?;
+    let fields = [
+        "state",
+        "hive",
+        "name",
+        "verification_url",
+        "user_code",
+        "expires_at",
+        "poll_interval_seconds",
+        "identity",
+        "recovery",
+    ];
+    if !recovery_fields(value, &["device"])
+        || !device
+            .as_object()
+            .is_some_and(|v| v.keys().all(|k| fields.contains(&k.as_str())))
+    {
+        return Err(rejected());
+    }
+    let state = device["state"].as_str().ok_or_else(rejected)?;
+    if ![
+        "unbound", "pending", "draining", "expired", "bound", "pairing",
+    ]
+    .contains(&state)
+    {
+        return Err(rejected());
+    }
+    if state == "bound" {
+        if device.get("identity").is_none()
+            || device["identity"].is_null()
+            || !recovery_identity(&device["identity"])
+        {
+            return Err(rejected());
+        }
+    } else if device.get("identity").is_some() {
+        return Err(rejected());
+    }
+    if let Some(recovery) = device.get("recovery") {
+        let envelope = serde_json::json!({"recovery":recovery});
+        let r = device_recovery(&envelope)?;
+        if !r["old_identity"].is_null() {
+            return Err(rejected());
+        }
+        let expected = match r["phase"].as_str().unwrap_or("") {
+            "completed" => "bound",
+            "pending" => "pending",
+            "draining" => "draining",
+            "expired" => "expired",
+            _ => "pairing",
+        };
+        if device["state"] != expected
+            || expected == "bound" && device["identity"] != r["new_identity"]
+        {
+            return Err(rejected());
+        }
+        if expected == "pending" || expected == "draining" {
+            if device["user_code"] != r["pairing"]["code"]
+                || device["verification_url"] != r["pairing"]["verification_url"]
+                || device["expires_at"] != r["pairing"]["expires_at"]
+            {
+                return Err(rejected());
+            }
+        }
+        if let Some(url) = r["pairing"]["verification_url"].as_str() {
+            let link = tauri::Url::parse(url).map_err(|_| rejected())?;
+            let hive = tauri::Url::parse(device["hive"].as_str().ok_or_else(rejected)?)
+                .map_err(|_| rejected())?;
+            if link.origin() != hive.origin() {
+                return Err(rejected());
+            }
+        }
+    } else if device["state"] == "pairing" {
+        return Err(rejected());
+    }
+    Ok(())
 }

@@ -47,3 +47,39 @@ func TestDeviceBeginStrictParameters(t *testing.T) {
 		}
 	}
 }
+
+type recoveryDevice struct {
+	fakeDevice
+	confirmations int
+}
+
+func (d *recoveryDevice) RecoveryPrepare(context.Context) (bee.DeviceRecoveryView, error) {
+	return bee.DeviceRecoveryView{OperationID: strings.Repeat("a", 48), Revision: 1, Phase: "awaiting_confirmation"}, nil
+}
+func (d *recoveryDevice) RecoveryStatus(context.Context) (bee.DeviceRecoveryView, error) {
+	return d.RecoveryPrepare(context.Background())
+}
+func (d *recoveryDevice) RecoveryConfirm(_ context.Context, id string, revision int64, decision string) (bee.DeviceRecoveryView, error) {
+	d.confirmations++
+	return d.RecoveryPrepare(context.Background())
+}
+func TestDeviceRecoveryBridgeStrictCommands(t *testing.T) {
+	d := &recoveryDevice{}
+	var out bytes.Buffer
+	input := hello + request("p", "device_recovery_prepare") + request("s", "device_recovery_status") + `{"protocol":1,"id":"c","method":"device_recovery_confirm","params":{"operation_id":"` + strings.Repeat("a", 48) + `","expected_revision":1,"decision":"begin_pairing"}}` + "\n"
+	for i, params := range []string{`{}`, `{"operation_id":"a","expected_revision":1,"decision":"begin_pairing"}`, `{"operation_id":"` + strings.Repeat("a", 48) + `","expected_revision":1,"decision":"begin_pairing","decision":"adopt_owner"}`} {
+		input += `{"protocol":1,"id":"bad` + string(rune('0'+i)) + `","method":"device_recovery_confirm","params":` + params + "}\n"
+	}
+	if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(input), &out, io.Discard, "test", d); err != nil {
+		t.Fatal(err)
+	}
+	frames := replies(t, out.String())
+	if d.confirmations != 1 || !bytes.Contains(frames[0].Result, []byte("device_recovery_prepare")) || !bytes.Contains(frames[1].Result, []byte("awaiting_confirmation")) {
+		t.Fatalf("recovery dispatch rejected: %s", out.String())
+	}
+	for _, f := range frames[4:] {
+		if f.Error == nil || f.Error.Code != "INVALID_REQUEST" {
+			t.Fatalf("unsafe recovery params accepted: %s", out.String())
+		}
+	}
+}

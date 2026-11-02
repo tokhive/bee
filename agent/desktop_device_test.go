@@ -182,8 +182,9 @@ func TestDesktopDeviceRejectsUnsafePairingURL(t *testing.T) {
 			}))
 			defer server.Close()
 			path := filepath.Join(t.TempDir(), "desktop.json")
-			if _, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), server.URL, "Mac"); err == nil {
-				t.Fatal("accepted untrusted verification URL")
+			v, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), server.URL, "Mac")
+			if err != nil || v.Recovery == nil || v.Recovery.Phase != "creation_unknown" || v.Recovery.Pairing != nil {
+				t.Fatalf("accepted untrusted verification URL: %+v %v", v, err)
 			}
 			state, _ := readState(path)
 			if state.Pairing != nil {
@@ -261,9 +262,9 @@ func TestDesktopDeviceUncertainRedeemKeepsTransaction(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	original := localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: "beep_" + strings.Repeat("a", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}}
 	saveState(path, original)
-	_, err := (newDesktopTestDevice(t, path)).Status(context.Background())
-	if err == nil || !strings.Contains(err.Error(), "unconfirmed") || !strings.Contains(err.Error(), "503") || !strings.Contains(err.Error(), "401") {
-		t.Fatalf("lost failure evidence: %v", err)
+	v, err := (newDesktopTestDevice(t, path)).Status(context.Background())
+	if err != nil || v.Recovery == nil || v.Recovery.Phase != "redemption_unknown" || v.Recovery.Failure == nil || !strings.Contains(v.Recovery.Failure.Message, "unconfirmed") || !strings.Contains(v.Recovery.Failure.Message, "503") || !strings.Contains(v.Recovery.Failure.Message, "401") {
+		t.Fatalf("lost failure evidence: %+v %v", v.Recovery, err)
 	}
 	actual, _ := readState(path)
 	if actual.Credential != original.Credential || actual.Pairing.PairingToken != original.Pairing.PairingToken || actual.Identity != nil {
@@ -302,17 +303,17 @@ func TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: "beep_" + strings.Repeat("a", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}})
 	device := newDesktopTestDevice(t, path)
-	if _, err := device.Status(context.Background()); err == nil {
-		t.Fatal("unexpected confirmed exchange")
+	if v, err := device.Status(context.Background()); err != nil || v.Recovery == nil || v.Recovery.Phase != "redemption_unknown" {
+		t.Fatalf("unexpected confirmed exchange: %+v %v", v, err)
 	}
 	state, _ := readState(path)
 	state.Pairing.ExpiresAt = time.Now().Add(-time.Minute)
 	saveState(path, state)
 	expired = true
 	closeDesktopTestDevice(t, device)
-	_, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac")
-	if err == nil || creates != 0 {
-		t.Fatalf("replaced unknown transaction: creates=%d error=%v", creates, err)
+	v, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac")
+	if err != nil || v.Recovery == nil || v.Recovery.Phase != "redemption_unknown" || creates != 0 {
+		t.Fatalf("replaced unknown transaction: creates=%d phase=%+v error=%v", creates, v.Recovery, err)
 	}
 	state, _ = readState(path)
 	if state.Pairing == nil || state.Pairing.PairingToken != "beep_"+strings.Repeat("a", 43) {
@@ -370,11 +371,11 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 					t.Fatalf("explicit restart rejected: %+v %v creates=%d", view, err, creates)
 				}
 			} else {
-				if err == nil || !strings.Contains(err.Error(), "unconfirmed") {
+				if err != nil || view.Recovery == nil || view.Recovery.Phase != "redemption_unknown" {
 					t.Fatalf("prior unknown exchange cleared by later expiry: %+v %v", view, err)
 				}
-				if _, err = (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac"); err == nil || creates != 0 {
-					t.Fatalf("prior unknown exchange replaced: creates=%d error=%v", creates, err)
+				if view, err = (newDesktopTestDevice(t, path)).Begin(context.Background(), origin, "Mac"); err != nil || view.Recovery == nil || view.Recovery.Phase != "redemption_unknown" || creates != 0 {
+					t.Fatalf("prior unknown exchange replaced: creates=%d phase=%+v error=%v", creates, view.Recovery, err)
 				}
 				state, _ := readState(path)
 				if state.Pairing.Status != "redeeming" || state.Pairing.PairingToken != token {
@@ -422,9 +423,10 @@ func TestDesktopDeviceRemoteErrorCannotEchoPairingToken(t *testing.T) {
 	origin = server.URL
 	path := filepath.Join(t.TempDir(), "desktop.json")
 	saveState(path, localState{Hive: origin, Name: "Mac", Credential: "bee_" + strings.Repeat("b", 43), Pairing: &beewire.Pairing{PairingToken: secret, UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"}})
-	_, err := (newDesktopTestDevice(t, path)).Status(context.Background())
-	if err == nil || strings.Contains(err.Error(), secret) || !strings.Contains(err.Error(), "500") {
-		t.Fatalf("unsafe remote error: %v", err)
+	v, err := (newDesktopTestDevice(t, path)).Status(context.Background())
+	raw, _ := json.Marshal(v)
+	if err != nil || v.Recovery == nil || v.Recovery.Failure == nil || strings.Contains(string(raw), secret) || !strings.Contains(v.Recovery.Failure.Message, "500") {
+		t.Fatalf("unsafe remote result: %s %v", raw, err)
 	}
 }
 

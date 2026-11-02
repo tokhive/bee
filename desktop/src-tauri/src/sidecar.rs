@@ -529,26 +529,62 @@ impl Bridge {
         }
         Ok(())
     }
-    pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
-        self.request(
-            "device_status",
-            serde_json::json!({}),
-            Duration::from_secs(15),
-        )
-        .await
+    pub(crate) async fn device_recovery_prepare(&self) -> Result<BridgeReply, BridgeError> {
+        self.device_recovery_request("device_recovery_prepare", serde_json::json!({}))
+            .await
     }
-
+    pub(crate) async fn device_recovery_status(&self) -> Result<BridgeReply, BridgeError> {
+        self.device_recovery_request("device_recovery_status", serde_json::json!({}))
+            .await
+    }
+    pub(crate) async fn device_recovery_confirm(
+        &self,
+        request: crate::protocol::DeviceRecoveryConfirm,
+    ) -> Result<BridgeReply, BridgeError> {
+        request.validate()?;
+        self.device_recovery_request("device_recovery_confirm", serde_json::json!(request))
+            .await
+    }
+    async fn device_recovery_request(
+        &self,
+        method: &'static str,
+        params: Value,
+    ) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(method, params, Duration::from_secs(15))
+            .await?;
+        crate::protocol::device_recovery(&reply.result)?;
+        Ok(reply)
+    }
+    pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "device_status",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        if reply.result.get("error").is_none() {
+            crate::protocol::validate_device_recovery(&reply.result)?;
+        }
+        Ok(reply)
+    }
     pub async fn device_begin(
         &self,
         hive: String,
         name: String,
     ) -> Result<BridgeReply, BridgeError> {
-        self.request(
-            "device_begin",
-            serde_json::json!({"hive":hive,"name":name}),
-            Duration::from_secs(15),
-        )
-        .await
+        let reply = self
+            .request(
+                "device_begin",
+                serde_json::json!({"hive":hive,"name":name}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        if reply.result.get("error").is_none() {
+            crate::protocol::validate_device_recovery(&reply.result)?;
+        }
+        Ok(reply)
     }
 
     pub async fn supply_status(
@@ -608,6 +644,9 @@ impl Bridge {
             method,
             "device_status"
                 | "device_context"
+                | "device_recovery_prepare"
+                | "device_recovery_confirm"
+                | "device_recovery_status"
                 | "runtime_verify"
                 | "runtime_snapshot"
                 | "network_status"

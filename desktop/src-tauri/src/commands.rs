@@ -183,9 +183,27 @@ fn pairing_browser_action(value: &serde_json::Value) -> Result<Option<tauri::Url
         .pointer("/device/state")
         .and_then(|state| state.as_str())
     {
-        Some("bound" | "expired" | "unbound") => Ok(None),
+        Some("bound" | "expired" | "unbound" | "pairing") => Ok(None),
         _ => pairing_url(value).map(Some),
     }
+}
+
+fn recovery_browser_action(
+    value: &serde_json::Value,
+    context: &serde_json::Value,
+) -> Result<tauri::Url, BridgeError> {
+    let recovery = crate::protocol::device_recovery(value)?;
+    crate::protocol::device_context(context)?;
+    if !matches!(recovery["phase"].as_str(), Some("pending" | "draining")) {
+        return Err(BridgeError::new("DEVICE_RECOVERY_OPEN_PHASE", format!(
+            "recovery browser open rejected: phase={}; required=pending or draining; refresh the original transaction",
+            recovery["phase"].as_str().unwrap_or("unknown"),
+        )));
+    }
+    pairing_url(&serde_json::json!({"device":{
+        "hive":context["context"]["hive"],
+        "verification_url":recovery["pairing"]["verification_url"],
+    }}))
 }
 
 async fn wait_opener(
@@ -227,13 +245,33 @@ async fn wait_opener(
 }
 
 #[tauri::command]
-pub async fn device_open(bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
+pub async fn device_open(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<BridgeReply, BridgeError> {
     let reply = bridge.device_status().await?;
-    if reply.result.get("error").is_some() {
-        return Ok(reply);
-    }
-    let Some(url) = pairing_browser_action(&reply.result)? else {
-        return Ok(reply);
+    let (reply, url) = if let Some(cause) = reply.result.get("error") {
+        if !matches!(
+            cause["code"].as_str(),
+            Some("device_replaced" | "invalid_device_credential")
+        ) {
+            return Ok(reply);
+        }
+        let before = bridge.device_context().await?;
+        crate::protocol::device_context(&before.result)?;
+        let recovery = crate::experience::recover_device(&app, &bridge, None, false).await?;
+        let current = bridge.device_context().await?;
+        crate::protocol::device_context(&current.result)?;
+        if before.instance != current.instance || before.result != current.result {
+            return Err(BridgeError::new("DEVICE_RECOVERY_OPEN_CONTEXT", "recovery browser context changed during transaction lookup; refresh the original recovery before opening its page".into()));
+        }
+        let url = recovery_browser_action(&recovery.result, &current.result)?;
+        (recovery, url)
+    } else {
+        let Some(url) = pairing_browser_action(&reply.result)? else {
+            return Ok(reply);
+        };
+        (reply, url)
     };
     // No shell interpolation or executable/path supplied by the frontend.
     #[cfg(target_os = "macos")]
@@ -275,6 +313,9 @@ mod tests {
             "ping --help",
             "supply_status",
             "supply_set_paused",
+            "device_recovery_prepare",
+            "device_recovery_confirm",
+            "device_recovery_status",
             "",
         ] {
             let error = check_method(method).unwrap_err();
@@ -312,7 +353,7 @@ mod browser_action_tests {
     use super::*;
     #[test]
     fn completed_or_expired_pairing_returns_without_opening_a_stale_url() {
-        for state in ["bound", "expired", "unbound"] {
+        for state in ["bound", "expired", "unbound", "pairing"] {
             assert!(
                 pairing_browser_action(&serde_json::json!({"device":{"state":state}}))
                     .unwrap()
@@ -320,6 +361,33 @@ mod browser_action_tests {
             );
         }
     }
+    #[test]
+    fn recovery_browser_uses_only_current_same_origin_pending_transaction() {
+        let context = serde_json::json!({"context":{"hive":"https://hive.example","name":"Mac","device_id":"old","owner_id":"owner","binding_revision":1}});
+        let value = serde_json::json!({"recovery":{"operation_id":"a".repeat(48),"revision":1,"phase":"pending","old_identity":null,"new_identity":null,"pairing":{"code":"ABCD-EFGH","verification_url":"https://hive.example/devices/pair?code=ABCD-EFGH","expires_at":"2030-01-01T00:00:00Z"},"failure":null}});
+        assert!(recovery_browser_action(&value, &context).is_ok());
+        let mut changed = value.clone();
+        changed["recovery"]["phase"] = serde_json::json!("creation_unknown");
+        assert_eq!(
+            recovery_browser_action(&changed, &context)
+                .unwrap_err()
+                .code,
+            "DEVICE_RECOVERY_OPEN_PHASE"
+        );
+        changed = value.clone();
+        changed["recovery"]["pairing"]["verification_url"] =
+            serde_json::json!("https://other.example/devices/pair?code=ABCD-EFGH");
+        assert_eq!(
+            recovery_browser_action(&changed, &context)
+                .unwrap_err()
+                .code,
+            "PAIRING_URL_REJECTED"
+        );
+        let mut bad_context = context.clone();
+        bad_context["context"]["hive"] = serde_json::json!("https://user@hive.example");
+        assert!(recovery_browser_action(&value, &bad_context).is_err());
+    }
+
     #[tokio::test]
     async fn browser_launcher_wait_is_bounded() {
         let mut command = tokio::process::Command::new("node");
@@ -707,4 +775,35 @@ pub async fn startup_recheck(
     bridge: tauri::State<'_, Bridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
     Ok(crate::experience::recheck(&app, &bridge).await)
+}
+
+#[tauri::command]
+pub async fn device_recovery_prepare(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<BridgeReply, BridgeError> {
+    crate::experience::recover_device(&app, &bridge, None, true).await
+}
+#[tauri::command]
+pub async fn device_recovery_status(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<BridgeReply, BridgeError> {
+    crate::experience::recover_device(&app, &bridge, None, false).await
+}
+#[tauri::command]
+pub async fn device_recovery_confirm(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+    operation_id: String,
+    expected_revision: u64,
+    decision: String,
+) -> Result<BridgeReply, BridgeError> {
+    let request = crate::protocol::DeviceRecoveryConfirm {
+        operation_id,
+        expected_revision,
+        decision,
+    };
+    request.validate()?;
+    crate::experience::recover_device(&app, &bridge, Some(request), false).await
 }

@@ -384,3 +384,55 @@ fn clear_selection_accepts_revision_without_candidate_but_select_does_not() {
     request.action = "select".into();
     assert!(request.validate().is_err());
 }
+
+#[test]
+fn device_recovery_public_contract_is_strict_and_keeps_initial_pairing_separate() {
+    let base = json!({"operation_id":"a".repeat(48),"revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null});
+    assert!(device_recovery(&json!({"recovery":base})).is_ok());
+    for patch in [
+        json!({"credential":"SECRET"}),
+        json!({"revision":0}),
+        json!({"phase":"invented"}),
+        json!({"phase":"saving"}),
+    ] {
+        let mut bad = base.clone();
+        bad.as_object_mut()
+            .unwrap()
+            .extend(patch.as_object().unwrap().clone());
+        assert!(device_recovery(&json!({"recovery":bad})).is_err());
+    }
+    let mut missing = base.clone();
+    missing.as_object_mut().unwrap().remove("failure");
+    assert!(device_recovery(&json!({"recovery":missing})).is_err());
+    let initial = json!({"device":{"state":"pairing","hive":"https://hive.example","name":"Mac","recovery":base.clone()}});
+    // serde_json has no object spread: populate the explicit phase below.
+    let mut initial = initial;
+    initial["device"]["recovery"] = base.clone();
+    initial["device"]["recovery"]["phase"] = json!("creation_unknown");
+    assert!(validate_device_recovery(&initial).is_ok());
+    initial["device"]["state"] = json!("bound");
+    assert!(validate_device_recovery(&initial).is_err());
+}
+
+#[test]
+fn initial_device_reply_rejects_unknown_or_secret_fields() {
+    for field in ["credential", "pairing_token", "unexpected"] {
+        let mut value = json!({"device":{"state":"unbound"}});
+        value["device"][field] = json!("SECRET");
+        assert!(
+            validate_device_recovery(&value).is_err(),
+            "accepted {field}"
+        );
+    }
+}
+
+#[test]
+fn initial_device_state_never_claims_an_unverified_identity() {
+    for device in [
+        json!({"state":"unknown"}),
+        json!({"state":"bound"}),
+        json!({"state":"unbound","identity":{"id":"d","name":"Mac","owner_id":"o","owner_email":"o@example.com"}}),
+    ] {
+        assert!(validate_device_recovery(&json!({"device":device})).is_err());
+    }
+}

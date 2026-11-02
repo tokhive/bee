@@ -25,6 +25,11 @@ type Devices interface {
 
 // Supplies is detected optionally so existing device-only implementations keep
 // their original capabilities and RunWithDevices signature.
+type DeviceRecovery interface {
+	RecoveryPrepare(context.Context) (bee.DeviceRecoveryView, error)
+	RecoveryConfirm(context.Context, string, int64, string) (bee.DeviceRecoveryView, error)
+	RecoveryStatus(context.Context) (bee.DeviceRecoveryView, error)
+}
 type DeviceContext interface {
 	Context(context.Context) (bee.DesktopDeviceContext, error)
 }
@@ -70,6 +75,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	if runner != nil && accounts == nil {
 		return errors.New("runtime bridge requires account service")
 	}
+	recoveries, hasRecovery := devices.(DeviceRecovery)
 	contexts, hasContext := devices.(DeviceContext)
 	verifier, hasVerifier := runner.(StartupVerifier)
 	supplies, hasSupplies := devices.(Supplies)
@@ -210,12 +216,35 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasVerifier {
 					capabilities = append(capabilities, "runtime_verify")
 				}
+				if hasRecovery {
+					capabilities = append(capabilities, "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status")
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
 					Arch         string   `json:"arch"`
 					Capabilities []string `json:"capabilities"`
 				}{version, runtime.GOOS, runtime.GOARCH, capabilities}
+			case hasRecovery && slices.Contains([]string{"device_recovery_prepare", "device_recovery_confirm", "device_recovery_status"}, req.Method):
+				var value bee.DeviceRecoveryView
+				var err error
+				switch req.Method {
+				case "device_recovery_prepare":
+					value, err = recoveries.RecoveryPrepare(ctx)
+				case "device_recovery_confirm":
+					value, err = recoveries.RecoveryConfirm(ctx, req.OperationID, req.RecoveryRevision, req.RecoveryDecision)
+				default:
+					value, err = recoveries.RecoveryStatus(ctx)
+				}
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("DEVICE_RECOVERY_FAILED", err)}
+				} else {
+					answer.Result = struct {
+						Recovery bee.DeviceRecoveryView `json:"recovery"`
+					}{value}
+				}
 			case hasContext && req.Method == "device_context":
 				value, err := contexts.Context(ctx)
 				if err != nil {

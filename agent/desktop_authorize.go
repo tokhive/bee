@@ -76,6 +76,11 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	defer o.accounts.lifecycleMu.Unlock()
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	if o.accounts.device != nil {
+		if err := o.accounts.device.recoveryWriteBarrier(); err != nil {
+			return DesktopOperation{}, err
+		}
+	}
 	if o.closed || o.accounts.closed {
 		return DesktopOperation{}, fmt.Errorf("official login rejected: owner closed")
 	}

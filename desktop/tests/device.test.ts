@@ -44,3 +44,26 @@ test('native context failures retain only a validated observed binding revision'
  for(const result of [{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:0},{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:1,context:{}},{error:{code:'DEVICE_CONTEXT_INVALID',message:'bad'},binding_revision:Number.MAX_SAFE_INTEGER+1}])await assert.rejects(createDeviceClient(async()=>({result})).context!());
  await assert.rejects(createDeviceClient(async()=>({result:{error:{code:'DEVICE_CONTEXT_FAILED',message:'session ownership unavailable'}}})).context!());
 });
+
+test('DeviceRecovery client provides explicit prepare confirm and status operations',async()=>{
+ const client=createDeviceClient(async()=>({result:{device:{state:'unbound'}}}));
+ for(const method of ['recoveryPrepare','recoveryConfirm','recoveryStatus','recoveryOpen'])assert.equal(typeof (client as any)[method],'function',method);
+});
+
+test('DeviceRecovery strict public contract rejects secrets missing fields and conflicting URL',async()=>{
+ const mod=await import('../src/system/device.ts');
+ const decode=(mod as any).decodeDeviceRecoveryReply;
+ assert.equal(typeof decode,'function');
+ const base={operation_id:'a'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:{id:'old',name:'Mac',owner_id:'owner',owner_email:'a@example.test'},new_identity:null,pairing:null,failure:null};
+ assert.deepEqual(decode({result:{recovery:base}}),base);
+ for(const value of [{...base,credential:'secret'},{...base,revision:-1},{...base,phase:'invented'},{...base,new_identity:{...base.old_identity,credential:'secret'}},{...base,pairing:{code:'ABCD-EFGH',verification_url:'https://other.example/wrong?code=ABCD-EFGH',expires_at:new Date().toISOString()}},Object.fromEntries(Object.entries(base).filter(([k])=>k!=='failure'))])assert.throws(()=>decode({result:{recovery:value}}));
+ const calls:any[]=[];const client=createDeviceClient(async(command,args)=>{calls.push([command,args]);return {result:{recovery:base}}});
+ await client.recoveryPrepare();await client.recoveryConfirm(base.operation_id,1,'begin_pairing');await client.recoveryStatus();await client.recoveryOpen();
+ assert.deepEqual(calls,[['device_recovery_prepare',undefined],['device_recovery_confirm',{operation_id:base.operation_id,expected_revision:1,decision:'begin_pairing'}],['device_recovery_status',undefined],['device_open',undefined]]);
+});
+
+test('DeviceRecovery initial pairing reports the same public transaction with consistent state',async()=>{
+ const recovery={operation_id:'a'.repeat(48),revision:3,phase:'creation_unknown',old_identity:null,new_identity:null,pairing:null,failure:null};
+ assert.equal(decodeDeviceReply({result:{device:{state:'pairing',hive:'https://hive.example',name:'Mac',recovery}}}).recovery?.phase,'creation_unknown');
+ for(const device of [{state:'pairing',hive:'https://hive.example',name:'Mac'},{state:'bound',hive:'https://hive.example',name:'Mac',identity:{id:'d',name:'Mac',owner_id:'o',owner_email:'a@b.test'},recovery},{state:'pairing',hive:'https://hive.example',name:'Mac',recovery:{...recovery,old_identity:{id:'old',name:'Mac',owner_id:'o',owner_email:'a@b.test'}}}])assert.throws(()=>decodeDeviceReply({result:{device}}));
+});

@@ -228,6 +228,12 @@ pub(crate) struct NetworkController {
 }
 
 impl NetworkController {
+    pub(crate) async fn invalidate_device_scope(&self) {
+        let mut state = self.state.lock().await;
+        state.applied_scope = None;
+        state.last = None;
+    }
+
     pub fn bind_verified_device(
         &self,
         store: &PreferencesStore,

@@ -216,3 +216,21 @@ Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重�
 `Bridge::prepare_owned_exit(OwnedExitReason::{AppExit,Update})` 冻结新请求及尚未发送的排队操作，核对同 instance、run_id、stop operation 和修订的停止回执，最多等待12秒后仍必须回收 owned Child。调用方取消不会取消该清理任务。仅保存意图、会话clean和Child wait/reap均被证实后返回四项为真的 `OwnedExitReceipt`；配置锁随该子进程退出释放。更新准备不释放 App 单实例，普通退出在回收后才释放。该回执不代表 Hive 在途任务已排空。
 
 账号换号待核对状态中，`operation.error.code=confirmation_not_submitted` 表示持久阶段证明确认 POST 尚未提交；界面可以在来源候选仍新鲜、修订一致且用户再次确认时继续原操作。其他 reconciling／结果未知状态只允许查询，不能重新确认。错误码为跨语言结构化字段，界面不解析英文错误文案判断提交状态。
+
+### 用户确认的设备恢复（T4b）
+
+新增有序 capabilities：`device_recovery_prepare`、`device_recovery_confirm`、`device_recovery_status`，排列在 `device_context`／`runtime_verify` 之后。prepare/status 的 params 必须为 `{}`；confirm 必须且只能包含 `{operation_id,expected_revision,decision}`，operation_id 为48位小写十六进制、expected_revision 为正安全整数，decision 为 `begin_pairing|adopt_owner|renew_expired`。重复字段、null、未知字段及不合法阶段在写入前拒绝。
+
+成功返回 `{recovery:DeviceRecoveryView}`，失败返回现有 `{error:{code,message,details?}}`。DeviceRecoveryView 的7个必填字段是 `operation_id,revision,phase,old_identity,new_identity,pairing,failure`，后四者按下述规则可为null。身份摘要严格为 `{id,name,owner_id,owner_email}`；pairing严格为 `{code,verification_url,expires_at}`，URL只能为已保存同源 Hive 的 `/devices/pair?code=<code>`；failure复用结构化错误及安全证据。绝不返回配对token或新旧设备凭据。URL只供显式 `device_open` 使用，不记录到日志。
+
+phase 固定为 `awaiting_confirmation|creating|creation_unknown|pending|draining|redeeming|redemption_unknown|awaiting_owner_confirmation|saving|completed|expired|blocked`。pending/draining/redeeming/redemption_unknown 必须有原pairing；awaiting_owner_confirmation/saving/completed 必须有已验证new_identity。redeeming/redemption_unknown仅证明已记录兑换尝试及尚待身份核对，不能声称已观察到更细的网络阶段。saving已有可信new_identity和必要owner确认，但本地配置保存／核验或事务收尾尚未完成。阶段不是新的供给ready事实。
+
+prepare只保存待确认记录，不创建配对；begin_pairing只适用于awaiting_confirmation，adopt_owner只适用于awaiting_owner_confirmation，renew_expired只适用于Hive明确确认过期且没有未决兑换的expired。已经接受的相同三元确认请求只返回现状；旧revision、其他decision、冲突事务明确拒绝。Status只查询／首次兑换已获网页批准的原事务／保存结果，不创建配对、不重放未知POST。不同owner在重启后仍须明确确认。
+
+首次配对继续使用 `device_begin`／`device_status`，不调用三条恢复命令。DeviceView新增可选 `recovery:DeviceRecoveryView`，仅表示purpose=initial_pairing的同一事务，old_identity必须为null。兼容状态pending/draining/expired/bound分别要求phase为pending/draining/expired/completed；bound.identity必须与completed.new_identity相同。其他阶段使用新增 `state:'pairing'`，此状态必须有合法recovery，且不能伪装成bound。pending/draining的顶层code／URL／expiry必须与事务pairing完全一致，事务URL必须与顶层hive同源；未知字段／敏感字段／矛盾组合均拒绝。公开阶段用于解释当前事实，不能按message猜测。
+
+两个目的共用固定配置目录下的0600原子文件 `bee-desktop-recovery.json`，不改变CLI localState schema。创建／兑换尝试标记在POST前持久化；未知结果只查询原token／新credential身份。无token创建未知保留阻塞，现有Hive协议不能取回raw token；人工核对／导出入口不等于恢复已完成。旧redeeming按未知处理，缺少创建标记的旧残留不能当作未发送。Poll approved不证明先前未知兑换未提交；本机时间不证明远端过期。
+
+恢复与运行启动、账号写入、官方登录、供给写入、网络应用共用核心admission屏障；进程锁仍只归管理进程所有，不持普通状态mutex等待网络。旧scope未决账号操作、未退出worker或不干净运行guard必须先按原机制核对，不能清空以便重绑。新设备不会继承旧选择、运行意图、内存来源或已应用代理；旧scope原记录保留。恢复完成保持stopped，StartupGate仍需显式startup_recheck；重查不Restore，不清更新完整性门禁。没有token的未知创建仍存在协议与人工闭环验收缺口。
+
+凭据恢复的显式网页打开同样复用无URL参数的 Tauri `device_open`，TS以 `recoveryOpen()` 接收严格 `{recovery}`（首次配对的 `open()` 仍接收 DeviceView）。仅旧凭据明确撤销、恢复事务仍为 pending/draining、前后本机context一致且配对URL与固定当前Hive同源时打开原事务；保留更新/数据完整性和owned-exit保护。阶段或上下文变化明确拒绝，失败不清除事务，前端可保留已显示的原配对URL。completed重复status只有仍匹配已显式核验的实例/绑定/网络时保留ready，活跃事务及绑定变化仍要求startup_recheck，绝不runtime_restore。

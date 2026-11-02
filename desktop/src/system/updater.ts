@@ -1,4 +1,4 @@
-import {decodeBridgeError} from './failures.ts';
+import {decodeBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
 import type {BridgeError} from './bridge';
 import type {DeviceInvoke} from './device';
 
@@ -16,11 +16,20 @@ export interface UpdateSnapshot {
   error: BridgeError | null;
 }
 export interface UpdateInstallRequest {operation_id: string; expected_revision: number; confirmed: true}
+export interface UpdateSession {snapshot:UpdateSnapshot|undefined;error:UiFailure|null;busy:boolean;uncertain:'check'|'download'|'install'|null;attemptedInstall:string|null}
 export interface UpdateClient {
+  getSession():UpdateSession;
+  subscribe(listener:()=>void):()=>void;
   snapshot(): Promise<UpdateSnapshot>;
   check(): Promise<UpdateSnapshot>;
   download(): Promise<UpdateSnapshot>;
   install(request: UpdateInstallRequest): Promise<UpdateSnapshot>;
+}
+export class UpdateResultSupersededError extends Error {
+  readonly code = 'UPDATE_RESULT_SUPERSEDED';
+  constructor(command:string,epoch:number,generation:number) {
+    super(`UPDATE_RESULT_SUPERSEDED: ${command} generation actual=${epoch}; required=current generation=${generation}`);
+  }
 }
 const states: readonly UpdateState[] = ['idle','checking','current','available','downloading','verified','stopping','installing','failed'];
 const activeStates: readonly UpdateState[] = ['checking','downloading','stopping','installing'];
@@ -79,8 +88,13 @@ export function createUpdateClient(invoke: DeviceInvoke): UpdateClient {
   let latest: UpdateSnapshot | undefined;
   let generation = 0;
   let mutation = false;
+  let uncertainBase:UpdateSnapshot|undefined;
+  const nativeRejections=new WeakSet<object>();
   const versions = new Map<string, string>();
   const installations = new Set<string>();
+  let session:UpdateSession={snapshot:undefined,error:null,busy:false,uncertain:null,attemptedInstall:null};
+  const listeners=new Set<()=>void>();
+  const publish=(patch:Partial<UpdateSession>)=>{session={...session,...patch,snapshot:latest};listeners.forEach(fn=>fn());};
   function observe(next: UpdateSnapshot, expected?: UpdateSnapshot): UpdateSnapshot {
     if (latest) {
       if (next.revision < latest.revision) invalid(`update.revision actual=${next.revision}; required=at least accepted revision=${latest.revision}`);
@@ -101,22 +115,45 @@ export function createUpdateClient(invoke: DeviceInvoke): UpdateClient {
     let reply: unknown;
     try {reply = await invoke(command, args);}
     catch (cause) {
+      if (epoch !== generation) throw new UpdateResultSupersededError(command,epoch,generation);
       if (cause instanceof Error) throw cause;
       const error = publicError(cause, `${command}.error`);
-      throw new Error(`${error.code}: ${error.message}`, {cause});
+      const rejection=Object.assign(new Error(`${error.code}: ${error.message}`, {cause}),{code:error.code,...(error.details?{details:error.details}:{})});
+      nativeRejections.add(rejection);throw rejection;
     }
-    if (epoch !== generation) throw new Error(`UPDATE_RESULT_SUPERSEDED: ${command} generation actual=${epoch}; required=current generation=${generation}`);
+    if (epoch !== generation) throw new UpdateResultSupersededError(command,epoch,generation);
     return observe(decodeUpdateSnapshot(reply), expected);
   }
   async function mutate(command: string, args?: Record<string, unknown>, expected?: UpdateSnapshot) {
+    if(session.uncertain)invalid(`${command} actual=unconfirmed ${session.uncertain}; required=read original update state without resubmitting`);
     if (mutation) invalid(`${command} actual=another mutation pending; required=no pending mutation`);
     mutation = true;
+    publish({busy:true,error:null});
+    const baseline=latest;
     const epoch = ++generation;
-    try {return await request(command, args, epoch, expected);}
-    finally {mutation = false;}
+    try {const next=await request(command, args, epoch, expected);publish({error:null,uncertain:null});return next;}
+    catch(cause){
+      const failure=normalizeFailure(cause,command),unsent=requestNotSent(failure);
+      const definite=unsent||typeof cause==='object'&&cause!==null&&nativeRejections.has(cause)&&failure.code.startsWith('UPDATE_');
+      uncertainBase=definite?undefined:baseline;
+      if(unsent&&command==='update_install'){const key=session.attemptedInstall;if(key)installations.delete(key);publish({attemptedInstall:null});}
+      publish({error:failure,uncertain:definite?null:command.slice(7) as 'check'|'download'|'install'});throw cause;
+    }
+    finally {mutation = false;publish({busy:false});}
   }
   return {
-    snapshot: () => request('update_snapshot', undefined, generation),
+    getSession:()=>session,
+    subscribe(listener){listeners.add(listener);return()=>{listeners.delete(listener);};},
+    async snapshot(){
+      try{
+        const next=await request('update_snapshot',undefined,generation);
+        const newer=next.revision>(uncertainBase?.revision??-1);
+        const sameOperation=next.operation_id===uncertainBase?.operation_id&&next.target_version===uncertainBase?.target_version;
+        const resolved=session.uncertain==='check'?newer&&next.operation_id!==null&&next.operation_id!==uncertainBase?.operation_id:session.uncertain==='download'?newer&&sameOperation&&['downloading','verified','failed'].includes(next.state):newer&&sameOperation&&['stopping','installing','failed'].includes(next.state);
+        const unresolved=session.uncertain&&!resolved;
+        publish(unresolved?{}:{error:null,uncertain:null});return next;
+      }catch(cause){if(!(cause instanceof UpdateResultSupersededError)&&!session.uncertain)publish({error:normalizeFailure(cause,'update_snapshot')});throw cause;}
+    },
     async check() {
       if (latest && activeStates.includes(latest.state)) invalid(`update_check actual_state=${latest.state}; required=idle|current|available|verified|failed`);
       return mutate('update_check');
@@ -126,6 +163,7 @@ export function createUpdateClient(invoke: DeviceInvoke): UpdateClient {
       return mutate('update_download', undefined, latest);
     },
     async install(input) {
+      if(session.uncertain||mutation)invalid('update_install requires no unconfirmed or pending update request');
       const o = exact(input, ['operation_id','expected_revision','confirmed'], 'update_install.request');
       text(o.operation_id, 'update_install.request.operation_id'); integer(o.expected_revision, 'update_install.request.expected_revision');
       if (o.confirmed !== true) invalid(`update_install.confirmed actual=${actual(o.confirmed)}; required=true from explicit user confirmation`);
@@ -135,6 +173,7 @@ export function createUpdateClient(invoke: DeviceInvoke): UpdateClient {
       const key = `${o.operation_id}:${o.expected_revision}`;
       if (installations.has(key)) invalid(`update_install actual=already attempted operation_id=${o.operation_id} revision=${o.expected_revision}; required=fresh verified receipt`);
       installations.add(key);
+      publish({attemptedInstall:key});
       return mutate('update_install', {request:{operation_id:o.operation_id, expected_revision:o.expected_revision, confirmed:true}}, latest);
     },
   };

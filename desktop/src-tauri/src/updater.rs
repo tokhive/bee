@@ -18,10 +18,85 @@ pub const MAX_UPDATE_BYTES: u64 = 1024 * 1024 * 1024;
 const MAX_SAFE: u64 = 9_007_199_254_740_991;
 const MAX_STATE_BYTES: u64 = 16 * 1024;
 pub(crate) fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
-        code: code.into(),
-        message: message.into(),
+    let raw = message.into();
+    let message = if raw.len() <= 32768 && crate::protocol::safe_failure_text(&raw) {
+        raw
+    } else {
+        format!("native update diagnostic excluded unsafe/oversize text: bytes={} SHA256={:x}; required=safe public text <=32768 bytes",raw.len(),Sha256::digest(raw.as_bytes()))
+    };
+    let check = if code.contains("SIGNATURE") {
+        "update_signature"
+    } else if code.contains("DIGEST") {
+        "update_digest"
+    } else if code.contains("RECOVERY")
+        || code == "UPDATE_PREVIOUS_NOT_INSTALLED"
+        || code == "UPDATE_PREFERENCES_UNVERIFIED"
+    {
+        "update_recovery"
+    } else if code.contains("INSTALL")
+        || code.contains("EXIT")
+        || code.contains("MARKER")
+        || code.contains("SPACE")
+    {
+        "update_install"
+    } else if code.contains("DOWNLOAD") || code.contains("SIZE") {
+        "update_download"
+    } else if code.contains("STATE") {
+        "update_state"
+    } else {
+        "update_check"
+    };
+    let details = crate::protocol::FailureDetails {
+        check: check.into(),
+        observed_at: time::OffsetDateTime::now_utc()
+            .format(&time::format_description::well_known::Rfc3339)
+            .expect("current UTC timestamp supports RFC3339"),
+        evidence: std::collections::BTreeMap::from([
+            ("source_type".into(), "native_updater".into()),
+            ("actual".into(), message.clone()),
+        ]),
+    };
+    BridgeError::with_details(code, message.clone(), details).unwrap_or_else(|cause| {
+        BridgeError::new(
+            code,
+            format!(
+                "{message}; failure metadata rejected: {}: {}",
+                cause.code, cause.message
+            ),
+        )
+    })
+}
+pub(crate) fn download_failure(cause: tauri_plugin_updater::Error) -> BridgeError {
+    use tauri_plugin_updater::Error as E;
+    let signature = matches!(
+        &cause,
+        E::Minisign(_)
+            | E::Base64(_)
+            | E::SignatureUtf8(_)
+            | E::SignedVersionMismatch { .. }
+            | E::MissingSignedVersion
+    );
+    let mut chain = cause.to_string();
+    let mut source = std::error::Error::source(&cause);
+    while let Some(nested) = source {
+        chain.push_str(&format!("; caused by: {nested}"));
+        source = nested.source();
     }
+    error(
+        if signature {
+            "UPDATE_SIGNATURE_FAILED"
+        } else {
+            "UPDATE_DOWNLOAD_FAILED"
+        },
+        format!(
+            "native {} failed: {chain}",
+            if signature {
+                "signature verification"
+            } else {
+                "download"
+            }
+        ),
+    )
 }
 pub(crate) fn now() -> i64 {
     time::OffsetDateTime::now_utc().unix_timestamp()
@@ -1120,7 +1195,7 @@ pub fn update_download<R: tauri::Runtime>(
         let result=async {
             let (native,identity)={let inner=manager.lock()?;(inner.native.clone().ok_or_else(||error("UPDATE_NATIVE_HANDLE_MISSING","validated updater handle missing; check again"))?,inner.asset.clone().ok_or_else(||error("UPDATE_IDENTITY_MISSING","validated asset identity missing"))?)};
             let cancellation=tokio::sync::Notify::new();let failure=Mutex::new(None);let mut download=Box::pin(native.download(|chunk,total|{if let Err(cause)=manager.progress(&id,chunk as u64,total){*failure.lock().unwrap()=Some(cause);cancellation.notify_one();}},||{}));
-            let bytes=tokio::select!{biased;_=cancellation.notified()=>return Err(failure.lock().unwrap().take().unwrap_or_else(||error("UPDATE_DOWNLOAD_CANCELLED","download failed size/progress validation"))), result=&mut download=>result.map_err(|e|error("UPDATE_DOWNLOAD_FAILED",format!("native download/signature validation failed: {e}")))?};
+            let bytes=tokio::select!{biased;_=cancellation.notified()=>return Err(failure.lock().unwrap().take().unwrap_or_else(||error("UPDATE_DOWNLOAD_CANCELLED","download failed size/progress validation"))), result=&mut download=>result.map_err(download_failure)?};
             if let Some(cause)=failure.lock().unwrap().take(){return Err(cause);}
             let hash=format!("{:x}",Sha256::digest(&bytes));if bytes.len() as u64!=identity.size||hash!=identity.sha256{return Err(error("UPDATE_DIGEST_MISMATCH",format!("verified asset bytes={} SHA256={hash}; required=bytes {} SHA256={}",bytes.len(),identity.size,identity.sha256)));}
             let mut inner=manager.lock()?;UpdateManager::require(&inner,&id,UpdateState::Downloading)?;inner.bytes=Some(Arc::new(bytes));inner.snapshot.state=UpdateState::Verified;UpdateManager::advance(&mut inner)?;Ok::<_,BridgeError>(())

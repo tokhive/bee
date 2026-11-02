@@ -107,3 +107,149 @@ setInterval(() => {}, 1000);
         std::thread::sleep(Duration::from_millis(20));
     }
 }
+
+fn language_preferences(language: Language, revision: u64) -> PreferencesSnapshot {
+    let mut preferences = crate::preferences::DesktopPreferences::default();
+    preferences.language = language;
+    preferences.revision = revision;
+    PreferencesSnapshot {
+        preferences,
+        error: None,
+    }
+}
+#[test]
+fn native_language_requires_saved_revision_explicit_match_and_monotonic_system_sequence() {
+    let mut prefs = language_preferences(Language::System, 4);
+    let language = NativeLanguage::initialize(&prefs);
+    assert_eq!(language.current(), None);
+    let sync = |locale, revision, sequence| {
+        language.synchronize(
+            LocaleRequest {
+                locale,
+                revision,
+                sequence,
+            },
+            &prefs,
+            |_| Ok(()),
+        )
+    };
+    sync(NativeLocale::Zh, 4, 1).unwrap();
+    sync(NativeLocale::En, 4, 3).unwrap();
+    assert_eq!(
+        sync(NativeLocale::Zh, 4, 2).unwrap_err().code,
+        "NATIVE_LOCALE_STALE"
+    );
+    assert_eq!(language.current(), Some(NativeLocale::En));
+    assert_eq!(
+        sync(NativeLocale::Zh, 3, 4).unwrap_err().code,
+        "NATIVE_LOCALE_STALE"
+    );
+    prefs.preferences.language = Language::Zh;
+    prefs.preferences.revision = 5;
+    assert_eq!(
+        language
+            .synchronize(
+                LocaleRequest {
+                    locale: NativeLocale::En,
+                    revision: 5,
+                    sequence: 5
+                },
+                &prefs,
+                |_| panic!("mismatch must not touch menu")
+            )
+            .unwrap_err()
+            .code,
+        "NATIVE_LOCALE_MISMATCH"
+    );
+    language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::Zh,
+                revision: 5,
+                sequence: 6,
+            },
+            &prefs,
+            |_| Ok(()),
+        )
+        .unwrap();
+    assert_eq!(language.current(), Some(NativeLocale::Zh));
+}
+#[test]
+fn native_language_menu_failure_retains_last_success_and_allows_newer_explicit_retry() {
+    let prefs = language_preferences(Language::System, 2);
+    let language = NativeLanguage::initialize(&prefs);
+    language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::Zh,
+                revision: 2,
+                sequence: 1,
+            },
+            &prefs,
+            |_| Ok(()),
+        )
+        .unwrap();
+    let error = language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::En,
+                revision: 2,
+                sequence: 3,
+            },
+            &prefs,
+            |_| {
+                Err(BridgeError::new(
+                    "NATIVE_LOCALE_MENU_FAILED",
+                    "item=bee-quit; actual=denied".into(),
+                ))
+            },
+        )
+        .unwrap_err();
+    assert!(error.message.contains("bee-quit"));
+    assert_eq!(language.current(), Some(NativeLocale::Zh));
+    assert!(language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::Zh,
+                revision: 2,
+                sequence: 2
+            },
+            &prefs,
+            |_| panic!("old event must not touch menu")
+        )
+        .is_err());
+    language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::En,
+                revision: 2,
+                sequence: 4,
+            },
+            &prefs,
+            |_| Ok(()),
+        )
+        .unwrap();
+    let mut unread = prefs.clone();
+    unread.error = Some(BridgeError::new(
+        "PREFERENCES_IO",
+        "read failed: permission denied".into(),
+    ));
+    let error = language
+        .synchronize(
+            LocaleRequest {
+                locale: NativeLocale::Zh,
+                revision: 2,
+                sequence: 5,
+            },
+            &unread,
+            |_| panic!("unread preferences must not touch menu"),
+        )
+        .unwrap_err();
+    assert!(error.message.contains("permission denied"));
+    assert_eq!(language.current(), Some(NativeLocale::En));
+    assert_eq!(NativeLanguage::initialize(&unread).current(), None);
+    assert!(serde_json::from_value::<LocaleRequest>(
+        serde_json::json!({"locale":"en","revision":2,"sequence":5,"notify":true})
+    )
+    .is_err());
+}

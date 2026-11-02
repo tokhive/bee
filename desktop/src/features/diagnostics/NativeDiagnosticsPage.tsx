@@ -1,21 +1,20 @@
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
-import {formatDate,currentLocale} from '../../i18n/index';
+import {formatDate,formatNumber,currentLocale} from '../../i18n/index';
 import {FailureNotice} from '../../components/ProblemNotice';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
 import {useEffect,useRef,useState} from 'react';
 import {Dialog,Tabs} from 'radix-ui';
 import {CircleAlert,ShieldCheck} from 'lucide-react';
 import {t} from '../../i18n/index';
-import type {DiagnosticCheck,DiagnosticEvent,DiagnosticPage,DiagnosticReport,DiagnosticsClient,LogQuery} from '../../system/diagnostics';
+import type {DiagnosticCheck,DiagnosticEvent,DiagnosticPage,DiagnosticReport,DiagnosticSession,DiagnosticsClient,LogQuery} from '../../system/diagnostics';
 import {downloadPayload} from './report';
-import {partitionChecks} from './presentation';
+import {partitionChecks,presentDiagnosticCheck} from './presentation';
 import '../../styles/section-tabs.css';
 import './native-diagnostics.css';
 
 const checkNames:Record<DiagnosticCheck['id'],string>={device:'设备身份',runtime:'贡献进程',hive:'Hive 连接',proxy:'网络路径',source:'官方登录来源',authorization:'官方授权',quota:'订阅额度',capabilities:'能力同步',account:'账号绑定',supply:'接单状态'};
 const statuses={pass:'通过',warning:'需要留意',fail:'检查失败',skipped:'未检查'};
 const destinations:Record<DiagnosticPage,string>={overview:'查看概览',accounts:'前往账号',diagnostics:'诊断',settings:'查看设置'};
-const messages:Record<string,string>={pending:'等待检查',not_checked:'本次未完成此项检查',cancelled:'检查已取消',timeout:'检查超时',device_not_paired:'请先在设置中配对设备',device_binding_valid:'设备身份已核对',owned_runtime_connected:'贡献进程已连接',runtime_stopped:'贡献进程尚未运行',runtime_ownership_conflict:'检测到其他 Bee 进程',hive_identity_verified:'Hive 身份已核对',network_policy_observed:'已核对当前网络路径',network_changed:'网络配置已变化，请重新运行诊断',source_not_selected:'尚未选择此平台的账号',selected_source_read:'已读取所选官方登录',source_missing:'官方登录不存在',source_changed:'官方登录已变化，请前往账号重新检测',authorization_expired:'官方授权已失效',official_authorization_observed:'官方授权已核对',quota_available:'订阅额度可用',quota_exhausted:'订阅额度已耗尽',account_binding_verified:'账号绑定已核对',account_changed:'账号在检查期间发生变化',capabilities_synchronized:'能力已同步',taking_new_work:'可以接收新任务',supply_blocked:'当前未接收新任务',dns_failed:'域名解析失败',tls_failed:'安全连接校验失败',connection_failed:'无法连接服务',http_rejected:'服务拒绝了本次查询',rate_limited:'查询受到限流，请稍后重试'};
 const date=(value:string)=>formatDate(value,currentLocale());
 const failure=(cause:unknown)=>normalizeFailure(cause,'diagnostics_operation');
 const checkSection=(check:DiagnosticCheck)=>check.id==='hive'?'connection':check.id==='proxy'?'network':check.id;
@@ -23,7 +22,9 @@ export interface NativeDiagnosticsPageProps {client:DiagnosticsClient;onNavigate
 export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevision,runId,bindingRevision=0,onReport,navigationRequest}:NativeDiagnosticsPageProps){
  const [activeTab,setActiveTab]=useState('checks'),[logsLoaded,setLogsLoaded]=useState(false);
  const [report,setReport]=useState<DiagnosticReport|null>(()=>client.getSnapshot());
- const [busy,setBusy]=useState<'start'|'cancel'|'export'|null>(null),[error,setError]=useState<UiFailure|null>(null),[notice,setNotice]=useState('');
+ const [session,setSession]=useState<DiagnosticSession>(()=>client.getSession());
+ const busy=session.start==='pending'?'start':session.cancel==='pending'?'cancel':['generating','waiting'].includes(session.download)?'export':null;
+ const notice=({idle:'',generating:'正在生成脱敏报告…',waiting:'正在等待报告下载结果…',completed:'脱敏报告已下载。',initiated:'已发起报告文件下载；请在下载列表核对。',unconfirmed:'报告下载结果未确认：waitedMs=30000；请先核对下载文件夹，避免重复导出。',failed:''} as const)[session.download];
  const [logs,setLogs]=useState<DiagnosticEvent[]>([]),[cursor,setCursor]=useState<string|null>(null),[truncated,setTruncated]=useState(false),[logsBusy,setLogsBusy]=useState(false),[logsError,setLogsError]=useState<UiFailure|null>(null);
  const [filters,setFilters]=useState<Pick<LogQuery,'module'|'platform'|'level'>>({module:null,platform:null,level:null});
  const [exportOpen,setExportOpen]=useState(false),[includeLogs,setIncludeLogs]=useState(false);
@@ -34,20 +35,21 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
  const visible=report&&report.instance===instance&&report.network_revision===networkRevision&&report.binding_revision===bindingRevision&&(runId===undefined||report.run_id===runId)?report:null;
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{
-  client.setContext(networkRevision,runId,bindingRevision);setReport(client.getSnapshot());setError(null);setNotice('');setBusy(null);setExportOpen(false);logRequest.current++;setLogs([]);setLogsLoaded(false);setCursor(null);setTruncated(false);setLogsBusy(false);setLogsError(null);
+  client.setContext(networkRevision,runId,bindingRevision);setReport(client.getSnapshot());setSession(client.getSession());setExportOpen(false);logRequest.current++;setLogs([]);setLogsLoaded(false);setCursor(null);setTruncated(false);setLogsBusy(false);setLogsError(null);
  },[client,scope,networkRevision,runId]);
+ useEffect(()=>client.subscribe(()=>{setReport(client.getSnapshot());setSession(client.getSession());}),[client]);
  useEffect(()=>{
-  if(!visible||visible.state!=='running')return;
+  if(!visible||visible.state!=='running'||session.read==='paused'||session.cancel==='unknown')return;
   let stopped=false,timer:ReturnType<typeof setTimeout>;
-  const poll=async()=>{try{const next=await client.snapshot(visible.id);if(stopped||!current())return;setReport(next);if(next.state==='running')timer=setTimeout(()=>void poll(),800);}catch(cause){if(!stopped&&current())setError(failure(cause));}};
+  const poll=async()=>{try{const next=await client.snapshot(visible.id);if(!stopped&&current()&&next.state==='running')timer=setTimeout(()=>void poll(),800);}catch{/* The client retains the report and paused read failure. */}};
   timer=setTimeout(()=>void poll(),800);return()=>{stopped=true;clearTimeout(timer);};
- },[client,scope,visible?.id,visible?.state]);
- async function run(action:'start'|'cancel'){
-  if(busy)return;setBusy(action);setError(null);setNotice('');
-  try{const next=action==='start'?await client.start():await client.cancel(visible!.id);if(current())setReport(next);}
-  catch(cause){if(current())setError(failure(cause));}
-  finally{if(current())setBusy(null);}
+ },[client,scope,visible?.id,visible?.state,session.read==='paused',session.cancel==='unknown']);
+ async function run(action:'start'|'cancel'|'read'){
+  if(busy)return;
+  try{if(action==='start')await client.start();else if(action==='cancel')await client.cancel(visible!.id);else await client.snapshot(visible!.id);}
+  catch{/* Submission and read results are retained by the scoped client. */}
  }
+
  function filter(next:typeof filters){logRequest.current++;setFilters(next);setLogs([]);setLogsLoaded(false);setCursor(null);setTruncated(false);setLogsBusy(false);setLogsError(null);}
  async function loadLogs(more=false){
   if(logsBusy)return;const request=++logRequest.current;setLogsBusy(true);setLogsError(null);
@@ -56,15 +58,11 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
   finally{if(current()&&request===logRequest.current)setLogsBusy(false);}
  }
  async function exportReport(){
-  if(!visible||busy)return;setBusy('export');setError(null);setNotice(t('正在生成脱敏报告…'));
-  try{
-   const payload=await client.export(visible.id,includeLogs);if(!current())return;
-   setExportOpen(false);setNotice(t('正在等待报告下载结果…'));
-   const result=await downloadPayload(new Blob([JSON.stringify(payload)],{type:'application/json'}),'bee-diagnostics.json');
-   if(current())setNotice(t(result==='completed'?'脱敏报告已下载。':result==='unconfirmed'?'报告下载结果未确认：waitedMs=30000；请先核对下载文件夹，避免重复导出。':'已发起报告文件下载；请在下载列表核对。'));
-  }catch(cause){if(current()){setNotice('');setError(failure(cause));}}
-  finally{if(current())setBusy(null);}
+  if(!visible||busy)return;setExportOpen(false);
+  try{await client.download(visible.id,includeLogs,payload=>downloadPayload(new Blob([JSON.stringify(payload)],{type:'application/json'}),'bee-diagnostics.json'));}
+  catch{/* The client retains the exact download failure across page changes. */}
  }
+
  useEffect(()=>{if(visible)onReport?.(visible);},[visible,onReport]);
  useEffect(()=>{if(navigationRequest?.target.page==='diagnostics')setActiveTab('checks');},[navigationRequest?.sequence]);
  const sections=partitionChecks(visible?.checks??[]);
@@ -72,16 +70,16 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
  const allPassed=visible?.state==='completed'&&visible.checks.length>0&&sections.passed.length===visible.checks.length;
  const target=navigationRequest?.target,targetSection=target?.section??(target?.platform?'account':undefined);
  const missingTarget=target?.page==='diagnostics'&&targetSection&&!visible?.checks.some(check=>checkSection(check)===targetSection&&(!target.platform||check.platform===target.platform));
- function renderCheck(check:DiagnosticCheck){return <li key={`${check.id}:${check.platform}`} data-status={check.status} data-nav-section={checkSection(check)} data-nav-platform={check.platform??undefined} tabIndex={-1}>
-  <div className="nd-check-heading"><div><h3>{check.platform&&<span className="nd-platform">{check.platform==='openai'?'OpenAI':'Claude'}</span>}{t(checkNames[check.id])}</h3><p>{t(messages[check.code]??'此项结果未确认，请查看安全证据。')}</p></div><span className={`nd-status nd-status-${check.status}`}>{t(check.code==='pending'?'等待检查':statuses[check.status])}</span></div>
-  <div className="nd-check-footer"><details><summary>{t('安全证据')}</summary><p>{check.code}</p><dl>{Object.entries(check.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><time dateTime={check.observed_at}>{date(check.observed_at)}</time></details>{check.status!=='pass'&&check.code!=='pending'&&check.next_action!=='diagnostics'&&<button className="quiet" onClick={()=>onNavigate({page:check.next_action,section:check.next_action==='accounts'?(check.id==='source'?'source':'account'):check.next_action==='settings'?'network':check.id==='runtime'?'runtime':check.id==='hive'?'connection':'device',...(check.platform&&check.next_action==='accounts'?{platform:check.platform}:{})})}>{t(destinations[check.next_action])}</button>}</div>
+ function renderCheck(check:DiagnosticCheck){const presentation=presentDiagnosticCheck(check);return <li key={`${check.id}:${check.platform}`} data-status={check.status} data-nav-section={checkSection(check)} data-nav-platform={check.platform??undefined} tabIndex={-1}>
+  <div className="nd-check-heading"><div><h3>{check.platform&&<span className="nd-platform">{check.platform==='openai'?'OpenAI':'Claude'}</span>}{t(checkNames[check.id])}</h3><p>{t(presentation.message)}</p></div><span className={`nd-status nd-status-${check.status}`}>{t(check.code==='pending'?'等待检查':statuses[check.status])}</span></div>
+  <div className="nd-check-footer"><details><summary>{t('检查详情')}</summary><p>{check.code}</p><dl>{Object.entries(check.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><time dateTime={check.observed_at}>{date(check.observed_at)}</time></details>{presentation.target&&<button className="quiet" onClick={()=>onNavigate(presentation.target!)}>{t(destinations[presentation.target.page])}</button>}</div>
  </li>;}
  return <Tabs.Root className="native-diagnostics section-tabs" data-testid="native-diagnostics" value={activeTab} onValueChange={setActiveTab}>
   <div className="nd-tabbar">
    <Tabs.List className="section-tabs-list" aria-label={t('诊断内容')}><Tabs.Trigger value="checks">{t('检查结果')}</Tabs.Trigger><Tabs.Trigger value="logs">{t('安全日志')}</Tabs.Trigger></Tabs.List>
    <div className="inline-actions nd-actions">{activeTab==='checks'?<>
-    <button className="primary" disabled={!instance||!!busy||visible?.state==='running'} aria-busy={busy==='start'} onClick={()=>void run('start')}>{t(visible?'重新运行诊断':'运行诊断')}</button>
-    {visible?.state==='running'&&<button disabled={!!busy} onClick={()=>void run('cancel')}>{t('取消诊断')}</button>}
+    <button className="primary" disabled={!instance||!!busy||visible?.state==='running'||session.start==='unknown'} aria-busy={busy==='start'} onClick={()=>void run('start')}>{t(visible?'重新运行诊断':'运行诊断')}</button>
+    {visible?.state==='running'&&<button disabled={!!busy||session.cancel==='unknown'} onClick={()=>void run('cancel')}>{t('取消诊断')}</button>}
    <Dialog.Root open={exportOpen} onOpenChange={next=>{if(!busy)setExportOpen(next);}}><Dialog.Trigger asChild><button disabled={!!busy||!visible}>{t('导出脱敏报告')}</button></Dialog.Trigger>
     <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content nd-export"><Dialog.Title>{t('选择导出范围')}</Dialog.Title><Dialog.Description>{t('报告保存在本机，最多 5 MiB。超出范围会明确标记截断。')}</Dialog.Description>
      <fieldset disabled={busy==='export'}><legend>{t('导出内容')}</legend><label><input type="radio" name="diagnostic-export-scope" checked={!includeLogs} onChange={()=>setIncludeLogs(false)}/><span>{t('仅本次检查结果')}</span></label><label><input type="radio" name="diagnostic-export-scope" checked={includeLogs} onChange={()=>setIncludeLogs(true)}/><span>{t('本次检查结果与安全日志')}</span></label></fieldset>
@@ -90,15 +88,17 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
    </Dialog.Root>
    </>:<button disabled={logsBusy} aria-busy={logsBusy} onClick={()=>void loadLogs()}>{t('刷新日志')}</button>}</div>
   </div>
-  {error&&<FailureNotice failure={error} check="diagnostics_operation" onNavigate={target=>onNavigate(target)}/>}{notice&&<p className="operation-message" role="status">{notice}</p>}
+  {session.failure&&<FailureNotice failure={session.failure} check="diagnostics_operation" onNavigate={onNavigate}/>}{session.readFailure&&<FailureNotice failure={session.readFailure} check="diagnostics_snapshot" onNavigate={onNavigate}/>}{session.downloadFailure&&<FailureNotice failure={session.downloadFailure} check="diagnostics_download" onNavigate={onNavigate}/>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
+  {session.start==='unknown'&&<div className="nd-recovery"><p role="status">{t('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。')}</p><p>{t('可按需读取安全日志并查看管理进程状态；切换页面不会重启管理进程或找回报告。')}</p><button onClick={()=>setActiveTab('logs')}>{t('查看安全日志')}</button><button onClick={()=>onNavigate({page:'overview',section:'runtime'})}>{t('查看运行状态')}</button></div>}
+  {visible&&(session.read==='paused'||session.cancel==='unknown')&&<div className="nd-recovery"><p role="status">{t(session.cancel==='unknown'?'取消结果尚未确认；仅核对原报告，不会重复取消。':'报告读取已暂停，已返回的检查仍保留。')}</p><button disabled={session.read==='reading'||!!busy} onClick={()=>void run('read')}>{t('重新读取原报告')}</button></div>}
   <Tabs.Content value="checks">
    {!visible?<div className="nd-empty" data-nav-section={navigationRequest?.target.section??(navigationRequest?.target.platform?'account':undefined)} data-nav-platform={navigationRequest?.target.platform} tabIndex={-1}><ShieldCheck aria-hidden="true"/><h2>{t('尚未运行诊断')}</h2><p>{t('点击运行诊断，查看当前设备的真实检查结果。')}</p><small>{t('检查设备、账号与网络；诊断不会开始贡献。')}</small></div>:<>
-    <div className="nd-report-meta" data-nav-section={missingTarget?targetSection:undefined} data-nav-platform={missingTarget?target?.platform:undefined} tabIndex={-1}><div><span>{t(visible.state==='running'?'诊断进行中':visible.state==='cancelled'?'诊断已取消':'检查已完成')}</span><time dateTime={visible.started_at}>{date(visible.started_at)}</time></div><div className="nd-counts">{(['fail','warning','pass','skipped'] as const).map(status=><span key={status} data-status={status}>{t(statuses[status])}<strong>{visible.checks.filter(check=>check.status===status).length}</strong></span>)}</div></div>
-    {issues.length>0&&<section className="nd-issues" aria-label={t('需要处理的问题')}><header><h2>{t('需要处理的问题')}</h2><span>{issues.length}</span></header>{(['device','openai','claude'] as const).map(group=>sections.issues[group].length>0&&<section className="nd-issue-group" key={group}><header><CircleAlert aria-hidden="true"/><h3>{group==='device'?t('设备与连接'):group==='openai'?'OpenAI':'Claude'}</h3><span>{sections.issues[group].length}</span></header><ul className="nd-checks">{sections.issues[group].map(renderCheck)}</ul></section>)}</section>}
+    <div className="nd-report-meta" data-nav-section={missingTarget?targetSection:undefined} data-nav-platform={missingTarget?target?.platform:undefined} tabIndex={-1}><div><span>{t(visible.state==='running'?'诊断进行中':visible.state==='cancelled'?'诊断已取消':'检查已完成')}</span><time dateTime={visible.started_at}>{date(visible.started_at)}</time></div><div className="nd-counts">{(['fail','warning','pass','skipped'] as const).map(status=><span key={status} data-status={status}>{t(statuses[status])}<strong>{formatNumber(visible.checks.filter(check=>check.status===status).length,currentLocale())}</strong></span>)}</div></div>
+    {issues.length>0&&<section className="nd-issues" aria-label={t('需要处理的问题')}><header><h2>{t('需要处理的问题')}</h2><span>{formatNumber(issues.length,currentLocale())}</span></header>{(['device','openai','claude'] as const).map(group=>sections.issues[group].length>0&&<section className="nd-issue-group" key={group}><header><CircleAlert aria-hidden="true"/><h3>{group==='device'?t('设备与连接'):group==='openai'?'OpenAI':'Claude'}</h3><span>{formatNumber(sections.issues[group].length,currentLocale())}</span></header><ul className="nd-checks">{sections.issues[group].map(renderCheck)}</ul></section>)}</section>}
     {allPassed&&<div className="nd-all-passed"><ShieldCheck aria-hidden="true"/><div><h2>{t('全部检查通过')}</h2><p>{t('本次已返回的检查均通过。')}</p></div></div>}
     {!issues.length&&!allPassed&&<p className="nd-incomplete">{t(visible.state==='running'?'检查仍在进行，尚不能确认全部结果。':visible.state==='cancelled'?'本次诊断已取消，以下为已返回的检查。':'本次尚有未完成或未确认的检查。')}</p>}
-    <details className="nd-fold" data-testid="unfinished-checks"><summary>{t('尚未完成的检查')}<span>{sections.unfinished.length}</span></summary><ul className="nd-checks">{sections.unfinished.map(renderCheck)}</ul></details>
-    <details className="nd-fold" data-testid="passed-checks"><summary>{t('通过的检查')}<span>{sections.passed.length}</span></summary><ul className="nd-checks">{sections.passed.map(renderCheck)}</ul></details>
+    <details className="nd-fold" data-testid="unfinished-checks"><summary>{t('尚未完成的检查')}<span>{formatNumber(sections.unfinished.length,currentLocale())}</span></summary><ul className="nd-checks">{sections.unfinished.map(renderCheck)}</ul></details>
+    <details className="nd-fold" data-testid="passed-checks"><summary>{t('通过的检查')}<span>{formatNumber(sections.passed.length,currentLocale())}</span></summary><ul className="nd-checks">{sections.passed.map(renderCheck)}</ul></details>
    </>}
   </Tabs.Content>
   <Tabs.Content value="logs"><section className="nd-logs" aria-label={t('安全日志')}>
@@ -108,7 +108,7 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
     <label>{t('日志级别')}<select value={filters.level??''} onChange={e=>filter({...filters,level:(e.target.value||null) as LogQuery['level']})}><option value="">{t('全部日志')}</option><option value="info">{t('信息')}</option><option value="warning">{t('提醒')}</option><option value="error">{t('错误')}</option></select></label>
    </div>
    {logsError&&<FailureNotice failure={logsError} check="diagnostic_logs"/>}
-   {!logs.length?<p className="nd-empty-logs">{t(logsBusy?'正在读取日志…':logsLoaded?'所选范围没有保留的安全事件。':'点击刷新日志，查看所选范围的安全事件。')}</p>:<ul className="nd-log-list" data-testid="native-diagnostic-logs">{logs.map((entry,index)=><li key={`${entry.time}:${index}`}><time dateTime={entry.time}>{date(entry.time)}</time><span className="nd-log-level" data-level={entry.level}>{t(({info:'信息',warning:'提醒',error:'错误'} as const)[entry.level])}</span><div><strong>{entry.platform==='openai'?'OpenAI ':entry.platform==='claude'?'Claude ':''}{entry.code}</strong><details><summary>{t('安全证据')}</summary><dl>{Object.entries(entry.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></details></div></li>)}</ul>}
+   {!logs.length?<p className="nd-empty-logs">{t(logsBusy?'正在读取日志…':logsLoaded?'所选范围没有保留的安全事件。':'点击刷新日志，查看所选范围的安全事件。')}</p>:<ul className="nd-log-list" data-testid="native-diagnostic-logs">{logs.map((entry,index)=><li key={`${entry.time}:${index}`}><time dateTime={entry.time}>{date(entry.time)}</time><span className="nd-log-level" data-level={entry.level}>{t(({info:'信息',warning:'提醒',error:'错误'} as const)[entry.level])}</span><div><strong>{entry.platform==='openai'?'OpenAI ':entry.platform==='claude'?'Claude ':''}{entry.code}</strong><details><summary>{t('检查详情')}</summary><dl>{Object.entries(entry.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl></details></div></li>)}</ul>}
    {truncated&&<p className="feature-note">{t('较早日志已轮转移除；此处仅显示保留范围。')}</p>}{cursor&&<div className="nd-pagination"><button disabled={logsBusy} onClick={()=>void loadLogs(true)}>{t('加载更多日志')}</button></div>}
   </section></Tabs.Content>
  </Tabs.Root>;

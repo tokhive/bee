@@ -37,6 +37,9 @@ struct FakeState {
     observed: RuntimeObservation,
     events: Vec<String>,
     fail_stop: bool,
+    fail_observe_at: usize,
+    observations: usize,
+    failure_details: Option<crate::protocol::FailureDetails>,
     fail_configure: bool,
     fail_restore: bool,
     stop_receipt: StopReceipt,
@@ -88,6 +91,9 @@ impl FakeRuntime {
                 },
                 events: vec![],
                 fail_stop: false,
+                fail_observe_at: 0,
+                observations: 0,
+                failure_details: None,
                 fail_configure: false,
                 fail_restore: false,
                 stop_receipt: StopReceipt {
@@ -117,6 +123,12 @@ impl NetworkRuntime for FakeRuntime {
     async fn observe(&self) -> Result<RuntimeObservation, BridgeError> {
         let mut s = self.state.lock().unwrap();
         s.events.push("observe".into());
+        s.observations += 1;
+        if s.fail_observe_at == s.observations {
+            let mut error = failure("OBSERVE_FAILED", "fixture runtime observation failed");
+            error.details = s.failure_details.clone();
+            return Err(error);
+        }
         Ok(s.observed.clone())
     }
     async fn stop_for_network(
@@ -134,10 +146,9 @@ impl NetworkRuntime for FakeRuntime {
         }
         let mut s = self.state.lock().unwrap();
         if s.fail_stop {
-            return Err(failure(
-                "STOP_FAILED",
-                "fixture stop did not confirm worker termination",
-            ));
+            let mut error = failure("STOP_FAILED", "fixture stop did not confirm worker termination");
+            error.details = s.failure_details.clone();
+            return Err(error);
         }
         s.observed.revision += 1;
         if s.stale_stop_revision {
@@ -162,10 +173,9 @@ impl NetworkRuntime for FakeRuntime {
         }
         let mut s = self.state.lock().unwrap();
         if s.fail_configure {
-            return Err(failure(
-                "CONFIGURE_FAILED",
-                "fixture config rejected before application",
-            ));
+            let mut error = failure("CONFIGURE_FAILED", "fixture config rejected before application");
+            error.details = s.failure_details.clone();
+            return Err(error);
         }
         s.observed.network_revision = config.revision;
         s.observed.revision += 1;
@@ -193,10 +203,9 @@ impl NetworkRuntime for FakeRuntime {
         let mut s = self.state.lock().unwrap();
         s.events.push("restore".into());
         if s.fail_restore {
-            return Err(failure(
-                "RESTORE_FAILED",
-                "fixture saved-intent verification failed",
-            ));
+            let mut error = failure("RESTORE_FAILED", "fixture saved-intent verification failed");
+            error.details = s.failure_details.clone();
+            return Err(error);
         }
         s.observed.local = "running".into();
         Ok(s.observed.clone())
@@ -647,3 +656,49 @@ async fn network_prepare_start_blocks_start_when_saved_preferences_change_during
         .any(|event| event.starts_with("stop:") || event == "restore"));
     fs::remove_dir_all(dir).unwrap();
 }
+
+
+async fn assert_apply_failure_stage(phase: &str, code: &str) {
+        for existing_details in [false, true] {
+            let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+            let runtime = FakeRuntime::new("");
+            let original = crate::protocol::FailureDetails { check: "runtime_owned_exit".into(), observed_at: "2026-10-30T12:00:00Z".into(), evidence: std::collections::BTreeMap::from([("actual".into(), "owned child still draining".into())]) };
+            {
+                let mut state = runtime.state.lock().unwrap();
+                state.fail_stop = phase == "stop";
+                state.fail_configure = phase == "configure";
+                state.fail_restore = phase == "restore";
+                state.fail_observe_at = if phase == "observe" {1} else if phase == "configure_readback" {2} else {0};
+                if existing_details { state.failure_details = Some(original.clone()); }
+            }
+            let manager = NetworkController::default();
+            let result = manager.apply_saved(&store, &runtime, &scope, true).await;
+            let error = result.error.unwrap();
+            assert_eq!(error.code, code);
+            assert!(error.message.starts_with("fixture "));
+            let details = error.details.expect("an apply failure must preserve its actual stage");
+            if existing_details { assert_eq!(details, original); }
+            else {
+                assert_eq!(details.check, format!("network_{phase}"));
+                assert!(crate::runtime_protocol::timestamp(&details.observed_at));
+                assert!(details.evidence.is_empty());
+            }
+            if ["observe", "stop", "configure", "configure_readback"].contains(&phase) { assert!(!runtime.events().contains(&"restore".into())); }
+            let _ = std::fs::remove_dir_all(dir);
+        }
+}
+
+#[tokio::test]
+async fn network_apply_failure_observe_retains_actual_stage() { assert_apply_failure_stage("observe", "OBSERVE_FAILED").await; }
+
+#[tokio::test]
+async fn network_apply_failure_stop_retains_actual_stage() { assert_apply_failure_stage("stop", "STOP_FAILED").await; }
+
+#[tokio::test]
+async fn network_apply_failure_configure_retains_actual_stage() { assert_apply_failure_stage("configure", "CONFIGURE_FAILED").await; }
+
+#[tokio::test]
+async fn network_apply_failure_configure_readback_retains_actual_stage() { assert_apply_failure_stage("configure_readback", "OBSERVE_FAILED").await; }
+
+#[tokio::test]
+async fn network_apply_failure_restore_retains_actual_stage() { assert_apply_failure_stage("restore", "RESTORE_FAILED").await; }

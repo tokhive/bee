@@ -140,3 +140,57 @@ test('completed reports cannot be displayed or exported under a replacement bind
  await client.start();assert.equal(client.getSnapshot()?.state,'completed');client.setContext(2,run,2);assert.equal(client.getSnapshot(),null);
  await assert.rejects(client.export(id,false),/current cached report/);assert.equal(requests,1);
 });
+
+
+test('lost start receipt fences another start until the diagnostic scope changes',async()=>{
+ let starts=0,lose=true;
+ const client=createDiagnosticsClient(async()=>{starts++;if(lose)throw {code:'IPC_TIMEOUT',message:'start accepted but receipt lost'};return reply();},instance,2,run);
+ await assert.rejects(client.start());
+ await assert.rejects(client.start());
+ assert.equal(starts,1,'an unknown start must never be replayed');
+ assert.equal(client.getSnapshot(),null);
+ lose=false;client.setContext(3,run);
+ await assert.rejects(client.start(),/revision/);assert.equal(starts,2);
+});
+test('lost cancel receipt permits only reading the original ID, never another cancel',async()=>{
+ const commands:string[]=[];let state='running';
+ const client=createDiagnosticsClient(async(command,args)=>{commands.push(command);if(command==='diagnostics_cancel')throw {code:'IPC_TIMEOUT',message:'cancel receipt lost'};return reply({...diagnosticReport(),state,finished_at:state==='running'?null:'2026-10-26T03:31:00Z'});},instance,2,run);
+ await client.start();await assert.rejects(client.cancel(id));await assert.rejects(client.cancel(id));
+ assert.equal(commands.filter(c=>c==='diagnostics_cancel').length,1);
+ state='cancelled';assert.equal((await client.snapshot(id)).state,'cancelled');assert.equal(client.getSnapshot()?.id,id);
+});
+test('concurrent reads of the original report share one request and preserve its last checks on failure',async()=>{
+ let release!:(value:unknown)=>void,reads=0;
+ const client=createDiagnosticsClient(async command=>{if(command==='diagnostics_snapshot'){reads++;return new Promise(resolve=>release=resolve);}return reply();},instance,2,run);
+ await client.start();const one=client.snapshot(id),two=client.snapshot(id);assert.equal(reads,1);
+ release(reply());await Promise.all([one,two]);assert.equal(client.getSnapshot()?.checks.length,1);
+});
+
+test('a failed read after unknown cancellation retains both exact failures in the scoped session',async()=>{
+ const client=createDiagnosticsClient(async command=>{if(command==='diagnostics_cancel')throw {code:'IPC_TIMEOUT',message:'cancel reply lost: request sent'};if(command==='diagnostics_snapshot')throw {code:'IPC_TIMEOUT',message:'original report read failed: attempt=1'};return reply();},instance,2,run);
+ await client.start();await assert.rejects(client.cancel(id));await assert.rejects(client.snapshot(id));
+ assert.match(client.getSession().failure!.message,/cancel reply lost/);assert.match(client.getSession().readFailure!.message,/original report read failed/);assert.equal(client.getSnapshot()?.id,id);
+});
+test('a late original report read cannot replace a newer explicitly started diagnostic in the same scope',async()=>{
+ let release!:(value:unknown)=>void,starts=0;
+ const client=createDiagnosticsClient(async command=>{if(command==='diagnostics_snapshot')return new Promise(resolve=>release=resolve);starts++;return reply({...diagnosticReport(),id:starts===1?id:'d'.repeat(48),state:'completed',finished_at:'2026-10-26T03:31:00Z'});},instance,2,run);
+ await client.start();const old=client.snapshot(id);await client.start();release(reply({...diagnosticReport(),state:'completed',finished_at:'2026-10-26T03:31:00Z'}));
+ await assert.rejects(old,/superseded/);assert.equal(client.getSnapshot()?.id,'d'.repeat(48));
+});
+
+test('a running cancel receipt remains unconfirmed and only a terminal read settles it',async()=>{
+ let state='running',cancels=0;
+ const client=createDiagnosticsClient(async command=>{if(command==='diagnostics_cancel')cancels++;return reply({...diagnosticReport(),state,finished_at:state==='running'?null:'2026-10-26T03:31:00Z'});},instance,2,run);
+ await client.start();await client.cancel(id);assert.equal(client.getSession().cancel,'unknown');await assert.rejects(client.cancel(id));
+ await client.snapshot(id);assert.equal(client.getSession().cancel,'unknown');state='cancelled';await client.snapshot(id);assert.equal(client.getSession().cancel,'idle');assert.equal(cancels,1);
+});
+test('a late export payload or delivery receipt cannot alter a newer report session',async()=>{
+ for(const delayed of ['payload','delivery']){
+  let release!:(value:any)=>void,starts=0,deliveries=0;
+  const terminal={...diagnosticReport(),state:'completed',finished_at:'2026-10-26T03:31:00Z'};
+  const client=createDiagnosticsClient(async command=>{if(command==='diagnostics_export'){const payload={...exported(),logs:[],report:terminal};if(delayed==='payload')return new Promise(resolve=>release=resolve);return payload;}starts++;return reply({...terminal,id:starts===1?id:'d'.repeat(48)});},instance,2,run);
+  await client.start();const pending=client.download(id,false,async()=>{deliveries++;return new Promise(resolve=>release=resolve);});
+  if(delayed==='delivery')await setImmediate();await client.start();release(delayed==='payload'?{...exported(),logs:[],report:terminal}:'completed');
+  await assert.rejects(pending,/superseded/);assert.equal(client.getSession().download,'idle');assert.equal(client.getSession().downloadFailure,null);assert.equal(deliveries,delayed==='payload'?0:1);
+ }
+});

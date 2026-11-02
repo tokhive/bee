@@ -20,6 +20,11 @@ const (
 	ReasonQuotaExhausted           = "quota_exhausted"
 	ReasonPlanNotConfigured        = "plan_not_configured"
 	ReasonConcurrencyFull          = "concurrency_full"
+	ReasonAccountNotRegistered     = "account_not_registered"
+	ReasonMarketNotOpen            = "market_not_open"
+	ReasonSupplyNotEnabled         = "supply_not_enabled"
+	ReasonSupplyDeviceRestricted   = "supply_device_restricted"
+	ReasonAccountNotAdmitted       = "account_not_admitted"
 )
 
 // AccountReason is the supply reason for an account status other than ready
@@ -35,7 +40,7 @@ func AccountReason(platform, status string) string {
 // AccountStatuses are the account states that surface as an AccountReason.
 var AccountStatuses = []string{"source_unavailable", "confirmation_required", "authorization_rejected", "account_in_use"}
 
-// SupplyReasons lists every reason Hive can report.
+// SupplyReasons lists the legacy reasons Hive reports without reason_detail=1.
 func SupplyReasons() []string {
 	reasons := []string{
 		ReasonManuallyPaused, ReasonBanned, ReasonDeviceDraining, ReasonOffline,
@@ -50,6 +55,13 @@ func SupplyReasons() []string {
 		}
 	}
 	return reasons
+}
+
+// DetailedSupplyReasons includes legacy reasons and the precise blockers available
+// with reason_detail=1. SupplyReasons stays unchanged for older clients.
+func DetailedSupplyReasons() []string {
+	return append(SupplyReasons(), ReasonAccountNotRegistered, ReasonMarketNotOpen,
+		ReasonSupplyNotEnabled, ReasonSupplyDeviceRestricted, ReasonAccountNotAdmitted)
 }
 
 // ReasonExplanation says why a platform does not take work and what to do,
@@ -80,6 +92,30 @@ var reasonExplanations = map[string]ReasonExplanation{
 	AccountReason("claude", "account_in_use"): {
 		Cause: "this Claude subscription account is registered to another Provider",
 		Fix:   "use a different account, or ask the original Provider to confirm a switch to a different account; disconnecting or pausing Bee does not release account ownership",
+	},
+	ReasonAccountNotRegistered: {
+		Cause: "Hive has no registered account for this platform",
+		Fix:   "check the selected platform account in Bee and keep bee run connected to register it with Hive",
+	},
+	ReasonMarketNotOpen: {
+		Cause: "the market has no tradable models for this platform",
+		Fix:   "ask the market administrator to publish an eligible platform model",
+		Admin: true,
+	},
+	ReasonSupplyNotEnabled: {
+		Cause: "this device has no valid static supply and dynamic supply is not configured for this platform",
+		Fix:   "ask the market administrator to configure supply for this device and platform",
+		Admin: true,
+	},
+	ReasonSupplyDeviceRestricted: {
+		Cause: "this owner's static platform supply is assigned to another device",
+		Fix:   "ask the market administrator to check the platform's device assignment",
+		Admin: true,
+	},
+	ReasonAccountNotAdmitted: {
+		Cause: "this account is not admitted to the platform's dynamic supply",
+		Fix:   "ask the market administrator to check this account's supply admission",
+		Admin: true,
 	},
 	ReasonManuallyPaused: {
 		Cause: "supply is paused on this Bee",

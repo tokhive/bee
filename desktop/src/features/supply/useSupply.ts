@@ -1,21 +1,30 @@
+import type {RefreshStatus} from '../../system/desktopState';
 import {normalizeFailure,type UiFailure} from '../../system/failures.ts';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {SupplyClient,SupplyPlatform,SupplyView} from '../../system/supply';
 export const platforms:SupplyPlatform[]=['openai','claude'];
 export const failure=(cause:unknown,check='supply_read'):UiFailure=>normalizeFailure(cause,check);
-export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null}
+export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null;refreshStatus?:RefreshStatus;supplyRefresh?:Partial<Record<SupplyPlatform,RefreshStatus>>}
 export function supplyFresh(state:SupplyState,platform:SupplyPlatform,now=Date.now()):boolean {
  const view=state.views[platform];
  return Boolean(view&&!state.errors[platform]&&Math.max(state.now,now)-Date.parse(view.checked_at)<=30000);
 }
-export function supplyProgress(state:SupplyState,platform:SupplyPlatform,now=Date.now()):'waiting'|'retrying'|'checking'|null {
+export function supplyProgress(state:SupplyState,platform:SupplyPlatform,now=Date.now()):'waiting'|'retrying'|'checking'|'blocked'|'stale'|null {
+ const refresh=state.supplyRefresh?.[platform];
+ if(refresh){
+  if(state.operation==='write'&&state.activePlatform===platform)return 'checking';
+  if(supplyFresh(state,platform,now))return null;
+  if(refresh.state==='reading')return state.errors[platform]?'retrying':'checking';
+  if(refresh.state==='scheduled'&&refresh.nextRetryAt)return 'waiting';
+  return refresh.state==='blocked'?'blocked':'stale';
+ }
  if(state.errors[platform])return state.operation==='read'&&state.activePlatform===platform?'retrying':'waiting';
  if(state.operation==='write'&&state.activePlatform===platform)return 'checking';
  if(supplyFresh(state,platform,now))return null;
  return state.operation==='read'&&state.views[platform]?'checking':null;
 }
-export interface CoordinatedSupply {views:Partial<Record<SupplyPlatform,SupplyView>>;errors?:Partial<Record<SupplyPlatform,UiFailure>>;activePlatform?:SupplyPlatform|null;error:UiFailure|null;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;snapshot?:()=>SupplyObservation;writeContext?:Partial<Record<SupplyPlatform,string>>}
-type SupplyObservation=Pick<CoordinatedSupply,'views'|'errors'|'activePlatform'|'error'|'busy'|'writeContext'>;
+export interface CoordinatedSupply {views:Partial<Record<SupplyPlatform,SupplyView>>;errors?:Partial<Record<SupplyPlatform,UiFailure>>;activePlatform?:SupplyPlatform|null;refreshStatus?:RefreshStatus;supplyRefresh?:Partial<Record<SupplyPlatform,RefreshStatus>>;error:UiFailure|null;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;snapshot?:()=>SupplyObservation;writeContext?:Partial<Record<SupplyPlatform,string>>}
+type SupplyObservation=Pick<CoordinatedSupply,'views'|'errors'|'activePlatform'|'error'|'busy'|'writeContext'|'refreshStatus'|'supplyRefresh'>;
 export function createSupplyModel(client:SupplyClient){
  let pendingPlatforms:SupplyPlatform[]=[];
  let writeContext:Partial<Record<SupplyPlatform,string>>={};
@@ -81,7 +90,7 @@ export function createSupplyModel(client:SupplyClient){
  function setWriteContext(next:Partial<Record<SupplyPlatform,string>>){for(const p of platforms)if(next[p]!==writeContext[p])writeVersions[p]++;writeContext={...next};}
  function adopt(value:SupplyObservation){if(!active||!coordinatedRefresh)return;adoptions++;externalBusy=value.busy;externalError=value.error;externalErrors=value.errors??{};observedViews=value.views;
   if(value.writeContext)setWriteContext(value.writeContext);
-  if(uncertainViews&&value.views!==uncertainViews&&!externalBusy&&!externalError){writeErrors={};uncertainViews=undefined;}if(awaitingExplicitAdoption&&!externalBusy&&!externalError){writeErrors={};awaitingExplicitAdoption=false;}publish({views:{...value.views},errors:adoptedErrors(),busy:localBusy||externalBusy,operation:localBusy?state.operation:externalBusy?'read':'idle',activePlatform:localBusy?state.activePlatform:value.activePlatform??null,now:Date.now()});scheduleExpiry();
+  if(uncertainViews&&value.views!==uncertainViews&&!externalBusy&&!externalError){writeErrors={};uncertainViews=undefined;}if(awaitingExplicitAdoption&&!externalBusy&&!externalError){writeErrors={};awaitingExplicitAdoption=false;}publish({refreshStatus:value.refreshStatus,supplyRefresh:value.supplyRefresh,views:{...value.views},errors:adoptedErrors(),busy:localBusy||externalBusy,operation:localBusy?state.operation:externalBusy?'read':'idle',activePlatform:localBusy?state.activePlatform:value.activePlatform??null,now:Date.now()});scheduleExpiry();
  }
  function write(writes:{platform:SupplyPlatform;paused:boolean}[]):Promise<void>{
   if(coordinatedSnapshot)adopt(coordinatedSnapshot());
@@ -115,6 +124,6 @@ export function useSupply(client:SupplyClient|undefined,enabled:boolean,blocked:
  model?.setCoordinated(coordinated?.refresh,coordinated?.pause,coordinated?.snapshot);
  const external=!!coordinated;
  useEffect(()=>{if(!model||!enabled)return;model.start();let active=true;if(!external)queueMicrotask(()=>{if(active)void model.read();});return()=>{active=false;model.stop();};},[model,enabled,external]);
- useEffect(()=>{if(model&&enabled&&coordinated)model.adopt(coordinated);},[model,enabled,coordinated?.views,coordinated?.errors,coordinated?.activePlatform,coordinated?.error,coordinated?.busy]);
+ useEffect(()=>{if(model&&enabled&&coordinated)model.adopt(coordinated);},[model,enabled,coordinated?.views,coordinated?.errors,coordinated?.activePlatform,coordinated?.error,coordinated?.busy,coordinated?.refreshStatus,coordinated?.supplyRefresh]);
  return model?{model,state,blocked}:undefined;
 }

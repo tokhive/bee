@@ -71,7 +71,7 @@ select { background: var(--paper); border: 1px solid var(--line); border-radius:
 .bottomline { display: flex; align-items: center; justify-content: space-between; margin-top: 17px; color: var(--muted); font-size: 11px; }
 footer { min-height: 31px; border-top: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; gap: 5px; padding: 6px 28px; background: var(--canvas); color: var(--muted); font-size: 11px; }
 .status-view { padding: 25px 20px; background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 20px; }
-.status-view p { max-width: 65ch; color: var(--muted); margin-top: 7px; }
+.status-view p, .status-view > .status-view-content { max-width: 65ch; color: var(--muted); margin-top: 7px; }
 .status-view button { margin-top: 12px; }
 .settings-list { border-block: 1px solid var(--line); }
 .settings-list > div { display: flex; justify-content: space-between; gap: 20px; padding: 18px 0; }
@@ -352,3 +352,12 @@ nav button { border:1px solid transparent; }
 .native-shell footer { height:29px; min-height:29px; padding:0 27px; font-size:10px; background:var(--panel); }
 :root[data-theme='dark'] .platform-mark.claude { color:#d4a18a; background:#372f2a; border-color:#493b31; }
 @media(prefers-color-scheme:dark) { :root:not([data-theme='light']) .platform-mark.claude { color:#d4a18a; background:#372f2a; border-color:#493b31; } }
+
+/* Navigation is an explicit user action; polling never changes scroll or focus. */
+.native-shell main { scroll-padding-block:24px; }
+.native-shell [data-nav-section],.native-shell [data-settings-section],.native-shell [data-account-source] { scroll-margin-block:24px; }
+.recovery-return { min-height:32px; margin-block:0 16px; }
+
+/* T5 state feedback must remain readable while full page presentation lands in T6–T8. */
+.native-shell .account-check-status,.native-shell .account-operation-status,.native-shell .runtime-note,.native-shell .account-list-status { font-size:12px; }
+.recovery-return { font-size:13px; }

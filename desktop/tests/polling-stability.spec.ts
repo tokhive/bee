@@ -27,7 +27,7 @@ for(const id of ['running','stopped'])test('normal runtime polling keeps the mai
  await expect(button).toBeEnabled();await hold(page,'runtime_snapshot');await page.clock.runFor(10100);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await expect(button).toBeEnabled();
- await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toHaveCount(0);
+ await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).release());await expect(button).toBeEnabled();
 });
 
@@ -45,7 +45,7 @@ test('a failed runtime read cancels the waiting start without replay',async({pag
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=page.getByRole('button',{name:'开始贡献',exact:true});await expect(button).toBeEnabled();await button.click();
  await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
- await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(0);
+ await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(0);
  await page.clock.runFor(10100);expect(await calls(page,'runtime_start')).toHaveLength(0);
 });
 
@@ -94,7 +94,7 @@ test('repeated runtime read failures retain feedback and continue read-only reco
  });
  for(let attempt=0;attempt<3;attempt++){
   await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).failedRuntimeReads)).toBe(attempt+1);
-  await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();
+  await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
  }
  await page.evaluate(()=>(window as any).failRuntimeReads=false);await page.clock.runFor(10100);
@@ -127,7 +127,7 @@ for(const outcome of ['fresh-revision','candidate-changed','read-failed'])test('
   await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);
   expect((await calls(page,'account_action'))[0].args.request.revision).toBe(revision);
  }else{
-  if(outcome==='candidate-changed')await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+  if(outcome==='candidate-changed'){await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();const notice=card.getByText('账号提交条件已经变化，本次未提交。',{exact:true});await expect(notice).toBeVisible();await page.clock.runFor(10100);await expect(notice).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);return;}
   else await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();
   expect(await calls(page,'account_action')).toHaveLength(0);
  }
@@ -154,7 +154,7 @@ test('an account confirmation waiting for a failed device read is cancelled with
  const confirm=page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true});await expect(confirm).toBeEnabled();
  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await confirm.click();await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
- await expect(page.getByText('等待自动重试…',{exact:true}).first()).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
+ await expect(page.getByText('核对已暂停，需先处理当前问题。',{exact:true}).first()).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
 });
 
 for(const kind of ['start','stop'])test('central readback rejects runtime revision below the '+kind+' receipt',async({page})=>{
@@ -162,10 +162,10 @@ for(const kind of ['start','stop'])test('central readback rejects runtime revisi
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_start'||command==='runtime_stop'){w.receiptRevision=result.result.operation.revision;w.regressRuntime=true;}if(command==='runtime_snapshot'&&w.regressRuntime)result.result.runtime.revision=w.receiptRevision-1;return result;};});
  await page.getByRole('button',{name:kind==='start'?'开始贡献':'停止贡献',exact:true}).click();
  if(kind==='stop')await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
- await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();
+ await expect(page.getByText('贡献状态待确认，核对已暂停。',{exact:true})).toBeVisible();
  expect(await calls(page,'runtime_'+kind)).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
- await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*runtime revision actual=.*required>=/);
+ const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');expect(evidence.runtime.code).toBe('DESKTOP_STALE_RESULT');expect(evidence.runtime.message).toMatch(/runtime revision actual=.*required>=/);
 });
 
 test('central account readback below a successful receipt remains blocked with revision evidence',async({page})=>{
@@ -176,7 +176,7 @@ test('central account readback below a successful receipt remains blocked with r
  await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
  await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
- await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/);
+ const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');const problem=evidence.accounts.openai??evidence.accounts.claude;expect(problem.code).toBe('DESKTOP_STALE_RESULT');expect(problem.message).toMatch(/account revision.*actual=.*required>=/);
 });
 
 for(const command of ['authorize_start','authorize_cancel'])test('central account readback enforces the '+command+' receipt revision',async({page})=>{
@@ -189,6 +189,6 @@ for(const command of ['authorize_start','authorize_cancel'])test('central accoun
  await expect.poll(()=>page.evaluate(()=>(window as any).regressAuthorize)).toBe(true);
  for(let i=0;i<3&&await page.getByRole('dialog').count();i++)await page.keyboard.press('Escape');
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
- await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/);
+ const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');const problem=evidence.accounts.openai??evidence.accounts.claude;expect(problem.code).toBe('DESKTOP_STALE_RESULT');expect(problem.message).toMatch(/account revision.*actual=.*required>=/);
  expect(await calls(page,command)).toHaveLength(1);
 });

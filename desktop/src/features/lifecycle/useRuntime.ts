@@ -1,10 +1,11 @@
+import type {RefreshStatus} from '../../system/desktopState';
 import type {UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
 import {failure} from '../supply/useSupply';
 
-export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean}}
+export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus}}
 export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordinated?:CoordinatedRuntime){
  const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
  const [settled,setSettled]=useState(0);
@@ -61,7 +62,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   }catch(cause){if(current()){verified.current=false;resolution.current={previous:latest.current};central.current?.pause?.();setError(failure(cause,'runtime_operation'));setUncertain(true);}}
   finally{writing.current=false;if(active.current)setBusy(false);}
  };
- return {view,error,stalled:!!coordinated?.error,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
+ return {view,error,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
   start:(resume:AccountPlatform[])=>write('start',resume),stop:()=>write('stop')};
 }
 export type RuntimeModel=ReturnType<typeof useRuntime>;

@@ -50,7 +50,7 @@ test('safe logs load manually with module/platform/level filters and native curs
 test('management startup failure keeps safe native logs accessible without enabling diagnostics',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
- await page.goto('/');await expect(page.getByText('SIDECAR_EXIT: owned management child exited: status=1',{exact:true})).toBeVisible();
+ await page.goto('/');await expect(page.getByRole('alert')).toHaveCount(1);const failure=page.locator('.status-view .problem-notice');await expect(failure).toContainText('SIDECAR_EXIT');await failure.getByText('查看失败详情',{exact:true}).click();await expect(failure).toContainText('owned management child exited: status=1');
  await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);

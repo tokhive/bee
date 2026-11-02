@@ -1,3 +1,4 @@
+import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {formatDate,currentLocale} from '../../i18n/index';
 import {FailureNotice} from '../../components/ProblemNotice';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
@@ -17,8 +18,9 @@ const destinations:Record<DiagnosticPage,string>={overview:'查看概览',accoun
 const messages:Record<string,string>={pending:'等待检查',not_checked:'本次未完成此项检查',cancelled:'检查已取消',timeout:'检查超时',device_not_paired:'请先在设置中配对设备',device_binding_valid:'设备身份已核对',owned_runtime_connected:'贡献进程已连接',runtime_stopped:'贡献进程尚未运行',runtime_ownership_conflict:'检测到其他 Bee 进程',hive_identity_verified:'Hive 身份已核对',network_policy_observed:'已核对当前网络路径',network_changed:'网络配置已变化，请重新运行诊断',source_not_selected:'尚未选择此平台的账号',selected_source_read:'已读取所选官方登录',source_missing:'官方登录不存在',source_changed:'官方登录已变化，请前往账号重新检测',authorization_expired:'官方授权已失效',official_authorization_observed:'官方授权已核对',quota_available:'订阅额度可用',quota_exhausted:'订阅额度已耗尽',account_binding_verified:'账号绑定已核对',account_changed:'账号在检查期间发生变化',capabilities_synchronized:'能力已同步',taking_new_work:'可以接收新任务',supply_blocked:'当前未接收新任务',dns_failed:'域名解析失败',tls_failed:'安全连接校验失败',connection_failed:'无法连接服务',http_rejected:'服务拒绝了本次查询',rate_limited:'查询受到限流，请稍后重试'};
 const date=(value:string)=>formatDate(value,currentLocale());
 const failure=(cause:unknown)=>normalizeFailure(cause,'diagnostics_operation');
-export interface NativeDiagnosticsPageProps {client:DiagnosticsClient;onNavigate:(page:DiagnosticPage)=>void;instance:string|undefined;networkRevision:number;runId?:string|null;bindingRevision?:number}
-export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevision,runId,bindingRevision=0}:NativeDiagnosticsPageProps){
+const checkSection=(check:DiagnosticCheck)=>check.id==='hive'?'connection':check.id==='proxy'?'network':check.id;
+export interface NativeDiagnosticsPageProps {client:DiagnosticsClient;onNavigate:(target:NavigationTarget)=>void;onReport?:(report:DiagnosticReport)=>void;navigationRequest?:NavigationRequest;instance:string|undefined;networkRevision:number;runId?:string|null;bindingRevision?:number}
+export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevision,runId,bindingRevision=0,onReport,navigationRequest}:NativeDiagnosticsPageProps){
  const [activeTab,setActiveTab]=useState('checks'),[logsLoaded,setLogsLoaded]=useState(false);
  const [report,setReport]=useState<DiagnosticReport|null>(()=>client.getSnapshot());
  const [busy,setBusy]=useState<'start'|'cancel'|'export'|null>(null),[error,setError]=useState<UiFailure|null>(null),[notice,setNotice]=useState('');
@@ -63,12 +65,16 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
   }catch(cause){if(current()){setNotice('');setError(failure(cause));}}
   finally{if(current())setBusy(null);}
  }
+ useEffect(()=>{if(visible)onReport?.(visible);},[visible,onReport]);
+ useEffect(()=>{if(navigationRequest?.target.page==='diagnostics')setActiveTab('checks');},[navigationRequest?.sequence]);
  const sections=partitionChecks(visible?.checks??[]);
  const issues=Object.values(sections.issues).flat();
  const allPassed=visible?.state==='completed'&&visible.checks.length>0&&sections.passed.length===visible.checks.length;
- function renderCheck(check:DiagnosticCheck){return <li key={`${check.id}:${check.platform}`} data-status={check.status}>
+ const target=navigationRequest?.target,targetSection=target?.section??(target?.platform?'account':undefined);
+ const missingTarget=target?.page==='diagnostics'&&targetSection&&!visible?.checks.some(check=>checkSection(check)===targetSection&&(!target.platform||check.platform===target.platform));
+ function renderCheck(check:DiagnosticCheck){return <li key={`${check.id}:${check.platform}`} data-status={check.status} data-nav-section={checkSection(check)} data-nav-platform={check.platform??undefined} tabIndex={-1}>
   <div className="nd-check-heading"><div><h3>{check.platform&&<span className="nd-platform">{check.platform==='openai'?'OpenAI':'Claude'}</span>}{t(checkNames[check.id])}</h3><p>{t(messages[check.code]??'此项结果未确认，请查看安全证据。')}</p></div><span className={`nd-status nd-status-${check.status}`}>{t(check.code==='pending'?'等待检查':statuses[check.status])}</span></div>
-  <div className="nd-check-footer"><details><summary>{t('安全证据')}</summary><p>{check.code}</p><dl>{Object.entries(check.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><time dateTime={check.observed_at}>{date(check.observed_at)}</time></details>{check.status!=='pass'&&check.code!=='pending'&&check.next_action!=='diagnostics'&&<button className="quiet" onClick={()=>onNavigate(check.next_action)}>{t(destinations[check.next_action])}</button>}</div>
+  <div className="nd-check-footer"><details><summary>{t('安全证据')}</summary><p>{check.code}</p><dl>{Object.entries(check.evidence).map(([key,value])=><div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl><time dateTime={check.observed_at}>{date(check.observed_at)}</time></details>{check.status!=='pass'&&check.code!=='pending'&&check.next_action!=='diagnostics'&&<button className="quiet" onClick={()=>onNavigate({page:check.next_action,section:check.next_action==='accounts'?(check.id==='source'?'source':'account'):check.next_action==='settings'?'network':check.id==='runtime'?'runtime':check.id==='hive'?'connection':'device',...(check.platform&&check.next_action==='accounts'?{platform:check.platform}:{})})}>{t(destinations[check.next_action])}</button>}</div>
  </li>;}
  return <Tabs.Root className="native-diagnostics section-tabs" data-testid="native-diagnostics" value={activeTab} onValueChange={setActiveTab}>
   <div className="nd-tabbar">
@@ -84,10 +90,10 @@ export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevisio
    </Dialog.Root>
    </>:<button disabled={logsBusy} aria-busy={logsBusy} onClick={()=>void loadLogs()}>{t('刷新日志')}</button>}</div>
   </div>
-  {error&&<FailureNotice failure={error} check="diagnostics_operation" onNavigate={target=>onNavigate(target.page)}/>}{notice&&<p className="operation-message" role="status">{notice}</p>}
+  {error&&<FailureNotice failure={error} check="diagnostics_operation" onNavigate={target=>onNavigate(target)}/>}{notice&&<p className="operation-message" role="status">{notice}</p>}
   <Tabs.Content value="checks">
-   {!visible?<div className="nd-empty"><ShieldCheck aria-hidden="true"/><h2>{t('尚未运行诊断')}</h2><p>{t('点击运行诊断，查看当前设备的真实检查结果。')}</p><small>{t('检查设备、账号与网络；诊断不会开始贡献。')}</small></div>:<>
-    <div className="nd-report-meta"><div><span>{t(visible.state==='running'?'诊断进行中':visible.state==='cancelled'?'诊断已取消':'检查已完成')}</span><time dateTime={visible.started_at}>{date(visible.started_at)}</time></div><div className="nd-counts">{(['fail','warning','pass','skipped'] as const).map(status=><span key={status} data-status={status}>{t(statuses[status])}<strong>{visible.checks.filter(check=>check.status===status).length}</strong></span>)}</div></div>
+   {!visible?<div className="nd-empty" data-nav-section={navigationRequest?.target.section??(navigationRequest?.target.platform?'account':undefined)} data-nav-platform={navigationRequest?.target.platform} tabIndex={-1}><ShieldCheck aria-hidden="true"/><h2>{t('尚未运行诊断')}</h2><p>{t('点击运行诊断，查看当前设备的真实检查结果。')}</p><small>{t('检查设备、账号与网络；诊断不会开始贡献。')}</small></div>:<>
+    <div className="nd-report-meta" data-nav-section={missingTarget?targetSection:undefined} data-nav-platform={missingTarget?target?.platform:undefined} tabIndex={-1}><div><span>{t(visible.state==='running'?'诊断进行中':visible.state==='cancelled'?'诊断已取消':'检查已完成')}</span><time dateTime={visible.started_at}>{date(visible.started_at)}</time></div><div className="nd-counts">{(['fail','warning','pass','skipped'] as const).map(status=><span key={status} data-status={status}>{t(statuses[status])}<strong>{visible.checks.filter(check=>check.status===status).length}</strong></span>)}</div></div>
     {issues.length>0&&<section className="nd-issues" aria-label={t('需要处理的问题')}><header><h2>{t('需要处理的问题')}</h2><span>{issues.length}</span></header>{(['device','openai','claude'] as const).map(group=>sections.issues[group].length>0&&<section className="nd-issue-group" key={group}><header><CircleAlert aria-hidden="true"/><h3>{group==='device'?t('设备与连接'):group==='openai'?'OpenAI':'Claude'}</h3><span>{sections.issues[group].length}</span></header><ul className="nd-checks">{sections.issues[group].map(renderCheck)}</ul></section>)}</section>}
     {allPassed&&<div className="nd-all-passed"><ShieldCheck aria-hidden="true"/><div><h2>{t('全部检查通过')}</h2><p>{t('本次已返回的检查均通过。')}</p></div></div>}
     {!issues.length&&!allPassed&&<p className="nd-incomplete">{t(visible.state==='running'?'检查仍在进行，尚不能确认全部结果。':visible.state==='cancelled'?'本次诊断已取消，以下为已返回的检查。':'本次尚有未完成或未确认的检查。')}</p>}

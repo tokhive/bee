@@ -1,7 +1,8 @@
+import type {DesktopPresentation} from '../presentation/desktopStatus';
 import { t } from '../i18n/index';
-import type { ReactNode } from 'react';
+import {useEffect,useRef,type ReactNode} from 'react';
 import { Monitor } from 'lucide-react';
-import { navigation } from '../app/navigation';
+import { navigation,navigationSelector,validNavigationTarget,type NavigationRequest } from '../app/navigation';
 import type { Page } from '../client/types';
 import logo from '../assets/app-icon-dark.svg';
 export function AppShell({
@@ -12,6 +13,7 @@ export function AppShell({
   deviceName, hive, connected = false,
   children,
   debug,
+  navigationRequest,desktopStatus,
 }: {
   page: Page;
   onNavigate: (page: Page) => void;
@@ -20,10 +22,29 @@ export function AppShell({
   deviceName?: string; hive?: string; connected?: boolean;
   children: ReactNode;
   debug?: ReactNode;
+  navigationRequest?:NavigationRequest;desktopStatus?:DesktopPresentation;
 }) {
+  const main=useRef<HTMLElement>(null);
+  useEffect(()=>{
+    if(!deviceMode)return;
+    const container=main.current;if(!container)return;
+    const target=navigationRequest?.target??{page};
+    if(target.page!==page||!validNavigationTarget(target))return;
+    const selector=navigationSelector(target);if(!selector)return;
+    const focus=()=>{
+      const element=document.querySelector<HTMLElement>(selector);if(!element)return false;
+      for(let parent=element.parentElement;parent;parent=parent.parentElement)if(parent instanceof HTMLDetailsElement)parent.open=true;
+      element.tabIndex=element.tabIndex<0?-1:element.tabIndex;
+      element.focus({preventScroll:true});element.scrollIntoView({block:'start',behavior:'instant'});
+      if(!target.section)container.scrollTop=0;
+      return true;
+    };
+    if(focus())return;
+    const observer=new MutationObserver(()=>{if(focus())observer.disconnect();});observer.observe(document.body,{subtree:true,childList:true});return()=>observer.disconnect();
+  },[page,navigationRequest?.sequence,deviceMode]);
   const current = navigation.find((item) => item.id === page) ?? navigation[0];
   return (
-    <div className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
+    <div data-desktop-status={desktopStatus?.kind} className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <img src={logo} alt="" />
@@ -56,10 +77,10 @@ export function AppShell({
             {demo && <span className="demo-badge">{t("演示数据")}</span>}
           </div>
         </header>
-        <main>
+        <main ref={main}>
           <div className="page-heading">
             <div>
-              <h1>{t(current.label)}</h1>
+              <h1 tabIndex={-1}>{t(current.label)}</h1>
               {!(deviceMode && page === 'overview') && <p>{t(current.description)}</p>}
             </div>
             {debug}

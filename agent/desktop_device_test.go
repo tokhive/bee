@@ -5,9 +5,12 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -421,5 +424,125 @@ func TestDesktopDeviceRemoteErrorCannotEchoPairingToken(t *testing.T) {
 	_, err := (newDesktopTestDevice(t, path)).Status(context.Background())
 	if err == nil || strings.Contains(err.Error(), secret) || !strings.Contains(err.Error(), "500") {
 		t.Fatalf("unsafe remote error: %v", err)
+	}
+}
+
+// Context must remain local even when Hive rejects the saved device.
+func TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests(t *testing.T) {
+	calls := 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls++
+		if r.Method != http.MethodGet || r.URL.Path != "/api/bee/identity" {
+			t.Errorf("revoked identity reached Hive write or contribution: %s %s", r.Method, r.URL.Path)
+		}
+		w.WriteHeader(401)
+		fmt.Fprint(w, `{"error":{"code":"device_replaced"}}`)
+	}))
+	defer server.Close()
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	state := localState{Hive: server.URL, Name: "Saved Mac", Credential: "bee_" + strings.Repeat("b", 43), Identity: &beewire.Identity{ID: "device", OwnerID: "owner", Name: "Saved Mac", OwnerEmail: "owner@example.test"}}
+	if err := saveState(d.path, state); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := d.Status(context.Background()); err == nil {
+		t.Fatal("expected rejected identity")
+	}
+	method := reflect.ValueOf(d).MethodByName("Context")
+	if !method.IsValid() {
+		t.Fatal("device_context is unavailable during identity rejection")
+	}
+	read := func() map[string]any {
+		result := method.Call([]reflect.Value{reflect.ValueOf(context.Background())})
+		if !result[1].IsNil() {
+			t.Fatal(result[1].Interface())
+		}
+		raw, _ := json.Marshal(result[0].Interface())
+		var value map[string]any
+		json.Unmarshal(raw, &value)
+		if strings.Contains(string(raw), state.Credential) {
+			t.Fatal("context leaked credential")
+		}
+		return value
+	}
+	before := calls
+	first := read()
+	second := read()
+	if calls != before || first["hive"] != server.URL || first["device_id"] != "device" || first["owner_id"] != "owner" || first["binding_revision"] != second["binding_revision"] {
+		t.Fatalf("local context rejected: %+v", first)
+	}
+	if _, err := d.SetPaused(context.Background(), "openai", false); err == nil {
+		t.Fatal("revoked identity resumed Hive supply")
+	}
+	accounts := NewDesktopAccounts(d)
+	defer accounts.Close()
+	runtime := NewDesktopRuntime(context.Background(), d, accounts)
+	defer runtime.Close()
+	if _, err := runtime.Start(context.Background(), DesktopStartRequest{ExpectedRevision: 0, ResumePlatforms: []string{}}); err != nil {
+		t.Fatal(err)
+	}
+	failed := waitRuntime(t, runtime, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
+	if failed.Operation == nil || failed.Operation.Error == nil {
+		t.Fatal("revoked identity contribution failure lost its evidence")
+	}
+	session, release, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	if err = session.save(state); err != nil {
+		t.Fatal(err)
+	}
+	if read()["binding_revision"] != first["binding_revision"] {
+		t.Fatal("same binding save advanced revision")
+	}
+	state.Identity.ID = "replacement"
+	if err = session.save(state); err != nil {
+		t.Fatal(err)
+	}
+	if read()["binding_revision"].(float64) <= first["binding_revision"].(float64) {
+		t.Fatal("changed binding retained revision")
+	}
+}
+
+func TestDesktopDeviceContextDistinguishesAbsentAndCorruptLocalRecords(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	for _, value := range []struct{ raw, code string }{{"", "DEVICE_CONTEXT_UNCONFIGURED"}, {`{"bad":true}`, "DEVICE_CONTEXT_INVALID"}} {
+		if value.raw != "" {
+			if err := os.WriteFile(d.path, []byte(value.raw), 0600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		_, err := d.Context(context.Background())
+		failure, ok := err.(*DesktopFailure)
+		if !ok || failure.Code != value.code || failure.Details == nil || failure.Details.Check != "device_context" {
+			t.Fatalf("local record failure=%v required=%s", err, value.code)
+		}
+	}
+}
+
+func TestDesktopAccountsStartupVerificationNeverStartsRuntime(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	r := NewDesktopRuntime(context.Background(), d, a)
+	defer r.Close()
+	method := reflect.ValueOf(r).MethodByName("VerifyStartup")
+	if !method.IsValid() {
+		t.Fatal("read-only startup verification is unavailable without Restore")
+	}
+	before, _ := r.Snapshot(context.Background())
+	result := method.Call([]reflect.Value{reflect.ValueOf(context.Background())})
+	if !result[0].IsNil() {
+		t.Fatal(result[0].Interface())
+	}
+	after, _ := r.Snapshot(context.Background())
+	if after.Local != "stopped" || after.Revision != before.Revision || after.Operation != nil {
+		t.Fatal("startup verification changed runtime")
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(d.path), "ai-accounts.json"), []byte(`{"version":99}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	if method.Call([]reflect.Value{reflect.ValueOf(context.Background())})[0].IsNil() {
+		t.Fatal("corrupt account state passed verification")
 	}
 }

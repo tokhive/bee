@@ -19,7 +19,7 @@ export function validFailureTime(value:unknown):value is string {
  if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(value))return false;
  const parsed=Date.parse(value);return Number.isFinite(parsed)&&new Date(parsed).toISOString().slice(0,19)===value.slice(0,19)&&parsed<=Date.now()+5000;
 }
-function safeOrigin(value:string):boolean {
+export function safeOrigin(value:string):boolean {
  try {
   const u=new URL(value);
   if(!/^https?:\/\/[^/?#@\\\s]+$/.test(value))return false;

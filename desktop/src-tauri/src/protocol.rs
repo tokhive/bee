@@ -201,7 +201,7 @@ fn safe_failure_text(value: &str) -> bool {
     }
     true
 }
-fn failure_origin(value: &str) -> bool {
+pub(crate) fn failure_origin(value: &str) -> bool {
     let authority = value
         .strip_prefix("https://")
         .or_else(|| value.strip_prefix("http://"));
@@ -667,6 +667,24 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(notification_candidates);
+    let local_candidates: Vec<_> = candidates
+        .clone()
+        .into_iter()
+        .flat_map(|group| {
+            let mut variants = Vec::new();
+            if group.iter().any(|m| m == "device_status") {
+                let mut context = group.clone();
+                context.push("device_context".into());
+                variants.push(context.clone());
+                if group.iter().any(|m| m == "runtime_restore") {
+                    context.push("runtime_verify".into());
+                    variants.push(context);
+                }
+            }
+            variants
+        })
+        .collect();
+    candidates.extend(local_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
             .iter()
@@ -899,5 +917,117 @@ mod failure_safety_contract_tests {
         ] {
             assert!(serde_json::from_value::<FailureDetails>(serde_json::json!({"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"response_body":body}})).is_err(),"unsafe response accepted");
         }
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct DeviceContext {
+    pub hive: String,
+    pub name: String,
+    #[serde(deserialize_with = "present_context_id")]
+    pub device_id: Option<String>,
+    #[serde(deserialize_with = "present_context_id")]
+    pub owner_id: Option<String>,
+    pub binding_revision: u64,
+}
+fn present_context_id<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<String>, D::Error> {
+    Option::<String>::deserialize(d)
+}
+pub(crate) fn result_error(value: &Value) -> Result<(), BridgeError> {
+    if let Some(error) = value.get("error") {
+        if value.as_object().is_none_or(|v| v.len() != 1) {
+            return Err(BridgeError::new(
+                "INVALID_REPLY",
+                "error result requires exactly one error".into(),
+            ));
+        }
+        return Err(serde_json::from_value(error.clone())
+            .map_err(|e| invalid_json("operation error", e))?);
+    }
+    Ok(())
+}
+pub(crate) fn device_context(value: &Value) -> Result<DeviceContext, BridgeError> {
+    result_error(value)?;
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Envelope {
+        context: DeviceContext,
+    }
+    let context = serde_json::from_value::<Envelope>(value.clone())
+        .map_err(|e| invalid_json("device context", e))?
+        .context;
+    if !failure_origin(&context.hive) {
+        return Err(BridgeError::new("DEVICE_CONTEXT_INVALID","saved Hive rejected; required=secure origin without credentials, path, query or fragment".into()));
+    }
+    let valid_id = |s: &String| {
+        !s.is_empty()
+            && s.len() <= 128
+            && s.bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_' || b == b'-')
+    };
+    if context.name.trim().is_empty()
+        || context.name.chars().count() > 80
+        || context.name.chars().any(char::is_control)
+        || context.binding_revision == 0
+        || context.binding_revision > 9_007_199_254_740_991
+        || context.device_id.is_some() != context.owner_id.is_some()
+        || context.device_id.as_ref().is_some_and(|s| !valid_id(s))
+        || context.owner_id.as_ref().is_some_and(|s| !valid_id(s))
+    {
+        return Err(BridgeError::new("DEVICE_CONTEXT_INVALID","saved context rejected; required=safe name,paired public IDs and positive safe binding revision".into()));
+    }
+    Ok(context)
+}
+
+#[cfg(test)]
+mod device_context_tests {
+    use super::*;
+    #[test]
+    fn context_keeps_go_origins_and_rejects_incomplete_or_secret_fields() {
+        let base = serde_json::json!({"hive":"https://hive.example","name":"Saved Mac","device_id":"device","owner_id":"owner","binding_revision":1});
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../../../desktopbridge/testdata/connection-origin-contract.json"
+        ))
+        .unwrap();
+        for item in fixture["accepted"].as_array().unwrap() {
+            let mut c = base.clone();
+            c["hive"] = item["hive"].clone();
+            assert!(
+                device_context(&serde_json::json!({"context":c})).is_ok(),
+                "{}",
+                item["hive"]
+            );
+        }
+        for origin in fixture["rejected"].as_array().unwrap() {
+            let mut c = base.clone();
+            c["hive"] = origin.clone();
+            assert!(
+                device_context(&serde_json::json!({"context":c})).is_err(),
+                "{origin}"
+            );
+        }
+        for field in ["hive", "name", "device_id", "owner_id", "binding_revision"] {
+            let mut c = base.clone();
+            c.as_object_mut().unwrap().remove(field);
+            assert!(
+                device_context(&serde_json::json!({"context":c})).is_err(),
+                "missing {field}"
+            );
+        }
+        for change in [
+            serde_json::json!({"credential":"SECRET"}),
+            serde_json::json!({"device_id":null}),
+            serde_json::json!({"binding_revision":0}),
+            serde_json::json!({"binding_revision":9_007_199_254_740_992_u64}),
+            serde_json::json!({"name":"bad\nname"}),
+        ] {
+            let mut c = base.clone();
+            c.as_object_mut()
+                .unwrap()
+                .extend(change.as_object().unwrap().clone());
+            assert!(device_context(&serde_json::json!({"context":c})).is_err());
+        }
+        assert_eq!(device_context(&serde_json::json!({"error":{"code":"DEVICE_CONTEXT_INVALID","message":"saved JSON invalid"}})).unwrap_err().code,"DEVICE_CONTEXT_INVALID");
     }
 }

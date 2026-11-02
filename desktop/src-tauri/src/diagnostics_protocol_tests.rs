@@ -1,6 +1,6 @@
 use super::*;
 fn report() -> Value {
-    serde_json::json!({"report":{"id":"a".repeat(48),"instance":"b".repeat(32),"run_id":null,"network_revision":0,"started_at":"2026-10-27T00:00:00Z","finished_at":null,"state":"running","checks":[{"id":"device","platform":null,"status":"skipped","observed_at":"2026-10-27T00:00:00Z","code":"pending","evidence":{},"next_action":"settings"}]}})
+    serde_json::json!({"report":{"id":"a".repeat(48),"instance":"b".repeat(32),"run_id":null,"network_revision":0,"binding_revision":0,"started_at":"2026-10-27T00:00:00Z","finished_at":null,"state":"running","checks":[{"id":"device","platform":null,"status":"skipped","observed_at":"2026-10-27T00:00:00Z","code":"pending","evidence":{},"next_action":"settings"}]}})
 }
 #[test]
 fn diagnostics_protocol_strict_identity_schema_and_unknown_checks() {

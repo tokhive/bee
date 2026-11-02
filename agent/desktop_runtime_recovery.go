@@ -179,3 +179,44 @@ func (r *DesktopRuntime) cleanRecoveryGuard(session *desktopDeviceSession) error
 	}
 	return nil
 }
+
+// VerifyStartup validates protected local state without reserving a run, changing
+// intent, launching account workers, or performing any external write.
+func (r *DesktopRuntime) VerifyStartup(ctx context.Context) error {
+	session, release, err := r.device.acquireSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	state, err := session.read()
+	if err != nil {
+		return err
+	}
+	if err = r.accounts.verifyStoredAccountState(session); err != nil {
+		return err
+	}
+	if state.Identity != nil {
+		scope, err := r.accounts.selectionScope(session, state, nil)
+		if err != nil {
+			return err
+		}
+		if len(scope.PendingOperations) > 0 {
+			return fmt.Errorf("startup verification blocked: unresolved account operations=%d; query existing operations before writes", len(scope.PendingOperations))
+		}
+	}
+	path := filepath.Join(filepath.Dir(session.path), "runtime-session")
+	guard, err := readDesktopAccountBytes(path)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("startup recovery guard read: %w", err)
+	}
+	if err == nil && !bytes.Equal(guard, []byte("clean\n")) {
+		r.mu.Lock()
+		run := r.snapshot.RunID
+		local := r.snapshot.Local
+		r.mu.Unlock()
+		if run == nil || (local != "running" && local != "starting") || !bytes.Equal(guard, []byte(*run+"\n")) {
+			return fmt.Errorf("startup recovery guard unconfirmed: local=%s; required=clean guard or current owned running session", local)
+		}
+	}
+	return nil
+}

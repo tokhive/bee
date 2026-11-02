@@ -166,13 +166,24 @@ async fn update_install_real_owned_exit_reaps_before_installer_and_blocks_on_fai
         "owned-exit-wrong-operation",
     ] {
         let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
-        tokio::time::timeout(std::time::Duration::from_secs(5), async {
-            while bridge.status().state == BridgePhase::Starting {
-                tokio::task::yield_now().await;
+        let started = std::time::Instant::now();
+        let mut statuses = bridge.subscribe();
+        // Node24's 117 MiB fixture is fully hashed before the protocol deadline
+        // starts. Match the existing runtime fixture's preparation wait; the
+        // production handshake and owned-exit budgets remain unchanged.
+        tokio::time::timeout(std::time::Duration::from_secs(30), async {
+            while statuses.borrow_and_update().state == BridgePhase::Starting {
+                statuses.changed().await.expect("owned-exit fixture status channel closed");
             }
         })
         .await
-        .unwrap();
+        .unwrap_or_else(|cause| panic!("owned-exit fixture preparation failed: mode={mode} elapsed_ms={} status={:?} required=ready within 30000ms; cause={cause}", started.elapsed().as_millis(), bridge.status()));
+        assert_eq!(
+            bridge.status().state,
+            BridgePhase::Ready,
+            "owned-exit fixture preparation rejected: mode={mode} status={:?}",
+            bridge.status()
+        );
         let (_dir, manager, request) = ready();
         let ticket = prepare_install(&manager, &request).unwrap();
         let called = Arc::new(Mutex::new(false));
@@ -452,43 +463,162 @@ fn update_install_recovery_requires_new_package_and_all_dependency_proofs_before
     assert!(manager.lock().unwrap().persistent.pending_update.is_none());
 }
 
-
 #[tokio::test]
 async fn update_install_pending_recovery_bootstraps_s2_network_while_user_actions_remain_blocked() {
-    use crate::{network::NetworkController, network_native::BridgeNetworkRuntime,
-        preferences::PreferencesStore, sidecar::{Bridge, BridgePhase}};
+    use crate::{
+        network::NetworkController,
+        network_native::BridgeNetworkRuntime,
+        preferences::PreferencesStore,
+        sidecar::{Bridge, BridgePhase},
+    };
     let (dir, old, request) = ready();
     prepare_install(&old, &request).unwrap();
     let manager = UpdateManager::new("0.2.0", old.store.clone()).unwrap();
     let store = PreferencesStore::new(dir.path().join("preferences.json"));
     let bridge = Bridge::start(crate::sidecar::tests::fixture("owned-exit-bootstrap"));
     let mut statuses = bridge.subscribe();
-    while statuses.borrow_and_update().state != BridgePhase::Ready {statuses.changed().await.unwrap();}
+    while statuses.borrow_and_update().state != BridgePhase::Ready {
+        statuses.changed().await.unwrap();
+    }
     hold_startup(&bridge);
     let controller = NetworkController::default();
-    let device = bridge.device_status().await.expect("pending update must permit S2 startup device read before S1 recovery");
-    let scope = controller.bind_verified_device(&store, &device.result).unwrap().unwrap();
+    let device = bridge
+        .device_status()
+        .await
+        .expect("pending update must permit S2 startup device read before S1 recovery");
+    let scope = controller
+        .bind_verified_device(&store, &device.result)
+        .unwrap()
+        .unwrap();
     let mut prefs = store.read().preferences;
-    prefs.proxies.push(crate::preferences::ProxyPreference{origin:scope.origin().into(),device_scope:Some(scope.device_scope().into()),connect_proxy:"http://127.0.0.1:7890".into()});
+    prefs.proxies.push(crate::preferences::ProxyPreference {
+        origin: scope.origin().into(),
+        device_scope: Some(scope.device_scope().into()),
+        connect_proxy: "http://127.0.0.1:7890".into(),
+    });
     let saved = store.save(prefs.revision, prefs);
     assert!(saved.error.is_none());
-    let network = controller.bootstrap_saved(&store, &BridgeNetworkRuntime(&bridge), &scope).await;
-    assert!(network.error.is_none(), "S2 bootstrap rejected during update recovery: {:?}", network.error);
+    let network = controller
+        .bootstrap_saved(&store, &BridgeNetworkRuntime(&bridge), &scope)
+        .await;
+    assert!(
+        network.error.is_none(),
+        "S2 bootstrap rejected during update recovery: {:?}",
+        network.error
+    );
     assert_eq!(network.effective_proxy, "http://127.0.0.1:7890");
     assert!(manager.has_pending().unwrap());
     assert!(!bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst));
-    assert_eq!(bridge.ping().await.unwrap_err().code, "STARTUP_VERIFICATION_PENDING");
-    assert_eq!(bridge.runtime_start(crate::runtime_protocol::RuntimeStartRequest{expected_revision:1,resume_platforms:vec![]}).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+    assert_eq!(
+        bridge.ping().await.unwrap_err().code,
+        "STARTUP_VERIFICATION_PENDING"
+    );
+    assert_eq!(
+        bridge
+            .runtime_start(crate::runtime_protocol::RuntimeStartRequest {
+                expected_revision: 1,
+                resume_platforms: vec![]
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "STARTUP_VERIFICATION_PENDING"
+    );
     // Even these startup reads/configuration must respect a concurrent owned exit.
-    bridge.0.frozen.store(true,std::sync::atomic::Ordering::SeqCst);
-    assert_eq!(bridge.device_status().await.unwrap_err().code,"OWNED_EXIT_PENDING");
-    assert_eq!(bridge.runtime_configure_network(crate::runtime_protocol::RuntimeNetworkConfig{revision:99,connect_proxy:String::new()}).await.unwrap_err().code,"OWNED_EXIT_PENDING");
-    bridge.0.frozen.store(false,std::sync::atomic::Ordering::SeqCst);
-    verify_startup(&manager,&bridge,store.read(),"stable").await.unwrap();
+    bridge
+        .0
+        .frozen
+        .store(true, std::sync::atomic::Ordering::SeqCst);
+    assert_eq!(
+        bridge.device_status().await.unwrap_err().code,
+        "OWNED_EXIT_PENDING"
+    );
+    assert_eq!(
+        bridge
+            .runtime_configure_network(crate::runtime_protocol::RuntimeNetworkConfig {
+                revision: 99,
+                connect_proxy: String::new()
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "OWNED_EXIT_PENDING"
+    );
+    bridge
+        .0
+        .frozen
+        .store(false, std::sync::atomic::Ordering::SeqCst);
+    verify_startup(&manager, &bridge, store.read(), "stable")
+        .await
+        .unwrap();
     assert!(!manager.has_pending().unwrap());
-    assert_eq!(manager.snapshot().unwrap().state,UpdateState::Current);
-    let runtime=bridge.runtime_snapshot().await.unwrap();
-    assert_eq!(runtime.result["runtime"]["network_revision"],network.effective_revision);
-    assert_eq!(runtime.result["runtime"]["local"],"running");
+    assert_eq!(manager.snapshot().unwrap().state, UpdateState::Current);
+    let runtime = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(
+        runtime.result["runtime"]["network_revision"],
+        network.effective_revision
+    );
+    assert_eq!(runtime.result["runtime"]["local"], "running");
     bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn business_recheck_never_fabricates_pending_update_runtime_evidence() {
+    let (dir, manager, request) = ready();
+    prepare_install(&manager, &request).unwrap();
+    let bridge = crate::sidecar::Bridge::start(crate::sidecar::tests::fixture("owned-exit"));
+    hold_startup(&bridge);
+    let error = verify_recheck(
+        &manager,
+        &bridge,
+        crate::preferences::PreferencesStore::new(dir.path().join("preferences.json")).read(),
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(error.code, "UPDATE_RECOVERY_PENDING");
+    assert!(manager.has_pending().unwrap());
+    assert!(!bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst));
+    assert!(!bridge
+        .0
+        .startup_verified
+        .load(std::sync::atomic::Ordering::SeqCst));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn business_recheck_after_restore_failure_and_clean_stop_preserves_pending_evidence() {
+    for pending in [false, true] {
+        let (dir, manager, request) = ready();
+        if pending {
+            prepare_install(&manager, &request).unwrap();
+        }
+        let bridge = crate::sidecar::Bridge::start(crate::sidecar::tests::fixture(
+            "owned-exit-restore-failure",
+        ));
+        hold_startup(&bridge);
+        let preferences =
+            crate::preferences::PreferencesStore::new(dir.path().join("preferences.json"));
+        let failure = verify_startup(&manager, &bridge, preferences.read(), "stable")
+            .await
+            .unwrap_err();
+        assert!(failure
+            .message
+            .contains("recovery stopped with saved intent and clean session"));
+        assert_eq!(
+            bridge.runtime_snapshot().await.unwrap().result["runtime"]["local"],
+            "stopped"
+        );
+        let result = verify_recheck(&manager, &bridge, preferences.read()).await;
+        if pending {
+            assert_eq!(result.unwrap_err().code, "UPDATE_RECOVERY_PENDING");
+            assert!(manager.has_pending().unwrap());
+        } else {
+            result.unwrap();
+        }
+        assert_eq!(
+            bridge.runtime_snapshot().await.unwrap().result["runtime"]["local"],
+            "stopped"
+        );
+        bridge.stop().await.unwrap();
+    }
 }

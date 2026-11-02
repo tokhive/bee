@@ -25,6 +25,11 @@ type Devices interface {
 
 // Supplies is detected optionally so existing device-only implementations keep
 // their original capabilities and RunWithDevices signature.
+type DeviceContext interface {
+	Context(context.Context) (bee.DesktopDeviceContext, error)
+}
+type StartupVerifier interface{ VerifyStartup(context.Context) error }
+
 type Supplies interface {
 	SupplyStatus(context.Context, string) (bee.DesktopSupply, error)
 	SetPaused(context.Context, string, bool) (bee.DesktopSupply, error)
@@ -65,6 +70,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	if runner != nil && accounts == nil {
 		return errors.New("runtime bridge requires account service")
 	}
+	contexts, hasContext := devices.(DeviceContext)
+	verifier, hasVerifier := runner.(StartupVerifier)
 	supplies, hasSupplies := devices.(Supplies)
 	notifications, hasNotifications := accounts.(Notifications)
 	hasNotifications = hasNotifications && (diagnosticService != nil || network != nil)
@@ -197,12 +204,39 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasNotifications {
 					capabilities = append(capabilities, notificationMethods...)
 				}
+				if hasContext {
+					capabilities = append(capabilities, "device_context")
+				}
+				if hasVerifier {
+					capabilities = append(capabilities, "runtime_verify")
+				}
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
 					Arch         string   `json:"arch"`
 					Capabilities []string `json:"capabilities"`
 				}{version, runtime.GOOS, runtime.GOARCH, capabilities}
+			case hasContext && req.Method == "device_context":
+				value, err := contexts.Context(ctx)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("DEVICE_CONTEXT_FAILED", err)}
+				} else {
+					answer.Result = struct {
+						Context bee.DesktopDeviceContext `json:"context"`
+					}{value}
+				}
+			case hasVerifier && req.Method == "runtime_verify":
+				if err := verifier.VerifyStartup(ctx); err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("STARTUP_DATA_INVALID", err)}
+				} else {
+					answer.Result = struct {
+						Verified bool `json:"verified"`
+					}{true}
+				}
 			case req.Method == "ping":
 				answer.Result = struct {
 					Alive bool `json:"alive"`

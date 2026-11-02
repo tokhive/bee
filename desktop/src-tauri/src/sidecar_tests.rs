@@ -276,8 +276,13 @@ async fn child_failure_retains_safe_management_evidence_without_exposing_stderr(
     assert!(cause.message.contains("stderr bytes="));
     assert!(cause.message.contains("retained="));
     assert!(cause.message.contains("truncated="));
-    assert!(!cause.message.contains("MARKER"), "raw stderr leaked into public native status");
-    assert!(!serde_json::to_string(&bridge.status()).unwrap().contains("MARKER"));
+    assert!(
+        !cause.message.contains("MARKER"),
+        "raw stderr leaked into public native status"
+    );
+    assert!(!serde_json::to_string(&bridge.status())
+        .unwrap()
+        .contains("MARKER"));
 }
 
 #[tokio::test]
@@ -564,6 +569,7 @@ async fn supply_native_commands_require_platform_and_an_explicit_boolean() {
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
         .manage(bridge.clone())
+        .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::supply_status,
             crate::commands::supply_set_paused,
@@ -623,9 +629,16 @@ async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_priva
     let app = tauri::test::mock_builder()
         .manage(bridge.clone())
         .manage(crate::experience::StartupGate::verified())
-        .manage(crate::preferences::PreferencesStore::new(std::env::temp_dir().join(format!("bee-s2-command-preferences-{}.json",std::process::id()))))
+        .manage(crate::preferences::PreferencesStore::new(
+            std::env::temp_dir().join(format!(
+                "bee-s2-command-preferences-{}.json",
+                std::process::id()
+            )),
+        ))
         .manage(crate::network::NetworkController::default())
-        .manage(crate::diagnostics_native::NativeDiagnostics::new(std::env::temp_dir().join(format!("bee-s2-command-logs-{}",std::process::id()))))
+        .manage(crate::diagnostics_native::NativeDiagnostics::new(
+            std::env::temp_dir().join(format!("bee-s2-command-logs-{}", std::process::id())),
+        ))
         .invoke_handler(tauri::generate_handler![
             crate::commands::runtime_snapshot,
             crate::commands::runtime_start,

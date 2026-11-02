@@ -1,6 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createDeviceClient, decodeDeviceReply } from '../src/system/device.ts';
+import { createDeviceClient, decodeDeviceReply, decodeDeviceContext } from '../src/system/device.ts';
+import {readFileSync} from 'node:fs';
+
+test('saved context uses the shared Go origin contract and rejects unsafe or incomplete records',()=>{
+ const context={hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:1};
+ const origins=JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/connection-origin-contract.json',import.meta.url),'utf8'));
+ for(const {hive} of origins.accepted)assert.equal(decodeDeviceContext({result:{context:{...context,hive}}}).hive,hive);
+ for(const hive of origins.rejected)assert.throws(()=>decodeDeviceContext({result:{context:{...context,hive}}}));
+ for(const value of [{...context,binding_revision:0},{...context,binding_revision:Number.MAX_SAFE_INTEGER+1},{...context,device_id:null},{...context,credential:'SECRET'},{...context,name:'bad\nname'},Object.fromEntries(Object.entries(context).filter(([key])=>key!=='owner_id'))])assert.throws(()=>decodeDeviceContext({result:{context:value}}));
+});
 
 test('device replies only expose validated public binding data', () => {
  const view = {state:'pending',hive:'https://hive.example',name:'Mac',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',user_code:'ABCD-EFGH',expires_at:new Date(Date.now()+60000).toISOString(),poll_interval_seconds:2};

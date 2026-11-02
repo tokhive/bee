@@ -9,7 +9,7 @@ import {createPreferencesClient} from '../src/system/preferences.ts';
 import {createDiagnosticsClient, decodeDiagnosticReport, decodeLogPage, decodeDiagnosticExport} from '../src/system/diagnostics.ts';
 
 const instance='b'.repeat(32), id='a'.repeat(48), run='c'.repeat(32);
-export const diagnosticReport=()=>({id,instance,run_id:run,network_revision:2,started_at:'2026-10-26T03:30:00Z',finished_at:null as string|null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:'2026-10-26T03:30:01Z',code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity'},next_action:'diagnostics'}]});
+export const diagnosticReport=()=>({id,instance,run_id:run,network_revision:2,binding_revision:0,started_at:'2026-10-26T03:30:00Z',finished_at:null as string|null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:'2026-10-26T03:30:01Z',code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity'},next_action:'diagnostics'}]});
 const reply=(report=diagnosticReport())=>({instance,result:{report}});
 const log=()=>({time:'2026-10-26T03:30:01Z',level:'info',module:'diagnostics',platform:null,code:'hive_identity_verified',evidence:{method:'GET'}});
 const exported=()=>({product:'Bee',app_version:'0.1.0',bee_version:'dev',os:'darwin',arch:'arm64',report:diagnosticReport(),logs:[log()],truncated:false,truncated_sections:[]});
@@ -108,7 +108,7 @@ test('native fixtures use real instance/runtime/preferences contracts and isolat
  const status=await invoke('bridge_status',{});assert.match(status.metadata.instance,/^[a-f0-9]{32}$/);
  const snapshot=decodeRuntimeSnapshot(await invoke('runtime_snapshot',{}),status.metadata.instance);assert.equal(snapshot.platforms.openai.account.capabilities.length,2);
  const preferences=await createPreferencesClient(invoke).read();assert.equal(preferences.preferences.version,1);
- const client=createDiagnosticsClient(invoke,status.metadata.instance,0,null);const first=await client.start();assert.equal(first.state,'running');assert.equal((await client.snapshot(first.id)).state,'completed');
+ const client=createDiagnosticsClient(invoke,status.metadata.instance,0,null,1);const first=await client.start();assert.equal(first.state,'running');assert.equal((await client.snapshot(first.id)).state,'completed');
  let bridgeEvents=0,downloads=0;const bridgeHandler=native.transformCallback(()=>bridgeEvents++),downloadHandler=native.transformCallback(()=>downloads++);
  await invoke('plugin:event|listen',{event:'bee://bridge-status',handler:bridgeHandler});await invoke('plugin:event|listen',{event:'bee://download-finished',handler:downloadHandler});
  windowFixture.emit('d'.repeat(32));windowFixture.emitDownload('blob:test',true);assert.equal(bridgeEvents,1);assert.equal(downloads,1);
@@ -125,4 +125,18 @@ test('diagnostic reports logs and exports retain defined detailed supply reason 
   assert.deepEqual(decodeDiagnosticExport(data,instance),data);
   assert.throws(()=>decodeDiagnosticReport({instance,result:{report:{...r,checks:[{...r.checks[0],evidence:{reason:'unrecognized_reason'}}]}}},instance),/DIAGNOSTICS_REPLY_INVALID/);
  }
+});
+test('binding changes invalidate cached and in-flight diagnostic reports',async()=>{
+ let resolve!:(value:unknown)=>void;
+ const client=createDiagnosticsClient(()=>new Promise(r=>{resolve=r;}),instance,2,run,1);
+ const pending=client.start();client.setContext(2,run,2);
+ resolve(reply({...diagnosticReport(),binding_revision:1}));
+ await assert.rejects(pending,/context changed/);
+ assert.equal(client.getSnapshot(),null);
+});
+test('completed reports cannot be displayed or exported under a replacement binding',async()=>{
+ let requests=0;const terminal={...diagnosticReport(),binding_revision:1,state:'completed',finished_at:'2026-10-26T03:30:02Z'};
+ const client=createDiagnosticsClient(async()=>{requests++;return reply(terminal);},instance,2,run,1);
+ await client.start();assert.equal(client.getSnapshot()?.state,'completed');client.setContext(2,run,2);assert.equal(client.getSnapshot(),null);
+ await assert.rejects(client.export(id,false),/current cached report/);assert.equal(requests,1);
 });

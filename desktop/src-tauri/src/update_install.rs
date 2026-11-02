@@ -254,6 +254,22 @@ pub(crate) async fn verify_startup(
     Ok(())
 }
 
+/// Business rechecks never restore intent or claim pending-update recovery.
+pub(crate) async fn verify_recheck(
+    manager: &UpdateManager,
+    bridge: &crate::sidecar::Bridge,
+    preferences: crate::preferences::PreferencesSnapshot,
+) -> Result<(), BridgeError> {
+    if let Some(cause) = preferences.error {
+        return Err(cause);
+    }
+    if manager.has_pending()? {
+        return Err(error("UPDATE_RECOVERY_PENDING","pending update recovery has not proven all required startup evidence; device recheck cannot restore runtime intent or clear the update marker"));
+    }
+    bridge.verify_local_startup().await?;
+    Ok(())
+}
+
 #[tauri::command]
 pub fn update_install(
     app: tauri::AppHandle,

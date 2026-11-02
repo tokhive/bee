@@ -61,6 +61,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bridge_request,
             commands::bridge_status,
+ commands::startup_status,
+ commands::startup_recheck,
+ commands::device_context,
             commands::autostart_status,
             commands::autostart_set,
             commands::diagnostics_start,
@@ -157,7 +160,7 @@ pub fn run() {
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {
                 while statuses.changed().await.is_ok() {
-                    let state = handle.state::<experience::StartupGate>().status(statuses.borrow_and_update().clone());
+                    let state = statuses.borrow_and_update().clone();
                     if let Err(cause) = handle.emit_to("main", "bee://bridge-status", state) {
                         eprintln!("deliver Bee bridge status to main window: {cause}");
                     }

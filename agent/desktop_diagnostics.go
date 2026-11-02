@@ -35,6 +35,7 @@ type DesktopDiagnosticReport struct {
 	Instance        string            `json:"instance"`
 	RunID           *string           `json:"run_id"`
 	NetworkRevision int64             `json:"network_revision"`
+	BindingRevision int64             `json:"binding_revision"`
 	StartedAt       string            `json:"started_at"`
 	FinishedAt      *string           `json:"finished_at"`
 	State           string            `json:"state"`
@@ -95,6 +96,10 @@ func (d *DesktopDiagnostics) Start(ctx context.Context, instance string) (Deskto
 	if d.active != "" {
 		return DesktopDiagnosticReport{}, errors.New("diagnostics already running; cancel or await the active report before starting")
 	}
+	bindingRevision, bindingErr := d.device.bindingRevision(ctx)
+	if bindingErr != nil && bindingRevision == 0 {
+		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics start binding unavailable: %w", bindingErr)
+	}
 	runtime, err := d.runtime.Snapshot(ctx)
 	if err != nil {
 		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics start runtime snapshot failed: code=%s", diagnosticErrorCode(err))
@@ -107,7 +112,7 @@ func (d *DesktopDiagnostics) Start(ctx context.Context, instance string) (Deskto
 		return DesktopDiagnosticReport{}, errors.New("diagnostics report ID unavailable: system_random_failed")
 	}
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	report := DesktopDiagnosticReport{ID: id, Instance: instance, RunID: runtime.RunID, NetworkRevision: runtime.NetworkRevision, StartedAt: now, State: "running", Checks: []DiagnosticCheck{}}
+	report := DesktopDiagnosticReport{ID: id, Instance: instance, RunID: runtime.RunID, NetworkRevision: runtime.NetworkRevision, BindingRevision: bindingRevision, StartedAt: now, State: "running", Checks: []DiagnosticCheck{}}
 	for _, name := range []string{"device", "runtime", "hive", "proxy"} {
 		report.Checks = append(report.Checks, newDiagnosticCheck(name, "", "skipped", "pending", now, "diagnostics", nil))
 	}
@@ -139,11 +144,18 @@ func (d *DesktopDiagnostics) Snapshot(ctx context.Context, id string) (DesktopDi
 	if err := ctx.Err(); err != nil {
 		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics snapshot rejected: request_context=%s", diagnosticErrorCode(err))
 	}
+	revision, readErr := d.device.bindingRevision(ctx)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	r, ok := d.reports[id]
 	if !ok {
 		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics report not retained: id_bytes=%d; required=known report in this management session", len(id))
+	}
+	if revision != r.BindingRevision {
+		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostic binding changed: checked_revision=%d current_revision=%d; old report cannot describe the new binding", r.BindingRevision, revision)
+	}
+	if readErr != nil && revision == 0 {
+		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostic binding cannot be read: %w", readErr)
 	}
 	return copyDiagnosticReport(r), nil
 }
@@ -151,6 +163,7 @@ func (d *DesktopDiagnostics) Cancel(ctx context.Context, id string) (DesktopDiag
 	if err := ctx.Err(); err != nil {
 		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostics cancel rejected: request_context=%s", diagnosticErrorCode(err))
 	}
+	revision, readErr := d.device.bindingRevision(ctx)
 	d.mu.Lock()
 	defer d.mu.Unlock()
 	r, ok := d.reports[id]
@@ -161,6 +174,9 @@ func (d *DesktopDiagnostics) Cancel(ctx context.Context, id string) (DesktopDiag
 		d.stop()
 		d.finishLocked(id, context.Canceled)
 		r = d.reports[id]
+	}
+	if revision != r.BindingRevision || readErr != nil && revision == 0 {
+		return DesktopDiagnosticReport{}, fmt.Errorf("diagnostic cancel binding unconfirmed: checked_revision=%d current_revision=%d; old report cannot describe the current binding", r.BindingRevision, revision)
 	}
 	return copyDiagnosticReport(r), nil
 }
@@ -214,7 +230,17 @@ func newDiagnosticCheck(id, platform, status, code, at, action string, evidence 
 	return DiagnosticCheck{ID: id, Platform: p, Status: status, Code: code, ObservedAt: at, NextAction: action, Evidence: evidence}
 }
 func (d *DesktopDiagnostics) set(id, name, platform, status, code, action string, evidence map[string]string) {
+	revision, _ := d.device.bindingRevision(d.ctx)
 	d.mu.Lock()
+	old := d.reports[id]
+	if old.BindingRevision != revision {
+		if d.active == id && d.stop != nil {
+			d.stop()
+		}
+		d.finishLocked(id, context.Canceled)
+		d.mu.Unlock()
+		return
+	}
 	defer d.mu.Unlock()
 	r := d.reports[id]
 	if r.State != "running" {

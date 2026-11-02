@@ -15,6 +15,25 @@ let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
+  if(mode.startsWith('startup-')&&request.method!=='hello') {
+    const config=JSON.parse(readFileSync(process.argv[4],'utf8'));
+    const reply=result=>process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');
+    const networkRevision=config.network_revision??bootstrapRevision;
+    const runtime={...JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,revision:bootstrapRevision,network_revision:networkRevision};
+    switch(request.method){
+      case 'device_context': reply(config.corrupt?{error:{code:'DEVICE_CONTEXT_INVALID',message:'saved local configuration JSON rejected'}}:config.unbound?{error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved binding'}}:{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:config.binding_revision??1}});return;
+      case 'device_status': reply(config.rejected?{error:{code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',target_origin:'https://hive.example'}}}}:config.unbound?{device:{state:'unbound'}}:{device:{state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',owner_id:'owner'}}});return;
+      case 'runtime_snapshot':reply({runtime});return;
+      case 'runtime_verify':writeFileSync(`${process.argv[4]}.verify`,'entered');setTimeout(()=>reply(config.bad_data?{error:{code:'STARTUP_DATA_INVALID',message:'protected account schema rejected'}}:{verified:true}),config.delay??0);return;
+      case 'runtime_restore': throw new Error('startup recheck repeated runtime restore');
+      case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;reply({configured:true});return;
+      case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
+      case 'account_detect':reply({account:{platform:request.params.platform,operation:null}});return;
+      case 'account_defaults':reply({defaults:{platforms:[]}});return;
+      case 'shutdown':input.close();process.stdin.destroy();return;
+      default:reply({alive:true});return;
+    }
+  }
   if(mode==='owned-exit-bootstrap'&&['device_status','network_status'].includes(request.method)) {
     const result=request.method==='device_status'?{device:{state:'bound',hive:'https://hive.example',identity:{id:'device',owner_id:'owner'}}}:{network:{effective_revision:bootstrapRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}};
     process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');return;
@@ -28,6 +47,7 @@ input.on('line', line => {
     if(mode==='owned-exit-bootstrap'&&request.method==='runtime_configure_network') {
       bootstrapProxy=request.params.connect_proxy;bootstrapRevision=request.params.revision;
       exitSnapshot={...exitSnapshot,network_revision:bootstrapRevision,revision:exitSnapshot.revision+1};result={configured:true};
+    } else if(request.method==='runtime_verify') {result={verified:true};
     } else if(request.method==='runtime_stop') {
       if(!['app_exit','update'].includes(request.params.reason)) throw new Error('exit reason not fixed');
       const operation={id:'b'.repeat(48),kind:'stop',platform:null,state:'pending',revision:++exitSnapshot.revision,error:null};
@@ -103,8 +123,9 @@ input.on('line', line => {
   if (mode === 'timeout') return;
   if (mode === 'utf8') { process.stdout.write(Buffer.from([255, 10])); return; }
   const result = request.method === 'hello'
-    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: mode.startsWith('owned-exit')?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore']:mode==='authorize'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','authorize_start','authorize_status','authorize_cancel']:mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
+    ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: (mode.startsWith('owned-exit')||mode.startsWith('startup-'))?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore']:mode==='authorize'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','authorize_start','authorize_status','authorize_cancel']:mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
     : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
+  if(request.method==='hello'&&mode.startsWith('startup-'))result.capabilities.push('device_context','runtime_verify');
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'f'.repeat(32), result }) + '\n';
   if (mode === 'slow-device' && request.method === 'device_status') {
     setTimeout(() => process.stdout.write(reply), 800);

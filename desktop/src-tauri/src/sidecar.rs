@@ -97,7 +97,8 @@ struct StopTask {
 pub struct Bridge(pub(crate) Arc<Inner>);
 
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: code.into(),
         message: message.into(),
     }
@@ -346,7 +347,8 @@ impl Bridge {
         let params = if method == "diagnostics_start" {
             serde_json::json!({})
         } else {
-            let id = id.ok_or_else(|| BridgeError { details: None,
+            let id = id.ok_or_else(|| BridgeError {
+                details: None,
                 code: "DIAGNOSTICS_REQUEST_INVALID".into(),
                 message: "diagnostics report identifier missing".into(),
             })?;
@@ -360,7 +362,8 @@ impl Bridge {
         ]
         .contains(&method)
         {
-            return Err(BridgeError { details: None,
+            return Err(BridgeError {
+                details: None,
                 code: "DIAGNOSTICS_REQUEST_INVALID".into(),
                 message: "diagnostics method outside fixed allowlist".into(),
             });
@@ -383,7 +386,13 @@ impl Bridge {
         Ok(reply)
     }
     pub(crate) async fn notification_snapshot(&self) -> Result<BridgeReply, BridgeError> {
-        let reply=self.request("notification_snapshot",serde_json::json!({}),Duration::from_secs(15)).await?;
+        let reply = self
+            .request(
+                "notification_snapshot",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
         crate::notification_poll::validate(&reply.result)?;
         Ok(reply)
     }
@@ -492,6 +501,34 @@ impl Bridge {
         Ok(reply)
     }
 
+    pub(crate) async fn device_context(&self) -> Result<BridgeReply, BridgeError> {
+        let reply = self
+            .request(
+                "device_context",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::device_context(&reply.result)?;
+        Ok(reply)
+    }
+    pub(crate) async fn verify_local_startup(&self) -> Result<(), BridgeError> {
+        let reply = self
+            .request(
+                "runtime_verify",
+                serde_json::json!({}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::result_error(&reply.result)?;
+        if reply.result != serde_json::json!({"verified":true}) {
+            return Err(BridgeError::new(
+                "STARTUP_DATA_INVALID",
+                "runtime verification requires exactly verified=true".into(),
+            ));
+        }
+        Ok(())
+    }
     pub async fn device_status(&self) -> Result<BridgeReply, BridgeError> {
         self.request(
             "device_status",
@@ -567,8 +604,15 @@ impl Bridge {
         // S2 must read the owned device/runtime and apply its saved network before
         // S3 can ask S1 to restore. The configure method has no WebView command.
         // Keep the ordinary frozen/queued-exit checks for every one of these calls.
-        let startup_network = matches!(method,
-            "device_status" | "runtime_snapshot" | "network_status" | "runtime_configure_network");
+        let startup_network = matches!(
+            method,
+            "device_status"
+                | "device_context"
+                | "runtime_verify"
+                | "runtime_snapshot"
+                | "network_status"
+                | "runtime_configure_network"
+        );
         if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request && !startup_network {
             return Err(error("STARTUP_VERIFICATION_PENDING", "request rejected: startup package/data/runtime verification has not succeeded; contribution remains blocked"));
         }

@@ -17,22 +17,22 @@ const destinations:Record<DiagnosticPage,string>={overview:'查看概览',accoun
 const messages:Record<string,string>={pending:'等待检查',not_checked:'本次未完成此项检查',cancelled:'检查已取消',timeout:'检查超时',device_not_paired:'请先在设置中配对设备',device_binding_valid:'设备身份已核对',owned_runtime_connected:'贡献进程已连接',runtime_stopped:'贡献进程尚未运行',runtime_ownership_conflict:'检测到其他 Bee 进程',hive_identity_verified:'Hive 身份已核对',network_policy_observed:'已核对当前网络路径',network_changed:'网络配置已变化，请重新运行诊断',source_not_selected:'尚未选择此平台的账号',selected_source_read:'已读取所选官方登录',source_missing:'官方登录不存在',source_changed:'官方登录已变化，请前往账号重新检测',authorization_expired:'官方授权已失效',official_authorization_observed:'官方授权已核对',quota_available:'订阅额度可用',quota_exhausted:'订阅额度已耗尽',account_binding_verified:'账号绑定已核对',account_changed:'账号在检查期间发生变化',capabilities_synchronized:'能力已同步',taking_new_work:'可以接收新任务',supply_blocked:'当前未接收新任务',dns_failed:'域名解析失败',tls_failed:'安全连接校验失败',connection_failed:'无法连接服务',http_rejected:'服务拒绝了本次查询',rate_limited:'查询受到限流，请稍后重试'};
 const date=(value:string)=>formatDate(value,currentLocale());
 const failure=(cause:unknown)=>normalizeFailure(cause,'diagnostics_operation');
-export interface NativeDiagnosticsPageProps {client:DiagnosticsClient;onNavigate:(page:DiagnosticPage)=>void;instance:string|undefined;networkRevision:number;runId?:string|null}
-export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevision,runId}:NativeDiagnosticsPageProps){
+export interface NativeDiagnosticsPageProps {client:DiagnosticsClient;onNavigate:(page:DiagnosticPage)=>void;instance:string|undefined;networkRevision:number;runId?:string|null;bindingRevision?:number}
+export function NativeDiagnosticsPage({client,onNavigate,instance,networkRevision,runId,bindingRevision=0}:NativeDiagnosticsPageProps){
  const [activeTab,setActiveTab]=useState('checks'),[logsLoaded,setLogsLoaded]=useState(false);
  const [report,setReport]=useState<DiagnosticReport|null>(()=>client.getSnapshot());
  const [busy,setBusy]=useState<'start'|'cancel'|'export'|null>(null),[error,setError]=useState<UiFailure|null>(null),[notice,setNotice]=useState('');
  const [logs,setLogs]=useState<DiagnosticEvent[]>([]),[cursor,setCursor]=useState<string|null>(null),[truncated,setTruncated]=useState(false),[logsBusy,setLogsBusy]=useState(false),[logsError,setLogsError]=useState<UiFailure|null>(null);
  const [filters,setFilters]=useState<Pick<LogQuery,'module'|'platform'|'level'>>({module:null,platform:null,level:null});
  const [exportOpen,setExportOpen]=useState(false),[includeLogs,setIncludeLogs]=useState(false);
- const scope=`${instance}:${networkRevision}:${runId===undefined?'unset':runId??'stopped'}`;
+ const scope=`${instance}:${bindingRevision}:${networkRevision}:${runId===undefined?'unset':runId??'stopped'}`;
  const owner=useRef({client,scope}),mounted=useRef(false),logRequest=useRef(0);
  owner.current={client,scope};
  const current=()=>mounted.current&&owner.current.client===client&&owner.current.scope===scope;
- const visible=report&&report.instance===instance&&report.network_revision===networkRevision&&(runId===undefined||report.run_id===runId)?report:null;
+ const visible=report&&report.instance===instance&&report.network_revision===networkRevision&&report.binding_revision===bindingRevision&&(runId===undefined||report.run_id===runId)?report:null;
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{
-  client.setContext(networkRevision,runId);setReport(client.getSnapshot());setError(null);setNotice('');setBusy(null);setExportOpen(false);logRequest.current++;setLogs([]);setLogsLoaded(false);setCursor(null);setTruncated(false);setLogsBusy(false);setLogsError(null);
+  client.setContext(networkRevision,runId,bindingRevision);setReport(client.getSnapshot());setError(null);setNotice('');setBusy(null);setExportOpen(false);logRequest.current++;setLogs([]);setLogsLoaded(false);setCursor(null);setTruncated(false);setLogsBusy(false);setLogsError(null);
  },[client,scope,networkRevision,runId]);
  useEffect(()=>{
   if(!visible||visible.state!=='running')return;

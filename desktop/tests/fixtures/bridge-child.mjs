@@ -1,5 +1,5 @@
 import { createInterface } from 'node:readline';
-import { writeFileSync, readFileSync, appendFileSync } from 'node:fs';
+import { writeFileSync, readFileSync, appendFileSync, existsSync } from 'node:fs';
 
 const mode = process.argv[2];
 if (process.argv[3]) writeFileSync(process.argv[3], String(process.pid));
@@ -16,6 +16,20 @@ let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
+  if((mode==='parallel-reads' || mode==='owned-exit-parallel') && request.method!=='hello' && (mode==='parallel-reads'||['account_detect','account_snapshot','supply_status'].includes(request.method))) {
+    const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
+    appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');
+    const reply=()=>{
+      const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),result:{platform:request.params.platform,alive:true}})+'\n';
+      process.stdout.write(frame);
+      if(config.fault==='duplicate')process.stdout.write(frame);
+    };
+    if(request.params.platform===config.slow||config.holdBoth&&request.params.platform) {
+      const timer=setInterval(()=>{if(existsSync(`${control}.release`)){clearInterval(timer);reply();}},5);
+      input.once('close',()=>clearInterval(timer));
+    } else reply();
+    return;
+  }
   if(mode.startsWith('startup-')&&request.method!=='hello') {
     const config=JSON.parse(readFileSync(process.argv[4],'utf8'));
     appendFileSync(`${process.argv[4]}.calls`,request.method+'\n');

@@ -124,6 +124,9 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	defer r.accounts.lifecycleMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if err := r.device.recoveryWriteBarrier(); err != nil {
+		return DesktopOperation{}, err
+	}
 	if r.closed {
 		return DesktopOperation{}, fmt.Errorf("runtime owner closed; start rejected")
 	}
@@ -481,6 +484,9 @@ func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNe
 	}
 	r.accounts.lifecycleMu.Lock()
 	defer r.accounts.lifecycleMu.Unlock()
+	if err := r.device.recoveryWriteBarrier(); err != nil {
+		return err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.closed || len(r.accounts.activeActions) > 0 || r.controlDone != nil {

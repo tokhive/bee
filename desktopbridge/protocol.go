@@ -3,6 +3,7 @@ package desktopbridge
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,22 +19,24 @@ const (
 )
 
 type request struct {
-	Protocol    int
-	ID          string
-	Method      string
-	Hive        string
-	Name        string
-	Platform    string
-	Paused      bool
-	Detect      bee.DesktopAccountDetectRequest
-	Action      bee.DesktopAccountActionRequest
-	Start       bee.DesktopStartRequest
-	Stop        bee.DesktopStopRequest
-	NetworkTest bee.DesktopNetworkTestRequest
-	Network     bee.DesktopNetworkConfig
-	Authorize   bee.DesktopAuthorizeRequest
-	OperationID string
-	Refresh     bool
+	Protocol         int
+	ID               string
+	Method           string
+	Hive             string
+	Name             string
+	Platform         string
+	Paused           bool
+	Detect           bee.DesktopAccountDetectRequest
+	Action           bee.DesktopAccountActionRequest
+	Start            bee.DesktopStartRequest
+	Stop             bee.DesktopStopRequest
+	NetworkTest      bee.DesktopNetworkTestRequest
+	Network          bee.DesktopNetworkConfig
+	Authorize        bee.DesktopAuthorizeRequest
+	OperationID      string
+	RecoveryRevision int64
+	RecoveryDecision string
+	Refresh          bool
 }
 
 type protocolError struct {
@@ -271,6 +274,43 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 		}
 		if req.Method == "supply_set_paused" && !seen["paused"] {
 			return req, rejected("INVALID_REQUEST", "supply paused field is missing; required=explicit boolean")
+		}
+		return req, nil
+	}
+	if req.Method == "device_recovery_confirm" {
+		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))
+		_, _ = decoder.Token()
+		seen := map[string]bool{}
+		for decoder.More() {
+			key, _ := decoder.Token()
+			name := key.(string)
+			if seen[name] || !slices.Contains([]string{"operation_id", "expected_revision", "decision"}, name) {
+				return req, rejected("INVALID_REQUEST", "recovery confirmation fields rejected; required=unique operation_id,expected_revision,decision")
+			}
+			seen[name] = true
+			var raw json.RawMessage
+			_ = decoder.Decode(&raw)
+			switch name {
+			case "operation_id":
+				if json.Unmarshal(raw, &req.OperationID) != nil {
+					return req, rejected("INVALID_REQUEST", "recovery operation ID requires string")
+				}
+				decoded, err := hex.DecodeString(req.OperationID)
+				if err != nil || len(decoded) != 24 || hex.EncodeToString(decoded) != req.OperationID {
+					return req, rejected("INVALID_REQUEST", "recovery operation ID requires 48 lowercase hexadecimal characters")
+				}
+			case "expected_revision":
+				if json.Unmarshal(raw, &req.RecoveryRevision) != nil || bytes.Equal(raw, []byte("null")) || req.RecoveryRevision < 1 || req.RecoveryRevision >= 9007199254740991 {
+					return req, rejected("INVALID_REQUEST", "recovery revision requires positive safe integer")
+				}
+			case "decision":
+				if json.Unmarshal(raw, &req.RecoveryDecision) != nil || !slices.Contains([]string{"begin_pairing", "adopt_owner", "renew_expired"}, req.RecoveryDecision) {
+					return req, rejected("INVALID_REQUEST", "recovery decision requires begin_pairing,adopt_owner,renew_expired")
+				}
+			}
+		}
+		if len(seen) != 3 {
+			return req, rejected("INVALID_REQUEST", "recovery confirmation fields=%d required=3", len(seen))
 		}
 		return req, nil
 	}

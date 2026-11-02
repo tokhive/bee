@@ -318,3 +318,82 @@ async fn network_recovery_keeps_update_identity_data_and_owned_exit_protections(
     }
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test]
+async fn device_recovery_stays_stopped_until_explicit_recheck_and_completed_status_is_stable() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"rejected":true}));
+    startup(app.handle().clone(), bridge.clone()).await;
+    bridge.0.startup_verified.store(false, Ordering::SeqCst);
+    let result = recover_device(app.handle(), &bridge, None, true)
+        .await
+        .unwrap();
+    assert_eq!(result.result["recovery"]["phase"], "awaiting_confirmation");
+    assert_eq!(
+        app.state::<StartupGate>().snapshot().failure.unwrap().code,
+        "DEVICE_RECOVERY_RECHECK_REQUIRED"
+    );
+    std::fs::write(
+        dir.path().join("context.json"),
+        r#"{"recovery_phase":"completed","binding_revision":2}"#,
+    )
+    .unwrap();
+    recover_device(app.handle(), &bridge, None, false)
+        .await
+        .unwrap();
+    assert!(app.state::<StartupGate>().check().is_err());
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let revision = app.state::<StartupGate>().snapshot().revision;
+    recover_device(app.handle(), &bridge, None, false)
+        .await
+        .unwrap();
+    assert!(app.state::<StartupGate>().check().is_ok());
+    assert_eq!(app.state::<StartupGate>().snapshot().revision, revision);
+    assert!(!bridge.0.restored.load(Ordering::SeqCst));
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.contains("runtime_restore"));
+    assert!(!calls.contains("runtime_start"));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn device_recovery_retains_update_data_and_owned_exit_protection() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"rejected":true}));
+    wait_bridge(&bridge).await.unwrap();
+    let manager = app.state::<UpdateManager>();
+    manager.lock().unwrap().persistent.pending_update = Some(crate::updater::PendingUpdate {
+        from_version: "0.1.0".into(),
+        to_version: "0.2.0".into(),
+        channel: "stable".into(),
+        stage: "prepared".into(),
+        target_digest: "a".repeat(64),
+    });
+    assert_eq!(
+        recover_device(app.handle(), &bridge, None, true)
+            .await
+            .unwrap_err()
+            .code,
+        "UPDATE_RECOVERY_PENDING"
+    );
+    assert!(manager.has_pending().unwrap());
+    manager.lock().unwrap().persistent.pending_update = None;
+    std::fs::write(dir.path().join("context.json"), r#"{"bad_data":true}"#).unwrap();
+    assert_eq!(
+        recover_device(app.handle(), &bridge, None, true)
+            .await
+            .unwrap_err()
+            .code,
+        "STARTUP_DATA_INVALID"
+    );
+    bridge.0.frozen.store(true, Ordering::SeqCst);
+    assert_eq!(
+        recover_device(app.handle(), &bridge, None, true)
+            .await
+            .unwrap_err()
+            .code,
+        "OWNED_EXIT_PENDING"
+    );
+    bridge.0.frozen.store(false, Ordering::SeqCst);
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.contains("device_recovery_prepare"));
+    bridge.stop().await.unwrap();
+}

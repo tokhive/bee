@@ -58,6 +58,9 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection, allowConfirm bool) bool {
 	a.lifecycleMu.Lock()
 	defer a.lifecycleMu.Unlock()
+	if a.device != nil && a.device.recoveryWriteBarrier() != nil {
+		return false
+	}
 	if a.closed {
 		return false
 	}

@@ -738,3 +738,53 @@ async fn authorize_native_commands_bind_operation_and_keep_shell_private() {
     }
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test]
+async fn device_recovery_methods_keep_fixed_contract_and_startup_hold_exit_boundaries() {
+    let dir = tempfile::tempdir().unwrap();
+    let marker = dir.path().join("recovery.json");
+    std::fs::write(&marker, "{}").unwrap();
+    let mut spec = fixture("startup-recovery");
+    spec.args
+        .extend(["".into(), marker.to_string_lossy().to_string()]);
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    bridge.0.startup_verified.store(false, Ordering::SeqCst);
+    assert_eq!(
+        bridge.device_recovery_prepare().await.unwrap().result["recovery"]["phase"],
+        "awaiting_confirmation"
+    );
+    let request = protocol::DeviceRecoveryConfirm {
+        operation_id: "a".repeat(48),
+        expected_revision: 1,
+        decision: "begin_pairing".into(),
+    };
+    bridge.device_recovery_confirm(request).await.unwrap();
+    bridge.device_recovery_status().await.unwrap();
+    let invalid = protocol::DeviceRecoveryConfirm {
+        operation_id: "a".repeat(48),
+        expected_revision: 0,
+        decision: "begin_pairing".into(),
+    };
+    assert_eq!(
+        bridge
+            .device_recovery_confirm(invalid)
+            .await
+            .unwrap_err()
+            .code,
+        "DEVICE_RECOVERY_REQUEST_INVALID"
+    );
+    bridge.0.frozen.store(true, Ordering::SeqCst);
+    assert_eq!(
+        bridge.device_recovery_prepare().await.unwrap_err().code,
+        "OWNED_EXIT_PENDING"
+    );
+    bridge.0.frozen.store(false, Ordering::SeqCst);
+    std::fs::write(marker, r#"{"recovery_extra":true}"#).unwrap();
+    assert_eq!(
+        bridge.device_recovery_status().await.unwrap_err().code,
+        "DEVICE_RECOVERY_INVALID"
+    );
+    bridge.stop().await.unwrap();
+    assert!(bridge.device_recovery_status().await.is_err());
+}

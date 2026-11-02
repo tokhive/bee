@@ -32,6 +32,11 @@ func (d *DesktopDevice) SupplyStatus(ctx context.Context, platform string) (Desk
 }
 
 func (d *DesktopDevice) SetPaused(ctx context.Context, platform string, paused bool) (DesktopSupply, error) {
+	end, err := d.beginDeviceWrite(ctx)
+	if err != nil {
+		return DesktopSupply{}, err
+	}
+	defer end()
 	if d.runtime != nil {
 		live, release, err := d.runtime.supplyBarrier(ctx, platform, paused)
 		if err != nil {

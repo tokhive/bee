@@ -13,7 +13,7 @@ import {decodeRuntimeSnapshot} from '../src/system/runtime.ts';
 import {decodeDiagnosticReport} from '../src/system/diagnostics.ts';
 import {decodeNetworkSnapshot} from '../src/system/network.ts';
 
-const capabilities=['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore','authorize_start','authorize_status','authorize_cancel','diagnostics_start','diagnostics_snapshot','diagnostics_cancel','network_status','network_test','notification_snapshot','device_context','runtime_verify'];
+const capabilities=['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore','authorize_start','authorize_status','authorize_cancel','diagnostics_start','diagnostics_snapshot','diagnostics_cancel','network_status','network_test','notification_snapshot','device_context','runtime_verify','device_recovery_prepare','device_recovery_confirm','device_recovery_status'];
 const [binary,evidenceArgument,...extra]=process.argv.slice(2);
 if(!binary||!isAbsolute(binary)||extra.length)throw new Error(`smoke arguments rejected: binary_absolute=${!!binary&&isAbsolute(binary)} extra_count=${extra.length}; required=<absolute Bee binary> [evidence directory]`);
 const temporary=mkdtempSync(join(tmpdir(),'bee-experience-smoke-'));
@@ -87,7 +87,7 @@ async function awaitClosed(){
 let failure;
 try{
  const hello=await success('hello');instance=hello.instance;
- assert.deepEqual(hello.result.capabilities,capabilities,'current Bee must declare all 26 ordered capabilities');
+ assert.deepEqual(hello.result.capabilities,capabilities,'current Bee must declare all 29 ordered capabilities');
  report.metadata=hello.result;report.checks.push({check:'complete capabilities and owned instance',outcome:'pass'});
  const defaults=decodeAccountDefaults(await success('account_defaults'),instance);
  assert.deepEqual(defaults.platforms.map(value=>value.platform),['openai','claude']);

@@ -1,11 +1,12 @@
+import type {UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
 import {failure} from '../supply/useSupply';
 
-export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:string;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:string;busy:boolean}}
+export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;busy:boolean}}
 export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordinated?:CoordinatedRuntime){
- const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState(''),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
+ const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
  const [settled,setSettled]=useState(0);
  const active=useRef(true),writing=useRef(false),reading=useRef<Promise<boolean>|undefined>(undefined),latest=useRef<RuntimeSnapshot|undefined>(undefined),verified=useRef(false);
  const external=!!coordinated,refreshCentral=coordinated?.refresh,view=external?coordinated?.view:localView;
@@ -16,7 +17,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   const next=central.current?.snapshot?.()??central.current;
   if(!next?.view||next.error){verified.current=false;return false;}
   latest.current=next.view;verified.current=true;
-  if(!resolution.current||next.view!==resolution.current.previous){resolution.current=undefined;setError('');setUncertain(false);}
+  if(!resolution.current||next.view!==resolution.current.previous){resolution.current=undefined;setError(null);setUncertain(false);}
   return true;
  },[]);
  useEffect(()=>{if(external&&!busy)observe();},[external,view,busy,coordinated?.error,observe]);
@@ -27,8 +28,8 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   const request=(async()=>{
    try{
     if(refreshCentral){await refreshCentral();return active.current&&central.current?.generation?.()===started?observe():false;}
-    const next=await client.snapshot();if(active.current){latest.current=next;verified.current=true;setView(next);setError('');setUncertain(false);return true;}return false;
-   }catch(cause){if(active.current&&central.current?.generation?.()===started){verified.current=false;setError(failure(cause));}return false;}
+    const next=await client.snapshot();if(active.current){latest.current=next;verified.current=true;setView(next);setError(null);setUncertain(false);return true;}return false;
+   }catch(cause){if(active.current&&central.current?.generation?.()===started){verified.current=false;setError(failure(cause,'runtime_operation'));}return false;}
   })().finally(()=>{if(reading.current===request)reading.current=undefined;if(active.current){setRefreshing(false);setSettled(v=>v+1);}});
   reading.current=request;return request;
  },[client,refreshCentral,observe]);
@@ -56,8 +57,8 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
     resolution.current={previous:next};setUncertain(true);
     if(central.current?.snapshot?.().busy)await refreshCentral();
     if(!current())return;await refreshCentral();if(current())observe();
-   }else{const observed=await client.snapshot();if(current()){latest.current=observed;verified.current=true;setView(observed);setError('');}}
-  }catch(cause){if(current()){verified.current=false;resolution.current={previous:latest.current};central.current?.pause?.();setError(failure(cause));setUncertain(true);}}
+   }else{const observed=await client.snapshot();if(current()){latest.current=observed;verified.current=true;setView(observed);setError(null);}}
+  }catch(cause){if(current()){verified.current=false;resolution.current={previous:latest.current};central.current?.pause?.();setError(failure(cause,'runtime_operation'));setUncertain(true);}}
   finally{writing.current=false;if(active.current)setBusy(false);}
  };
  return {view,error,stalled:!!coordinated?.error,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,

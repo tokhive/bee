@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	bee "github.com/tokhive/bee/agent"
 	"io"
@@ -36,14 +37,67 @@ type request struct {
 }
 
 type protocolError struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    string                     `json:"code"`
+	Message string                     `json:"message"`
+	Details *bee.DesktopFailureDetails `json:"details,omitempty"`
 }
 
 func (e *protocolError) Error() string { return e.Code + ": " + e.Message }
 
+func (e *protocolError) UnmarshalJSON(raw []byte) error {
+	decoder := json.NewDecoder(bytes.NewReader(raw))
+	token, err := decoder.Token()
+	if err != nil || token != json.Delim('{') {
+		return errors.New("failure object rejected; required=object")
+	}
+	fields := map[string]json.RawMessage{}
+	for decoder.More() {
+		token, err = decoder.Token()
+		if err != nil {
+			return err
+		}
+		key, ok := token.(string)
+		if !ok || !slices.Contains([]string{"code", "message", "details"}, key) || fields[key] != nil {
+			return errors.New("failure fields rejected; required=unique code,message and optional details")
+		}
+		var value json.RawMessage
+		if err = decoder.Decode(&value); err != nil {
+			return err
+		}
+		fields[key] = value
+	}
+	if _, err = decoder.Token(); err != nil {
+		return err
+	}
+	if _, err = decoder.Token(); err != io.EOF {
+		return errors.New("failure trailing JSON rejected; required=one object")
+	}
+	var value protocolError
+	if fields["code"] == nil || json.Unmarshal(fields["code"], &value.Code) != nil || value.Code == "" || fields["message"] == nil || json.Unmarshal(fields["message"], &value.Message) != nil || value.Message == "" {
+		return errors.New("failure code/message rejected; required=nonempty strings")
+	}
+	if details, exists := fields["details"]; exists {
+		if bytes.Equal(bytes.TrimSpace(details), []byte("null")) {
+			return errors.New("failure details is null; required=object when present")
+		}
+		if err := json.Unmarshal(details, &value.Details); err != nil {
+			return err
+		}
+	}
+	*e = value
+	return nil
+}
+
 func rejected(code, format string, args ...any) *protocolError {
 	return &protocolError{Code: code, Message: fmt.Sprintf(format, args...)}
+}
+
+func operationFailure(code string, cause error) *protocolError {
+	var failure *bee.DesktopFailure
+	if errors.As(cause, &failure) {
+		return &protocolError{Code: failure.Code, Message: cause.Error(), Details: failure.Details}
+	}
+	return rejected(code, "%s", cause)
 }
 
 type reply struct {

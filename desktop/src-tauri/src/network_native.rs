@@ -73,7 +73,7 @@ impl NetworkRuntime for BridgeNetworkRuntime<'_> {
 }
 
 fn failure(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }

@@ -1,8 +1,9 @@
+import {decodeBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 
 export interface ProxyPreference {origin:string;device_scope:string|null;connect_proxy:string}
 export interface DesktopPreferences {version:1;revision:number;language:'system'|'zh'|'en';theme:'system'|'light'|'dark';notifications_enabled:boolean;autostart_desired:boolean;proxies:ProxyPreference[]}
-export interface PreferenceError {code:string;message:string}
+export type PreferenceError = import('./bridge').BridgeError;
 export interface PreferencesSnapshot {preferences:DesktopPreferences;error:PreferenceError|null}
 export interface PreferencesClient {read():Promise<PreferencesSnapshot>;save(expected:number,preferences:DesktopPreferences):Promise<PreferencesSnapshot>}
 export function defaultPreferences():DesktopPreferences {return {version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};}
@@ -44,7 +45,7 @@ export function decodePreferences(value:unknown):PreferencesSnapshot {
   if(typeof proxy.connect_proxy!=='string')invalid('proxy requires string');validateProxy(proxy.connect_proxy);
   const key=JSON.stringify([proxy.origin,proxy.device_scope]);if(scopes.has(key))invalid('duplicate origin/device scope');scopes.add(key);
  }
- if(snapshot.error!==null){const error=object(snapshot.error,['code','message'],'error');if(typeof error.code!=='string'||!/^PREFERENCES_[A-Z_]+$/.test(error.code)||typeof error.message!=='string'||error.message.length>1024)invalid('error requires bounded public code and message');}
+ if(snapshot.error!==null){const error=decodeBridgeError(snapshot.error,'PREFERENCES_INVALID');if(!/^PREFERENCES_[A-Z_]+$/.test(error.code)||error.message.length>1024)invalid('error requires bounded public preference code and message');}
  return value as PreferencesSnapshot;
 }
 export function createPreferencesClient(invoke:DeviceInvoke):PreferencesClient {

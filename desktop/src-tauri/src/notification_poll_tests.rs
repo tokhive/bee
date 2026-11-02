@@ -188,7 +188,7 @@ fn preferences_failure_blocks_delivery_but_still_applies_explicit_recovery() {
     let mut input = value();
     input["notifications"]["facts"][0]["recovered"] = json!(true);
     let mut saved = prefs(true);
-    saved.error = Some(BridgeError {
+    saved.error = Some(BridgeError { details: None,
         code: "PREFERENCES_SCHEMA".into(),
         message: "saved preferences schema failed".into(),
     });
@@ -218,7 +218,7 @@ fn background_delivery_errors_are_retained_and_later_polls_continue() {
         Ok(vec![DeliveryOutcome {
             identity: "a".repeat(64),
             state: DeliveryState::Failed,
-            error: Some(BridgeError {
+            error: Some(BridgeError { details: None,
                 code: "NOTIFICATION_SUBMISSION_FAILED".into(),
                 message: "native submit HRESULT=5".into(),
             }),

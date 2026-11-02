@@ -28,7 +28,7 @@ impl StartupGate {
         if self.ready.load(Ordering::Acquire) {
             Ok(())
         } else {
-            Err(self.error.lock().ok().and_then(|v|v.clone()).unwrap_or(BridgeError{code:"NETWORK_STARTUP_PENDING".into(),message:"saved network configuration has not been verified for this management instance; retry after startup completes".into()}))
+            Err(self.error.lock().ok().and_then(|v|v.clone()).unwrap_or(BridgeError{ details: None,code:"NETWORK_STARTUP_PENDING".into(),message:"saved network configuration has not been verified for this management instance; retry after startup completes".into()}))
         }
     }
     pub fn status(&self, mut status: BridgeStatus) -> BridgeStatus {
@@ -65,12 +65,12 @@ async fn initialize(app: &tauri::AppHandle, bridge: &Bridge) -> Result<(), Bridg
         let phase = statuses.borrow_and_update().state.clone();
         match phase {
             BridgePhase::Ready => break,
-            BridgePhase::Starting => statuses.changed().await.map_err(|_| BridgeError {
+            BridgePhase::Starting => statuses.changed().await.map_err(|_| BridgeError { details: None,
                 code: "NETWORK_STARTUP_FAILED".into(),
                 message: "management status channel closed before network bootstrap".into(),
             })?,
             _ => {
-                return Err(BridgeError {
+                return Err(BridgeError { details: None,
                     code: "NETWORK_STARTUP_FAILED".into(),
                     message: format!("saved network bootstrap rejected: bridge={phase:?}"),
                 })

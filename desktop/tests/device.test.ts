@@ -12,6 +12,13 @@ test('device replies only expose validated public binding data', () => {
 test('business rejection preserves operation evidence', () => {
  assert.throws(()=>decodeDeviceReply({result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET /api/bee/identity HTTP 503'}}}),/HTTP 503/);
 });
+test('device rejection retains structured failure before binding validation',()=>{
+ const error={code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{target_origin:'https://hive.example',path:'/api/bee/identity',http_status:'401',remote_code:'device_replaced'}}};
+ assert.throws(()=>decodeDeviceReply({result:{error}}),cause=>{assert.equal((cause as any).code,error.code);assert.equal((cause as any).message,error.message);assert.deepEqual((cause as any).details,error.details);return true;});
+});
+test('device error details reject unknown fields and invalid observations',()=>{
+ for(const details of [{check:'device_identity',observed_at:'2026-02-30T00:00:00Z',evidence:{}},{check:'device_identity',observed_at:new Date().toISOString(),evidence:{credential:'SECRET'}},{check:'device_identity',observed_at:new Date().toISOString(),evidence:{},extra:true}])assert.throws(()=>decodeDeviceReply({result:{error:{code:'http_rejected',message:'HTTP 503',details}}}),/DEVICE_REPLY_INVALID/);
+});
 test('native device client uses fixed commands and no frontend config path', async () => {
  const calls:unknown[]=[];
  const client=createDeviceClient(async (command,args)=>{calls.push([command,args]);return {result:{device:{state:'unbound'}}};});

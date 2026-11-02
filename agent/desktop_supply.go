@@ -116,11 +116,20 @@ func (d *DesktopDevice) operateSupply(ctx context.Context, platform string, paus
 	return DesktopSupply{Hive: state.Hive, DeviceID: identity.ID, Platform: result.Platform, Paused: result.Paused, Ready: result.Ready, Reasons: result.Reasons, CheckedAt: time.Now().UTC().Format(time.RFC3339)}, nil
 }
 
-func desktopSupplyCall(ctx context.Context, state localState, platform string, paused *bool) (beewire.PlatformSupply, error) {
+func desktopSupplyCall(ctx context.Context, state localState, platform string, paused *bool) (result beewire.PlatformSupply, failure error) {
 	method := http.MethodGet
 	path := "/api/bee/platforms/" + platform + "?reason_detail=1"
 	var body io.Reader
+	check := "supply_read"
+	var status int
+	var responseBody []byte
+	defer func() {
+		if failure != nil {
+			failure = desktopRequestFailure(state, path, check, failure, status, responseBody)
+		}
+	}()
 	if paused != nil {
+		check = "supply_write"
 		method = http.MethodPut
 		data, _ := json.Marshal(struct {
 			Paused bool `json:"paused"`
@@ -142,23 +151,25 @@ func desktopSupplyCall(ctx context.Context, state localState, platform string, p
 		return beewire.PlatformSupply{}, fmt.Errorf("%s %s transport failed: %w", method, path, err)
 	}
 	defer response.Body.Close()
+	status = response.StatusCode
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
 	if err != nil {
 		return beewire.PlatformSupply{}, fmt.Errorf("read %s %s HTTP %d: %w", method, path, response.StatusCode, err)
 	}
 	if len(data) > 65536 {
-		return beewire.PlatformSupply{}, fmt.Errorf("%s %s HTTP %d: response bytes exceed 65536", method, path, response.StatusCode)
+		return beewire.PlatformSupply{}, fmt.Errorf("%s %s HTTP %d: response bytes=%d exceed maximum=65536; body omitted", method, path, response.StatusCode, len(data))
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		responseBody = data
 		var failure struct {
 			Error struct {
 				Code string `json:"code"`
 			} `json:"error"`
 		}
 		decodeErr := json.Unmarshal(data, &failure)
-		return beewire.PlatformSupply{}, fmt.Errorf("%s %s: HTTP %d, code=%q, error_json_valid=%t", method, path, response.StatusCode, safeCode(failure.Error.Code), decodeErr == nil)
+		return beewire.PlatformSupply{}, fmt.Errorf("%s %s: HTTP %d, code=%q, error_json_valid=%t: %w", method, path, response.StatusCode, safeCode(failure.Error.Code), decodeErr == nil, &apiFailure{Status: response.StatusCode, Code: safeCode(failure.Error.Code)})
 	}
-	result, err := decodeDesktopSupply(data, platform)
+	result, err = decodeDesktopSupply(data, platform)
 	if err != nil {
 		return beewire.PlatformSupply{}, fmt.Errorf("%s %s HTTP %d: %w", method, path, response.StatusCode, err)
 	}

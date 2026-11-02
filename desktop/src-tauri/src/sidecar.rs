@@ -97,7 +97,7 @@ struct StopTask {
 pub struct Bridge(pub(crate) Arc<Inner>);
 
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }
@@ -346,7 +346,7 @@ impl Bridge {
         let params = if method == "diagnostics_start" {
             serde_json::json!({})
         } else {
-            let id = id.ok_or_else(|| BridgeError {
+            let id = id.ok_or_else(|| BridgeError { details: None,
                 code: "DIAGNOSTICS_REQUEST_INVALID".into(),
                 message: "diagnostics report identifier missing".into(),
             })?;
@@ -360,7 +360,7 @@ impl Bridge {
         ]
         .contains(&method)
         {
-            return Err(BridgeError {
+            return Err(BridgeError { details: None,
                 code: "DIAGNOSTICS_REQUEST_INVALID".into(),
                 message: "diagnostics method outside fixed allowlist".into(),
             });

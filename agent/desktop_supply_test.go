@@ -171,7 +171,7 @@ func TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest(t *testing.
 				switch check {
 				case "revoked":
 					w.WriteHeader(401)
-					w.Write([]byte(`{"error":{"code":"device_replaced","message":"secret-marker"}}`))
+					w.Write([]byte(`{"error":{"code":"device_replaced","message":"maintenance; token=secret-marker"}}`))
 					return
 				case "device_changed":
 					identity.ID = "other-device"
@@ -407,7 +407,7 @@ func TestDesktopSupplyUnconfirmedWritesNeverReplay(t *testing.T) {
 						return
 					case "put_http_error":
 						w.WriteHeader(503)
-						w.Write([]byte(`{"error":{"code":"unavailable","message":"secret-marker"}}`))
+						w.Write([]byte(`{"error":{"code":"unavailable","message":"maintenance; token=secret-marker"}}`))
 						return
 					case "put_wrong_target":
 						w.Write([]byte(`{"platform":"openai","paused":false,"ready":true,"reasons":[]}`))

@@ -275,7 +275,25 @@ func safeCode(code string) string {
 		return "unrecognized_code"
 	}
 }
-func desktopCall(ctx context.Context, state localState, path, method, secret string, input, output any) error {
+func desktopCall(ctx context.Context, state localState, path, method, secret string, input, output any) (failure error) {
+	check := "device_identity"
+	switch path {
+	case "/api/bee/pairings":
+		if method == http.MethodPost {
+			check = "pairing_create"
+		} else {
+			check = "pairing_status"
+		}
+	case "/api/bee/pairings/redeem":
+		check = "pairing_redeem"
+	}
+	var status int
+	var responseBody []byte
+	defer func() {
+		if failure != nil {
+			failure = desktopRequestFailure(state, path, check, failure, status, responseBody, secret)
+		}
+	}()
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
@@ -299,14 +317,16 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 		return fmt.Errorf("%s %s at %s: %w", method, path, state.Hive, err)
 	}
 	defer response.Body.Close()
+	status = response.StatusCode
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
 	if err != nil {
 		return fmt.Errorf("read %s %s HTTP %d: %w", method, path, response.StatusCode, err)
 	}
 	if len(data) > 65536 {
-		return fmt.Errorf("%s %s HTTP %d: response bytes exceed 65536", method, path, response.StatusCode)
+		return fmt.Errorf("%s %s HTTP %d: response bytes=%d exceed maximum=65536; body omitted", method, path, response.StatusCode, len(data))
 	}
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		responseBody = data
 		var result struct {
 			Error struct {
 				Code string `json:"code"`

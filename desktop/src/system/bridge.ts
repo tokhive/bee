@@ -1,4 +1,5 @@
-export interface BridgeError { code: string; message: string }
+import type {FailureDetails} from './failures';
+export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
   state: 'starting' | 'ready' | 'failed' | 'stopped';
   metadata?: { bee_version: string; os: string; arch: string; instance: string };

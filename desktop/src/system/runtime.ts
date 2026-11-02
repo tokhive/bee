@@ -1,3 +1,4 @@
+import {decodeBridgeError,throwBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {AccountError,AccountPlatform,AccountSnapshot} from './accounts';
 import {decodeAccountReply,decodeAccountError} from './accounts.ts';
@@ -73,7 +74,7 @@ function operation(value:unknown):RuntimeOperation{
 function result(reply:unknown,instance:string,key:string):unknown{
  if(!reply||typeof reply!=='object'||(reply as {instance?:unknown}).instance!==instance)invalid('reply.instance differs from current child');
  const result=(reply as {result:unknown}).result;
- if(result&&typeof result==='object'&&'error'in result){const r=object(result,['error'],'result');const e=object(r.error,['code','message'],'error');if(e.code!=='RUNTIME_OPERATION_FAILED'||typeof e.message!=='string')invalid('runtime error envelope rejected');throw new Error(`${e.code}: ${e.message}`);}
+ if(result&&typeof result==='object'&&'error'in result){const r=object(result,['error'],'result');const e=decodeBridgeError(r.error,'RUNTIME_REPLY_INVALID');if(e.code!=='RUNTIME_OPERATION_FAILED')invalid('runtime error code rejected');throwBridgeError(e,'RUNTIME_REPLY_INVALID');}
  return object(result,[key],'result')[key];
 }
 export function decodeRuntimeOperation(reply:unknown,instance:string):RuntimeOperation{return operation(result(reply,instance,'operation'));}

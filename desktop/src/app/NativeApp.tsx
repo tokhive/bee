@@ -1,3 +1,6 @@
+import {FailureNotice} from '../components/ProblemNotice';
+import {normalizeFailure,type UiFailure} from '../system/failures';
+import type {NavigationTarget} from './navigation';
 import {NativeUpdateControls} from '../features/settings/NativeUpdateControls';
 import type {UpdateClient} from '../system/updater';
 import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
@@ -30,22 +33,22 @@ interface NativeProps {
  diagnosticsFactory:(instance:string|undefined,networkRevision:number,runId?:string|null)=>DiagnosticsClient;
  openHive:()=>Promise<unknown>;
 }
-const failure=(cause:unknown):string=>cause instanceof Error?cause.message:typeof cause==='object'&&cause!==null&&'message'in cause?`${'code'in cause?String(cause.code)+': ':''}${String(cause.message)}`:String(cause);
+const failure=(cause:unknown)=>normalizeFailure(cause,'device_status');
 function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'openai'|'claude',string>>={}){
  return Object.fromEntries((['openai','claude'] as const).map(p=>{
   const account=snapshot.accounts[p],runtime=snapshot.runtime;
   return [p,JSON.stringify([runtime?.local,runtime?.run_id,runtime?.platforms[p].selection_revision,!!snapshot.error,account?.selection.state,account?.selection.fingerprint,account?.hive.state,account?.hive.fingerprint,account?.hive.generation,!!snapshot.accountErrors[p],local[p]])];
  }));
 }
-const initial:DesktopSnapshot={native:{state:'starting'},deviceError:'',accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:'',busy:false};
+const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false};
 function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void}){
  const {native,device:view}=snapshot;
- const [busy,setBusy]=useState(false),[error,setError]=useState('');const working=useRef(false),mounted=useRef(true);
+ const [busy,setBusy]=useState(false),[error,setError]=useState<UiFailure|null>(null);const working=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  const refresh=useCallback(()=>model?.refresh()??Promise.resolve(),[model]);
  const pause=useCallback(()=>model?.pause(),[model]);
  const run=async(action?:()=>Promise<DeviceView|unknown>)=>{
-  if(working.current)return;working.current=true;setBusy(true);setError('');
+  if(working.current)return;working.current=true;setBusy(true);setError(null);
   const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;
   try{
    const binding=(value:DeviceView|undefined)=>JSON.stringify([value?.state,value?.hive,value?.user_code,value?.identity?.id]);
@@ -75,11 +78,12 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
  const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error,Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error,busy:snapshot.busy,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id),[props.diagnosticsFactory,instance]);
  const ready=native.state==='ready';
+ const navigate=(target:NavigationTarget)=>setPage(target.page);
  return <AppShell page={page} onNavigate={setPage} demo={false} deviceMode deviceName={!snapshot.deviceError?view?.identity?.name:undefined} hive={view?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!view?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
-  {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>{native.error?`${native.error.code}: ${native.error.message}`:t('正在读取 Bee…')}</StatusView>}
-  {error&&page!=='overview'&&<p role="alert">{error}</p>}
-  {ready&&page==='overview'&&<NativeOverviewPage accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||!view&&snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run()} open={()=>void run(()=>props.client.open())}/>}
-  {ready&&page==='accounts'&&<NativeAccountsPage runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
+  {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')}>{native.error?<FailureNotice failure={native.error} check="bridge_startup" onNavigate={navigate}/>:t('正在读取 Bee…')}</StatusView>}
+  {error&&page!=='overview'&&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
+  {ready&&page==='overview'&&<NativeOverviewPage onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} busy={busy||!view&&snapshot.busy} error={error||snapshot.deviceError} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run()} open={()=>void run(()=>props.client.open())}/>}
+  {ready&&page==='accounts'&&<NativeAccountsPage onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||snapshot.deviceError}/>}
   {page==='diagnostics'&&<><NativeDiagnosticsPage client={diagnostics} onNavigate={setPage} instance={instance} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('核对诊断')}</summary><pre>{JSON.stringify({runtime:runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
   {page==='settings'&&<NativeSettingsPage updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}
  </AppShell>;
@@ -90,7 +94,7 @@ export function NativeApp(props:NativeProps){
  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
  const acceptPreferences=useCallback((value:PreferencesSnapshot)=>setPreferences(previous=>value.preferences.revision>=previous.preferences.revision?value:previous),[]);
  useLanguage(preferences.preferences.language);
- useEffect(()=>{let active=true;const revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active)acceptPreferences(v);},cause=>{if(active)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:{code:'PREFERENCES_READ_FAILED',message:failure(cause)}});});return()=>{active=false;};},[props.preferencesClient,acceptPreferences]);
+ useEffect(()=>{let active=true;const revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active)acceptPreferences(v);},cause=>{if(active)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:normalizeFailure(cause,'preferences_read')});});return()=>{active=false;};},[props.preferencesClient,acceptPreferences]);
  useEffect(()=>{
   const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
   apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);

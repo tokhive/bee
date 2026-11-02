@@ -109,18 +109,281 @@ impl AccountActionRequest {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
-#[serde(deny_unknown_fields)]
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct FailureDetails {
+    pub check: String,
+    pub observed_at: String,
+    pub evidence: std::collections::BTreeMap<String, String>,
+}
+fn public_identifier(value: &str, max: usize) -> bool {
+    !value.is_empty()
+        && value.len() <= max
+        && value.as_bytes()[0].is_ascii_lowercase()
+        && value
+            .bytes()
+            .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+}
+fn safe_failure_text(value: &str) -> bool {
+    if value
+        .chars()
+        .any(|c| c.is_control() && !"\n\r\t".contains(c))
+    {
+        return false;
+    }
+    let lower = value.to_ascii_lowercase();
+    for prefix in [
+        "bearer ",
+        "authorization",
+        "credential",
+        "token",
+        "secret",
+        "password",
+        "api_key",
+        "api-key",
+    ] {
+        let mut rest = lower.as_str();
+        while let Some((before, tail)) = rest.split_once(prefix) {
+            let boundary = before
+                .chars()
+                .last()
+                .is_none_or(|c| !c.is_ascii_alphanumeric() && c != '_');
+            let tail = tail.trim_start_matches(['\"', '\'']).trim_start();
+            let assigned = if prefix == "bearer " {
+                Some(tail)
+            } else {
+                tail.strip_prefix(':').or_else(|| tail.strip_prefix('='))
+            };
+            if boundary
+                && assigned.is_some_and(|v| {
+                    !v.trim_start()
+                        .trim_start_matches(['\"', '\''])
+                        .starts_with("[redacted]")
+                })
+            {
+                return false;
+            }
+            if tail.is_empty() {
+                break;
+            }
+            rest = tail;
+        }
+    }
+    for prefix in ["bee_", "beep_", "sk-"] {
+        if lower.split(prefix).skip(1).any(|tail| {
+            tail.bytes()
+                .take_while(|b| b.is_ascii_alphanumeric() || b"_-".contains(b))
+                .count()
+                >= 8
+        }) {
+            return false;
+        }
+    }
+    for word in value.split(|c: char| c.is_whitespace() || "<>\"'".contains(c)) {
+        if [
+            "http://",
+            "https://",
+            "ws://",
+            "wss://",
+            "socks5://",
+            "socks5h://",
+        ]
+        .iter()
+        .any(|s| word.to_ascii_lowercase().starts_with(s))
+        {
+            if word.contains('?')
+                || word.contains('#')
+                || tauri::Url::parse(word)
+                    .is_ok_and(|u| !u.username().is_empty() || u.password().is_some())
+            {
+                return false;
+            }
+        }
+    }
+    true
+}
+fn failure_origin(value: &str) -> bool {
+    let authority = value
+        .strip_prefix("https://")
+        .or_else(|| value.strip_prefix("http://"));
+    let shape = authority.is_some_and(|a| {
+        !a.is_empty() && !a.chars().any(|c| c.is_whitespace() || "/?#@\\".contains(c))
+    });
+    let host = authority
+        .map(|a| {
+            if a.starts_with('[') {
+                a.split_once(']').map_or(a, |(h, _)| &h[1..])
+            } else {
+                a.split_once(':').map_or(a, |(h, _)| h)
+            }
+        })
+        .unwrap_or("");
+    let local=host=="localhost"||host.parse::<std::net::IpAddr>().is_ok_and(|ip|ip.is_loopback()||matches!(ip,std::net::IpAddr::V6(v) if v.to_ipv4_mapped().is_some_and(|v|v.is_loopback())));
+    shape
+        && tauri::Url::parse(value).is_ok_and(|u| {
+            u.username().is_empty()
+                && u.password().is_none()
+                && u.query().is_none()
+                && u.fragment().is_none()
+                && (u.scheme() == "https" || u.scheme() == "http" && local)
+        })
+}
+impl FailureDetails {
+    pub fn validate(&self) -> Result<(), String> {
+        let observed = time::OffsetDateTime::parse(
+            &self.observed_at,
+            &time::format_description::well_known::Rfc3339,
+        );
+        if !public_identifier(&self.check, 80)
+            || !crate::runtime_protocol::timestamp(&self.observed_at)
+            || observed.is_err()
+            || observed
+                .is_ok_and(|v| v > time::OffsetDateTime::now_utc() + time::Duration::seconds(5))
+        {
+            return Err("failure details require bounded check and valid UTC observation no later than now+5s".into());
+        }
+        for (key, value) in &self.evidence {
+            if value.len() > 32768 || !safe_failure_text(value) {
+                return Err(format!("failure evidence rejected: key={key} bytes={}; required=safe text at most 32768 bytes",value.len()));
+            }
+            let valid = match key.as_str() {
+                "target_origin" => failure_origin(value),
+                "path" => {
+                    value.starts_with("/api/bee/")
+                        && value.len() > 9
+                        && value.bytes().all(|b| {
+                            b.is_ascii_lowercase() || b.is_ascii_digit() || b"/_-".contains(&b)
+                        })
+                }
+                "http_status" => {
+                    value.len() == 3 && value.parse::<u16>().is_ok_and(|n| (100..=599).contains(&n))
+                }
+                "remote_code" => public_identifier(value, 128),
+                "source_type" => public_identifier(value, 80),
+                "response_body" | "actual" | "required" => true,
+                _ => false,
+            };
+            if !valid {
+                return Err(format!("failure evidence key/value rejected: key={key}; required=fixed safe public field"));
+            }
+        }
+        Ok(())
+    }
+}
+impl<'de> Deserialize<'de> for FailureDetails {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            check: String,
+            observed_at: String,
+            #[serde(deserialize_with = "failure_evidence")]
+            evidence: std::collections::BTreeMap<String, String>,
+        }
+        let v = Wire::deserialize(d)?;
+        let result = Self {
+            check: v.check,
+            observed_at: v.observed_at,
+            evidence: v.evidence,
+        };
+        result.validate().map_err(serde::de::Error::custom)?;
+        Ok(result)
+    }
+}
+fn failure_evidence<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<std::collections::BTreeMap<String, String>, D::Error> {
+    struct Fields;
+    impl<'de> serde::de::Visitor<'de> for Fields {
+        type Value = std::collections::BTreeMap<String, String>;
+        fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            f.write_str("unique safe evidence fields")
+        }
+        fn visit_map<A: serde::de::MapAccess<'de>>(
+            self,
+            mut map: A,
+        ) -> Result<Self::Value, A::Error> {
+            let mut fields = std::collections::BTreeMap::new();
+            while let Some((key, value)) = map.next_entry::<String, String>()? {
+                if fields.insert(key, value).is_some() {
+                    return Err(serde::de::Error::custom(
+                        "failure evidence duplicate field rejected",
+                    ));
+                }
+            }
+            Ok(fields)
+        }
+    }
+    d.deserialize_map(Fields)
+}
+fn failure_details<'de, D: serde::Deserializer<'de>>(
+    d: D,
+) -> Result<Option<FailureDetails>, D::Error> {
+    FailureDetails::deserialize(d).map(Some)
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
 pub struct BridgeError {
     pub code: String,
     pub message: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub details: Option<FailureDetails>,
+}
+
+impl<'de> Deserialize<'de> for BridgeError {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Wire {
+            code: String,
+            message: String,
+            #[serde(default, deserialize_with = "failure_details")]
+            details: Option<FailureDetails>,
+        }
+        let value = Wire::deserialize(d)?;
+        if value.code.is_empty()
+            || value.code.len() > 128
+            || !value.code.as_bytes()[0].is_ascii_alphabetic()
+            || !value
+                .code
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b == b'_')
+            || value.message.is_empty()
+            || value.message.len() > 32768
+            || value
+                .message
+                .chars()
+                .any(|c| c.is_control() && !"\n\r\t".contains(c))
+        {
+            return Err(serde::de::Error::custom("failure code/message rejected; required=public code 1..128 and safe message 1..32768 bytes"));
+        }
+        match value.details {
+            Some(details) => Self::with_details(&value.code, value.message, details)
+                .map_err(|e| serde::de::Error::custom(e.message)),
+            None => Ok(Self::new(&value.code, value.message)),
+        }
+    }
 }
 
 impl BridgeError {
-    fn new(code: &str, message: String) -> Self {
+    pub fn with_details(
+        code: &str,
+        message: String,
+        details: FailureDetails,
+    ) -> Result<Self, Self> {
+        details
+            .validate()
+            .map_err(|reason| Self::new("FAILURE_DETAILS_INVALID", reason))?;
+        Ok(Self {
+            code: code.into(),
+            message,
+            details: Some(details),
+        })
+    }
+    pub(crate) fn new(code: &str, message: String) -> Self {
         Self {
             code: code.into(),
             message,
+            details: None,
         }
     }
 }
@@ -389,7 +652,20 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
             candidates.push(diagnostics);
         }
     }
-    let notification_candidates:Vec<_>=candidates.iter().filter(|group|group.iter().any(|m|m=="account_snapshot")&&group.iter().any(|m|m=="network_test"||m=="diagnostics_start")).map(|group|{let mut group=group.clone();group.push("notification_snapshot".into());group}).collect();
+    let notification_candidates: Vec<_> = candidates
+        .iter()
+        .filter(|group| {
+            group.iter().any(|m| m == "account_snapshot")
+                && group
+                    .iter()
+                    .any(|m| m == "network_test" || m == "diagnostics_start")
+        })
+        .map(|group| {
+            let mut group = group.clone();
+            group.push("notification_snapshot".into());
+            group
+        })
+        .collect();
     candidates.extend(notification_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
@@ -564,4 +840,64 @@ pub(crate) fn validate_operation(
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod desktop_failure_tests {
+    use super::*;
+    #[test]
+    fn structured_errors_retain_details_and_reject_invalid_evidence() {
+        let good = serde_json::json!({"code":"http_rejected","message":"HTTP 503","details":{"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"target_origin":"https://hive.test","http_status":"503"}}});
+        let parsed: BridgeError =
+            serde_json::from_value(good.clone()).expect("valid failure details");
+        assert_eq!(serde_json::to_value(parsed).unwrap(), good);
+        for detail in [
+            serde_json::json!(null),
+            serde_json::json!({"check":"device_identity","observed_at":"2026-02-30T00:00:00Z","evidence":{}}),
+            serde_json::json!({"check":"device_identity","observed_at":"2099-01-01T00:00:00Z","evidence":{}}),
+            serde_json::json!({"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"token":"secret"}}),
+            serde_json::json!({"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"actual":"Bearer SECRET"}}),
+        ] {
+            let mut bad = good.clone();
+            bad["details"] = detail;
+            assert!(serde_json::from_value::<BridgeError>(bad).is_err());
+        }
+        assert!(serde_json::from_value::<BridgeError>(
+            serde_json::json!({"code":"OLD","message":"legacy"})
+        )
+        .is_ok());
+    }
+}
+
+#[cfg(test)]
+mod failure_safety_contract_tests {
+    use super::*;
+    #[test]
+    fn details_use_go_origin_contract_and_safe_response_fields() {
+        let fixture: Value = serde_json::from_str(include_str!(
+            "../../../desktopbridge/testdata/connection-origin-contract.json"
+        ))
+        .unwrap();
+        let details = |origin: Value| serde_json::json!({"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"target_origin":origin}});
+        for item in fixture["accepted"].as_array().unwrap() {
+            assert!(
+                serde_json::from_value::<FailureDetails>(details(item["hive"].clone())).is_ok(),
+                "{}",
+                item["hive"]
+            );
+        }
+        for origin in fixture["rejected"].as_array().unwrap() {
+            assert!(
+                serde_json::from_value::<FailureDetails>(details(origin.clone())).is_err(),
+                "{origin}"
+            );
+        }
+        for body in [
+            r#"{"token":"SECRET"}"#,
+            r#"{"secret":"SECRET"}"#,
+            "https://hive.test/path?token=SECRET",
+        ] {
+            assert!(serde_json::from_value::<FailureDetails>(serde_json::json!({"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"response_body":body}})).is_err(),"unsafe response accepted");
+        }
+    }
 }

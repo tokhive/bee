@@ -1,8 +1,9 @@
+import {normalizeFailure,type UiFailure} from '../../system/failures.ts';
 import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {SupplyClient,SupplyPlatform,SupplyView} from '../../system/supply';
 export const platforms:SupplyPlatform[]=['openai','claude'];
-export const failure=(cause:unknown):string=>cause instanceof Error?cause.message:typeof cause==='object'&&cause!==null&&'message'in cause?`${'code'in cause?String(cause.code)+': ':''}${String(cause.message)}`:String(cause);
-export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,string>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null}
+export const failure=(cause:unknown,check='supply_read'):UiFailure=>normalizeFailure(cause,check);
+export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null}
 export function supplyFresh(state:SupplyState,platform:SupplyPlatform,now=Date.now()):boolean {
  const view=state.views[platform];
  return Boolean(view&&!state.errors[platform]&&Math.max(state.now,now)-Date.parse(view.checked_at)<=30000);
@@ -13,7 +14,7 @@ export function supplyProgress(state:SupplyState,platform:SupplyPlatform,now=Dat
  if(supplyFresh(state,platform,now))return null;
  return state.operation==='read'&&state.views[platform]?'checking':null;
 }
-export interface CoordinatedSupply {views:Partial<Record<SupplyPlatform,SupplyView>>;errors?:Partial<Record<SupplyPlatform,string>>;activePlatform?:SupplyPlatform|null;error:string;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;snapshot?:()=>SupplyObservation;writeContext?:Partial<Record<SupplyPlatform,string>>}
+export interface CoordinatedSupply {views:Partial<Record<SupplyPlatform,SupplyView>>;errors?:Partial<Record<SupplyPlatform,UiFailure>>;activePlatform?:SupplyPlatform|null;error:UiFailure|null;busy:boolean;refresh:()=>Promise<void>;pause?:()=>void;snapshot?:()=>SupplyObservation;writeContext?:Partial<Record<SupplyPlatform,string>>}
 type SupplyObservation=Pick<CoordinatedSupply,'views'|'errors'|'activePlatform'|'error'|'busy'|'writeContext'>;
 export function createSupplyModel(client:SupplyClient){
  let pendingPlatforms:SupplyPlatform[]=[];
@@ -22,8 +23,8 @@ export function createSupplyModel(client:SupplyClient){
  let state:SupplyState={views:{},errors:{},busy:false,writeBusy:false,now:Date.now(),operation:'idle',activePlatform:null,retryAt:null},active=false,blocked=false,generation=0;
  let timer:ReturnType<typeof setTimeout>|undefined,expiry:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined;
  const listeners=new Set<()=>void>();
- let coordinatedRefresh:(()=>Promise<void>)|undefined,coordinatedPause:(()=>void)|undefined,externalBusy=false,externalError='',adoptions=0,awaitingExplicitAdoption=false,localBusy=false;
- let writeErrors:Partial<Record<SupplyPlatform,string>>={},externalErrors:Partial<Record<SupplyPlatform,string>>={};
+ let coordinatedRefresh:(()=>Promise<void>)|undefined,coordinatedPause:(()=>void)|undefined,externalBusy=false,externalError:UiFailure|null=null,adoptions=0,awaitingExplicitAdoption=false,localBusy=false;
+ let writeErrors:Partial<Record<SupplyPlatform,UiFailure>>={},externalErrors:Partial<Record<SupplyPlatform,UiFailure>>={};
  let coordinatedSnapshot:(()=>SupplyObservation)|undefined;
  let observedViews:CoordinatedSupply['views']|undefined,uncertainViews:CoordinatedSupply['views']|undefined;
  const adoptedErrors=()=>externalError?{...writeErrors,...externalErrors,openai:externalError,claude:externalError}:{...writeErrors,...externalErrors};
@@ -64,7 +65,7 @@ export function createSupplyModel(client:SupplyClient){
     const write=writes?.find(w=>w.platform===platform);
     if(write&&write.version!==writeVersions[platform])continue;
     try{if(write&&!usable(platform,write.paused))throw new Error('SUPPLY_WRITE_BLOCKED: platform snapshot is no longer writable; required=fresh verified state without pending account change');const result=write?await client.setPaused(platform,write.paused):await client.status(platform);if(!coordinatedRefresh)views[platform]=result;delete errors[platform];}
-    catch(cause){errors[platform]=failure(cause);if(writes&&active&&generation===epoch){writeFailed=true;uncertainViews=observedViews;coordinatedPause?.();}}
+    catch(cause){errors[platform]=failure(cause,writes?'supply_write':'supply_read');if(writes&&active&&generation===epoch){writeFailed=true;uncertainViews=observedViews;coordinatedPause?.();}}
     if(!active||generation!==epoch)return;
     if(coordinatedRefresh){writeErrors={...errors};publish({errors:adoptedErrors(),now:Date.now()});}
     else publish({views:{...views},errors:{...errors},now:Date.now()});

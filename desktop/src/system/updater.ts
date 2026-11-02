@@ -1,3 +1,4 @@
+import {decodeBridgeError} from './failures.ts';
 import type {BridgeError} from './bridge';
 import type {DeviceInvoke} from './device';
 
@@ -50,9 +51,7 @@ function nullableText(value: unknown, at: string, max?: number, empty = false): 
   if (value !== null) text(value, at, max, empty);
 }
 function publicError(value: unknown, at: string): BridgeError {
-  const error = exact(value, ['code','message'], at);
-  text(error.code, `${at}.code`, 128); text(error.message, `${at}.message`, 32768);
-  return {code: error.code, message: error.message};
+  return decodeBridgeError(value,'UPDATE_REPLY_INVALID');
 }
 
 /** The native command returns this exact public value, without a sidecar envelope. */

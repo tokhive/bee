@@ -1,3 +1,5 @@
+import {FailureNotice} from '../../components/ProblemNotice';
+import {normalizeFailure,type UiFailure} from '../../system/failures';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Tabs} from 'radix-ui';
 import {version as appVersion} from '../../../package.json';
@@ -20,11 +22,7 @@ export interface NativeSettingsPageProps {
  updateControls?:ReactNode;
  onSaved:(snapshot:PreferencesSnapshot)=>void;
 }
-function failure(cause:unknown):string {
- if(cause instanceof Error)return cause.message;
- if(cause&&typeof cause==='object'&&'message'in cause&&typeof cause.message==='string')return `${'code'in cause?String(cause.code)+': ':''}${cause.message}`;
- return 'SETTINGS_OPERATION_UNCONFIRMED: native operation returned no failure evidence';
-}
+const failure=(cause:unknown)=>normalizeFailure(cause,'settings_operation');
 function path(value:string){return t(({direct:'直连',local_proxy:'本机代理',environment_proxy:'进程环境代理',unknown:'尚未确认'} as Record<string,string>)[value]??'尚未确认');}
 function officialPath(value:string,platform:'openai'|'claude'){return path(value.split(';').find(part=>part.startsWith(`${platform}=`))?.split('=')[1]??'unknown');}
 const checkNames={local_proxy:'本机代理连接',openai_read_only:'OpenAI 只读端点',claude_read_only:'Claude 只读端点'};
@@ -34,8 +32,8 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  const [draftOrigin,setDraftOrigin]=useState(()=>hive??preferences.preferences.proxies.find(entry=>entry.device_scope===null)?.origin??'');
  const [saved,setSaved]=useState(preferences),[network,setNetwork]=useState<NetworkSnapshot|null>(null),[proxy,setProxy]=useState(()=>paired?'':draftProxy(preferences.preferences,hive??draftOrigin));
  const [permission,setPermission]=useState<NotificationPermission|null>(null),[autostart,setAutostart]=useState<AutostartSnapshot|null>(null),[test,setTest]=useState<NetworkTestResult|null>(null);
- const [busy,setBusy]=useState<string|null>(null),[error,setError]=useState(''),[notice,setNotice]=useState(''),[permissionError,setPermissionError]=useState(''),[autostartError,setAutostartError]=useState('');
- const [deliveryError,setDeliveryError]=useState('');
+ const [busy,setBusy]=useState<string|null>(null),[error,setError]=useState<UiFailure|null>(null),[notice,setNotice]=useState(''),[permissionError,setPermissionError]=useState<UiFailure|null>(null),[autostartError,setAutostartError]=useState<UiFailure|null>(null);
+ const [deliveryError,setDeliveryError]=useState<UiFailure|null>(null);
  const mounted=useRef(false),operation=useRef(false),generation=useRef(0),networkRead=useRef(0),permissionRead=useRef(0),autostartRead=useRef(0),deliveryRead=useRef(0),proxyDirty=useRef(false);
  const owner=useRef({preferencesClient,notificationsClient,networkClient,hive,paired});owner.current={preferencesClient,notificationsClient,networkClient,hive,paired};
  const current=()=>mounted.current&&owner.current.preferencesClient===preferencesClient&&owner.current.notificationsClient===notificationsClient&&owner.current.networkClient===networkClient&&owner.current.hive===hive&&owner.current.paired===paired;
@@ -47,18 +45,18 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
   if(origin!==draftOrigin)setDraftOrigin(origin);setProxy(draftProxy(preferences.preferences,origin));
  },[preferences,hive,paired]);
  useEffect(()=>{
-  const epoch=++generation.current,request=++networkRead.current,permissionRequest=++permissionRead.current,autostartRequest=++autostartRead.current;proxyDirty.current=false;operation.current=false;setBusy(null);setNetwork(null);setTest(null);setProxy(paired?'':draftProxy(preferences.preferences,hive??draftOrigin));setError('');setNotice('');setPermission(null);setAutostart(null);setPermissionError('');setAutostartError('');
+  const epoch=++generation.current,request=++networkRead.current,permissionRequest=++permissionRead.current,autostartRequest=++autostartRead.current;proxyDirty.current=false;operation.current=false;setBusy(null);setNetwork(null);setTest(null);setProxy(paired?'':draftProxy(preferences.preferences,hive??draftOrigin));setError(null);setNotice('');setPermission(null);setAutostart(null);setPermissionError(null);setAutostartError(null);
   void networkClient.snapshot().then(value=>{if(current()&&epoch===generation.current&&request===networkRead.current){setNetwork(value);if(paired&&!proxyDirty.current)setProxy(value.saved_proxy);if(value.error)setError(failure(value.error));}},cause=>{if(current()&&epoch===generation.current&&request===networkRead.current)setError(failure(cause));});
   void notificationsClient.permission().then(value=>{if(current()&&epoch===generation.current&&permissionRequest===permissionRead.current)setPermission(value);},cause=>{if(current()&&epoch===generation.current&&permissionRequest===permissionRead.current)setPermissionError(failure(cause));});
   void notificationsClient.autostartStatus().then(value=>{if(current()&&epoch===generation.current&&autostartRequest===autostartRead.current){setAutostart(value);if(value.error)setAutostartError(failure(value.error));}},cause=>{if(current()&&epoch===generation.current&&autostartRequest===autostartRead.current)setAutostartError(failure(cause));});
-  const deliveryRequest=++deliveryRead.current;setDeliveryError('');
-  void notificationsClient.deliveryStatus().then(value=>{if(current()&&epoch===generation.current&&deliveryRequest===deliveryRead.current)setDeliveryError(value.error?failure(value.error):'');},cause=>{if(current()&&epoch===generation.current&&deliveryRequest===deliveryRead.current)setDeliveryError(failure(cause));});
+  const deliveryRequest=++deliveryRead.current;setDeliveryError(null);
+  void notificationsClient.deliveryStatus().then(value=>{if(current()&&epoch===generation.current&&deliveryRequest===deliveryRead.current)setDeliveryError(value.error?failure(value.error):null);},cause=>{if(current()&&epoch===generation.current&&deliveryRequest===deliveryRead.current)setDeliveryError(failure(cause));});
   return()=>{generation.current++;networkRead.current++;};
  },[preferencesClient,notificationsClient,networkClient,hive,paired]);
  const prefs=saved.preferences;
  function acceptPreferences(value:PreferencesSnapshot){if(!current())return;setSaved(value);onSaved(value);if(value.error)throw value.error;}
  async function run(name:string,action:()=>Promise<unknown>){
-  if(operation.current)return;operation.current=true;setBusy(name);setError('');setNotice('');const epoch=generation.current;
+  if(operation.current)return;operation.current=true;setBusy(name);setError(null);setNotice('');const epoch=generation.current;
   try{await action();}catch(cause){if(current()&&epoch===generation.current)setError(failure(cause));}
   finally{if(current()&&epoch===generation.current){operation.current=false;setBusy(null);}}
  }
@@ -72,11 +70,11 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  function changePreference(change:Partial<DesktopPreferences>){void run('preferences',async()=>{await savePreference(change);if(current())setNotice('偏好已保存。');});}
  function notifications(enabled:boolean){void run('notifications',async()=>{
   await savePreference({notifications_enabled:enabled});if(!current())return;
-  if(enabled){permissionRead.current++;const allowed=await notificationsClient.enable();if(!current())return;setPermission(allowed);setPermissionError('');}
+  if(enabled){permissionRead.current++;const allowed=await notificationsClient.enable();if(!current())return;setPermission(allowed);setPermissionError(null);}
   if(current())setNotice('通知偏好已保存。');
  });}
  function setStartup(enabled:boolean){void run('autostart',async()=>{
-  autostartRead.current++;const actual=await notificationsClient.autostartSet(enabled);if(!current())return;setAutostart(actual);setAutostartError(actual.error?failure(actual.error):'');
+  autostartRead.current++;const actual=await notificationsClient.autostartSet(enabled);if(!current())return;setAutostart(actual);setAutostartError(actual.error?failure(actual.error):null);
   const value=await preferencesClient.read();acceptPreferences(value);
   if(actual.error)throw actual.error;
   if(actual.registered!==enabled)throw new Error(`AUTOSTART_UNCONFIRMED: desired=${enabled} registered=${actual.registered}; required=matching OS readback`);
@@ -87,7 +85,7 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  });}
  return <Tabs.Root className="native-settings section-tabs" data-testid="native-settings" defaultValue="network">
   <Tabs.List className="section-tabs-list ns-tabs" aria-label={t('设置分类')}><Tabs.Trigger value="general">{t('通用')}</Tabs.Trigger><Tabs.Trigger value="network">{t('网络与代理')}</Tabs.Trigger><Tabs.Trigger value="system">{t('通知与启动')}</Tabs.Trigger><Tabs.Trigger value="about">{t('关于')}</Tabs.Trigger></Tabs.List>
-  {(error||saved.error)&&<div className="ns-failure"><p className="ns-error" role="alert">{error||failure(saved.error)}</p>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
+  {(error||saved.error)&&<div className="ns-failure"><FailureNotice failure={error||saved.error} check="settings_operation"/>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
   <Tabs.Content value="general">  <section className="ns-section" aria-labelledby="ns-preferences-title"><header><h2 id="ns-preferences-title">{t('语言与外观')}</h2><p>{t('保存到当前系统用户，重启后保留。')}</p></header>
    <div className="ns-row"><label htmlFor="ns-language">{t('语言')}</label><select id="ns-language" disabled={!!busy||!!saved.error} value={prefs.language} onChange={event=>changePreference({language:event.target.value as DesktopPreferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></div>
    <div className="ns-row"><label htmlFor="ns-theme">{t('外观')}</label><select id="ns-theme" disabled={!!busy||!!saved.error} value={prefs.theme} onChange={event=>changePreference({theme:event.target.value as DesktopPreferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></div>
@@ -105,17 +103,17 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
    <p className="feature-note">{t('官方查询优先使用进程环境代理，并遵守直连规则；环境配置原文不会显示。')}</p>
 </aside></div></section></Tabs.Content>
   <Tabs.Content value="system"><section className="ns-section" aria-labelledby="ns-system-title"><header><h2 id="ns-system-title">{t('通知与启动')}</h2><p>{t('偏好与系统实际状态分别显示。')}</p></header>   <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error} checked={prefs.notifications_enabled} onChange={event=>notifications(event.target.checked)}/><span>{t('希望接收系统通知')}</span></label><p>{t('授权、换号、离线和额度问题仍会保留在应用内。')}</p></div><div className="ns-os-status"><span>{t('系统权限')}</span><strong>{t(permission==='granted'?'已允许':permission==='denied'?'已拒绝':permission==='prompt'?'尚未允许':'尚未确认')}</strong></div></div>
-   {permissionError&&<p className="ns-error" role="alert">{permissionError}</p>}
-   {deliveryError&&<div className="ns-delivery-error"><p className="ns-error" role="alert">{t('最近一次后台通知错误')} · {deliveryError}</p>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())setNotice('将在下次后台检查时重试明确失败的通知。');})}>{t('重试失败的通知')}</button>}</div>}
+   {permissionError&&<FailureNotice failure={permissionError} check="system_permissions"/>}
+   {deliveryError&&<div className="ns-delivery-error"><FailureNotice failure={deliveryError} check="notification_delivery"/>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())setNotice('将在下次后台检查时重试明确失败的通知。');})}>{t('重试失败的通知')}</button>}</div>}
    {permission==='denied'&&<p className="feature-note">{t('请在系统设置中允许 Bee 发送通知；应用内提醒会继续显示。')}</p>}
-   {prefs.notifications_enabled&&permission==='prompt'&&<button disabled={!!busy} onClick={()=>void run('permission',async()=>{permissionRead.current++;const value=await notificationsClient.enable();if(current()){setPermission(value);setPermissionError('');}})}>{t('允许系统通知')}</button>}
+   {prefs.notifications_enabled&&permission==='prompt'&&<button disabled={!!busy} onClick={()=>void run('permission',async()=>{permissionRead.current++;const value=await notificationsClient.enable();if(current()){setPermission(value);setPermissionError(null);}})}>{t('允许系统通知')}</button>}
    <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error} checked={prefs.autostart_desired} onChange={event=>setStartup(event.target.checked)}/><span>{t('登录桌面后启动 Bee')}</span></label><p>{t('保留此前运行选择，不会自动授权或解除暂停。')}</p></div><div className="ns-os-status"><span>{t('系统登记')}</span><strong>{t(autostart?.registered===true?'已登记':autostart?.registered===false?'未登记':'尚未确认')}</strong></div></div>
-   {autostartError&&<p className="ns-error" role="alert">{autostartError}</p>}
+   {autostartError&&<FailureNotice failure={autostartError} check="system_permissions"/>}
    <div className="ns-secondary-actions"><button disabled={!!busy} onClick={()=>void run('os',async()=>{
     permissionRead.current++;autostartRead.current++;deliveryRead.current++;const results=await Promise.allSettled([notificationsClient.permission(),notificationsClient.autostartStatus(),notificationsClient.deliveryStatus()]);if(!current())return;
-    if(results[0].status==='fulfilled'){setPermission(results[0].value);setPermissionError('');}else setPermissionError(failure(results[0].reason));
-    if(results[1].status==='fulfilled'){setAutostart(results[1].value);setAutostartError(results[1].value.error?failure(results[1].value.error):'');}else setAutostartError(failure(results[1].reason));
-    if(results[2].status==='fulfilled')setDeliveryError(results[2].value.error?failure(results[2].value.error):'');else setDeliveryError(failure(results[2].reason));
+    if(results[0].status==='fulfilled'){setPermission(results[0].value);setPermissionError(null);}else setPermissionError(failure(results[0].reason));
+    if(results[1].status==='fulfilled'){setAutostart(results[1].value);setAutostartError(results[1].value.error?failure(results[1].value.error):null);}else setAutostartError(failure(results[1].reason));
+    if(results[2].status==='fulfilled')setDeliveryError(results[2].value.error?failure(results[2].value.error):null);else setDeliveryError(failure(results[2].reason));
    })}>{t('重新检查系统状态')}</button></div>
 <p className="ns-window-note">{t('关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。')}</p></section></Tabs.Content>
   <Tabs.Content value="about"><section className="ns-section ns-about" aria-label={t('关于 Bee')}><header><h2>{t('关于 Bee')}</h2><p>{t('当前应用、运行核心与 Hive 信息。')}</p></header>{updateControls}{updateControls&&version!==appVersion&&<p className="ns-core-version feature-note">{t('Bee 版本')}：{version||t('尚未读取')}</p>}<dl>{!updateControls&&<><div><dt>{t('桌面应用版本')}</dt><dd>{appVersion}</dd></div><div><dt>{t('Bee 版本')}</dt><dd>{version||t('尚未读取')}</dd></div></>}<div><dt>Hive</dt><dd>{hive??t('尚未配对')}</dd></div></dl></section></Tabs.Content>

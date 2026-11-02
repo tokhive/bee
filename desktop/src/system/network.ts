@@ -1,3 +1,4 @@
+import {decodeBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {BridgeError} from './bridge';
 import {decodePreferences,validateProxy} from './preferences.ts';
@@ -19,7 +20,7 @@ function object(value:unknown,fields:string[],at:string):Record<string,unknown>{
  return record;
 }
 function integer(value:unknown,at:string){if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0)invalid(`${at} requires nonnegative safe integer`);}
-function error(value:unknown){if(value===null)return;const e=object(value,['code','message'],'error');if(typeof e.code!=='string'||!/^[A-Z][A-Z0-9_]{0,79}$/.test(e.code)||typeof e.message!=='string'||e.message.length>32768)invalid('error requires bounded public code and message');}
+function error(value:unknown){if(value!==null)decodeBridgeError(value,'NETWORK_REPLY_INVALID');}
 function proxy(value:unknown,at:string){if(typeof value!=='string')invalid(`${at} requires string`);validateProxy(value);}
 function origin(value:unknown){
  if(value===null)return;

@@ -27,7 +27,7 @@ struct Envelope {
 }
 pub fn validate_test(v: &Value) -> Result<NetworkTest, BridgeError> {
     let invalid = || {
-        BridgeError{code:"NETWORK_REPLY_INVALID".into(),message:"network test rejected: required=three fixed read-only checks, valid timestamp and bounded safe fields".into()}
+        BridgeError{ details: None,code:"NETWORK_REPLY_INVALID".into(),message:"network test rejected: required=three fixed read-only checks, valid timestamp and bounded safe fields".into()}
     };
     let result: Envelope = serde_json::from_value(v.clone()).map_err(|_| invalid())?;
     if !crate::runtime_protocol::timestamp(&result.network_test.observed_at)

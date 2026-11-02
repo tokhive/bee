@@ -1,3 +1,4 @@
+import {normalizeFailure} from '../src/system/failures.ts';
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createSupplyClient, decodeSupplyReply, supplyReasons } from '../src/system/supply.ts';
@@ -53,9 +54,9 @@ test('shared supply model preserves per-platform failures and never repeats an u
  const writes:string[]=[];let failRead=false;
  const model=createSupplyModel({status:async platform=>{if(failRead&&platform==='openai')throw new Error('GET HTTP 503');return {...good,platform,checked_at:new Date().toISOString()};},setPaused:async(platform,paused)=>{writes.push(platform);if(platform==='openai')throw new Error('PUT HTTP 503 uncertain');return {...good,platform,paused,reasons:paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()};}});
  model.start();await model.read();assert.equal(model.getSnapshot().views.claude?.platform,'claude');
- await model.writeAll(true);assert.deepEqual(writes,['openai','claude']);assert.match(model.getSnapshot().errors.openai??'',/PUT HTTP 503/);assert.equal(model.getSnapshot().views.claude?.paused,true);
+ await model.writeAll(true);assert.deepEqual(writes,['openai','claude']);assert.match(model.getSnapshot().errors.openai?.message??'',/PUT HTTP 503/);assert.equal(model.getSnapshot().views.claude?.paused,true);
  await model.write('openai',true);assert.deepEqual(writes,['openai','claude']);
- failRead=true;await model.read();assert.match(model.getSnapshot().errors.openai??'',/GET HTTP 503/);assert.equal(model.getSnapshot().views.claude?.platform,'claude');model.stop();
+ failRead=true;await model.read();assert.match(model.getSnapshot().errors.openai?.message??'',/GET HTTP 503/);assert.equal(model.getSnapshot().views.claude?.platform,'claude');model.stop();
 });
 test('pending account confirmation blocks writes in the shared supply model',async(t)=>{
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0;
@@ -68,12 +69,12 @@ test('coordinated supply consumes adopted snapshots and routes every read throug
  const model=createSupplyModel({status:async platform=>{gets++;return {...good,platform};},setPaused:async(platform,paused)=>{writes++;return {...good,platform,paused,reasons:paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()};}});
  t.after(()=>model.stop());
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()},claude:{...good,platform:'claude' as const,checked_at:new Date().toISOString()}};
- model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:'',busy:false});});
- model.start();model.adopt({views,error:'',busy:false});
+ model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:null,busy:false});});
+ model.start();model.adopt({views,error:null,busy:false});
  await model.read();assert.equal(refreshes,1);assert.equal(gets,0);
  await model.write('openai',true);assert.equal(writes,1);assert.equal(refreshes,2);assert.equal(gets,0);
- model.adopt({views,error:'central GET failed: HTTP 503',busy:false});assert.equal(model.canWrite('claude'),false);
- model.adopt({views,error:'',busy:true});assert.equal(model.canWrite('claude'),true);
+ model.adopt({views,error:normalizeFailure('central GET failed: HTTP 503','supply_read'),busy:false});assert.equal(model.canWrite('claude'),false);
+ model.adopt({views,error:null,busy:true});assert.equal(model.canWrite('claude'),true);
 });
 
 test('coordinated supply preserves an uncertain write until an explicit refreshed adoption',async(t)=>{
@@ -81,15 +82,15 @@ test('coordinated supply preserves an uncertain write until an explicit refreshe
  const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;throw new Error('PUT HTTP 503 uncertain');}});
  t.after(()=>model.stop());
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
- model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:'',busy:false});},()=>{pauses++;});model.start();model.adopt({views,error:'',busy:false});
- await model.write('openai',true);assert.match(model.getSnapshot().errors.openai??'',/PUT HTTP 503 uncertain/);assert.equal(pauses,1);assert.equal(refreshes,0);
- model.adopt({views,error:'',busy:false});await model.write('openai',true);assert.equal(writes,1);
+ model.setCoordinated(async()=>{refreshes++;model.adopt({views,error:null,busy:false});},()=>{pauses++;});model.start();model.adopt({views,error:null,busy:false});
+ await model.write('openai',true);assert.match(model.getSnapshot().errors.openai?.message??'',/PUT HTTP 503 uncertain/);assert.equal(pauses,1);assert.equal(refreshes,0);
+ model.adopt({views,error:null,busy:false});await model.write('openai',true);assert.equal(writes,1);
  await model.read();assert.equal(refreshes,1);assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',true),true);
 });
 test('a stopped supply owner cannot pause a newer coordinator when its write fails late',async()=>{
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let rejectWrite!:(reason:Error)=>void,pauses=0;
  const model=createSupplyModel({status:async()=>good as any,setPaused:()=>new Promise((_resolve,reject)=>{rejectWrite=reject;})});
- model.setCoordinated(async()=>{},()=>{pauses++;});model.start();model.adopt({views:{openai:{...good,platform:'openai',checked_at:new Date().toISOString()}},error:'',busy:false});
+ model.setCoordinated(async()=>{},()=>{pauses++;});model.start();model.adopt({views:{openai:{...good,platform:'openai',checked_at:new Date().toISOString()}},error:null,busy:false});
  const write=model.write('openai',true);model.stop();rejectWrite(new Error('old owner write failed after replacement'));await write;
  assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai,undefined);
 });
@@ -98,8 +99,8 @@ for(const outcome of ['success','failure'])test(`a previous supply generation ca
  const model=createSupplyModel({status:async()=>good as any,setPaused:()=>new Promise((resolve,reject)=>{finishWrite=()=>outcome==='success'?resolve(good as any):reject(new Error('old generation write failed'));})});
  t.after(()=>model.stop());
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
- model.setCoordinated(async()=>{refreshes++;},()=>{pauses++;});model.start();model.adopt({views,error:'',busy:false});
- const write=model.write('openai',true);model.stop();model.start();model.adopt({views,error:'',busy:false});finishWrite();await write;
+ model.setCoordinated(async()=>{refreshes++;},()=>{pauses++;});model.start();model.adopt({views,error:null,busy:false});
+ const write=model.write('openai',true);model.stop();model.start();model.adopt({views,error:null,busy:false});finishWrite();await write;
  assert.equal(refreshes,0);assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',true),true);
 });
 const flushSupply=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
@@ -206,7 +207,7 @@ for(const outcome of ['changed','changed-back','runtime-stopped'])test('a waitin
 test('a supply click observes central busy before the React adoption effect and cancels a changed identity',async t=>{
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0,refreshes=0,release!:()=>void;
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
- let current={views,error:'',busy:false,writeContext:{openai:'account-A'}};
+ let current={views,error:null,busy:false,writeContext:{openai:'account-A'}};
  const reading=new Promise<void>(resolve=>release=resolve);
  const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;return good as any;}});
  t.after(()=>model.stop());model.setCoordinated(async()=>{refreshes++;await reading;},undefined,()=>current);model.start();model.adopt(current);
@@ -220,20 +221,20 @@ test('a queued supply click reports a rejected central read without submitting o
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0;
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
  const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;return good as any;}});
- t.after(()=>model.stop());model.setCoordinated(async()=>{throw new Error('DEVICE_OPERATION_FAILED: GET identity HTTP 503');});model.start();model.adopt({views,error:'',busy:true});
+ t.after(()=>model.stop());model.setCoordinated(async()=>{throw new Error('DEVICE_OPERATION_FAILED: GET identity HTTP 503');});model.start();model.adopt({views,error:null,busy:true});
  await assert.doesNotReject(model.write('openai',true));assert.equal(writes,0);
- assert.match(model.getSnapshot().errors.openai??'',/GET identity HTTP 503/);assert.equal(model.getSnapshot().writeBusy,false);
+ assert.match(model.getSnapshot().errors.openai?.message??'',/GET identity HTTP 503/);assert.equal(model.getSnapshot().writeBusy,false);
 });
 
 test('a successful supply PUT stays blocked after a failed readback until a fresh supply observation',async t=>{
  const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0;
  const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
  const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;return {...views.openai,paused:true,reasons:['manually_paused']};}});
- t.after(()=>model.stop());model.setCoordinated(async()=>{throw new Error('DEVICE_OPERATION_FAILED: GET identity HTTP 503');});model.start();model.adopt({views,error:'',busy:false});
+ t.after(()=>model.stop());model.setCoordinated(async()=>{throw new Error('DEVICE_OPERATION_FAILED: GET identity HTTP 503');});model.start();model.adopt({views,error:null,busy:false});
  await model.write('openai',true);assert.equal(writes,1);
- model.adopt({views,error:'',busy:false});assert.match(model.getSnapshot().errors.openai??'',/GET identity HTTP 503/);assert.equal(model.canWrite('openai',true),false);
+ model.adopt({views,error:null,busy:false});assert.match(model.getSnapshot().errors.openai?.message??'',/GET identity HTTP 503/);assert.equal(model.canWrite('openai',true),false);
  await model.write('openai',true);assert.equal(writes,1);
- model.adopt({views:{openai:{...views.openai,paused:true,reasons:['manually_paused']}},error:'',busy:false});assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',false),true);
+ model.adopt({views:{openai:{...views.openai,paused:true,reasons:['manually_paused']}},error:null,busy:false});assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',false),true);
 });
 
 test('detailed supply reasons are accepted without relaxing platform or readiness invariants',()=>{

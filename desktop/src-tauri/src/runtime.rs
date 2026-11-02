@@ -33,7 +33,7 @@ pub(crate) struct OwnedExitTask {
     result: Option<ExitResult>,
 }
 fn failure(message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: "OWNED_EXIT_UNCONFIRMED".into(),
         message: message.into(),
     }

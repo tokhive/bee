@@ -1,3 +1,5 @@
+import {FailureNotice} from '../../components/ProblemNotice';
+import type {NavigationTarget} from '../../app/navigation';
 import {useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {accountPending,type AccountsModel} from './useAccounts';
@@ -8,12 +10,13 @@ import {t} from '../../i18n/index';
 
 const actions={select:{label:'接入',confirm:'确认接入',description:'保存当前账号选择，核验并暂停该平台；接入成功后需明确开始贡献。'},confirm_change:{label:'换号',confirm:'确认更换',description:'将此平台切换到当前候选账号，换号成功后仍保持暂停。'},clear_selection:{label:'取消接入',confirm:'确认取消接入',description:'仅取消尚未注册的本地选择。'},authorize:{label:'重新登录',confirm:'开始官方登录',description:'将调用已安装的官方客户端，可能改变官方客户端当前登录。完成后仅成为候选，不会自动接入或贡献。'}};
 type Action=keyof typeof actions;
-export function AccountOperationStatus({accounts,platform}:{accounts:AccountsModel;platform:AccountPlatform}){
+export function AccountOperationStatus({accounts,platform,onNavigate}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void}){
  const op=accounts.views[platform]?.operation;
  const unconfirmed=accounts.uncertain[platform]||!!accounts.errors[platform]||op?.state==='reconciling';
  return <div className="account-operation-status">
   {unconfirmed?<p role="status">{t(accounts.busy[platform]?'重试中…':'等待自动重试…')}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成':'正在处理账号操作':op.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':'账号操作已完成，平台保持暂停':op.state==='cancelled'?'操作已取消':'账号操作失败')}</p>}
-  {op?.error&&<p role="alert">{op.error.message}</p>}
+  {op?.error&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
+  {accounts.errors[platform]&&<FailureNotice failure={accounts.errors[platform]} check="account_operation" onNavigate={onNavigate}/>}
  </div>;
 }
 export function NativeAccountActions({accounts,platform,runtime,placement='row'}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail'}){

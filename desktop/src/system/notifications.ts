@@ -1,3 +1,4 @@
+import {decodeBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {BridgeError} from './bridge';
 export type NotificationPermission='granted'|'denied'|'prompt';
@@ -8,7 +9,7 @@ export function decodeAutostart(value:unknown):AutostartSnapshot{
  if(!value||typeof value!=='object'||Array.isArray(value))invalid();
  const o=value as Record<string,unknown>;
  if(Object.keys(o).length!==3||!['desired','registered','error'].every(k=>k in o)||typeof o.desired!=='boolean'||(o.registered!==null&&typeof o.registered!=='boolean'))invalid();
- if(o.error!==null){if(!o.error||typeof o.error!=='object'||Array.isArray(o.error))invalid();const e=o.error as Record<string,unknown>;if(Object.keys(e).length!==2||typeof e.code!=='string'||typeof e.message!=='string'||e.message.length>1024)invalid();}
+ if(o.error!==null)decodeBridgeError(o.error,'OS_STATE_INVALID');
  return value as AutostartSnapshot;
 }
 export function createNotificationsClient(invoke:DeviceInvoke){return {

@@ -23,7 +23,7 @@ const MAX_SEQUENCE: u64 = 9_007_199_254_740_991;
 const MAX_ENTRY_BYTES: usize = 16 * 1024;
 static STORE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }

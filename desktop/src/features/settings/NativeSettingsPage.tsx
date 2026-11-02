@@ -17,10 +17,10 @@ interface SettingsControl {operation:string|null;networkRead:number;permissionRe
 export interface NativeSettingsDraft {
  proxy?:string;origin?:string;dirty?:boolean;tab?:string;control?:SettingsControl;
  saved?:PreferencesSnapshot;network?:NetworkSnapshot|null;permission?:NotificationPermission|null;autostart?:AutostartSnapshot|null;test?:NetworkTestResult|null;
- busy?:string|null;error?:UiFailure|null;notice?:string;permissionError?:UiFailure|null;autostartError?:UiFailure|null;deliveryError?:UiFailure|null;networkReadError?:UiFailure|null;preferenceReadError?:UiFailure|null;
+ busy?:string|null;error?:UiFailure|null;notice?:string;permissionError?:UiFailure|null;autostartError?:UiFailure|null;autostartReadError?:UiFailure|null;deliveryError?:UiFailure|null;networkReadError?:UiFailure|null;preferenceReadError?:UiFailure|null;
  proxySave?:'pending'|'confirmed'|'unknown'|'failed';saveFailure?:UiFailure|null;savedProxy?:{value:string;revision:number};saveReadConfirmed?:boolean;
  applyState?:'pending'|'confirmed'|'unknown'|'failed';applyFailure?:UiFailure|null;
- notificationState?:'pending'|'confirmed'|'unknown';autostartState?:'pending'|'confirmed'|'unknown';autostartDesired?:boolean;
+ notificationState?:'pending'|'confirmed'|'unknown';autostartState?:'pending'|'confirmed'|'unknown';autostartDesired?:boolean;autostartReadConfirmed?:boolean;
  runtime?:RuntimeSnapshot|null;runtimeReadError?:UiFailure|null;
 }
 export interface NativeSettingsPageProps {
@@ -53,7 +53,7 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  useEffect(()=>{if(target?.page==='settings'&&target.section&&target.section in settingsTabForSection)patchDraft({tab:settingsTabForSection[target.section as keyof typeof settingsTabForSection]});},[navigationRequest?.sequence]);
  const saved=currentDraft.saved&&currentDraft.saved.preferences.revision>=preferences.preferences.revision?currentDraft.saved:preferences;
  const network=currentDraft.network??null,permission=currentDraft.permission??null,autostart=currentDraft.autostart??null,test=currentDraft.test??null;
- const busy=currentDraft.busy??null,error=currentDraft.error??null,notice=currentDraft.notice??'',permissionError=currentDraft.permissionError??null,autostartError=currentDraft.autostartError??null,deliveryError=currentDraft.deliveryError??null;
+ const busy=currentDraft.busy??null,error=currentDraft.error??null,notice=currentDraft.notice??'',permissionError=currentDraft.permissionError??null,autostartError=currentDraft.autostartError??null,autostartReadError=currentDraft.autostartReadError??null,deliveryError=currentDraft.deliveryError??null;
  const control=currentDraft.control??localDraft.control!;
  const mounted=useRef(false),proxyDirty=useRef(!!currentDraft.dirty);proxyDirty.current=!!currentDraft.dirty;
  const owner=useRef({preferencesClient,notificationsClient,networkClient});owner.current={preferencesClient,notificationsClient,networkClient};
@@ -75,7 +75,12 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
   const permissionRequest=++control.permissionRead,autostartRequest=++control.autostartRead,deliveryRequest=++control.deliveryRead;
   const results=await Promise.allSettled([notificationsClient.permission(),notificationsClient.autostartStatus(),notificationsClient.deliveryStatus()]);if(!current())return;
   if(permissionRequest===control.permissionRead){const r=results[0];patchDraft(r.status==='fulfilled'?{permission:r.value,permissionError:null,notificationState:'confirmed'}:{permission:null,permissionError:normalizeFailure(r.reason,'notification_permission')});}
-  if(autostartRequest===control.autostartRead){const r=results[1];patchDraft(r.status==='fulfilled'?{autostart:r.value,autostartState:'confirmed',autostartDesired:r.value.desired,autostartError:r.value.error?normalizeFailure(r.value.error,'autostart_status'):null}:{autostartError:normalizeFailure(r.reason,'autostart_status')});}
+  if(autostartRequest===control.autostartRead){
+   const r=results[1];
+   // Status can carry a preference-read error even when the OS returned a boolean.
+   if(r.status==='fulfilled'&&!r.value.error&&typeof r.value.registered==='boolean')patchDraft({autostart:r.value,autostartState:'confirmed',autostartReadConfirmed:true,autostartError:null,autostartReadError:null});
+   else patchDraft({autostartReadConfirmed:false,autostartReadError:r.status==='rejected'?normalizeFailure(r.reason,'autostart_status'):r.value.error?normalizeFailure(r.value.error,'autostart_status'):null});
+  }
   if(deliveryRequest===control.deliveryRead){const r=results[2];patchDraft({deliveryError:r.status==='fulfilled'?(r.value.error?normalizeFailure(r.value.error,'notification_delivery'):null):normalizeFailure(r.reason,'notification_delivery')});}
  }
  useEffect(()=>{if(control.operation)return;void refreshNetwork();void readOs();},[preferencesClient,notificationsClient,networkClient]);
@@ -93,9 +98,17 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  }
  function notifications(enabled:boolean){void run('notifications',async()=>{await savePreference({notifications_enabled:enabled});if(!current())return;patchDraft({notice:'通知偏好已保存。'});if(enabled)await enableNotifications();});}
  function setStartup(enabled:boolean){void run('autostart',async()=>{
+  if(draftRef.current.autostartState==='unknown')return;
   const request=++control.autostartRead;patchDraft({autostartDesired:enabled,autostartState:'pending',autostartError:null});
-  try{const actual=await notificationsClient.autostartSet(enabled);if(!current()||request!==control.autostartRead)return;patchDraft({autostart:actual,autostartState:'confirmed',autostartDesired:actual.desired,autostartError:actual.error?normalizeFailure(actual.error,'autostart_set'):null});await readPreferences();if(current()&&!actual.error&&actual.registered===actual.desired)patchDraft({notice:'已核对系统启动登记。'});}
-  catch(cause){if(current()&&request===control.autostartRead)patchDraft({autostartState:'unknown',autostartError:normalizeFailure(cause,'autostart_set')});}
+  try{
+   const actual=await notificationsClient.autostartSet(enabled);if(!current()||request!==control.autostartRead)return;
+   if(typeof actual.registered!=='boolean'){patchDraft({autostartState:'unknown',autostartReadConfirmed:false,autostartError:actual.error?normalizeFailure(actual.error,'autostart_set'):null});return;}
+   // Native set saves the desired preference before applying and reading registration.
+   // A boolean proves the observed registration; its write failure still remains visible.
+   patchDraft({autostart:actual,autostartState:'confirmed',autostartDesired:enabled,autostartReadConfirmed:true,autostartError:actual.error?normalizeFailure(actual.error,'autostart_set'):null,autostartReadError:null});
+   await readPreferences();if(current()&&!actual.error&&actual.registered===enabled)patchDraft({notice:'已核对系统启动登记。'});
+  }
+  catch(cause){if(current()&&request===control.autostartRead)patchDraft({autostartState:'unknown',autostartReadConfirmed:false,autostartError:normalizeFailure(cause,'autostart_set')});}
  });}
  function saveProxy(){void run('save-proxy',async()=>{
   if(draftRef.current.proxySave==='unknown'&&!draftRef.current.saveReadConfirmed||draftRef.current.applyState==='pending')return;
@@ -143,8 +156,8 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
    {deliveryError&&<div className="ns-delivery-error"><FailureNotice failure={deliveryError} check="notification_delivery"/>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())patchDraft({notice:'将在下次后台检查时重试明确失败的通知。'});})}>{t('重试失败的通知')}</button>}</div>}
    {permission==='denied'&&<p className="feature-note">{t(permissionHelp)}</p>}{currentDraft.notificationState==='unknown'&&<p className="feature-note">{t('通知授权请求结果尚未确认；请重新检查系统状态，不会重复请求授权。')}</p>}
    {prefs.notifications_enabled&&permission==='prompt'&&<button disabled={!!busy} onClick={()=>void run('permission',enableNotifications)}>{t('允许系统通知')}</button>}
-   <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error||currentDraft.autostartState==='unknown'} checked={currentDraft.autostartDesired??autostart?.desired??prefs.autostart_desired} onChange={event=>setStartup(event.target.checked)}/><span>{t('登录系统后启动 Bee')}</span></label><p>{t('登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。')}</p></div><div className="ns-os-status"><span>{t(currentDraft.autostartState==='unknown'?'上次确认的系统登记':'系统登记')}</span><strong>{t(autostart?.registered===true?'已登记':autostart?.registered===false?'未登记':'尚未确认')}</strong></div></div>
-   {currentDraft.autostartState==='unknown'&&<p>{t('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。')}</p>}{autostart&&autostart.registered!==autostart.desired&&<p className="feature-note">{t('期望启动选项与系统登记不一致；请核对实际登记及失败详情。')}</p>}{autostartError&&<FailureNotice failure={autostartError} check="system_permissions"/>}
+   <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error||currentDraft.autostartState==='unknown'} checked={currentDraft.autostartDesired??autostart?.desired??prefs.autostart_desired} onChange={event=>setStartup(event.target.checked)}/><span>{t('登录系统后启动 Bee')}</span></label><p>{t('登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。')}</p></div><div className="ns-os-status"><span>{t(autostart&&(currentDraft.autostartState==='unknown'||currentDraft.autostartReadConfirmed===false)?'上次确认的系统登记':'系统登记')}</span><strong>{t(autostart?.registered===true?'已登记':autostart?.registered===false?'未登记':'尚未确认')}</strong></div></div>
+   {currentDraft.autostartState==='unknown'&&<p>{t('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。')}</p>}{autostart&&currentDraft.autostartState==='confirmed'&&currentDraft.autostartReadConfirmed===true&&typeof autostart.registered==='boolean'&&autostart.registered!==(currentDraft.autostartDesired??autostart.desired)&&<p className="feature-note">{t('期望启动选项与系统登记不一致；请核对实际登记及失败详情。')}</p>}{autostartError&&<FailureNotice failure={autostartError} check="autostart_set"/>}{autostartReadError&&<FailureNotice failure={autostartReadError} check="autostart_status"/>}
    <div className="ns-secondary-actions"><button disabled={!!busy} onClick={()=>void run('os',async()=>{await Promise.allSettled([readOs(),readPreferences()]);})}>{t('重新检查系统状态')}</button></div>
 <p className="ns-window-note">{t('关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。')}</p></section></Tabs.Content>
   <Tabs.Content value="about"><section className="ns-section ns-about" data-settings-section="about" tabIndex={-1} aria-label={t('关于 Bee')}><header><h2>{t('关于 Bee')}</h2><p>{t('当前应用、运行核心与 Hive 信息。')}</p></header>{updateControls}{updateControls&&version!==appVersion&&<p className="ns-core-version feature-note">{t('Bee 版本')}：{version||t('尚未读取')}</p>}<dl>{!updateControls&&<><div><dt>{t('桌面应用版本')}</dt><dd>{appVersion}</dd></div><div><dt>{t('Bee 版本')}</dt><dd>{version||t('尚未读取')}</dd></div></>}<div><dt>Hive</dt><dd>{hive??t(contextKnown?'尚未配置 Hive':'本机 Hive 信息尚未确认')}</dd></div></dl><p className="feature-note">{t(paired?'Hive 设备身份已核对。':hive?'显示上次保存的 Hive，远端身份尚未确认。':contextKnown?'请在概览连接本机设备；配对不会自动开始贡献。':'本机保存信息尚未确认；不能据此判定设备未绑定。')}</p></section></Tabs.Content>

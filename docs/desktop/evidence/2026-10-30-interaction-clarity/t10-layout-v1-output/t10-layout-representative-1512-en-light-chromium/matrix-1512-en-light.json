@@ -1,0 +1,153 @@
+{
+  "id": "matrix-1512-en-light",
+  "scene": "running",
+  "scope": "三尺寸×中英×明暗长内容",
+  "expectation": "主页面和模态框无横向溢出",
+  "layer": "正式组件＋模拟IPC",
+  "viewport": {
+    "width": 1512,
+    "height": 833
+  },
+  "locale": "en",
+  "theme": "light",
+  "long": true,
+  "actual": {
+    "viewport": {
+      "width": 1512,
+      "height": 833
+    },
+    "document": {
+      "width": 1512,
+      "height": 833
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 1334,
+      "height": 752,
+      "right": 1512,
+      "bottom": 804
+    },
+    "heading": "Overview",
+    "theme": "light",
+    "text": "OverviewOpen Hive consoleReady for tasksManage platforms individually; pausing stops new tasks.Stop contributionReady platforms: OpenAIBee runningHive connectedThis deviceVerify device againThis deviceBee DesktopDevice paired.Owner accountowner@example.testDevice ownerHivehttps://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.examplePairing does not start contributionAI accounts1 connectedOpenAIPlusAccount ID: bbbbbbbbbbbbbbbbAccepting tasks5 hours3% used7 days2% usedPause tasks✳ClaudeNo Claude account connected yetNot accepting tasksNo sign-in was found in the selected source. Adjust the location or use official sign-in.This Hive did not provide a more specific availability reasonContact the Hive administrator to check platform configuration. This reason does not establish market or account state.QuotaNot checked yetAuthorization stays on this device",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "Open Hive console",
+        "disabled": false,
+        "x": 1352.734375,
+        "y": 77,
+        "width": 130.265625,
+        "height": 32,
+        "right": 1483,
+        "bottom": 109
+      },
+      {
+        "text": "Stop contribution",
+        "disabled": false,
+        "x": 1330.21875,
+        "y": 132,
+        "width": 152.78125,
+        "height": 32,
+        "right": 1483,
+        "bottom": 164
+      },
+      {
+        "text": "Verify device again",
+        "disabled": false,
+        "x": 1322.703125,
+        "y": 292.5,
+        "width": 160.296875,
+        "height": 33.5,
+        "right": 1483,
+        "bottom": 326
+      },
+      {
+        "text": "Pause tasks",
+        "disabled": false,
+        "x": 1363.0625,
+        "y": 633.5,
+        "width": 94.9375,
+        "height": 32,
+        "right": 1458,
+        "bottom": 665.5
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "en",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "running"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-representative-1512-en-light-chromium/matrix-1512-en-light.png",
+  "observed_at": "2026-11-02T18:58:44.863Z",
+  "pageErrors": []
+}

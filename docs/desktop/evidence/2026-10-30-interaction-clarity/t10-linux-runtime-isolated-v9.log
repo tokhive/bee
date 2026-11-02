@@ -1,0 +1,194 @@
+{"started_at": "2026-11-02T19:14:59.547448+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0", "argv": ["python3", "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-runtime-isolated.py"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "bf05ea691e87cdec4983396ab579be6a158f5388", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/playwright.config.ts\n M desktop/playwright.device.config.ts\n M desktop/tests/device.spec.ts\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/native-runtime.spec.ts\n M desktop/tests/native-updater.spec.ts\n M desktop/tests/preview-scenarios.spec.ts\n M desktop/tests/supply.spec.ts\n M docs/desktop/account-runtime-validation.md\n M docs/desktop/bridge-protocol.md\n M docs/desktop/supply-control.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/playwright.t10-layout.config.ts\n?? desktop/tests/device-recovery.spec.ts\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? desktop/tests/fixtures/t10-layout-cases.json\n?? desktop/tests/t10-layout-supplement.spec.ts\n?? desktop/tests/t10-layout.spec.ts\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "M hive/internal/integration/desktop_broker_test.go\n?? hive/internal/integration/desktop_runtime_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.27.3 darwin/arm64"}
+{
+  "Name": "bee-t10-runtime-internal-20261103",
+  "Id": "5cca40549bd27f6d8c4eed87a296c640ff7579377f60b39f4af71aabf4c84fd7",
+  "Created": "2026-11-02T19:13:52.060958172Z",
+  "Scope": "local",
+  "Driver": "bridge",
+  "EnableIPv6": false,
+  "IPAM": {
+    "Driver": "default",
+    "Options": {},
+    "Config": [
+      {
+        "Subnet": "172.22.0.0/16",
+        "Gateway": "172.22.0.1"
+      }
+    ]
+  },
+  "Internal": true,
+  "Attachable": false,
+  "Ingress": false,
+  "ConfigFrom": {
+    "Network": ""
+  },
+  "ConfigOnly": false,
+  "Containers": {
+    "2649442847b2142ba6e8e0554d5f9a9669c5e64f15e78268b99c1a9af6132d1a": {
+      "Name": "bee-t10-runtime-pg-20261103",
+      "EndpointID": "194ef2c35082c3949b2f490891df7b8cee2913688ae382fd56f2630c9992b681",
+      "MacAddress": "02:42:ac:16:00:02",
+      "IPv4Address": "172.22.0.2/16",
+      "IPv6Address": ""
+    }
+  },
+  "Options": {},
+  "Labels": {}
+}
+Iface	Destination	Gateway 	Flags	RefCnt	Use	Metric	Mask		MTU	Window	IRTT                                                       
+eth0	000016AC	00000000	0001	0	0	0	0000FFFF	0	0	0                                                                               
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures/401
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/auth/register status=201 duration=19ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    desktop_runtime_broker_test.go:120: final executable handshake: status=401 code=http_rejected connection=rejected retry=halted; paused=true; resume PUT=0; WS upgrades=0; maintenance/credentials=0; stopped
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures/403
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/auth/register status=201 duration=17ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:01 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    desktop_runtime_broker_test.go:120: final executable handshake: status=403 code=http_rejected connection=rejected retry=halted; paused=true; resume PUT=0; WS upgrades=0; maintenance/credentials=0; stopped
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures/409
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/auth/register status=201 duration=17ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    desktop_runtime_broker_test.go:120: final executable handshake: status=409 code=ownership_unconfirmed connection=occupied retry=halted; paused=true; resume PUT=0; WS upgrades=0; maintenance/credentials=0; stopped
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures/503
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/auth/register status=201 duration=21ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:02 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    desktop_runtime_broker_test.go:120: final executable handshake: status=503 code=http_rejected connection=reconnecting retry=scheduled; paused=true; resume PUT=0; WS upgrades=0; maintenance/credentials=0; stopped
+=== RUN   TestDesktopBrokerRuntimeHandshakeFailures/-1
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/auth/register status=201 duration=18ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    desktop_runtime_broker_test.go:120: final executable handshake: status=-1 code=connection_closed connection=reconnecting retry=scheduled; paused=true; resume PUT=0; WS upgrades=0; maintenance/credentials=0; stopped
+--- PASS: TestDesktopBrokerRuntimeHandshakeFailures (2.69s)
+    --- PASS: TestDesktopBrokerRuntimeHandshakeFailures/401 (0.58s)
+    --- PASS: TestDesktopBrokerRuntimeHandshakeFailures/403 (0.54s)
+    --- PASS: TestDesktopBrokerRuntimeHandshakeFailures/409 (0.52s)
+    --- PASS: TestDesktopBrokerRuntimeHandshakeFailures/503 (0.55s)
+    --- PASS: TestDesktopBrokerRuntimeHandshakeFailures/-1 (0.50s)
+=== RUN   TestDesktopBrokerRuntimeReconnectPreservesPause
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/auth/register status=201 duration=19ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 19:15:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=5ms
+2026/11/02 19:15:04 INFO bee connected module=bee device=q9LL0CgL4h8mCA5GJtcRbBgIzaUfl5_v-AY-hPZPO7U tunnel=true version=dev+3b0b747ff2ca-dirty platform=linux/arm64
+    desktop_runtime_broker_test.go:156: real Hive upgrade connected: run=0694e43fde9b5c81e08fa7b32d227e16 requests=2
+2026/11/02 19:15:04 INFO bee disconnected module=bee device=q9LL0CgL4h8mCA5GJtcRbBgIzaUfl5_v-AY-hPZPO7U session=6ms reason="context closed"
+2026/11/02 19:15:04 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=12ms
+2026/11/02 19:15:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=503 duration=5ms
+    desktop_runtime_broker_test.go:180: real socket close followed by refused retry: detail=map[failure:map[code:connection_refused evidence:map[path:/api/bee/agent target_origin:http://127.0.0.1:36131] message:failed to WebSocket dial: failed to send handshake request: Get "http://127.0.0.1:36131/api/bee/agent": dial tcp 127.0.0.1:36131: connect: connection refused occurred_at:2026-11-02T19:15:05.84509072Z stage:connect] next_retry_at:2026-11-02T19:15:07.845199845Z retry:scheduled]
+2026/11/02 19:15:07 INFO bee connected module=bee device=q9LL0CgL4h8mCA5GJtcRbBgIzaUfl5_v-AY-hPZPO7U tunnel=true version=dev+3b0b747ff2ca-dirty platform=linux/arm64
+2026/11/02 19:15:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=6ms
+2026/11/02 19:15:07 INFO http request module=http method=POST path=/api/bee/maintenance status=503 duration=1ms
+2026/11/02 19:15:07 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 19:15:07 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 19:15:07 INFO bee disconnected module=bee device=q9LL0CgL4h8mCA5GJtcRbBgIzaUfl5_v-AY-hPZPO7U session=30ms reason="context closed"
+2026/11/02 19:15:07 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=40ms
+    desktop_runtime_broker_test.go:202: reconnected same run=0694e43fde9b5c81e08fa7b32d227e16; paused=true; resume PUT=0; final stop receipt=map[intent_saved:true session_clean:true workers_stopped:true]
+--- PASS: TestDesktopBrokerRuntimeReconnectPreservesPause (4.61s)
+PASS
+{"finished_at": "2026-11-02T19:15:09.173521+00:00", "exit": 0}

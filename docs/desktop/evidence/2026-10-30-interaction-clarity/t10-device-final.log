@@ -1,0 +1,983 @@
+{"started_at": "2026-11-02T18:48:07.726163+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "--workers", "4", "--output", "../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "da161c5600c617652fe70507739809c9427acf49", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/playwright.config.ts\n M desktop/playwright.device.config.ts\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/preview-scenarios.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/device-recovery.spec.ts\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "?? hive/internal/integration/desktop_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.27.3 darwin/arm64"}
+
+Running 252 tests using 4 workers
+
+  ✓    3 [chromium] › tests/account-auto-read.spec.ts:38:1 › failed account snapshots retry after ten seconds without replaying writes (1.9s)
+  ✓    4 [chromium] › tests/account-auto-read.spec.ts:44:1 › uncertain writes survive passive runtime, old snapshots and pending replies until explicit terminal confirmation (1.6s)
+  ✓    5 [chromium] › tests/account-auto-read.spec.ts:56:1 › official retry_at defers reads and unchanged failed observations never create a prompt loop (350ms)
+  ✓    7 [chromium] › tests/account-auto-read.spec.ts:65:1 › failed local sources remain diagnosed without automatic prompts and retry once on account re-entry (285ms)
+  ✓    6 [chromium] › tests/account-auto-read.spec.ts:52:1 › source replacement rejects a late previous-source reply (813ms)
+  ✓    8 [chromium] › tests/account-auto-read.spec.ts:73:1 › one platform snapshot error does not slow the other pending operation or starve its retry (233ms)
+  ✓    9 [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling select retries refreshed snapshots at ten seconds without replaying actions (236ms)
+  ✓    2 [chromium] › tests/account-auto-read.spec.ts:18:1 › selected matching candidate automatically reads official quota once and retains the raw percentage (3.0s)
+  ✓   10 [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling confirm_change retries refreshed snapshots at ten seconds without replaying actions (274ms)
+  ✓    1 [chromium] › tests/account-auto-read.spec.ts:6:1 › account entry reads each source once and never performs automatic writes or sign-in (3.3s)
+  ✓   11 [chromium] › tests/account-auto-read.spec.ts:86:62 › resolved permission_denied source failures retry on re-entry without repeated permission prompts (383ms)
+  ✓   12 [chromium] › tests/account-auto-read.spec.ts:86:62 › resolved source_unavailable source failures retry on re-entry without repeated permission prompts (416ms)
+  ✓   14 [chromium] › tests/account-auto-read.spec.ts:120:1 › account action waits for a background snapshot and submits once using the refreshed revision (327ms)
+  ✓   13 [chromium] › tests/account-auto-read.spec.ts:95:1 › a late coordinated readback cannot confirm a replacement credential source (448ms)
+  ✓   15 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after failed (321ms)
+  ✓   16 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after candidate-changed (302ms)
+  ✓   17 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after expired (346ms)
+  ✓   18 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after unmounted (355ms)
+  ✓   19 [chromium] › tests/account-auto-read.spec.ts:138:1 › account read errors remain visible throughout the retry and clear only after success (307ms)
+  ✓   20 [chromium] › tests/account-auto-read.spec.ts:146:1 › repeated account read failures keep retrying until a successful snapshot (384ms)
+  ✓   21 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes running (316ms)
+  ✓   22 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes succeeded (301ms)
+  ✓   23 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes replaced (369ms)
+  ✓   25 [chromium] › tests/account-auto-read.spec.ts:196:57 › owned official login releases pending confirmation only after its succeeded terminal observation (425ms)
+  ✓   26 [chromium] › tests/account-auto-read.spec.ts:196:57 › owned official login releases pending confirmation only after its failed terminal observation (420ms)
+  ✓   27 [chromium] › tests/account-auto-read.spec.ts:196:57 › owned official login releases pending confirmation only after its cancelled terminal observation (360ms)
+  ✓   24 [chromium] › tests/account-auto-read.spec.ts:171:1 › NativeApp reconciling coordinator waits exactly ten seconds without replaying writes (703ms)
+  ✓   29 [chromium] › tests/account-auto-read.spec.ts:200:94 › owned official login ignores other-operation terminal confirmation (297ms)
+  ✓   28 [chromium] › tests/account-auto-read.spec.ts:200:94 › owned official login ignores old-revision terminal confirmation (305ms)
+  ✓   30 [chromium] › tests/account-auto-read.spec.ts:200:94 › owned official login ignores other-platform terminal confirmation (313ms)
+  ✓   31 [chromium] › tests/account-auto-read.spec.ts:200:94 › owned official login ignores other-generation terminal confirmation (374ms)
+  ✓   32 [chromium] › tests/account-auto-read.spec.ts:219:1 › a received reconciling account action retains its owner until the same terminal snapshot without replay (346ms)
+  ✓   33 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-creation-unknown (1.2s)
+  ✓   34 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-redemption-unknown (1.3s)
+  ✓   35 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-saving (1.5s)
+  ✓   36 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-pending (1.5s)
+  ✓   37 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-draining (1.1s)
+  ✓   38 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-creation-unknown (1.2s)
+  ✓   39 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-saving (1.2s)
+  ✓   40 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-redemption-unknown (1.3s)
+  ✓   41 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-owner (1.2s)
+  ✓   43 [chromium] › tests/device-recovery.spec.ts:43:1 › saved revoked identity and missing selected source keep all pages reachable without account or runtime writes (1.2s)
+  ✓   42 [chromium] › tests/device-recovery.spec.ts:21:1 › revoked credential recovery requires local consent, external approval and explicit new owner adoption (1.6s)
+  ✓   45 [chromium] › tests/device.spec.ts:68:1 › failed verification blocks success and remains retryable (831ms)
+  ✓   47 [chromium] › tests/device.spec.ts:91:1 › an old native status rejection cannot overwrite a newer ready event (841ms)
+  ✓   44 [chromium] › tests/device.spec.ts:49:1 › normal native build pairs and verifies without demo balances or starting supply (2.4s)
+  ✓   49 [chromium] › tests/device.spec.ts:105:1 › English device entry and settings have complete translations (795ms)
+  ✓   46 [chromium] › tests/device.spec.ts:77:1 › retrying a failed bound-device check does not revive cached success (1.9s)
+  ✓   51 [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation (849ms)
+  ✓   52 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read (926ms)
+  ✓   53 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read (1.3s)
+  ✓   54 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read (1.3s)
+  ✓   55 [chromium] › tests/device.spec.ts:158:1 › a historical completed recovery yields preparation guidance to current account and runtime facts (1.5s)
+  ✓   56 [chromium] › tests/device.spec.ts:168:1 › initial device facts stay unknown until the first read finishes (1.6s)
+  ✘   48 [chromium] › tests/device.spec.ts:97:1 › opening after website confirmation consumes the latest bound result (6.3s)
+  ✓   57 [chromium] › tests/device.spec.ts:177:1 › pairing copy feedback and failed browser opening retain the same request (1.4s)
+  ✓   58 [chromium] › tests/device.spec.ts:186:201 › initial pairing presents creation_unknown from its durable transaction (970ms)
+  ✓   59 [chromium] › tests/device.spec.ts:186:201 › initial pairing presents redeeming from its durable transaction (1.3s)
+  ✓   60 [chromium] › tests/device.spec.ts:186:201 › initial pairing presents redemption_unknown from its durable transaction (1.3s)
+  ✓   62 [chromium] › tests/device.spec.ts:186:201 › initial pairing presents saving from its durable transaction (1.6s)
+  ✓   63 [chromium] › tests/device.spec.ts:192:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation (1.9s)
+  ✓   61 [chromium] › tests/device.spec.ts:186:201 › initial pairing presents draining from its durable transaction (1.5s)
+  ✓   64 [chromium] › tests/device.spec.ts:202:1 › restarted unknown recovery queries the existing transaction without writes (883ms)
+  ✓   65 [chromium] › tests/device.spec.ts:207:1 › adopting a different owner requires its own current revision confirmation (1.2s)
+  ✓   66 [chromium] › tests/device.spec.ts:213:1 › local expiry waits for Hive confirmation before offering another pairing request (1.3s)
+  ✓   67 [chromium] › tests/device.spec.ts:220:1 › a stale owner dialog cannot submit after the coordinator sees a newer transaction revision (1.3s)
+  ✓   68 [chromium] › tests/native-accounts.spec.ts:9:1 › account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus (1.4s)
+  ✓   70 [chromium] › tests/native-accounts.spec.ts:26:1 › overview and accounts share per-platform pause state; resume never starts contribution (1.5s)
+  ✘   50 [chromium] › tests/device.spec.ts:112:1 › diagnostics preserve runtime operation and platform authorization failure evidence (30.1s)
+  ✘   69 [chromium] › tests/native-accounts.spec.ts:17:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme (30.2s)
+  ✘   71 [chromium] › tests/native-accounts.spec.ts:30:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota (30.1s)
+  ✘   72 [chromium] › tests/native-accounts.spec.ts:34:1 › uncertain per-platform pause preserves the other platform and does not replay a write (30.1s)
+  ✓   74 [chromium] › tests/native-accounts.spec.ts:42:1 › approved shared rows show saved identity and a keyboard-accessible compact detail (2.9s)
+  ✓   75 [chromium] › tests/native-accounts.spec.ts:58:1 › unconnected candidate shows its target and exact pause impact before connecting (1.9s)
+  ✓   76 [chromium] › tests/native-accounts.spec.ts:68:1 › running official login explains its stopped precondition and provides the runtime location (1.5s)
+  ✓   77 [chromium] › tests/native-accounts.spec.ts:75:1 › candidate expiring at the safety boundary explains zero-write refusal (991ms)
+  ✓   78 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_missing stays scoped and leaves the other platform usable (1.0s)
+  ✓   79 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source permission_denied stays scoped and leaves the other platform usable (1.0s)
+  ✓   80 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source expired stays scoped and leaves the other platform usable (1.1s)
+  ✓   81 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_changed stays scoped and leaves the other platform usable (1.1s)
+  ✓   82 [chromium] › tests/native-accounts.spec.ts:89:1 › confirmation invalidates a changed candidate while retaining the original target and zero writes (1.2s)
+  ✓   83 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_missing is actionable without automatically connecting (1.4s)
+  ✓   84 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_version_unsupported is actionable without automatically connecting (1.5s)
+  ✓   85 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_source_unchanged is actionable without automatically connecting (1.1s)
+  ✓   86 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_timeout is actionable without automatically connecting (1.2s)
+  ✓   87 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_namespace_mismatch is actionable without automatically connecting (1.3s)
+  ✓   88 [chromium] › tests/native-accounts.spec.ts:101:1 › unknown cancel only queries the same official operation and late success remains an unconnected candidate (1.5s)
+  ✓   89 [chromium] › tests/native-accounts.spec.ts:106:1 › background snapshot failure during official login never invents a cancel request (1.2s)
+  ✓   90 [chromium] › tests/native-accounts.spec.ts:119:52 › runtime read failure marks retained account facts until recovery without automatic writes (1.2s)
+  ✓   91 [chromium] › tests/native-accounts.spec.ts:119:52 › openai read failure marks retained account facts until recovery without automatic writes (1.3s)
+  ✓   93 [chromium] › tests/native-experience.spec.ts:39:1 › safe logs load manually with module/platform/level filters and native cursors (968ms)
+  ✓   94 [chromium] › tests/native-experience.spec.ts:50:1 › management startup failure keeps safe native logs accessible without enabling diagnostics (894ms)
+  ✓   92 [chromium] › tests/native-experience.spec.ts:25:1 › four native pages share one poller; diagnostics starts only on click and survives navigation (1.8s)
+  ✓   95 [chromium] › tests/native-experience.spec.ts:59:1 › failed preference save keeps the saved appearance; recovery and English copy stay usable (1.1s)
+  ✓   96 [chromium] › tests/native-experience.spec.ts:71:1 › Hive entry asks native code to open only the saved origin root without frontend URL input (851ms)
+  ✓   97 [chromium] › tests/native-experience.spec.ts:76:44 › late Hive open success from the previous instance cannot refresh the new owner (927ms)
+  ✓   98 [chromium] › tests/native-experience.spec.ts:76:44 › late Hive open failure from the previous instance cannot refresh the new owner (965ms)
+  ✓   99 [chromium] › tests/native-experience.spec.ts:86:1 › notification delivery failures stay visible and retry requires an explicit action (1.4s)
+  ✓  100 [chromium] › tests/native-experience.spec.ts:98:44 › a delayed initial preference success cannot roll back a newer saved appearance (1.4s)
+  ✓  101 [chromium] › tests/native-experience.spec.ts:98:44 › a delayed initial preference failure cannot roll back a newer saved appearance (1.2s)
+  ✓  103 [chromium] › tests/native-experience.spec.ts:135:1 › new management instance discards a pending diagnostic from the previous instance (978ms)
+  ✓  104 [chromium] › tests/native-experience.spec.ts:142:1 › diagnostic tabs keep reads explicit and preserve the running report (1.1s)
+  ✓  102 [chromium] › tests/native-experience.spec.ts:113:1 › export confirms scope and waits for matched native success/failure/unknown receipts (1.8s)
+  ✓  105 [chromium] › tests/native-experience.spec.ts:158:1 › settings categories preserve the proxy draft and test result without querying the OS again (1.1s)
+  ✓  106 [chromium] › tests/native-experience.spec.ts:173:1 › settings device replacement offers overview navigation without replaying the proxy write (910ms)
+  ✓  107 [chromium] › tests/native-experience.spec.ts:193:1 › problem-first sections retain every platform reason and its original safe evidence (1.2s)
+  ✓  108 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes empty reports (850ms)
+  ✓  109 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes skipped reports (974ms)
+  ✓  110 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes cancelled reports (1.0s)
+  ✓  111 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes passed reports (1.2s)
+  ✓  112 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes unknown reports (838ms)
+  ✓  113 [chromium] › tests/native-experience.spec.ts:231:1 › log filters distinguish unread and empty and reject a late result from an older filter (909ms)
+  ✓  114 [chromium] › tests/native-experience.spec.ts:250:1 › older initial network observation cannot replace an explicit refresh or an edited proxy (938ms)
+  ✓  115 [chromium] › tests/native-experience.spec.ts:263:1 › denied notifications and unknown autostart remain distinct without requesting OS changes (905ms)
+  ✓  116 [chromium] › tests/native-experience.spec.ts:275:1 › about shows a missing Bee version as unread while retaining the real build version (731ms)
+  ✘   73 [chromium] › tests/native-accounts.spec.ts:37:1 › device verification failure permits local reads and preserves selected historical Hive quota (30.1s)
+  ✓  117 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 1440 zh light (1.6s)
+  ✓  118 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 1440 en dark (2.1s)
+  ✓  119 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 860 en light (1.9s)
+  ✓  121 [chromium] › tests/native-experience.spec.ts:301:1 › T8 original report read pauses after one failure and explicit reread completes without another start (1.1s)
+  ✓  123 [chromium] › tests/native-experience.spec.ts:319:1 › T8 lost cancel receipt is checked by original report reads across navigation (1.2s)
+  ✓  122 [chromium] › tests/native-experience.spec.ts:311:1 › T8 lost start receipt remains unknown across all pages and only logs are available without an ID (1.5s)
+  ✓  124 [chromium] › tests/native-experience.spec.ts:326:1 › T8 saved proxy survives a failed network read and is never reported as a failed save (1.1s)
+  ✓  120 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 860 zh dark (2.4s)
+  ✓  126 [chromium] › tests/native-experience.spec.ts:341:1 › T8 denied notification keeps the saved preference and gives the actual OS settings location (959ms)
+  ✓  127 [chromium] › tests/native-experience.spec.ts:346:1 › T8 autostart read failure retains the desired choice and actual registration receipt (1.2s)
+  ✓  128 [chromium] › tests/native-experience.spec.ts:353:69 › T8 diagnostic local binding and revoked Hive identity remain separate concrete facts: device_replaced (1.2s)
+  ✓  125 [chromium] › tests/native-experience.spec.ts:332:1 › T8 unknown network apply preserves the draft and only rereads network and runtime after navigation (1.7s)
+  ✓  129 [chromium] › tests/native-experience.spec.ts:353:69 › T8 diagnostic local binding and revoked Hive identity remain separate concrete facts: invalid_device_credential (1.2s)
+  ✓  130 [chromium] › tests/native-experience.spec.ts:362:1 › T8 confirmed proxy save never selects an older device scope when its network read fails (1.1s)
+  ✓  131 [chromium] › tests/native-experience.spec.ts:370:1 › T8 unknown proxy save permits a new explicit save only after current scoped reads succeed (1.2s)
+  ✓  132 [chromium] › tests/native-experience.spec.ts:377:1 › T8 restore failure preserves the applied network and the separate stopped runtime (1.4s)
+  ✓  133 [chromium] › tests/native-experience.spec.ts:385:1 › T8 pending network apply receives one result after navigating away without replay (1.3s)
+  ✓  134 [chromium] › tests/native-experience.spec.ts:393:1 › T8 lost notification permission receipt survives navigation and is reconciled only by OS reads (1.3s)
+  ✓  135 [chromium] › tests/native-experience.spec.ts:400:1 › T8 repeated original-report read failures preserve cancel evidence and share a pending reread (1.4s)
+  ✓  137 [chromium] › tests/native-experience.spec.ts:416:1 › T8 successful upstream network tests retain the separate Hive failure and actual targets (1.0s)
+  ✓  136 [chromium] › tests/native-experience.spec.ts:408:1 › T8 export waiting and unknown receipts survive navigation and translate with the app language (1.7s)
+  ✓  138 [chromium] › tests/native-experience.spec.ts:424:1 › T8 lost autostart receipt keeps the last registration separate from the new desired choice (1.1s)
+  ✓  140 [chromium] › tests/native-experience.spec.ts:478:1 › T8 null autostart set registration remains unknown without inventing a mismatch (1.0s)
+  ✓  141 [chromium] › tests/native-experience.spec.ts:488:1 › T8 error-bearing autostart set receipt stays unknown with registration=null (1.1s)
+  ✓  142 [chromium] › tests/native-experience.spec.ts:502:38 › T8 autostart set failure retains its proven boolean registration=false (1.1s)
+  ✓  139 [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence (3.3s)
+  ✓  143 [chromium] › tests/native-experience.spec.ts:502:38 › T8 autostart set failure retains its proven boolean registration=true (2.0s)
+  ✓  144 [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (1.9s)
+  ✓  145 [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot (2.5s)
+  ✓  146 [chromium] › tests/native-runtime.spec.ts:43:1 › a successful account write still requires a verified read when central readback fails (1.3s)
+  ✓  148 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action success from the previous owner cannot refresh or pause the current instance (1.5s)
+  ✓  149 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action failure from the previous owner cannot refresh or pause the current instance (1.1s)
+  ✓  150 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start success from the previous owner cannot refresh or pause the current instance (989ms)
+  ✓  151 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start failure from the previous owner cannot refresh or pause the current instance (930ms)
+  ✓  152 [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (1.3s)
+  ✓  155 [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query (683ms)
+  ✘  147 [chromium] › tests/native-runtime.spec.ts:51:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart (6.3s)
+  ✘  154 [chromium] › tests/native-runtime.spec.ts:94:1 › official login warns about official account, supports cancellation, and completed login remains a candidate (5.9s)
+  ✘  156 [chromium] › tests/native-runtime.spec.ts:105:1 › completed login cannot clear a later source edit, and write admission locks the source (6.9s)
+  ✓  159 [chromium] › tests/native-runtime.spec.ts:130:1 › English runtime and login confirmation support keyboard at minimum window size (1.0s)
+  ✘  157 [chromium] › tests/native-runtime.spec.ts:112:1 › account change remains paused and a platform failure leaves the other platform visible (6.1s)
+  ✘  158 [chromium] › tests/native-runtime.spec.ts:122:1 › only proven unsubmitted confirmation can continue after reconciliation (6.2s)
+  ✓  162 [chromium] › tests/native-runtime.spec.ts:157:1 › start preserves paused platforms and uncertain start recovers by reading only (760ms)
+  ✘  161 [chromium] › tests/native-runtime.spec.ts:148:1 › runtime observations preserve newer candidates and edited sources (5.8s)
+  ✘  163 [chromium] › tests/native-runtime.spec.ts:178:1 › unregistered selection can be cancelled only after confirmation and never starts runtime (6.0s)
+  ✓  165 [chromium] › tests/native-runtime.spec.ts:182:56 › identity diagnostic still permits one trusted local stop (1.1s)
+  ✓  166 [chromium] › tests/native-runtime.spec.ts:182:56 › identity recovery still permits one trusted local stop (1.0s)
+  ✘  167 [chromium] › tests/native-runtime.spec.ts:193:43 › device failure allows local login and cancellation but keeps account selection blocked (6.1s)
+  ✘  153 [chromium] › tests/native-runtime.spec.ts:86:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them (30.1s)
+  ✓  169 [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview (766ms)
+  ✓  170 [chromium] › tests/native-runtime.spec.ts:217:57 › known unsent account_action recovers at the same revision without replay (1.1s)
+  ✓  171 [chromium] › tests/native-runtime.spec.ts:217:57 › known unsent runtime_start recovers at the same revision without replay (890ms)
+  ✓  172 [chromium] › tests/native-runtime.spec.ts:230:244 › shared connecting status never presents running as ready (523ms)
+  ✓  173 [chromium] › tests/native-runtime.spec.ts:230:244 › shared reconnecting status never presents running as ready (510ms)
+  ✓  174 [chromium] › tests/native-runtime.spec.ts:230:244 › shared disconnected status never presents running as ready (504ms)
+  ✓  175 [chromium] › tests/native-runtime.spec.ts:230:244 › shared rejected status never presents running as ready (485ms)
+  ✘  168 [chromium] › tests/native-runtime.spec.ts:193:43 › recovery failure allows local login and cancellation but keeps account selection blocked (6.1s)
+  ✓  176 [chromium] › tests/native-runtime.spec.ts:230:244 › shared occupied status never presents running as ready (506ms)
+  ✓  177 [chromium] › tests/native-updater.spec.ts:37:1 › background check failure leaves contribution intact and manual retry needs no app restart (614ms)
+  ✓  178 [chromium] › tests/native-updater.spec.ts:29:1 › native background check is observed through read-only polls without triggering an automatic check (444ms)
+  ✓  179 [chromium] › tests/native-updater.spec.ts:48:1 › unknown bytes never imply 100 percent and download completion awaits signed verified state (658ms)
+  ✓  180 [chromium] › tests/native-updater.spec.ts:62:1 › quit-and-install confirmation is sole install action and failed stopping state never claims success (752ms)
+  ✓  181 [chromium] › tests/native-updater.spec.ts:74:1 › stale confirmation surfaces native revision evidence and cannot silently install a changed receipt (626ms)
+  ✓  182 [chromium] › tests/native-updater.spec.ts:83:1 › keyboard confirmation starts on cancel and returns focus after dismissal (482ms)
+  ✓  183 [chromium] › tests/native-updater.spec.ts:90:1 › late older poll stays blocked and exposes revision evidence (445ms)
+  ✓  184 [chromium] › tests/native-updater.spec.ts:95:1 › current version says current and never invents recovery success in English (379ms)
+  ✓  186 [chromium] › tests/native-updater.spec.ts:139:1 › a failed install receipt can be reconciled and replaced without repeating the same install (1.0s)
+  ✓  185 [chromium] › tests/native-updater.spec.ts:101:1 › settings About has one version and one update action wired to the fixed native commands (1.1s)
+  ✓  187 [chromium] › tests/native-updater.spec.ts:161:1 › T9 known update failure is localized with the original evidence in the same notice (398ms)
+  ✓  188 [chromium] › tests/native-updater.spec.ts:166:42 › T9 trusted previous recovery explains and permits a new explicit check and download in zh (733ms)
+  ✘  160 [chromium] › tests/native-runtime.spec.ts:138:1 › runtime account revisions reach an open confirmation without changing its candidate (30.1s)
+  ✓  189 [chromium] › tests/native-updater.spec.ts:166:42 › T9 trusted previous recovery explains and permits a new explicit check and download in en (728ms)
+  ✓  190 [chromium] › tests/native-updater.spec.ts:187:42 › T9 unproven recovery preserves protection and allows only readback in zh (431ms)
+  ✓  192 [chromium] › tests/native-updater.spec.ts:215:1 › T9 saved language and same-revision system changes synchronize native metadata without notification or runtime writes (945ms)
+  ✓  193 [chromium] › tests/native-updater.spec.ts:187:42 › T9 unproven recovery preserves protection and allows only readback in en (496ms)
+  ✓  191 [chromium] › tests/native-updater.spec.ts:198:1 › T9 an unknown install receipt survives leaving settings and permits only reading that operation (1.1s)
+  ✓  194 [chromium] › tests/native-updater.spec.ts:232:1 › T9 unread preferences cannot publish a default native language and recovery reads before synchronizing (676ms)
+  ✓  196 [chromium] › tests/native-updater.spec.ts:240:53 › T9 escape closes an unsubmitted installation confirmation during a pending status poll (677ms)
+  ✓  195 [chromium] › tests/native-updater.spec.ts:240:53 › T9 cancel closes an unsubmitted installation confirmation during a pending status poll (779ms)
+  ✓  198 [chromium] › tests/native-updater.spec.ts:255:1 › T9 background status reads do not disable an update action between pointer down and up (483ms)
+  ✓  197 [chromium] › tests/native-updater.spec.ts:249:1 › T9 a proven unsent install keeps the same verified update available for a new explicit confirmation (602ms)
+  ✓  200 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: running (600ms)
+  ✓  201 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: stopped (602ms)
+  ✓  199 [chromium] › tests/native-updater.spec.ts:260:1 › T9 StrictMode keeps one background read pending and an unmounted read cannot overwrite a new check (1.3s)
+  ✓  202 [chromium] › tests/polling-stability.spec.ts:34:1 › an explicit start during a runtime read waits and submits once (746ms)
+  ✓  203 [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay (850ms)
+  ✓  204 [chromium] › tests/polling-stability.spec.ts:52:1 › fresh supply reads keep pause available and serialize a single explicit change (840ms)
+  ✓  205 [chromium] › tests/polling-stability.spec.ts:63:1 › pairing polling keeps the website action stable (724ms)
+  ✓  207 [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery (784ms)
+  ✓  206 [chromium] › tests/polling-stability.spec.ts:71:1 › account status polling never disables cancel login and the explicit cancel is not lost (1.3s)
+  ✓  208 [chromium] › tests/polling-stability.spec.ts:104:1 › a waiting platform resume cannot apply to a replacement account (825ms)
+  ✓  209 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: fresh-revision (1.1s)
+  ✓  211 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: read-failed (997ms)
+  ✓  210 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: candidate-changed (1.3s)
+  ✓  212 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (1.1s)
+  ✓  214 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt (759ms)
+  ✓  213 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (925ms)
+  ✘  164 [chromium] › tests/native-runtime.spec.ts:182:56 › identity device still permits one trusted local stop (30.1s)
+  ✓  215 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt (877ms)
+  ✓  216 [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence (1.0s)
+  ✓  217 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision (1.4s)
+  ✓  218 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (816ms)
+  ✓  220 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (1.0s)
+  ✓  221 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (1.2s)
+  ✓  219 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision (1.7s)
+  ✓  222 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (1.3s)
+  ✓  223 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (1.2s)
+  ✓  224 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 (918ms)
+  ✓  225 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 (1.0s)
+  ✓  226 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 (1.1s)
+  ✓  227 [chromium] › tests/recovery-navigation.spec.ts:12:1 › binding replacement isolates unsaved settings drafts (871ms)
+  ✓  228 [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft (1.4s)
+  ✓  230 [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus (1.3s)
+  ✓  229 [chromium] › tests/recovery-navigation.spec.ts:26:1 › unknown account result remains read only across navigation and a new instance clears the old operation (1.4s)
+  ✓  231 [chromium] › tests/recovery-navigation.spec.ts:40:1 › a diagnostic report survives pages and a network change off-page invalidates it (1.7s)
+  ✓  233 [chromium] › tests/recovery-navigation.spec.ts:57:1 › a diagnostic target absent from a partial report focuses its summary once without starting a run (939ms)
+  ✓  232 [chromium] › tests/recovery-navigation.spec.ts:49:1 › a newer diagnostic identity rejection blocks account submission and runtime start (1.3s)
+  ✓  234 [chromium] › tests/recovery-navigation.spec.ts:70:1 › Claude inline source recovery keeps its platform, drafts and return focus without writes (1.7s)
+  ✓  235 [chromium] › tests/recovery-navigation.spec.ts:83:1 › T8 diagnostic source recovery targets Claude credentials and returns focus to its original check without writes (1.2s)
+  ✓  236 [chromium] › tests/supply.spec.ts:51:1 › two verified shared account rows show real reasons and explicit pause/resume semantics at 860x600 (1.2s)
+  ✓  239 [chromium] › tests/supply.spec.ts:94:1 › expired snapshots never show a current successful state or enable writes (649ms)
+  ✓  238 [chromium] › tests/supply.spec.ts:78:1 › independent platform polling waits ten seconds after completion and never overlaps the same platform (785ms)
+  ✓  240 [chromium] › tests/supply.spec.ts:98:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire (727ms)
+  ✓  243 [chromium] › tests/supply.spec.ts:121:1 › unverified devices never issue supply IPC (559ms)
+  ✓  242 [chromium] › tests/supply.spec.ts:113:1 › English platform controls and reason copy are complete at minimum width (954ms)
+  ✓  245 [chromium] › tests/supply.spec.ts:141:1 › a delayed expiry timer cannot authorize a write from a stale rendered button (611ms)
+  ✓  246 [chromium] › tests/supply.spec.ts:148:1 › manager replacement invalidates device data while preserving this run’s language and navigation (759ms)
+  ✘  237 [chromium] › tests/supply.spec.ts:64:1 › an uncertain write retries GET automatically, preserves diagnostics and never repeats PUT (30.1s)
+  ✘  241 [chromium] › tests/supply.spec.ts:106:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance (30.1s)
+  ✘  244 [chromium] › tests/supply.spec.ts:125:1 › old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round (30.1s)
+  ✓  248 [chromium] › tests/supply.spec.ts:164:254 › detailed supply account_not_registered preserves pause and offers its real handling object (1.5s)
+  ✘  247 [chromium] › tests/supply.spec.ts:155:1 › one platform read failure preserves the other platform fresh report (30.2s)
+  ✓  250 [chromium] › tests/supply.spec.ts:164:254 › detailed supply supply_device_restricted preserves pause and offers its real handling object (1.6s)
+  ✓  249 [chromium] › tests/supply.spec.ts:164:254 › detailed supply market_not_open preserves pause and offers its real handling object (2.0s)
+  ✓  251 [chromium] › tests/supply.spec.ts:164:254 › detailed supply supply_not_enabled preserves pause and offers its real handling object (1.6s)
+  ✓  252 [chromium] › tests/supply.spec.ts:164:254 › detailed supply account_not_admitted preserves pause and offers its real handling object (1.3s)
+
+
+  1) [chromium] › tests/device.spec.ts:97:1 › opening after website confirmation consumes the latest bound result 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByRole('alert')
+    Expected: 0
+    Received: 1
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+        14 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      100 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
+      101 |  await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
+    > 102 |  await expect(page.getByText('设备已绑定。')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
+          |                                                                                             ^
+      103 | });
+      104 |
+      105 | test('English device entry and settings have complete translations',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:102:93
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/device.spec.ts:112:1 › diagnostics preserve runtime operation and platform authorization failure evidence 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      124 |  });
+      125 |  await page.goto('/');await page.getByRole('button',{name:'诊断',exact:true}).click();
+    > 126 |  await page.getByText('核对诊断',{exact:true}).click();
+          |                                            ^
+      127 |  const evidence=page.locator('.native-diagnostic-evidence pre');
+      128 |  await expect(evidence).toContainText('runtime_start_check');await expect(evidence).toContainText('permission_denied');
+      129 |  await expect(evidence).toContainText('source_read');await expect(evidence).toContainText('/fixture/source');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:126:44
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/native-accounts.spec.ts:17:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+       6 | async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
+       7 | async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
+    >  8 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
+         |                                                                                                                                                              ^
+       9 | test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
+      10 |  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
+      11 |  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:8:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:23:2
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-source-edi-ef912-with-English-and-dark-theme-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-source-edi-ef912-with-English-and-dark-theme-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-source-edi-ef912-with-English-and-dark-theme-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/native-accounts.spec.ts:30:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+       6 | async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
+       7 | async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
+    >  8 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
+         |                                                                                                                                                              ^
+       9 | test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
+      10 |  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
+      11 |  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:8:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:32:237
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-official-s-0cae2--never-offers-a-valid-quota-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-official-s-0cae2--never-offers-a-valid-quota-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-official-s-0cae2--never-offers-a-valid-quota-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/native-accounts.spec.ts:34:1 › uncertain per-platform pause preserves the other platform and does not replay a write 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+       6 | async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
+       7 | async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
+    >  8 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
+         |                                                                                                                                                              ^
+       9 | test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
+      10 |  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
+      11 |  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:8:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:35:575
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-uncertain--4825f-and-does-not-replay-a-write-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-uncertain--4825f-and-does-not-replay-a-write-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-uncertain--4825f-and-does-not-replay-a-write-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/native-accounts.spec.ts:37:1 › device verification failure permits local reads and preserves selected historical Hive quota 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+       6 | async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
+       7 | async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
+    >  8 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
+         |                                                                                                                                                              ^
+       9 | test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
+      10 |  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
+      11 |  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:8:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-accounts.spec.ts:39:769
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-device-ver-cb375-ected-historical-Hive-quota-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-device-ver-cb375-ected-historical-Hive-quota-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-accounts-device-ver-cb375-ected-historical-Hive-quota-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/native-runtime.spec.ts:51:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('只检查网络可达性，不证明授权或额度，不会开始贡献。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('只检查网络可达性，不证明授权或额度，不会开始贡献。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('只检查网络可达性，不证明授权或额度，不会开始贡献。', { exact: true })
+
+
+      53 |  await expect(page.getByLabel('代理草稿的 Hive 地址',{exact:true})).toHaveCount(0);
+      54 |  const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://192.0.2.1:7890');await page.getByRole('button',{name:'测试连接',exact:true}).click();await expect(page.getByRole('alert')).toContainText('loopback');expect(await calls(page,'network_test')).toEqual([]);
+    > 55 |  await proxy.fill('http://127.0.0.1:7890');await page.getByRole('button',{name:'测试连接',exact:true}).click();await expect(page.getByText('只检查网络可达性，不证明授权或额度，不会开始贡献。',{exact:true})).toBeVisible();
+         |                                                                                                                                                                                   ^
+      56 |  const effective=page.locator('.ns-network-summary div').filter({has:page.getByText('当前生效配置',{exact:true})});await expect(effective).toContainText('代理未启用');
+      57 |  await page.getByRole('button',{name:'保存代理',exact:true}).click();await expect(page.getByRole('button',{name:'停止并重新启动以应用',exact:true})).toBeVisible();await expect(effective).toContainText('代理未启用');
+      58 |  await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();expect(await calls(page,'network_apply_saved')).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:55:179
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-paired-prox-72e6f-until-the-confirmed-restart-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-paired-prox-72e6f-until-the-confirmed-restart-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-paired-prox-72e6f-until-the-confirmed-restart-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests/native-runtime.spec.ts:86:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      88 |  await page.evaluate(()=>{(window as any).actionUnknown=true;(window as any).actionPending=true;});
+      89 |  await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByText('等待自动重试…',{exact:true})).toBeVisible();
+    > 90 |  await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('pre')).toContainText('RESPONSE_TIMEOUT: account action result unconfirmed');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+         |                                                                                                          ^
+      91 |  const reads=await page.evaluate(()=>(window as any).runtimeReadCount);await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByText('等待自动重试…',{exact:true})).toBeVisible();
+      92 |  await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeDisabled();const snapshots=(await calls(page,'account_snapshot')).length;await page.clock.runFor(10001);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBeGreaterThan(snapshots);await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeDisabled();await expect(card(page).getByText('等待自动重试…',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
+      93 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:90:106
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-uncertain-a-c50ef-e-runtime-cannot-clear-them-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-uncertain-a-c50ef-e-runtime-cannot-clear-them-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-uncertain-a-c50ef-e-runtime-cannot-clear-them-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests/native-runtime.spec.ts:94:1 › official login warns about official account, supports cancellation, and completed login remains a candidate 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('dialog').last()
+    Expected substring: "可能改变官方客户端当前登录"
+    Received string:    "登录 Claude将调用已安装的 Claude Code 官方客户端，可能改变该客户端当前登录。完成后仅成为候选，不会自动接入、开始贡献或恢复接单。取消开始官方登录"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('dialog').last() with timeout 5000ms
+      - waiting for getByRole('dialog').last()
+        14 × locator resolved to <div role="dialog" tabindex="-1" id="radix-_r_g_" data-state="open" class="dialog-content" aria-labelledby="radix-_r_h_" aria-describedby="radix-_r_i_">…</div>
+           - unexpected value "登录 Claude将调用已安装的 Claude Code 官方客户端，可能改变该客户端当前登录。完成后仅成为候选，不会自动接入、开始贡献或恢复接单。取消开始官方登录"
+
+
+      94 | test('official login warns about official account, supports cancellation, and completed login remains a candidate',async({page})=>{
+      95 |  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page,'Claude').getByText('已有登录，尚未接入')).toBeVisible();await openDetails(page,'Claude');
+    > 96 |  const sheet=page.getByRole('dialog').first();await sheet.getByRole('button',{name:'登录 Claude',exact:true}).click();const confirm=page.getByRole('dialog').last();await expect(confirm).toContainText('可能改变官方客户端当前登录');await confirm.getByRole('button',{name:'开始官方登录',exact:true}).click();await expect(sheet.getByRole('button',{name:'取消官方登录',exact:true})).toBeEnabled();await sheet.getByRole('button',{name:'取消官方登录',exact:true}).click();await expect(sheet.getByText('操作已取消',{exact:true})).toBeVisible();
+         |                                                                                                                                                                                         ^
+      97 |  await page.evaluate(()=>{(window as any).loginComplete=true;});await sheet.getByRole('button',{name:'登录 Claude',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await expect(sheet.getByText('登录已核验，尚未接入')).toBeVisible();await page.keyboard.press('Escape');await expect(card(page,'Claude').getByText('尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+      98 | });
+      99 | test('uncertain runtime start is never replayed and requires a fresh query',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:96:185
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-official-lo-d0bea-d-login-remains-a-candidate-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-official-lo-d0bea-d-login-remains-a-candidate-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-official-lo-d0bea-d-login-remains-a-candidate-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests/native-runtime.spec.ts:105:1 › completed login cannot clear a later source edit, and write admission locks the source 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').first().getByText('操作已取消', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog').first().getByText('操作已取消', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('dialog').first().getByText('操作已取消', { exact: true })
+
+
+      105 | test('completed login cannot clear a later source edit, and write admission locks the source',async({page})=>{
+      106 |  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();await openDetails(page);const sheet=page.getByRole('dialog').first();await page.evaluate(()=>{(window as any).loginAdmissionDelay=600;});
+    > 107 |  await sheet.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await expect(sheet.getByLabel('自定义目录')).toBeDisabled();await expect(sheet.getByRole('button',{name:'取消官方登录',exact:true})).toBeEnabled();await sheet.getByRole('button',{name:'取消官方登录',exact:true}).click();await expect(sheet.getByText('操作已取消',{exact:true})).toBeVisible();
+          |                                                                                                                                                                                                                                                                                                                                                                                                                                    ^
+      108 |  await page.evaluate(()=>{(window as any).loginAdmissionDelay=0;(window as any).loginComplete=true;});await sheet.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await expect(sheet.getByText('登录已核验，尚未接入',{exact:true})).toBeVisible();
+      109 |  await page.evaluate(()=>{(window as any).delay=30000;});await sheet.getByLabel('自定义目录').fill('/tmp/another-account');await sheet.getByLabel('自定义目录').press('Enter');await reconcile(page);await expect(sheet.getByLabel('自定义目录')).toHaveValue('/tmp/another-account');await expect.poll(async()=>(await calls(page,'account_detect')).at(-1)?.args.request.directory).toBe('/tmp/another-account');expect(await calls(page,'account_action')).toEqual([]);
+      110 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:107:420
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-completed-l-8d430--admission-locks-the-source-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-completed-l-8d430--admission-locks-the-source-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-completed-l-8d430--admission-locks-the-source-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests/native-runtime.spec.ts:112:1 › account change remains paused and a platform failure leaves the other platform visible 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').getByText('账号操作已完成，平台保持暂停')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog').getByText('账号操作已完成，平台保持暂停') with timeout 5000ms
+      - waiting for getByRole('dialog').getByText('账号操作已完成，平台保持暂停')
+
+
+      114 |  await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+      115 |  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};a.revision++;});
+    > 116 |  await reconcile(page);await openDetails(page);await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();await expect(page.getByRole('dialog').getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+          |                                                                                                                                                                                                                                                                                                ^
+      117 |  expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);expect(await calls(page,'runtime_start')).toEqual([]);
+      118 |  await page.evaluate(()=>{const a=(window as any).accounts.claude;a.revision++;a.authorization.error={code:'source_unavailable',check:'source_read',platform:'claude',message:'source unavailable',evidence:{}};});
+      119 |  await page.keyboard.press('Escape');await page.getByRole('button',{name:'概览',exact:true}).click();await reconcile(page);await expect(card(page,'Claude').getByRole('alert')).toContainText('source unavailable');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeEnabled();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:116:288
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-account-cha-3c341--the-other-platform-visible-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-account-cha-3c341--the-other-platform-visible-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-account-cha-3c341--the-other-platform-visible-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests/native-runtime.spec.ts:122:1 › only proven unsubmitted confirmation can continue after reconciliation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').getByText('账号操作已完成，平台保持暂停')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog').getByText('账号操作已完成，平台保持暂停') with timeout 5000ms
+      - waiting for getByRole('dialog').getByText('账号操作已完成，平台保持暂停')
+
+
+      125 |  await reconcile(page);await openDetails(page);await expect(page.getByRole('dialog').getByRole('button',{name:'换号',exact:true})).toBeDisabled();await page.keyboard.press('Escape');expect(await calls(page,'account_action')).toEqual([]);
+      126 |  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.revision++;a.operation.revision=a.revision;a.operation.error.code='confirmation_not_submitted';a.operation.error.message='confirmation was not submitted';});
+    > 127 |  await reconcile(page);await openDetails(page);await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();await expect(page.getByRole('dialog').getByText('账号操作已完成，平台保持暂停')).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
+          |                                                                                                                                                                                                                                                                                                ^
+      128 | });
+      129 |
+      130 | test('English runtime and login confirmation support keyboard at minimum window size',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:127:288
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-only-proven-a5d27-ntinue-after-reconciliation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-only-proven-a5d27-ntinue-after-reconciliation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-only-proven-a5d27-ntinue-after-reconciliation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [chromium] › tests/native-runtime.spec.ts:138:1 › runtime account revisions reach an open confirmation without changing its candidate 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('dialog').last().getByRole('button', { name: '确认更换', exact: true })
+        - locator resolved to <button disabled data-size="sm" data-slot="button" data-variant="default" class="ui-button primary ">确认更换</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not enabled
+        - retrying click action
+          - waiting 100ms
+        14 × waiting for element to be visible, enabled and stable
+           - element is not enabled
+         - retrying click action
+           - waiting 500ms
+      - element was detached from the DOM, retrying
+
+
+      141 |  await reconcile(page);await openDetails(page);await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();
+      142 |  const before=await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.revision+=2;w.accounts.openai=a;return {reads:w.runtimeReadCount,revision:a.revision,candidate:a.candidate.reference};});
+    > 143 |  await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before.reads);await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();
+          |                                                                                                                                                                                                                             ^
+      144 |  const written=await calls(page,'account_action');expect(written).toHaveLength(1);expect(written[0].args.request.revision).toBe(before.revision);expect(written[0].args.request.candidate_ref).toBe(before.candidate);
+      145 |  await expect(page.getByRole('dialog').getByText('账号操作已完成，平台保持暂停')).toBeVisible();await expect(page.getByRole('dialog').getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+      146 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:143:221
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-acc-59be1-hout-changing-its-candidate-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-acc-59be1-hout-changing-its-candidate-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-acc-59be1-hout-changing-its-candidate-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) [chromium] › tests/native-runtime.spec.ts:148:1 › runtime observations preserve newer candidates and edited sources 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('尚未接入', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('尚未接入', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('尚未接入', { exact: true })
+
+
+      149 |  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+      150 |  const reads=await page.evaluate(()=>{const w=window as any;w.runtimeAccounts=structuredClone(w.accounts);w.runtimeAccounts.openai.revision=0;w.runtimeAccounts.openai.candidate.fingerprint='f'.repeat(64);w.runtimeAccounts.openai.candidate.reference='e'.repeat(48);return w.runtimeReadCount;});
+    > 151 |  await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByText('尚未接入',{exact:true})).toBeVisible();await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();expect((await calls(page,'account_action'))[0].args.request.candidate_ref).toBe('a'.repeat(48));
+          |                                                                                                                                                                                           ^
+      152 |  await openDetails(page);await page.evaluate(()=>{(window as any).delay=30000;});await page.getByRole('dialog').first().getByLabel('自定义目录').fill('/tmp/edited-source');await page.getByRole('dialog').first().getByLabel('自定义目录').press('Enter');
+      153 |  const later=await page.evaluate(()=>{const w=window as any;delete w.runtimeAccounts;w.accounts.openai=structuredClone(w.accounts.openai);w.accounts.openai.revision++;return w.runtimeReadCount;});
+      154 |  await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(later);await expect(page.getByRole('dialog').first().getByLabel('自定义目录')).toHaveValue('/tmp/edited-source');await expect(page.getByRole('dialog').first().getByText('正在读取已有登录…')).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:151:187
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-obs-f94a1-ndidates-and-edited-sources-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-obs-f94a1-ndidates-and-edited-sources-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-runtime-obs-f94a1-ndidates-and-edited-sources-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15) [chromium] › tests/native-runtime.spec.ts:178:1 › unregistered selection can be cancelled only after confirmation and never starts runtime 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('dialog').last()
+    Expected substring: "仅取消尚未注册的本地选择"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" getByRole('dialog').last() with timeout 5000ms
+      - waiting for getByRole('dialog').last()
+        10 × locator resolved to <div role="dialog" tabindex="-1" id="radix-_r_g_" data-state="open" class="dialog-content" aria-labelledby="radix-_r_h_" aria-describedby="radix-_r_i_">…</div>
+           - unexpected value "取消接入仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。取消确认取消接入"
+
+
+      177 |
+      178 | test('unregistered selection can be cancelled only after confirmation and never starts runtime',async({page})=>{
+    > 179 |  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();await openDetails(page);await page.getByRole('dialog').getByRole('button',{name:'取消接入',exact:true}).click();await expect(page.getByRole('dialog').last()).toContainText('仅取消尚未注册的本地选择');expect(await calls(page,'account_action')).toHaveLength(1);await page.getByRole('dialog').last().getByRole('button',{name:'确认取消接入',exact:true}).click();await expect(page.getByRole('dialog').getByRole('button',{name:'取消接入',exact:true})).toHaveCount(0);await page.keyboard.press('Escape');await expect(card(page).getByText('尚未接入',{exact:true})).toBeVisible();expect((await calls(page,'account_action')).map((c:any)=>c.args.request.action)).toEqual(['select','clear_selection']);expect(await calls(page,'runtime_start')).toEqual([]);
+          |                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       ^
+      180 | });
+      181 |
+      182 | for(const denial of ['device','diagnostic','recovery'])test('identity '+denial+' still permits one trusted local stop',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:179:551
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-unregistere-bb20b-on-and-never-starts-runtime-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-unregistere-bb20b-on-and-never-starts-runtime-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-unregistere-bb20b-on-and-never-starts-runtime-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  16) [chromium] › tests/native-runtime.spec.ts:182:56 › identity device still permits one trusted local stop 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '停止贡献', exact: true })
+        - locator resolved to <button type="button" data-size="sm" data-slot="button" data-state="closed" aria-expanded="false" data-variant="default" aria-haspopup="dialog" class="ui-button primary ">…</button>
+      - attempting click action
+        - waiting for element to be visible, enabled and stable
+        - element is visible, enabled and stable
+        - scrolling into view if needed
+
+
+      186 |  else if(denial==='recovery'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_status'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);});await reconcile(page);}
+      187 |  else{await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot')result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
+    > 188 |  const stop=page.getByRole('button',{name:'停止贡献',exact:true});await expect(stop).toBeEnabled();if(denial==='diagnostic')await page.evaluate(()=>(window as any).deviceFail=true);await stop.click();await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+          |                                                                                                                                                                                             ^
+      189 |  await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+      190 |  expect(await calls(page,'runtime_start')).toHaveLength(1);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
+      191 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:188:189
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  17) [chromium] › tests/native-runtime.spec.ts:193:43 › device failure allows local login and cancellation but keeps account selection blocked 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').getByText('操作已取消', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog').getByText('操作已取消', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('dialog').getByText('操作已取消', { exact: true })
+
+
+      198 |  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+      199 |  const cancel=page.getByRole('button',{name:'取消官方登录',exact:true}).last();await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
+    > 200 |  await expect(page.getByRole('dialog').getByText('操作已取消',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
+          |                                                                         ^
+      201 | });
+      202 |
+      203 | test('recovery-only failure hides ready supply, blocks resume, and is visible beyond overview',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:200:73
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-device-fail-8470d-s-account-selection-blocked-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-device-fail-8470d-s-account-selection-blocked-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-device-fail-8470d-s-account-selection-blocked-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  18) [chromium] › tests/native-runtime.spec.ts:193:43 › recovery failure allows local login and cancellation but keeps account selection blocked 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('dialog').getByText('操作已取消', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('dialog').getByText('操作已取消', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('dialog').getByText('操作已取消', { exact: true })
+
+
+      198 |  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+      199 |  const cancel=page.getByRole('button',{name:'取消官方登录',exact:true}).last();await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
+    > 200 |  await expect(page.getByRole('dialog').getByText('操作已取消',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
+          |                                                                         ^
+      201 | });
+      202 |
+      203 | test('recovery-only failure hides ready supply, blocks resume, and is visible beyond overview',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:200:73
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-recovery-fa-324dd-s-account-selection-blocked-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-recovery-fa-324dd-s-account-selection-blocked-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/native-runtime-recovery-fa-324dd-s-account-selection-blocked-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  19) [chromium] › tests/supply.spec.ts:64:1 › an uncertain write retries GET automatically, preserves diagnostics and never repeats PUT 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      45 |  },{...options,passiveRuntime,accounts});
+      46 | }
+    > 47 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
+         |                                                                                                                                                              ^
+      48 | interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
+      49 | const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+      50 | const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:47:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:73:113
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-an-uncertain-write--6f578-stics-and-never-repeats-PUT-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-an-uncertain-write--6f578-stics-and-never-repeats-PUT-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-an-uncertain-write--6f578-stics-and-never-repeats-PUT-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  20) [chromium] › tests/supply.spec.ts:106:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      45 |  },{...options,passiveRuntime,accounts});
+      46 | }
+    > 47 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
+         |                                                                                                                                                              ^
+      48 | interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
+      49 | const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+      50 | const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:47:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:111:64
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-navigation-keeps-on-1efc8-late-a-new-manager-instance-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-navigation-keeps-on-1efc8-late-a-new-manager-instance-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-navigation-keeps-on-1efc8-late-a-new-manager-instance-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  21) [chromium] › tests/supply.spec.ts:125:1 › old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      45 |  },{...options,passiveRuntime,accounts});
+      46 | }
+    > 47 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
+         |                                                                                                                                                              ^
+      48 | interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
+      49 | const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+      50 | const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:47:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:133:2
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-old-in-flight-platf-448bf--another-old-instance-round-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-old-in-flight-platf-448bf--another-old-instance-round-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-old-in-flight-platf-448bf--another-old-instance-round-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  22) [chromium] › tests/supply.spec.ts:155:1 › one platform read failure preserves the other platform fresh report 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByText('核对诊断', { exact: true })
+
+
+      45 |  },{...options,passiveRuntime,accounts});
+      46 | }
+    > 47 | async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
+         |                                                                                                                                                              ^
+      48 | interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
+      49 | const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+      50 | const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
+        at diagnostics (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:47:158)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:160:116
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-one-platform-read-f-53f84-other-platform-fresh-report-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-one-platform-read-f-53f84-other-platform-fresh-report-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-device-final-output/supply-one-platform-read-f-53f84-other-platform-fresh-report-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  22 failed
+    [chromium] › tests/device.spec.ts:97:1 › opening after website confirmation consumes the latest bound result 
+    [chromium] › tests/device.spec.ts:112:1 › diagnostics preserve runtime operation and platform authorization failure evidence 
+    [chromium] › tests/native-accounts.spec.ts:17:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme 
+    [chromium] › tests/native-accounts.spec.ts:30:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota 
+    [chromium] › tests/native-accounts.spec.ts:34:1 › uncertain per-platform pause preserves the other platform and does not replay a write 
+    [chromium] › tests/native-accounts.spec.ts:37:1 › device verification failure permits local reads and preserves selected historical Hive quota 
+    [chromium] › tests/native-runtime.spec.ts:51:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart 
+    [chromium] › tests/native-runtime.spec.ts:86:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them 
+    [chromium] › tests/native-runtime.spec.ts:94:1 › official login warns about official account, supports cancellation, and completed login remains a candidate 
+    [chromium] › tests/native-runtime.spec.ts:105:1 › completed login cannot clear a later source edit, and write admission locks the source 
+    [chromium] › tests/native-runtime.spec.ts:112:1 › account change remains paused and a platform failure leaves the other platform visible 
+    [chromium] › tests/native-runtime.spec.ts:122:1 › only proven unsubmitted confirmation can continue after reconciliation 
+    [chromium] › tests/native-runtime.spec.ts:138:1 › runtime account revisions reach an open confirmation without changing its candidate 
+    [chromium] › tests/native-runtime.spec.ts:148:1 › runtime observations preserve newer candidates and edited sources 
+    [chromium] › tests/native-runtime.spec.ts:178:1 › unregistered selection can be cancelled only after confirmation and never starts runtime 
+    [chromium] › tests/native-runtime.spec.ts:182:56 › identity device still permits one trusted local stop 
+    [chromium] › tests/native-runtime.spec.ts:193:43 › device failure allows local login and cancellation but keeps account selection blocked 
+    [chromium] › tests/native-runtime.spec.ts:193:43 › recovery failure allows local login and cancellation but keeps account selection blocked 
+    [chromium] › tests/supply.spec.ts:64:1 › an uncertain write retries GET automatically, preserves diagnostics and never repeats PUT 
+    [chromium] › tests/supply.spec.ts:106:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance 
+    [chromium] › tests/supply.spec.ts:125:1 › old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round 
+    [chromium] › tests/supply.spec.ts:155:1 › one platform read failure preserves the other platform fresh report 
+  230 passed (3.0m)
+{"finished_at": "2026-11-02T18:51:08.207659+00:00", "exit": 1}

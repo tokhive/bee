@@ -1,0 +1,171 @@
+{
+  "id": "S06",
+  "scene": "startup-blocked",
+  "scope": "T5/T10；旧启动事件迟到、新实例接管 UI",
+  "expectation": "清除旧可操作依据、保留语言导航，不接受旧成功",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台设备身份被拒绝开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备本机设备Bee Desktop上次确认的设备，当前待核对。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献此设备已被替换，原设备凭据已撤销。设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。查看设备查看失败详情错误码: device_replaced\n失败环节: startup_check\n原始原因: GET identity HTTP 401 device_replaced原凭据已明确撤销。重新绑定需再次在 Hive 网页确认，完成后贡献保持停止。重新绑定设备AI 账号等待自动重试…1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待更新5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待更新所选来源未找到登录；可调整读取位置或使用官方登录。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 292.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 326
+      },
+      {
+        "text": "查看设备",
+        "disabled": false,
+        "x": 742,
+        "y": 441.5,
+        "width": 76,
+        "height": 33.5,
+        "right": 818,
+        "bottom": 475
+      },
+      {
+        "text": "重新绑定设备",
+        "disabled": false,
+        "x": 729,
+        "y": 565.5,
+        "width": 102,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 599
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "startup_status",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "startup_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "startup-blocked"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S06-T5-T10；旧启动事件迟到、新实例接管-UI-chromium/S06.png",
+  "observed_at": "2026-11-02T18:58:04.299Z",
+  "pageErrors": []
+}

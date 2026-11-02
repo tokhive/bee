@@ -1,0 +1,38 @@
+{"started_at": "2026-11-02T19:08:46.616125+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.t10-layout.config.ts", "t10-layout-supplement.spec.ts", "--grep", "L04-process-failed", "--workers", "1", "--output", "../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-process-failed-v2-output"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "bf05ea691e87cdec4983396ab579be6a158f5388", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/playwright.config.ts\n M desktop/playwright.device.config.ts\n M desktop/tests/device.spec.ts\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/native-runtime.spec.ts\n M desktop/tests/native-updater.spec.ts\n M desktop/tests/preview-scenarios.spec.ts\n M desktop/tests/supply.spec.ts\n M docs/desktop/account-runtime-validation.md\n M docs/desktop/bridge-protocol.md\n M docs/desktop/supply-control.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/playwright.t10-layout.config.ts\n?? desktop/tests/device-recovery.spec.ts\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? desktop/tests/fixtures/t10-layout-cases.json\n?? desktop/tests/t10-layout-supplement.spec.ts\n?? desktop/tests/t10-layout.spec.ts\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "M hive/internal/integration/desktop_broker_test.go\n?? hive/internal/integration/desktop_runtime_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.27.3 darwin/arm64"}
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/t10-layout-supplement.spec.ts:12:277 › L04-process-failed (50.1s)
+
+
+  1) [chromium] › tests/t10-layout-supplement.spec.ts:12:277 › L04-process-failed ──────────────────
+
+    Test timeout of 50000ms exceeded.
+
+    Error: locator.click: Test timeout of 50000ms exceeded.
+    Call log:
+      - waiting for getByRole('navigation').getByRole('button', { name: 'AI 账号', exact: true })
+
+
+      11 | }
+      12 | for(const [id,code,copy]of [['L01-client-missing','client_missing','未找到已安装的官方客户端。'],['L01-version','client_version_unsupported','官方客户端版本不在支持范围内。'],['L04-timeout','authorization_timeout','官方登录已超时。'],['L04-process-failed','authorization_process_failed','官方登录进程执行失败。']] as const)test(id,async({page},info)=>{
+    > 13 |  await setup(page,{loginOutcome:{state:'failed',error:{code,check:'official_source_recheck',platform:'openai',message:'safe official evidence; verified=false',evidence:{confirmed:'false'}}}});await nav(page,'AI 账号').click();await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await page.evaluate(()=>(window as any).loginComplete=true);await page.clock.runFor(10001);await expect(page.getByText(copy,{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);await evidence(page,info,id);
+         |                                                                                                                                                                                                                         ^
+      14 | });
+      15 | test('L04-cancel-unknown',async({page},info)=>{
+      16 |  await setup(page,{cancelUnknown:true});await nav(page,'AI 账号').click();await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消官方登录',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('取消请求结果未确认');expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toEqual([]);await evidence(page,info,'L04-cancel-unknown');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/t10-layout-supplement.spec.ts:13:217
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-process-failed-v2-output/t10-layout-supplement-L04-process-failed-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-process-failed-v2-output/t10-layout-supplement-L04-process-failed-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-process-failed-v2-output/t10-layout-supplement-L04-process-failed-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/t10-layout-supplement.spec.ts:12:277 › L04-process-failed ───────────────────
+{"finished_at": "2026-11-02T19:09:38.653280+00:00", "exit": 1}

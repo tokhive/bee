@@ -1,0 +1,322 @@
+{
+  "id": "G06",
+  "scene": "diagnostics-export-unknown",
+  "scope": "T8/T10；导出范围、取消、失败／完成／下载未知",
+  "expectation": "真实下载回执；未知给核对位置，不重复导出",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "诊断",
+    "theme": "light",
+    "text": "诊断检查 Bee 运行与连接状态。打开 Hive 控制台检查结果安全日志重新运行诊断导出脱敏报告报告下载结果未确认：waitedMs=30000；请先核对下载文件夹，避免重复导出。检查已完成2026年11月3日 02:58:37检查失败2需要留意0通过1未检查0需要处理的问题2设备与连接1设备身份服务拒绝了本次查询检查失败检查详情http_rejectedmethodGETpath/api/bee/identityhttp_status401server_codeinvalid_device_credential2026年11月3日 02:58:37OpenAI1OpenAI官方登录来源未找到所选凭证来源。检查失败检查详情source_missingsource_typefile2026年11月3日 02:58:37前往账号尚未完成的检查0通过的检查1网络路径已核对当前网络路径通过检查详情network_policy_observed2026年11月3日 02:58:37运行详情{\n  \"runtime\": null,\n  \"runtimeAuthorization\": {\n    \"openai\": null,\n    \"claude\": null\n  },\n  \"device\": null,\n  \"supply\": {},\n  \"defaults\": null,\n  \"accounts\": {},\n  \"sources\": {},\n  \"accountEvidence\": {\n    \"openai\": {\n      \"candidate\": null,\n      \"authorization\": null,\n      \"hive\": null,\n      \"capabilities\": [\n        {\n          \"origin\": \"official\",\n          \"error\": null\n        },\n        {\n          \"origin\": \"hive\",\n          \"error\": null\n        }\n      ],\n      \"issues\": []\n    },\n    \"claude\": {\n      \"candidate\": null,\n      \"authorization\": null,\n      \"hive\": null,\n      \"capabilities\": [\n        {\n          \"origin\": \"official\",\n          \"error\": null\n        },\n        {\n          \"origin\": \"hive\",\n          \"error\": null\n        }\n      ],\n      \"issues\": []\n    }\n  }\n}",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 87.59375,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "检查结果",
+        "disabled": false,
+        "x": 207,
+        "y": 159.1875,
+        "width": 54,
+        "height": 36.09375,
+        "right": 261,
+        "bottom": 195.28125
+      },
+      {
+        "text": "安全日志",
+        "disabled": false,
+        "x": 279,
+        "y": 159.1875,
+        "width": 54,
+        "height": 36.09375,
+        "right": 333,
+        "bottom": 195.28125
+      },
+      {
+        "text": "重新运行诊断",
+        "disabled": false,
+        "x": 619,
+        "y": 153.1875,
+        "width": 102,
+        "height": 36.09375,
+        "right": 721,
+        "bottom": 189.28125
+      },
+      {
+        "text": "导出脱敏报告",
+        "disabled": false,
+        "x": 729,
+        "y": 153.1875,
+        "width": 102,
+        "height": 36.09375,
+        "right": 831,
+        "bottom": 189.28125
+      },
+      {
+        "text": "前往账号",
+        "disabled": false,
+        "x": 749,
+        "y": 714.875,
+        "width": 64,
+        "height": 32.09375,
+        "right": 813,
+        "bottom": 746.96875
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "diagnostics_start",
+        "args": {}
+      },
+      {
+        "command": "diagnostics_export",
+        "args": {
+          "reportId": "000000000000000000000000000000000000000000000001",
+          "includeLogs": false
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "scene": "diagnostics-export-unknown"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-G06-T8-T10；导出范围、取消、失败／完成／下载未知-chromium/G06.png",
+  "observed_at": "2026-11-02T18:59:08.222Z",
+  "pageErrors": []
+}

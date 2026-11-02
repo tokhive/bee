@@ -1,0 +1,316 @@
+{
+  "id": "matrix-860-en-dark",
+  "scene": "confirm-change",
+  "scope": "三尺寸×中英×明暗长内容",
+  "expectation": "主页面和模态框无横向溢出",
+  "layer": "正式组件＋模拟IPC",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "en",
+  "theme": "dark",
+  "long": true,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "AI accounts",
+    "theme": "dark",
+    "text": "AI accountsManage the AI accounts contributing from this device.Open Hive consoleAI accounts1 connectedOpenAIPlan unconfirmedAccount ID: bbbbbbbbbbbbbbbbNot accepting tasksPausedA different account was found. Confirm the switch in details; the current selection is retained.Manually pausedResuming removes only this platform's manual pause. Contribution will not start, and other blockers still apply.Hive does not see this platform’s Bee connectionOpen Overview to check contribution runtime and the actual connection cause.View connectionAccount quota window is unconfirmedQuota is unknown. Use actual source reads and reports; unknown does not mean zero.Codex account change awaits confirmationReview the current and target OpenAI accounts, then explicitly confirm the switch.View account detailsQuotaNot checked yet✳ClaudeNo Claude account connected yetNot accepting tasksNo sign-in was found in the selected source. Adjust the location or use official sign-in.This Hive did not provide a more specific availability reasonContact the Hive administrator to check platform configuration. This reason does not establish market or account state.Hive does not see this platform’s Bee connectionOpen Overview to check contribution runtime and the actual connection cause.View connectionQuotaNot checked yetSign in to ClaudeAuthorization stays on this device",
+    "dialogs": [
+      {
+        "name": "radix-_r_8_",
+        "x": 430,
+        "y": 0,
+        "width": 430,
+        "height": 600,
+        "right": 860,
+        "bottom": 600
+      },
+      {
+        "name": "radix-_r_h_",
+        "x": 230,
+        "y": 139.859375,
+        "width": 400,
+        "height": 320.28125,
+        "right": 630,
+        "bottom": 460.140625
+      }
+    ],
+    "actions": [
+      {
+        "text": "Open Hive console",
+        "disabled": false,
+        "x": 700.734375,
+        "y": 87.59375,
+        "width": 130.265625,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "View connection",
+        "disabled": false,
+        "x": 276,
+        "y": 533.984375,
+        "width": 97.5625,
+        "height": 34.390625,
+        "right": 373.5625,
+        "bottom": 568.375
+      },
+      {
+        "text": "View account details",
+        "disabled": false,
+        "x": 276,
+        "y": 726.71875,
+        "width": 121.640625,
+        "height": 34.390625,
+        "right": 397.640625,
+        "bottom": 761.109375
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 785.109375,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 817.109375
+      },
+      {
+        "text": "View connection",
+        "disabled": false,
+        "x": 276,
+        "y": 1189.40625,
+        "width": 97.5625,
+        "height": 34.390625,
+        "right": 373.5625,
+        "bottom": 1223.796875
+      },
+      {
+        "text": "Sign in to Claude",
+        "disabled": false,
+        "x": 644.265625,
+        "y": 1247.796875,
+        "width": 123.734375,
+        "height": 32,
+        "right": 768,
+        "bottom": 1279.796875
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 1247.796875,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 1279.796875
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "en",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "scene": "confirm-change"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-representative-860-en-dark-chromium/matrix-860-en-dark.png",
+  "observed_at": "2026-11-02T18:58:43.165Z",
+  "pageErrors": []
+}

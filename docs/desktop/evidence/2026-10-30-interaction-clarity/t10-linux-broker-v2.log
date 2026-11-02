@@ -1,0 +1,214 @@
+{"started_at": "2026-11-02T18:41:29.435330+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0", "argv": ["docker", "run", "--rm", "--name", "bee-clarity-t10-core-v2", "-v", "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/interaction-clarity-linux:/qa:ro", "-v", "/Users/dayong/myspace/mywork/tokenhive/.worktrees/hive-desktop-interaction:/hive:ro", "-w", "/hive/hive/internal/integration", "-e", "TEST_BEE_BIN=/qa/bee-final", "-e", "TEST_DATABASE_URL=postgres://hive:hive_local_dev@host.docker.internal:55432/hive?sslmode=disable", "bee-linux-minimum-window-qa:20261023", "/qa/hive-integration-v2.test", "-test.run", "^TestDesktopBroker(Initial|Credential|Final)", "-test.v", "-test.timeout=180s"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "da161c5600c617652fe70507739809c9427acf49", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/preview-scenarios.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "?? hive/internal/integration/desktop_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.27.3 darwin/arm64"}
+=== RUN   TestDesktopBrokerInitialPreflightAndUnknownCreation
+=== RUN   TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight503
+2026/11/02 18:41:30 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=3ms
+2026/11/02 18:41:30 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=5ms
+    desktop_broker_test.go:415: preflight503: create POST=1 committed_pairings=1 redeem POST=0 restart=2
+=== RUN   TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight_disconnect
+2026/11/02 18:41:32 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=12ms
+2026/11/02 18:41:32 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=22ms
+    desktop_broker_test.go:415: preflight_disconnect: create POST=1 committed_pairings=1 redeem POST=0 restart=2
+=== RUN   TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight_timeout
+2026/11/02 18:41:45 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=8ms
+2026/11/02 18:41:45 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=6ms
+    desktop_broker_test.go:415: preflight_timeout: create POST=1 committed_pairings=1 redeem POST=0 restart=2
+=== RUN   TestDesktopBrokerInitialPreflightAndUnknownCreation/creation_lost
+2026/11/02 18:41:46 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=5ms
+2026/11/02 18:41:46 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=7ms
+2026/11/02 18:41:46 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=6ms
+2026/11/02 18:41:47 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=3ms
+2026/11/02 18:41:47 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=4ms
+    desktop_broker_test.go:415: creation_lost: create POST=1 committed_pairings=1 redeem POST=0 restart=2
+--- PASS: TestDesktopBrokerInitialPreflightAndUnknownCreation (17.19s)
+    --- PASS: TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight503 (0.95s)
+    --- PASS: TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight_disconnect (2.07s)
+    --- PASS: TestDesktopBrokerInitialPreflightAndUnknownCreation/preflight_timeout (12.28s)
+    --- PASS: TestDesktopBrokerInitialPreflightAndUnknownCreation/creation_lost (1.89s)
+=== RUN   TestDesktopBrokerInitialRedemptionLostAndSaved
+2026/11/02 18:41:47 INFO http request module=http method=POST path=/api/auth/register status=201 duration=20ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+    desktop_broker_test.go:435: initial lost redemption: POST=1 committed_devices=1 restart identity valid; stopped
+--- PASS: TestDesktopBrokerInitialRedemptionLostAndSaved (0.72s)
+=== RUN   TestDesktopBrokerCredentialRecovery
+=== RUN   TestDesktopBrokerCredentialRecovery/same_owner
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/auth/register status=201 duration=6ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=4ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=5ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=3ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=5ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=5ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:48 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:48 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+    desktop_broker_test.go:537: same_owner: recovery create/redeem POST=1/1; committed_devices=3; restart stopped
+=== RUN   TestDesktopBrokerCredentialRecovery/different_owner
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=16ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=5ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=4ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+    desktop_broker_test.go:537: different_owner: recovery create/redeem POST=1/1; committed_devices=3; restart stopped
+=== RUN   TestDesktopBrokerCredentialRecovery/create_lost
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=12ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+    desktop_broker_test.go:474: recovery lost creation committed=1 POST=1 replay=0; manual token recovery unavailable
+=== RUN   TestDesktopBrokerCredentialRecovery/redeem_lost
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/auth/register status=201 duration=7ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+    desktop_broker_test.go:537: redeem_lost: recovery create/redeem POST=1/1; committed_devices=3; restart stopped
+=== RUN   TestDesktopBrokerCredentialRecovery/redeem_unknown
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/auth/register status=201 duration=6ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:50 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:50 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+    desktop_broker_test.go:537: redeem_unknown: recovery create/redeem POST=1/1; committed_devices=3; restart stopped
+=== RUN   TestDesktopBrokerCredentialRecovery/save_failed
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/auth/register status=201 duration=7ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=2ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=0s
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=401 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=200 duration=2ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/pairings status=200 duration=1ms
+2026/11/02 18:41:51 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/02 18:41:51 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+    desktop_broker_test.go:537: save_failed: recovery create/redeem POST=1/1; committed_devices=3; restart stopped
+--- PASS: TestDesktopBrokerCredentialRecovery (3.54s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/same_owner (0.59s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/different_owner (0.64s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/create_lost (0.56s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/redeem_lost (0.60s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/redeem_unknown (0.60s)
+    --- PASS: TestDesktopBrokerCredentialRecovery/save_failed (0.56s)
+=== RUN   TestDesktopBrokerFinalBinaryProvenance
+    desktop_broker_test.go:581: final TEST_BEE_BIN SHA256=4ae0997ce1857681b7b5c63d02cfc82e13354994e378d7a67ceebda5e0e932ac
+--- PASS: TestDesktopBrokerFinalBinaryProvenance (0.04s)
+PASS
+{"finished_at": "2026-11-02T18:41:51.951195+00:00", "exit": 0}

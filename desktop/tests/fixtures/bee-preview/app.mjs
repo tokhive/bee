@@ -12,17 +12,20 @@ try{
  await installPreviewFixture(scene.id);
  step='加载正式 NativeApp';await import('/src/main.tsx');
  window.__beePreviewActivate();
- step=`导航 ${scene.page}`;if(scene.page==='accounts')(await until(()=>button('AI 账号')??button('AI Accounts'))).click();
- await until(()=>document.querySelector('[data-nav-section=runtime]')||document.querySelector('.native-account-row'));
+ const {t}=await import('/src/i18n/index.ts');
+ step=`导航 ${scene.page}`;if(scene.page!=='overview')(await until(()=>button(t({accounts:'AI 账号',diagnostics:'诊断',settings:'设置'}[scene.page])))).click();
+ await until(()=>document.querySelector('main h1'));
+ if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
+ if(scene.page==='diagnostics'){(await until(()=>button(t('运行诊断')))).click();if(scene.id==='diagnostics-export-unknown'){(await until(()=>button(t('导出脱敏报告')))).click();(await until(()=>button(t('确认导出')))).click();}}
  if(scene.action){
   if(['detail','change','clear'].includes(scene.action)){
-   step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label="OpenAI 详情"]'))).click();
+   step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('{platform} 详情',{platform:'OpenAI'}))+']'))).click();
    await until(()=>document.querySelector('.account-source'));
   }
   const names={'start-unknown':'开始贡献',login:'登录 OpenAI',select:'接入',stop:'停止贡献',change:'换号',clear:'取消接入'};
-  if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(names[scene.action]))).click();}
+  if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(t(names[scene.action])))).click();}
   if(scene.action!=='detail'&&scene.action!=='start-unknown')await until(()=>document.querySelector('.dialog-content'));
-  if(scene.action==='start-unknown')await until(()=>document.body.textContent.includes('贡献状态待确认'));
+  if(scene.action==='start-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));
  }
  window.__beePreviewReady=true;
 }catch(cause){

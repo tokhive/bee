@@ -1,0 +1,131 @@
+{
+  "id": "D02",
+  "scene": "device-creating",
+  "scope": "T4b/T6；正在创建配对、重复点击",
+  "expectation": "单个动作；明确进度，重复点击不新增远端请求",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台等待完成设备配对开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接准备贡献绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://hive.example正在创建配对请求正在处理已保存的请求，请勿重复创建。AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源未找到登录；可调整读取位置或使用官方登录。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 411,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 444.5
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "device-creating"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D02-T4b-T6；正在创建配对、重复点击-chromium/D02.png",
+  "observed_at": "2026-11-02T18:58:05.695Z",
+  "pageErrors": []
+}

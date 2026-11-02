@@ -1,0 +1,153 @@
+{
+  "id": "matrix-1512-zh-dark",
+  "scene": "running",
+  "scope": "三尺寸×中英×明暗长内容",
+  "expectation": "主页面和模态框无横向溢出",
+  "layer": "正式组件＋模拟IPC",
+  "viewport": {
+    "width": 1512,
+    "height": 833
+  },
+  "locale": "zh",
+  "theme": "dark",
+  "long": true,
+  "actual": {
+    "viewport": {
+      "width": 1512,
+      "height": 833
+    },
+    "document": {
+      "width": 1512,
+      "height": 833
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 1334,
+      "height": 752,
+      "right": 1512,
+      "bottom": 804
+    },
+    "heading": "概览",
+    "theme": "dark",
+    "text": "概览打开 Hive 控制台可接单按平台管理接单；暂停后不再接收新任务。停止贡献可接单平台：OpenAIBee 运行中Hive 已连接本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb可接单5 小时已用 3%7 日已用 2%暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 1367.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 1483,
+        "bottom": 109
+      },
+      {
+        "text": "停止贡献",
+        "disabled": false,
+        "x": 1386,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 1483,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 1362,
+        "y": 292.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 1483,
+        "bottom": 326
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "x": 1384,
+        "y": 633.5,
+        "width": 74,
+        "height": 32,
+        "right": 1458,
+        "bottom": 665.5
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "running"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-representative-1512-zh-dark-chromium/matrix-1512-zh-dark.png",
+  "observed_at": "2026-11-02T18:58:44.653Z",
+  "pageErrors": []
+}

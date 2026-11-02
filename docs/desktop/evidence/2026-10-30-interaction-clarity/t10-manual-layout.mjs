@@ -1,0 +1,15 @@
+const fs=await import('node:fs/promises');
+const base='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity';
+const t=await taskSpace(40),p=t.page('p1');
+await p.cdp('Emulation.setDeviceMetricsOverride',{width:860,height:600,deviceScaleFactor:1,mobile:false});
+await p.goto('http://127.0.0.1:1519/tests/fixtures/bee-preview/app.html?scene=confirm-change&locale=en&theme=dark&long=1');
+await p.waitForFunction(()=>window.__beePreviewReady||window.__beePreviewError);
+console.log(await p.snapshot());
+await p.screenshot({path:base+'/t10-manual-change-en-dark-860.png'});
+await p.keyboard.press('Escape');await p.keyboard.press('Escape');
+const focus=await p.evaluate(()=>({text:document.activeElement?.getAttribute('aria-label')??document.activeElement?.textContent,dialogs:document.querySelectorAll('[role=dialog]').length,viewport:{width:innerWidth,height:innerHeight},horizontal:document.documentElement.scrollWidth,scene:window.__beePreviewScene,error:window.__beePreviewError,calls:window.calls}));
+await p.click('loc=role:button[name="Settings"]',{label:'open settings after closing confirmation'});
+await p.waitForFunction(()=>document.querySelector('main h1')?.textContent==='Settings');
+const settings=await p.evaluate(()=>({heading:document.querySelector('main h1')?.textContent,focused:document.activeElement?.textContent,y:document.querySelector('main h1')?.getBoundingClientRect().y}));
+await p.screenshot({path:base+'/t10-manual-settings-en-dark-860.png'});
+await fs.writeFile(base+'/t10-manual-layout-result.json',JSON.stringify({at:new Date().toISOString(),focus,settings},null,2));console.log({focus,settings});

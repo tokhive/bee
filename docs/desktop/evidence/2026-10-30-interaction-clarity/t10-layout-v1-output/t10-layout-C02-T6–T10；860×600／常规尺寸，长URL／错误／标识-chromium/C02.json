@@ -1,0 +1,161 @@
+{
+  "id": "C02",
+  "scene": "device-pending",
+  "scope": "T6–T10；860×600／常规尺寸，长URL／错误／标识",
+  "expectation": "主操作可发现、纵向可滚动、无横向溢出；同尺寸对照原布局，暂停／恢复保留右侧额度区下方靠右",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台等待完成设备配对开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接准备贡献绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单本机设备重新核对设备等待网页确认打开 Hive 确认网页配对码ABCD-EFGH复制配对码有效期至2026年11月3日 03:08:40剩余 600 秒https://hive.example/devices/pair?code=ABCD-EFGH复制确认网址完成网页确认后，请回到 Bee。 网页无法打开时，可手动复制上方网址；当前请求会保留。AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源未找到登录；可调整读取位置或使用官方登录。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 411,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 444.5
+      },
+      {
+        "text": "打开 Hive 确认网页",
+        "disabled": false,
+        "x": 675.625,
+        "y": 460.5,
+        "width": 155.375,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 494
+      },
+      {
+        "text": "复制配对码",
+        "disabled": false,
+        "x": 207,
+        "y": 576,
+        "width": 108,
+        "height": 33.5,
+        "right": 315,
+        "bottom": 609.5
+      },
+      {
+        "text": "复制确认网址",
+        "disabled": false,
+        "x": 207,
+        "y": 665,
+        "width": 121,
+        "height": 33.5,
+        "right": 328,
+        "bottom": 698.5
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "device-pending"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-C02-T6–T10；860×600／常规尺寸，长URL／错误／标识-chromium/C02.png",
+  "observed_at": "2026-11-02T18:58:41.156Z",
+  "pageErrors": []
+}

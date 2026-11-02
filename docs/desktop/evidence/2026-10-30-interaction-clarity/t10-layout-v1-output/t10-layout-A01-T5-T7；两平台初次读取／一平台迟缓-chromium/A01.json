@@ -1,0 +1,205 @@
+{
+  "id": "A01",
+  "scene": "account-reading",
+  "scope": "T5/T7；两平台初次读取／一平台迟缓",
+  "expectation": "分平台加载；已确认设备、运行和另一平台仍可见",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "AI 账号",
+    "theme": "light",
+    "text": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号接入数量待确认OpenAI尚未接入 OpenAI 账号不能接单正在读取已有登录…此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 OpenAI官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 Claude官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 87.59375,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "登录 OpenAI",
+        "disabled": true,
+        "x": 710.03125,
+        "y": 399.25,
+        "width": 95.96875,
+        "height": 32,
+        "right": 806,
+        "bottom": 431.25
+      },
+      {
+        "text": "查看贡献运行",
+        "disabled": false,
+        "x": 732,
+        "y": 489.625,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 521.625
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 529.625,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 561.625
+      },
+      {
+        "text": "登录 Claude",
+        "disabled": true,
+        "x": 712.375,
+        "y": 819.578125,
+        "width": 93.625,
+        "height": 32,
+        "right": 806,
+        "bottom": 851.578125
+      },
+      {
+        "text": "查看贡献运行",
+        "disabled": false,
+        "x": 732,
+        "y": 909.953125,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 941.953125
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 949.953125,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 981.953125
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      }
+    ],
+    "scene": "account-reading"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A01-T5-T7；两平台初次读取／一平台迟缓-chromium/A01.png",
+  "observed_at": "2026-11-02T18:58:10.210Z",
+  "pageErrors": []
+}

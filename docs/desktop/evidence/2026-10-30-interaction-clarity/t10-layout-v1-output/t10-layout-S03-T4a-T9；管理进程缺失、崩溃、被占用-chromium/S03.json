@@ -1,0 +1,81 @@
+{
+  "id": "S03",
+  "scene": "bridge-failed",
+  "scope": "T4a/T9；管理进程缺失、崩溃、被占用",
+  "expectation": "说明失败环节；可用日志和菜单恢复入口；不假造重启按钮",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台原生管理进程本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: SIDECAR_EXITED\n失败环节: bridge_startup\n原始原因: owned QA sidecar exited; exit=17",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": true,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "bridge_status",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "bridge_status",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "bridge-failed"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-S03-T4a-T9；管理进程缺失、崩溃、被占用-chromium/S03.png",
+  "observed_at": "2026-11-02T18:58:03.154Z",
+  "pageErrors": []
+}

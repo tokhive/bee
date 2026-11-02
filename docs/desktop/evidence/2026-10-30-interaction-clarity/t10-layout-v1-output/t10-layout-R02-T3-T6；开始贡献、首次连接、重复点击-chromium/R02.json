@@ -1,0 +1,163 @@
+{
+  "id": "R02",
+  "scene": "runtime-connecting",
+  "scope": "T3/T6；开始贡献、首次连接、重复点击",
+  "expectation": "一次启动，连接中不等于可接单；开始不解除暂停",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台正在连接 Hive按平台管理接单；暂停后不再接收新任务。停止贡献Bee 运行中正在连接 Hive请求已超时。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: timeout\n失败环节: connect\n观察时间: 2026年11月3日 02:58:21\n路径: /api/bee/connect\n原始原因: QA connection attempt is in flight正在尝试重新连接。检查 Hive 连接本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb可接单5 小时已用 3%7 日已用 2%暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "停止贡献",
+        "disabled": false,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "检查 Hive 连接",
+        "disabled": false,
+        "x": 207,
+        "y": 376.5,
+        "width": 104.15625,
+        "height": 32,
+        "right": 311.15625,
+        "bottom": 408.5
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 457.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 491
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "x": 732,
+        "y": 779,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 811
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "runtime-connecting"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R02-T3-T6；开始贡献、首次连接、重复点击-chromium/R02.png",
+  "observed_at": "2026-11-02T18:58:24.168Z",
+  "pageErrors": []
+}

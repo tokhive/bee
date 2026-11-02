@@ -1,0 +1,233 @@
+{
+  "id": "L04-process-failed",
+  "at": "2026-11-02T19:16:13.068Z",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n尚未接入 AI 账号\n\nFixture\n设备与平台控制\n本机设备\nAI 账号\n\n管理这台设备用于贡献的 AI 账号。\n\n打开 Hive 控制台\nAI 账号\n0 个已接入\nOpenAI\n\n尚未接入 OpenAI 账号\n\n不能接单\n\n已有登录，尚未接入\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n\n账号操作失败\n\n官方登录进程执行失败。\n\n本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。\n\n查看失败详情\n额度\n尚未核对\n接入\n✳\nClaude\n\n尚未接入 Claude 账号\n\n不能接单\n\n已有登录，尚未接入\n\n已手动暂停\n\n恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。\n\nHive 未看到此平台的 Bee 连接\n\n请在概览核对贡献运行和实际连接原因。\n\n查看连接\n额度\n尚未核对\n接入\n\n授权信息保留在本机\n\nBee\n设备绑定不自动开始贡献\nOpenAI 账号详情\n关闭\n\n查看账号与额度，管理凭证读取方式。\n\n当前账号标识\n尚未接入 OpenAI 账号\n候选账号标识\nbbbbbbbbbbbbbbbb\n\n已有登录，尚未接入\n\n额度与重置\n额度\n尚未核对\n凭证读取方式\n\n读取官方客户端已保存的登录；目录留空使用默认位置。\n\n自定义目录\n存储方式\n自动\n文件\n钥匙串\n\n修改读取位置不会自动更换已接入账号。\n\n账号操作失败\n\n官方登录进程执行失败。\n\n本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。\n\n查看失败详情\n接入\n登录 OpenAI",
+  "dialogs": [
+    {
+      "text": "OpenAI 账号详情关闭查看账号与额度，管理凭证读取方式。当前账号标识尚未接入 OpenAI 账号候选账号标识bbbbbbbbbbbbbbbb已有登录，尚未接入额度与重置额度尚未核对凭证读取方式读取官方客户端已保存的登录；目录留空使用默认位置。自定义目录存储方式自动文件钥匙串修改读取位置不会自动更换已接入账号。账号操作失败官方登录进程执行失败。本次未确认新的可接入账号；官方客户端登录可能已改变，请先核对所选来源。不会自动接入或恢复接单。查看失败详情错误码: authorization_process_failed\n失败环节: official_source_recheck\nconfirmed: false\n原始原因: safe official evidence; verified=false接入登录 OpenAI",
+      "rect": {
+        "x": 430,
+        "y": 0,
+        "width": 430,
+        "height": 600,
+        "top": 0,
+        "right": 860,
+        "bottom": 600,
+        "left": 430
+      }
+    }
+  ],
+  "calls": [
+    {
+      "command": "preferences_read",
+      "args": {}
+    },
+    {
+      "command": "preferences_read",
+      "args": {}
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_defaults",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    },
+    {
+      "command": "native_locale_sync",
+      "args": {
+        "request": {
+          "locale": "zh",
+          "revision": 0,
+          "sequence": 1
+        }
+      }
+    },
+    {
+      "command": "account_detect",
+      "args": {
+        "request": {
+          "platform": "openai",
+          "directory": null,
+          "store": "file",
+          "mode": "local"
+        }
+      }
+    },
+    {
+      "command": "account_detect",
+      "args": {
+        "request": {
+          "platform": "claude",
+          "directory": null,
+          "store": "file",
+          "mode": "local"
+        }
+      }
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    },
+    {
+      "command": "authorize_start",
+      "args": {
+        "request": {
+          "platform": "openai",
+          "source": {
+            "directory": null,
+            "store": "file"
+          },
+          "expected_revision": 2
+        }
+      }
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    }
+  ]
+}

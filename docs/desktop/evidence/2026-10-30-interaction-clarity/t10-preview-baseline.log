@@ -1,0 +1,545 @@
+{"started_at": "2026-11-02T18:31:26.022038+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.preview.config.ts", "--output", "../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "da161c5600c617652fe70507739809c9427acf49", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.27.3 darwin/arm64"}
+
+Running 45 tests using 4 workers
+
+  ✓   1 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-unbound (2.3s)
+  ✓   4 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-bound (2.3s)
+  ✓   2 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-pending (2.3s)
+  ✓   7 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-starting (935ms)
+  ✓   6 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: stopped (961ms)
+  ✓   9 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-stopping (729ms)
+  ✓  10 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-disconnected (574ms)
+  ✘   3 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-expired (20.3s)
+  ✘   5 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-error (18.7s)
+  ✘   8 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: running (18.6s)
+  ✓  14 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-candidate (531ms)
+  ✘  11 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-unknown (18.6s)
+  ✓  15 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-selected (524ms)
+  ✓  16 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-expired (582ms)
+  ✓  17 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-error (634ms)
+  ✓  18 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-change (594ms)
+  ✓  19 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-ready (685ms)
+  ✓  20 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-paused (811ms)
+  ✓  21 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-blocked (569ms)
+  ✓  22 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-partial (563ms)
+  ✓  23 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-background (2.4s)
+  ✓  25 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-waiting (614ms)
+  ✓  24 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-expired (10.9s)
+  ✓  27 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-recovered (518ms)
+  ✓  28 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-sequence (506ms)
+  ✓  29 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-normal (551ms)
+  ✓  30 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-unknown (585ms)
+  ✘  12 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-reading (18.7s)
+  ✓  26 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-retrying (11.0s)
+  ✓  31 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-expired (693ms)
+  ✓  32 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-over (803ms)
+  ✘  13 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-empty (19.1s)
+  ✓  33 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-login (1.0s)
+  ✓  34 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-select (758ms)
+  ✓  36 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-change (1.1s)
+  ✓  35 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-multiple (1.3s)
+  ✓  37 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-clear (1.3s)
+  ✓  39 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-detail (1.1s)
+  ✓  38 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-stop (1.1s)
+  ✘  40 [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes (5.7s)
+  ✘  41 [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only (6.9s)
+  ✘  42 [chromium] › tests/preview-scenarios.spec.ts:67:1 › preview pairing remains pending after a poll and simulated website confirmation binds the device (6.4s)
+  ✘  43 [chromium] › tests/preview-scenarios.spec.ts:79:1 › confirmed account actions update only the fixture and preserve pause semantics (7.7s)
+  ✘  44 [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: confirm-change (6.0s)
+  ✘  45 [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: account-change (6.1s)
+
+
+  1) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-expired 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 2
+
+    - 配对码已过期
+    + Bee概览AI 账号诊断设置hive.example等待完成设备配对Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台等待完成设备配对开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接准备贡献绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单本机设备重新核对设备Hive 已确认配对码过期旧配对已确认过期；重新生成需由你发起。重新生成配对码AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源暂不能提供可接入账号，请查看具体原因。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        39 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example等待完成设备配对Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台等待完成设备配对开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接准备贡献绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单本机设备重新核对设备Hive 已确认配对码过期旧配对已确认过期；重新生成需由你发起。重新生成配对码AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源暂不能提供可接入账号，请查看具体原因。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-79d9f-ended-writes-device-expired-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-79d9f-ended-writes-device-expired-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-79d9f-ended-writes-device-expired-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-error 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 9
+
+    - 设备核对失败
+    + Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://hive.exampleHive 拒绝了本次请求（HTTP 503）。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: http_rejected
+    + 失败环节: device_identity
+    + 观察时间: 2026年11月3日 02:31:42
+    + 目标: https://hive.example
+    + 路径: /api/bee/identity
+    + HTTP 状态: 503
+    + 安全响应: Hive upstream temporarily unavailable
+    + 原始原因: GET /api/bee/identity HTTP 503; preview upstream unavailableAI 账号接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源暂不能提供可接入账号，请查看具体原因。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        23 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://hive.exampleHive 拒绝了本次请求（HTTP 503）。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: http_rejected
+    失败环节: device_identity
+    观察时间: 2026年11月3日 02:31:32
+    目标: https://hive.example
+    路径: /api/bee/identity
+    HTTP 状态: 503
+    安全响应: Hive upstream temporarily unavailable
+    原始原因: GET /api/bee/identity HTTP 503; preview upstream unavailableAI 账号接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源暂不能提供可接入账号，请查看具体原因。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+        16 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://hive.exampleHive 拒绝了本次请求（HTTP 503）。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: http_rejected
+    失败环节: device_identity
+    观察时间: 2026年11月3日 02:31:42
+    目标: https://hive.example
+    路径: /api/bee/identity
+    HTTP 状态: 503
+    安全响应: Hive upstream temporarily unavailable
+    原始原因: GET /api/bee/identity HTTP 503; preview upstream unavailableAI 账号接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源暂不能提供可接入账号，请查看具体原因。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-9e6a7-ntended-writes-device-error-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-9e6a7-ntended-writes-device-error-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-9e6a7-ntended-writes-device-error-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: running 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 2
+
+    - 贡献已启动
+    + Bee概览AI 账号诊断设置hive.example可接单Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台可接单按平台管理接单；暂停后不再接收新任务。停止贡献可接单平台：OpenAIBee 运行中Hive 已连接本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb可接单5 小时已用 3%7 日已用 2%暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        39 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example可接单Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台可接单按平台管理接单；暂停后不再接收新任务。停止贡献可接单平台：OpenAIBee 运行中Hive 已连接本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb可接单5 小时已用 3%7 日已用 2%暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-0847c-r-unintended-writes-running-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-0847c-r-unintended-writes-running-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-0847c-r-unintended-writes-running-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-unknown 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 6
+
+    - 贡献状态待确认，正在自动核对
+    + Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先核对本机贡献状态。Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    + 失败环节: runtime_operation
+    + 原始原因: RESPONSE_TIMEOUT: runtime_start preview response lost; submitted=true; result=unconfirmed本机设备重新核对设备本机设备Bee Desktop上次确认的设备，当前待核对。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: RUNTIME_OPERATION_FAILED
+    + 失败环节: desktop_refresh
+    + 原始原因: runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submittedAI 账号等待自动重试…接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb上次确认的账号事实；当前状态待核对。历史事实不能支持当前可接单结论或账号写操作。上次确认: 2026年11月3日 02:31:35状态待更新等待自动重试… 2026年11月3日 02:31:555 小时已用 3%7 日已用 2%上次确认的额度；当前待核对。上次额度观测: 2026年11月3日 02:31:34✳Claude尚未接入 Claude 账号上次确认的账号事实；当前状态待核对。历史事实不能支持当前可接单结论或账号写操作。上次确认: 2026年11月3日 02:31:35状态待更新等待自动重试… 2026年11月3日 02:31:55额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        24 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example贡献尚未启动Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台贡献尚未启动开始后建立连接；接单需单独恢复。开始贡献请先核对本机贡献状态。Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    失败环节: runtime_operation
+    原始原因: RESPONSE_TIMEOUT: runtime_start preview response lost; submitted=true; result=unconfirmed本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb不能接单已手动暂停恢复接单只解除此平台暂停；不会开始贡献，其他阻塞仍需满足。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+        15 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先核对本机贡献状态。Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    失败环节: runtime_operation
+    原始原因: RESPONSE_TIMEOUT: runtime_start preview response lost; submitted=true; result=unconfirmed本机设备重新核对设备本机设备Bee Desktop上次确认的设备，当前待核对。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: RUNTIME_OPERATION_FAILED
+    失败环节: desktop_refresh
+    原始原因: runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submittedAI 账号等待自动重试…接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb上次确认的账号事实；当前状态待核对。历史事实不能支持当前可接单结论或账号写操作。上次确认: 2026年11月3日 02:31:35状态待更新等待自动重试… 2026年11月3日 02:31:555 小时已用 3%7 日已用 2%上次确认的额度；当前待核对。上次额度观测: 2026年11月3日 02:31:34✳Claude尚未接入 Claude 账号上次确认的账号事实；当前状态待核对。历史事实不能支持当前可接单结论或账号写操作。上次确认: 2026年11月3日 02:31:35状态待更新等待自动重试… 2026年11月3日 02:31:55额度尚未核对授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-e22c0-nded-writes-runtime-unknown-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-e22c0-nded-writes-runtime-unknown-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-e22c0-nded-writes-runtime-unknown-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-reading 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 2
+
+    - 正在读取已有登录
+    + Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号接入数量待确认OpenAI尚未接入 OpenAI 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 OpenAI官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 Claude官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        39 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example状态待确认Bee Desktop设备与平台控制本机设备AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号接入数量待确认OpenAI尚未接入 OpenAI 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 OpenAI官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 Claude官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-829b7-nded-writes-account-reading-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-829b7-nded-writes-account-reading-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-829b7-nded-writes-account-reading-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-empty 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('body')
+    Timeout: 18000ms
+    - Expected substring  - 1
+    + Received string     + 2
+
+    - 还没有 OpenAI 登录
+    + Bee概览AI 账号诊断设置hive.example尚未接入 AI 账号Bee Desktop设备与平台控制本机设备AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号0 个已接入OpenAI尚未接入 OpenAI 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对登录 OpenAI✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对登录 Claude授权信息保留在本机Bee设备绑定不自动开始贡献
+    +
+
+    Call log:
+      - Expect "toContainText" locator('body') with timeout 18000ms
+      - waiting for locator('body')
+        39 × locator resolved to <body>…</body>
+           - unexpected value "Bee概览AI 账号诊断设置hive.example尚未接入 AI 账号Bee Desktop设备与平台控制本机设备AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号0 个已接入OpenAI尚未接入 OpenAI 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对登录 OpenAI✳Claude尚未接入 Claude 账号不能接单所选来源暂不能提供可接入账号，请查看具体原因。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。Hive 未看到此平台的 Bee 连接请在概览核对贡献运行和实际连接原因。查看连接额度尚未核对登录 Claude授权信息保留在本机Bee设备绑定不自动开始贡献
+    "
+
+
+      22 |  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
+      23 |  await openScene(page,scene);
+    > 24 |  await expect(page.locator('body')).toContainText(copy,{timeout:18000});
+         |                                     ^
+      25 |  expect(errors).toEqual([]);
+      26 |  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');
+      27 |  const submitted=(await commands(page)).filter(call=>writes.has(call.command));
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:24:37
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-61dd8-tended-writes-account-empty-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-61dd8-tended-writes-account-empty-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-scene-re-61dd8-tended-writes-account-empty-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#scene optgroup')
+    Expected: 7
+    Received: 8
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" locator('#scene optgroup') with timeout 5000ms
+      - waiting for locator('#scene optgroup')
+        13 × locator resolved to 8 elements
+           - unexpected value "8"
+
+
+      39 | test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
+      40 |  await page.goto('/.cache/bee-shadcn-review.html?scene=running&theme=light&size=normal');
+    > 41 |  await expect(page.locator('#scene optgroup')).toHaveCount(7);
+         |                                                ^
+      42 |  await expect(page.locator('#scene option')).toHaveCount(39);
+      43 |  await page.locator('#scene').selectOption('confirm-change');
+      44 |  const app=page.frameLocator('iframe');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:41:48
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.account-check-status')
+    Expected: "核对中…"
+    Received: "等待自动重试…"
+    Timeout:  6000ms
+
+    Call log:
+      - Expect "toHaveText" locator('.account-check-status') with timeout 6000ms
+      - waiting for locator('.account-check-status')
+        10 × locator resolved to <span role="status" class="account-check-status">等待自动重试…</span>
+           - unexpected value "等待自动重试…"
+
+
+      54 |  await openScene(page,'check-sequence');
+      55 |  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible();
+    > 56 |  await expect(page.locator('.account-check-status')).toHaveText('核对中…',{timeout:6000});
+         |                                                      ^
+      57 |  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
+      58 |  await expect(card(page).getByRole('button',{name:'暂停接单'})).toBeDisabled();
+      59 |  await expect(page.locator('.account-check-status')).toHaveText('等待自动重试…');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:56:54
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests/preview-scenarios.spec.ts:67:1 › preview pairing remains pending after a poll and simulated website confirmation binds the device 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('设备已绑定。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('设备已绑定。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('设备已绑定。', { exact: true })
+
+
+      73 |  await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
+      74 |  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
+    > 75 |  await expect(page.getByText('设备已绑定。',{exact:true})).toBeVisible();
+         |                                                      ^
+      76 |  expect((await commands(page)).filter(call=>writes.has(call.command))).toEqual([]);
+      77 | });
+      78 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:75:54
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-preview--33624-nfirmation-binds-the-device-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-preview--33624-nfirmation-binds-the-device-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-preview--33624-nfirmation-binds-the-device-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests/preview-scenarios.spec.ts:79:1 › confirmed account actions update only the fixture and preserve pause semantics 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停') with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+
+
+      80 |  await openScene(page,'confirm-select');
+      81 |  await page.getByRole('button',{name:'确认接入',exact:true}).click();
+    > 82 |  await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+         |                                                       ^
+      83 |  expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['account_action']);
+      84 |  expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(true);
+      85 |  await page.getByRole('button',{name:'概览',exact:true}).click();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:82:55
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-7fff8-nd-preserve-pause-semantics-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-7fff8-nd-preserve-pause-semantics-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-7fff8-nd-preserve-pause-semantics-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: confirm-change 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停') with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+
+
+      101 |  await page.getByRole('button',{name:'确认更换',exact:true}).click();
+      102 |  await page.getByRole('button',{name:'关闭',exact:true}).click();
+    > 103 |  await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+          |                                                       ^
+      104 |  const state=await page.evaluate(()=>{const w=window as unknown as {accounts:{openai:{candidate:{fingerprint:string};selection:{fingerprint:string};authorization:{fingerprint:string};capabilities:{windows:unknown[]}[]}};paused:{openai:boolean}};return {account:w.accounts.openai,paused:w.paused.openai};});
+      105 |  expect(state.account.selection.fingerprint).toBe('f'.repeat(64));
+      106 |  expect(state.account.authorization.fingerprint).toBe(state.account.candidate.fingerprint);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:103:55
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-77ba0-ccount-quota-confirm-change-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-77ba0-ccount-quota-confirm-change-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-77ba0-ccount-quota-confirm-change-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: account-change 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停') with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('账号操作已完成，平台保持暂停')
+
+
+      101 |  await page.getByRole('button',{name:'确认更换',exact:true}).click();
+      102 |  await page.getByRole('button',{name:'关闭',exact:true}).click();
+    > 103 |  await expect(card(page).getByText('账号操作已完成，平台保持暂停')).toBeVisible();
+          |                                                       ^
+      104 |  const state=await page.evaluate(()=>{const w=window as unknown as {accounts:{openai:{candidate:{fingerprint:string};selection:{fingerprint:string};authorization:{fingerprint:string};capabilities:{windows:unknown[]}[]}};paused:{openai:boolean}};return {account:w.accounts.openai,paused:w.paused.openai};});
+      105 |  expect(state.account.selection.fingerprint).toBe('f'.repeat(64));
+      106 |  expect(state.account.authorization.fingerprint).toBe(state.account.candidate.fingerprint);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:103:55
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-93ea6-ccount-quota-account-change-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-93ea6-ccount-quota-account-change-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-baseline-output/preview-scenarios-confirme-93ea6-ccount-quota-account-change-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12 failed
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-expired 
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-error 
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: running 
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-unknown 
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-reading 
+    [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-empty 
+    [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes 
+    [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only 
+    [chromium] › tests/preview-scenarios.spec.ts:67:1 › preview pairing remains pending after a poll and simulated website confirmation binds the device 
+    [chromium] › tests/preview-scenarios.spec.ts:79:1 › confirmed account actions update only the fixture and preserve pause semantics 
+    [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: confirm-change 
+    [chromium] › tests/preview-scenarios.spec.ts:95:56 › confirmed changed identity cannot inherit the prior account quota: account-change 
+  33 passed (58.5s)
+{"finished_at": "2026-11-02T18:32:26.369071+00:00", "exit": 1}

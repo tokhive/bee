@@ -1,0 +1,153 @@
+{
+  "id": "R03",
+  "scene": "running",
+  "scope": "T5/T6/T7/T10；运行连接正常、平台部分可用",
+  "expectation": "主状态基于平台；两平台分别有受控请求实际返回，暂停阻止新派发、停止后不可继续接单",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台可接单按平台管理接单；暂停后不再接收新任务。停止贡献可接单平台：OpenAIBee 运行中Hive 已连接本机设备重新核对设备本机设备Bee Desktop设备已绑定。归属账号owner@example.test设备所属账号Hivehttps://hive.example配对不会自动开始贡献AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb可接单5 小时已用 3%7 日已用 2%暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "停止贡献",
+        "disabled": false,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 292.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 326
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "x": 732,
+        "y": 614,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 646
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "running"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-R03-T5-T6-T7-T10；运行连接正常、平台部分可用-chromium/R03.png",
+  "observed_at": "2026-11-02T18:58:24.471Z",
+  "pageErrors": []
+}

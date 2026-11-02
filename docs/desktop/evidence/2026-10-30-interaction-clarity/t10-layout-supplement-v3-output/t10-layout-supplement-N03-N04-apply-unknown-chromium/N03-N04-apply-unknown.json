@@ -1,0 +1,158 @@
+{
+  "id": "N03-N04-apply-unknown",
+  "at": "2026-11-02T19:10:08.891Z",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "body": "Bee\n概览\nAI 账号\n诊断\n设置\nhive.example\n\n尚未接入 AI 账号\n\nFixture\n设备与平台控制\n本机设备\n设置\n\n管理设备偏好与应用设置。\n\n打开 Hive 控制台\n通用\n网络与代理\n通知与启动\n关于\n网络与代理\n\n使用本机代理时，先启动对应代理工具，再保存或测试。\n\n适用范围\nhttps://hive.example\n\n本机 HTTP 代理\n\n留空关闭。仅支持无认证的回环 IP 与端口；不修改系统代理。\n\n保存代理\n测试连接\n\n代理配置已保存。\n\n本次操作失败，原因尚未确认。\n\n本次操作未能完成；后续状态以重新核对的结果为准。\n\n查看失败详情\n\n应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。\n\n当前贡献进程：已停止\n\n配置与实际路径\n刷新生效路径\n已保存配置\nhttp://127.0.0.1:18393\n当前生效配置\nhttp://127.0.0.1:18393\n当前实际生效路径\n流量\t路径\nBee 转发的上游连接\t本机代理\n官方查询与续期\tOpenAI: 本机代理\nClaude: 本机代理\nHive HTTP / WebSocket\t沿用进程环境\n官方客户端登录\t由官方客户端管理\n\n官方查询优先使用进程环境代理，并遵守直连规则；环境配置原文不会显示。\n\nBee\n设备绑定不自动开始贡献",
+  "dialogs": [],
+  "calls": [
+    {
+      "command": "preferences_read",
+      "args": {}
+    },
+    {
+      "command": "preferences_read",
+      "args": {}
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_defaults",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    },
+    {
+      "command": "native_locale_sync",
+      "args": {
+        "request": {
+          "locale": "zh",
+          "revision": 0,
+          "sequence": 1
+        }
+      }
+    },
+    {
+      "command": "network_snapshot",
+      "args": {}
+    },
+    {
+      "command": "notification_permission",
+      "args": {}
+    },
+    {
+      "command": "autostart_status",
+      "args": {}
+    },
+    {
+      "command": "notification_delivery_status",
+      "args": {}
+    },
+    {
+      "command": "network_snapshot",
+      "args": {}
+    },
+    {
+      "command": "notification_permission",
+      "args": {}
+    },
+    {
+      "command": "autostart_status",
+      "args": {}
+    },
+    {
+      "command": "notification_delivery_status",
+      "args": {}
+    },
+    {
+      "command": "network_save_proxy",
+      "args": {
+        "proxy": "http://127.0.0.1:18393",
+        "origin": "https://hive.example",
+        "expectedRevision": 0
+      }
+    },
+    {
+      "command": "network_snapshot",
+      "args": {}
+    },
+    {
+      "command": "native_locale_sync",
+      "args": {
+        "request": {
+          "locale": "zh",
+          "revision": 1,
+          "sequence": 2
+        }
+      }
+    },
+    {
+      "command": "network_apply_saved",
+      "args": {
+        "confirmed": true
+      }
+    },
+    {
+      "command": "network_snapshot",
+      "args": {}
+    },
+    {
+      "command": "runtime_snapshot",
+      "args": {}
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "openai",
+        "refresh": true
+      }
+    },
+    {
+      "command": "account_snapshot",
+      "args": {
+        "platform": "claude",
+        "refresh": true
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "openai"
+      }
+    },
+    {
+      "command": "supply_status",
+      "args": {
+        "platform": "claude"
+      }
+    }
+  ]
+}

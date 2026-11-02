@@ -1,0 +1,137 @@
+{
+  "id": "D09",
+  "scene": "recovery-owner",
+  "scope": "T4b/T10；撤销后重绑，同／不同所有者",
+  "expectation": "本机确认＋网页确认；新归属再确认，旧选择与运行意图隔离",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "概览",
+    "theme": "light",
+    "text": "概览打开 Hive 控制台设备身份被拒绝开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://hive.example此设备已被替换，原设备凭据已撤销。设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。查看设备查看失败详情错误码: device_replaced\n失败环节: device_status\n原始原因: GET /api/bee/identity HTTP 401 device_replaced新设备归属与原设备不同原归属账号owner@example.test新归属账号new-owner@example.test采用新归属后，旧账号选择与运行意图不会迁移。确认采用新归属AI 账号接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源未找到登录；可调整读取位置或使用官方登录。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 109
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "x": 734,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 831,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 710,
+        "y": 292.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 831,
+        "bottom": 326
+      },
+      {
+        "text": "查看设备",
+        "disabled": false,
+        "x": 742,
+        "y": 389,
+        "width": 76,
+        "height": 33.5,
+        "right": 818,
+        "bottom": 422.5
+      },
+      {
+        "text": "确认采用新归属",
+        "disabled": false,
+        "x": 207,
+        "y": 647.5,
+        "width": 115,
+        "height": 33.5,
+        "right": 322,
+        "bottom": 681
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "recovery-owner"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-D09-T4b-T10；撤销后重绑，同／不同所有者-chromium/D09.png",
+  "observed_at": "2026-11-02T18:58:09.471Z",
+  "pageErrors": []
+}

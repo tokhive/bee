@@ -1,0 +1,128 @@
+{"started_at": "2026-11-02T18:41:29.435337+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.preview.config.ts", "--output", "../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "da161c5600c617652fe70507739809c9427acf49", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/preview-scenarios.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "?? hive/internal/integration/desktop_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.26.5 darwin/arm64"}
+
+Running 45 tests using 4 workers
+
+  ✓   2 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-expired (2.7s)
+  ✓   1 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-bound (2.7s)
+  ✓   4 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-pending (2.8s)
+  ✓   3 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-unbound (2.8s)
+  ✓   5 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: device-error (940ms)
+  ✓   6 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: stopped (984ms)
+  ✓   7 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-starting (1.4s)
+  ✓   8 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: running (1.4s)
+  ✓  10 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-disconnected (1.0s)
+  ✓   9 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-stopping (1.1s)
+  ✓  11 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: runtime-unknown (1.1s)
+  ✓  12 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-reading (1.1s)
+  ✓  13 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-empty (986ms)
+  ✓  14 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-candidate (1.1s)
+  ✓  15 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-selected (952ms)
+  ✓  16 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-error (1.1s)
+  ✓  17 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-expired (936ms)
+  ✓  18 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-change (1.0s)
+  ✓  19 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-ready (1.1s)
+  ✓  20 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-paused (1.2s)
+  ✓  21 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-blocked (1.4s)
+  ✓  22 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: supply-partial (1.4s)
+  ✓  25 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-waiting (923ms)
+  ✓  27 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-recovered (619ms)
+  ✓  23 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-background (2.7s)
+  ✓  28 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-sequence (521ms)
+  ✓  29 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-normal (595ms)
+  ✓  30 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-unknown (641ms)
+  ✓  31 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-expired (623ms)
+  ✓  32 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-multiple (614ms)
+  ✓  33 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: quota-over (649ms)
+  ✓  34 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-login (811ms)
+  ✓  35 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-select (672ms)
+  ✓  36 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-stop (606ms)
+  ✓  37 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-change (689ms)
+  ✓  38 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: confirm-clear (694ms)
+  ✓  39 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: account-detail (659ms)
+  ✓  24 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-expired (11.1s)
+  ✘  40 [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes (5.7s)
+  ✓  26 [chromium] › tests/preview-scenarios.spec.ts:21:33 › scene renders formal state without invalid data or unintended writes: check-retrying (11.4s)
+  ✓  43 [chromium] › tests/preview-scenarios.spec.ts:99:56 › confirmed changed identity cannot inherit the prior account quota: confirm-change (901ms)
+  ✘  41 [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only (6.6s)
+  ✓  44 [chromium] › tests/preview-scenarios.spec.ts:83:1 › confirmed account actions update only the fixture and preserve pause semantics (1.0s)
+  ✓  45 [chromium] › tests/preview-scenarios.spec.ts:99:56 › confirmed changed identity cannot inherit the prior account quota: account-change (912ms)
+  ✓  42 [chromium] › tests/preview-scenarios.spec.ts:69:1 › preview pairing remains pending after a poll and simulated website confirmation binds the device (3.2s)
+
+
+  1) [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('iframe').contentFrame().getByRole('dialog').last()
+    Expected substring: "要换成"
+    Received string:    "换号将此平台切换到目标账号，核对 Hive 注册与已有请求收尾；完成后仍保持暂停，不会开始贡献。当前账号bbbbbbbbbbbbbbbb目标账号ffffffffffffffff平台OpenAI取消确认更换"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('iframe').contentFrame().getByRole('dialog').last() with timeout 5000ms
+      - waiting for locator('iframe').contentFrame().getByRole('dialog').last()
+        - locator resolved to <div role="dialog" tabindex="-1" id="radix-_r_7_" data-state="open" class="detail-sheet" aria-labelledby="radix-_r_8_" aria-describedby="radix-_r_9_">…</div>
+        - unexpected value "OpenAI 账号详情关闭查看账号与额度，管理凭证读取方式。当前账号标识bbbbbbbbbbbbbbbb订阅套餐套餐待确认授权到期未知候选账号标识ffffffffffffffff发现不同账号，请在详情确认换号；原账号选择仍保留。额度与重置额度尚未核对凭证读取方式读取官方客户端已保存的登录；目录留空使用默认位置。自定义目录存储方式自动文件钥匙串修改读取位置不会自动更换已接入账号。换号重新登录取消接入"
+        12 × locator resolved to <div role="dialog" tabindex="-1" id="radix-_r_g_" data-state="open" class="dialog-content" aria-labelledby="radix-_r_h_" aria-describedby="radix-_r_i_">…</div>
+           - unexpected value "换号将此平台切换到目标账号，核对 Hive 注册与已有请求收尾；完成后仍保持暂停，不会开始贡献。当前账号bbbbbbbbbbbbbbbb目标账号ffffffffffffffff平台OpenAI取消确认更换"
+
+
+      43 |  await page.locator('#scene').selectOption('confirm-change');
+      44 |  const app=page.frameLocator('iframe');
+    > 45 |  await expect(app.getByRole('dialog').last()).toContainText('要换成');
+         |                                               ^
+      46 |  await page.locator('#theme').selectOption('dark');
+      47 |  await page.locator('#size').selectOption('narrow');
+      48 |  await expect(page.locator('#scene')).toHaveValue('confirm-change');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:45:47
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-review-s-4dd67--when-theme-or-size-changes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator:  locator('.account-check-status')
+    Expected: "等待已安排的核对…"
+    Received: "等待自动重试…"
+    Timeout:  6000ms
+
+    Call log:
+      - Expect "toHaveText" locator('.account-check-status') with timeout 6000ms
+      - waiting for locator('.account-check-status')
+        9 × locator resolved to <span role="status" class="account-check-status">等待自动重试…</span>
+          - unexpected value "等待自动重试…"
+
+
+      55 |  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible();
+      56 |  test.setTimeout(45000);
+    > 57 |  await expect(page.locator('.account-check-status')).toHaveText('等待已安排的核对…',{timeout:6000});
+         |                                                      ^
+      58 |  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
+      59 |  await expect(card(page).getByRole('button',{name:'暂停接单'})).toBeDisabled();
+      60 |  await expect(page.locator('.account-check-status')).toHaveText('核对中…',{timeout:15000});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/preview-scenarios.spec.ts:57:54
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-preview-v2-output/preview-scenarios-automati-d2578-es-using-read-requests-only-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/preview-scenarios.spec.ts:39:1 › review selector covers approved groups and preserves scene when theme or size changes 
+    [chromium] › tests/preview-scenarios.spec.ts:53:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only 
+  43 passed (24.5s)
+{"finished_at": "2026-11-02T18:41:55.138528+00:00", "exit": 1}

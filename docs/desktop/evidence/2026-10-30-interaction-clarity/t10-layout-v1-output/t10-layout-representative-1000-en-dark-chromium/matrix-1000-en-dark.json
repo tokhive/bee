@@ -1,0 +1,117 @@
+{
+  "id": "matrix-1000-en-dark",
+  "scene": "device-error",
+  "scope": "三尺寸×中英×明暗长内容",
+  "expectation": "主页面和模态框无横向溢出",
+  "layer": "正式组件＋模拟IPC",
+  "viewport": {
+    "width": 1000,
+    "height": 700
+  },
+  "locale": "en",
+  "theme": "dark",
+  "long": true,
+  "actual": {
+    "viewport": {
+      "width": 1000,
+      "height": 700
+    },
+    "document": {
+      "width": 1000,
+      "height": 700
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 822,
+      "height": 619,
+      "right": 1000,
+      "bottom": 671
+    },
+    "heading": "Overview",
+    "theme": "dark",
+    "text": "OverviewOpen Hive consoleStatus unconfirmedStart to connect; resume each platform separately.Start contributingComplete device verification and binding first.Bee stoppedHive connection has not been startedThis deviceVerify device againLast saved device information：Bee Desktop · https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.exampleHive rejected this request (HTTP 503).The device state could not be confirmed. Actions requiring its identity remain unavailable.View failure detailsError code: http_rejected\nFailed check: device_identity\nObserved at: Nov 3, 2026, 2:58:43 AM\nTarget: https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example\nPath: /api/bee/identity\nHTTP status: 503\nSafe response: Hive upstream temporarily unavailable\nOriginal cause: GET /api/bee/identity HTTP 503; preview upstream unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; AI accountsConnected account count unconfirmedOpenAIPlusAccount ID: bbbbbbbbbbbbbbbbStatus unconfirmed5 hours3% used7 days2% used✳ClaudeNo Claude account connected yetStatus unconfirmedNo sign-in was found in the selected source. Adjust the location or use official sign-in.QuotaNot checked yetAuthorization stays on this device",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "Open Hive console",
+        "disabled": false,
+        "x": 840.734375,
+        "y": 77,
+        "width": 130.265625,
+        "height": 32,
+        "right": 971,
+        "bottom": 109
+      },
+      {
+        "text": "Start contributing",
+        "disabled": true,
+        "x": 816.234375,
+        "y": 132,
+        "width": 154.765625,
+        "height": 32,
+        "right": 971,
+        "bottom": 164
+      },
+      {
+        "text": "Verify device again",
+        "disabled": false,
+        "x": 810.703125,
+        "y": 292.5,
+        "width": 160.296875,
+        "height": 33.5,
+        "right": 971,
+        "bottom": 326
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "en",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "device-error"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-representative-1000-en-dark-chromium/matrix-1000-en-dark.png",
+  "observed_at": "2026-11-02T18:58:44.103Z",
+  "pageErrors": []
+}

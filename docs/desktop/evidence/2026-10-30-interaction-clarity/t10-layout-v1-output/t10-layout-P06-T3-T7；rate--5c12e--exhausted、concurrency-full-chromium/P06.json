@@ -1,0 +1,287 @@
+{
+  "id": "P06",
+  "scene": "quota-over",
+  "scope": "T3/T7；rate_limited、quota_unknown、quota_exhausted、concurrency_full",
+  "expectation": "可证明的恢复条件和时间；无根据不倒计时",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "AI 账号",
+    "theme": "light",
+    "text": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号1 个已接入OpenAIPlus账号标识: bbbbbbbbbbbbbbbb不能接单账号订阅额度已耗尽请查看全部额度窗口与已报告的重置时间；恢复按钮不能解除额度限制。5 小时已用 120%7 日已用 2%有额度窗口已耗尽；请查看各窗口重置时间。暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 Claude官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 87.59375,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "x": 694,
+        "y": 378.859375,
+        "width": 74,
+        "height": 32,
+        "right": 768,
+        "bottom": 410.859375
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 378.859375,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 410.859375
+      },
+      {
+        "text": "登录 Claude",
+        "disabled": true,
+        "x": 712.375,
+        "y": 668.8125,
+        "width": 93.625,
+        "height": 32,
+        "right": 806,
+        "bottom": 700.8125
+      },
+      {
+        "text": "查看贡献运行",
+        "disabled": false,
+        "x": 732,
+        "y": 759.1875,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 791.1875
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 799.1875,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 831.1875
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "scene": "quota-over"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-P06-T3-T7；rate--5c12e--exhausted、concurrency-full-chromium/P06.png",
+  "observed_at": "2026-11-02T18:58:31.068Z",
+  "pageErrors": []
+}

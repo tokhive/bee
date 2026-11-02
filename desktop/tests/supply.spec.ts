@@ -22,7 +22,8 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
    if(command==='device_context')return {instance:currentInstance,result:{context:{hive:'https://hive.example',name:'Fixture Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:1}}};
    if(command==='preferences_read')return structuredClone({preferences,error:null});
    if(command==='preferences_save'){preferences={...args!.request!.preferences,revision:preferences.revision+1};return structuredClone({preferences,error:null});}
-   if(command==='notification_permission')return 'prompt';
+   if(command==='native_locale_sync')return null;
+    if(command==='notification_permission')return 'prompt';
    if(command==='autostart_status')return {desired:false,registered:false,error:null};
    if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
    if(command==='account_defaults')return {instance:currentInstance,result:{defaults:{platforms:['openai','claude'].map(platform=>({platform,directory:platform==='openai'?'/tmp/codex':'/tmp/claude',default_store:'file',stores:[{store:'file',supported:true,reason:null}]}))}}};
@@ -44,7 +45,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
   }};
  },{...options,passiveRuntime,accounts});
 }
-async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
+async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('运行详情',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);await page.getByRole('button',{name:'概览',exact:true}).click();}
 interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
 const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
 const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
@@ -104,7 +105,7 @@ test('fresh background reads stay quiet and hide previous success only when thir
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
 });
 test('navigation keeps one application poller and old results cannot repopulate a new manager instance',async({page})=>{
- await fixture(page);await page.clock.install();await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await fixture(page);await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.clock.runFor(10001);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(1500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);await page.clock.runFor(3500);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count+2);
  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('c'.repeat(32));});

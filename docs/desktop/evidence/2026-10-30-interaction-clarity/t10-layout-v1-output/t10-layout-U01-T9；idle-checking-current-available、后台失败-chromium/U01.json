@@ -1,0 +1,209 @@
+{
+  "id": "U01",
+  "scene": "settings-about",
+  "scope": "T9；idle/checking/current/available、后台失败",
+  "expectation": "只读检查不影响贡献；可显式重试，有当前版本",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "设置",
+    "theme": "light",
+    "text": "设置管理设备偏好与应用设置。打开 Hive 控制台通用网络与代理通知与启动关于关于 Bee当前应用、运行核心与 Hive 信息。Bee 0.1.0macOS · arm64检查更新尚未检查更新检查和下载不会退出 Bee。安装需要你确认退出，可能中断正在处理的任务。Bee 版本：devHivehttps://hive.exampleHive 设备身份已核对。",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 87.59375,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "通用",
+        "disabled": false,
+        "x": 207,
+        "y": 153.1875,
+        "width": 28,
+        "height": 36.09375,
+        "right": 235,
+        "bottom": 189.28125
+      },
+      {
+        "text": "网络与代理",
+        "disabled": false,
+        "x": 253,
+        "y": 153.1875,
+        "width": 67,
+        "height": 36.09375,
+        "right": 320,
+        "bottom": 189.28125
+      },
+      {
+        "text": "通知与启动",
+        "disabled": false,
+        "x": 338,
+        "y": 153.1875,
+        "width": 67,
+        "height": 36.09375,
+        "right": 405,
+        "bottom": 189.28125
+      },
+      {
+        "text": "关于",
+        "disabled": false,
+        "x": 423,
+        "y": 153.1875,
+        "width": 28,
+        "height": 36.09375,
+        "right": 451,
+        "bottom": 189.28125
+      },
+      {
+        "text": "检查更新",
+        "disabled": false,
+        "x": 755,
+        "y": 300.296875,
+        "width": 76,
+        "height": 36.09375,
+        "right": 831,
+        "bottom": 336.390625
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "network_snapshot",
+        "args": {}
+      },
+      {
+        "command": "notification_permission",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "notification_delivery_status",
+        "args": {}
+      },
+      {
+        "command": "network_snapshot",
+        "args": {}
+      },
+      {
+        "command": "notification_permission",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "notification_delivery_status",
+        "args": {}
+      },
+      {
+        "command": "update_snapshot",
+        "args": {}
+      }
+    ],
+    "scene": "settings-about"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-U01-T9；idle-checking-current-available、后台失败-chromium/U01.png",
+  "observed_at": "2026-11-02T18:58:38.557Z",
+  "pageErrors": []
+}

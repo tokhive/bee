@@ -1,0 +1,56 @@
+{"started_at": "2026-11-02T18:42:52.177134+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "device-recovery.spec.ts", "--workers", "4", "--output", "../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-recovery-ui-first-output"], "bee_head": "3b0b747ff2ca60f8cab621056207971806c75c43", "hive_head": "da161c5600c617652fe70507739809c9427acf49", "hive_bee_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f", "bee_dirty": "M Makefile\n M desktop/README.md\n M desktop/playwright.config.ts\n M desktop/playwright.device.config.ts\n M desktop/tests/fixtures/bee-preview/app.mjs\n M desktop/tests/fixtures/bee-preview/fixture.mjs\n M desktop/tests/fixtures/bee-preview/scenarios.mjs\n M desktop/tests/preview-scenarios.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/device-recovery.spec.ts\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md", "hive_dirty": "?? hive/internal/integration/desktop_broker_test.go", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "go": "go version go1.26.5 darwin/arm64"}
+
+Running 11 tests using 4 workers
+
+  ✓   4 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-creation-unknown (2.9s)
+  ✓   1 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-redemption-unknown (2.9s)
+  ✓   3 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-pending (2.9s)
+  ✓   2 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: device-saving (2.9s)
+  ✓   6 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-creation-unknown (1.2s)
+  ✓   5 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-draining (1.3s)
+  ✓   7 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-redemption-unknown (1.5s)
+  ✓   8 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-saving (1.6s)
+  ✓   9 [chromium] › tests/device-recovery.spec.ts:14:50 › unresolved device transaction survives four pages without write replay: recovery-owner (1.1s)
+  ✓  10 [chromium] › tests/device-recovery.spec.ts:21:1 › revoked credential recovery requires local consent, external approval and explicit new owner adoption (1.5s)
+  ✘  11 [chromium] › tests/device-recovery.spec.ts:43:1 › saved revoked identity and missing selected source keep all pages reachable without account or runtime writes (5.9s)
+
+
+  1) [chromium] › tests/device-recovery.spec.ts:43:1 › saved revoked identity and missing selected source keep all pages reachable without account or runtime writes 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true })
+    Expected substring: "所选来源未找到登录"
+    Received string:    "OpenAI账号状态尚未确认状态待确认等待自动重试… 2026年11月3日 02:43:09额度尚未核对登录 OpenAI账号状态尚未确认，暂不能提交。"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: 'OpenAI 账号', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true })
+        14 × locator resolved to <section tabindex="-1" aria-label="OpenAI 账号" class="native-account-row" data-nav-section="account" data-nav-platform="openai" data-account-platform="openai">…</section>
+           - unexpected value "OpenAI账号状态尚未确认状态待确认等待自动重试… 2026年11月3日 02:43:09额度尚未核对登录 OpenAI账号状态尚未确认，暂不能提交。"
+
+
+      44 |  await open(page,'device-revoked-source-missing');await expect(page.locator('body')).toContainText('上次保存的设备信息');
+      45 |  await nav(page,'AI 账号').click();const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+    > 46 |  await expect(account).toContainText('所选来源未找到登录');await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+         |                        ^
+      47 |  await expect(page.getByRole('dialog')).toContainText('凭证读取方式');await page.keyboard.press('Escape');
+      48 |  for(const destination of ['设置','诊断','概览']){await nav(page,destination).click();await expect(page.getByRole('heading',{level:1,name:destination,exact:true})).toBeFocused();}
+      49 |  expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device-recovery.spec.ts:46:24
+
+    Error Context: ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-recovery-ui-first-output/device-recovery-saved-revo-c115c-t-account-or-runtime-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-recovery-ui-first-output/device-recovery-saved-revo-c115c-t-account-or-runtime-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../docs/desktop/evidence/2026-10-30-interaction-clarity/t10-recovery-ui-first-output/device-recovery-saved-revo-c115c-t-account-or-runtime-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/device-recovery.spec.ts:43:1 › saved revoked identity and missing selected source keep all pages reachable without account or runtime writes 
+  10 passed (11.7s)
+{"finished_at": "2026-11-02T18:43:05.047256+00:00", "exit": 1}

@@ -1,0 +1,117 @@
+{
+  "id": "matrix-1000-zh-dark",
+  "scene": "device-error",
+  "scope": "三尺寸×中英×明暗长内容",
+  "expectation": "主页面和模态框无横向溢出",
+  "layer": "正式组件＋模拟IPC",
+  "viewport": {
+    "width": 1000,
+    "height": 700
+  },
+  "locale": "zh",
+  "theme": "dark",
+  "long": true,
+  "actual": {
+    "viewport": {
+      "width": 1000,
+      "height": 700
+    },
+    "document": {
+      "width": 1000,
+      "height": 700
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 822,
+      "height": 619,
+      "right": 1000,
+      "bottom": 671
+    },
+    "heading": "概览",
+    "theme": "dark",
+    "text": "概览打开 Hive 控制台状态待确认开始后建立连接；接单需单独恢复。开始贡献请先完成设备核对与绑定。Bee 未运行尚未建立 Hive 连接本机设备重新核对设备上次保存的设备信息：Bee Desktop · https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.exampleHive 拒绝了本次请求（HTTP 503）。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: http_rejected\n失败环节: device_identity\n观察时间: 2026年11月3日 02:58:43\n目标: https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example\n路径: /api/bee/identity\nHTTP 状态: 503\n安全响应: Hive upstream temporarily unavailable\n原始原因: GET /api/bee/identity HTTP 503; preview upstream unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; AI 账号接入数量待确认OpenAIPlus账号标识: bbbbbbbbbbbbbbbb状态待确认5 小时已用 3%7 日已用 2%✳Claude尚未接入 Claude 账号状态待确认所选来源未找到登录；可调整读取位置或使用官方登录。额度尚未核对授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 855.25,
+        "y": 77,
+        "width": 115.75,
+        "height": 32,
+        "right": 971,
+        "bottom": 109
+      },
+      {
+        "text": "开始贡献",
+        "disabled": true,
+        "x": 874,
+        "y": 132,
+        "width": 97,
+        "height": 32,
+        "right": 971,
+        "bottom": 164
+      },
+      {
+        "text": "重新核对设备",
+        "disabled": false,
+        "x": 850,
+        "y": 292.5,
+        "width": 121,
+        "height": 33.5,
+        "right": 971,
+        "bottom": 326
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      }
+    ],
+    "scene": "device-error"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-representative-1000-zh-dark-chromium/matrix-1000-zh-dark.png",
+  "observed_at": "2026-11-02T18:58:43.544Z",
+  "pageErrors": []
+}

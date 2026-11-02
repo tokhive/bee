@@ -1,0 +1,307 @@
+{
+  "id": "A03",
+  "scene": "account-error",
+  "scope": "T4/T7；所选文件缺失、权限拒绝、解析失败",
+  "expectation": "区分具体失败，定位读取位置；修复后自动读取",
+  "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+  "viewport": {
+    "width": 860,
+    "height": 600
+  },
+  "locale": "zh",
+  "theme": "light",
+  "long": false,
+  "actual": {
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "document": {
+      "width": 860,
+      "height": 600
+    },
+    "main": {
+      "x": 178,
+      "y": 52,
+      "width": 682,
+      "height": 519,
+      "right": 860,
+      "bottom": 571
+    },
+    "heading": "AI 账号",
+    "theme": "light",
+    "text": "AI 账号管理这台设备用于贡献的 AI 账号。打开 Hive 控制台AI 账号1 个已接入OpenAI套餐待确认账号标识: bbbbbbbbbbbbbbbb不能接单所选来源暂不能提供可接入账号，请查看具体原因。无法读取 Codex 官方登录请检查 OpenAI 的所选凭证来源与具体读取原因。检查凭证来源没有读取所选凭证来源的权限。本次只确认了所选来源的读取结果，其他登录状态仍未知。检查凭证来源查看失败详情错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: 无法读取 OpenAI 登录：file_read permission_denied=true；预览模拟权限拒绝。额度尚未核对暂停接单✳Claude尚未接入 Claude 账号不能接单所选来源未找到登录；可调整读取位置或使用官方登录。此 Hive 未提供更具体的接单原因请联系 Hive 管理员核对平台配置；当前原因不能证明市场或账号状态。额度尚未核对登录 Claude官方登录前请先停止贡献；前往概览停止后再返回。查看贡献运行授权信息保留在本机",
+    "dialogs": [],
+    "actions": [
+      {
+        "text": "打开 Hive 控制台",
+        "disabled": false,
+        "x": 715.25,
+        "y": 87.59375,
+        "width": 115.75,
+        "height": 32,
+        "right": 831,
+        "bottom": 119.59375
+      },
+      {
+        "text": "检查凭证来源",
+        "disabled": false,
+        "x": 276,
+        "y": 395.640625,
+        "width": 74,
+        "height": 34.390625,
+        "right": 350,
+        "bottom": 430.03125
+      },
+      {
+        "text": "检查凭证来源",
+        "disabled": false,
+        "x": 289,
+        "y": 533.53125,
+        "width": 102,
+        "height": 33.5,
+        "right": 391,
+        "bottom": 567.03125
+      },
+      {
+        "text": "暂停接单",
+        "disabled": false,
+        "x": 694,
+        "y": 660.03125,
+        "width": 74,
+        "height": 32,
+        "right": 768,
+        "bottom": 692.03125
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 660.03125,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 692.03125
+      },
+      {
+        "text": "登录 Claude",
+        "disabled": true,
+        "x": 712.375,
+        "y": 949.984375,
+        "width": 93.625,
+        "height": 32,
+        "right": 806,
+        "bottom": 981.984375
+      },
+      {
+        "text": "查看贡献运行",
+        "disabled": false,
+        "x": 732,
+        "y": 1040.359375,
+        "width": 74,
+        "height": 32,
+        "right": 806,
+        "bottom": 1072.359375
+      },
+      {
+        "text": "",
+        "disabled": false,
+        "x": 776,
+        "y": 1080.359375,
+        "width": 30,
+        "height": 32,
+        "right": 806,
+        "bottom": 1112.359375
+      }
+    ],
+    "reducedMotion": true,
+    "calls": [
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "preferences_read",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_defaults",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "native_locale_sync",
+        "args": {
+          "request": {
+            "locale": "zh",
+            "revision": 0,
+            "sequence": 1
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "openai",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "account_detect",
+        "args": {
+          "request": {
+            "platform": "claude",
+            "directory": null,
+            "store": "file",
+            "mode": "local"
+          }
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "device_recovery_status",
+        "args": {}
+      },
+      {
+        "command": "device_status",
+        "args": {}
+      },
+      {
+        "command": "device_context",
+        "args": {}
+      },
+      {
+        "command": "runtime_snapshot",
+        "args": {}
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "openai",
+          "refresh": true
+        }
+      },
+      {
+        "command": "account_snapshot",
+        "args": {
+          "platform": "claude",
+          "refresh": true
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "openai"
+        }
+      },
+      {
+        "command": "supply_status",
+        "args": {
+          "platform": "claude"
+        }
+      }
+    ],
+    "scene": "account-error"
+  },
+  "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-layout-v1-output/t10-layout-A03-T4-T7；所选文件缺失、权限拒绝、解析失败-chromium/A03.png",
+  "observed_at": "2026-11-02T18:58:10.985Z",
+  "pageErrors": []
+}

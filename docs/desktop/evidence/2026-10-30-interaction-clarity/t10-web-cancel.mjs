@@ -1,0 +1,14 @@
+const fs=await import('node:fs/promises');
+const base='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0';
+const info=JSON.parse(await fs.readFile(base+'/.cache/interaction-clarity-web-v2/ready.json','utf8'));
+const t=await taskSpace(40),p=t.page('p1');
+console.log({at:new Date().toISOString(),source:'Ego Lite browser actual pointer/keyboard; real loopback Hive App; temporary Linux XDG core',origin:info.origin});
+await p.goto(info.origin+'/devices/pair');await p.waitForSelector('input[name=email]');
+await p.fill('input[name=email]',info.email);await p.fill('input[name=password]',info.password);
+await p.click('loc=role:button[name="Sign in"]',{label:'sign in isolated test user'});await p.waitForSelector('input[placeholder="ABCD-EFGH"]');
+await p.fill('input[placeholder="ABCD-EFGH"]',info.code);await p.click('loc=role:button[name="Verify device"]',{label:'inspect real recovery pairing'});
+await p.waitForSelector('loc=role:dialog[name="Confirm Bee Replacement"]');console.log(await p.snapshot());
+await p.screenshot({path:base+'/docs/desktop/evidence/2026-10-30-interaction-clarity/t10-web-v2-inspect.png'});
+await p.click('loc=role:button[name="Cancel"]',{label:'cancel before replacement submission'});await p.waitForFunction(()=>!document.querySelector('[role=dialog]'));
+await fs.writeFile(base+'/.cache/interaction-clarity-web-v2/cancelled','cancel clicked via actual web UI');
+console.log({at:new Date().toISOString(),url:await p.url(),cancelled:true});console.log(await p.snapshot());

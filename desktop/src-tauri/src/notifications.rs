@@ -881,7 +881,14 @@ mod linux_native {
             {
                 return Err(SubmissionFailure::rejected(failure("NOTIFICATION_APP_IDENTITY","Linux desktop-entry identifier rejected: required=bounded canonical application identifier")));
             }
-            let actions = vec!["default", "Open Bee"];
+            let actions = vec![
+                "default",
+                if locale == NativeLocale::Zh {
+                    "打开 Bee"
+                } else {
+                    "Open Bee"
+                },
+            ];
             let hints = HashMap::from([(
                 "desktop-entry",
                 zbus::zvariant::Value::from(self.app_identifier.as_str()),

@@ -1,4 +1,5 @@
 import {FailureNotice} from '../../components/ProblemNotice';
+import type {NavigationTarget} from '../../app/navigation';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Tabs} from 'radix-ui';
@@ -21,6 +22,7 @@ export interface NativeSettingsPageProps {
  version?:string;
  updateControls?:ReactNode;
  onSaved:(snapshot:PreferencesSnapshot)=>void;
+ onNavigate?:(target:NavigationTarget)=>void;
 }
 const failure=(cause:unknown)=>normalizeFailure(cause,'settings_operation');
 function path(value:string){return t(({direct:'直连',local_proxy:'本机代理',environment_proxy:'进程环境代理',unknown:'尚未确认'} as Record<string,string>)[value]??'尚未确认');}
@@ -28,7 +30,7 @@ function officialPath(value:string,platform:'openai'|'claude'){return path(value
 const checkNames={local_proxy:'本机代理连接',openai_read_only:'OpenAI 只读端点',claude_read_only:'Claude 只读端点'};
 const draftProxy=(preferences:DesktopPreferences,origin:string)=>preferences.proxies.find(entry=>entry.origin===origin&&entry.device_scope===null)?.connect_proxy??'';
 
-export function NativeSettingsPage({preferences,preferencesClient,notificationsClient,networkClient,hive,paired=false,version,updateControls,onSaved}:NativeSettingsPageProps){
+export function NativeSettingsPage({preferences,preferencesClient,notificationsClient,networkClient,hive,paired=false,version,updateControls,onSaved,onNavigate}:NativeSettingsPageProps){
  const [draftOrigin,setDraftOrigin]=useState(()=>hive??preferences.preferences.proxies.find(entry=>entry.device_scope===null)?.origin??'');
  const [saved,setSaved]=useState(preferences),[network,setNetwork]=useState<NetworkSnapshot|null>(null),[proxy,setProxy]=useState(()=>paired?'':draftProxy(preferences.preferences,hive??draftOrigin));
  const [permission,setPermission]=useState<NotificationPermission|null>(null),[autostart,setAutostart]=useState<AutostartSnapshot|null>(null),[test,setTest]=useState<NetworkTestResult|null>(null);
@@ -85,7 +87,7 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  });}
  return <Tabs.Root className="native-settings section-tabs" data-testid="native-settings" defaultValue="network">
   <Tabs.List className="section-tabs-list ns-tabs" aria-label={t('设置分类')}><Tabs.Trigger value="general">{t('通用')}</Tabs.Trigger><Tabs.Trigger value="network">{t('网络与代理')}</Tabs.Trigger><Tabs.Trigger value="system">{t('通知与启动')}</Tabs.Trigger><Tabs.Trigger value="about">{t('关于')}</Tabs.Trigger></Tabs.List>
-  {(error||saved.error)&&<div className="ns-failure"><FailureNotice failure={error||saved.error} check="settings_operation"/>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
+  {(error||saved.error)&&<div className="ns-failure"><FailureNotice failure={error||saved.error} check="settings_operation" onNavigate={onNavigate}/>{saved.error&&<button disabled={!!busy} onClick={()=>void run('preferences',async()=>acceptPreferences(await preferencesClient.read()))}>{t('重新读取偏好')}</button>}</div>}{notice&&<p className="operation-message" role="status">{t(notice)}</p>}
   <Tabs.Content value="general">  <section className="ns-section" aria-labelledby="ns-preferences-title"><header><h2 id="ns-preferences-title">{t('语言与外观')}</h2><p>{t('保存到当前系统用户，重启后保留。')}</p></header>
    <div className="ns-row"><label htmlFor="ns-language">{t('语言')}</label><select id="ns-language" disabled={!!busy||!!saved.error} value={prefs.language} onChange={event=>changePreference({language:event.target.value as DesktopPreferences['language']})}><option value="system">{t('跟随系统')}</option><option value="zh">{t('中文')}</option><option value="en">English</option></select></div>
    <div className="ns-row"><label htmlFor="ns-theme">{t('外观')}</label><select id="ns-theme" disabled={!!busy||!!saved.error} value={prefs.theme} onChange={event=>changePreference({theme:event.target.value as DesktopPreferences['theme']})}><option value="system">{t('跟随系统')}</option><option value="light">{t('浅色')}</option><option value="dark">{t('深色')}</option></select></div>

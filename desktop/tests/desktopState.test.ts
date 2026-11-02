@@ -37,6 +37,15 @@ test('uncertain writes invalidate late results and recover with one read after t
  m.pause();const before=f.calls();t.mock.timers.tick(9999);await tick();assert.equal(f.calls(),before);
  t.mock.timers.tick(1);await tick();assert.equal(f.calls(),before+1);
 });
+test('a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const f=fixture();f.deps.intervalMs=10000;const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ m.recordRuntimeReceipt(9);await m.refresh();
+ const failure=m.getSnapshot().error,reads=f.calls();
+ t.mock.timers.tick(10000);await tick();
+ assert.deepEqual({code:failure?.code,evidence:failure?.evidence,reads:f.calls()},{code:'DESKTOP_STALE_RESULT',evidence:{actual:'1',required:'runtime revision >=9 from confirmed operation receipt'},reads});
+ assert.equal(m.getSnapshot().runtime?.revision,1);
+});
 test('one account snapshot failure stays on that platform and leaves the other readable',async t=>{
  const f=fixture();
  f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:'device'}});

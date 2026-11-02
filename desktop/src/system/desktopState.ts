@@ -54,7 +54,7 @@ export function createDesktopState(deps:DesktopDeps){
     if(observedSupply)supplies[platform]=observedSupply;else if(!supply&&view?.supply)supplies[platform]=view.supply;else if(state.supplies[platform])supplies[platform]=state.supplies[platform];
    }
    if(!current())return;
-   if(next.revision<runtimeReceiptRevision)throw new Error(`DESKTOP_STALE_RESULT: runtime revision actual=${next.revision}; required>=${runtimeReceiptRevision} from confirmed operation receipt`);
+   if(next.revision<runtimeReceiptRevision)throw {code:'DESKTOP_STALE_RESULT',evidence:{actual:String(next.revision),required:`runtime revision >=${runtimeReceiptRevision} from confirmed operation receipt`},message:`runtime revision actual=${next.revision}; required>=${runtimeReceiptRevision} from confirmed operation receipt`};
    for(const platform of ['openai','claude'] as const){
     const minimum=Math.max(accountReceiptRevisions[platform]??-1,state.accounts[platform]?.revision??-1),actual=views[platform]?.revision;
     if(minimum>=0&&(actual===undefined||actual<minimum)){

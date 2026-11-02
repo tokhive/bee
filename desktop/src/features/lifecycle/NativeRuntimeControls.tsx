@@ -1,3 +1,4 @@
+import {requestNotSent} from '../../system/failures';
 import {FailureNotice} from '../../components/ProblemNotice';
 import {useState} from 'react';
 import {Dialog} from 'radix-ui';
@@ -23,10 +24,10 @@ export function NativeRuntimeControls({runtime,deviceReady=true}:{runtime:Runtim
     <p>{t(running?'按平台管理接单；暂停后不再接收新任务。':'开始后建立连接；接单需单独恢复。')}</p>
    </div></div>
    {running||stopping?<Dialog.Root open={stopOpen} onOpenChange={setStopOpen}><Dialog.Trigger asChild><Button disabled={blocked||stopping}><Square aria-hidden="true"/>{t(stopping?'正在停止贡献':'停止贡献')}</Button></Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content"><Dialog.Title>{t('停止贡献')}</Dialog.Title><Dialog.Description>{t('停止或退出可能中断正在处理的任务，不会等待 Hive 任务完成。停止后下次打开保持停止。')}</Dialog.Description><div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={blocked} onClick={()=>{setStopOpen(false);void runtime.stop();}}>{t('确认停止')}</Button></div></Dialog.Content></Dialog.Portal></Dialog.Root>
-    :<Button disabled={blocked||!selected||!deviceReady||starting} onClick={()=>void runtime.start([])}><Play aria-hidden="true"/>{t(starting?'正在启动贡献':'开始贡献')}</Button>}
+    :<Button disabled={blocked||runtime.startBlocked||!selected||!deviceReady||starting} onClick={()=>void runtime.start([])}><Play aria-hidden="true"/>{t(starting?'正在启动贡献':'开始贡献')}</Button>}
   </div>
   <div className="health native-runtime-health"><span>{confirmed&&running?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?running?'Bee 运行中':'Bee 未运行':'Bee 状态待确认')}</span><span>{confirmed&&view.connection==='connected'?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?connectionCopy[view.connection]:'Hive 状态待确认')}</span></div>
-  {(uncertain||error||runtime.stalled)&&<p role="status" className="runtime-note">{t(runtime.refreshStatus?.state==='blocked'?'贡献状态待确认，核对已暂停。':runtime.refreshStatus?.state==='scheduled'?'贡献状态待确认，等待已安排的核对。':runtime.refreshStatus?.state==='reading'||runtime.refreshing?'贡献状态待确认，正在核对…':'贡献状态待确认。')}</p>}
+  {(uncertain||error&&!requestNotSent(error)||runtime.stalled)&&<p role="status" className="runtime-note">{t(runtime.refreshStatus?.state==='blocked'?'贡献状态待确认，核对已暂停。':runtime.refreshStatus?.state==='scheduled'?'贡献状态待确认，等待已安排的核对。':runtime.refreshStatus?.state==='reading'||runtime.refreshing?'贡献状态待确认，正在核对…':'贡献状态待确认。')}</p>}
   {error&&<FailureNotice failure={error} check="runtime_operation"/>}
   {confirmed&&view.operation?.error&&<FailureNotice failure={view.operation.error} check="runtime_operation"/>}
   {view?.stop_receipt&&<p className="runtime-note">{t(view.stop_receipt.workers_stopped&&view.stop_receipt.intent_saved&&view.stop_receipt.session_clean?'停止已确认，下次打开保持停止。':'本机已尝试停止，但保存或清理结果未确认。')}</p>}

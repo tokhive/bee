@@ -256,3 +256,13 @@ test('independent platform reads reach the transport before a slow platform comp
  const slow=client.status('openai'),fast=client.status('claude');await new Promise(resolve=>setImmediate(resolve));
  try{assert.deepEqual([...invoked],['openai','claude']);}finally{release();await Promise.all([slow,fast]);}
 });
+
+test('known unsent supply writes retain evidence without pausing the healthy coordinator',async t=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let writes=0,pauses=0;
+ const model=createSupplyModel({status:async()=>{throw new Error('unexpected independent GET');},setPaused:async()=>{writes++;throw {code:'REQUEST_QUEUE_TIMEOUT',message:'fixture before first byte'};}});
+ t.after(()=>model.stop());const views={openai:{...good,platform:'openai' as const,checked_at:new Date().toISOString()}};
+ model.setCoordinated(async()=>{},()=>{pauses++;});model.start();model.adopt({views,error:null,busy:false});
+ await model.write('openai',true);assert.equal(pauses,0);assert.equal(model.getSnapshot().errors.openai?.code,'REQUEST_QUEUE_TIMEOUT');
+ model.adopt({views:{...views},error:{code:'BRIDGE_NOT_READY',message:'bridge failed',check:'desktop_refresh',observedAt:null,evidence:{}},busy:false});assert.equal(model.canWrite('openai',true),false);
+ model.adopt({views:{...views},error:null,busy:false});assert.equal(model.canWrite('openai',true),true);assert.equal(writes,1);
+});

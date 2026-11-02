@@ -1,3 +1,4 @@
+import {requestNotSent} from '../../system/failures';
 import {FailureNotice} from '../../components/ProblemNotice';
 import type {NavigationTarget} from '../../app/navigation';
 import {useState} from 'react';
@@ -15,7 +16,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate}:{accounts:
  const submissionChanged=accounts.errors[platform]?.code==='ACCOUNT_CONTEXT_CHANGED';
  const refresh=accounts.accountRefresh?.[platform];
  const progress=refresh?refresh.state==='reading'?'重试中…':refresh.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。':accounts.busy[platform]?'重试中…':'等待自动重试…';
- const unconfirmed=accounts.uncertain[platform]||!!accounts.errors[platform]||op?.state==='reconciling';
+ const unconfirmed=accounts.uncertain[platform]||!!accounts.errors[platform]&&!requestNotSent(accounts.errors[platform]!)||op?.state==='reconciling';
  return <div className="account-operation-status">
   {unconfirmed&&!submissionChanged?<p role="status">{t(progress)}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成':'正在处理账号操作':op.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':'账号操作已完成，平台保持暂停':op.state==='cancelled'?'操作已取消':'账号操作失败')}</p>}
   {op?.error&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
@@ -30,7 +31,7 @@ export function NativeAccountActions({accounts,platform,runtime,placement='row'}
  const candidate=!dirty&&!!view?.candidate.reference&&view.candidate.state==='available'&&!!view.candidate.expires_at&&Date.parse(view.candidate.expires_at)>Date.now()+30000;
  function disabled(action:Action){
   const continuation=action==='confirm_change'&&op?.state==='reconciling'&&op.error?.code==='confirmation_not_submitted';
-  if(!view||accounts.submissionBlocked||busy||pending&&!continuation||unknown||transitioning||!view.features[action].available)return true;
+  if(!view||action!=='authorize'&&accounts.submissionBlocked||busy||pending&&!continuation||unknown||transitioning||!view.features[action].available)return true;
   if(action==='authorize')return !accounts.defaults||runtime.uncertain||!!runtime.error||runtime.stalled||!runtime.view||!['stopped','failed'].includes(runtime.view.local);
   if(action==='clear_selection')return !selected;
   if(!candidate)return true;

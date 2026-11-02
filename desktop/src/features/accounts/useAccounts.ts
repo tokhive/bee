@@ -1,5 +1,5 @@
 import type {RefreshStatus} from '../../system/desktopState';
-import type {UiFailure} from '../../system/failures';
+import {requestNotSent,type UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
 import type {AuthorizeClient} from '../../system/authorize';
@@ -22,13 +22,14 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const detectedSources=useRef(new Map<string,string>()),officialReads=useRef(new Map<string,string>());
  const epochs=useRef({openai:0,claude:0}),active=useRef(true),running=useRef({openai:false,claude:false});
  const requests=useRef<Partial<Record<AccountPlatform,Promise<void>>>>({}),latest=useRef<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),verified=useRef({openai:false,claude:false});
+ const localUnconfirmed=useRef<Partial<Record<AccountPlatform,boolean>>>({});
  const revisions=useRef({openai:-1,claude:-1}),unconfirmedRevisions=useRef<Partial<Record<AccountPlatform,number>>>({});
  const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??null,accountErrors=coordinated?.accountErrors??noAccountErrors;
  const savedDefaults=external?coordinated?.defaults:defaults;
  const deviceError=coordinated?.deviceError;
  const currentRuntime=useRef(runtime);currentRuntime.current=runtime;
  const observedRuntime=useRef(runtime);
- const resolutions=useRef<Partial<Record<AccountPlatform,{previous:RuntimeSnapshot|undefined;detected:boolean}>>>({});
+ const resolutions=useRef<Partial<Record<AccountPlatform,{previous:RuntimeSnapshot|undefined;detected:boolean;local:boolean}>>>({});
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  const publish=useCallback((platform:AccountPlatform,view:AccountSnapshot,detected=false)=>{
   if(view.revision<revisions.current[platform])return false;
@@ -44,21 +45,21 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   for(const p of platforms){
    if(running.current[p])continue;
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
-   if(centralError||deviceError||accountErrors[p]){verified.current[p]=false;continue;}
+   if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
    const resolved=resolution&&runtime!==resolution.previous;
-   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
+   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
    const minimum=unconfirmedRevisions.current[p];
-   if(external&&!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum)){
-    delete unconfirmedRevisions.current[p];setUncertain(v=>({...v,[p]:false}));
+   if(external&&(!deviceError||resolution?.local||localUnconfirmed.current[p])&&!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum)){
+    delete unconfirmedRevisions.current[p];delete localUnconfirmed.current[p];setUncertain(v=>({...v,[p]:false}));
    }
    if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]&&v[p]?.code!=='ACCOUNT_CONTEXT_CHANGED'?{...v,[p]:undefined}:v);
-   if(resolved)delete resolutions.current[p];
+   if(resolved&&(!deviceError||resolution.local))delete resolutions.current[p];
   }
   observedRuntime.current=runtime;
  },[enabled,runtime,busy,dirty,publish,centralError,deviceError,accountErrors,external,sourceReadFailed]);
  const central=useRef(coordinated);central.current=coordinated;
  const dirtySource=useRef(dirty);dirtySource.current=dirty;
- const run=useCallback((platform:AccountPlatform,operation:(current?:AccountSnapshot)=>Promise<AccountSnapshot|AccountOperation|void>,detected=false,write=false,confirm=false,cancel=false):Promise<void>=>{
+ const run=useCallback((platform:AccountPlatform,operation:(current?:AccountSnapshot)=>Promise<AccountSnapshot|AccountOperation|void>,detected=false,write=false,confirm=false,cancel=false,local=false):Promise<void>=>{
   if(writing.current[platform]||!write&&running.current[platform])return Promise.resolve();
   const started=central.current?.generation?.();
   const execute=()=>{
@@ -73,7 +74,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
      const view=result&&'selection'in result?result:undefined;
      if(view&&publish(platform,view,detected))setErrors(v=>({...v,[platform]:undefined}));
      if(refreshCentral){
-      resolutions.current[platform]={previous:currentRuntime.current,detected};
+      resolutions.current[platform]={previous:currentRuntime.current,detected,local:local||!write};
       if(write)setUncertain(v=>({...v,[platform]:true}));
       if(central.current?.snapshot?.().busy)await refreshCentral();
       if(!current())return;
@@ -82,13 +83,15 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
       delete unconfirmedRevisions.current[platform];setUncertain(v=>({...v,[platform]:false}));
      }
     }catch(cause){if(current()){
-     verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause,'account_operation')}));
-     if(write){unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));pauseCentral?.();}
+     const problem=failure(cause,'account_operation');
+     verified.current[platform]=false;setErrors(v=>({...v,[platform]:problem}));
+     if(write&&!requestNotSent(problem)){localUnconfirmed.current[platform]=local;unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));pauseCentral?.();}
     }}finally{if(active.current&&epoch===epochs.current[platform]){running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSettled(v=>({...v,[platform]:v[platform]+1}));}}
    })().finally(()=>{if(requests.current[platform]===request)delete requests.current[platform];});
    requests.current[platform]=request;return request;
   };
   if(!write)return execute();
+  const runtimeIntent=currentRuntime.current;
   const intent=latest.current[platform],epoch=epochs.current[platform],prior=requests.current[platform];
   const identity=(s:AccountSnapshot|undefined)=>JSON.stringify([s?.selection.state,s?.selection.fingerprint,s?.hive.fingerprint,s?.hive.generation,s?.candidate.reference,!!s?.candidate.expires_at&&Date.parse(s.candidate.expires_at)>Date.now()+30000,s?.features,s?.operation?.id,cancel&&s?.operation&&['pending','running'].includes(s.operation.state)?'cancellable':s?.operation?.state]);
   const expected=identity(intent);
@@ -106,9 +109,13 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
    const observation=central.current?.snapshot?.();
    if(observation){
-    if(observation.error||observation.deviceError||observation.accountErrors[platform]){setErrors(v=>({...v,[platform]:observation.error??observation.deviceError??observation.accountErrors[platform]}));return;}
+    if(observation.error||!local&&observation.deviceError||observation.accountErrors[platform]){setErrors(v=>({...v,[platform]:observation.error??(!local?observation.deviceError:undefined)??observation.accountErrors[platform]}));return;}
     const next=observation.runtime?.platforms[platform].account;
     if(next&&!dirtySource.current[platform]&&next.revision>=revisions.current[platform])publish(platform,next);
+   }
+   if(local&&!cancel){
+    const next=observation?.runtime??currentRuntime.current;
+    if(!next||!['stopped','failed'].includes(next.local)||next.local!==runtimeIntent?.local||next.run_id!==runtimeIntent?.run_id){rejectSubmission('authorize_runtime',JSON.stringify({local:next?.local??'missing',run_id:next?.run_id??null}),'same stopped local runtime; local='+runtimeIntent?.local+'; run_id='+(runtimeIntent?.run_id??'null'));return;}
    }
    if(!verified.current[platform]){rejectSubmission('account_verification','verified=false','current verified account observation');return;}
    if(expected!==identity(latest.current[platform])){rejectSubmission('account_submission_identity','account identity or candidate changed; revision='+revisions.current[platform],'same account identity and candidate as confirmed');return;}
@@ -190,11 +197,11 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   },
   authorize(platform:AccountPlatform){
    const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError)return;
-   void run(platform,async current=>{const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});return refreshCentral?receipt:client.snapshot(platform,false);},false,true);
+   void run(platform,async current=>{const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true);
   },
   cancelAuthorize(platform:AccountPlatform){
    const id=views[platform]?.operation?.id;if(!client||!authorizer||!id)return;
-   void run(platform,async current=>{if(current?.operation?.id!==id||!['pending','running'].includes(current.operation.state))return current;const receipt=await authorizer.cancel(id);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,true);
+   void run(platform,async current=>{if(current?.operation?.id!==id||!['pending','running'].includes(current.operation.state))return current;const receipt=await authorizer.cancel(id);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,true,true);
   }
  };
 }

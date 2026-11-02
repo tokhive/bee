@@ -67,7 +67,7 @@ test('device read failure stays on the device and still publishes account defaul
  assert.equal(m.getSnapshot().error,null);
  assert.match(m.getSnapshot().deviceError?.message??'',/HTTP 503/);
  assert.equal(m.getSnapshot().defaults?.platforms.length,1);
- assert.equal(m.getSnapshot().accounts.claude,undefined);
+ assert.equal(m.getSnapshot().accounts.claude?.revision,1);
 });
 test('replacement refresh starts after the status listener returns',async t=>{
  const f=fixture();let inside=false,reads=0;
@@ -136,4 +136,22 @@ test('supply progress follows its platform request rather than another platform 
  assert.equal(supplyProgress(state,'openai',now),'waiting');
  state.supplyRefresh.openai={state:'blocked',nextRetryAt:null,lastConfirmedAt:null};assert.equal(supplyProgress(state,'openai',now),'blocked');
  state.supplyRefresh.openai={state:'reading',nextRetryAt:null,lastConfirmedAt:null};assert.equal(supplyProgress(state,'openai',now),'checking');
+});
+
+for(const operation of ['reconciling','pending','running'])test('coordinator preserves the actual retry timer for '+operation,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});const f=fixture();f.deps.intervalMs=10000;let reads=0;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{reads++;return {platform,revision:1,issues:[],operation:{state:operation}};}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ const delay=operation==='reconciling'?10000:400;
+ assert.equal(Date.parse(m.getSnapshot().refresh.nextRetryAt!),Date.now()+delay);
+ assert.equal(reads,2);t.mock.timers.tick(delay-1);await tick();assert.equal(reads,2);
+ t.mock.timers.tick(1);await tick();assert.equal(reads,4);assert.equal(f.calls(),2);
+});
+
+test('identity failure still fences each local account receipt before publishing local facts',async t=>{
+ const f=fixture();let refreshed=0;f.deps.device.status=async()=>{throw {code:'device_replaced',message:'identity HTTP 401'};};
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async()=>{refreshed++;throw new Error('identity failure must not resume workers');}});
+ f.set({...runtime(),platforms:{openai:{account:{platform:'openai',revision:1}},claude:{account:{platform:'claude',revision:3}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();m.recordAccountReceipt('openai',4);await m.refresh();
+ assert.equal(m.getSnapshot().accountErrors.openai?.code,'DESKTOP_STALE_RESULT');assert.equal(m.getSnapshot().accountErrors.claude,undefined);assert.equal(m.getSnapshot().accounts.claude?.revision,3);assert.equal(refreshed,0);
 });

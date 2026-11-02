@@ -66,3 +66,6 @@ export function normalizeFailure(cause:unknown,check:string):UiFailure {
  }
  return fallback;
 }
+
+/** Reserved native transport codes prove this attempt emitted no request bytes. */
+export const requestNotSent=(failure:UiFailure):boolean=>['REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED'].includes(failure.code);

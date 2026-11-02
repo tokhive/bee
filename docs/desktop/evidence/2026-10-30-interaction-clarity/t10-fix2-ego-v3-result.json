@@ -1,0 +1,343 @@
+{
+  "spaceId": 42,
+  "layer": "正式 NativeApp＋模拟 IPC；不证明真实包校验、退出、安装或原生恢复",
+  "states": [
+    {
+      "id": "protocol-zh-light",
+      "entry": {
+        "code": "VERSION_MISMATCH",
+        "message": "reply protocol=2; required=1",
+        "summary": "Bee 管理协议版本与当前应用不兼容。",
+        "impact": "原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee 后重新打开；若仍不兼容，请使用可信来源的匹配安装包处理。",
+        "summaryRect": {
+          "x": 241,
+          "y": 215,
+          "width": 482.25,
+          "height": 19.5,
+          "top": 215,
+          "right": 723.25,
+          "bottom": 234.5,
+          "left": 241
+        },
+        "impactRect": {
+          "x": 241,
+          "y": 249.5,
+          "width": 482.25,
+          "height": 39,
+          "top": 249.5,
+          "right": 723.25,
+          "bottom": 288.5,
+          "left": 241
+        },
+        "width": 860,
+        "viewport": {
+          "width": 860,
+          "height": 600
+        },
+        "theme": "light",
+        "reducedMotion": true,
+        "actionButtons": 0
+      },
+      "expanded": {
+        "text": "Bee 管理协议版本与当前应用不兼容。\n\n原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee 后重新打开；若仍不兼容，请使用可信来源的匹配安装包处理。\n\n查看失败详情\n错误码: VERSION_MISMATCH\n失败环节: bridge_startup\n原始原因: reply protocol=2; required=1",
+        "focused": true,
+        "focusRect": {
+          "x": 241,
+          "y": 296.5,
+          "width": 482.25,
+          "height": 32,
+          "top": 296.5,
+          "right": 723.25,
+          "bottom": 328.5,
+          "left": 241
+        },
+        "focusOutline": "rgb(186, 141, 73) solid 2px",
+        "detailsOpen": true,
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "zh",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ],
+        "mainButtonNames": [
+          "打开 Hive 控制台"
+        ]
+      }
+    },
+    {
+      "id": "protocol-en-dark",
+      "entry": {
+        "code": "VERSION_MISMATCH",
+        "message": "reply protocol=2; required=1",
+        "summary": "The Bee management protocol version is incompatible with this app.",
+        "impact": "Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu and reopen it. If it remains incompatible, use a matching installer from a trusted source.",
+        "summaryRect": {
+          "x": 241,
+          "y": 215,
+          "width": 482.25,
+          "height": 19.5,
+          "top": 215,
+          "right": 723.25,
+          "bottom": 234.5,
+          "left": 241
+        },
+        "impactRect": {
+          "x": 241,
+          "y": 249.5,
+          "width": 482.25,
+          "height": 58.5,
+          "top": 249.5,
+          "right": 723.25,
+          "bottom": 308,
+          "left": 241
+        },
+        "width": 860,
+        "viewport": {
+          "width": 860,
+          "height": 600
+        },
+        "theme": "dark",
+        "reducedMotion": true,
+        "actionButtons": 0
+      },
+      "expanded": {
+        "text": "The Bee management protocol version is incompatible with this app.\n\nNative operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu and reopen it. If it remains incompatible, use a matching installer from a trusted source.\n\nView failure details\nError code: VERSION_MISMATCH\nFailed check: bridge_startup\nOriginal cause: reply protocol=2; required=1",
+        "focused": true,
+        "focusRect": {
+          "x": 241,
+          "y": 316,
+          "width": 482.25,
+          "height": 32,
+          "top": 316,
+          "right": 723.25,
+          "bottom": 348,
+          "left": 241
+        },
+        "focusOutline": "rgb(186, 141, 73) solid 2px",
+        "detailsOpen": true,
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "en",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ],
+        "mainButtonNames": [
+          "Open Hive console"
+        ]
+      }
+    },
+    {
+      "id": "integrity-zh-light",
+      "entry": {
+        "code": "BUNDLED_BEE_INVALID",
+        "message": "bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "summary": "随附的 Bee 程序未通过完整性校验。",
+        "impact": "原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee，使用可信来源的安装包重新安装后再打开。",
+        "summaryRect": {
+          "x": 241,
+          "y": 215,
+          "width": 482.25,
+          "height": 19.5,
+          "top": 215,
+          "right": 723.25,
+          "bottom": 234.5,
+          "left": 241
+        },
+        "impactRect": {
+          "x": 241,
+          "y": 249.5,
+          "width": 482.25,
+          "height": 39,
+          "top": 249.5,
+          "right": 723.25,
+          "bottom": 288.5,
+          "left": 241
+        },
+        "width": 860,
+        "viewport": {
+          "width": 860,
+          "height": 600
+        },
+        "theme": "light",
+        "reducedMotion": true,
+        "actionButtons": 0
+      },
+      "expanded": {
+        "text": "随附的 Bee 程序未通过完整性校验。\n\n原生操作保持受阻，无法开始贡献或执行账号操作。请从应用菜单退出 Bee，使用可信来源的安装包重新安装后再打开。\n\n查看失败详情\n错误码: BUNDLED_BEE_INVALID\n失败环节: bridge_startup\n原始原因: bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "focused": true,
+        "focusRect": {
+          "x": 241,
+          "y": 296.5,
+          "width": 482.25,
+          "height": 32,
+          "top": 296.5,
+          "right": 723.25,
+          "bottom": 328.5,
+          "left": 241
+        },
+        "focusOutline": "rgb(186, 141, 73) solid 2px",
+        "detailsOpen": true,
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "zh",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ],
+        "mainButtonNames": [
+          "打开 Hive 控制台"
+        ]
+      }
+    },
+    {
+      "id": "integrity-en-dark",
+      "entry": {
+        "code": "BUNDLED_BEE_INVALID",
+        "message": "bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "summary": "The bundled Bee program failed integrity verification.",
+        "impact": "Native operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu, reinstall it with an installer from a trusted source, then reopen it.",
+        "summaryRect": {
+          "x": 241,
+          "y": 215,
+          "width": 482.25,
+          "height": 19.5,
+          "top": 215,
+          "right": 723.25,
+          "bottom": 234.5,
+          "left": 241
+        },
+        "impactRect": {
+          "x": 241,
+          "y": 249.5,
+          "width": 482.25,
+          "height": 58.5,
+          "top": 249.5,
+          "right": 723.25,
+          "bottom": 308,
+          "left": 241
+        },
+        "width": 860,
+        "viewport": {
+          "width": 860,
+          "height": 600
+        },
+        "theme": "dark",
+        "reducedMotion": true,
+        "actionButtons": 0
+      },
+      "expanded": {
+        "text": "The bundled Bee program failed integrity verification.\n\nNative operations remain blocked; contribution and account operations are unavailable. Quit Bee from the app menu, reinstall it with an installer from a trusted source, then reopen it.\n\nView failure details\nError code: BUNDLED_BEE_INVALID\nFailed check: bridge_startup\nOriginal cause: bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "focused": true,
+        "focusRect": {
+          "x": 241,
+          "y": 316,
+          "width": 482.25,
+          "height": 32,
+          "top": 316,
+          "right": 723.25,
+          "bottom": 348,
+          "left": 241
+        },
+        "focusOutline": "rgb(186, 141, 73) solid 2px",
+        "detailsOpen": true,
+        "calls": [
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "preferences_read",
+            "args": {}
+          },
+          {
+            "command": "bridge_status",
+            "args": {}
+          },
+          {
+            "command": "native_locale_sync",
+            "args": {
+              "request": {
+                "locale": "en",
+                "revision": 0,
+                "sequence": 1
+              }
+            }
+          }
+        ],
+        "mainButtonNames": [
+          "Open Hive console"
+        ]
+      }
+    }
+  ],
+  "observed_at": "2026-11-02T20:23:39.530Z"
+}

@@ -1,0 +1,72 @@
+{
+  "scenario": "S05",
+  "observed_at": "2026-11-02T20:26:08.638226+00:00",
+  "bee_product_commit": "dd554529e8803f2791f26ab99c9ee5178a9479fd",
+  "hive_head": "87e3233faa3b00e2a207e6dc0fdc5ea380c3a02a",
+  "hive_gitlink": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+  "cases": [
+    {
+      "id": "S05-integrity-blocked",
+      "preconditions": {
+        "code": "BUNDLED_BEE_INVALID",
+        "check": "sidecar_verify",
+        "message": "bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "locale": "zh",
+        "syntheticFailure": true,
+        "nativeOperationsBlocked": true
+      },
+      "dto_and_actual_calls": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-integrity-blocked-chromium/S05-integrity-blocked.png",
+      "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+      "status": "所列模拟组件子路径通过；S05复合行未全验"
+    },
+    {
+      "id": "S05-integrity-blocked-en",
+      "preconditions": {
+        "code": "BUNDLED_BEE_INVALID",
+        "check": "sidecar_verify",
+        "message": "bundled Bee SHA256 mismatch at /isolated/qa/bee: actual=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa; required=bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "locale": "en",
+        "syntheticFailure": true,
+        "nativeOperationsBlocked": true
+      },
+      "dto_and_actual_calls": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-integrity-blocked-en-chromium/S05-integrity-blocked-en.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-integrity-blocked-en-chromium/S05-integrity-blocked-en.png",
+      "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+      "status": "所列模拟组件子路径通过；S05复合行未全验"
+    },
+    {
+      "id": "S05-protocol-mismatch",
+      "preconditions": {
+        "code": "VERSION_MISMATCH",
+        "check": "bridge_hello",
+        "message": "reply protocol=2; required=1",
+        "locale": "zh",
+        "syntheticFailure": true,
+        "nativeOperationsBlocked": true
+      },
+      "dto_and_actual_calls": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-protocol-mismatch-chromium/S05-protocol-mismatch.png",
+      "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+      "status": "所列模拟组件子路径通过；S05复合行未全验"
+    },
+    {
+      "id": "S05-protocol-mismatch-en",
+      "preconditions": {
+        "code": "VERSION_MISMATCH",
+        "check": "bridge_hello",
+        "message": "reply protocol=2; required=1",
+        "locale": "en",
+        "syntheticFailure": true,
+        "nativeOperationsBlocked": true
+      },
+      "dto_and_actual_calls": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-protocol-mismatch-en-chromium/S05-protocol-mismatch-en.json",
+      "screenshot": "docs/desktop/evidence/2026-10-30-interaction-clarity/t10-fix2-s05-green-output/t10-layout-fix-S05-protocol-mismatch-en-chromium/S05-protocol-mismatch-en.png",
+      "layer": "正式 NativeApp＋模拟 IPC；仅断言的组件子路径，不证明真实官方/OS副作用",
+      "status": "所列模拟组件子路径通过；S05复合行未全验"
+    }
+  ],
+  "historical_source": "t10-fix-scenario-ledger.json",
+  "historical_limit": "前轮两码仅证明详情及保护，摘要仍通用；配置损坏证据仅为故障DTO，不证明真实文件保留；历史原件保持不变",
+  "remaining": "真实损坏配置、实际包/协议失败、签名安装及退出重开等原生组合未验，不判定S05整行通过"
+}

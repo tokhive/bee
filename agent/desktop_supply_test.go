@@ -32,8 +32,12 @@ func desktopSupplyFixture(t *testing.T, handler http.HandlerFunc, mutate ...func
 		if r.Header.Get("Authorization") != "Bearer "+credential || r.Header.Get("X-Hive-Request") != "1" || r.Header.Get("Content-Type") != "application/json" || r.Header.Get("User-Agent") == "" {
 			t.Error("request omitted existing authenticated Hive headers")
 		}
-		if r.URL.RawQuery != "" {
-			t.Error("unexpected query")
+		if strings.HasPrefix(r.URL.Path, "/api/bee/platforms/") {
+			if r.URL.RawQuery != "reason_detail=1" {
+				t.Errorf("desktop supply must opt in to details: method=%s query=%q", r.Method, r.URL.RawQuery)
+			}
+		} else if r.URL.RawQuery != "" {
+			t.Error("unexpected query on identity request")
 		}
 		handler(w, r)
 	}))

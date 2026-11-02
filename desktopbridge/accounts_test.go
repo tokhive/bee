@@ -45,9 +45,7 @@ func TestAccountsStrictParametersAndFailureIsolation(t *testing.T) {
 func TestAccountsFixedMethodsAndOrderedCapabilities(t *testing.T) {
 	var out bytes.Buffer
 	input := hello + supplyRequest("d", "account_defaults", `{}`) + supplyRequest("s", "account_snapshot", `{"platform":"claude","refresh":false}`) + supplyRequest("a", "account_action", `{"platform":"openai","revision":0,"candidate_ref":"`+strings.Repeat("a", 48)+`","action":"select","confirmed":false}`) + request("p", "ping")
-	if err := desktopbridge.RunWithAccounts(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil)); err != nil {
-		t.Fatal(err)
-	}
+	out.WriteString(runDeviceFrames(t, &fakeSupply{}, strings.SplitAfter(input, "\n"), bee.NewDesktopAccounts(nil)))
 	frames := replies(t, out.String())
 	var metadata struct {
 		Capabilities []string `json:"capabilities"`

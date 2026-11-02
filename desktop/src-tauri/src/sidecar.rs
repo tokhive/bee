@@ -6,19 +6,22 @@ use crate::protocol::{
 use serde::Serialize;
 use serde_json::Value;
 use std::{
-    collections::VecDeque,
+    collections::{HashMap, VecDeque},
+    future::poll_fn,
     path::PathBuf,
+    pin::Pin,
     process::Stdio,
     sync::{
-        atomic::{AtomicBool, AtomicU8, Ordering},
-        Arc,
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex as StdMutex,
     },
+    task::Poll,
     time::Duration,
 };
 use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt},
+    io::{AsyncReadExt, AsyncWrite, AsyncWriteExt},
     process::{Child, ChildStdin, ChildStdout, Command},
-    sync::{mpsc, oneshot, watch, Mutex},
+    sync::{mpsc, oneshot, watch, Mutex, Notify, OwnedSemaphorePermit, Semaphore},
     time::{timeout, timeout_at, Instant},
 };
 
@@ -64,14 +67,135 @@ pub(crate) struct LaunchSpec {
     pub timeout: Duration,
 }
 
+#[derive(Clone, Copy, PartialEq)]
+enum RequestPhase {
+    Queued,
+    Sent,
+    Canceled,
+}
+struct CancelUnsent(Arc<StdMutex<RequestPhase>>, Arc<Notify>);
+impl Drop for CancelUnsent {
+    fn drop(&mut self) {
+        let mut phase = self.0.lock().unwrap();
+        if *phase == RequestPhase::Queued {
+            *phase = RequestPhase::Canceled;
+        }
+        self.1.notify_one();
+    }
+}
+
+struct Outgoing {
+    id: String,
+    bytes: Vec<u8>,
+    written: usize,
+}
+
+// poll_write is synchronous. Hold the same short lock used by the caller's
+// deadline/drop guard across that poll and the first successful byte count.
+// Pending emits no bytes, so cancellation can still preserve the live session.
+async fn write_step<W: AsyncWrite + Unpin>(
+    writer: &mut W,
+    frame: &mut Outgoing,
+    phase: &StdMutex<RequestPhase>,
+    deadline: Instant,
+    frozen: &AtomicBool,
+    ordinary: bool,
+) -> Result<bool, BridgeError> {
+    poll_fn(|cx| {
+        let mut state = phase.lock().unwrap();
+        if *state != RequestPhase::Sent
+            && (*state == RequestPhase::Canceled
+                || Instant::now() >= deadline
+                || ordinary && frozen.load(Ordering::SeqCst))
+        {
+            *state = RequestPhase::Canceled;
+            return Poll::Ready(Ok(true));
+        }
+        if frame.written == frame.bytes.len() {
+            return Pin::new(&mut *writer).poll_flush(cx).map(|r| {
+                r.map(|_| true).map_err(|cause| {
+                    error(
+                        "PIPE_WRITE_FAILED",
+                        format!("flush owned Bee request id={}: {cause}", frame.id),
+                    )
+                })
+            });
+        }
+        match Pin::new(&mut *writer).poll_write(cx, &frame.bytes[frame.written..]) {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(Ok(0)) => Poll::Ready(Err(error(
+                "PIPE_WRITE_FAILED",
+                format!(
+                    "write owned Bee request id={} returned zero bytes; remaining={}",
+                    frame.id,
+                    frame.bytes.len() - frame.written
+                ),
+            ))),
+            Poll::Ready(Ok(count)) => {
+                frame.written += count;
+                *state = RequestPhase::Sent;
+                Poll::Ready(Ok(false))
+            }
+            Poll::Ready(Err(cause)) => Poll::Ready(Err(error(
+                "PIPE_WRITE_FAILED",
+                format!(
+                    "write owned Bee request id={} completed bytes={}: {cause}",
+                    frame.id, frame.written
+                ),
+            ))),
+        }
+    })
+    .await
+}
+
 struct Request {
     exit_request: bool,
     method: &'static str,
     params: Value,
     deadline: Instant,
-    // 0=queued, 1=sent/being sent, 2=canceled before sending. CAS owns the boundary.
-    phase: Arc<AtomicU8>,
+    // Shared lock makes first-byte emission atomic with caller cancellation/deadline.
+    phase: Arc<StdMutex<RequestPhase>>,
+    _permit: OwnedSemaphorePermit,
     reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
+}
+
+fn read_platform(request: &Request) -> Option<&str> {
+    if !matches!(
+        request.method,
+        "account_detect" | "account_snapshot" | "supply_status"
+    ) {
+        return None;
+    }
+    request.params["platform"]
+        .as_str()
+        .filter(|p| matches!(*p, "openai" | "claude"))
+}
+fn unsent_rejection(request: &Request, frozen: &AtomicBool, now: Instant) -> Option<BridgeError> {
+    if frozen.load(Ordering::SeqCst) && !request.exit_request {
+        return Some(error(
+            "OWNED_EXIT_PENDING",
+            "queued operation rejected before send: owned exit is pending",
+        ));
+    }
+    if now >= request.deadline {
+        return Some(error(
+            "REQUEST_QUEUE_TIMEOUT",
+            format!(
+                "{} expired before any bytes were sent; bridge session preserved",
+                request.method
+            ),
+        ));
+    }
+    if request.reply.is_closed() || *request.phase.lock().unwrap() == RequestPhase::Canceled {
+        return Some(error(
+            "REQUEST_CANCELED",
+            format!(
+                "{} canceled before any bytes were sent; bridge session preserved",
+                request.method
+            ),
+        ));
+    }
+    None
 }
 
 pub(crate) struct Inner {
@@ -83,6 +207,8 @@ pub(crate) struct Inner {
     status_tx: watch::Sender<BridgeStatus>,
     stop: watch::Sender<bool>,
     requests: mpsc::Sender<Request>,
+    capacity: Arc<Semaphore>,
+    wake: Arc<Notify>,
     timeout: Duration,
     task: Mutex<StopTask>,
 }
@@ -190,6 +316,8 @@ impl Bridge {
                     status_tx,
                     stop,
                     requests,
+                    capacity: Arc::new(Semaphore::new(16)),
+                    wake: Arc::new(Notify::new()),
                     timeout: Duration::from_secs(5),
                     task: Mutex::new(StopTask::default()),
                 }))
@@ -207,12 +335,14 @@ impl Bridge {
         let (requests_tx, requests_rx) = mpsc::channel(16);
         let duration = spec.timeout;
         let frozen = Arc::new(AtomicBool::new(false));
+        let wake = Arc::new(Notify::new());
         let task = tauri::async_runtime::spawn(supervise(
             spec,
             status_tx.clone(),
             stop_rx,
             requests_rx,
             frozen.clone(),
+            wake.clone(),
         ));
         Self(Arc::new(Inner {
             frozen,
@@ -223,6 +353,8 @@ impl Bridge {
             status_tx,
             stop: stop_tx,
             requests: requests_tx,
+            capacity: Arc::new(Semaphore::new(16)),
+            wake,
             timeout: duration,
             task: Mutex::new(StopTask {
                 handle: Some(task),
@@ -630,6 +762,11 @@ impl Bridge {
             .await
     }
 
+    pub(crate) fn freeze_for_exit(&self) {
+        self.0.frozen.store(true, Ordering::SeqCst);
+        self.0.wake.notify_one();
+    }
+
     async fn request_inner(
         &self,
         method: &'static str,
@@ -677,7 +814,20 @@ impl Bridge {
         }
         let deadline = Instant::now() + duration;
         let (reply, receive) = oneshot::channel();
-        let phase = Arc::new(AtomicU8::new(0));
+        let phase = Arc::new(StdMutex::new(RequestPhase::Queued));
+        let _guard = CancelUnsent(phase.clone(), self.0.wake.clone());
+        let permit = if exit_request {
+            // Frozen ordinary waiters still own permits until the supervisor
+            // rejects them. Await that reclamation within this request's
+            // existing deadline instead of bypassing or growing the budget.
+            self.0.wake.notify_one();
+            timeout_at(deadline, self.0.capacity.clone().acquire_owned())
+                .await
+                .map_err(|_| error("REQUEST_QUEUE_TIMEOUT", format!("{method} expired awaiting outstanding request capacity; no bytes sent; maximum=16")))?
+                .map_err(|_| error("REQUEST_NOT_QUEUED", format!("{method} rejected: outstanding request admission is closed")))?
+        } else {
+            self.0.capacity.clone().try_acquire_owned().map_err(|_| error("REQUEST_NOT_QUEUED",format!("{method} rejected: outstanding request budget exhausted; maximum=16 including queued and in-flight requests")))?
+        };
         self.0
             .requests
             .try_send(Request {
@@ -686,6 +836,7 @@ impl Bridge {
                 params,
                 deadline,
                 phase: phase.clone(),
+                _permit: permit,
                 reply,
             })
             .map_err(|cause| {
@@ -695,10 +846,26 @@ impl Bridge {
                 )
             })?;
         let response = timeout_at(deadline, receive).await.map_err(|_| {
-            if phase.compare_exchange(0, 2, Ordering::SeqCst, Ordering::SeqCst).is_err() {
-                { let cause=error("RESPONSE_TIMEOUT", format!("owned Bee {method} reply deadline elapsed; required=reply within {} ms including queue time; write result unconfirmed",duration.as_millis())); self.0.status_tx.send_if_modified(|current|{if current.state!=BridgePhase::Ready { return false; } *current=status(BridgePhase::Failed,None,Some(cause.clone()));true});cause }
+            let mut phase = phase.lock().unwrap();
+            if *phase == RequestPhase::Sent {
+                let cause = error(
+                    "RESPONSE_TIMEOUT",
+                    format!("owned Bee {method} reply deadline elapsed; required=reply within {} ms including queue time; write result unconfirmed", duration.as_millis()),
+                );
+                self.0.status_tx.send_if_modified(|current| {
+                    if current.state != BridgePhase::Ready {
+                        return false;
+                    }
+                    *current = status(BridgePhase::Failed, None, Some(cause.clone()));
+                    true
+                });
+                cause
             } else {
-                error("REQUEST_QUEUE_TIMEOUT",format!("{method} expired in the request queue before any bytes were sent; bridge session preserved"))
+                *phase = RequestPhase::Canceled;
+                error(
+                    "REQUEST_QUEUE_TIMEOUT",
+                    format!("{method} expired in the request queue before any bytes were sent; bridge session preserved"),
+                )
             }
         })?;
         response.map_err(|cause| {
@@ -796,6 +963,7 @@ async fn session(
     stop: &mut watch::Receiver<bool>,
     requests: &mut mpsc::Receiver<Request>,
     frozen: &AtomicBool,
+    wake: &Notify,
 ) -> Result<(), BridgeError> {
     let hello_params = serde_json::json!({});
     let handshake = exchange(
@@ -829,51 +997,160 @@ async fn session(
         None,
     ));
     let mut counter = 1u64;
-    loop {
-        if let Some(cause) = statuses.borrow().error.clone() {
-            return Err(cause);
-        }
-        tokio::select! {
-            biased;
-            _ = stopped(stop) => return Ok(()),
-            result = child.wait() => return Err(error("CHILD_EXITED", match result { Ok(exit) => format!("owned Bee exited while bridge was ready: status={exit}"), Err(cause) => format!("wait for owned Bee failed: {cause}") })),
-            result = replies.next() => return Err(match result { Ok(frame) => error("UNEXPECTED_REPLY", format!("owned Bee sent a response with no pending request; id bytes={}", frame.id.len())), Err(cause) => cause }),
-            request = requests.recv() => {
-                let Some(request) = request else { return Ok(()); };
-                if request.reply.is_closed() { continue; }
-                if frozen.load(Ordering::SeqCst) && !request.exit_request {
-                    let _ = request.reply.send(Err(error("OWNED_EXIT_PENDING", "queued operation rejected before send: owned exit is pending")));
-                    continue;
+    let mut waiting = VecDeque::<Request>::new();
+    let mut active = HashMap::<String, Request>::new();
+    let mut writing: Option<Outgoing> = None;
+    let result = async {
+        loop {
+            if let Some(cause) = statuses.borrow().error.clone() {
+                return Err(cause);
+            }
+            let now = Instant::now();
+            let mut retained = VecDeque::new();
+            while let Some(request) = waiting.pop_front() {
+                if let Some(cause) = unsent_rejection(&request, frozen, now) {
+                    let _ = request.reply.send(Err(cause));
+                } else {
+                    retained.push_back(request);
                 }
-                if Instant::now() >= request.deadline {
-                    // No bytes were sent: only this queued request failed.
-                    let _ = request.reply.send(Err(error("REQUEST_QUEUE_TIMEOUT", format!("{} expired in the request queue before any bytes were sent; bridge session preserved", request.method))));
-                    continue;
+            }
+            waiting = retained;
+            let mut expired = Vec::new();
+            for (id, request) in &active {
+                let phase = *request.phase.lock().unwrap();
+                if phase != RequestPhase::Sent {
+                    if let Some(cause) = unsent_rejection(request, frozen, now) {
+                        expired.push((id.clone(), cause));
+                    }
+                } else if now >= request.deadline {
+                    return Err(error("RESPONSE_TIMEOUT",format!("owned Bee {} reply deadline elapsed; request id={id}; bytes were sent and result is unconfirmed",request.method)));
                 }
-                counter = counter.checked_add(1).ok_or_else(|| error("REQUEST_ID_EXHAUSTED", "shell request counter reached u64 maximum"))?;
-                let id = format!("shell-{counter}");
-                if request.phase.compare_exchange(0,1,Ordering::SeqCst,Ordering::SeqCst).is_err() { continue; }
-                let response = tokio::select! {
-                    biased;
-                    _ = stopped(stop) => { let _ = request.reply.send(Err(error("BRIDGE_STOPPED", "ping cancelled because owned Bee is stopping"))); return Ok(()); },
-                    result = exchange(stdin, replies, request.method, &id, &request.params, request.deadline) => result,
-                }.and_then(|frame| frame.success(&id, Some(&instance)))
-                    .and_then(|result| {
-                        if request.method == "ping" && result != serde_json::json!({"alive":true}) { return Err(error("INVALID_PING", "ping result differs from required alive=true object")); }
-                        Ok(BridgeReply { protocol: 1, id, instance: instance.clone(), result })
+            }
+            for (id, cause) in expired {
+                if writing.as_ref().is_some_and(|w| w.id == id) {
+                    writing = None;
+                }
+                if let Some(request) = active.remove(&id) {
+                    let _ = request.reply.send(Err(cause));
+                }
+            }
+            if writing.is_none() {
+                let mut selected = None;
+                for (index, request) in waiting.iter().enumerate() {
+                    let lane = read_platform(request);
+                    if lane.is_none() {
+                        if index == 0 && active.is_empty() {
+                            selected = Some(index);
+                        }
+                        break;
+                    }
+                    if active.values().all(|current| {
+                        read_platform(current).is_some() && read_platform(current) != lane
+                    }) {
+                        selected = Some(index);
+                        break;
+                    }
+                }
+                if let Some(index) = selected {
+                    let request = waiting.remove(index).unwrap();
+                    counter = counter.checked_add(1).ok_or_else(|| {
+                        error(
+                            "REQUEST_ID_EXHAUSTED",
+                            "shell request counter reached u64 maximum",
+                        )
+                    })?;
+                    let id = format!("shell-{counter}");
+                    let mut bytes = serde_json::to_vec(&serde_json::json!({
+                        "protocol": 1, "id": id, "method": request.method, "params": request.params
+                    })).map_err(|cause| error(
+                        "REQUEST_ENCODING_FAILED",
+                        format!("encode {} request: {cause}", request.method),
+                    ))?;
+                    bytes.push(b'\n');
+                    writing = Some(Outgoing {
+                        id: id.clone(),
+                        bytes,
+                        written: 0,
                     });
-                // A caller deadline can revoke the session before exchange gets polled
-                // again. Never accept its late success or send another queued write.
-                let response=if let Some(cause)=statuses.borrow().error.clone() { Err(cause) } else { response };
-                let failure = response.as_ref().err().cloned();
-                if let Some(cause) = &failure {
-                    statuses.send_replace(status(BridgePhase::Failed, None, Some(cause.clone())));
+                    active.insert(id, request);
                 }
-                let _ = request.reply.send(response);
-                if let Some(failure) = failure { return Err(failure); }
+            }
+            let deadline = waiting
+                .iter()
+                .chain(active.values())
+                .map(|r| r.deadline)
+                .min();
+            tokio::select! {
+                biased;
+                _ = stopped(stop) => return Ok(()),
+                _ = wake.notified() => {},
+                result = child.wait() => return Err(error("CHILD_EXITED", match result {
+                    Ok(exit) => format!("owned Bee exited while bridge was ready: status={exit}"),
+                    Err(cause) => format!("wait for owned Bee failed: {cause}"),
+                })),
+                _ = async {
+                    if let Some(at) = deadline {
+                        tokio::time::sleep_until(at).await
+                    } else {
+                        std::future::pending::<()>().await
+                    }
+                } => {},
+                result = async {
+                    let frame = writing.as_mut().unwrap();
+                    let request = active.get(&frame.id).unwrap();
+                    write_step(stdin, frame, &request.phase, request.deadline, frozen, !request.exit_request).await
+                }, if writing.is_some() => {
+                    if result? { writing = None; }
+                },
+                result = replies.next() => {
+                    let frame = result?;
+                    let request = active.get(&frame.id).ok_or_else(|| error(
+                        "UNEXPECTED_REPLY",
+                        format!("owned Bee reply has no unfinished request; id bytes={}; active requests={}", frame.id.len(), active.len()),
+                    ))?;
+                    if *request.phase.lock().unwrap() != RequestPhase::Sent || writing.as_ref().is_some_and(|w| w.id == frame.id) {
+                        return Err(error("UNEXPECTED_REPLY","owned Bee replied before its complete request frame was written"));
+                    }
+                    let id = frame.id.clone();
+                    let result = frame.success(&id, Some(&instance))?;
+                    if request.method == "ping" && result != serde_json::json!({"alive":true}) {
+                        return Err(error("INVALID_PING", "ping result differs from required alive=true object"));
+                    }
+                    if let Some(cause) = statuses.borrow().error.clone() { return Err(cause); }
+                    let request = active.remove(&id).unwrap();
+                    let _ = request.reply.send(Ok(BridgeReply { protocol: 1, id, instance: instance.clone(), result }));
+                },
+                request = requests.recv() => {
+                    match request {
+                        Some(request) => waiting.push_back(request),
+                        None => return Ok(()),
+                    }
+                },
             }
         }
+    }.await;
+    let cause = result.as_ref().err().cloned().unwrap_or_else(|| {
+        error(
+            "BRIDGE_STOPPED",
+            "owned Bee session stopped; sent request result is unconfirmed",
+        )
+    });
+    for request in waiting.into_iter().chain(active.into_values()) {
+        let sent = *request.phase.lock().unwrap() == RequestPhase::Sent;
+        let failure = if sent {
+            cause.clone()
+        } else {
+            error(
+                "REQUEST_NOT_SENT",
+                format!(
+                    "{} rejected before any bytes were sent because owned session ended; cause={}",
+                    request.method, cause.code
+                ),
+            )
+        };
+        let _ = request.reply.send(Err(failure));
     }
+    result
 }
 
 async fn reap(child: &mut Child) -> Result<std::process::ExitStatus, BridgeError> {
@@ -902,6 +1179,7 @@ async fn supervise(
     mut stop: watch::Receiver<bool>,
     mut requests: mpsc::Receiver<Request>,
     frozen: Arc<AtomicBool>,
+    wake: Arc<Notify>,
 ) -> Result<(), BridgeError> {
     let mut cleanup_failure = None;
     let run = async {
@@ -975,6 +1253,7 @@ async fn supervise(
             &mut stop,
             &mut requests,
             &frozen,
+            &wake,
         )
         .await;
         if let Err(cause) = &result {
@@ -1043,13 +1322,13 @@ async fn supervise(
     statuses.send_replace(terminal);
     requests.close();
     while let Some(request) = requests.recv().await {
-        let cause = run.as_ref().err().cloned().unwrap_or_else(|| {
-            error(
-                "BRIDGE_STOPPED",
-                "queued ping cancelled after owned Bee stopped",
-            )
-        });
-        let _ = request.reply.send(Err(cause));
+        let _ = request.reply.send(Err(error(
+            "REQUEST_NOT_SENT",
+            format!(
+                "{} rejected before any bytes were sent because owned Bee stopped",
+                request.method
+            ),
+        )));
     }
     // A protocol failure is reported through status; stop reports cleanup/join
     // errors independently instead of treating a failed handshake as failed quit.

@@ -19,6 +19,20 @@
 
 成功为 `result.supply`，精确字段为 `hive/device_id/platform/paused/ready/reasons/checked_at`；业务失败为 `result.error`。前端检查全部字段、当前 Hive/设备/平台、显式暂停目标、UTC 时间、原因白名单及 ready/reasons、paused/manually_paused 不变量。未知字段和原因的原始载荷不写入错误，凭证始终只在 Go。JSON 重复字段由上游 Go 解码拒绝；前端接收的是已解码对象。
 
+### 详细原因契约
+
+桌面 Go、Rust 与 TypeScript 解码器同时接受旧原因和下列详细原因。`beewire.DetailedSupplyReasons()` 返回两者并集；`SupplyReasons()` 保留原有 19 项，旧网页与 CLI 的默认集合不变。此步骤只补齐接收和诊断说明，尚未为桌面 GET／PUT 添加 `reason_detail=1`，不改变默认请求或 Hive 准入结果。
+
+| 原因码 | 已确认事实 |
+| --- | --- |
+| `account_not_registered` | Hive 没有对应平台账号记录；不代表本机未接入 |
+| `market_not_open` | 平台全局市场没有符合发布、价格和协议条件的可交易模型 |
+| `supply_not_enabled` | 设备没有有效静态供给，平台动态供给也未配置；由管理员处理 |
+| `supply_device_restricted` | 同一所有者的平台静态绑定指向其他设备；由管理员核对绑定 |
+| `account_not_admitted` | 当前账号指纹不在动态供给允许集合中；不返回其他账号或允许集合 |
+
+`model_unavailable` 继续表示市场已开放但该账号或供给没有可用模型；`authorization_unavailable` 仅表示没有可用加密授权，不据此推断正在同步。诊断报告、原生日志和导出保留上述安全原因证据。未知原因、重复原因、跨平台账号原因，以及 `ready`／`paused` 与原因列表矛盾的供给对象仍被拒绝。
+
 完整细节见[私有管理协议](bridge-protocol.md)。
 
 ## 本批验收与交付边界

@@ -8,6 +8,7 @@ export interface SupplyClient {
 }
 export type SupplyFactory = (binding: SupplyBinding) => SupplyClient;
 export const supplyReasons = [
+ 'account_not_registered','market_not_open','supply_not_enabled','supply_device_restricted','account_not_admitted',
  'manually_paused','banned','device_draining','offline','not_configured','model_unavailable',
  'authorization_unavailable','capabilities_unknown','rate_limited','quota_unknown','quota_exhausted',
  'plan_not_configured','concurrency_full','codex_source_unavailable','codex_confirmation_required',

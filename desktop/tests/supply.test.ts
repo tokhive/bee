@@ -235,3 +235,16 @@ test('a successful supply PUT stays blocked after a failed readback until a fres
  await model.write('openai',true);assert.equal(writes,1);
  model.adopt({views:{openai:{...views.openai,paused:true,reasons:['manually_paused']}},error:'',busy:false});assert.equal(model.getSnapshot().errors.openai,undefined);assert.equal(model.canWrite('openai',false),true);
 });
+
+test('detailed supply reasons are accepted without relaxing platform or readiness invariants',()=>{
+ for(const platform of ['openai','claude'] as const)for(const reason of ['account_not_registered','market_not_open','supply_not_enabled','supply_device_restricted','account_not_admitted']){
+  const supply={...good,platform,reasons:[reason]};
+  assert.deepEqual(decodeSupplyReply(reply(supply),binding,platform,undefined,now),supply);
+  for(const invalid of [
+   {...supply,reasons:[reason,reason]}, {...supply,ready:true}, {...supply,paused:true},
+   {...supply,reasons:[reason,'manually_paused']},
+   {...supply,reasons:[reason,platform==='openai'?'claude_source_unavailable':'codex_source_unavailable']},
+   {...supply,reasons:[reason,'unrecognized_reason']},
+  ])assert.throws(()=>decodeSupplyReply(reply(invalid),binding,platform,undefined,now),/SUPPLY_REPLY_INVALID/);
+ }
+});

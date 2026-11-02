@@ -169,3 +169,32 @@ func TestSupplyParameterErrorsIdentifyTheObservedJSONTypeWithoutPayload(t *testi
 		})
 	}
 }
+
+type detailedSupply struct{ fakeSupply }
+
+func (s *detailedSupply) SupplyStatus(_ context.Context, platform string) (bee.DesktopSupply, error) {
+	return bee.DesktopSupply{Platform: platform, Reasons: []string{"account_not_registered", "market_not_open", "supply_not_enabled", "supply_device_restricted", "account_not_admitted"}}, nil
+}
+func TestSupplyDetailedReasonsSurviveBridgeEnvelope(t *testing.T) {
+	for _, platform := range []string{"openai", "claude"} {
+		d := &detailedSupply{}
+		var out bytes.Buffer
+		if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("s", "supply_status", `{"platform":"`+platform+`"}`)), &out, io.Discard, "test", d); err != nil {
+			t.Fatal(err)
+		}
+		frame := replies(t, out.String())[1]
+		if frame.Error != nil {
+			t.Fatal(frame.Error)
+		}
+		var result struct {
+			Supply bee.DesktopSupply `json:"supply"`
+		}
+		if err := json.Unmarshal(frame.Result, &result); err != nil {
+			t.Fatal(err)
+		}
+		want, _ := d.SupplyStatus(context.Background(), platform)
+		if !reflect.DeepEqual(result.Supply, want) {
+			t.Fatalf("supply bridge changed detailed reasons: actual=%+v required=%+v", result.Supply, want)
+		}
+	}
+}

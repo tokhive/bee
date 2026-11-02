@@ -456,7 +456,7 @@
   },
   {
     "id": "R01",
-    "scene": "stopped",
+    "scene": "runtime-no-accounts",
     "scope": "T5/T6；没有账号／账号未确认时开始贡献",
     "expectation": "具体禁用原因与账号入口；不将未知显示零账号",
     "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",

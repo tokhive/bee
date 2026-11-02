@@ -20,6 +20,7 @@ test.beforeEach(async({page})=>{
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1};
    if(command==='preferences_read')return {preferences,error:null};
    if(command==='preferences_save'){preferences={...args.request.preferences,revision:preferences.revision+1};return {preferences,error:null};}
+   if(command==='native_locale_sync')return null;
    if(command==='notification_permission')return 'prompt';
    if(command==='autostart_status')return {desired:false,registered:false,error:null};
    if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
@@ -123,7 +124,7 @@ test('diagnostics preserve runtime operation and platform authorization failure 
   };
  });
  await page.goto('/');await page.getByRole('button',{name:'诊断',exact:true}).click();
- await page.getByText('核对诊断',{exact:true}).click();
+ await page.getByText('运行详情',{exact:true}).click();
  const evidence=page.locator('.native-diagnostic-evidence pre');
  await expect(evidence).toContainText('runtime_start_check');await expect(evidence).toContainText('permission_denied');
  await expect(evidence).toContainText('source_read');await expect(evidence).toContainText('/fixture/source');

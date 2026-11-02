@@ -5,7 +5,7 @@ const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).c
 function selected(platform:string){const a=accountFixture(platform) as any;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};return a;}
 async function fixture(page:Page,options:{selected?:boolean;runtime?:boolean}={}){await page.addInitScript(installAccountFixture,{runtimeEnabled:options.runtime??false,accounts:{openai:options.selected?selected('openai'):accountFixture('openai'),claude:options.selected?selected('claude'):accountFixture('claude')}});}
 async function details(page:Page,p='OpenAI'){await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();return page.getByRole('dialog').last();}
-async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('核对诊断',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
+async function diagnostics(page:Page,message:string){await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('运行详情',{exact:true}).click();await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(message);}
 test('account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus',async({page})=>{
  await fixture(page,{selected:true});await page.setViewportSize({width:860,height:600});await page.goto('/');expect(await calls(page,'account_detect')).toEqual([]);
  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();

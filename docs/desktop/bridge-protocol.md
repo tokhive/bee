@@ -64,7 +64,7 @@ Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`
 
 Go `DesktopFailure` 只用于设备／供给请求边界，内部 Cause 支持 Unwrap 且不序列化；既有配对过期、撤销、写入结果未知的 typed cause 判断继续有效。HTTP 正文仅投影公开 `error.code/message`，过滤凭据、配对令牌、Bearer、秘密赋值及 URL 用户信息、query、fragment，不传完整敏感响应。非公开 JSON／正文超限时报告实际观察长度与限额或投影要求，明确注明省略；HTTP 读取仍最多观察 65,537 字节并以 65,536 为限额。消息限额为 32,768 字节。TS 状态存储未翻译的 `UiFailure`，由呈现层按 App 语言显示具体原因、影响、已证实的处理入口和同一提示中的安全原始证据；未知码不猜原因。
 
-`DeviceView` 只含 `state`（unbound/pending/draining/expired/bound）及适用的 `hive`、`name`、`verification_url`、`user_code`、`expires_at`、`poll_interval_seconds`、公开 `identity`。身份字段为 `id/name/owner_id/owner_email`。凭证和配对令牌只留在 Go；配置路径固定为 `UserConfigDir()/tokhive/bee-desktop.json`，不接受前端传入路径。兑换结果未知时保留原事务和凭证，先重新核验身份，禁止用新事务覆盖。
+`DeviceView` 包含 `state`（unbound/pending/draining/expired/bound；共同事务另支持 pairing，见下文）及适用的 `hive`、`name`、`verification_url`、`user_code`、`expires_at`、`poll_interval_seconds`、公开 `identity`。身份字段为 `id/name/owner_id/owner_email`。凭证和配对令牌只留在 Go；配置路径固定为 `UserConfigDir()/tokhive/bee-desktop.json`，不接受前端传入路径。兑换结果未知时保留原事务和凭证，先重新核验身份，禁止用新事务覆盖。
 
 Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只在 pending/draining 时打开同 Hive 的 `/devices/pair?code=…`；若恰好已绑定或过期，直接返回最新状态。系统启动器最长等待 5 秒，超时回收自有启动器并报告打开结果未确认。浏览器确认后须手动回到 Bee，没有账号自动回跳。
 
@@ -234,3 +234,14 @@ prepare只保存待确认记录，不创建配对；begin_pairing只适用于awa
 恢复与运行启动、账号写入、官方登录、供给写入、网络应用共用核心admission屏障；进程锁仍只归管理进程所有，不持普通状态mutex等待网络。旧scope未决账号操作、未退出worker或不干净运行guard必须先按原机制核对，不能清空以便重绑。新设备不会继承旧选择、运行意图、内存来源或已应用代理；旧scope原记录保留。恢复完成保持stopped，StartupGate仍需显式startup_recheck；重查不Restore，不清更新完整性门禁。没有token的未知创建仍存在协议与人工闭环验收缺口。
 
 凭据恢复的显式网页打开同样复用无URL参数的 Tauri `device_open`，TS以 `recoveryOpen()` 接收严格 `{recovery}`（首次配对的 `open()` 仍接收 DeviceView）。仅旧凭据明确撤销、恢复事务仍为 pending/draining、前后本机context一致且配对URL与固定当前Hive同源时打开原事务；保留更新/数据完整性和owned-exit保护。阶段或上下文变化明确拒绝，失败不清除事务，前端可保留已显示的原配对URL。completed重复status只有仍匹配已显式核验的实例/绑定/网络时保留ready，活跃事务及绑定变化仍要求startup_recheck，绝不runtime_restore。
+
+
+## 2026-11-03 最终组合验收
+
+以 `TEST_BEE_BIN` 显式选择最终桌面 Bee，在非 root Linux 的临时 `XDG_CONFIG_HOME` 中执行 JSONL 私有桥；未改 HOME、未启动完整 GUI。真实 Hive/PostgreSQL 用独立 schema。首次身份 503、断连、超时分别校验 `unavailable`、`connection_closed`、`timeout`，同时严格核对 `device_identity`、该次 observed_at、目标 origin/path 及适用的 HTTP 公开响应证据。
+
+创建/兑换提交后的响应丢失以数据库增量及真实 POST 次数证明；两个重启期间只续查原事务，保存失败保留旧配置与已验证日志，最终恢复仍停止。无 token 的创建未知安全阻止第二次创建，但当前协议不能查回 token，人工恢复闭环仍待完成。详见[台账](interaction-clarity-validation.md)及 `t10-linux-broker-race-v6.log`。
+
+原生 `native_locale_sync` 成功回执严格为 null，locale/revision/sequence 由偏好同步调用携带。旧测试替身已补该回执，不能把缺少命令产生的语言同步警告解释为设备配对失败。
+
+最终核心连接使用相同外部二进制，经真实HTTP核对401/403/409/503/EOF；另外在Docker internal网络与专属临时数据库里真实upgrade后断socket及listener，观察connection_refused与实际next_retry_at，再恢复listener，确认同run重新connected、手动暂停保持且resume PUT=0，最后完整停止回执。`t10-linux-runtime-isolated-v9.log/json`保存网络inspect与无默认路由证据；这些连接事实不证明官方账号维护或上游请求已通过。Hive验收提交为`bf05ea6`＋`d0e979b`，gitlink仍为`ab8140a`。

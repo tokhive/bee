@@ -180,7 +180,8 @@ export function createDesktopState(deps:DesktopDeps){
    if(!Number.isFinite(Date.parse(check.observed_at))||deviceObservedAt&&Date.parse(check.observed_at)<=Date.parse(deviceObservedAt)||diagnosticObservedAt&&Date.parse(check.observed_at)<=Date.parse(diagnosticObservedAt))continue;
    diagnosticObservedAt=check.observed_at;
    const evidence:Record<string,string>={};for(const key of ['http_status','path'] as const)if(check.evidence[key])evidence[key]=check.evidence[key];if(check.evidence.server_code)evidence.remote_code=check.evidence.server_code;
-   publish({diagnosticFailure:failure({code:check.code,message:'Hive identity check '+check.code+(evidence.http_status?' HTTP '+evidence.http_status:''),details:{check:'device_identity',observed_at:check.observed_at,evidence}},'device_identity')});
+   const code=check.code==='http_rejected'&&check.evidence.method==='GET'&&evidence.path==='/api/bee/identity'&&evidence.http_status==='401'&&evidence.remote_code==='invalid_device_credential'?'invalid_device_credential':check.code;
+   publish({diagnosticFailure:failure({code,message:'Hive identity check '+check.code+(evidence.http_status?' HTTP '+evidence.http_status:''),details:{check:'device_identity',observed_at:check.observed_at,evidence}},'device_identity')});
   }
  }
  return {

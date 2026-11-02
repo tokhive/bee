@@ -19,6 +19,17 @@ fn failure(code: &str, message: impl Into<String>) -> BridgeError {
     }
 }
 
+/// Preserve a producer's concrete check; only otherwise identify this apply stage.
+fn at_apply_stage(mut error: BridgeError, check: &str) -> BridgeError {
+    if error.details.is_none() {
+        if let Ok(observed_at) = time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339) {
+            let details = crate::protocol::FailureDetails { check: check.into(), observed_at, evidence: std::collections::BTreeMap::new() };
+            if let Ok(enriched) = BridgeError::with_details(&error.code, error.message.clone(), details) { error = enriched; }
+        }
+    }
+    error
+}
+
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct NetworkPaths {
@@ -450,7 +461,7 @@ impl NetworkController {
             Ok(view)
         }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(error)),
+            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(at_apply_stage(error, "network_observe"))),
         };
         capture(&mut state, current.clone(), Some(scope));
         let proxy = saved
@@ -471,7 +482,7 @@ impl NetworkController {
                 Ok(view)
             }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(error)),
+            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(at_apply_stage(error, "network_stop"))),
         };
         if stopped.instance != current.instance {
             return render(&state,&saved.preferences,Some(scope),Some(failure("NETWORK_INSTANCE_CHANGED","owned management instance changed during network stop; configuration and restore were not dispatched")));
@@ -509,14 +520,14 @@ impl NetworkController {
                     capture(&mut state, view, Some(scope));
                 }
             }
-            return render(&state, &fresh.preferences, Some(scope), Some(error));
+            return render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_configure")));
         }
         let configured = match runtime.observe().await.and_then(|view| {
             view.validate()?;
             Ok(view)
         }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &fresh.preferences, Some(scope), Some(error)),
+            Err(error) => return render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_configure_readback"))),
         };
         if configured.instance != current.instance
             || configured.local != "stopped"
@@ -544,7 +555,7 @@ impl NetworkController {
                 capture(&mut state, restored, Some(scope));
                 render(&state, &fresh.preferences, Some(scope), None)
             }
-            Err(error) => render(&state, &fresh.preferences, Some(scope), Some(error)),
+            Err(error) => render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_restore"))),
         }
     }
 }

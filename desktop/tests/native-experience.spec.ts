@@ -87,7 +87,7 @@ test('notification delivery failures stay visible and retry requires an explicit
  await setup(page);await page.evaluate(()=>{const w=window as any;w.notificationPermission='granted';w.notificationDeliveryError={code:'NOTIFICATION_NATIVE',message:'native notification rejected: os_code=13'};});
  await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
  expect(await calls(page,'notification_retry')).toEqual([]);expect(await calls(page,'notification_enable')).toEqual([]);
- await page.getByLabel('希望接收系统通知',{exact:true}).check();
+ await page.getByLabel('接收系统通知',{exact:true}).check();
  await page.getByRole('button',{name:'重试失败的通知',exact:true}).click();
  expect(await calls(page,'notification_retry')).toEqual([{command:'notification_retry',args:{}}]);
  await expect(page.getByRole('status')).toContainText('将在下次后台检查时重试明确失败的通知');
@@ -296,4 +296,133 @@ for(const [width,height,language,theme] of [[1440,1000,'zh','light'],[1440,1000,
  const logBounds=await page.locator('.nd-log-list li').first().evaluate(row=>{const range=document.createRange();range.selectNodeContents(row.querySelector('.nd-log-level')!);return {levelRight:range.getBoundingClientRect().right,codeLeft:row.querySelector('strong')!.getBoundingClientRect().left};});expect(logBounds.levelRight).toBeLessThanOrEqual(logBounds.codeLeft);
  if(en)await page.screenshot({path:`../.cache/s2-ui-verification/logs-${theme}-en-860.png`});
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+});
+
+test('T8 original report read pauses after one failure and explicit reread completes without another start',async({page})=>{
+ await setup(page);await nav(page,'诊断').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let failed=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='diagnostics_snapshot'&&!failed){failed=true;w.calls.push({command,args});throw {code:'IPC_TIMEOUT',message:'snapshot read timed out: report retained'};}return invoke(command,args);};});
+ await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);
+ await expect(page.getByText('报告读取已暂停，已返回的检查仍保留。',{exact:true})).toBeVisible();
+ await expect(page.locator('.nd-report-meta')).toBeVisible();await page.clock.runFor(5000);expect((await calls(page,'diagnostics_snapshot')).length).toBe(1);
+ await page.getByRole('button',{name:'重新读取原报告',exact:true}).click();await expect(page.getByText('检查已完成',{exact:true})).toBeVisible();
+ expect((await calls(page,'diagnostics_start')).length).toBe(1);const reads=await calls(page,'diagnostics_snapshot');expect(new Set(reads.map((c:any)=>c.args.id)).size).toBe(1);
+ await page.clock.runFor(5000);expect((await calls(page,'diagnostics_snapshot')).length).toBe(2);
+});
+test('T8 lost start receipt remains unknown across all pages and only logs are available without an ID',async({page})=>{
+ await setup(page);await nav(page,'诊断').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start')throw {code:'IPC_TIMEOUT',message:'start accepted; reply unavailable'};return result;};});
+ await page.getByRole('button',{name:'运行诊断',exact:true}).click();
+ for(const destination of ['概览','设置','AI 账号']){await nav(page,destination).click();await nav(page,'诊断').click();}
+ await expect(page.getByText('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+ expect(await calls(page,'diagnostics_snapshot')).toEqual([]);expect((await calls(page,'diagnostics_start')).length).toBe(1);
+ await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toBeVisible();
+});
+test('T8 lost cancel receipt is checked by original report reads across navigation',async({page})=>{
+ await setup(page);await nav(page,'诊断').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.diagnosticsStayRunning=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_cancel')throw {code:'IPC_TIMEOUT',message:'cancel accepted; reply unavailable'};return result;};});
+ await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.getByRole('button',{name:'取消诊断',exact:true}).click();
+ await nav(page,'设置').click();await nav(page,'诊断').click();await expect(page.getByText('取消结果尚未确认；仅核对原报告，不会重复取消。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'取消诊断',exact:true})).toBeDisabled();await page.getByRole('button',{name:'重新读取原报告',exact:true}).click();
+ await expect(page.getByText('诊断已取消',{exact:true})).toBeVisible();expect((await calls(page,'diagnostics_cancel')).length).toBe(1);expect((await calls(page,'diagnostics_start')).length).toBe(1);
+});
+test('T8 saved proxy survives a failed network read and is never reported as a failed save',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let saved=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='network_snapshot'&&saved){w.calls.push({command,args});throw {code:'NETWORK_RUNTIME_UNCONFIRMED',message:'network read unavailable after preference saved'};}const value=await invoke(command,args);if(command==='network_save_proxy')saved=true;return value;};});
+ await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18381');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ await expect(page.getByText('代理配置已保存；生效状态尚未确认。',{exact:true})).toBeVisible();await expect(page.locator('.ns-network-summary')).toContainText('http://127.0.0.1:18381');
+ await nav(page,'概览').click();await nav(page,'设置').click();await expect(page.getByText('代理配置已保存；生效状态尚未确认。',{exact:true})).toBeVisible();expect((await calls(page,'network_save_proxy')).length).toBe(1);
+});
+test('T8 unknown network apply preserves the draft and only rereads network and runtime after navigation',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18382');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='network_apply_saved')throw {code:'IPC_TIMEOUT',message:'apply accepted; reply lost'};return result;};});
+ await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'停止并重新启动',exact:true}).click();
+ await expect(page.getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。',{exact:true})).toBeVisible();
+ for(const destination of ['诊断','AI 账号','概览']){await nav(page,destination).click();await nav(page,'设置').click();}
+ await expect(page.getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。',{exact:true})).toBeVisible();await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:18382');
+ await page.getByRole('button',{name:'刷新生效路径',exact:true}).click();expect((await calls(page,'network_apply_saved')).length).toBe(1);expect(await calls(page,'runtime_stop')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+});
+test('T8 denied notification keeps the saved preference and gives the actual OS settings location',async({page})=>{
+ await setup(page);await page.evaluate(()=>{(window as any).notificationPermission='denied';});await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.getByLabel(/^(希望接收系统通知|接收系统通知)$/).check();await expect(page.getByLabel(/^(希望接收系统通知|接收系统通知)$/)).toBeChecked();await expect(page.getByText('已拒绝',{exact:true})).toBeVisible();
+ await expect(page.getByText('在 macOS“系统设置 → 通知 → Bee”中允许通知。应用内提醒会继续显示。',{exact:true})).toBeVisible();expect((await calls(page,'notification_enable')).length).toBe(1);
+});
+test('T8 autostart read failure retains the desired choice and actual registration receipt',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let changed=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='preferences_read'&&changed)throw {code:'PREFERENCES_READ_FAILED',message:'preferences read failed after autostart receipt'};const value=await invoke(command,args);if(command==='autostart_set')changed=true;return value;};});
+ await page.getByLabel(/^(登录桌面后启动 Bee|登录系统后启动 Bee)$/).check();await expect(page.getByLabel(/^(登录桌面后启动 Bee|登录系统后启动 Bee)$/)).toBeChecked();await expect(page.getByText('已登记',{exact:true})).toBeVisible();
+ await expect(page.getByText('系统登记回执已保留，偏好读取尚未确认。',{exact:true})).toBeVisible();await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByLabel(/^(登录桌面后启动 Bee|登录系统后启动 Bee)$/)).toBeChecked();expect((await calls(page,'autostart_set')).length).toBe(1);
+});
+
+
+for(const reason of ['device_replaced','invalid_device_credential'])test('T8 diagnostic local binding and revoked Hive identity remain separate concrete facts: '+reason,async({page})=>{
+ await setup(page);await page.clock.runFor(100);await page.evaluate(reason=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='diagnostics_start'){const r=value.result.report;r.state='completed';r.finished_at=r.started_at;r.checks=[{id:'device',platform:null,status:'pass',code:'device_binding_valid',observed_at:r.started_at,evidence:{},next_action:'diagnostics'},{id:'hive',platform:null,status:'fail',code:reason==='device_replaced'?reason:'http_rejected',observed_at:r.started_at,evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:reason},next_action:'diagnostics'}];}return value;};},reason);
+ await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.getByTestId('passed-checks').locator(':scope > summary').click();
+ await expect(page.getByText('本机绑定信息完整；远端身份需单独核对。',{exact:true})).toBeVisible();const check=page.locator('.nd-issues [data-nav-section="connection"]');await expect(check).toContainText(reason==='device_replaced'?'此设备已被替换，原设备凭据已撤销。':'Hive 已拒绝此设备凭据。');
+ await check.getByRole('button',{name:'查看概览',exact:true}).click();await expect(page.locator('[data-nav-section="device"]')).toBeFocused();await expect(page.getByRole('button',{name:'重新绑定设备',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(check).toBeFocused();expect((await calls(page,'diagnostics_start')).length).toBe(1);
+ for(const command of ['device_recovery_prepare','device_recovery_confirm','runtime_start','account_action','device_begin'])expect((await calls(page,command)).length).toBe(0);
+});
+
+test('T8 confirmed proxy save never selects an older device scope when its network read fails',async({page})=>{
+ await setup(page);await nav(page,'设置').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let saved=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='network_snapshot'&&saved){w.calls.push({command,args});throw {code:'NETWORK_RUNTIME_UNCONFIRMED',message:'network observation unavailable after current-device save'};}const value=await invoke(command,args);if(command==='network_save_proxy'){saved=true;value.preferences.proxies.unshift({origin:'https://hive.example',device_scope:'previous-device',connect_proxy:'http://127.0.0.1:17001'});}return value;};});
+ await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18389');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ const saved=page.locator('.ns-network-summary>div').first();await expect(saved).toContainText('http://127.0.0.1:18389');await expect(saved).not.toContainText('17001');
+ await nav(page,'概览').click();await nav(page,'设置').click();await expect(saved).toContainText('http://127.0.0.1:18389');expect((await calls(page,'network_save_proxy')).length).toBe(1);
+});
+
+test('T8 unknown proxy save permits a new explicit save only after current scoped reads succeed',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let lost=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='network_save_proxy'&&!lost){lost=true;throw {code:'IPC_TIMEOUT',message:'save accepted; receipt lost'};}return value;};});
+ await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18391');const save=page.getByRole('button',{name:'保存代理',exact:true});await save.click();await expect(save).toBeDisabled();
+ await page.getByRole('button',{name:'核对当前保存配置',exact:true}).click();await expect(save).toBeEnabled();expect((await calls(page,'network_save_proxy')).length).toBe(1);
+ await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18392');await save.click();await expect(page.locator('.ns-network-summary')).toContainText('18392');expect((await calls(page,'network_save_proxy')).length).toBe(2);
+});
+
+test('T8 restore failure preserves the applied network and the separate stopped runtime',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18393');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='network_apply_saved')value.error={code:'RUNTIME_OPERATION_FAILED',message:'restore failed: local=stopped; intended=running',details:{check:'network_restore',observed_at:new Date().toISOString(),evidence:{}}};return value;};});
+ await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'停止并重新启动',exact:true}).click();
+ await expect(page.getByText('网络配置已生效，但贡献恢复未完成。',{exact:true})).toBeVisible();await expect(page.locator('.ns-network-summary>div').last()).toContainText('18393');await expect(page.getByText('当前贡献进程：已停止',{exact:true})).toBeVisible();
+ await nav(page,'概览').click();await nav(page,'设置').click();await expect(page.getByText('网络配置已生效，但贡献恢复未完成。',{exact:true})).toBeVisible();expect((await calls(page,'network_apply_saved')).length).toBe(1);
+});
+
+test('T8 pending network apply receives one result after navigating away without replay',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18394');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='network_apply_saved')return new Promise(resolve=>w.releaseApply=()=>resolve(value));return value;};});
+ await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'停止并重新启动',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseApply)).toBe('function');
+ await nav(page,'诊断').click();await nav(page,'设置').click();await expect(page.getByText('正在等待网络应用回执…',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'保存代理',exact:true})).toBeDisabled();
+ await page.evaluate(()=>(window as any).releaseApply());await expect(page.getByText('已收到网络应用回执；贡献状态以当前读取为准。',{exact:true})).toBeVisible();expect((await calls(page,'network_apply_saved')).length).toBe(1);
+});
+
+test('T8 lost notification permission receipt survives navigation and is reconciled only by OS reads',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='notification_enable'){w.notificationPermission='granted';throw {code:'IPC_TIMEOUT',message:'notification permission receipt unavailable'};}return value;};});
+ await page.getByLabel('接收系统通知',{exact:true}).check();await expect(page.getByText('通知授权请求结果尚未确认；请重新检查系统状态，不会重复请求授权。',{exact:true})).toBeVisible();
+ await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();expect((await calls(page,'notification_enable')).length).toBe(1);
+ await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(page.locator('.ns-os-status').first()).toContainText('已允许');expect((await calls(page,'notification_enable')).length).toBe(1);expect(await calls(page,'autostart_set')).toEqual([]);
+});
+
+test('T8 repeated original-report read failures preserve cancel evidence and share a pending reread',async({page})=>{
+ await setup(page);await nav(page,'诊断').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.diagnosticsStayRunning=true;let reads=0;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='diagnostics_cancel'){w.calls.push({command,args});throw {code:'IPC_TIMEOUT',message:'cancel receipt missing: sent=true'};}if(command==='diagnostics_snapshot'){w.calls.push({command,args});if(++reads===1)throw {code:'IPC_TIMEOUT',message:'read failed: attempt=1'};return new Promise(resolve=>w.releaseRead=async()=>resolve(await invoke(command,args)));}return invoke(command,args);};});
+ await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.getByRole('button',{name:'取消诊断',exact:true}).click();const read=page.getByRole('button',{name:'重新读取原报告',exact:true});await read.click();
+ await expect(page.getByRole('alert').filter({hasText:'diagnostics_cancel'})).toContainText('IPC_TIMEOUT');await expect(page.getByRole('alert').filter({hasText:'diagnostics_snapshot'})).toContainText('IPC_TIMEOUT');
+ await read.click();await expect(read).toBeDisabled();await nav(page,'设置').click();await nav(page,'诊断').click();await expect(read).toBeDisabled();await page.evaluate(()=>(window as any).releaseRead());
+ expect((await calls(page,'diagnostics_start')).length).toBe(1);expect((await calls(page,'diagnostics_cancel')).length).toBe(1);expect(new Set((await calls(page,'diagnostics_snapshot')).map((c:any)=>c.args.id)).size).toBe(1);
+});
+
+test('T8 export waiting and unknown receipts survive navigation and translate with the app language',async({page})=>{
+ await setup(page);await completeReport(page);await page.evaluate(()=>{const w=window as any;w.downloads=[];HTMLAnchorElement.prototype.click=function(){w.downloads.push(this.href);};});
+ await page.getByRole('button',{name:'导出脱敏报告',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认导出',exact:true}).click();await expect(page.getByText('正在等待报告下载结果…',{exact:true})).toBeVisible();
+ await nav(page,'设置').click();await tab(page,'通用').click();await page.getByLabel('语言',{exact:true}).selectOption('en');await nav(page,'Diagnostics').click();await expect(page.getByText('Waiting for the report download result…',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Export sanitized report',exact:true})).toBeDisabled();
+ await page.clock.runFor(30001);await expect(page.getByRole('status')).toContainText('30000');expect((await calls(page,'diagnostics_export')).length).toBe(1);
+ await nav(page,'Settings').click();await nav(page,'Diagnostics').click();await expect(page.getByRole('status')).toContainText('30000');
+});
+
+test('T8 successful upstream network tests retain the separate Hive failure and actual targets',async({page})=>{
+ await setup(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='diagnostics_start'){const r=value.result.report;r.state='completed';r.finished_at=r.started_at;r.checks=[{id:'hive',platform:null,status:'fail',code:'http_rejected',observed_at:r.started_at,evidence:{http_status:'503',path:'/api/bee/identity'},next_action:'overview'}];}if(command==='network_test')value.result.network_test.checks.forEach((check:any,index:number)=>check.http_status=index===0?null:index===1?401:429);return value;};});
+ await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await nav(page,'设置').click();await page.getByRole('button',{name:'测试连接',exact:true}).click();
+ const result=page.locator('.ns-test');await expect(result).toContainText('HTTP 401');await expect(result).toContainText('HTTP 429');await expect(result).toContainText('不检查 Hive');await expect(result).toContainText('GET https://chatgpt.com/backend-api/wham/usage');await expect(result).toContainText('GET https://api.anthropic.com/api/oauth/profile');
+ await expect(page.getByRole('alert')).toContainText('Hive 拒绝了本次请求（HTTP 503）');await expect(page.locator('.desktop-side-status')).not.toHaveText('可接单');
+ expect(await calls(page,'network_apply_saved')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+});
+
+test('T8 lost autostart receipt keeps the last registration separate from the new desired choice',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='autostart_set')throw {code:'IPC_TIMEOUT',message:'autostart accepted; receipt lost'};return value;};});
+ const desired=page.getByLabel('登录系统后启动 Bee',{exact:true});await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();await expect(page.locator('.ns-os-status').last()).toContainText('上次确认的系统登记');await expect(page.locator('.ns-os-status').last()).toContainText('未登记');
+ await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(page.locator('.ns-os-status').last()).toContainText('已登记');await expect(desired).toBeEnabled();expect((await calls(page,'autostart_set')).length).toBe(1);
 });

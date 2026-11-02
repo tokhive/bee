@@ -44,3 +44,12 @@ test('network client preserves failed save and failed apply snapshots',async()=>
  assert.deepEqual(await client.applySaved(true),failed);
  assert.deepEqual(await client.saveProxy({proxy:'',origin:null,expectedRevision:0}),preferences);
 });
+
+test('network stage feedback preserves concrete producer cause while naming only its proven failed stage',async()=>{
+ const {presentFailure}=await import('../src/presentation/problems.ts');
+ const {normalizeFailure}=await import('../src/system/failures.ts');
+ for(const check of ['network_stop','network_configure','network_configure_readback','network_restore']){
+  const problem=presentFailure(normalizeFailure({code:'RUNTIME_TIMEOUT',message:'owned runtime timed out: actual=40000ms required=30000ms',details:{check,observed_at:'2026-10-30T12:00:00Z',evidence:{actual:'40000',required:'30000'}}},'network_apply'),'en');
+  assert.match(problem.summary,/stop|configuration|restor/i);assert.match(problem.details,/actual=40000ms/);assert.match(problem.details,/RUNTIME_TIMEOUT/);assert.equal(problem.action,null);
+ }
+});

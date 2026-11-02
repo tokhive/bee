@@ -1,4 +1,4 @@
-import {decodeBridgeError,throwBridgeError} from './failures.ts';
+import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
 import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
@@ -90,28 +90,63 @@ export function decodeDiagnosticExport(value:unknown,instance:string):Diagnostic
  if(typeof e.truncated!=='boolean'||!Array.isArray(e.truncated_sections)||e.truncated_sections.some(s=>s!=='logs'&&s!=='checks')||new Set(e.truncated_sections).size!==e.truncated_sections.length||e.truncated!==(e.truncated_sections.length>0))invalid('export truncation explanation rejected');
  if(new TextEncoder().encode(JSON.stringify(e)).byteLength>DIAGNOSTIC_EXPORT_BYTES)invalid('export exceeds byte limit=5242880');return structuredClone(e) as unknown as DiagnosticExport;
 }
-export interface DiagnosticsClient {start():Promise<DiagnosticReport>;snapshot(id:string):Promise<DiagnosticReport>;cancel(id:string):Promise<DiagnosticReport>;logs(query:LogQuery):Promise<LogPage>;export(reportId:string,includeLogs:boolean):Promise<DiagnosticExport>;setContext(networkRevision:number,runId?:string|null,bindingRevision?:number):void;getSnapshot():DiagnosticReport|null}
+export type DiagnosticDownloadState='idle'|'generating'|'waiting'|'completed'|'initiated'|'unconfirmed'|'failed';
+export interface DiagnosticSession {start:'idle'|'pending'|'unknown';cancel:'idle'|'pending'|'unknown';read:'idle'|'reading'|'paused';failure:UiFailure|null;readFailure:UiFailure|null;download:DiagnosticDownloadState;downloadFailure:UiFailure|null}
+const emptySession=():DiagnosticSession=>({start:'idle',cancel:'idle',read:'idle',failure:null,readFailure:null,download:'idle',downloadFailure:null});
+export interface DiagnosticsClient {start():Promise<DiagnosticReport>;snapshot(id:string):Promise<DiagnosticReport>;cancel(id:string):Promise<DiagnosticReport>;logs(query:LogQuery):Promise<LogPage>;export(reportId:string,includeLogs:boolean):Promise<DiagnosticExport>;download(reportId:string,includeLogs:boolean,deliver:(payload:DiagnosticExport)=>Promise<'completed'|'initiated'|'unconfirmed'>):Promise<void>;setContext(networkRevision:number,runId?:string|null,bindingRevision?:number):void;getSnapshot():DiagnosticReport|null;getSession():DiagnosticSession;subscribe(listener:()=>void):()=>void}
 export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|undefined,initialNetworkRevision=0,initialRunId?:string|null,initialBindingRevision=0):DiagnosticsClient{
  if(instance!==undefined)digest(instance,32,'instance');integer(initialNetworkRevision,'network revision');if(initialRunId!==undefined&&initialRunId!==null)digest(initialRunId,32,'run id');
  integer(initialBindingRevision,'binding revision');
- let bindingRevision=initialBindingRevision;
- let networkRevision=initialNetworkRevision,runId=initialRunId,epoch=0,cached:DiagnosticReport|null=null,starting=false;
+ let bindingRevision=initialBindingRevision,networkRevision=initialNetworkRevision,runId=initialRunId,epoch=0,reportGeneration=0,cached:DiagnosticReport|null=null,session=emptySession();
+ let reading:Promise<DiagnosticReport>|null=null;
+ const listeners=new Set<()=>void>(),emit=()=>listeners.forEach(fn=>fn());
+ const update=(patch:Partial<DiagnosticSession>)=>{session={...session,...patch};emit();};
  const current=(generation:number)=>{if(generation!==epoch)invalid('result context changed while request was pending');};
+ const currentReport=(generation:number,reportSequence:number)=>{current(generation);if(reportSequence!==reportGeneration)invalid('report superseded while request was pending');};
+ const ownsReport=(generation:number,reportSequence:number)=>generation===epoch&&reportSequence===reportGeneration;
+ const owned=()=>{if(instance===undefined)invalid('management instance is missing; report actions require a verified current child');};
  const gate=(r:DiagnosticReport)=>{if(r.binding_revision!==bindingRevision)invalid('report binding revision differs from current context');if(r.network_revision!==networkRevision)invalid('report network revision differs from current context');if(runId!==undefined&&r.run_id!==runId)invalid('report run differs from current context');};
  async function request(command:string,args:Record<string,unknown>,id?:string){
-  if(instance===undefined)invalid('management instance is missing; report actions require a verified current child');
-  if(id!==undefined)digest(id,48,'report id');const generation=epoch;
-  const r=decodeDiagnosticReport(await invoke(command,args),instance);current(generation);gate(r);
+  owned();if(id!==undefined)digest(id,48,'report id');const generation=epoch,reportSequence=reportGeneration;
+  const r=decodeDiagnosticReport(await invoke(command,args),instance!);currentReport(generation,reportSequence);gate(r);
   if(id!==undefined&&r.id!==id)invalid('report id differs from requested id');
   if(cached?.id===r.id){if(cached.run_id!==r.run_id)invalid('report run changed');if(cached.state!=='running'&&r.state==='running')invalid('terminal report cannot regress to running');}
-  cached=r;return structuredClone(r);
+  cached=r;emit();return structuredClone(r);
+ }
+ async function exportPayload(reportId:string,includeLogs:boolean){
+  owned();digest(reportId,48,'report id');if(typeof includeLogs!=='boolean')invalid('includeLogs requires boolean');if(!cached||cached.id!==reportId)invalid('export report id requires current cached report');gate(cached);const generation=epoch,reportSequence=reportGeneration;
+  const e=decodeDiagnosticExport(await invoke('diagnostics_export',{reportId,includeLogs}),instance!);currentReport(generation,reportSequence);gate(e.report);if(e.report.id!==reportId)invalid('export report id differs from requested id');if(!includeLogs&&e.logs.length)invalid('report-only export unexpectedly contains logs');return e;
  }
  return {
-  async start(){if(starting)invalid('diagnostic start already pending');starting=true;try{return await request('diagnostics_start',{});}finally{starting=false;}},
-  snapshot(id){return request('diagnostics_snapshot',{id},id);},cancel(id){return request('diagnostics_cancel',{id},id);},
+  async start(){
+   owned();if(session.start!=='idle'||cached?.state==='running')invalid(`diagnostic start blocked: start=${session.start} report=${cached?.state??'none'}`);
+   const generation=epoch,reportSequence=++reportGeneration;cached=null;reading=null;update({...emptySession(),start:'pending'});
+   try{const r=await request('diagnostics_start',{});update({start:'idle'});return r;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotSent(failure)?'idle':'unknown',failure});}throw cause;}
+  },
+  async snapshot(id){
+   owned();digest(id,48,'report id');if(!cached||cached.id!==id)invalid('snapshot requires the original cached report ID');
+   if(reading)return reading;
+   const generation=epoch,reportSequence=reportGeneration;update({read:'reading'});
+   const task=(async()=>{try{const r=await request('diagnostics_snapshot',{id},id);update({read:'idle',readFailure:null,...(r.state!=='running'?{cancel:'idle',failure:null}:session.cancel==='unknown'?{}:{failure:null})});return r;}
+    catch(cause){if(ownsReport(generation,reportSequence))update({read:'paused',readFailure:normalizeFailure(cause,'diagnostics_snapshot')});throw cause;}
+    finally{if(ownsReport(generation,reportSequence))reading=null;}})();reading=task;return task;
+  },
+  async cancel(id){
+   owned();digest(id,48,'report id');if(!cached||cached.id!==id||cached.state!=='running'||session.cancel!=='idle')invalid(`diagnostic cancel blocked: cancel=${session.cancel} report=${cached?.state??'none'}`);
+   const generation=epoch,reportSequence=reportGeneration;update({cancel:'pending',failure:null});
+   try{const r=await request('diagnostics_cancel',{id},id);update({cancel:r.state==='running'?'unknown':'idle',read:r.state==='running'?'paused':'idle',failure:null});return r;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotSent(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
+  },
   async logs(query){object(query,['cursor','limit','module','platform','level'],'log query');cursor(query.cursor);if(!Number.isInteger(query.limit)||query.limit<1||query.limit>200)invalid('log query limit requires 1..200');enumValue(query.module,[null,...modules],'log query module');enumValue(query.platform,[null,'openai','claude'],'log query platform');enumValue(query.level,[null,...levels],'log query level');const generation=epoch;const page=decodeLogPage(await invoke('diagnostic_logs',{query}));current(generation);return page;},
-  async export(reportId,includeLogs){if(instance===undefined)invalid('management instance is missing; report actions require a verified current child');digest(reportId,48,'report id');if(typeof includeLogs!=='boolean')invalid('includeLogs requires boolean');if(!cached||cached.id!==reportId)invalid('export report id requires current cached report');gate(cached);const generation=epoch;const e=decodeDiagnosticExport(await invoke('diagnostics_export',{reportId,includeLogs}),instance);current(generation);gate(e.report);if(e.report.id!==reportId)invalid('export report id differs from requested id');if(!includeLogs&&e.logs.length)invalid('report-only export unexpectedly contains logs');return e;},
-  setContext(nextRevision,nextRunId,nextBindingRevision=bindingRevision){integer(nextBindingRevision,'binding revision');integer(nextRevision,'network revision');if(nextRunId!==undefined&&nextRunId!==null)digest(nextRunId,32,'run id');if(nextRevision!==networkRevision||nextRunId!==runId||nextBindingRevision!==bindingRevision){bindingRevision=nextBindingRevision;networkRevision=nextRevision;runId=nextRunId;epoch++;cached=null;}},
-  getSnapshot(){return cached?structuredClone(cached):null;},
+  export:exportPayload,
+  async download(reportId,includeLogs,deliver){
+   if(['generating','waiting'].includes(session.download))invalid(`report download already pending: state=${session.download}`);
+   const generation=epoch,reportSequence=reportGeneration;update({download:'generating',downloadFailure:null});
+   try{const payload=await exportPayload(reportId,includeLogs);currentReport(generation,reportSequence);update({download:'waiting'});const result=await deliver(payload);currentReport(generation,reportSequence);update({download:result});}
+   catch(cause){if(ownsReport(generation,reportSequence))update({download:'failed',downloadFailure:normalizeFailure(cause,'diagnostics_download')});throw cause;}
+  },
+  setContext(nextRevision,nextRunId,nextBindingRevision=bindingRevision){integer(nextBindingRevision,'binding revision');integer(nextRevision,'network revision');if(nextRunId!==undefined&&nextRunId!==null)digest(nextRunId,32,'run id');if(nextRevision!==networkRevision||nextRunId!==runId||nextBindingRevision!==bindingRevision){bindingRevision=nextBindingRevision;networkRevision=nextRevision;runId=nextRunId;epoch++;cached=null;reading=null;session=emptySession();emit();}},
+  getSnapshot(){return cached?structuredClone(cached):null;},getSession(){return structuredClone(session);},subscribe(listener){listeners.add(listener);return()=>{listeners.delete(listener);};},
  };
 }

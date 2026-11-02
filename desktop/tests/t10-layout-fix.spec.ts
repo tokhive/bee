@@ -1,5 +1,5 @@
 import {test,expect,type Page,type TestInfo,type Locator} from '@playwright/test';
-import {writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync} from 'node:fs';
 import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
 
 const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('button',{name,exact:true});
@@ -133,12 +133,36 @@ for(const mode of ['unread','empty','loading','filtered-rotation'])test('G05-log
  await zeroWrites(page);expect(await calls(page,'diagnostics_start')).toEqual([]);await evidence(page,info,'G05-logs-'+mode,{mode,manualRead:mode!=='unread'});
 });
 
+test('final-fix-runtime-consumer-keeps-only-unrecovered-platform-failures',async({page},info)=>{
+ const facts=JSON.parse(readFileSync(new URL('./fixtures/synchronization-recovery.json',import.meta.url),'utf8'));
+ await install(page,{reasons:{openai:['manually_paused'],claude:['not_configured']}},{openai:selected('openai'),claude:accountFixture('claude')});
+ await page.addInitScript(detail=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.finalFixDetail=detail;w.finalFixRevision=0;w.paused.openai=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+  const result=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(result.result.runtime,{run_id:'a'.repeat(32),revision:++w.finalFixRevision,local:'running',connection:'connected',connection_detail:structuredClone(w.finalFixDetail)});return result;
+ };},facts.transitions.both_failed);
+ await ready(page);const runtime=page.getByRole('region',{name:'贡献运行',exact:true}),detail=runtime.locator('.native-connection-detail');
+ await expect(detail).toBeVisible();await detail.getByText('查看失败详情',{exact:true}).click();await expect(detail).toContainText('claude supply readback HTTP 503');
+ await page.evaluate(value=>(window as any).finalFixDetail=value,facts.transitions.claude_recovered);await page.clock.runFor(10001);
+ await expect(detail).toContainText('openai authorization readback differs');await expect(detail).not.toContainText('claude supply readback HTTP 503');
+ await expect(detail).toContainText('当前没有安排自动重连。');await expect(detail).not.toContainText('已安排重新连接');
+ await evidence(page,info,'final-fix-runtime-one-platform-unrecovered',{source:facts.source,source_sha256:facts.source_sha256,remaining:'openai'},detail);
+ await page.evaluate(value=>(window as any).finalFixDetail=value,facts.transitions.all_recovered);await page.clock.runFor(10001);
+ await expect(detail).toHaveCount(0);await expect(runtime).toContainText('Bee 运行中');
+ await expect(card(page)).toContainText('已手动暂停');await expect(card(page,'Claude')).toContainText('尚未接入 Claude 账号');
+ await expect(page.locator('main')).not.toContainText('openai authorization readback differs');await expect(page.locator('main')).not.toContainText('claude supply readback HTTP 503');
+ await zeroWrites(page);await evidence(page,info,'final-fix-runtime-recovered-paused',{source:facts.source,source_sha256:facts.source_sha256,coreReconnectsScheduled:0,businessWrites:0},runtime);
+});
+
 test('D06-initial-pairing-completed-stopped',async({page},info)=>{
  await preview(page,'device-pending');await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeVisible();
+ await expect(page.getByText('1 个已接入',{exact:true})).toBeVisible();
  await page.evaluate(()=>(window as any).__beePreviewApprove());await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
  await expect(page.getByText('owner@example.test',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'贡献运行',exact:true})).toContainText('Bee 未运行');
- expect(await page.evaluate(()=>Object.values((window as any).accounts).map((a:any)=>a.selection.state))).toEqual(['not_selected','not_selected']);
+ await expect(page.getByText('0 个已接入',{exact:true})).toBeVisible();
+ for(const platform of ['OpenAI','Claude'])await expect(card(page,platform)).toContainText('尚未接入');
+ for(const oldFact of ['bbbbbbbbbbbbbbbb','Plus','3%','2%'])await expect(page.locator('main')).not.toContainText(oldFact);
  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();await zeroWrites(page);await evidence(page,info,'D06-bound-stopped-no-selection',{initialStage:'pending',externalApproval:'simulated',finalStage:'bound',local:'stopped'});
+ await evidence(page,info,'D06-bound-stopped-accounts-visible',{actualRenderedAccountCount:0,platforms:['openai','claude'],oldFactsRemoved:true,local:'stopped'},card(page));
+ await evidence(page,info,'D06-bound-stopped-claude-visible',{actualRenderedAccountCount:0,local:'stopped'},card(page,'Claude'));
 });
 
 for(const [code,copy]of [['authorization_source_unchanged','官方登录已退出，但所选来源没有改变。'],['authorization_namespace_mismatch','所选登录位置与官方客户端登录位置不一致。']])test('L05-'+code,async({page},info)=>{

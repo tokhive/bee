@@ -1,0 +1,46 @@
+{
+  "source": "docs/desktop/evidence/2026-10-30-interaction-clarity/final-fix-green-scopes.log",
+  "source_sha256": "d854a1ab845ae75c50fb7ce9335c03b8dc36c07949059a3a32255ea0948520b2",
+  "transitions": {
+    "openai_failed": {
+      "failure": {
+        "code": "synchronization_failed",
+        "stage": "synchronize",
+        "occurred_at": "2026-11-02T21:05:49.258006Z",
+        "message": "openai authorization readback differs",
+        "evidence": {
+          "target_origin": "https://hive.test"
+        }
+      },
+      "retry": "idle",
+      "next_retry_at": null
+    },
+    "both_failed": {
+      "failure": {
+        "code": "synchronization_failed",
+        "stage": "synchronize",
+        "occurred_at": "2026-11-02T21:05:49.258375Z",
+        "message": "claude supply readback HTTP 503",
+        "evidence": {
+          "target_origin": "https://hive.test"
+        }
+      },
+      "retry": "idle",
+      "next_retry_at": null
+    },
+    "claude_recovered": {
+      "failure": {
+        "code": "synchronization_failed",
+        "stage": "synchronize",
+        "occurred_at": "2026-11-02T21:05:49.258006Z",
+        "message": "openai authorization readback differs",
+        "evidence": {
+          "target_origin": "https://hive.test"
+        }
+      },
+      "retry": "idle",
+      "next_retry_at": null
+    },
+    "all_recovered": null
+  }
+}

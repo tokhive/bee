@@ -48,7 +48,7 @@ struct Envelope {
     notifications: Snapshot,
 }
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: "NOTIFICATION_REPLY_INVALID".into(),
         message: message.into(),
     }
@@ -157,7 +157,7 @@ fn sampled(
         || reply.instance != expected
         || reply.protocol != 1
     {
-        return Err(BridgeError{code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification sample discarded: current management instance/startup gate differs from the ready instance that began this poll".into()});
+        return Err(BridgeError{ details: None,code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification sample discarded: current management instance/startup gate differs from the ready instance that began this poll".into()});
     }
     decode(&reply.result)
 }
@@ -268,7 +268,7 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
             let status=worker_bridge.status();
             let startup_ready=worker_app.state::<crate::experience::StartupGate>().check().is_ok();
             if ready_instance(&status,startup_ready)? != Some(instance.as_str()) {
-                return Err(BridgeError{code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification submission blocked: management instance/startup gate changed while scheduling native reconciliation".into()});
+                return Err(BridgeError{ details: None,code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification submission blocked: management instance/startup gate changed while scheduling native reconciliation".into()});
             }
             let preferences=worker_app.state::<PreferencesStore>().read();
             let service=worker_app.state::<NotificationService>();
@@ -277,7 +277,7 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
         match result {
             Ok(Ok(()))=>{},
             Ok(Err(error))=>retain(&app,error),
-            Err(error)=>retain(&app,BridgeError{code:"NOTIFICATION_WORKER_FAILED".into(),message:format!("notification native worker did not complete: cancelled={} panicked={}; future polling remains enabled",error.is_cancelled(),error.is_panic())}),
+            Err(error)=>retain(&app,BridgeError{ details: None,code:"NOTIFICATION_WORKER_FAILED".into(),message:format!("notification native worker did not complete: cancelled={} panicked={}; future polling remains enabled",error.is_cancelled(),error.is_panic())}),
         }
     }
 }

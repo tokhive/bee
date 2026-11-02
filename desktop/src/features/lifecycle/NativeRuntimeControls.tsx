@@ -1,3 +1,4 @@
+import {FailureNotice} from '../../components/ProblemNotice';
 import {useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {CirclePause, Play, Square, Radio, Check, Pause} from 'lucide-react';
@@ -26,7 +27,8 @@ export function NativeRuntimeControls({runtime,deviceReady=true}:{runtime:Runtim
   </div>
   <div className="health native-runtime-health"><span>{confirmed&&running?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?running?'Bee 运行中':'Bee 未运行':'Bee 状态待确认')}</span><span>{confirmed&&view.connection==='connected'?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(confirmed?connectionCopy[view.connection]:'Hive 状态待确认')}</span></div>
   {(uncertain||error||runtime.stalled)&&<p role="status" className="runtime-note">{t('贡献状态待确认，正在自动核对…')}</p>}
-  {confirmed&&view.operation?.error&&<p role="alert" className="runtime-note">{view.operation.error.message}</p>}
+  {error&&<FailureNotice failure={error} check="runtime_operation"/>}
+  {confirmed&&view.operation?.error&&<FailureNotice failure={view.operation.error} check="runtime_operation"/>}
   {view?.stop_receipt&&<p className="runtime-note">{t(view.stop_receipt.workers_stopped&&view.stop_receipt.intent_saved&&view.stop_receipt.session_clean?'停止已确认，下次打开保持停止。':'本机已尝试停止，但保存或清理结果未确认。')}</p>}
  </section>;
 }

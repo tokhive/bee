@@ -1,3 +1,6 @@
+import {formatDate,currentLocale} from '../../i18n/index';
+import {FailureNotice} from '../../components/ProblemNotice';
+import type {NavigationTarget} from '../../app/navigation';
 import {useEffect,useState} from 'react';
 import {ArrowRight} from 'lucide-react';
 import type {AccountError,AccountPlatform} from '../../system/accounts';
@@ -11,9 +14,9 @@ import {accountPresentation} from './accountPresentation';
 import {NativeAccountActions,AccountOperationStatus} from './NativeAccountActions';
 import {AccountQuota,AccountCheckStatus,useAccountClock} from './AccountDisplay';
 // Detailed diagnostic evidence remains available to diagnostic consumers.
-export function AccountErrorView({error}:{error:AccountError}){return <p role="alert" className="device-error">{error.code}: {error.message}<br/>{error.check} {JSON.stringify(error.evidence)}</p>;}
-export const accountTime=(value:string|null)=>value?new Date(value).toLocaleString():t('未知');
-export function NativeAccountDetails({accounts,platform,runtime,supply}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply}){
+export function AccountErrorView({error}:{error:AccountError}){return <FailureNotice failure={error} check="account_operation"/>;}
+export const accountTime=(value:string|null)=>value?formatDate(value,currentLocale()):t('未知');
+export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigate}:{accounts:AccountsModel;onNavigate?:(target:NavigationTarget)=>void;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply}){
  const label=platform==='openai'?'OpenAI':'Claude',snapshot=accounts.views[platform];
  const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now);
  const defaults=accounts.defaults?.platforms.find(d=>d.platform===platform);
@@ -31,11 +34,11 @@ export function NativeAccountDetails({accounts,platform,runtime,supply}:{account
    <label>{t('自定义目录')}<input disabled={blocked} placeholder={defaults?.directory??t('默认目录')} value={directory} onChange={e=>setDirectory(e.target.value)} onBlur={commitDirectory} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitDirectory();}}}/></label>
    <label>{t('存储方式')}<select disabled={blocked||!defaults} value={source.store} onChange={e=>accounts.edit(platform,{directory:directory||null,store:e.target.value})}>{defaults?.stores.map(v=><option key={v.store} value={v.store} disabled={!v.supported}>{t(storeNames[v.store]??v.store)}{v.supported?'':` (${t('暂不支持')})`}</option>)}</select></label>
    {accounts.busy[platform]&&!accountPending(snapshot)&&(accounts.dirty[platform]||!snapshot?.candidate.source)&&<p role="status">{t('正在读取已有登录…')}</p>}
-   {accounts.sourceReadFailed[platform]?<p role="alert">{t('无法读取凭证来源，请检查目录和访问权限；重新进入账号页会再次读取。')}</p>:accounts.dirty[platform]&&!accounts.busy[platform]&&<p>{t('来源已更改，等待自动读取。')}</p>}
+   {accounts.sourceReadFailed[platform]?<FailureNotice failure={accounts.sourceReadFailed[platform]} check="source_read" onNavigate={onNavigate}/>:accounts.dirty[platform]&&!accounts.busy[platform]&&<p>{t('来源已更改，等待自动读取。')}</p>}
    <p>{t('修改读取位置不会自动更换已接入账号。')}</p>
    {!defaults&&<p>{t('凭证读取方式暂不可用，正在自动核对。')}</p>}
   </details>
-  <AccountOperationStatus accounts={accounts} platform={platform}/>
+  <AccountOperationStatus accounts={accounts} platform={platform} onNavigate={onNavigate}/>
   <div className="account-detail-actions"><NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="detail"/></div>
   {runtime.view?.local==='running'&&<p className="feature-note">{t('重新登录前请先停止贡献。')}</p>}
  </DetailSheet>;

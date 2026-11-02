@@ -1,3 +1,4 @@
+import {decodeBridgeError,throwBridgeError} from './failures.ts';
 import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
@@ -68,9 +69,9 @@ export function decodeDiagnosticReport(reply:unknown,instance:string):Diagnostic
  if(!reply||typeof reply!=='object'||(reply as {instance?:unknown}).instance!==instance)invalid('reply instance differs from current child');
  const result=(reply as {result?:unknown}).result;
  if(result&&typeof result==='object'&&'error'in result){
-  const e=object(object(result,['error'],'result').error,['code','message'],'error');
+  const e=decodeBridgeError(object(result,['error'],'result').error,'DIAGNOSTICS_REPLY_INVALID');
   if(e.code!=='DIAGNOSTICS_OPERATION_FAILED'||typeof e.message!=='string'||e.message.length>1024)invalid('operation error envelope rejected');
-  throw new Error(`${e.code}: ${e.message}`);
+  throwBridgeError(e,'DIAGNOSTICS_REPLY_INVALID');
  }
  return report(object(result,['report'],'result').report,instance);
 }

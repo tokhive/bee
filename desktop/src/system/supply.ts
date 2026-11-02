@@ -1,3 +1,4 @@
+import {throwBridgeError} from './failures.ts';
 import type { DeviceInvoke } from './device';
 export type SupplyPlatform = 'openai' | 'claude';
 export interface SupplyBinding { hive: string; deviceId: string }
@@ -30,10 +31,7 @@ export function decodeSupplyReply(reply: unknown, binding: SupplyBinding, platfo
  const { result } = reply;
  if ('error' in result) {
   exact(result, ['error'], 'result');
-  if (!record(result.error)) return invalid(`result.error actual_type=${kind(result.error)}; required=object`);
-  exact(result.error, ['code','message'], 'result.error');
-  for(const field of ['code','message']) if(typeof result.error[field] !== 'string') return invalid(`result.error.${field} actual_type=${kind(result.error[field])}; required=string`);
-  throw new Error(`${result.error.code}: ${result.error.message}`);
+  throwBridgeError(result.error,'SUPPLY_REPLY_INVALID');
  }
  exact(result, ['supply'], 'result');
  const view = result.supply;

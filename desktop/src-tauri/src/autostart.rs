@@ -12,7 +12,7 @@ pub trait Registrar {
     fn registered(&self) -> Result<bool, BridgeError>;
 }
 fn problem(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError {
+    BridgeError { details: None,
         code: code.into(),
         message: message.into(),
     }

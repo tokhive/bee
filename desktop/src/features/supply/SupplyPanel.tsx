@@ -1,3 +1,5 @@
+import {formatDate,currentLocale} from '../../i18n/index';
+import {FailureNotice} from '../../components/ProblemNotice';
 import {platforms,supplyFresh,supplyProgress,type SharedSupply} from './useSupply';
 import { t } from '../../i18n/index';
 export const reasonCopy: Record<string,string> = {
@@ -20,9 +22,9 @@ export function SupplyPanel({supply}: {supply:SharedSupply}) {
    return <section className="supply-card" aria-label={platform==='openai'?'OpenAI':'Claude'} key={platform}>
     <h3>{platform==='openai'?'OpenAI':'Claude'}</h3>
     <p className="supply-state" role={progress?'status':undefined}>{t(current ? view!.paused?'已手动暂停':view!.ready?'满足接单条件（Hive 报告）':'不满足接单条件' : progress?progressCopy:errors[platform]?'本次结果未确认':'核对已过期')}</p>
-    {errors[platform]&&<p role="alert" className="device-error">{t('平台结果未确认；将自动重新读取报告，不会自动重试修改。')}<br/>{errors[platform]}</p>}
+    {errors[platform]&&<FailureNotice failure={errors[platform]} check="supply_read"/>}
     {current&&view!.reasons.length>0&&<ul className="supply-reasons">{view!.reasons.filter(reason=>reason!=='manually_paused').map(reason=><li key={reason}>{t(reasonCopy[reason])}</li>)}</ul>}
-    <p className="muted supply-time">{t('最后核对时间')}: {view?<time dateTime={view.checked_at}>{new Date(view.checked_at).toLocaleString()}</time>:t('尚未核对')}</p>
+    <p className="muted supply-time">{t('最后核对时间')}: {view?<time dateTime={view.checked_at}>{formatDate(view.checked_at,currentLocale())}</time>:t('尚未核对')}</p>
     <button disabled={blocked||!current||!model.canWrite(platform,!view?.paused)} onClick={()=>{if(current)void model.write(platform,!view!.paused);}}>{t(view?.paused?'恢复':'暂停')}</button>
    </section>;
   })}</div>

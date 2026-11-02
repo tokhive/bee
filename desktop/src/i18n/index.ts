@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Preferences } from '../client/types';
-import { en } from './en';
-import { zh } from './zh';
+import { en } from './en.ts';
+import { zh } from './zh.ts';
 export const missingTranslations = new Set<string>();
 let language: 'zh' | 'en' = 'zh';
 /** Presentation only: callers pass visible copy, never input values, IDs, URLs or money. */
@@ -24,3 +24,13 @@ export function useLanguage(preference: Preferences['language']) {
   document.documentElement.lang = language;
   return language;
 }
+
+export function currentLocale():'zh'|'en' {return language;}
+export function translate(value:string,locale:'zh'|'en',params?:Record<string,string|number>):string {
+ const result=locale==='zh'?(zh[value]??value):(en[value]??value);
+ return params?result.replace(/\{(\w+)\}/g,(match,key)=>String(params[key]??match)):result;
+}
+export function formatDate(value:string|number|Date,locale:'zh'|'en',options:Intl.DateTimeFormatOptions={}):string {
+ return new Intl.DateTimeFormat(locale==='zh'?'zh-CN':'en-US',{dateStyle:'medium',timeStyle:'medium',...options}).format(new Date(value));
+}
+export function formatNumber(value:number,locale:'zh'|'en',options:Intl.NumberFormatOptions={}):string {return new Intl.NumberFormat(locale==='zh'?'zh-CN':'en-US',options).format(value);}

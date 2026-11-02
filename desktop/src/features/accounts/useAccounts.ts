@@ -1,27 +1,28 @@
+import type {UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
 import type {AuthorizeClient} from '../../system/authorize';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
-const noAccountErrors:Partial<Record<AccountPlatform,string>>={};
-export interface CoordinatedAccounts {defaults?:AccountDefaults;error:string;accountErrors?:Partial<Record<AccountPlatform,string>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:string;accountErrors:Partial<Record<AccountPlatform,string>>;busy:boolean}}
+const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
+export interface CoordinatedAccounts {defaults?:AccountDefaults;error:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
- const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState('');
+ const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
  useEffect(()=>{if(!enabled||!autoRead)return;const timer=setInterval(()=>setClock(v=>v+1),10000);return()=>clearInterval(timer);},[enabled,autoRead]);
- const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,string>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
+ const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
  const [writeBusy,setWriteBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  // An ignored old reply or unchanged error must still schedule the next poll.
  const [settled,setSettled]=useState({openai:0,claude:0});
- const [sourceReadFailed,setSourceReadFailed]=useState<Partial<Record<AccountPlatform,string>>>({});
+ const [sourceReadFailed,setSourceReadFailed]=useState<Partial<Record<AccountPlatform,UiFailure>>>({});
  const autoReadPreviously=useRef(false);
  const detectedSources=useRef(new Map<string,string>()),officialReads=useRef(new Map<string,string>());
  const epochs=useRef({openai:0,claude:0}),active=useRef(true),running=useRef({openai:false,claude:false});
  const requests=useRef<Partial<Record<AccountPlatform,Promise<void>>>>({}),latest=useRef<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),verified=useRef({openai:false,claude:false});
  const revisions=useRef({openai:-1,claude:-1}),unconfirmedRevisions=useRef<Partial<Record<AccountPlatform,number>>>({});
- const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??'',accountErrors=coordinated?.accountErrors??noAccountErrors;
+ const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??null,accountErrors=coordinated?.accountErrors??noAccountErrors;
  const savedDefaults=external?coordinated?.defaults:defaults;
  const currentRuntime=useRef(runtime);currentRuntime.current=runtime;
  const observedRuntime=useRef(runtime);
@@ -48,7 +49,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(external&&!accountPending(next)&&(minimum===undefined?resolved:next.revision>minimum)){
     delete unconfirmedRevisions.current[p];setUncertain(v=>({...v,[p]:false}));
    }
-   if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]?{...v,[p]:''}:v);
+   if(external&&(observationChanged||resolved)&&next.revision>=revisions.current[p]&&!sourceReadFailed[p])setErrors(v=>v[p]?{...v,[p]:undefined}:v);
    if(resolved)delete resolutions.current[p];
   }
   observedRuntime.current=runtime;
@@ -68,7 +69,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
      if(!current())return;
      if(result)central.current?.recordReceipt?.(platform,result.revision);
      const view=result&&'selection'in result?result:undefined;
-     if(view&&publish(platform,view,detected))setErrors(v=>({...v,[platform]:''}));
+     if(view&&publish(platform,view,detected))setErrors(v=>({...v,[platform]:undefined}));
      if(refreshCentral){
       resolutions.current[platform]={previous:currentRuntime.current,detected};
       if(write)setUncertain(v=>({...v,[platform]:true}));
@@ -79,7 +80,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
       delete unconfirmedRevisions.current[platform];setUncertain(v=>({...v,[platform]:false}));
      }
     }catch(cause){if(current()){
-     verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause)}));
+     verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause,'account_operation')}));
      if(write){unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));pauseCentral?.();}
     }}finally{if(active.current&&epoch===epochs.current[platform]){running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSettled(v=>({...v,[platform]:v[platform]+1}));}}
    })().finally(()=>{if(requests.current[platform]===request)delete requests.current[platform];});
@@ -103,17 +104,17 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    }
    if(!verified.current[platform]||expected!==identity(latest.current[platform]))return;
    await execute();
-  })().catch(cause=>{if(active.current&&epoch===epochs.current[platform]&&central.current?.generation?.()===started){verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause)}));}}).finally(()=>{writing.current[platform]=false;if(active.current)setWriteBusy(v=>({...v,[platform]:false}));});
+  })().catch(cause=>{if(active.current&&epoch===epochs.current[platform]&&central.current?.generation?.()===started){verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause,'account_operation')}));}}).finally(()=>{writing.current[platform]=false;if(active.current)setWriteBusy(v=>({...v,[platform]:false}));});
  },[publish,refreshCentral,pauseCentral]);
  const detectLocal=useCallback(async(platform:AccountPlatform,source:AccountSource)=>{
   const epoch=epochs.current[platform];
   try{
    const view=await client!.detect({platform,...source,mode:'local'});
    // Source access failures are valid snapshots with candidate.error, not IPC rejections.
-   if(active.current&&epoch===epochs.current[platform])setSourceReadFailed(v=>({...v,[platform]:!view.candidate.source&&view.candidate.error?JSON.stringify(view.candidate.error):''}));
+   if(active.current&&epoch===epochs.current[platform])setSourceReadFailed(v=>({...v,[platform]:!view.candidate.source&&view.candidate.error?failure(view.candidate.error,'source_read'):undefined}));
    return view;
   }
-  catch(cause){if(active.current&&epoch===epochs.current[platform]){setSourceReadFailed(v=>({...v,[platform]:failure(cause)}));setDirty(v=>({...v,[platform]:true}));}throw cause;}
+  catch(cause){if(active.current&&epoch===epochs.current[platform]){setSourceReadFailed(v=>({...v,[platform]:failure(cause,'account_operation')}));setDirty(v=>({...v,[platform]:true}));}throw cause;}
  },[client]);
  const read=useCallback(async(platform:AccountPlatform,refresh:boolean,operationId?:string)=>{
   if(!client)return;
@@ -121,7 +122,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  },[client,run,authorizer,refreshCentral]);
  useEffect(()=>{
   if(!enabled||!client||external)return;let current=true;let timer:ReturnType<typeof setTimeout>|undefined;
-  const load=()=>{void client.defaults().then(v=>{if(current){setDefaults(v);setDefaultsError('');}},e=>{if(current){setDefaultsError(failure(e));timer=setTimeout(load,10000);}});};
+  const load=()=>{void client.defaults().then(v=>{if(current){setDefaults(v);setDefaultsError(null);}},e=>{if(current){setDefaultsError(failure(e,'account_defaults'));timer=setTimeout(load,10000);}});};
   load();
   for(const p of platforms)void read(p,true);
   return()=>{current=false;clearTimeout(timer);};
@@ -136,7 +137,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  useEffect(()=>poll('openai'),[enabled,views.openai,busy.openai,errors.openai,uncertain.openai,settled.openai,read,external]);
  useEffect(()=>poll('claude'),[enabled,views.claude,busy.claude,errors.claude,uncertain.claude,settled.claude,read,external]);
  useEffect(()=>{
-  if(autoRead&&!autoReadPreviously.current){for(const p of platforms)if(sourceReadFailed[p]){detectedSources.current.delete(p);setErrors(v=>({...v,[p]:''}));}}
+  if(autoRead&&!autoReadPreviously.current){for(const p of platforms)if(sourceReadFailed[p]){detectedSources.current.delete(p);setErrors(v=>({...v,[p]:undefined}));}}
   autoReadPreviously.current=autoRead;
  },[autoRead,sourceReadFailed]);
  useEffect(()=>{
@@ -170,7 +171,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;
    delete resolutions.current[platform];verified.current[platform]=false;
-   setSourceReadFailed(v=>({...v,[platform]:''}));client?.invalidate(platform);epochs.current[platform]++;running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSources(v=>({...v,[platform]:source}));setDirty(v=>({...v,[platform]:true}));setErrors(v=>({...v,[platform]:''}));
+   setSourceReadFailed(v=>({...v,[platform]:undefined}));client?.invalidate(platform);epochs.current[platform]++;running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSources(v=>({...v,[platform]:source}));setDirty(v=>({...v,[platform]:true}));setErrors(v=>({...v,[platform]:undefined}));
   },
   detect(platform:AccountPlatform,mode:'local'|'official'){if(client&&savedDefaults&&!centralError)void run(platform,()=>client.detect({platform,...sourceFor(platform),mode}),true);},
   refresh(platform:AccountPlatform){void read(platform,true,views[platform]?.operation?.kind==='authorize'?views[platform]?.operation?.id:undefined);},

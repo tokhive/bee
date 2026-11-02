@@ -361,3 +361,52 @@ nav button { border:1px solid transparent; }
 /* T5 state feedback must remain readable while full page presentation lands in T6–T8. */
 .native-shell .account-check-status,.native-shell .account-operation-status,.native-shell .runtime-note,.native-shell .account-list-status { font-size:12px; }
 .recovery-return { font-size:13px; }
+
+/* T6: shared status, device transactions and stable actions. */
+.native-runtime-summary { padding-bottom:24px; }
+.native-runtime-row { align-items:flex-start; gap:24px; }
+.native-runtime-title { gap:12px; }
+.native-runtime-title .run-mark { width:32px; height:32px; border-radius:8px; }
+.native-runtime-title .run-mark svg { width:18px; height:18px; }
+.native-runtime-title p { font-size:13px; max-width:60ch; }
+.native-runtime-row .ui-button { min-height:32px; font-size:13px; flex-shrink:0; }
+.native-runtime-health { font-size:12px; flex-wrap:wrap; }
+.runtime-note { font-size:12px; }
+.native-device-summary { max-width:none; margin:24px 0; padding-bottom:24px; border-bottom:1px solid var(--line); }
+.device-section-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-bottom:16px; }
+.device-section-heading h2 { font-size:16px; }
+.device-section-heading .ui-button { flex-shrink:0; }
+.native-device-summary .ui-button { min-height:32px; height:auto; font-size:13px; }
+.device-facts { padding:0; gap:0; }
+.device-facts p,.device-facts small { font-size:12px; }
+.device-facts strong { font-size:13px; }
+.device-note,.saved-device-context { font-size:12px; color:var(--muted); margin-block:12px; overflow-wrap:anywhere; }
+.device-transaction>p { margin-block:12px; }
+.device-transaction .pairing-phase { font-size:16px; font-weight:600; color:var(--ink); }
+.device-pairing-grid,.recovery-identities { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-block:24px; }
+.device-pairing-grid p,.device-pairing-grid small { display:block; font-size:12px; color:var(--muted); }
+.device-pairing-grid strong,.recovery-identities strong { display:block; font-size:13px; overflow-wrap:anywhere; }
+.device-pairing-grid .pair-code { font:600 24px ui-monospace,monospace; letter-spacing:.06em; user-select:all; margin-bottom:12px; }
+.device-url { font-size:13px; user-select:all; overflow-wrap:anywhere; }
+.device-pairing .settings-form { margin-block:24px; }
+.device-recovery-action { display:flex; align-items:flex-start; gap:24px; justify-content:space-between; margin-top:24px; }
+.device-recovery-action .ui-button { flex-shrink:0; }
+.preparation-steps { margin-block:24px; padding:16px 0; border-bottom:1px solid var(--line); }
+.preparation-steps h2 { font-size:13px; }
+.preparation-steps ol { display:flex; flex-wrap:wrap; gap:12px 24px; padding-left:18px; font-size:12px; color:var(--muted); margin-block:12px; }
+.preparation-steps li[aria-current=step] { color:var(--ink); font-weight:600; }
+.native-shell .side-note { font-size:12px; }
+.desktop-side-status[data-severity=error],.desktop-side-status[data-severity=warning] { color:var(--ink); }
+.problem-notice { margin-block:16px; display:grid; grid-template-columns:minmax(0,1fr) auto; gap:8px 24px; align-items:start; }
+.problem-notice>p,.problem-notice>details { grid-column:1; }
+.problem-notice>.ui-button { grid-column:2; grid-row:1 / span 2; min-height:32px; font-size:13px; }
+.problem-notice pre { overflow-wrap:anywhere; }
+@media(max-width:960px) { .device-pairing-grid,.recovery-identities { gap:16px; }.device-recovery-action { flex-wrap:wrap; }.device-recovery-action .ui-button { margin-left:auto; } }
+
+.native-runtime-title .run-mark { order:2; }
+.native-runtime-title>div { order:1; }
+
+.device-transaction-heading { display:flex; align-items:flex-start; justify-content:space-between; gap:24px; margin-block:12px; }
+.device-transaction-heading .ui-button { flex-shrink:0; }
+.device-transaction-heading .pairing-phase { margin:0; }
+@media(max-width:960px) { .device-transaction-heading { flex-wrap:wrap; }.device-transaction-heading .ui-button { margin-left:auto; } }

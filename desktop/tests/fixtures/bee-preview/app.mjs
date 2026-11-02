@@ -12,8 +12,8 @@ try{
  await installPreviewFixture(scene.id);
  step='加载正式 NativeApp';await import('/src/main.tsx');
  window.__beePreviewActivate();
- step=`导航 ${scene.page}`;(await until(()=>button(scene.page==='accounts'?'AI 账号':'概览'))).click();
- await until(()=>document.querySelector('.native-account-row'));
+ step=`导航 ${scene.page}`;if(scene.page==='accounts')(await until(()=>button('AI 账号')??button('AI Accounts'))).click();
+ await until(()=>document.querySelector('[data-nav-section=runtime]')||document.querySelector('.native-account-row'));
  if(scene.action){
   if(['detail','change','clear'].includes(scene.action)){
    step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label="OpenAI 详情"]'))).click();

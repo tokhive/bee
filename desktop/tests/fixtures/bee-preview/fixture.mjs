@@ -6,6 +6,8 @@ const hold=()=>new Promise(()=>{});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function installPreviewFixture(id){
  const scene=getScene(id),w=window;
+ const long=new URLSearchParams(location.search).has('long');
+ const origin=long?'https://'+['long-hive-address'.repeat(3),'pairing-verification'.repeat(2),'example'].join('.'):'https://hive.example';
  const phase=value=>{w.__beePreviewPhase=value;w.parent.postMessage({type:'bee-preview-phase',scene:scene.id,phase:value},location.origin);};
  const seeded=(platform,selected=true)=>{
   const a=accountFixture(platform),fingerprint=(platform==='openai'?'b':'c').repeat(64);
@@ -41,6 +43,15 @@ export async function installPreviewFixture(id){
  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
  let deviceStage=id==='device-unbound'?'unbound':id==='device-pending'?'pending':id==='device-expired'?'expired':'bound';
  let pairingExpiresAt=stamp(600000);
+ const recoveryPhases={'device-awaiting-confirmation':'awaiting_confirmation','device-creating':'creating','device-creation-unknown':'creation_unknown','device-redeeming':'redeeming','device-redemption-unknown':'redemption_unknown','device-saving':'saving','device-draining':'draining','recovery-pending':'pending','recovery-draining':'draining','recovery-creation-unknown':'creation_unknown','recovery-redemption-unknown':'redemption_unknown','recovery-owner':'awaiting_owner_confirmation','recovery-saving':'saving','recovery-completed':'completed'};
+ const oldIdentity={id:'dev-1',name:'Bee Desktop',owner_id:'owner-1',owner_email:'owner@example.test'};
+ const newIdentity={id:'dev-2',name:'Bee Desktop',owner_id:'owner-2',owner_email:'new-owner@example.test'};
+ const isRecovery=id.startsWith('recovery-');
+ let recovery=recoveryPhases[id]?{operation_id:'d'.repeat(48),revision:4,phase:recoveryPhases[id],old_identity:isRecovery?oldIdentity:null,new_identity:['saving','completed','awaiting_owner_confirmation'].includes(recoveryPhases[id])?newIdentity:null,pairing:['pending','draining','redeeming','redemption_unknown'].includes(recoveryPhases[id])?{code:'ABCD-EFGH',verification_url:origin+'/devices/pair?code=ABCD-EFGH',expires_at:pairingExpiresAt}:null,failure:id.endsWith('saving')?{code:'DEVICE_RECOVERY_BLOCKED',message:'atomic local save failed: permission denied; phase=saving',details:{check:'device_recovery_save',observed_at:stamp(0),evidence:{actual:'permission denied',required:'private configuration writable'}}}:null}:null;
+ if(recovery||id==='device-recovery-confirm')local='stopped';
+ const finishRecovery=()=>{for(const p of ['openai','claude']){const features=accounts[p].features;accounts[p]={...accountFixture(p),features};w.paused[p]=true;}local='stopped';revision++;runtimeOperation=null;};
+ if(isRecovery&&recovery?.phase==='completed')finishRecovery();
+ w.__beePreviewApprove=()=>{if(recovery){recovery={...recovery,revision:recovery.revision+1,phase:isRecovery?'awaiting_owner_confirmation':'completed',new_identity:newIdentity};}else deviceStage='bound';};
  const original=w.__TAURI_INTERNALS__.invoke;
  const instance=(await original('bridge_status')).metadata.instance;
  const reads={openai:0,claude:0};
@@ -61,19 +72,39 @@ export async function installPreviewFixture(id){
    const account=w.accounts.openai;
    if(account.selection.state==='selected'&&account.candidate.fingerprint&&account.candidate.fingerprint!==account.selection.fingerprint)reasons.push('codex_confirmation_required');
   }
-  return {hive:'https://hive.example',device_id:'dev-1',platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
+  return {hive:origin,device_id:recovery?.phase==='completed'?newIdentity.id:'dev-1',platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
  };
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
-  if(command==='preferences_read'){const result=await original(command,args);result.preferences.language='zh';result.preferences.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';return result;}
+  if(command==='preferences_read'){const result=await original(command,args);result.preferences.language=new URLSearchParams(location.search).get('locale')==='en'?'en':'zh';result.preferences.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';return result;}
+  if(command==='device_context'){
+   w.calls.push({command,args});
+   if(id==='device-unbound'||id==='device-loading')return {result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved configuration'}}};
+   const identity=recovery?.phase==='completed'?newIdentity:oldIdentity;
+   return {result:{context:{hive:origin,name:'Bee Desktop',device_id:id.startsWith('device-')&&deviceStage!=='bound'?null:identity.id,owner_id:id.startsWith('device-')&&deviceStage!=='bound'?null:identity.owner_id,binding_revision:recovery?.phase==='completed'?2:1}}};
+  }
+  if(command.startsWith('device_recovery_')){
+   w.calls.push({command,args});
+   if(command==='device_recovery_prepare')recovery={operation_id:'d'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:oldIdentity,new_identity:null,pairing:null,failure:null};
+   if(command==='device_recovery_confirm'){
+    if(args.operation_id!==recovery?.operation_id||args.expected_revision!==recovery?.revision)return businessError('DEVICE_RECOVERY_PRECONDITION','confirmation revision differs from current transaction');
+    recovery={...recovery,revision:recovery.revision+1,phase:args.decision==='adopt_owner'?'completed':'pending',pairing:args.decision==='adopt_owner'?null:{code:'ABCD-EFGH',verification_url:origin+'/devices/pair?code=ABCD-EFGH',expires_at:pairingExpiresAt}};
+    if(recovery.phase==='completed')finishRecovery();
+   }
+   return recovery&&isRecovery||recovery?.old_identity?{result:{recovery:clone(recovery)}}:businessError('DEVICE_RECOVERY_NONE','no credential recovery transaction exists');
+  }
   if(command==='device_status'||command==='device_begin'||command==='device_open'){
    w.calls.push({command,args});
-   if(id==='device-error')return businessError('DEVICE_OPERATION_FAILED','GET /device identity HTTP 503; preview upstream unavailable');
+   if(id==='device-loading')return hold();
+   if(id==='device-recovery-confirm'&&!recovery||isRecovery&&recovery?.phase!=='completed')return businessError('device_replaced','GET /api/bee/identity HTTP 401 device_replaced');
+   if(id==='device-error')return {result:{error:{code:'http_rejected',message:'GET /api/bee/identity HTTP 503; preview upstream unavailable'+(long?'; '+('retry-after observation unavailable; '.repeat(12)):''),details:{check:'device_identity',observed_at:stamp(0),evidence:{target_origin:origin,path:'/api/bee/identity',http_status:'503',response_body:'Hive upstream temporarily unavailable'}}}}};
    if(command==='device_begin'){deviceStage='pending';pairingExpiresAt=stamp(600000);}
-   if(command==='device_open'&&deviceStage==='pending')deviceStage='bound';
-   const state=deviceStage;
-   const device=state==='unbound'?{state}:{state,hive:'https://hive.example',name:'Bee Desktop'};
+   if(command==='device_open'&&recovery?.old_identity)return {result:{recovery:clone(recovery)}};
+   const state=recovery&&!recovery.old_identity?(recovery.phase==='completed'?'bound':['pending','draining','expired'].includes(recovery.phase)?recovery.phase:'pairing'):deviceStage;
+   const device=state==='unbound'?{state}:{state,hive:origin,name:'Bee Desktop'};
    if(state==='bound')device.identity={id:'dev-1',name:'Bee Desktop',owner_id:'owner-1',owner_email:'owner@example.test'};
-   if(state==='pending')Object.assign(device,{user_code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:pairingExpiresAt,poll_interval_seconds:2});
+   if(state==='pending'||state==='draining')Object.assign(device,{user_code:'ABCD-EFGH',verification_url:origin+'/devices/pair?code=ABCD-EFGH',expires_at:pairingExpiresAt,poll_interval_seconds:2});
+   if(recovery&&!recovery.old_identity)device.recovery=clone(recovery);
+   if(recovery?.phase==='completed')device.identity=newIdentity;
    return {result:{device}};
   }
   if(command==='runtime_start'){
@@ -91,7 +122,7 @@ export async function installPreviewFixture(id){
   if(command==='runtime_snapshot'){
    w.calls.push({command,args});
    if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
-   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?(id==='runtime-disconnected'?'disconnected':'connected'):local==='starting'?'connecting':'disconnected',connection_detail:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+   return {instance,result:{runtime:{run_id:local==='stopped'?null:'a'.repeat(32),revision,network_revision:0,observed_at:stamp(0),local,connection:local==='running'?({'runtime-disconnected':'reconnecting','runtime-connecting':'connecting','runtime-rejected':'rejected','runtime-occupied':'occupied'}[id]??'connected'):local==='starting'?'connecting':'disconnected',connection_detail:['runtime-disconnected','runtime-connecting','runtime-rejected','runtime-occupied'].includes(id)?{failure:{code:'http_rejected',stage:'connect',occurred_at:stamp(-2000),message:'Hive returned HTTP 503: capacity unavailable',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:id==='runtime-connecting'?'attempting':id==='runtime-disconnected'?'scheduled':'halted',next_retry_at:id==='runtime-disconnected'?stamp(12000):null}:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(command==='account_detect'||command==='account_snapshot'){
    w.calls.push({command,args});const p=args.request?.platform??args.platform;

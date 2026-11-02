@@ -1,6 +1,6 @@
 import {normalizeFailure,type UiFailure} from './failures.ts';
 import type {SystemBridge,BridgeStatus,StartupStatus} from './bridge';
-import type {DeviceClient,DeviceView,DeviceContext} from './device';
+import type {DeviceClient,DeviceView,DeviceContext,DeviceRecoveryView} from './device';
 import type {AccountFactory,AccountDefaults,AccountSnapshot,AccountPlatform} from './accounts';
 import type {SupplyFactory,SupplyView} from './supply';
 import type {RuntimeFactory,RuntimeSnapshot} from './runtime';
@@ -8,6 +8,7 @@ import type {DiagnosticReport} from './diagnostics';
 export interface RefreshStatus {state:'idle'|'reading'|'scheduled'|'blocked';nextRetryAt:string|null;lastConfirmedAt:string|null}
 export interface DesktopSnapshot {
  native:BridgeStatus;startup?:StartupStatus;deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;
+ recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;
  device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;
  accounts:Partial<Record<AccountPlatform,AccountSnapshot>>;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;
  supplies:Partial<Record<AccountPlatform,SupplyView>>;supplyErrors:Partial<Record<AccountPlatform,UiFailure>>;
@@ -31,7 +32,7 @@ export function createDesktopState(deps:DesktopDeps){
  const listeners=new Set<()=>void>();
  const publish=(next:Partial<DesktopSnapshot>)=>{if(disposed)return;state={...state,...next};listeners.forEach(fn=>fn());};
  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
- const reset=()=>({device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
+ const reset=()=>({recovery:undefined,recoveryError:null,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
  const acceptStartup=(next:StartupStatus)=>{
   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
   if(next.state!=='checking'){
@@ -80,8 +81,28 @@ export function createDesktopState(deps:DesktopDeps){
      epoch++;generation=epoch;pendingEpoch=generation;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;device=undefined;
      publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
     }else publish({deviceContext,bindingRevision,deviceContextFailure});
+    let recovery=state.recovery,recoveryError:UiFailure|null=null;
+    if(deps.device.recoveryStatus)try{
+     const nextRecovery=await deps.device.recoveryStatus();if(!current())return;
+     if(recovery&&(recovery.operation_id===nextRecovery.operation_id&&nextRecovery.revision<recovery.revision||recovery.operation_id!==nextRecovery.operation_id&&recovery.phase!=='completed'))throw {code:'DESKTOP_STALE_RESULT',message:'recovery observation conflicts with the current transaction; actual='+nextRecovery.operation_id+':'+nextRecovery.revision+' required='+recovery.operation_id+':'+recovery.revision,details:{check:'device_recovery_status',observed_at:new Date().toISOString(),evidence:{actual:nextRecovery.operation_id+':'+nextRecovery.revision,required:recovery.operation_id+':'+recovery.revision}}};
+     recovery=nextRecovery;
+    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE')recovery=undefined;else recoveryError=problem;}
+    if(!current())return;
     try{device=await deps.device.status();deviceObservedAt=new Date().toISOString();if(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt))publish({diagnosticFailure:null});}catch(e){if(!current())return;deviceError??=failure(e,'device_status');}
     if(!current())return;
+    // Both status methods can save the active configuration before their final receipt fails.
+    // Re-observe local scope on success AND failure before publishing any subsequent scoped fact.
+    if(deps.device.context){
+     const local=await deps.device.context();if(!current())return;
+     if('failure'in local&&local.failure.code!=='DEVICE_CONTEXT_UNCONFIGURED')throw local.failure;
+     if(local.binding_revision!==bindingRevision){
+      epoch++;generation=epoch;pendingEpoch=generation;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;
+      if('failure'in local||device?.state!=='bound'||device.identity?.id!==local.device_id||device.hive!==local.hive)device=undefined;
+      bindingRevision=local.binding_revision;deviceContext='failure'in local?undefined:local;deviceContextFailure='failure'in local?local.failure:undefined;
+      publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
+     }
+    }
+    publish({recovery,recoveryError});
     // Runtime and defaults form the shared read. Validate all shared floors BEFORE publishing any of it.
     const [next,defaults]=await Promise.all([runtime.snapshot(),!state.defaults&&accounts?accounts.defaults():Promise.resolve(state.defaults)]);
     if(!current())return;
@@ -92,7 +113,7 @@ export function createDesktopState(deps:DesktopDeps){
     };
     const networkChanged=state.runtime&&state.runtime.network_revision!==next.network_revision;
     if(networkChanged){diagnosticObservedAt=null;publish({diagnosticFailure:null});}
-    if(deviceError){
+    if(deviceError||recoveryError){
      // Local runtime observations may confirm login/cancellation, but never resume an old Hive write worker.
      const localAccounts={...state.accounts},errors={...state.accountErrors},refreshes={...state.accountRefresh};
      for(const platform of platforms){
@@ -144,7 +165,7 @@ export function createDesktopState(deps:DesktopDeps){
      if(blocked)publish({refresh:status(state.refresh,'blocked'),accountRefresh:mapStatus(state.accountRefresh,'blocked'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});
      else{
       const moving=state.runtime?.local==='starting'||state.runtime?.local==='stopping'||Object.values(state.accounts).some(v=>v.operation&&['pending','running'].includes(v.operation.state));
-      schedule(moving?400:state.device?.state==='pending'||state.device?.state==='draining'?(state.device.poll_interval_seconds??2)*1000:deps.intervalMs??10000);
+      schedule(moving?400:state.recovery?.phase==='pending'||state.recovery?.phase==='draining'?2000:state.device?.state==='pending'||state.device?.state==='draining'?(state.device.poll_interval_seconds??2)*1000:deps.intervalMs??10000);
      }
     }
    }

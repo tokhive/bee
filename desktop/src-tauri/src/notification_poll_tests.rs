@@ -188,7 +188,8 @@ fn preferences_failure_blocks_delivery_but_still_applies_explicit_recovery() {
     let mut input = value();
     input["notifications"]["facts"][0]["recovered"] = json!(true);
     let mut saved = prefs(true);
-    saved.error = Some(BridgeError { details: None,
+    saved.error = Some(BridgeError {
+        details: None,
         code: "PREFERENCES_SCHEMA".into(),
         message: "saved preferences schema failed".into(),
     });
@@ -218,7 +219,8 @@ fn background_delivery_errors_are_retained_and_later_polls_continue() {
         Ok(vec![DeliveryOutcome {
             identity: "a".repeat(64),
             state: DeliveryState::Failed,
-            error: Some(BridgeError { details: None,
+            error: Some(BridgeError {
+                details: None,
                 code: "NOTIFICATION_SUBMISSION_FAILED".into(),
                 message: "native submit HRESULT=5".into(),
             }),
@@ -276,4 +278,36 @@ fn repeated_polls_and_absent_facts_preserve_dedupe_until_explicit_recovery() {
     apply(decode(&active).unwrap(), prefs(true), reconcile).unwrap();
     assert_eq!(adapter.0.load(Ordering::SeqCst), 2);
     std::fs::remove_dir_all(path).unwrap();
+}
+
+#[test]
+fn unconfirmed_system_language_never_changes_delivery_ledger_or_consumes_permission_and_retry() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("delivery.json");
+    let adapter = Arc::new(Adapter(AtomicUsize::new(0)));
+    let service = NotificationService::new(path.clone(), adapter.clone());
+    let mut active = value();
+    active["notifications"]["facts"][0]["active"] = json!(true);
+    active["notifications"]["facts"][0]["eligible"] = json!(true);
+    let reconcile = |enabled, events: &[NotificationEvent]| service.reconcile(enabled, events);
+    apply_localized(decode(&active).unwrap(), prefs(true), None, reconcile).unwrap();
+    assert!(!path.exists());
+    assert_eq!(adapter.0.load(Ordering::SeqCst), 0);
+    apply_localized(
+        decode(&active).unwrap(),
+        prefs(true),
+        Some(crate::lifecycle::NativeLocale::Zh),
+        reconcile,
+    )
+    .unwrap();
+    let before = std::fs::read(&path).unwrap();
+    apply_localized(
+        decode(&active).unwrap(),
+        prefs(true),
+        Some(crate::lifecycle::NativeLocale::En),
+        reconcile,
+    )
+    .unwrap();
+    assert_eq!(std::fs::read(&path).unwrap(), before);
+    assert_eq!(adapter.0.load(Ordering::SeqCst), 1);
 }

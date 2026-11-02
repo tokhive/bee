@@ -21,6 +21,7 @@ export function decodeStartupStatus(value:unknown):StartupStatus {
  return {...v,failure} as unknown as StartupStatus;
 }
 export interface SystemBridge {
+ syncNativeLocale?(locale:'zh'|'en',revision:number):Promise<void>;
  startupStatus?():Promise<StartupStatus>;
  startupRecheck?():Promise<StartupStatus>;
  onStartup?(listener:(status:StartupStatus)=>void):Promise<Unlisten>;
@@ -31,7 +32,9 @@ export interface SystemBridge {
   onNotification?(listener: (page:NotificationPage) => void):Promise<Unlisten>;
 }
 
+let nativeLocaleSequence=0;
 export function createSystemBridge(): SystemBridge {
+  let localeQueue:Promise<unknown>=Promise.resolve();
   const unavailable: BridgeError = { code: 'NATIVE_UNAVAILABLE', message: '当前页面没有 Tauri 原生运行环境，无法检查内置 Bee。' };
   if (!isTauri()) return {
     async status() { return { state: 'failed', error: unavailable }; },
@@ -41,6 +44,13 @@ export function createSystemBridge(): SystemBridge {
     async onNotification() { return () => {}; },
   };
   return {
+    syncNativeLocale(locale,revision) {
+      if(!['zh','en'].includes(locale)||!Number.isSafeInteger(revision)||revision<0||nativeLocaleSequence>=Number.MAX_SAFE_INTEGER)return Promise.reject({code:'NATIVE_LOCALE_INPUT',message:'native language metadata requires zh/en, saved safe revision and available sequence'});
+      const sequence=++nativeLocaleSequence;
+      const result=localeQueue.then(async()=>{const receipt=await invoke<unknown>('native_locale_sync',{request:{locale,revision,sequence}});if(receipt!==null)throw {code:'NATIVE_LOCALE_REPLY_INVALID',message:'native language sync receipt rejected; required=void receipt from native metadata command'};});
+      localeQueue=result.catch(()=>{});
+      return result;
+    },
     status: () => invoke<BridgeStatus>('bridge_status'),
  startupStatus: async()=>decodeStartupStatus(await invoke('startup_status')),
  startupRecheck: async()=>decodeStartupStatus(await invoke('startup_recheck')),

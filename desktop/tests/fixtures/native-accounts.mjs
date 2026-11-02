@@ -43,6 +43,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    }
    return structuredClone(w.updateSnapshot);
   }
+  if(command==='native_locale_sync')return null;
   if(command==='preferences_read')return structuredClone({preferences,error:null});
   if(command==='preferences_save'){
    if(w.preferencesFail)return structuredClone({preferences,error:preferenceError()});

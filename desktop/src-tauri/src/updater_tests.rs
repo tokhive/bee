@@ -2,6 +2,26 @@ use crate::updater::*;
 use serde_json::json;
 use sha2::Digest;
 
+#[test]
+fn update_failures_keep_the_real_phase_and_raw_evidence() {
+    for (code, check) in [
+        ("UPDATE_INSTALL_FAILED", "update_install"),
+        ("UPDATE_SIGNATURE_FAILED", "update_signature"),
+        ("UPDATE_DIGEST_MISMATCH", "update_digest"),
+        ("UPDATE_RECOVERY_PENDING", "update_recovery"),
+    ] {
+        let failure = error(code, "actual=3 required=4; native cause retained");
+        assert_eq!(
+            failure.message,
+            "actual=3 required=4; native cause retained"
+        );
+        assert_eq!(
+            failure.details.as_ref().map(|d| d.check.as_str()),
+            Some(check)
+        );
+    }
+}
+
 fn store() -> (tempfile::TempDir, UpdateStore) {
     let dir = tempfile::tempdir().unwrap();
     let store = UpdateStore::new(dir.path().join("desktop-update-state.json"));
@@ -509,4 +529,60 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
     }).await.expect("signed native IPC download did not reach verified within 5s");
     server.join().unwrap();
 
+}
+
+#[test]
+fn plugin_signature_errors_are_distinct_from_transport_and_other_download_failures() {
+    use tauri_plugin_updater::Error as E;
+    for cause in [
+        E::MissingSignedVersion,
+        E::SignedVersionMismatch {
+            signed: "0.1.0".into(),
+            announced: "0.2.0".into(),
+        },
+        E::SignatureUtf8("invalid signature bytes".into()),
+    ] {
+        let original = cause.to_string();
+        let failure = download_failure(cause);
+        assert_eq!(failure.code, "UPDATE_SIGNATURE_FAILED");
+        assert!(failure.message.contains(&original));
+        assert_eq!(failure.details.unwrap().check, "update_signature");
+    }
+    for cause in [
+        E::Network("connection reset by peer".into()),
+        E::Io(std::io::Error::other("write failed: actual=read-only")),
+        E::InvalidUpdaterFormat,
+    ] {
+        let original = cause.to_string();
+        let failure = download_failure(cause);
+        assert_eq!(failure.code, "UPDATE_DOWNLOAD_FAILED");
+        assert!(failure.message.contains(&original));
+        assert_eq!(failure.details.unwrap().check, "update_download");
+    }
+}
+
+#[test]
+fn update_failure_details_exclude_sensitive_or_oversize_raw_text_with_explicit_evidence() {
+    for raw in [
+        "request rejected: token=private-value".to_string(),
+        "x".repeat(32769),
+    ] {
+        let failure = error("UPDATE_CHECK_FAILED", raw.clone());
+        assert!(!failure.message.contains("private-value"));
+        assert!(failure.message.contains(&format!("bytes={}", raw.len())));
+        assert!(failure.message.contains("SHA256="));
+        let details = failure.details.unwrap();
+        details.validate().unwrap();
+        assert_eq!(details.evidence["actual"], failure.message);
+    }
+}
+
+#[tokio::test]
+async fn plugin_download_transport_keeps_nested_source_chain() {
+    use std::error::Error;
+    init_tls().unwrap();
+    let cause=reqwest::Client::builder().timeout(std::time::Duration::from_secs(2)).no_proxy().build().unwrap().get("http://127.0.0.1:0/").send().await.unwrap_err();
+    let evidence=cause.source().expect("transport rejection has a source").to_string();
+    let failure=download_failure(tauri_plugin_updater::Error::Reqwest(cause));
+    assert_eq!(failure.code,"UPDATE_DOWNLOAD_FAILED");assert!(failure.message.contains(&evidence),"returned error dropped the transport source: actual={}; required={evidence}",failure.message);
 }

@@ -308,6 +308,7 @@ fn notifications_native_constructor_is_inert_without_application_bundle() {
     let _adapter = NativeNotificationAdapter::new(
         "invalid-for-runtime-test".into(),
         Arc::new(|_| panic!("constructor must not navigate")),
+        Arc::new(NativeLanguage::default()),
     );
 }
 

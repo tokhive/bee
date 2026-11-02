@@ -105,15 +105,18 @@ commands::device_recovery_status,
             updater::update_download,
             update_install::update_install,
             lifecycle::login_return_received
+            ,lifecycle::native_locale_sync
         ])
         .setup(|app| {
             app.manage(preferences::PreferencesStore::new(app.path().config_dir()?.join("tokhive/desktop-preferences.json")));
+            let native_language=std::sync::Arc::new(lifecycle::NativeLanguage::initialize(&app.state::<preferences::PreferencesStore>().read()));
+            app.manage(native_language.clone());
             app.manage(diagnostics_native::NativeDiagnostics::new(app.path().app_log_dir()?.join("safe-diagnostics")));
             let notify_handle = app.handle().clone();
             let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |page| {
                 lifecycle::dispatch(&notify_handle,lifecycle::WindowEvent::Reopen);
                 if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",page){eprintln!("notification navigation delivery failed: {cause}");}
-            }));
+            }),native_language);
             app.manage(notifications::NotificationService::new(app.path().config_dir()?.join("tokhive/notification-delivery.json"),std::sync::Arc::new(adapter)));
             let config = app.config().app.windows.first().ok_or_else(|| {
                 std::io::Error::new(

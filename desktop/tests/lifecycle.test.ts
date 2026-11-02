@@ -57,3 +57,19 @@ test('普通浏览器不伪造回跳提示', async () => {
   (await onLoginReturn(() => { received = true; }))();
   assert.equal(received, false);
 });
+
+test('native locale metadata is serialized in request order and a failed request does not stop recovery', async () => {
+  const {createSystemBridge}=await import('../src/system/bridge.ts');
+  globals.isTauri=true;const calls:any[]=[];let release!:()=>void;
+  mockIPC(async(command,args)=>{assert.equal(command,'native_locale_sync');calls.push(args);if(calls.length===1){await new Promise<void>(resolve=>{release=resolve;});throw {code:'NATIVE_LOCALE_MENU_FAILED',message:'item=bee-open; actual=denied'};}return null;});
+  const bridge=createSystemBridge();assert.equal(typeof bridge.syncNativeLocale,'function');
+  const first=bridge.syncNativeLocale!('zh',4);const second=bridge.syncNativeLocale!('en',4);
+  await new Promise(resolve=>setImmediate(resolve));assert.equal(calls.length,1);release();
+  await assert.rejects(first,(cause:any)=>cause.code==='NATIVE_LOCALE_MENU_FAILED'&&cause.message.includes('bee-open'));
+  await second;assert.deepEqual(calls.map(v=>v.request.locale),['zh','en']);assert.ok(calls[1].request.sequence>calls[0].request.sequence);
+});
+
+test('native locale success requires the exact void receipt',async()=>{
+ const {createSystemBridge}=await import('../src/system/bridge.ts');globals.isTauri=true;mockIPC(()=>({accepted:true}));
+ await assert.rejects(createSystemBridge().syncNativeLocale!('en',1),(cause:any)=>cause.code==='NATIVE_LOCALE_REPLY_INVALID');
+});

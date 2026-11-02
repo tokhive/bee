@@ -48,7 +48,8 @@ struct Envelope {
     notifications: Snapshot,
 }
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: "NOTIFICATION_REPLY_INVALID".into(),
         message: message.into(),
     }
@@ -178,6 +179,17 @@ fn apply(
     }
     Ok(())
 }
+fn apply_localized(
+    snapshot: Snapshot,
+    preferences: PreferencesSnapshot,
+    locale: Option<crate::lifecycle::NativeLocale>,
+    reconcile: impl FnOnce(bool, &[NotificationEvent]) -> Result<Vec<DeliveryOutcome>, BridgeError>,
+) -> Result<(), BridgeError> {
+    if locale.is_none() {
+        return Ok(());
+    }
+    apply(snapshot, preferences, reconcile)
+}
 fn safe_code(code: &str) -> &str {
     // A shape check alone would still log caller-controlled uppercase data.
     // Unknown bridge codes stay available in retained state, never in logs.
@@ -229,6 +241,15 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
         if before.state == BridgePhase::Stopped {
             return;
         }
+        // System language is resolved by the WebView. Until its first trusted
+        // metadata receipt, do not touch the ledger or consume an attempt/retry.
+        if app
+            .state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>()
+            .current()
+            .is_none()
+        {
+            continue;
+        }
         let startup_ready = app
             .state::<crate::experience::StartupGate>()
             .check()
@@ -272,7 +293,7 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
             }
             let preferences=worker_app.state::<PreferencesStore>().read();
             let service=worker_app.state::<NotificationService>();
-            apply(snapshot,preferences,|enabled,events|service.reconcile(enabled,events))
+            apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
         }).await;
         match result {
             Ok(Ok(()))=>{},

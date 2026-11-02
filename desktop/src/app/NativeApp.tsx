@@ -4,7 +4,7 @@ import {validNavigationTarget,type NavigationTarget,type RecoveryContext,type Na
 import {deriveDesktopStatus} from '../presentation/desktopStatus';
 import {NativeUpdateControls} from '../features/settings/NativeUpdateControls';
 import type {UpdateClient} from '../system/updater';
-import {useCallback,useEffect,useMemo,useRef,useState} from 'react';
+import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'react';
 import {AppShell} from '../components/AppShell';
 import {StatusView} from '../components/StatusView';
 import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
@@ -43,7 +43,7 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
-function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void}){
+function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,nativeLanguageFeedback}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
  const {native,device:view}=snapshot;
  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
  const [recovery,setRecovery]=useState<RecoveryContext|null>(null);
@@ -122,6 +122,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved}
   {ready&&snapshot.startup?.state==='checking'&&<p role="status">{t('正在重新检查设备…')}</p>}
   {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}
   {error&&page!=='overview' &&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
+  {nativeLanguageFeedback}
   {ready&&page==='overview'&&<NativeOverviewPage presentation={presentation} onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} context={snapshot.deviceContext} recovery={snapshot.recovery} recoveryError={snapshot.recoveryError} refreshStatus={snapshot.refresh} recover={(decision,transaction)=>void recover(decision,transaction)} busy={busy||!view&&snapshot.busy} error={error??sharedProblem} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)} open={()=>void run(()=>snapshot.recovery?props.client.recoveryOpen():props.client.open())}/>}
   {ready&&page==='accounts'&&<NativeAccountsPage navigationRequest={navigationRequest} onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||(showSharedProblem?null:snapshot.deviceError)}/>}
   {page==='diagnostics'&&<><NativeDiagnosticsPage navigationRequest={navigationRequest} onReport={model?.acceptDiagnosticReport} client={diagnostics} onNavigate={navigate} instance={instance} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('运行详情')}</summary><pre>{JSON.stringify({runtime:snapshot.error??runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
@@ -132,8 +133,20 @@ export function NativeApp(props:NativeProps){
  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
- const acceptPreferences=useCallback((value:PreferencesSnapshot)=>setPreferences(previous=>value.preferences.revision>=previous.preferences.revision?value:previous),[]);
- useLanguage(preferences.preferences.language);
+ const [preferencesTrusted,setPreferencesTrusted]=useState(false);
+ const trustedLanguage=useRef<{language:PreferencesSnapshot['preferences']['language'];revision:number}|null>(null);
+ const acceptPreferences=useCallback((value:PreferencesSnapshot)=>{if(value.preferences.revision<preferencesRevision.current)return;preferencesRevision.current=value.preferences.revision;setPreferences(value);if(value.error){setPreferencesTrusted(!!trustedLanguage.current&&trustedLanguage.current.revision===value.preferences.revision&&trustedLanguage.current.language===value.preferences.language);}else{trustedLanguage.current={language:value.preferences.language,revision:value.preferences.revision};setPreferencesTrusted(true);}},[]);
+ const locale=useLanguage(preferences.preferences.language);
+ const [localeFailure,setLocaleFailure]=useState<UiFailure|null>(null),[localeRetry,setLocaleRetry]=useState(0),[localeReading,setLocaleReading]=useState(false);
+ const localeGeneration=useRef(0);
+ useEffect(()=>{
+  const generation=++localeGeneration.current;
+  if(!preferencesTrusted){if(preferences.error)setLocaleFailure(normalizeFailure({code:'NATIVE_LOCALE_PREFERENCES',message:`native language has no trusted saved preference receipt: ${preferences.error.code}: ${preferences.error.message}`},'native_locale_sync'));return;}
+  if(!props.systemBridge.syncNativeLocale)return;
+  void props.systemBridge.syncNativeLocale(locale,preferences.preferences.revision).then(()=>{if(generation===localeGeneration.current)setLocaleFailure(null);},cause=>{if(generation===localeGeneration.current)setLocaleFailure(normalizeFailure(cause,'native_locale_sync'));});
+  return()=>{localeGeneration.current++;};
+ },[locale,preferences.preferences.revision,preferences.error,preferencesTrusted,props.systemBridge,localeRetry]);
+ const retryNativeLanguage=async()=>{if(localeReading)return;setLocaleReading(true);try{const value=await props.preferencesClient.read();if(value.error)throw value.error;if(value.preferences.revision<preferencesRevision.current)throw {code:'NATIVE_LOCALE_STALE',message:`native language recovery read revision=${value.preferences.revision}; required=at least ${preferencesRevision.current}`};acceptPreferences(value);setLocaleRetry(v=>v+1);}catch(cause){setLocaleFailure(normalizeFailure(cause,'native_locale_sync'));}finally{setLocaleReading(false);}};
  useEffect(()=>{let active=true;const revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active)acceptPreferences(v);},cause=>{if(active)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:normalizeFailure(cause,'preferences_read')});});return()=>{active=false;};},[props.preferencesClient,acceptPreferences]);
  useEffect(()=>{
   const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
@@ -145,5 +158,5 @@ export function NativeApp(props:NativeProps){
   return()=>{off();coordinator.dispose();};
  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
- return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} onSaved={acceptPreferences}/>;
+ return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
 }

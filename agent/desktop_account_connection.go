@@ -92,6 +92,7 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 		r.controlCancel = nil
 		r.controlDone = nil
 		r.snapshot.Connection = "disconnected"
+		r.snapshot.ConnectionDetail = nil
 		r.snapshot.Revision++
 		r.mu.Unlock()
 		close(done)
@@ -145,7 +146,16 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 		})
 		return nil, workers.Wait
 	}}
-	err = connectObserved(live, state, cfg, io.Discard, func(value string) { r.mu.Lock(); r.snapshot.Connection = value; r.snapshot.Revision++; r.mu.Unlock() })
+	err = connectObserved(live, state, cfg, io.Discard, func(observation DesktopConnectionObservation) {
+		r.mu.Lock()
+		defer r.mu.Unlock()
+		if r.closed || r.controlDone != done || r.snapshot.Local == "stopping" || live.Err() != nil {
+			return
+		}
+		r.snapshot.Connection = observation.Connection
+		r.snapshot.ConnectionDetail = observation.Detail
+		r.snapshot.Revision++
+	})
 	// connectObserved joins its relay and action before returning.
 	select {
 	case actionErr := <-outcome:

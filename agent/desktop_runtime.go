@@ -71,10 +71,15 @@ func (r *DesktopRuntime) Close() {
 }
 func (r *DesktopRuntime) Snapshot(ctx context.Context) (DesktopRuntimeSnapshot, error) {
 	r.mu.Lock()
-	raw, _ := json.Marshal(r.snapshot)
+	raw, err := json.Marshal(r.snapshot)
 	r.mu.Unlock()
 	var s DesktopRuntimeSnapshot
-	_ = json.Unmarshal(raw, &s)
+	if err != nil {
+		return s, fmt.Errorf("encode runtime snapshot: %w", err)
+	}
+	if err = json.Unmarshal(raw, &s); err != nil {
+		return s, fmt.Errorf("copy runtime snapshot: %w", err)
+	}
 	s.ObservedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	for _, platform := range []string{"openai", "claude"} {
 		p, release, err := r.accounts.acquire(ctx, platform)
@@ -145,6 +150,7 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	r.snapshot.NetworkRevision = r.network.Revision
 	r.snapshot.Local = "starting"
 	r.snapshot.Connection = "disconnected"
+	r.snapshot.ConnectionDetail = nil
 	r.snapshot.StopReceipt = nil
 	op := DesktopOperation{ID: id, Kind: "start", State: "pending", Revision: r.snapshot.Revision}
 	r.snapshot.Operation = &op
@@ -292,15 +298,17 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 		return fmt.Errorf("runtime start has no verified paused platforms; inspect platform errors")
 	}
 	cfg := &egressConfig{Targets: targets, ConnectProxy: network.ConnectProxy, desktop: r}
-	return connectObserved(ctx, state, cfg, io.Discard, func(connection string) { r.connectionObserved(run, connection) })
+	return connectObserved(ctx, state, cfg, io.Discard, func(observation DesktopConnectionObservation) { r.connectionObserved(run, observation) })
 }
-func (r *DesktopRuntime) connectionObserved(run, connection string) {
+func (r *DesktopRuntime) connectionObserved(run string, observation DesktopConnectionObservation) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	if r.snapshot.RunID == nil || *r.snapshot.RunID != run || r.snapshot.Local == "stopping" {
+	if r.closed || r.snapshot.RunID == nil || *r.snapshot.RunID != run || (r.snapshot.Local != "starting" && r.snapshot.Local != "running") {
 		return
 	}
+	connection := observation.Connection
 	r.snapshot.Connection = connection
+	r.snapshot.ConnectionDetail = observation.Detail
 	r.snapshot.Revision++
 	if connection == "connected" {
 		r.snapshot.Local = "running"
@@ -340,6 +348,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}
 	r.snapshot.Revision++
 	r.snapshot.Local = "stopping"
+	r.snapshot.ConnectionDetail = nil
 	if input.Reason == "user_stop" {
 		r.userStopRequested = true
 	}
@@ -360,6 +369,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 		r.snapshot.Revision++
 		r.snapshot.Local = "stopped"
 		r.snapshot.Connection = "disconnected"
+		r.snapshot.ConnectionDetail = nil
 		r.snapshot.StopReceipt = &receipt
 		r.snapshot.Operation.State = "succeeded"
 		r.snapshot.Operation.Revision = r.snapshot.Revision

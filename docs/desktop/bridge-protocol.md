@@ -84,7 +84,7 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 | --- | --- |
 | `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
 | `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled）、revision、error；id是本机动作引用，不是Hive confirmation_id |
-| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、platforms、operation、stop_receipt。桥envelope的instance仍为管理进程实例 |
+| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt。桥envelope的instance仍为管理进程实例 |
 | platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
 | `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
 | `runtime_stop` | expected_revision、reason（user_stop/app_exit/update/network_change）；reason由固定Rust入口生成；网页只可明确停止 |
@@ -177,6 +177,14 @@ go run ./cmd/bee help
 ### S1-T3 真实运行与同步屏障
 
 `runtime_snapshot` 返回 `{runtime:DesktopRuntimeSnapshot}`；`runtime_start`／`runtime_stop`／`runtime_restore` 返回 `{operation:DesktopOperation}`；`runtime_configure_network` 返回 `{configured:true}`。业务错误为 `RUNTIME_OPERATION_FAILED`，不使管理桥失效。前端调用分别为 `{}`、`{request:{expected_revision,resume_platforms}}`、`{expectedRevision}`；停止理由由 Rust 固定为 `user_stop`，内部理由及代理配置不开放为网页命令。
+
+`connection_detail` 为 `null` 或 `{failure,retry,next_retry_at}`，三个字段均必填。`retry` 为 `idle|attempting|scheduled|halted`；仅 `scheduled` 必须有实际核心等待定时器的 UTC RFC3339 `next_retry_at`，其余必须为 null。时间已过去的快照只表示上次观察，桌面不据此发起重试。
+
+`failure` 可空；非空时严格包含 `code,stage,occurred_at,message,evidence`。`code` 固定为 `dns_failed|tls_failed|connection_refused|timeout|http_rejected|connection_closed|synchronization_failed|ownership_unconfirmed|unknown_failure`；`stage` 为 `connect|heartbeat|synchronize`；`occurred_at` 为本次失败的 UTC RFC3339 时间。分类只依赖实际错误类型、HTTP 响应与所属调用环节，不解析日志或英文句子。`message` 保留脱敏原因链，最多32768字节；超限明确报告实际字节数和限额。
+
+`evidence` 是字符串映射，键仅允许 `target_origin,path,http_status,remote_code,response_body,owned_session,consecutive_conflicts`，每值最多32768字节。origin 必须无凭据、查询和片段；path 仅为固定 Bee API 路径。当前生产者只提取 Hive 已知公开错误码，不复制可能包含凭据／账号数据的任意响应正文，也不从 HTTP 401/403 推断远端领域码。缺少远端码时保留实际 HTTP 状态与脱敏底层错误。Go、Rust、TS 同步拒绝未知字段、枚举、无效日期及重试／时间矛盾。
+
+等待和下一次尝试保留最近失败，确认连接后清除，主动停止立即清除。详情跟随外层 run_id/revision，旧运行、旧连接和停止中的回调不能覆盖当前状态。非终端的平台同步失败使用 `retry=idle`，不改 WebSocket 的 connected 状态，不清除其他平台供给；另一平台同步成功也不能证明该错误恢复。现有平台读取／重试及核心退避策略不变。无底层错误的连接结束只报告连接已结束，不猜断线原因。CLI 的 nil 观察者仍沿用原有重连及409处理。
 
 真实 Go 连接与授权维护运行于管理子进程。同步回执核对当前连接租约、账号指纹、代次和凭证修订，并与持久选择／run_id核对；手动恢复同样核验。来源切换先取消并等待原平台维护，再启用新来源，成功仍保持暂停。一个平台失败不阻塞另一个平台；首次409停止，不抢占连接。
 

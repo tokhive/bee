@@ -6,10 +6,13 @@ import {decodeSupplyReply} from './supply.ts';
 
 export interface RuntimeOperation {id:string;kind:'start'|'stop';platform:null;state:'pending'|'running'|'reconciling'|'succeeded'|'failed'|'cancelled';revision:number;error:AccountError|null}
 export interface StopReceipt {workers_stopped:boolean;intent_saved:boolean;session_clean:boolean}
+export interface ConnectionFailure {code:'dns_failed'|'tls_failed'|'connection_refused'|'timeout'|'http_rejected'|'connection_closed'|'synchronization_failed'|'ownership_unconfirmed'|'unknown_failure';stage:'connect'|'heartbeat'|'synchronize';occurred_at:string;message:string;evidence:Record<string,string>}
+export interface ConnectionDetail {failure:ConnectionFailure|null;retry:'idle'|'attempting'|'scheduled'|'halted';next_retry_at:string|null}
 export interface RuntimeSnapshot {
  run_id:string|null;revision:number;network_revision:number;observed_at:string;
  local:'stopped'|'starting'|'running'|'stopping'|'failed';
  connection:'disconnected'|'connecting'|'connected'|'reconnecting'|'rejected'|'occupied';
+ connection_detail:ConnectionDetail|null;
  platforms:Record<AccountPlatform,{account:AccountSnapshot;supply:SupplyView|null;selection_revision:number}>;
  operation:RuntimeOperation|null;stop_receipt:StopReceipt|null;
 }
@@ -25,7 +28,35 @@ function object(value:unknown,fields:string[],at:string):Record<string,unknown>{
 }
 function integer(value:unknown,at:string){if(typeof value!=='number'||!Number.isSafeInteger(value)||value<0)invalid(`${at} requires nonnegative safe integer`);}
 function oneOf(value:unknown,allowed:unknown[],at:string){if(!allowed.includes(value))invalid(`${at} requires known value`);}
-function timestamp(value:unknown,at:string){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(Date.parse(value)).toISOString().slice(0,19)!==value.slice(0,19)||Date.parse(value)>Date.now()+5000)invalid(`${at} requires a valid observed UTC timestamp`);}
+function timestamp(value:unknown,at:string,scheduled=false){if(typeof value!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?Z$/.test(value)||!Number.isFinite(Date.parse(value))||new Date(Date.parse(value)).toISOString().slice(0,19)!==value.slice(0,19)||(!scheduled&&Date.parse(value)>Date.now()+5000))invalid(`${at} requires a valid observed UTC timestamp`);}
+function connectionDetail(value:unknown):void {
+ if(value===null)return;
+ const d=object(value,['failure','retry','next_retry_at'],'connection_detail');
+ oneOf(d.retry,['idle','attempting','scheduled','halted'],'connection_detail.retry');
+ if(d.retry==='scheduled')timestamp(d.next_retry_at,'next_retry_at',true);
+ else if(d.next_retry_at!==null)invalid('next_retry_at requires null unless scheduled');
+ if(d.failure===null)return;
+ const f=object(d.failure,['code','stage','occurred_at','message','evidence'],'connection_detail.failure');
+ oneOf(f.code,['dns_failed','tls_failed','connection_refused','timeout','http_rejected','connection_closed','synchronization_failed','ownership_unconfirmed','unknown_failure'],'connection_detail.failure.code');
+ oneOf(f.stage,['connect','heartbeat','synchronize'],'connection_detail.failure.stage');timestamp(f.occurred_at,'connection_detail.failure.occurred_at');
+ const bytes=(v:string)=>new TextEncoder().encode(v).length;
+ if(typeof f.message!=='string'||bytes(f.message)>32768)invalid('connection failure message requires bounded text');
+ if(!f.evidence||typeof f.evidence!=='object'||Array.isArray(f.evidence))invalid('connection failure evidence requires object');
+ const allowed=['target_origin','path','http_status','remote_code','response_body','owned_session','consecutive_conflicts'];
+ for(const [key,v]of Object.entries(f.evidence)){
+  if(!allowed.includes(key)||typeof v!=='string'||bytes(v)>32768)invalid('connection failure evidence key or value rejected');
+  if(key==='target_origin'){
+   let u:URL;try{u=new URL(v);}catch{invalid('connection target_origin requires safe origin');}
+   const loopback=u.hostname==='localhost'||u.hostname==='[::1]'||/^127\.(?:\d{1,3}\.){2}\d{1,3}$/.test(u.hostname);
+   if(u.origin!==v||u.username||u.password||u.search||u.hash||(u.protocol!=='https:'&&!(u.protocol==='http:'&&loopback)))invalid('connection target_origin requires safe origin');
+  }
+  if(key==='path'&&!/^\/api\/bee\/[a-z0-9/_-]+$/.test(v))invalid('connection path rejected');
+  if(key==='http_status'&&!/^[1-5]\d{2}$/.test(v))invalid('connection HTTP rejection status rejected');
+  if(key==='remote_code'&&!/^[a-z][a-z0-9_]{0,127}$/.test(v))invalid('connection remote code rejected');
+  if(key==='owned_session'&&v!=='true'&&v!=='false')invalid('connection ownership evidence rejected');
+  if(key==='consecutive_conflicts'&&(!/^(0|[1-9]\d*)$/.test(v)||!Number.isSafeInteger(Number(v))))invalid('connection conflict evidence rejected');
+ }
+}
 function operation(value:unknown):RuntimeOperation{
  const o=object(value,['id','kind','platform','state','revision','error'],'operation');
  if(typeof o.id!=='string'||!/^[a-f0-9]{48}$/.test(o.id))invalid('operation.id requires 48 lowercase hex');
@@ -40,10 +71,11 @@ function result(reply:unknown,instance:string,key:string):unknown{
 }
 export function decodeRuntimeOperation(reply:unknown,instance:string):RuntimeOperation{return operation(result(reply,instance,'operation'));}
 export function decodeRuntimeSnapshot(reply:unknown,instance:string):RuntimeSnapshot{
- const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','platforms','operation','stop_receipt'],'runtime');
+ const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','connection_detail','platforms','operation','stop_receipt'],'runtime');
  if(s.run_id!==null&&(typeof s.run_id!=='string'||!/^[a-f0-9]{32}$/.test(s.run_id)))invalid('run_id requires null or 32 lowercase hex');
  integer(s.revision,'revision');integer(s.network_revision,'network_revision');timestamp(s.observed_at,'observed_at');
  oneOf(s.local,['stopped','starting','running','stopping','failed'],'local');oneOf(s.connection,['disconnected','connecting','connected','reconnecting','rejected','occupied'],'connection');
+ connectionDetail(s.connection_detail);
  const platforms=object(s.platforms,['openai','claude'],'platforms');
  for(const platform of ['openai','claude'] as const){
   const p=object(platforms[platform],['account','supply','selection_revision'],`platforms.${platform}`);integer(p.selection_revision,'selection_revision');decodeAccountReply({instance,result:{account:p.account}},platform,instance);

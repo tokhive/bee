@@ -180,7 +180,7 @@ func desktopRuntimeDeviceFixture(t *testing.T, handler http.HandlerFunc) *Deskto
 }
 
 func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
-	for _, scenario := range []string{"clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start", "restore_running", "restore_paused", "restore_manual_resume", "restore_user_stop", "restore_new_token", "crash_then_exit", "restore_stop_save_failure", "restore_reservation_save_failure"} {
+	for _, scenario := range []string{"synchronization_failure_recovery", "readback_failure_recovery", "clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start", "restore_running", "restore_paused", "restore_manual_resume", "restore_user_stop", "restore_new_token", "crash_then_exit", "restore_stop_save_failure", "restore_reservation_save_failure"} {
 		t.Run(scenario, func(t *testing.T) {
 			saveFailure := scenario == "save_failure"
 			proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, q *http.Request) {
@@ -212,7 +212,9 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 			var identityRequests atomic.Int32
 			var blockRecoveryIdentity atomic.Bool
 			recoveryIdentityEntered := make(chan struct{})
-			var resumePuts atomic.Int32
+			var resumePuts, supplyPuts, connections atomic.Int32
+			var recoveryFailure atomic.Bool
+			recoveryFailure.Store(true)
 			d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
 				if q.URL.Path == "/api/bee/identity" && blockRecoveryIdentity.CompareAndSwap(true, false) {
 					close(recoveryIdentityEntered)
@@ -231,6 +233,7 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					return
 				}
 				if q.URL.Path == "/api/bee/agent" {
+					connections.Add(1)
 					w.Header().Set("X-Bee-Lease", "owned-test-lease")
 					conn, e := websocket.Accept(w, q, nil)
 					if e != nil {
@@ -254,7 +257,13 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				defer mu.Unlock()
 				switch q.URL.Path {
 				case "/api/bee/platforms/openai":
+					if scenario == "readback_failure_recovery" && uploads > 0 && q.Method == "GET" && recoveryFailure.CompareAndSwap(true, false) {
+						w.WriteHeader(503)
+						w.Write([]byte(`{"code":"supply_temporarily_unavailable","message":"synthetic readback outage"}`))
+						return
+					}
 					if q.Method == "PUT" {
+						supplyPuts.Add(1)
 						var v struct {
 							Paused bool `json:"paused"`
 						}
@@ -279,6 +288,11 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					json.NewEncoder(w).Encode(account)
 				case "/api/bee/maintenance":
 					maintenance++
+					if scenario == "synchronization_failure_recovery" && recoveryFailure.CompareAndSwap(true, false) {
+						w.WriteHeader(503)
+						w.Write([]byte(`{"code":"maintenance_unavailable","message":"synthetic synchronization outage"}`))
+						return
+					}
 					var input beewire.MaintenanceRequest
 					if e := json.NewDecoder(q.Body).Decode(&input); e != nil {
 						t.Error(e)
@@ -360,7 +374,11 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				t.Fatal("construction synchronized credentials")
 			}
 			mu.Unlock()
-			if _, e := r.Start(context.Background(), DesktopStartRequest{ExpectedRevision: s.Revision, ResumePlatforms: []string{"openai"}}); e != nil {
+			resume := []string{"openai"}
+			if strings.HasSuffix(scenario, "failure_recovery") {
+				resume = []string{}
+			}
+			if _, e := r.Start(context.Background(), DesktopStartRequest{ExpectedRevision: s.Revision, ResumePlatforms: resume}); e != nil {
 				t.Fatal(e)
 			}
 			if scenario == "stop_during_start" {
@@ -401,6 +419,33 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					t.Fatal(err)
 				}
 				close(releaseIdentity)
+			}
+			if strings.HasSuffix(scenario, "failure_recovery") {
+				failed := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.ConnectionDetail != nil && s.ConnectionDetail.Failure != nil && s.ConnectionDetail.Failure.Stage == "synchronize"
+				})
+				if failed.Connection != "connected" || failed.ConnectionDetail.Retry != "idle" || failed.ConnectionDetail.NextRetryAt != nil {
+					t.Fatalf("platform outage changed core reconnect: %+v", failed)
+				}
+				before := supplyPuts.Load()
+				recovered := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.Platforms["openai"].Supply != nil && s.Platforms["openai"].Account.Authorization.State == "synchronized" && s.ConnectionDetail == nil
+				})
+				if recovered.ConnectionDetail != nil {
+					t.Fatalf("same-connection successful synchronization retained current failure: %+v", recovered.ConnectionDetail)
+				}
+				if recovered.RunID == nil || *recovered.RunID != *failed.RunID || recovered.Connection != "connected" || connections.Load() != 1 || supplyPuts.Load() != before || resumePuts.Load() != 0 || !recovered.Platforms["openai"].Supply.Paused {
+					t.Fatalf("recovery changed run/link/pause or wrote supply: snapshot=%+v connections=%d supply_puts=%d before=%d resume_puts=%d", recovered, connections.Load(), supplyPuts.Load(), before, resumePuts.Load())
+				}
+				for label, value := range map[string]DesktopRuntimeSnapshot{"failed": failed, "recovered": recovered} {
+					raw, _ := json.Marshal(value)
+					t.Logf("%s=%s", label, raw)
+				}
+				if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: recovered.Revision, Reason: "user_stop"}); err != nil {
+					t.Fatal(err)
+				}
+				waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" })
+				return
 			}
 			ready := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
 				return s.Local == "running" && s.Platforms["openai"].Supply != nil && (scenario == "pause_during_start" || s.Platforms["openai"].Supply.Ready)

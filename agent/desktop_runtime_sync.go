@@ -58,6 +58,8 @@ type desktopRuntimeConnection struct {
 	workers  sync.WaitGroup
 	failures chan error
 	active   bool
+	// Scoped to this connection and its run; protected by runtime mu and syncMu.
+	synchronizationFailures map[string]*DesktopConnectionDetail
 }
 
 func (r *DesktopRuntime) configForSelection(platform string, selection desktopAccountSelection) (*egressConfig, error) {
@@ -249,8 +251,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 				return
 			}
 			if err != nil {
-				r.platformFailure(platform, "authorization_sync", err)
-				r.synchronizationObserved(connection, connection.run, err)
+				r.synchronizationObserved(connection, connection.run, platform, "authorization_sync", err)
 				var api *apiFailure
 				if errors.Is(err, errInboxIdentity) || errors.As(err, &api) && (api.Status == 401 || api.Status == 403) {
 					select {
@@ -260,8 +261,9 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 					return
 				}
 			} else if err = r.observeSynchronizedPlatform(ctx, connection.state, platform, slot); err != nil {
-				r.platformFailure(platform, "authorization_readback", err)
-				r.synchronizationObserved(connection, connection.run, err)
+				r.synchronizationObserved(connection, connection.run, platform, "authorization_readback", err)
+			} else {
+				r.synchronizationObserved(connection, connection.run, platform, "", nil)
 			}
 			first = false
 			if pause(ctx, 2*time.Second) != nil {
@@ -586,11 +588,20 @@ func (r *DesktopRuntime) validateManualResume(ctx context.Context, platform stri
 	return err
 }
 
-// A platform worker does not schedule core reconnects. Success on another
-// platform cannot prove this failure recovered; a new connected observation can.
-func (r *DesktopRuntime) synchronizationObserved(connection *desktopRuntimeConnection, run *string, err error) {
-	if err == nil {
+// Platform recovery is published only after synchronization and every readback
+// completed. It never schedules a core reconnect or clears another platform.
+func (r *DesktopRuntime) synchronizationObserved(connection *desktopRuntimeConnection, run *string, platform, check string, err error) {
+	if !desktopPlatform(platform) || connection == nil {
 		return
+	}
+	var account *desktopAccountPlatform
+	if err != nil {
+		p, release, acquireErr := r.accounts.acquire(connection.ctx, platform)
+		if acquireErr != nil {
+			return
+		}
+		defer release()
+		account = p
 	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -599,6 +610,31 @@ func (r *DesktopRuntime) synchronizationObserved(connection *desktopRuntimeConne
 	if r.closed || run == nil || r.snapshot.RunID == nil || *run != *r.snapshot.RunID || r.connection != connection || !connection.active || connection.ctx.Err() != nil || r.snapshot.Local != "running" || r.snapshot.Connection != "connected" {
 		return
 	}
-	r.snapshot.ConnectionDetail = &DesktopConnectionDetail{Failure: observedConnectionFailure(err, nil, connection.state, "/api/bee/agent", "synchronize"), Retry: "idle"}
+	if err != nil {
+		account.snapshot.Authorization = DesktopAccountFact{State: "unconfirmed", ObservedAt: accountTime(time.Now()), Error: accountFailure(platform, "runtime_platform_unconfirmed", check, err.Error())}
+		account.snapshot.Revision++
+		v := r.snapshot.Platforms[platform]
+		v.Supply = nil
+		r.snapshot.Platforms[platform] = v
+		if connection.synchronizationFailures == nil {
+			connection.synchronizationFailures = map[string]*DesktopConnectionDetail{}
+		}
+		detail := &DesktopConnectionDetail{Failure: observedConnectionFailure(err, nil, connection.state, "/api/bee/agent", "synchronize"), Retry: "idle"}
+		connection.synchronizationFailures[platform] = detail
+		r.snapshot.ConnectionDetail = detail
+	} else {
+		previous, failed := connection.synchronizationFailures[platform]
+		if !failed {
+			return
+		}
+		delete(connection.synchronizationFailures, platform)
+		if r.snapshot.ConnectionDetail != previous {
+			return
+		}
+		r.snapshot.ConnectionDetail = nil
+		for _, remaining := range connection.synchronizationFailures {
+			r.snapshot.ConnectionDetail = remaining
+		}
+	}
 	r.snapshot.Revision++
 }

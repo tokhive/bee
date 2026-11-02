@@ -12,13 +12,14 @@ import type {RuntimeModel} from '../lifecycle/useRuntime';
 import type {SharedSupply} from '../supply/useSupply';
 import {accountPresentation,accountPhase} from './accountPresentation';
 import {NativeAccountActions,AccountOperationStatus} from './NativeAccountActions';
-import {AccountQuota,AccountCheckStatus,useAccountClock} from './AccountDisplay';
+import {AccountQuota,AccountCheckStatus,AccountReadHistory,useAccountClock} from './AccountDisplay';
 // Detailed diagnostic evidence remains available to diagnostic consumers.
 export function AccountErrorView({error}:{error:AccountError}){return <FailureNotice failure={error} check="account_operation"/>;}
 export const accountTime=(value:string|null)=>value?formatDate(value,currentLocale()):t('未知');
 export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;accounts:AccountsModel;onNavigate?:(target:NavigationTarget)=>void;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply}){
  const label=platform==='openai'?'OpenAI':'Claude',snapshot=accounts.views[platform];
- const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now);
+ const readFailed=!!accounts.readFailures[platform];
+ const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now,readFailed,!!accounts.deviceFailure);
  const defaults=accounts.defaults?.platforms.find(d=>d.platform===platform);
  const source=accounts.sources[platform]??{directory:null,store:defaults?.default_store??'file'};
  const [localDirectory,setLocalDirectory]=useState(source.directory??'');
@@ -33,8 +34,9 @@ export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigat
  const storeNames:Record<string,string>={auto:'自动',file:'文件',keyring:'钥匙串',keychain:'钥匙串'};
  return <DetailSheet open={open} onOpenChange={setOpen} trigger={<Button variant="ghost" size="icon" aria-label={t('{platform} 详情',{platform:label})} title={t('{platform} 详情',{platform:label})}><ArrowRight aria-hidden="true"/></Button>} title={t('{name} 账号详情',{name:label})} description={t('查看账号与额度，管理凭证读取方式。')}>
   <AccountCheckStatus supply={supply} platform={platform}/>
+  <AccountReadHistory accounts={accounts} platform={platform}/>
   <dl className="account-detail-facts"><div><dt>{t('当前账号标识')}</dt><dd>{presentation.identity??t('尚未接入 {platform} 账号',{platform:label})}</dd></div>{snapshot?.selection.state==='selected'&&<><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan??t('套餐待确认')}</dd></div><div><dt>{t('授权到期')}</dt><dd>{accountTime(presentation.expiresAt)}</dd></div></>}{!accounts.dirty[platform]&&snapshot?.candidate.reference&&<div><dt>{t('候选账号标识')}</dt><dd>{snapshot.candidate.fingerprint?.slice(0,16)??t('账号标识待官方核验')}</dd></div>}</dl>
-  <p className="native-account-reason">{t(accountPhase(snapshot,!!accounts.dirty[platform],!!accounts.busy[platform],now))}</p>
+  {!readFailed&&<p className="native-account-reason">{t(accountPhase(snapshot,!!accounts.dirty[platform],!!accounts.busy[platform],now))}</p>}
   <section className="account-detail-quota"><h3>{t('额度与重置')}</h3><AccountQuota presentation={presentation} resets/></section>
   <details open className="account-source" data-account-source={platform} data-nav-section="source" data-nav-platform={platform}><summary>{t('凭证读取方式')}</summary><p>{t('读取官方客户端已保存的登录；目录留空使用默认位置。')}</p>
    <label>{t('自定义目录')}<input disabled={blocked} placeholder={defaults?.directory??t('默认目录')} value={directory} onChange={e=>setDirectory(e.target.value)} onBlur={commitDirectory} onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();commitDirectory();}}}/></label>

@@ -25,6 +25,15 @@ export function AccountCheckStatus({supply,platform}:{supply?:SharedSupply;platf
  const copy=progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
  return copy?<span className="account-check-status" role="status">{t(copy)}</span>:null;
 }
+export function AccountReadHistory({accounts,platform}:{accounts:AccountsModel;platform:AccountPlatform}){
+ const snapshot=accounts.views[platform];
+ if(!snapshot)return null;
+ if(accounts.readFailures[platform]){
+  const confirmed=accounts.accountRefresh?.[platform]?.lastConfirmedAt??accounts.refreshStatus?.lastConfirmedAt;
+  return <div className="account-read-history"><p>{t('上次确认的账号事实；当前状态待核对。')}</p><p>{t('历史事实不能支持当前可接单结论或账号写操作。')}</p>{confirmed&&<p>{t('上次确认')}: <time dateTime={confirmed}>{formatDate(confirmed,currentLocale())}</time></p>}</div>;
+ }
+ return accounts.deviceFailure&&snapshot.hive.observed_at?<div className="account-remote-history"><p>{t('Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。')}</p><p>{t('上次 Hive 观测')}: <time dateTime={snapshot.hive.observed_at}>{formatDate(snapshot.hive.observed_at,currentLocale())}</time></p></div>:null;
+}
 export function AccountQuota({presentation,resets=false}:{presentation:AccountPresentation;resets?:boolean}){
  const {windows,quotaState}=presentation;
  const ordered=[...windows].sort((a,b)=>a.seconds-b.seconds);
@@ -36,7 +45,8 @@ export function AccountQuota({presentation,resets=false}:{presentation:AccountPr
    {resets&&<p className="quota-reset">{t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>}
   </div>)}
   {quotaState==='stale'&&<p className="quota-history">{t('历史数据，已过期')}</p>}
-  {quotaState==='stale'&&presentation.observedAt&&<p className="quota-history">{t('上次额度观测')}: <time dateTime={presentation.observedAt}>{formatDate(presentation.observedAt,currentLocale())}</time></p>}
+  {quotaState==='unconfirmed'&&<p className="quota-history">{t('上次确认的额度；当前待核对。')}</p>}
+  {(quotaState==='stale'||quotaState==='unconfirmed')&&presentation.observedAt&&<p className="quota-history">{t('上次额度观测')}: <time dateTime={presentation.observedAt}>{formatDate(presentation.observedAt,currentLocale())}</time></p>}
   {quotaState==='current'&&windows.some(w=>w.used_percent!==null&&w.used_percent>=100)&&<p className="quota-exhausted">{t('有额度窗口已耗尽；请查看各窗口重置时间。')}</p>}
  </div>;
 }

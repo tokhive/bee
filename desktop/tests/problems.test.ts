@@ -13,6 +13,11 @@ test('Chinese 503 device feedback includes fact, target, impact and safe origina
 test('device replacement keeps its exact cause and provides the device entry',()=>{
  const problem=presentFailure({...failure('device_replaced'),evidence:{http_status:'401',remote_code:'device_replaced'}},'zh');
  assert.match(problem.summary,/替换/);assert.doesNotMatch(problem.summary,/未确认|代理/);assert.deepEqual(problem.action,{page:'overview',section:'device'});
+ for(const locale of ['zh','en'] as const)for(const code of ['confirmation_required','authorization_rejected','offline']){
+  const actual=presentFailure(failure(code),locale),connection=code==='offline';
+  assert.deepEqual(actual.action,connection?{page:'overview',section:'connection'}:{page:'accounts',section:'account'});
+  assert.equal(actual.actionLabel,translate(connection?'查看连接':'查看账号详情',locale));
+ }
 });
 test('selected source missing and denied access do not claim the whole machine has no login',()=>{
  const missing=normalizeFailure({code:'source_missing',check:'source_read',platform:'openai',message:'file absent',evidence:{not_found:'true',permission_denied:'false'}},'detect');

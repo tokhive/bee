@@ -32,5 +32,5 @@ export function presentFailure(failure:UiFailure,locale:'zh'|'en'):PresentedProb
  if(networkApply)action={page:'settings',section:'network'};
  const labels:Record<string,string>={code:'错误码',check:'失败环节',observed_at:'观察时间',original:'原始原因',target_origin:'目标',path:'路径',http_status:'HTTP 状态',remote_code:'远端错误码',response_body:'安全响应',source_type:'来源类型',actual:'实际值',required:'要求'};
  const rows=[[tr(labels.code),failure.code],[tr(labels.check),failure.check],...(failure.observedAt?[[tr(labels.observed_at),formatDate(failure.observedAt,locale)]]:[]),...Object.entries(failure.evidence).map(([key,value])=>[tr(labels[key]??key),value]),[tr(labels.original),failure.message]];
- return {summary,impact,details:rows.map(([key,value])=>`${key}: ${safeFailureText(value)}`).join('\n'),action,actionLabel:tr(invalidContext?'查看诊断':networkApply?'查看设置':account?'检查凭证来源':'查看设备'),detailsLabel:tr('查看失败详情')};
+ return {summary,impact,details:rows.map(([key,value])=>`${key}: ${safeFailureText(value)}`).join('\n'),action,actionLabel:tr(action?.page==='diagnostics'?'查看诊断':action?.page==='settings'?'查看设置':action?.section==='source'?'检查凭证来源':action?.section==='account'?'查看账号详情':action?.section==='connection'?'查看连接':'查看设备'),detailsLabel:tr('查看失败详情')};
 }

@@ -401,6 +401,10 @@ nav button { border:1px solid transparent; }
 .problem-notice>p,.problem-notice>details { grid-column:1; }
 .problem-notice>.ui-button { grid-column:2; grid-row:1 / span 2; min-height:32px; font-size:13px; }
 .problem-notice pre { overflow-wrap:anywhere; }
+.native-account-copy .problem-notice { grid-template-columns:minmax(0,1fr); gap:8px; }
+.native-account-copy .problem-notice>.ui-button { grid-column:1; grid-row:auto; justify-self:start; max-width:100%; white-space:normal; }
+.account-read-history,.account-remote-history { font-size:12px; line-height:1.6; color:var(--muted); }
+.account-read-history p,.account-remote-history p { margin:6px 0; }
 @media(max-width:960px) { .device-pairing-grid,.recovery-identities { gap:16px; }.device-recovery-action { flex-wrap:wrap; }.device-recovery-action .ui-button { margin-left:auto; } }
 
 .native-runtime-title .run-mark { order:2; }

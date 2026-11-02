@@ -18,6 +18,13 @@ test('historical quota carries the observation actually used and never borrows a
  assert.equal((accountPresentation(s,false,now) as any).observedAt,stamp);
  s.hive.fingerprint='c'.repeat(64);assert.equal((accountPresentation(s,false,now) as any).observedAt,null);
 });
+test('remote identity failure leaves fresh local quota current and marks retained fresh Hive quota unconfirmed',()=>{
+ const s=selected();s.hive.fingerprint=s.selection.fingerprint;
+ for(const c of s.capabilities)Object.assign(c,{status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:20,reset_at:null}]});
+ assert.equal(accountPresentation(s,false,now,false,true).quotaState,'current');
+ s.capabilities[0]={...s.capabilities[0],status:'unknown',observed_at:null,windows:[]};
+ assert.equal(accountPresentation(s,false,now,false,true).quotaState,'unconfirmed');
+});
 test('candidate expiry and changed source explain blocked submission; official login requires stopped runtime',()=>{
  const block=(presentation as any).accountActionBlock;assert.equal(typeof block,'function');
  const s=selected();s.selection.state='not_selected';s.features.select={available:true,reason:null};s.features.authorize={available:true,reason:null};s.candidate.state='available';s.candidate.reference='a'.repeat(48);
@@ -29,4 +36,8 @@ test('candidate expiry and changed source explain blocked submission; official l
  assert.deepEqual(block('select',{...input,submissionBlocked:true}).target,{page:'overview',section:'device'});
  // Device identity cannot bar the independent, stopped official-client login.
  assert.equal(block('authorize',{...input,submissionBlocked:true}),null);
+ const sharedReadFailure={code:'RESPONSE_TIMEOUT',check:'runtime_snapshot',observedAt:null,evidence:{actual:'no runtime response'},message:'runtime read response lost'};
+ const sharedBlock=block('select',{...input,submissionBlocked:true,sharedReadFailure});
+ assert.match(sharedBlock.message,/共享状态读取未确认/);assert.doesNotMatch(sharedBlock.message,/恢复设备身份/);assert.deepEqual(sharedBlock.target,{page:'overview',section:'runtime'});
+ assert.deepEqual(block('select',{...input,submissionBlocked:true,sharedReadFailure:{...sharedReadFailure,check:'account_defaults'}}).target,{page:'accounts',section:'source',platform:'openai'});
 });

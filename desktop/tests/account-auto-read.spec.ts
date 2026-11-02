@@ -177,3 +177,48 @@ test('NativeApp reconciling coordinator waits exactly ten seconds without replay
  await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(4);
  for(const command of ['account_action','authorize_start','runtime_start','supply_set_paused'])expect(await calls(page,command)).toHaveLength(0);
 });
+
+async function ownedAccountHarness(page:Page,kind:'authorize'|'select'='authorize'){
+ await hookHarness(page);await page.evaluate(kind=>{
+  const w=window as any;w.generation=1;
+  const adopt=()=>{w.runtime={local:'stopped',run_id:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:structuredClone(w.data[p])}]))};w.rerender();};
+  w.runtime={local:'stopped',run_id:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:structuredClone(w.data[p])}]))};
+  w.coordinated={defaults:w.model.defaults,error:null,accountErrors:{},generation:()=>w.generation,refresh:async()=>adopt(),snapshot:()=>({runtime:w.runtime,error:null,accountErrors:{},busy:false})};
+  w.authorizer={start:async()=>{const a=w.data.openai;a.operation={id:'d'.repeat(48),kind:'authorize',platform:'openai',state:'running',revision:++a.revision,error:null};return structuredClone(a.operation);}};w.rerender();
+  if(kind==='select')w.client.action=async()=>{w.counts.action++;const a=w.data.openai;a.operation={id:'c'.repeat(48),kind:'select',platform:'openai',state:'reconciling',revision:++a.revision,error:null};return structuredClone(a);};
+ },kind);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.submissionBlocked)).toBe(false);
+ await page.evaluate(kind=>{const m=(window as any).model;if(kind==='authorize')m.authorize('openai');else m.action('openai','select');},kind);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai?.operation?.state)).toBe(kind==='authorize'?'running':'reconciling');
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.writeBusy.openai)).toBe(false);
+ expect(await page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(true);
+}
+for(const outcome of ['succeeded','failed','cancelled'])test(`owned official login releases pending confirmation only after its ${outcome} terminal observation`,async({page})=>{
+ await ownedAccountHarness(page);await page.evaluate(async outcome=>{const w=window as any,a=w.data.openai;a.operation={...a.operation,state:outcome,revision:++a.revision};await w.coordinated.refresh();},outcome);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(false);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+});
+for(const mismatch of ['old-revision','other-operation','other-platform','other-generation'])test(`owned official login ignores ${mismatch} terminal confirmation`,async({page})=>{
+ await ownedAccountHarness(page);await page.evaluate(async mismatch=>{
+  const w=window as any,a=w.data.openai,receiptRevision=a.revision;
+  a.operation={...a.operation,state:'succeeded',revision:++a.revision};
+  if(mismatch==='old-revision'){a.revision=receiptRevision-1;a.operation.revision=a.revision;}
+  if(mismatch==='other-operation')a.operation.id='e'.repeat(48);
+  if(mismatch==='other-platform')a.operation.platform='claude';
+  if(mismatch==='other-generation')w.generation++;
+  await w.coordinated.refresh();
+ },mismatch);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai?.operation?.state)).toBe(mismatch==='old-revision'?'running':'succeeded');
+ expect(await page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(true);
+ expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+ if(mismatch!=='other-generation'){
+  await page.evaluate(async()=>{const w=window as any,a=w.data.openai;a.revision+=10;a.operation={...a.operation,id:'d'.repeat(48),platform:'openai',revision:a.revision};await w.coordinated.refresh();});
+  await expect.poll(()=>page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(false);
+ }
+});
+
+test('a received reconciling account action retains its owner until the same terminal snapshot without replay',async({page})=>{
+ await ownedAccountHarness(page,'select');await page.evaluate(async()=>{const w=window as any;await w.coordinated.refresh();});
+ expect(await page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(true);
+ await page.evaluate(async()=>{const w=window as any,a=w.data.openai;a.operation={...a.operation,state:'succeeded',revision:++a.revision};await w.coordinated.refresh();});
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(false);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(1);
+});

@@ -1,6 +1,6 @@
 # Bee 桌面：安装、更新与发布验收
 
-日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 已获执行授权，按 S1→S2→S3 顺序推进**。本文为 S3，承接[S1 账号与运行](2026-10-26-desktop-account-runtime-design.md)、[S2 诊断与日常体验](2026-10-26-desktop-diagnostics-experience-design.md)。[对应实施计划](../plans/2026-10-26-desktop-release-update.md)已获执行授权；本轮不发布安装包。
+当前有效规格：安装、更新与发布。当前构建和发布入口见[发布说明](../../desktop/release.md)，生产资源与三端真实验收缺口见[发布验收](../../desktop/release-validation.md)，未完成工作见[实施计划](../plans/2026-10-26-desktop-release-update.md)。
 
 ## 1. 用户最终得到什么
 
@@ -10,9 +10,9 @@
 
 ## 2. 继承范围和当前证据
 
-以[当前需求](../../../../../docs/discussions/2026-10-21-bee-desktop-requirements.md#当前有效范围2026-10-26)及相邻决策记录为准。旧 P0/P1 缺口中与窗口、系统权限、真实官方来源、进程回收、安装及目标平台有关的部分继续验收；旧 Hive 用户登录、五页资金界面、独立市场列表、完整移除和等待任务退出不再作为交付门槛。
+以[产品需求](../../desktop/product.md)及相邻决策记录为准。旧 P0/P1 缺口中与窗口、系统权限、真实官方来源、进程回收、安装及目标平台有关的部分继续验收；旧 Hive 用户登录、五页资金界面、独立市场列表、完整移除和等待任务退出不再作为交付门槛。
 
-现有[桌面配置](../../../desktop/src-tauri/tauri.conf.json)为 Bee Dev／`dev.tokhive.bee`，已有 DMG、NSIS、AppImage 配套打包；[原生 CI](../../../.github/workflows/desktop.yml)及 hosted 工作流提供多平台开发包和来源证据。当前 ad-hoc 签名、demo 包和容器显示检查不能替代正式签名、真实桌面或安装验收。已有记录见[底座验证](../../desktop/p0-validation.md)和[页面验收](../../../desktop/docs/p1-acceptance.md)。本稿不改写历史测试结果。
+现有[桌面配置](../../../desktop/src-tauri/tauri.conf.json)为 Bee Dev／`dev.tokhive.bee`，已有 DMG、NSIS、AppImage 配套打包；[原生 CI](../../../.github/workflows/desktop.yml)及 hosted 工作流提供多平台开发包和来源证据。当前 ad-hoc 签名、demo 包和容器显示检查不能替代正式签名、真实桌面或安装验收。已有记录见[底座验证](../../desktop/acceptance.md)和[页面验收](../../desktop/acceptance.md)。本稿不改写历史测试结果。
 
 ## 3. 技术选型与发布配置
 

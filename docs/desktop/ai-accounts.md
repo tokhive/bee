@@ -26,7 +26,7 @@ OpenAI 默认目录依次取 `CODEX_HOME`、用户目录下 `.codex`。`auto` �
 
 Hive 观察执行身份核验和 account → capabilities → account 夹读，核对指纹、generation、credential_revision、状态及未决账号。变化时整组未确认，不能混用两个账号的数据。`rate_limited` 是独立的当前事实，历史额度过期不会覆盖它。账号支持模型、市场开放和当前接单条件属于不同事实；普通页面不列出模型名或内部市场元数据，缺少可信观察时保持未知。
 
-S2 由一个应用级协调器持有设备、运行、账号与供给快照，四页切换不重建轮询或重复维护；普通核对间隔 10 秒，运行动作等待期加快查询。供给 GET 仍串行执行。30 秒以上、核对中、失败或未核验状态禁止写入；每次实际发送全部操作中的下一项前也重查门禁。未知写结果立即隔离旧回包，随后按新版 S1 规则十秒后只读核对，不自动重放 PUT。修订发生可证明的回退时停止自动核对并保留错误。实例或网络修订改变后拒绝旧结果。
+S2 由一个应用级协调器持有设备、运行、账号与供给快照，四页切换不重建轮询或重复维护；成功读取的普通间隔为 10 秒；短暂失败按 2/4/8/16/30 秒基准退避，遵守 Retry-After；终止自动重试的错误修复后明确重新核对。运行动作等待期加快查询。两平台独立调度；同一平台账号读取与供给读取按顺序执行。报告超过 30 秒、失败、未核验或等待原请求时禁止依赖该报告的写入；新鲜报告的普通后台读取不等于全局禁止操作，每次发送仍重查门禁。未知写结果立即隔离旧回包，随后按新版 S1 规则十秒后只读核对，不自动重放 PUT。修订发生可证明的回退时停止自动核对并保留错误。实例或网络修订改变后拒绝旧结果。
 
 错误保留本次失败的检查点、HTTP 状态或系统证据，不回显官方正文、token、JWT、邮箱、confirmation_id 或连接 lease。一个子域失败不冒充其他子域失败或成功。
 
@@ -50,7 +50,7 @@ S2 由一个应用级协调器持有设备、运行、账号与供给快照，�
 
 “打开 Hive”仅由已保存的 canonical origin 打开站点根地址，不接受前端 URL、不携带秘密；浏览器自行处理网站登录。关窗继续后台运行，由托盘、Dock／任务栏或再次启动找回同一窗口；明确退出只回收 owned Bee，不等待 Hive 在途任务排空。完整 typed 参数及 smoke 限制见[管理协议的 S2 契约](bridge-protocol.md#s2-诊断网络与后台问题事实)。
 
-私有桥新增四个固定命令，详见[管理协议](bridge-protocol.md)：
+账号观察与选择使用以下四个固定命令，详见[管理协议](bridge-protocol.md)：
 
 | 命令 | 固定参数 | 行为 |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ S2 由一个应用级协调器持有设备、运行、账号与供给快照，�
 | `account_snapshot` | `platform,refresh` | false 仅公开快照；true 只刷新 Hive |
 | `account_action` | `platform,revision,candidate_ref,action,confirmed` | 严格校验；select／clear_selection 已有真实保存与暂停核对，confirm_change 已接通真实暂停、确认及同步核对；完整移除仍不可用 |
 
-Go 操作总期限 12 秒；Rust 账号请求从进入队列起共 15 秒。未发出的排队超时不破坏健康会话；已发送超时先撤销 ready，拒绝迟到成功和后续排队写。前端仅使用 typed 命令，不扩展 generic `bridge_request` 的 ping 权限。
+Go 普通操作总期限 12 秒；Rust 账号请求排队最多 15 秒，首次发送后普通执行预算为 15 秒，`account_detect` 保留 10 分钟。未发出的排队超时取消该请求；已发送超时保留管理会话、原请求和通道，迟到回复仍严格校验。原请求结束后状态读取按资源退避重试，账号选择、登录、贡献与暂停操作不会自动重放。前端仅使用 typed 命令，不扩展 generic `bridge_request` 的 ping 权限。完整规则见[私有管理协议](bridge-protocol.md)。
 
 公开快照固定含 `platform/revision/operation/candidate/selection/hive/authorization/capabilities/features/issues/checked_at`。Hive 额外公开 `pending_fingerprint/generation`，不公开 confirmation_id。能力按 official、hive 两项排列；所有时间为 UTC RFC3339（可含 1–9 位小数）或 null。前端逐字段解码，未知字段、错类型和错误实例不能进入视图。
 

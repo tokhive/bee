@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述 **24 项**有序能力。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述 **30 项**有序能力（包含设备在线、上下文核验与设备恢复）。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -56,7 +56,7 @@ Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`
 
 设备、供给和账号业务失败返回 `result.error`；账号沿用 `ACCOUNT_OPERATION_FAILED` 及现有 `AccountError`。设备／供给的实际 HTTP 请求失败保留具体领域码（例如 `device_replaced`）或网络分类码，只有没有结构化原因的旧边界继续使用 `DEVICE_OPERATION_FAILED`／`SUPPLY_OPERATION_FAILED`。失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
 
-所有私有 `protocolError`／Rust `BridgeError`／TS `BridgeError` 均支持可选 `details`，旧 `{code,message}` 错误仍有效。有详情时必须为 `{check,observed_at,evidence}` 对象，不接受 null、未知字段或重复字段；check 为 1–80 字符的小写公开标识，observed_at 为有效 UTC RFC3339，最多允许本机当前时间后 5 秒。evidence 仅允许字符串键 `target_origin,path,http_status,remote_code,response_body,source_type,actual,required`，逐值限制 32,768 UTF-8 字节，并验证公开 origin、路径、状态与代码格式。不得将任意异常对象序列化为证据。
+所有私有 `protocolError`／Rust `BridgeError`／TS `BridgeError` 均支持可选 `details`，旧 `{code,message}` 错误仍有效。有详情时必须为 `{check,observed_at,evidence}` 对象，不接受 null、未知字段或重复字段；check 为 1–80 字符的小写公开标识，observed_at 为有效 UTC RFC3339，最多允许本机当前时间后 5 秒。evidence 的基础字符串键为 `target_origin,path,http_status,remote_code,response_body,source_type,actual,required`，另允许下文列明的请求重试证据；逐值限制 32,768 UTF-8 字节，并验证公开 origin、路径、状态与代码格式。不得将任意异常对象序列化为证据。
 
 ```json
 {"error":{"code":"unavailable","message":"GET /api/bee/identity: HTTP 503; response_body=…","details":{"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"target_origin":"https://hive.example","path":"/api/bee/identity","http_status":"503","remote_code":"unavailable","response_body":"{\"error\":{\"code\":\"unavailable\",\"message\":\"maintenance\"}}"}}}}
@@ -68,7 +68,13 @@ Go `DesktopFailure` 只用于设备／供给请求边界，内部 Cause 支持 U
 
 Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只在 pending/draining 时打开同 Hive 的 `/devices/pair?code=…`；若恰好已绑定或过期，直接返回最新状态。系统启动器最长等待 5 秒，超时回收自有启动器并报告打开结果未确认。浏览器确认后须手动回到 Bee，没有账号自动回跳。
 
-Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最长 10 秒；S1 `dd8ef64` 将 OpenAI official 检测及官方能力查询放宽到最多 10 分钟，仍服从调用方取消。Rust 普通业务请求从进入队列起共 15 秒，`account_detect` 为 10 分钟，原 hello/ping 为 5 秒。排队时期限已过且尚未发送的请求单独返回 `REQUEST_QUEUE_TIMEOUT`，取消后不会迟发，保留健康会话。已发送请求超时先撤销 ready，再返回 `RESPONSE_TIMEOUT`；子进程回收不延迟调用方超时。会话拒绝迟到成功及后续排队写，不能因 supervisor 暂时未被调度而恢复 ready。
+Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最长 10 秒；OpenAI official 检测及官方能力查询最多 10 分钟，仍服从调用方取消。Rust 普通请求排队最多 15 秒，首次写出字节后再计算执行预算，普通业务为 15 秒、`account_detect` 为 10 分钟、ping 为原有 5 秒。握手、明确退出与更新继续遵守既有整体期限。
+
+未发送的超时请求返回 `REQUEST_QUEUE_TIMEOUT` 并移除，不会迟发。已发送超时返回 `RESPONSE_TIMEOUT`，保留 Ready、owned Bee 和原请求；部分帧继续剩余字节，不重放或交错。原请求继续占用既有最多 16 项预算及平台通道／共享屏障，直到真实回复。迟到成功或合法业务失败仍严格校验并消费，但不再交给已经超时的调用方；未知／重复 ID、错误实例、非法回复、真实进程退出与管道损坏仍终止会话。
+
+本地 Tauri 命令 `bridge_pending_requests` 返回 `{instance,requests:[{id,method,platform}]}`，只列已超时仍在途的请求，不向 Go 发探测。完成事件 `bee://request-settled` 携带 `{instance,id,method,platform}`，不包含业务结果；无平台时为 null。前端先等待原请求结束，再按资源使用 2/4/8/16/30 秒退避（抖动为基准的 80%–100%）；成功恢复正常 10 秒核对。事件丢失通过本地在途回读补偿。有效 429 Retry-After 可延长等待，认证／TLS／非法数据或未知失败停止该资源自动重试。写命令不自动重放。
+
+超时证据增加 `request_id,method,platform,phase,queue_ms,execution_ms,fully_sent,in_flight`；HTTP 证据增加 `method,phase,elapsed_ms,retry_after_seconds,failure_kind`。所有值仍为经过封闭枚举或非负整数验证的字符串，无平台证据为 `none`。请求阶段日志通过有界队列输出固定 `BEE_DESKTOP_EVENT` 前缀；Rust 仅接纳已知事件及严格白名单，拒绝重复字段，拥堵可丢日志但不阻塞业务。原始 stderr 不作为安全日志转发。详见[重试设计](../superpowers/specs/2026-11-03-desktop-request-retry-design.md)。
 
 请求含有唯一有效 ID 时，未知字段或重复非 ID 字段的错误仍关联原 ID。无法可靠解码请求信封、重复 ID 字段有歧义，或编码后的响应超过上限时，错误响应的 `id` 为空字符串。输出超长只发送小型 `FRAME_TOO_LARGE` 错误帧并终止会话；父进程应将这种响应作为协议错误处理，不能据此完成某个正常请求。
 
@@ -144,7 +150,7 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 | `network_test` / `network_snapshot` | `{proxy}` 返回 Go envelope；`{}` 返回 `{saved_revision,effective_revision,saved_proxy,effective_proxy,paths,pending_restart,error}` |
 | `network_save_proxy` / `network_apply_saved` | `{proxy,origin,expectedRevision}` 保存并返回偏好快照，origin 为未配对草稿的 canonical origin 或 null；`{confirmed:true}` 明确确认可能中断任务后应用，返回网络快照 |
 | `notification_permission` / `notification_enable` | 查询 / 用户明确触发请求权限；返回 granted/denied/prompt，普通保存偏好不申请权限 |
-| `notification_delivery_status` / `notification_retry` | 查询返回 `{error}`；用户主动允许失败提交再试，返回 null，不清除 S1 问题 |
+| `notification_delivery_status` / `notification_retry` | 查询返回 `{error,retryable_count,pending_count,uncertain_count,check_sequence}`，分别表示当前故障、可重试数、已安排数、结果未知数及本次 App 已完成的后台检查序号；主动重试返回 `{retryable_count}`（本次接受数，零项不写入账本）。已接受和结果未知的提交不会重发，不清除 S1 问题 |
 | `autostart_status` / `autostart_set` | `{}` / `{enabled}`；返回 `{desired,registered,error}`；registered 可为 null，登记失败不能按 desired 宣称成功 |
 | `hive_open` | 不接受 URL 参数；由已保存 canonical origin 打开站点根地址，不携带凭证或配对码 |
 
@@ -154,7 +160,7 @@ proxies 每项为 `{origin,device_scope,connect_proxy}`，device_scope 为 null 
 
 ### 安全只读 smoke
 
-Node 24 下可执行 `node desktop/scripts/smoke-accounts.mjs <Bee绝对路径>` 以及 `node desktop/scripts/smoke-experience.mjs <Bee绝对路径> [证据目录]`。二者均严格断言当前完整 24 项能力；前者只取默认来源及 refresh:false 公开快照，后者另核对 S1 内存快照、网络策略、参数拒绝、未知报告业务错误及 owned 子进程回收，不执行配对／检测凭证／恢复／贡献／有效网络测试。
+Node 24 下可执行 `node desktop/scripts/smoke-accounts.mjs <Bee绝对路径>` 以及 `node desktop/scripts/smoke-experience.mjs <Bee绝对路径> [证据目录]`。当前两脚本静态列表仍为 29 项，缺少 `runtime_enable_presence`，须同步后才能用于当前完整构建；这项差异登记在[验收状态](acceptance.md)。前者只取默认来源及 refresh:false 公开快照，后者另核对 S1 内存快照、网络策略、参数拒绝、未知报告业务错误及 owned 子进程回收，不执行配对／检测凭证／恢复／贡献／有效网络测试。
 
 体验脚本以独立临时工作目录运行：Linux 将子进程 XDG_CONFIG_HOME、Windows 将 APPDATA 指向空临时目录，才额外执行未配对诊断及空通知快照，只允许产生临时配置锁。macOS 的 Go `os.UserConfigDir()` 不使用 XDG_CONFIG_HOME，因此脚本明确跳过会打开设备会话的命令；不重定向 HOME，不读取用户的 `~/Library/Application Support/tokhive`。JSON 证据记录覆盖、跳过、二进制 SHA256 与正常退出；协议 smoke、浏览器 fixture 均不替代 doctor 真实配对路径、实际代理、日志下载或原生 OS 通知／自启／窗口验收。
 
@@ -171,7 +177,7 @@ go run ./cmd/bee help
 
 协议测试覆盖分段/合并帧、帧长度边界、错误输入、重复未完成 ID、实例关联、版本不匹配、流所有权、取消和底层 I/O 错误。命令测试创建真实测试子进程，验证握手、拒绝贡献操作、shutdown、父输入 EOF、空闲输入/堵塞输出时的中断、CLI 帮助与版本一致，以及工作目录配置样本未改变。
 
-本次设备配对的自动测试与实际子进程证据来自 macOS arm64；交叉编译不替代 Windows/Linux 的行为测试。设备增量的使用、验证及原生图形缺口见[设备配对说明](device-pairing.md)。既有 P0 三端进度仍以 [P0 验证记录](p0-validation.md)为准，不能用本增量宣称三端产品已通过。
+本次设备配对的自动测试与实际子进程证据来自 macOS arm64；交叉编译不替代 Windows/Linux 的行为测试。设备增量的使用、验证及原生图形缺口见[设备配对说明](device-pairing.md)。既有 P0 三端进度仍以 [当前验收状态](acceptance.md)为准，不能用本增量宣称三端产品已通过。
 
 供给公开字段、暂停持久语义、前端串行刷新和未知写结果处理见[平台状态与暂停恢复说明](supply-control.md)。`DesktopSupply` 精确字段为 `hive/device_id/platform/paused/ready/reasons/checked_at`；凭证不进入前端。`checked_at` 为 UTC RFC3339。`ready` 当且仅当原因数组为空，`paused` 当且仅当含 `manually_paused`；两平台原因不能串线。PUT 后 GET 回读失败或目标值不符均报告结果未确认，重新核对仅 GET。
 

@@ -33,7 +33,7 @@ func AccountReason(platform, status string) string {
 }
 
 // AccountStatuses are the account states that surface as an AccountReason.
-var AccountStatuses = []string{"source_unavailable", "confirmation_required", "authorization_rejected"}
+var AccountStatuses = []string{"source_unavailable", "confirmation_required", "authorization_rejected", "account_in_use"}
 
 // SupplyReasons lists every reason Hive can report.
 func SupplyReasons() []string {
@@ -73,6 +73,14 @@ func ExplainReason(reason, platform string) (ReasonExplanation, bool) {
 }
 
 var reasonExplanations = map[string]ReasonExplanation{
+	AccountReason("openai", "account_in_use"): {
+		Cause: "this OpenAI subscription account is registered to another Provider",
+		Fix:   "use a different account, or ask the original Provider to confirm a switch to a different account; disconnecting or pausing Bee does not release account ownership",
+	},
+	AccountReason("claude", "account_in_use"): {
+		Cause: "this Claude subscription account is registered to another Provider",
+		Fix:   "use a different account, or ask the original Provider to confirm a switch to a different account; disconnecting or pausing Bee does not release account ownership",
+	},
 	ReasonManuallyPaused: {
 		Cause: "supply is paused on this Bee",
 		Fix:   "run bee resume --platform PLATFORM when you want to take work again",

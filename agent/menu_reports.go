@@ -81,6 +81,7 @@ func (m *managementMenu) showPlatform(device localState, p string) error {
 func (m *managementMenu) reason(r string) string {
 	if m.ui.lang == "zh" {
 		if zh, ok := map[string]string{
+			"codex_account_in_use": "OpenAI 账号已归属其他 Provider", "claude_account_in_use": "Claude 账号已归属其他 Provider",
 			"codex_authorization_rejected": "Codex 授权被上游拒绝", "claude_authorization_rejected": "Claude 授权被上游拒绝",
 			"codex_source_unavailable": "等待官方 Codex 登录恢复", "claude_source_unavailable": "等待官方 Claude Code 登录恢复",
 			"codex_confirmation_required": "OpenAI 账号已变更，等待确认", "claude_confirmation_required": "Claude 账号已变更，等待确认",
@@ -178,6 +179,8 @@ func (m *managementMenu) reasonFix(reason string, admin bool) string {
 		return "请联系 Hive 管理员处理套餐、模型或禁用状态。"
 	}
 	switch reason {
+	case "codex_account_in_use", "claude_account_in_use":
+		return "请换用其他账号，或请原 Provider 确认换走账号；断开或暂停 Bee 不会释放归属。"
 	case "manually_paused":
 		return "选择「供给账号 → 恢复接单」。"
 	case "offline":

@@ -20,6 +20,7 @@ var accountStateLabels = map[string]string{
 	"ready":                  "authorization synchronized",
 	"source_unavailable":     "waiting for official authorization recovery or synchronization",
 	"confirmation_required":  "account changed; awaiting explicit confirmation",
+	"account_in_use":         "account registered to another Provider; use a different account or ask the original Provider to confirm an account switch",
 	"authorization_rejected": "authorization rejected by upstream; waiting for an official client update",
 }
 
@@ -69,6 +70,9 @@ func accountControl(ctx context.Context, state localState, platform, fingerprint
 		return err
 	}
 	if confirm {
+		if account.Status == "account_in_use" {
+			return errors.New(accountStateLabels["account_in_use"])
+		}
 		fingerprint = strings.ToLower(fingerprint)
 		decoded, err := hex.DecodeString(fingerprint)
 		if err != nil || len(decoded) != 32 {

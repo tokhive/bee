@@ -1,6 +1,6 @@
 # Bee 桌面：诊断、网络与日常桌面体验
 
-日期：2026-10-26。状态：**spec 已获用户整体批准；对应实施 plan 已获执行授权，按 S1→S2→S3 顺序推进**。本文为 S2，依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)的真实状态和运行控制；[S3 安装更新与发布](2026-10-26-desktop-release-update-design.md)验证原生平台行为。[对应实施计划](../plans/2026-10-26-desktop-diagnostics-experience.md)已获执行授权。
+当前有效规格：诊断、网络与日常桌面体验。依赖[S1 账号与贡献运行](2026-10-26-desktop-account-runtime-design.md)，原生行为按[验收状态](../../desktop/acceptance.md)逐项确认；未完成工作见[实施计划](../plans/2026-10-26-desktop-diagnostics-experience.md)。
 
 ## 1. 用户最终得到什么
 
@@ -10,16 +10,7 @@
 
 ## 2. 已有能力及技术栈
 
-依据[当前范围](../../../../../docs/discussions/2026-10-21-bee-desktop-requirements.md#当前有效范围2026-10-26)和相邻决策记录。Bee 基线 `a16f251`。
-
-| 来源 | 已有与尚缺 |
-| --- | --- |
-| [doctor](../../../agent/doctor.go) | 已有逐项结构化检查，但 CLI 包装会改变全局日志器，不能直接嵌入长期管理进程 |
-| [原生入口](../../../desktop/src/app/NativeApp.tsx) | 诊断仅少量管理信息，语言／主题仅当前运行；完整原生偏好与日志尚未接通 |
-| [代理核心](../../../agent/connect_proxy.go) | 支持无认证本机 HTTP CONNECT；官方 HTTP 查询保留 HTTPS_PROXY 优先级，Hive 不走此专用 transport |
-| [现有偏好](../../../desktop/src/features/settings/preferences.ts) | 属于 demo 存储，包含 Hive 用户会话假设及未接通 SOCKS5 校验，不能直接作为原生配置 |
-| [账号提醒](../../../agent/desktop_account_hive.go) | 已有持久去重；当前账号页面轮询不能代替后台系统通知调度 |
-| [系统壳生命周期](../../../desktop/src-tauri/src/lifecycle.rs)、[诊断管道](../../../desktop/src-tauri/src/diagnostics.rs) | 已有托盘／关窗／重开及有界 stderr 消费；不是完整用户日志功能 |
+当前产品范围见[产品需求](../../desktop/product.md)。正式 NativeApp 已接入共享状态、只读诊断、安全日志、持久偏好、代理编排、通知和自启适配；实现入口见[架构](../../desktop/architecture.md)，原生环境未验项见[验收状态](../../desktop/acceptance.md)。CLI doctor 不直接嵌入长期管理进程；专用代理沿用本机 HTTP CONNECT，Hive 与官方客户端登录使用各自网络。
 
 | 用途 | 技术与版本 | 状态及理由 |
 | --- | --- | --- |
@@ -111,4 +102,4 @@ S1 提供运行与问题事实，S2 负责用户诊断、日志存储、普通�
 
 ## 10. 2026-10-28 UI 整理
 
-用户已选定诊断页 C「问题优先」和设置页 B「分类页签」，视觉采用已确认的银白精工 + shadcn/ui。布局与既有功能边界汇总见 [S2 UI 规格](2026-10-28-desktop-s2-ui-design.md)，对应 [UI 实施计划](../plans/2026-10-28-desktop-s2-ui.md)已获继续实施授权。该整理不改变本稿的主动诊断、按需日志、代理应用确认及系统权限规则；正式 UI 按新计划实施。
+用户已选定诊断页 C「问题优先」和设置页 B「分类页签」，视觉采用已确认的银白精工 + shadcn/ui。布局与既有功能边界汇总见 [S2 UI 规格](2026-10-28-desktop-s2-ui-design.md)，对应 [UI 实施计划](2026-10-28-desktop-s2-ui-design.md)已获继续实施授权。该整理不改变本稿的主动诊断、按需日志、代理应用确认及系统权限规则；正式 UI 按新计划实施。

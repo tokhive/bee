@@ -4,12 +4,12 @@
 
 ## 怎么使用
 
-1. 打开匹配本增量源码的普通原生开发包，进入“概览”。尚未绑定时先按[设备配对说明](device-pairing.md)完成绑定；网页确认后手动回到 Bee。
-2. 已核验设备下方显示两个平台的 Hive 报告、具体原因和最后核对时间。“满足接单条件（Hive 报告）”只表示 Hive 当前报告满足条件，不表示本机正在贡献。
+1. 打开按当前源码构建的普通原生开发包，进入“概览”。尚未绑定时先按[设备配对说明](device-pairing.md)完成绑定；网页确认后手动回到 Bee。
+2. 已核验设备下方显示两个平台的 Hive 报告、具体原因和最后核对时间。“可接单”须同时满足贡献运行、平台未暂停和新鲜供给报告无阻碍原因；不表示当前正在处理任务。
 3. 点击对应平台“暂停接单”或“恢复接单”。暂停按当前 Hive 账号和该平台持久保存，替换设备后仍继承；不会终止已接请求。恢复只解除手动暂停，不启动本机贡献；离线、账号或授权问题仍可能阻止接单。
 4. 如显示“结果未确认”，先查看同一条消息中的检查或 HTTP 证据，等待已安排的自动读取，或使用错误对应的核对入口。核对只读取服务端现状，不重复提交修改。应用重启也只读取，不保存或重放写意图。
 
-两平台独立读取，同平台请求不重叠；每次完成后等待 10 秒再读取，失败也按实际调度自动重试。新鲜报告后台读取时保留当前事实；失败或超过 30 秒后隐藏旧可接单结论并禁止依赖该报告的写入。概览与 AI 账号页共用同一份状态；管理实例改变会丢弃旧设备和供给依据，重新核验。
+两平台独立读取，同平台请求不重叠；成功后正常间隔 10 秒；短暂失败按 2/4/8/16/30 秒基准退避，叠加受限抖动且不早于服务端 Retry-After。请求尚未结束时等待原请求；认证、TLS 与非法数据等终止自动重试的问题，修复后明确重新核对。新鲜报告后台读取时保留当前事实；失败或超过 30 秒后隐藏旧可接单结论并禁止依赖该报告的写入。概览与 AI 账号页共用同一份状态；管理实例改变会丢弃旧设备和供给依据，重新核验。
 
 账号观察增量见[AI 账号说明](ai-accounts.md)；换号未决的平台禁止恢复，仍可暂停及 GET 核对。设备绑定、官方登录、账号接入和开始贡献各有独立流程；页面不显示推测收益。中英文和 860×600 最小窗口沿用现有银白布局；小窗口可纵向滚动。演示构建仍只操作本地演示数据，不调用真实设备或供给命令。
 
@@ -39,29 +39,9 @@
 
 最终组件、模拟 IPC、真实最终 Bee/Hive HTTP、数据库和有限原生包专项分别登记在[76 项台账](interaction-clarity-validation.md)。真实协议组合包含新 Bee／新 Hive、旧请求／新 Hive，以及忽略详细参数的旧响应处理器；签名更新和官方上游请求不在这些通过结论内。
 
-## 历史增量验收与交付边界（2026-10-24 至 10-26）
 
-客户端自动测试仅对本地原生 IPC fixture 执行暂停／恢复，不修改用户真实 Hive 平台状态或设备配置。执行入口：
+## 状态与验证
 
-```sh
-npm --prefix desktop run test:device
-npm --prefix desktop run typecheck
-npm --prefix desktop run build
-npm --prefix desktop run build:demo
-npm --prefix desktop run test:bridge
-cd desktop
-npx playwright test navigation.spec.ts onboarding-overview.spec.ts settings-diagnostics.spec.ts lifecycle-ui.spec.ts --project chromium
-```
+无报告显示待确认；读取失败或报告过期不沿用旧的可接单结论；新鲜事实在普通后台核对时保持。两平台使用独立读取状态与退避门禁，共享概览／账号页的同一份快照。原因文案来自 `desktop/src/presentation/`，全部原因可见，未知不推断为网络故障。
 
-本批源码与自动化验收已完成，完整行为路径独立复核 C/I/M 为 0/0/0。最终 Mac 包绑定源码 `24aca16f37e9fa17f843d1c300786056a2b083a1`，版本 `dev+24aca16f37e9`；后续文档提交不改变包内版本。
-
-- App：`desktop/src-tauri/target/debug/bundle/macos/Bee Dev.app`。旧包已正常退出，完整备份保留在 `.cache/supply-control/previous/Bee Dev.app`，没有复制或覆盖设备配置。
-- ZIP：`.cache/supply-control/Bee-Dev-macos-arm64-24aca16.zip`，23,021,577 字节；SHA256 `6464759e020c95ab1983e79f1cec24e9388bead1aa0ce643239871180dfec024`。CRC、全部 App 文件字节和两程序可执行权限均已核对。
-- `codesign --verify --deep --strict` 通过；2 项签名包专项通过，涵盖包内 Bee 握手/ping/回收与篡改拒绝。仅 ad-hoc 开发签名，未公证或生产发布。
-- 最终包内 Bee 真实执行 hello → OpenAI GET → Claude GET → ping → shutdown，两个平台均通过严格校验，exit0、stderr0、设备配置字节未改。OpenAI 未就绪原因是 offline、codex_source_unavailable、authorization_unavailable；Claude 是 offline、authorization_unavailable。没有发送 PUT，也未启动贡献。
-- 自动测试：Go 全量7包及 vet；设备/供给 race；最终供给定向回归；Rust普通51项和上述签名包2项；工具37项；前端初次设备/供给单元8项（后续供给单测8项）、页面17项、桥10项及相关旧页面89项；typecheck、普通/demo build 通过。各轮源码和后续窄修覆盖见[验收记录](evidence/2026-10-24-supply-control/README.md)，不把旧轮结果冒充最终源码全量重跑。
-- **2026-10-26 已补验新版 Mac 界面。** 用户显示窗口后，核对了已绑定设备、两张真实平台卡、手动刷新时的核对中/禁用状态、成功时间更新、失败时隐藏旧成功与禁写、诊断版本、导航及中英切换。语言已恢复为原来的“跟随系统”，界面已交还用户正常使用。完整证据见[原生补验记录](evidence/2026-10-26-supply-native/README.md)。连续联网稳定性未通过：成功查询后出现HTTP409，再有EOF；独立Go只读诊断也报TLS握手失败，具体根因尚未确定，不能据此断言是Hive或客户端故障。
-
-现在可以正常操作电脑和 Bee，不需保持窗口或等待测试。查看状态时进入“概览”向下滚动到平台卡；如果显示未确认，可点“重新核对平台”只读查询，不需重新配对。真实暂停/恢复未在本轮点击。以后只有明确收到“请暂停操作”的通知才需停手，测试结束会明确交还。
-
-Windows/Linux 本增量原生界面、已有 P0/P1 环境矩阵和其它缺口继续保留。来源、签名、只读证据及未验收项见[交付清单](evidence/2026-10-24-supply-control/manifest.json)。
+开发可运行 `npm --prefix desktop run test:device`，正式预览按[开发说明](../../desktop/README.md)执行。真实账号与平台准入验收缺口见[验收状态](acceptance.md)。

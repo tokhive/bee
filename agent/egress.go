@@ -52,6 +52,9 @@ type egressConfig struct {
 	metadataLease           string
 	metadataModels          []string
 	capabilityReportPending bool
+	// announceReady is a capability recovery whose readiness line waits for
+	// Hive to accept the report.
+	announceReady bool
 	// capabilityWanted and claudeCapabilityWanted are Hive asking for a
 	// capability report now.
 	capabilityWanted       atomic.Bool
@@ -315,15 +318,15 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	}
 	var result beewire.MaintenanceResponse
 	revision := credential.metadata().CredentialRevision
-	stalePlan := cfg.Capabilities.wantsPlanRefresh(revision, time.Now())
+	staleToken := cfg.Capabilities.wantsRefresh(revision, time.Now())
 	err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential,
-		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: stalePlan}, &result)
+		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: staleToken}, &result)
 	if err != nil {
 		return err
 	}
-	if stalePlan {
-		cfg.Capabilities.askedPlanRefresh(revision, time.Now())
-		slog.Info("openai plan changed; authorization refresh requested", "module", "maintenance")
+	if staleToken {
+		cfg.Capabilities.askedRefresh(revision, time.Now())
+		slog.Info("openai authorization stale; refresh requested", "module", "maintenance")
 	}
 	if result.Account.Status == "account_in_use" {
 		cfg.accountMessage(out, "account_in_use", accountStateLabels["account_in_use"]+"; new OpenAI jobs paused")
@@ -377,6 +380,10 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		cfg.capabilityReportPending = true
 		if err := cfg.synchronizeCapabilities(ctx, state, lease, force); err != nil {
 			return err
+		}
+		if cfg.announceReady {
+			cfg.announceReady = false
+			go reportReadiness(ctx, state, "openai", out)
 		}
 	}
 	// A cycle that handled a task leaves Hive in a state worth confirming at

@@ -10,13 +10,13 @@ S2 普通偏好、系统适配器、只读诊断、安全日志、代理编排�
 
 ## 2026-10-29 S1 集成及 UI 原生增补
 
-通过真实 merge `3d908fc` 集成 S1 已提交源快照 `27f5360`，保留唯一公共壳和状态协调器；S1 后续未提交的轮询稳定性修复未复制或重写。本轮以诊断 C「问题优先」和设置 B「分类页签」完成整窗暖银白 UI，浏览器 87/87、Node 60/60、Rust 148 通过／2 ignored、Go 定向、typecheck／build 通过。详细命令、截图与证据见 [UI 验收记录](../superpowers/reports/2026-10-28-desktop-s2-ui-verification.md)。下文 2026-10-28 环境与自动验证表保留为历史证据，本节和 E1–E6 表反映增补后的当前边界。
+通过真实 merge `3d908fc` 集成 S1 已提交源快照 `27f5360`，保留唯一公共壳和状态协调器；S1 后续未提交的轮询稳定性修复未复制或重写。本轮以诊断 C「问题优先」和设置 B「分类页签」完成整窗暖银白 UI，浏览器 87/87、Node 60/60、Rust 148 通过／2 ignored、Go 定向、typecheck／build 通过。当前验收缺口统一见[验收状态](acceptance.md)；该批 `.cache/s2-*` 原始资产在当前检出缺失，下述批次结论不作为最终候选的可复核证明。下文 2026-10-28 环境与自动验证表保留为历史证据，本节和 E1–E6 表反映增补后的当前边界。
 
 原生主包为 S2 工作树的 `Bee S2 Dev.app`，对应实现 `3d908fc`，Bee `dev+3d908fc0f1d3-dirty`（dirty 为未提交文档）。本地 ad-hoc 重签后严格校验通过，最终包内 Bee SHA256 为 `a3bfa5a20d1bca5a2265e2db086e83119bad78357b088efa2249460e06cf6db0`；签名后只读协议 smoke 为 14 通过、1 项按 macOS UserConfigDir 限制跳过，未重定向 HOME。
 
 - 从真实主窗口主动运行、取消并重新运行诊断，得到 16 项：2 fail／1 warning／3 pass／10 skipped，当前贡献未运行及 OpenAI 来源缺失如实显示。日志由明确刷新读取，没有自动诊断或启动贡献。
 - “检查＋日志”导出首次受 macOS Downloads 目录确认阻塞，UI 按 30 秒显示未确认；允许目录访问后独立读回 7442 字节、16 checks／21 logs。先核对首文件，再明确导出仅检查，实际完成回执与 3675 字节、16 checks／0 logs 一致。原始证据在 `.cache/s2-native-ui/export-*.json`，两份实际报告保留 Downloads；目录访问与通知权限分别处理。
-- 现有空代理配置的两官方只读端点返回 HTTP 401；临时回环 HTTP CONNECT 透传服务又实际转发三次 CONNECT，两个真实 HTTPS 端点经本机代理返回 HTTP 401。该工具不伪造应答，只允许固定两个目标；原生表单仅测试未保存草稿，保存／生效代理仍为空，未执行贡献重启，临时服务已关闭。[代理核对](../../.cache/s2-native-ui/network-proxy-verification.json)。
+- 现有空代理配置的两官方只读端点返回 HTTP 401；临时回环 HTTP CONNECT 透传服务又实际转发三次 CONNECT，两个真实 HTTPS 端点经本机代理返回 HTTP 401。该工具不伪造应答，只允许固定两个目标；原生表单仅测试未保存草稿，保存／生效代理仍为空，未执行贡献重启，临时服务已关闭。原记录指向 `.cache/s2-native-ui/network-proxy-verification.json`，当前检出缺少该文件，本条不能作为可复核的当前代理验收证据。
 - 将语言／主题从 system／system 保存为 en／light，正常退出重开后仍显示 English／Light，随后恢复 system／system。主 App 只查询通知权限与自启登记，未再次申请、发送通知或改登记；主 App 与旧 probe 的 bundle ID 不同，不混用其权限结果。
 - S1／S2 使用相同应用标识，等待另一会话结束且确认贡献未运行后，按正常退出／启动顺序轮换；结束时确认 S2 owned 主子进程消失，再恢复原 S1 包窗口。未改写原工作树或 S1 的现有包。
 

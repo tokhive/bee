@@ -37,7 +37,7 @@ for(const [scene,copy] of cases)test('scene renders formal state without invalid
 });
 
 test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
- await page.goto('/.cache/bee-shadcn-review.html?scene=running&theme=light&size=normal');
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light&size=normal');
  await expect(page.locator('#scene optgroup')).toHaveCount(10);
  expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
  await expect(page.locator('#scene option')).toHaveCount(76);

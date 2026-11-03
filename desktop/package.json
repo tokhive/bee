@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "build": "tsc --noEmit && vite build",
     "dev": "vite --host 127.0.0.1 --port 1420 --strictPort",
+    "dev:ui": "vite --host 127.0.0.1 --port 1420 --strictPort --open /tests/fixtures/bee-preview/index.html",
     "test:e2e": "playwright test",
     "test:tooling": "node --test tests/tooling.test.mjs",
     "test:bridge": "node --test tests/bridge.test.ts tests/bridgeMonitor.test.ts tests/lifecycle.test.ts",

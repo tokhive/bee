@@ -322,3 +322,11 @@ This Claude subscription account is registered to another Provider. New work is 
 ### `claude_authorization_rejected`
 
 Anthropic rejected the account's authorization. Sign in to Claude Code again.
+
+### BEE-CONFIG-OPENAI-API
+
+官方 OpenAI API 供给配置无效。`openai_api.models` 必须选择 1–512 个不重复的模型 ID；`local_url` 仅用于全部目标均为 loopback 的本地测试。
+
+### BEE-CONFIG-OPENAI-API-KEY
+
+官方 API Key 文件不可读取或内容无效。`openai_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个 Key。Key 不应写入配置文件、日志或命令参数。

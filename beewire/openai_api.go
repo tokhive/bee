@@ -18,5 +18,5 @@ type OpenAIAPIStatus struct {
 }
 
 func (s OpenAIAPIStatus) Valid() bool {
-	return s.Lease != "" && (ResellerStatus{KeyFingerprint: s.KeyFingerprint, State: ResellerReady, Models: s.Models}).Valid()
+	return s.Lease != "" && validFingerprint(s.KeyFingerprint) && ValidModelIDs(s.Models)
 }

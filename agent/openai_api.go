@@ -26,7 +26,9 @@ type openaiAPISource struct {
 	lastState                      string
 }
 
-func (s *openaiAPISource) key() (string, error) { return (&resellerSource{KeyFile: s.KeyFile}).key() }
+func (s *openaiAPISource) key() (string, error) {
+	return readStaticKeyFile(s.KeyFile, "BEE-CONFIG-OPENAI-API-KEY")
+}
 func (s *openaiAPISource) validate() error {
 	if s.LocalURL != "" {
 		u, err := url.Parse(s.LocalURL)
@@ -35,7 +37,7 @@ func (s *openaiAPISource) validate() error {
 		}
 	}
 
-	if len(s.Models) == 0 || !(beewire.OpenAIAPIStatus{Lease: "validation", KeyFingerprint: hex.EncodeToString(make([]byte, 32)), Models: s.Models}).Valid() {
+	if len(s.Models) == 0 || !beewire.ValidModelIDs(s.Models) {
 		return fail("BEE-CONFIG-OPENAI-API", "models must select 1 to 512 distinct model IDs")
 	}
 	_, err := s.key()

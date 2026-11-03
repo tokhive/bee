@@ -57,14 +57,7 @@ func (s ResellerStatus) Valid() bool {
 	if s.AvailableUSD != "" && !usdBalance.MatchString(s.AvailableUSD) {
 		return false
 	}
-	seen := make(map[string]bool, len(s.Models))
-	for _, model := range s.Models {
-		if !capabilityModelID.MatchString(model) || seen[model] {
-			return false
-		}
-		seen[model] = true
-	}
-	return true
+	return ValidModelIDs(s.Models)
 }
 
 func validFingerprint(value string) bool {

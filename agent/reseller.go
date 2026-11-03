@@ -8,14 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/tee/tee"
@@ -76,30 +72,7 @@ func (source *resellerSource) validate() error {
 // key reads the key file. It is read every cycle, so replacing the key needs
 // no restart.
 func (source *resellerSource) key() (string, error) {
-	if !filepath.IsAbs(source.KeyFile) {
-		return "", fail("BEE-CONFIG-RESELLER-KEY", "key_file must be an absolute path")
-	}
-	info, err := os.Lstat(source.KeyFile)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" does not exist")
-	case err != nil || !info.Mode().IsRegular():
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is not a readable regular file")
-	case info.Mode().Perm()&0077 != 0:
-		return "", failf("BEE-CONFIG-RESELLER-KEY", "%s has mode %04o", source.KeyFile, info.Mode().Perm())
-	case info.Size() > 1024:
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is too large for a key")
-	}
-	raw, err := os.ReadFile(source.KeyFile)
-	if err != nil {
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is not a readable regular file")
-	}
-	key := strings.TrimSpace(string(raw))
-	if key == "" || strings.IndexFunc(key, unicode.IsSpace) >= 0 || (tee.Secret{Header: "authorization", Scheme: "Bearer", Token: key}).Validate() != nil {
-		// The key is never echoed.
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" does not hold a single key")
-	}
-	return key, nil
+	return readStaticKeyFile(source.KeyFile, "BEE-CONFIG-RESELLER-KEY")
 }
 
 func fingerprint(key string) string {

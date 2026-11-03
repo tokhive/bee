@@ -36,6 +36,7 @@ type egressConfig struct {
 	Credential              tee.Secret        `json:"credential"`
 	Codex                   *codexSource      `json:"codex,omitempty"`
 	Claude                  *claudeSource     `json:"claude,omitempty"`
+	OpenAIAPI               *openaiAPISource  `json:"openai_api,omitempty"`
 	Reseller                *resellerSource   `json:"reseller,omitempty"`
 	Capabilities            *capabilitySource `json:"capabilities,omitempty"`
 	capabilitySequence      int64
@@ -214,6 +215,11 @@ func (cfg *egressConfig) validate() error {
 	if cfg.Claude != nil && cfg.Claude.Store != claudeStoreKeychain && cfg.Claude.Store != claudeStoreFile {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
+	if cfg.OpenAIAPI != nil {
+		if err := cfg.OpenAIAPI.validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Reseller != nil {
 		if err := cfg.Reseller.validate(); err != nil {
 			return err
@@ -226,6 +232,12 @@ func (cfg *egressConfig) validate() error {
 		return fail("BEE-CONFIG-CAPABILITIES-URL", "")
 	}
 	if !cfg.loopbackTargets() {
+		if cfg.OpenAIAPI != nil && cfg.OpenAIAPI.LocalURL != "" {
+			return fail("BEE-CONFIG-OPENAI-API", "local_url requires loopback egress targets")
+		}
+		if cfg.OpenAIAPI != nil && !slices.Contains(cfg.Targets, "api.openai.com:443") {
+			return fail("BEE-CONFIG-TARGET-MISSING", "openai_api requires api.openai.com:443")
+		}
 		for _, platform := range platformTargets {
 			configured := platform.field == "codex" && cfg.Codex != nil || platform.field == "claude" && cfg.Claude != nil
 			if configured && !slices.Contains(cfg.Targets, platform.target) {
@@ -245,6 +257,9 @@ func (cfg *egressConfig) validate() error {
 			return fail("BEE-CONFIG-PROXY", "")
 		}
 		official := officialTransport(address)
+		if cfg.OpenAIAPI != nil {
+			cfg.OpenAIAPI.transport = official
+		}
 		if cfg.Codex != nil {
 			cfg.Codex.transport = official
 		}
@@ -275,7 +290,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil
+	return cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

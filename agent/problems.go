@@ -96,6 +96,14 @@ var problems = map[string]problem{
 		"capabilities.local_url is not an HTTP address at a loopback IP",
 		"remove local_url; it exists only for local test fixtures",
 	},
+	"BEE-CONFIG-OPENAI-API": {
+		"official OpenAI API supply configuration is invalid",
+		"select 1 to 512 distinct model IDs; local_url is only for loopback test fixtures",
+	},
+	"BEE-CONFIG-OPENAI-API-KEY": {
+		"the official API key file is missing, unreadable, open to other users or does not hold a single key",
+		"set openai_api.key_file to an absolute path holding only the key, with permissions 600",
+	},
 	"BEE-CONFIG-RESELLER": {
 		"reseller names an API reseller Bee does not know",
 		"set reseller.reseller to a supported reseller, such as wokey",

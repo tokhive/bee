@@ -159,6 +159,10 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	if result.Account.Platform != "claude" {
 		return errors.New("Hive returned an unexpected platform for Claude maintenance")
 	}
+	if result.Account.Status == "account_in_use" {
+		source.message(out, "account_in_use", accountStateLabels["account_in_use"]+"; new Claude jobs paused")
+		return nil
+	}
 	if result.Account.Status == "confirmation_required" {
 		source.message(out, "confirmation_required", "different Claude account detected; new jobs paused; run bee account-status --platform claude and explicitly confirm with bee confirm-account")
 		return nil

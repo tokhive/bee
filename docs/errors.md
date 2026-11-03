@@ -299,6 +299,10 @@ Bee can't currently read the Codex login. Sign in again with the official Codex 
 
 The Codex login switched to a different account, and the change must be confirmed before it takes effect. Run `bee account-status --platform openai` to see the pending fingerprint, then confirm it with `bee confirm-account`.
 
+### `codex_account_in_use`
+
+This OpenAI subscription account is registered to another Provider. New work is paused. Use a different account, or ask the original Provider to confirm a switch to a different account. Disconnecting or pausing Bee does not release ownership; once it is released, a running Bee retries automatically. An existing account switch still needs explicit confirmation.
+
 ### `codex_authorization_rejected`
 
 OpenAI rejected the account's authorization. Sign in again with the official Codex client.
@@ -310,6 +314,10 @@ Bee can't currently read the Claude Code login. Sign in to Claude Code again; a 
 ### `claude_confirmation_required`
 
 The Claude Code login switched to a different account, and the change must be confirmed before it takes effect. Run `bee account-status --platform claude` to see the pending fingerprint, then confirm it with `bee confirm-account`.
+
+### `claude_account_in_use`
+
+This Claude subscription account is registered to another Provider. New work is paused. Use a different account, or ask the original Provider to confirm a switch to a different account. Disconnecting or pausing Bee does not release ownership; once it is released, a running Bee retries automatically. An existing account switch still needs explicit confirmation.
 
 ### `claude_authorization_rejected`
 

@@ -58,7 +58,9 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 // supplyReasonLabels says each reason Hive gives for not sending work in a
 // few words, for bee supply-status and bee status.
 var supplyReasonLabels = map[string]string{
-	"capabilities_unknown": "account capabilities unknown or expired", "quota_unknown": "quota awaiting a new query", "quota_exhausted": "account quota exhausted", "rate_limited": "upstream rate limit cooldown active", "concurrency_full": "account concurrency limit reached",
+	"codex_account_in_use":  "OpenAI account registered to another Provider",
+	"claude_account_in_use": "Claude account registered to another Provider",
+	"capabilities_unknown":  "account capabilities unknown or expired", "quota_unknown": "quota awaiting a new query", "quota_exhausted": "account quota exhausted", "rate_limited": "upstream rate limit cooldown active", "concurrency_full": "account concurrency limit reached",
 	"manually_paused": "manually paused", "banned": "banned by administrator", "device_draining": "device being replaced; finishing in-flight execution and settlement", "plan_not_configured": "no concurrency limit configured for this plan", "offline": "Bee offline", "not_configured": "supply not configured",
 	"model_unavailable": "model not tradable", "codex_authorization_rejected": "Codex authorization rejected by upstream",
 	"authorization_unavailable":     "no valid online authorization envelope",

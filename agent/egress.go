@@ -328,6 +328,10 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		cfg.Capabilities.askedRefresh(revision, time.Now())
 		slog.Info("openai authorization stale; refresh requested", "module", "maintenance")
 	}
+	if result.Account.Status == "account_in_use" {
+		cfg.accountMessage(out, "account_in_use", accountStateLabels["account_in_use"]+"; new OpenAI jobs paused")
+		return nil
+	}
 	if result.Account.Status == "confirmation_required" {
 		cfg.accountMessage(out, "confirmation_required", "different OpenAI account detected; new jobs paused; run bee account-status --platform openai and explicitly confirm with bee confirm-account")
 		return nil

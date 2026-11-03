@@ -37,6 +37,9 @@ func (m *managementMenu) accounts() error {
 func (m *managementMenu) printAccount(a beewire.PlatformAccount) {
 	labels := map[string]string{"not_configured": m.text("No registered account", "尚未注册账号"), "ready": m.text("Authorization synchronized", "授权已同步"), "source_unavailable": m.text("Waiting for official sign-in recovery", "等待官方账号登录恢复"), "confirmation_required": m.text("Account change needs confirmation", "账号变更等待确认"), "authorization_rejected": m.text("Authorization rejected", "授权被拒绝")}
 	label := labels[a.Status]
+	if a.Status == "account_in_use" {
+		label = m.text("Account registered to another Provider; use a different account or ask the original Provider to confirm an account switch", "账号已归属其他 Provider；请换用其他账号，或请原 Provider 确认换走账号")
+	}
 	if label == "" {
 		label = a.Status
 	}

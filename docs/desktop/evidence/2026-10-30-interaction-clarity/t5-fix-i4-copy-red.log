@@ -1,0 +1,37 @@
+time=2026-11-02T10:06:13.734514+00:00
+command=['node', '--test', '--test-name-pattern=known unsent failures', 'tests/problems.test.ts']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+✖ known unsent failures use the App locale and retain evidence without guessing from messages (1.108917ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 142.644958
+
+✖ failing tests:
+
+test at tests/problems.test.ts:89:1
+✖ known unsent failures use the App locale and retain evidence without guessing from messages (1.108917ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /未发送.*未提交/. Input:
+  
+  '本次操作失败，原因尚未确认。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:92:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '本次操作失败，原因尚未确认。',
+    expected: /未发送.*未提交/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+exit=1

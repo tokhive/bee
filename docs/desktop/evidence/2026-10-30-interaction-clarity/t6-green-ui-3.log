@@ -1,0 +1,23 @@
+UTC: 2026-11-02T10:41:51.519474+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', 'native-runtime.spec.ts', '--grep', 'normal native|failed verification|retrying a failed|initial device|restarted unknown|ready management|uncertain runtime start', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 7 tests using 4 workers
+
+  ✓  4 [chromium] › tests/device.spec.ts:133:1 › initial device facts stay unknown until the first read finishes (1.2s)
+  ✓  3 [chromium] › tests/device.spec.ts:67:1 › failed verification blocks success and remains retryable (1.3s)
+  ✓  5 [chromium] › tests/device.spec.ts:166:1 › restarted unknown recovery queries the existing transaction without writes (497ms)
+  ✓  6 [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (861ms)
+  ✓  7 [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query (501ms)
+  ✓  1 [chromium] › tests/device.spec.ts:76:1 › retrying a failed bound-device check does not revive cached success (2.3s)
+  ✓  2 [chromium] › tests/device.spec.ts:48:1 › normal native build pairs and verifies without demo balances or starting supply (2.8s)
+
+  7 passed (4.0s)
+
+Exit: 0
+UTC end: 2026-11-02T10:41:56.221859+00:00

@@ -1,0 +1,51 @@
+time=2026-11-02T10:14:27.811058+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/native-runtime.spec.ts', '--grep', 'identity failure allows local', '--workers=1']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+Running 1 test using 1 worker
+
+[WebServer] 6:14:30 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+[WebServer] 6:14:30 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+[WebServer] 6:14:31 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+  ✘  1 [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked (1.5s)
+
+
+  1) [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 5
+
+    - Array []
+    + Array [
+    +   "Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.",
+    +   "Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.",
+    +   "Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.",
+    + ]
+
+      197 |  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+      198 |  const cancel=page.getByRole('button',{name:'取消官方登录',exact:true}).last();await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
+    > 199 |  await expect(page.getByRole('dialog').getByText('操作已取消',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
+          |                                                                                                                                                                        ^
+      200 | });
+      201 |
+      202 | for(const command of ['account_action','runtime_start'])test('known unsent '+command+' recovers at the same revision without replay',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:199:168
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked 
+
+exit=1

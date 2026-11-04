@@ -1,0 +1,38 @@
+=== RUN   TestDetailedSupplyOptionValidationPrecedesPauseWrite
+2026/11/02 11:31:46 INFO http request module=http method=POST path=/api/auth/register status=201 duration=5ms
+2026/11/02 11:31:46 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 11:31:46 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:31:46 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:31:46 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=5ms
+--- PASS: TestDetailedSupplyOptionValidationPrecedesPauseWrite (0.42s)
+PASS
+ok  	github.com/tokhive/hive/hive/internal/integration	0.872s

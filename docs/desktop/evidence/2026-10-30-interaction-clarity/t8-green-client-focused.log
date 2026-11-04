@@ -1,0 +1,13 @@
+{"utc": "2026-11-02T15:39:16.079994+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "--test-name-pattern=lost start|lost cancel|concurrent reads", "tests/diagnostics.test.ts"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+✔ lost start receipt fences another start until the diagnostic scope changes (3.41825ms)
+✔ lost cancel receipt permits only reading the original ID, never another cancel (0.525875ms)
+✔ concurrent reads of the original report share one request and preserve its last checks on failure (0.254458ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 3
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 125.197083
+{"exit": 0, "utc": "2026-11-02T15:39:16.635574+00:00"}

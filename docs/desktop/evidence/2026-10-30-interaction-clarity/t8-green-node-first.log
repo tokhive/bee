@@ -1,0 +1,67 @@
+{"utc": "2026-11-02T15:50:06.600606+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/network.test.ts", "tests/diagnostics.test.ts", "tests/diagnostic-presentation.test.ts", "tests/preferences.test.ts", "tests/notifications.test.ts"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+✔ presentation preserves each check and every reason while prioritizing device and platform issues (1.423708ms)
+✔ empty, pending and unknown observations never become passed checks (0.16975ms)
+✔ diagnostic presentation separates local binding proof and exact remote recovery targets (0.358167ms)
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (3.4415ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (0.714583ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (0.568375ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.282792ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (0.816833ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (0.287458ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.239834ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (0.908458ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (11.483958ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (1.616667ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (2.854ms)
+✔ diagnostic reports logs and exports retain defined detailed supply reason evidence (1.091667ms)
+✔ binding changes invalidate cached and in-flight diagnostic reports (0.120917ms)
+✔ completed reports cannot be displayed or exported under a replacement binding (0.130166ms)
+✔ lost start receipt fences another start until the diagnostic scope changes (0.186ms)
+✔ lost cancel receipt permits only reading the original ID, never another cancel (0.220834ms)
+✔ concurrent reads of the original report share one request and preserve its last checks on failure (0.13325ms)
+✔ network snapshot decodes the seven fixed saved and effective fields (2.977292ms)
+✔ network tests accept exactly the three fixed checks and preserve HTTP evidence (3.563ms)
+✔ network client uses fixed native commands and revisioned scope-free save input (0.542916ms)
+✔ network client rejects unsafe proxy, origin, revision, scope and unconfirmed restart before invocation (0.444ms)
+✔ network client preserves failed save and failed apply snapshots (0.355875ms)
+✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (14.26925ms)
+✔ OS permission decoder rejects unknown and autostart never infers registration from desire (2.939584ms)
+✔ permission is requested only at explicit enable and no arbitrary notification payload is exposed (0.413375ms)
+✔ delivery failure remains observable and retry is an explicit fixed action (0.373666ms)
+✔ native preferences defaults and strict public schema exclude demo state and secrets (5.447792ms)
+✔ proxy validation accepts only explicit loopback IP HTTP with port and no credentials (0.436333ms)
+✔ native preferences client sends revisioned commands and preserves failure snapshot (0.72ms)
+ℹ tests 32
+ℹ suites 0
+ℹ pass 31
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 382.008125
+
+✖ failing tests:
+
+test at tests/network.test.ts:48:1
+✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (14.26925ms)
+  file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts:2
+  import {
+   "Hive 设备身份已核对。":"Hive 设备身份已核对。",
+   ^^^^^^^^^^^^^^^^^^^^^^^
+   "上次确认的生效配置":"上次确认的生效配置",
+  
+  SyntaxError [ERR_INVALID_TYPESCRIPT_SYNTAX]: A string literal cannot be used as an imported binding.
+  - Did you mean `import { "Hive 设备身份已核对。" as foo }`?
+      at parseTypeScript (node:internal/modules/typescript:72:36)
+      at processTypeScriptCode (node:internal/modules/typescript:146:42)
+      at stripTypeScriptModuleTypes (node:internal/modules/typescript:215:22)
+      at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:680:29)
+      at #translate (node:internal/modules/esm/loader:438:20)
+      at afterLoad (node:internal/modules/esm/loader:506:29)
+      at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:511:12)
+      at #getOrCreateModuleJobAfterResolve (node:internal/modules/esm/loader:564:36)
+      at afterResolve (node:internal/modules/esm/loader:611:52)
+      at ModuleLoader.getOrCreateModuleJob (node:internal/modules/esm/loader:617:12) {
+    code: 'ERR_INVALID_TYPESCRIPT_SYNTAX'
+  }
+{"exit": 1, "utc": "2026-11-02T15:50:07.435015+00:00"}

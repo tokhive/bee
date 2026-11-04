@@ -1,0 +1,14 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.77s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 7 tests
+test experience::tests::startup_business_check_never_changes_real_management_status ... ok
+test experience::tests::network_recovery_keeps_update_identity_data_and_owned_exit_protections ... ok
+test experience::tests::recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime ... ok
+test experience::tests::unbound_recheck_is_ready_but_bridge_failure_cannot_be_cleared ... ok
+test experience::tests::rejected_startup_keeps_local_reads_and_recheck_unlocks_without_runtime_restore ... ok
+test experience::tests::saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready ... ok
+test experience::tests::recheck_rejects_changed_binding_network_and_corrupt_local_data ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 191 filtered out; finished in 31.93s
+

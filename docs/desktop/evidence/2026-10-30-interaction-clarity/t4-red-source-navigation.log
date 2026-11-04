@@ -1,0 +1,62 @@
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (16.166208ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.685042ms)
+✖ selected source missing and denied access do not claim the whole machine has no login (0.455083ms)
+✖ recovery navigation rejects invalid page/section/platform combinations and types (0.239916ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.625292ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.123416ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.329666ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (5.981083ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.1805ms)
+✔ explicit locale formatting and placeholders follow the App language (3.041417ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 8
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 189.194833
+
+✖ failing tests:
+
+test at tests/problems.test.ts:17:1
+✖ selected source missing and denied access do not claim the whole machine has no login (0.455083ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /权限/. Input:
+  
+  '所选凭证来源暂不可读取。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:22:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '所选凭证来源暂不可读取。',
+    expected: /权限/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/problems.test.ts:25:1
+✖ recovery navigation rejects invalid page/section/platform combinations and types (0.239916ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  true !== false
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:27:191)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: true,
+    expected: false,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

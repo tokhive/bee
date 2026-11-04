@@ -1,0 +1,38 @@
+const fs=await import('node:fs/promises');
+const base='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity';
+const task=await taskSpace(36),page=task.page('p1'),records=[];
+async function scene(id,locale='zh',theme='light',width=860,height=600){
+ await page.cdp('Emulation.setDeviceMetricsOverride',{width,height,deviceScaleFactor:1,mobile:false});
+ await page.cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await page.goto(`http://127.0.0.1:1421/tests/fixtures/bee-preview/app.html?scene=${id}&locale=${locale}&theme=${theme}&long=1`);
+ await page.waitForFunction(()=>window.__beePreviewReady&&!window.__beePreviewError&&document.querySelector('.native-device-summary'),undefined,{timeout:15000});
+}
+await scene('device-pending','en','dark');await page.waitForSelector('.pair-code');
+await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async text=>{window.__manualCopied=text;}}}));
+await page.click('loc=role:button[name="Copy pairing code"]');
+await page.waitForFunction(()=>document.body.textContent.includes('Pairing code copied'));
+const copy=await page.evaluate(()=>({value:window.__manualCopied,feedback:document.querySelector('.device-pairing').textContent}));
+await page.evaluate(()=>{const w=window,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command,args)=>{if(command==='device_open'){w.calls.push({command,args});throw {code:'BROWSER_OPEN_FAILED',message:'browser open rejected; mock OS denied launch'};}return invoke(command,args);};});
+await page.click('loc=role:button[name="Open Hive confirmation page"]');
+await page.waitForFunction(()=>document.body.textContent.includes('browser open rejected; mock OS denied launch'));
+await page.evaluate(()=>Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('clipboard_write rejected; mock permission denied');}}}));
+await page.click('loc=role:button[name="Copy confirmation URL"]');
+await page.waitForFunction(()=>document.body.textContent.includes('clipboard_write rejected; mock permission denied'));
+const before=await page.evaluate(()=>({code:document.querySelector('.pair-code').textContent,url:document.querySelector('.device-url').textContent,scroll:document.querySelector('main').scrollTop,reads:window.calls.filter(c=>c.command==='device_status').length}));
+await page.focus('loc=role:button[name="Copy confirmation URL"]');
+await page.waitForFunction(n=>window.calls.filter(c=>c.command==='device_status').length>n,before.reads,{timeout:5000});
+const after=await page.evaluate(()=>({code:document.querySelector('.pair-code').textContent,url:document.querySelector('.device-url').textContent,scroll:document.querySelector('main').scrollTop,focus:document.activeElement.textContent,focusOutline:getComputedStyle(document.activeElement).outlineStyle,reduced:matchMedia('(prefers-reduced-motion: reduce)').matches,animation:getComputedStyle(document.activeElement).animationDuration,transition:getComputedStyle(document.activeElement).transitionDuration,writes:window.calls.filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','account_action','supply_set_paused'].includes(c.command))}));
+await page.screenshot({path:`${base}/t6-manual-pending-copy-open-fail-860-en-dark.png`});records.push({case:'copy success/failure, open failure retains request, background refresh',utc:new Date().toISOString(),viewport:[860,600],copy,before,after});
+await scene('device-recovery-confirm');await page.waitForSelector('.device-recovery-action button');await page.focus('.device-recovery-action button');await page.keyboard.press('Enter');await page.waitForSelector('[role=dialog]');
+const dialogFocus=await page.evaluate(()=>({focus:document.activeElement.textContent,inside:!!document.activeElement.closest('[role=dialog]')}));await page.keyboard.press('Escape');
+records.push({case:'recovery cancel by keyboard',utc:new Date().toISOString(),viewport:[860,600],dialogFocus,result:await page.evaluate(()=>({closed:!document.querySelector('[role=dialog]'),restoredFocus:document.activeElement===document.querySelector('.device-recovery-action button'),writes:window.calls.filter(c=>['device_recovery_prepare','device_recovery_confirm'].includes(c.command))}))});
+await scene('recovery-owner');await page.waitForSelector('.recovery-identities');
+await page.evaluate(()=>{const w=window,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command,args)=>{const result=await invoke(command,args);if(result?.result?.recovery){result.result.recovery.old_identity.owner_email='long-old-owner-address-for-local-confirmation@example.test';result.result.recovery.new_identity.owner_email='long-new-owner-address-for-explicit-adoption@example.test';}return result;};});
+await page.click('loc=role:button[name="重新核对设备"]');await page.waitForFunction(()=>document.body.textContent.includes('long-new-owner-address-for-explicit-adoption@example.test'));
+await page.focus('.device-transaction > button');await page.keyboard.press('Enter');await page.waitForSelector('[role=dialog]');await page.keyboard.press('Shift+Tab');await page.keyboard.press('Tab');
+const owner=await page.evaluate(()=>({viewport:[innerWidth,innerHeight],inside:!!document.activeElement.closest('[role=dialog]'),focus:document.activeElement.textContent,overflow:document.querySelector('[role=dialog]').scrollWidth>document.querySelector('[role=dialog]').clientWidth,dialogRect:JSON.parse(JSON.stringify(document.querySelector('[role=dialog]').getBoundingClientRect()))}));
+await page.screenshot({path:`${base}/t6-manual-owner-dialog-long-860-zh-light.png`});await page.keyboard.press('Escape');owner.writes=await page.evaluate(()=>window.calls.filter(c=>c.command==='device_recovery_confirm'||c.command==='device_recovery_prepare'));records.push({case:'different owner long identifiers and focus trap cancellation',utc:new Date().toISOString(),owner});
+await page.click('loc=css:nav button:nth-child(2)');await page.waitForFunction(()=>document.querySelector('h1')?.textContent==='AI 账号');records.push({case:'navigation title remains visible',utc:new Date().toISOString(),result:await page.evaluate(()=>({title:document.querySelector('h1').textContent,rect:JSON.parse(JSON.stringify(document.querySelector('h1').getBoundingClientRect())),scroll:document.querySelector('main').scrollTop,focus:document.activeElement.tagName}))});
+await scene('recovery-completed','en','light',1080,840);await page.waitForFunction(()=>document.querySelector('.pairing-phase')?.textContent.includes('Device rebound'));
+await page.evaluate(()=>document.querySelector('.device-pairing').scrollIntoView({block:'start'}));await page.screenshot({path:`${base}/t6-manual-recovery-completed-1080-en-light-final.png`});records.push({case:'completed fixture corrected to native scope reset',utc:new Date().toISOString(),result:await page.evaluate(()=>({viewport:[innerWidth,innerHeight],status:document.querySelector('.app-shell').dataset.desktopStatus,selections:Object.fromEntries(Object.entries(window.accounts).map(([p,a])=>[p,a.selection.state])),paused:window.paused,writes:window.calls.filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','account_action','supply_set_paused'].includes(c.command))}))});
+await fs.writeFile(`${base}/t6-manual-round3.json`,JSON.stringify({utc:new Date().toISOString(),runtime:process.version,space:36,page:'p1',script:'/tmp/t6-manual-round3.mjs',records},null,2));console.log(JSON.stringify(records,null,2));

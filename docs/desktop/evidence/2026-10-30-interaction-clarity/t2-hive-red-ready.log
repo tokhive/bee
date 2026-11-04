@@ -1,0 +1,11 @@
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/static_subscription_without_registration
+    dynamic_supply_unit_test.go:219: admission changed: old={Platform:openai Paused:false Ready:true Reasons:[]} detailed={Platform:openai Paused:false Ready:false Reasons:[account_not_registered]}
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/dynamic_ready_without_registration
+    dynamic_supply_unit_test.go:219: admission changed: old={Platform:openai Paused:false Ready:true Reasons:[]} detailed={Platform:openai Paused:false Ready:false Reasons:[account_not_registered]}
+--- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission (0.94s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/static_subscription_without_registration (0.58s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/dynamic_ready_without_registration (0.36s)
+FAIL
+FAIL	github.com/tokhive/hive/hive/internal/service	1.716s
+FAIL

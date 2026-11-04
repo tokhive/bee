@@ -1,0 +1,82 @@
+{
+  "utc": "2026-11-02T11:01:55.573Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "script": "/tmp/t6-manual-round5.mjs",
+  "records": [
+    {
+      "scene": "device-loading",
+      "utc": "2026-11-02T11:01:52.744Z",
+      "before": null,
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "overflow": false,
+        "title": "正在读取设备与账号状态",
+        "unboundForm": false,
+        "action": null,
+        "writes": []
+      }
+    },
+    {
+      "scene": "device-draining",
+      "utc": "2026-11-02T11:01:52.975Z",
+      "before": null,
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "overflow": false,
+        "title": "等待完成设备配对",
+        "phase": "等待旧设备完成任务和结算",
+        "unboundForm": false,
+        "action": null,
+        "writes": []
+      }
+    },
+    {
+      "scene": "device-redemption-unknown",
+      "utc": "2026-11-02T11:01:53.227Z",
+      "before": null,
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "overflow": false,
+        "title": "等待完成设备配对",
+        "phase": "兑换结果未知，正在核对新设备身份",
+        "unboundForm": false,
+        "action": null,
+        "writes": []
+      }
+    },
+    {
+      "scene": "recovery-owner",
+      "utc": "2026-11-02T11:01:55.573Z",
+      "before": {
+        "actionX": 731,
+        "actionTopRelative": 13
+      },
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "overflow": false,
+        "title": "设备身份被拒绝",
+        "phase": "新设备归属与原设备不同",
+        "unboundForm": false,
+        "action": {
+          "actionX": 731,
+          "actionTopRelative": 13
+        },
+        "writes": []
+      }
+    }
+  ]
+}

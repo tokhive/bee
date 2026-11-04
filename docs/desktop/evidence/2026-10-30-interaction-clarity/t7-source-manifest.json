@@ -1,0 +1,32 @@
+{
+  "utc": "2026-11-02T13:57:19.558044+00:00",
+  "base": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04",
+  "source_state": "BASE + manifest指定22个T7文件的工作树内容；其余dirty为主控工作，不在本提交",
+  "files": {
+    "agent/desktop_authorize.go": "5f3a310a80525a5b436074197cd5ba5d49c65ac3632f50043871d824534bfb12",
+    "agent/desktop_authorize_test.go": "ca2363d73e267f109d27183acb7e832c54768eecbfc89e045563b0f654e4f3bb",
+    "desktop/src/features/accounts/AccountDisplay.tsx": "0709fd9c71f5370eab9b70ca76673eb8c5595bedd05da539b5579ca033494731",
+    "desktop/src/features/accounts/NativeAccountActions.tsx": "bbd73bd416ceb0ed9d73578fb450738c08c0e26f5492619875077a75ff661e0d",
+    "desktop/src/features/accounts/NativeAccountDetails.tsx": "5afc74351b83205736345d8f0d0b82f05598daeedfbca5925a78dcb80a44155d",
+    "desktop/src/features/accounts/NativeAccountList.tsx": "948092c6e1ea8d544af2b2a6e5a89f6b7583fbd8384db68a1207d493d0f497d7",
+    "desktop/src/features/accounts/NativeAccountsPage.tsx": "4fb459a3ffb8cb73aa29d9c2b21c18d9710f4bbad62372f3446102fc589a0e0f",
+    "desktop/src/features/accounts/accountPresentation.ts": "35f7fd6321d58739511788170197011d4757fc45997bf7366fa449e21a7c7e13",
+    "desktop/src/features/accounts/useAccounts.ts": "7c1cb01359b5d892d4b42f1e04806ab179b8ddc3687eee21715b1d6eb49266de",
+    "desktop/src/features/supply/SupplyPanel.tsx": "c93cbb47377de1f1b45637cd8f5a0be483453b017429a723e04c1a9e8456e856",
+    "desktop/src/i18n/en.ts": "4887ac921845f043dc3a5cffe23cd6c11c05dd0ce80013a39b11553908b0978f",
+    "desktop/src/i18n/zh.ts": "e483c223e1f55626caacffb2be0779d89eeb0f4aebd1a5e951d38e00fd60407d",
+    "desktop/src/presentation/problems.ts": "ef6db9ceae1e8f2d27613b20edb02f70100cfbc2c7a4dbfa98d05535e42aa197",
+    "desktop/src/styles/app.css": "aeb0780a5b05d8885e512c71858b59e8a58ada58b4ffb59c1d779ca7463d73a8",
+    "desktop/tests/accountPresentation.test.ts": "8ad44fb495e2505af652f111770a8b5c259e3ca72ef3184e77b077bf05872ef0",
+    "desktop/tests/fixtures/native-accounts.d.mts": "8d0ad2eebf4ca0d073a7a9b297c1a58550bbc397ed3322af0176ce0a8b1a6c4f",
+    "desktop/tests/fixtures/native-accounts.mjs": "d4c0627f29a93094e0256f5d368c7ac9b0f0a1d0333d05e10f2a59bfd8c2ff41",
+    "desktop/tests/native-accounts.spec.ts": "586241cc0147c0f37b987f84ca43279052e611bfa44904987afc922335e591b4",
+    "desktop/tests/polling-stability.spec.ts": "3ea2893d34abf7a026519a68171b7c8bcb188c4bf9b45d72860add4f0814a76b",
+    "desktop/tests/problems.test.ts": "501f3ff658ccdeb1a55bbcdc7d3eec9b4892c9482883ae254d2b70683c11d3a2",
+    "desktop/tests/supply.spec.ts": "b27846d4d238fff9ad4feca01b390948f45ff442e8ac749a720decde0cb11144",
+    "desktop/tests/supply.test.ts": "af8967d2e9b4657bab06ca337db8e23d3fa9f8c4e2d56827c2c90f112922ce35"
+  },
+  "dirty": " M Makefile\n M agent/desktop_authorize.go\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/NativeAccountsPage.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/src/features/supply/SupplyPanel.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.d.mts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/polling-stability.spec.ts\n M desktop/tests/problems.test.ts\n M desktop/tests/supply.spec.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+  "commit": "267a33d38db3a09f0c47917419e36055a6660ee6",
+  "commit_verified_utc": "2026-11-02T14:01:01.680053+00:00"
+}

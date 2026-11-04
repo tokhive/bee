@@ -1,0 +1,31 @@
+=== RUN   TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/auth/register status=201 duration=7ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 04:48:15 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 04:48:15 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+=== RUN   TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings
+=== RUN   TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/a
+=== PAUSE TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/a
+=== RUN   TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/b
+=== PAUSE TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/b
+=== CONT  TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/a
+=== CONT  TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/b
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=8ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=409 duration=11ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 04:48:15 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=409 duration=4ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=7ms
+2026/11/02 04:48:15 INFO http request module=http method=GET path=/api/auth/me status=200 duration=5ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/devices/pairings/inspect status=410 duration=3ms
+2026/11/02 04:48:15 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=410 duration=3ms
+2026/11/02 04:48:15 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=410 duration=2ms
+--- PASS: TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption (0.68s)
+    --- PASS: TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings (0.00s)
+        --- PASS: TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/a (0.01s)
+        --- PASS: TestBeeSingleDeviceExpiresAndRejectsConcurrentRedemption/redeem_competing_pairings/b (0.01s)
+PASS

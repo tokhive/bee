@@ -1,0 +1,645 @@
+time=2026-11-02T08:21:19.684697+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8 + T5 WIP
+source=NativeApp browser fixture, no real accounts
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'recovery-navigation.spec.ts', 'polling-stability.spec.ts']
+
+Running 26 tests using 5 workers
+
+  ✓   3 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: stopped (2.3s)
+  ✓   5 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: running (2.3s)
+  ✓   4 [chromium] › tests/polling-stability.spec.ts:34:1 › an explicit start during a runtime read waits and submits once (2.3s)
+  ✓   1 [chromium] › tests/polling-stability.spec.ts:52:1 › fresh supply reads keep pause available and serialize a single explicit change (2.4s)
+  ✓   6 [chromium] › tests/polling-stability.spec.ts:63:1 › pairing polling keeps the website action stable (900ms)
+  ✓   7 [chromium] › tests/polling-stability.spec.ts:71:1 › account status polling never disables cancel login and the explicit cancel is not lost (1.3s)
+  ✓   9 [chromium] › tests/polling-stability.spec.ts:104:1 › a waiting platform resume cannot apply to a replacement account (1.2s)
+  ✓  10 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: fresh-revision (1.2s)
+  ✓  11 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: candidate-changed (1.1s)
+  ✓  12 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: read-failed (1.1s)
+  ✓  13 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (1.2s)
+  ✓  14 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (1.1s)
+  ✘   2 [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay (7.5s)
+  ✘   8 [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery (6.5s)
+  ✘  15 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt (5.8s)
+  ✘  16 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt (6.2s)
+  ✘  17 [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence (6.1s)
+  ✓  20 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 (893ms)
+  ✓  21 [chromium] › tests/recovery-navigation.spec.ts:12:1 › binding replacement isolates unsaved settings drafts (727ms)
+  ✓  22 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 (943ms)
+  ✓  23 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 (1.0s)
+  ✓  24 [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft (1.2s)
+  ✓  25 [chromium] › tests/recovery-navigation.spec.ts:26:1 › unknown account result remains read only across navigation and a new instance clears the old operation (1.1s)
+  ✓  26 [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus (858ms)
+  ✘  18 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision (6.5s)
+  ✘  19 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision (6.1s)
+
+
+  1) [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('贡献状态待确认，正在自动核对…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('贡献状态待确认，正在自动核对…', { exact: true }) with timeout 5000ms
+      - waiting for getByText('贡献状态待确认，正在自动核对…', { exact: true })
+
+
+      46 |  const button=page.getByRole('button',{name:'开始贡献',exact:true});await expect(button).toBeEnabled();await button.click();
+      47 |  await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
+    > 48 |  await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(0);
+         |                                                               ^
+      49 |  await page.clock.runFor(10100);expect(await calls(page,'runtime_start')).toHaveLength(0);
+      50 | });
+      51 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:48:63
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-a-failed-fa58a-aiting-start-without-replay-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-a-failed-fa58a-aiting-start-without-replay-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-a-failed-fa58a-aiting-start-without-replay-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('贡献状态待确认，正在自动核对…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('贡献状态待确认，正在自动核对…', { exact: true }) with timeout 5000ms
+      - waiting for getByText('贡献状态待确认，正在自动核对…', { exact: true })
+
+
+       95 |  for(let attempt=0;attempt<3;attempt++){
+       96 |   await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).failedRuntimeReads)).toBe(attempt+1);
+    >  97 |   await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();
+          |                                                                ^
+       98 |   await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+       99 |  }
+      100 |  await page.evaluate(()=>(window as any).failRuntimeReads=false);await page.clock.runFor(10100);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:97:64
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-repeated-73a99-continue-read-only-recovery-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-repeated-73a99-continue-read-only-recovery-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-repeated-73a99-continue-read-only-recovery-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('贡献状态待确认，正在自动核对…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('贡献状态待确认，正在自动核对…', { exact: true }) with timeout 5000ms
+      - waiting for getByText('贡献状态待确认，正在自动核对…', { exact: true })
+
+
+      163 |  await page.getByRole('button',{name:kind==='start'?'开始贡献':'停止贡献',exact:true}).click();
+      164 |  if(kind==='stop')await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+    > 165 |  await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();
+          |                                                               ^
+      166 |  expect(await calls(page,'runtime_'+kind)).toHaveLength(1);
+      167 |  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
+      168 |  await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*runtime revision actual=.*required>=/);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:165:63
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-central--ae153-ion-below-the-start-receipt-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-central--ae153-ion-below-the-start-receipt-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-central--ae153-ion-below-the-start-receipt-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('贡献状态待确认，正在自动核对…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('贡献状态待确认，正在自动核对…', { exact: true }) with timeout 5000ms
+      - waiting for getByText('贡献状态待确认，正在自动核对…', { exact: true })
+
+
+      163 |  await page.getByRole('button',{name:kind==='start'?'开始贡献':'停止贡献',exact:true}).click();
+      164 |  if(kind==='stop')await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+    > 165 |  await expect(page.getByText('贡献状态待确认，正在自动核对…',{exact:true})).toBeVisible();
+          |                                                               ^
+      166 |  expect(await calls(page,'runtime_'+kind)).toHaveLength(1);
+      167 |  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
+      168 |  await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*runtime revision actual=.*required>=/);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:165:63
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-central--b5ea8-sion-below-the-stop-receipt-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-central--b5ea8-sion-below-the-stop-receipt-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-central--b5ea8-sion-below-the-stop-receipt-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.native-diagnostic-evidence pre')
+    Timeout: 5000ms
+    Expected pattern: /DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/
+    Received string:  "{
+      \"runtime\": null,
+      \"runtimeAuthorization\": {
+        \"openai\": null,
+        \"claude\": null
+      },
+      \"device\": null,
+      \"supply\": {},
+      \"defaults\": null,
+      \"accounts\": {
+        \"openai\": {
+          \"code\": \"DESKTOP_STALE_RESULT\",
+          \"check\": \"account_snapshot\",
+          \"observedAt\": null,
+          \"evidence\": {
+            \"actual\": \"2\",
+            \"required\": \"account revision >=3\"
+          },
+          \"message\": \"account revision platform=openai actual=2; required>=3 from last confirmed observation; account revision platform=openai actual=2; required>=3 from last confirmed observation\"
+        }
+      },
+      \"sources\": {},
+      \"accountEvidence\": {
+        \"openai\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"operation\": null,
+          \"issues\": []
+        },
+        \"claude\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"issues\": []
+        }
+      }
+    }"
+
+    Call log:
+      - Expect "toContainText" locator('.native-diagnostic-evidence pre') with timeout 5000ms
+      - waiting for locator('.native-diagnostic-evidence pre')
+        14 × locator resolved to <pre>{↵  "runtime": null,↵  "runtimeAuthorization": {↵…</pre>
+           - unexpected value "{
+      "runtime": null,
+      "runtimeAuthorization": {
+        "openai": null,
+        "claude": null
+      },
+      "device": null,
+      "supply": {},
+      "defaults": null,
+      "accounts": {
+        "openai": {
+          "code": "DESKTOP_STALE_RESULT",
+          "check": "account_snapshot",
+          "observedAt": null,
+          "evidence": {
+            "actual": "2",
+            "required": "account revision >=3"
+          },
+          "message": "account revision platform=openai actual=2; required>=3 from last confirmed observation; account revision platform=openai actual=2; required>=3 from last confirmed observation"
+        }
+      },
+      "sources": {},
+      "accountEvidence": {
+        "openai": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "operation": null,
+          "issues": []
+        },
+        "claude": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "issues": []
+        }
+      }
+    }"
+
+
+      177 |  await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
+      178 |  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
+    > 179 |  await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/);
+          |                                                                ^
+      180 | });
+      181 |
+      182 | for(const command of ['authorize_start','authorize_cancel'])test('central account readback enforces the '+command+' receipt revision',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:179:64
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-central--8685d-cked-with-revision-evidence-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-central--8685d-cked-with-revision-evidence-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-central--8685d-cked-with-revision-evidence-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.native-diagnostic-evidence pre')
+    Timeout: 5000ms
+    Expected pattern: /DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/
+    Received string:  "{
+      \"runtime\": null,
+      \"runtimeAuthorization\": {
+        \"openai\": null,
+        \"claude\": null
+      },
+      \"device\": null,
+      \"supply\": {},
+      \"defaults\": null,
+      \"accounts\": {
+        \"claude\": {
+          \"code\": \"DESKTOP_STALE_RESULT\",
+          \"check\": \"account_snapshot\",
+          \"observedAt\": null,
+          \"evidence\": {
+            \"actual\": \"2\",
+            \"required\": \"account revision >=3\"
+          },
+          \"message\": \"account revision platform=claude actual=2; required>=3 from last confirmed observation; account revision platform=claude actual=2; required>=3 from last confirmed observation\"
+        }
+      },
+      \"sources\": {},
+      \"accountEvidence\": {
+        \"openai\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"issues\": []
+        },
+        \"claude\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"issues\": []
+        }
+      }
+    }"
+
+    Call log:
+      - Expect "toContainText" locator('.native-diagnostic-evidence pre') with timeout 5000ms
+      - waiting for locator('.native-diagnostic-evidence pre')
+        14 × locator resolved to <pre>{↵  "runtime": null,↵  "runtimeAuthorization": {↵…</pre>
+           - unexpected value "{
+      "runtime": null,
+      "runtimeAuthorization": {
+        "openai": null,
+        "claude": null
+      },
+      "device": null,
+      "supply": {},
+      "defaults": null,
+      "accounts": {
+        "claude": {
+          "code": "DESKTOP_STALE_RESULT",
+          "check": "account_snapshot",
+          "observedAt": null,
+          "evidence": {
+            "actual": "2",
+            "required": "account revision >=3"
+          },
+          "message": "account revision platform=claude actual=2; required>=3 from last confirmed observation; account revision platform=claude actual=2; required>=3 from last confirmed observation"
+        }
+      },
+      "sources": {},
+      "accountEvidence": {
+        "openai": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "issues": []
+        },
+        "claude": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "issues": []
+        }
+      }
+    }"
+
+
+      190 |  for(let i=0;i<3&&await page.getByRole('dialog').count();i++)await page.keyboard.press('Escape');
+      191 |  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
+    > 192 |  await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/);
+          |                                                                ^
+      193 |  expect(await calls(page,command)).toHaveLength(1);
+      194 | });
+      195 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:192:64
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-central--01090-rize-start-receipt-revision-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-central--01090-rize-start-receipt-revision-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-central--01090-rize-start-receipt-revision-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.native-diagnostic-evidence pre')
+    Timeout: 5000ms
+    Expected pattern: /DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/
+    Received string:  "{
+      \"runtime\": null,
+      \"runtimeAuthorization\": {
+        \"openai\": null,
+        \"claude\": null
+      },
+      \"device\": null,
+      \"supply\": {},
+      \"defaults\": null,
+      \"accounts\": {
+        \"claude\": {
+          \"code\": \"DESKTOP_STALE_RESULT\",
+          \"check\": \"account_snapshot\",
+          \"observedAt\": null,
+          \"evidence\": {
+            \"actual\": \"3\",
+            \"required\": \"account revision >=4\"
+          },
+          \"message\": \"account revision platform=claude actual=3; required>=4 from last confirmed observation; account revision platform=claude actual=3; required>=4 from last confirmed observation\"
+        }
+      },
+      \"sources\": {},
+      \"accountEvidence\": {
+        \"openai\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"issues\": []
+        },
+        \"claude\": {
+          \"candidate\": null,
+          \"authorization\": null,
+          \"hive\": null,
+          \"capabilities\": [
+            {
+              \"origin\": \"official\",
+              \"error\": null
+            },
+            {
+              \"origin\": \"hive\",
+              \"error\": null
+            }
+          ],
+          \"operation\": null,
+          \"issues\": []
+        }
+      }
+    }"
+
+    Call log:
+      - Expect "toContainText" locator('.native-diagnostic-evidence pre') with timeout 5000ms
+      - waiting for locator('.native-diagnostic-evidence pre')
+        14 × locator resolved to <pre>{↵  "runtime": null,↵  "runtimeAuthorization": {↵…</pre>
+           - unexpected value "{
+      "runtime": null,
+      "runtimeAuthorization": {
+        "openai": null,
+        "claude": null
+      },
+      "device": null,
+      "supply": {},
+      "defaults": null,
+      "accounts": {
+        "claude": {
+          "code": "DESKTOP_STALE_RESULT",
+          "check": "account_snapshot",
+          "observedAt": null,
+          "evidence": {
+            "actual": "3",
+            "required": "account revision >=4"
+          },
+          "message": "account revision platform=claude actual=3; required>=4 from last confirmed observation; account revision platform=claude actual=3; required>=4 from last confirmed observation"
+        }
+      },
+      "sources": {},
+      "accountEvidence": {
+        "openai": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "issues": []
+        },
+        "claude": {
+          "candidate": null,
+          "authorization": null,
+          "hive": null,
+          "capabilities": [
+            {
+              "origin": "official",
+              "error": null
+            },
+            {
+              "origin": "hive",
+              "error": null
+            }
+          ],
+          "operation": null,
+          "issues": []
+        }
+      }
+    }"
+
+
+      190 |  for(let i=0;i<3&&await page.getByRole('dialog').count();i++)await page.keyboard.press('Escape');
+      191 |  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
+    > 192 |  await expect(page.locator('.native-diagnostic-evidence pre')).toContainText(/DESKTOP_STALE_RESULT.*account revision.*actual=.*required>=/);
+          |                                                                ^
+      193 |  expect(await calls(page,command)).toHaveLength(1);
+      194 | });
+      195 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:192:64
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-central--9082a-ize-cancel-receipt-revision-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-central--9082a-ize-cancel-receipt-revision-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-central--9082a-ize-cancel-receipt-revision-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7 failed
+    [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay 
+    [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery 
+    [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt 
+    [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt 
+    [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence 
+    [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision 
+    [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision 
+  19 passed (17.7s)
+[WebServer] (node:71636) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:71722) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71724) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71723) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71721) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:71725) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72221) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72283) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72360) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72398) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:72399) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+exit=1

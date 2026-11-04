@@ -1,0 +1,37 @@
+time=2026-11-02T10:01:06.071486+00:00
+command=['node', '--test', '--test-name-pattern=actual retry timer', 'tests/desktopState.test.ts']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+✖ coordinator preserves the actual retry timer for reconciling (3.353166ms)
+✔ coordinator preserves the actual retry timer for pending (0.83875ms)
+✔ coordinator preserves the actual retry timer for running (0.539708ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 67.607583
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:141:60
+✖ coordinator preserves the actual retry timer for reconciling (3.353166ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  400 !== 10000
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:146:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 400,
+    expected: 10000,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit=1

@@ -1,0 +1,45 @@
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (8.736334ms)
+✔ old child and network revision results never replace current state (4.492542ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (6.588708ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (2.867458ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (2.779542ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (2.9575ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (1.471167ms)
+✔ device read failure stays on the device and still publishes account defaults (1.248292ms)
+✔ replacement refresh starts after the status listener returns (1.7295ms)
+✔ a superseded initial status rejection cannot block a ready event (1.7845ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (2.6025ms)
+✔ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (10.029041ms)
+✔ device replies only expose validated public binding data (4.287209ms)
+✔ business rejection preserves operation evidence (5.374083ms)
+✔ device rejection retains structured failure before binding validation (2.525125ms)
+✔ device error details reject unknown fields and invalid observations (0.578208ms)
+✔ native device client uses fixed commands and no frontend config path (0.42ms)
+✔ native context failures retain only a validated observed binding revision (0.980167ms)
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (14.831917ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (1.707416ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (1.166917ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.53975ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (3.561667ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (1.796625ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.786166ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (0.827209ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (14.963584ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (2.324042ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (2.849666ms)
+✔ diagnostic reports logs and exports retain defined detailed supply reason evidence (1.11475ms)
+✔ binding changes invalidate cached and in-flight diagnostic reports (0.121667ms)
+✔ completed reports cannot be displayed or exported under a replacement binding (0.136833ms)
+✔ startup status survives a bridge query that settles later and rejects old instances (6.226458ms)
+✔ binding replacement invalidates operation generations and clears old facts before new reads (3.235709ms)
+✔ startup decoder rejects malformed context and state/failure contradictions (2.678208ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (4.177375ms)
+✔ absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state (4.602709ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 211.203416

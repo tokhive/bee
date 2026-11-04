@@ -1,0 +1,90 @@
+{
+  "utc": "2026-11-02T12:49:42.644Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "records": [
+    {
+      "locale": "zh",
+      "theme": "light",
+      "utc": "2026-11-02T12:49:35.684Z",
+      "before": {
+        "viewport": [
+          860,
+          600
+        ],
+        "phase": "上次重新绑定已完成，未自动开始贡献。",
+        "nextStep": "准备贡献绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单前往准备账号",
+        "devicePreparationButtons": [
+          "重新核对设备"
+        ]
+      },
+      "running": {
+        "viewport": [
+          860,
+          600
+        ],
+        "locale": "zh",
+        "theme": "light",
+        "overflow": false,
+        "runtime": "接单已暂停",
+        "phase": "上次重新绑定已完成，未自动开始贡献。",
+        "nextStep": false,
+        "devicePreparationButtons": [
+          "重新核对设备"
+        ],
+        "writes": []
+      },
+      "cancelled": {
+        "viewport": [
+          860,
+          600
+        ],
+        "focused": "重新绑定设备",
+        "dialog": false,
+        "writes": []
+      }
+    },
+    {
+      "locale": "en",
+      "theme": "dark",
+      "utc": "2026-11-02T12:49:42.644Z",
+      "before": {
+        "viewport": [
+          860,
+          600
+        ],
+        "phase": "The previous device recovery completed without automatically starting contribution.",
+        "nextStep": "Prepare to contributeBind this deviceConfirm on HiveConnect an AI accountStart Bee and resume each platformPrepare accounts",
+        "devicePreparationButtons": [
+          "Verify device again"
+        ]
+      },
+      "running": {
+        "viewport": [
+          860,
+          600
+        ],
+        "locale": "en",
+        "theme": "dark",
+        "overflow": false,
+        "runtime": "Task intake paused",
+        "phase": "The previous device recovery completed without automatically starting contribution.",
+        "nextStep": false,
+        "devicePreparationButtons": [
+          "Verify device again"
+        ],
+        "writes": []
+      },
+      "cancelled": {
+        "viewport": [
+          860,
+          600
+        ],
+        "focused": "Rebind this device",
+        "dialog": false,
+        "writes": []
+      }
+    }
+  ]
+}

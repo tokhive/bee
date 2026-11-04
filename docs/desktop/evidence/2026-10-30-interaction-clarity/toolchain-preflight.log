@@ -1,0 +1,10 @@
+OK Node: actual=24.22.1; required=24.x LTS
+OK Go: actual=go version go1.27.3 darwin/arm64; required=go1.27.3
+OK Rust: actual=rustc 1.94.0 (4a4ef493e 2026-03-02); required=1.94.0 (rust-toolchain.toml)
+OK Cargo: actual=cargo 1.94.0 (85eff7c80 2026-01-15); required=1.94.0
+OK Git: actual=git version 2.39.3 (Apple Git-146); required=Git installed
+OK Target: actual=darwin/arm64; required=darwin arm64/x64; win32 x64; linux arm64/x64
+OK macOS: actual=15.7.7; required=13.0 or newer
+OK Xcode: actual=/Applications/Xcode.app/Contents/Developer; required=selected developer directory
+OK Clang / system WebKit: actual=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang; required=Xcode clang and macOS system WebKit
+OK macOS SDK: actual=14.4; required=13.0 or newer

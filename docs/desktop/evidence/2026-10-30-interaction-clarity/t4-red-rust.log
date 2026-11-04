@@ -1,0 +1,31 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.95s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 2 tests
+test network::desktop_failure_tests::device_rejection_precedes_scope_validation ... FAILED
+test protocol::desktop_failure_tests::structured_errors_retain_details_and_reject_invalid_evidence ... FAILED
+
+failures:
+
+---- network::desktop_failure_tests::device_rejection_precedes_scope_validation stdout ----
+
+thread 'network::desktop_failure_tests::device_rejection_precedes_scope_validation' (9308012) panicked at src/network.rs:584:9:
+assertion `left == right` failed
+  left: "NETWORK_DEVICE_SCOPE"
+ right: "device_replaced"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- protocol::desktop_failure_tests::structured_errors_retain_details_and_reject_invalid_evidence stdout ----
+
+thread 'protocol::desktop_failure_tests::structured_errors_retain_details_and_reject_invalid_evidence' (9308013) panicked at src/protocol.rs:575:69:
+valid failure details: Error("unknown field `details`, expected `code` or `message`", line: 0, column: 0)
+
+
+failures:
+    network::desktop_failure_tests::device_rejection_precedes_scope_validation
+    protocol::desktop_failure_tests::structured_errors_retain_details_and_reject_invalid_evidence
+
+test result: FAILED. 0 passed; 2 failed; 0 ignored; 0 measured; 184 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

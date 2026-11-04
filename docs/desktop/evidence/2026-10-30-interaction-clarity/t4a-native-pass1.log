@@ -1,0 +1,51 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+error[E0277]: async commands that contain references as inputs must return a `Result`
+   --> src/commands.rs:694:84
+    |
+694 | pub async fn startup_recheck(app:tauri::AppHandle,bridge:tauri::State<'_,Bridge>)->crate::experience::StartupStatus{crate::experien...
+    |                                                                                    ^^^^^ unsatisfied trait bound
+    |
+help: the trait `commands::_::AsyncCommandMustReturnResult` is not implemented for `StartupStatus`
+   --> src/experience.rs:7:1
+    |
+  7 | pub(crate) struct StartupStatus {
+    | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+help: the trait `commands::_::AsyncCommandMustReturnResult` is implemented for `Result<A, B>`
+   --> src/commands.rs:694:84
+    |
+694 | pub async fn startup_recheck(app:tauri::AppHandle,bridge:tauri::State<'_,Bridge>)->crate::experience::StartupStatus{crate::experien...
+    |                                                                                    ^^^^^
+    = note: required for the cast from `&StartupStatus` to `&dyn commands::_::AsyncCommandMustReturnResult`
+
+error[E0597]: `__tauri_message__` does not live long enough
+   --> src/commands.rs:693:1
+    |
+693 |   #[tauri::command]
+    |   ^^^^^^^^^^^^^^^^-
+    |   |               |
+    |   |               `__tauri_message__` dropped here while still borrowed
+    |   borrowed value does not live long enough
+    |   argument requires that `__tauri_message__` is borrowed for `'static`
+    |
+   ::: src/lib.rs:61:25
+    |
+ 61 |           .invoke_handler(tauri::generate_handler![
+    |  _________________________-
+ 62 | |             commands::bridge_request,
+ 63 | |             commands::bridge_status,
+ 64 | |  commands::startup_status,
+...   |
+104 | |             lifecycle::login_return_received
+105 | |         ])
+    | |_________- in this macro invocation
+    |
+note: requirement that the value outlives `'static` introduced here
+   --> /Users/dayong/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tauri-2.12.5/src/ipc/command.rs:298:38
+    |
+298 |       F: Future<Output = T> + Send + 'static,
+    |                                      ^^^^^^^
+    = note: this error originates in the macro `commands::__cmd__startup_recheck` which comes from the expansion of the macro `tauri::generate_handler` (in Nightly builds, run with -Z macro-backtrace for more info)
+
+Some errors have detailed explanations: E0277, E0597.
+For more information about an error, try `rustc --explain E0277`.
+error: could not compile `bee-desktop` (lib test) due to 2 previous errors

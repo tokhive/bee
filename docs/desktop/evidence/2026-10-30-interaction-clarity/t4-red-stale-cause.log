@@ -1,0 +1,39 @@
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (2.80375ms)
+✔ old child and network revision results never replace current state (0.969875ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (1.687042ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (1.154667ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (0.399625ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (0.388375ms)
+✔ device read failure stays on the device and still publishes account defaults (0.330166ms)
+✔ replacement refresh starts after the status listener returns (0.312917ms)
+✔ a superseded initial status rejection cannot block a ready event (0.309833ms)
+✖ an account receipt floor retains the failing read evidence and resets with its native instance (1.301ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.561208
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:75:1
+✖ an account receipt floor retains the failing read evidence and resets with its native instance (1.301ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'DESKTOP_STALE_RESULT'
+  - 'http_rejected'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:83:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'DESKTOP_STALE_RESULT',
+    expected: 'http_rejected',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

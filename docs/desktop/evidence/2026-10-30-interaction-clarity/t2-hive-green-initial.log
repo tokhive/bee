@@ -1,0 +1,67 @@
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/disabled_supply
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/unregistered
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/authorization
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/restricted_device
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/fingerprint_rejected
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/all_models_disabled
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/incomplete_price
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/device_subset_empty
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/static_without_registration
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/paused_with_independent_blockers
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/catalog_read_failure
+--- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission (3.97s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/disabled_supply (0.36s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/unregistered (0.32s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/authorization (0.42s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/restricted_device (0.39s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/fingerprint_rejected (0.33s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/all_models_disabled (0.28s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/incomplete_price (0.36s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/device_subset_empty (0.32s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty (0.32s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/static_without_registration (0.29s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/paused_with_independent_blockers (0.29s)
+    --- PASS: TestDetailedSupplyDatabaseFactsPreserveAdmission/catalog_read_failure (0.28s)
+PASS
+ok  	github.com/tokhive/hive/hive/internal/service	4.401s
+=== RUN   TestDetailedSupplyOptionValidationPrecedesPauseWrite
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/auth/register status=201 duration=12ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/auth/me status=200 duration=5ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=11ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=5ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=5ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=2ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=8ms
+--- PASS: TestDetailedSupplyOptionValidationPrecedesPauseWrite (0.55s)
+=== RUN   TestDetailedSupplyNoConfigurationReportsOnlyProvenBlockers
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/auth/register status=201 duration=4ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 11:27:54 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:27:54 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+--- PASS: TestDetailedSupplyNoConfigurationReportsOnlyProvenBlockers (0.35s)
+PASS
+ok  	github.com/tokhive/hive/hive/internal/integration	1.465s

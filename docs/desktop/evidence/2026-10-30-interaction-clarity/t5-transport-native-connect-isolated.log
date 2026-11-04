@@ -1,0 +1,12 @@
+{"time": "2026-11-02T09:35:27.282248+00:00", "command": ["cargo", "test", "--lib", "native_bee_platform_reads_cross_local_connect_independently", "--", "--nocapture"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.75s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+native CONNECT slow=openai fast=claude prepared_ms=6 fast_reply_ms=4; fast reply observed before release; instance and failure evidence verified
+native CONNECT slow=claude fast=openai prepared_ms=6 fast_reply_ms=5; fast reply observed before release; instance and failure evidence verified
+test sidecar::tests::native_concurrency::native_bee_platform_reads_cross_local_connect_independently ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 214 filtered out; finished in 2.30s
+

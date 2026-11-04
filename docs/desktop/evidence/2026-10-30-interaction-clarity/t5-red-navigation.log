@@ -1,0 +1,211 @@
+time=2026-11-02T08:09:58.351168+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=coordinator/status WIP; NativeApp/consumers base
+command=npx playwright test --config playwright.device.config.ts recovery-navigation.spec.ts --workers=2
+
+Running 7 tests using 2 workers
+
+  ✘  2 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 (6.4s)
+  ✘  1 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 (6.4s)
+  ✓  3 [chromium] › tests/recovery-navigation.spec.ts:12:1 › binding replacement isolates unsaved settings drafts (820ms)
+  ✘  5 [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft (893ms)
+  ✓  6 [chromium] › tests/recovery-navigation.spec.ts:26:1 › unknown account result remains read only across navigation and a new instance clears the old operation (1.0s)
+  ✘  4 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 (6.0s)
+  ✘  7 [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus (5.6s)
+
+
+  1) [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('本机 HTTP 代理', { exact: true })
+    Expected: "http://127.0.0.1:18181"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('本机 HTTP 代理', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('本机 HTTP 代理', { exact: true })
+        14 × locator resolved to <input value="" type="text" id="ns-proxy" maxlength="256" autocorrect="off" spellcheck="false" autocapitalize="none" placeholder="http://127.0.0.1:7890"/>
+           - unexpected value ""
+
+
+       7 | for(const destination of ['概览','诊断','AI 账号'])test('settings draft survives a real page round trip through '+destination,async({page})=>{
+       8 |  await open(page);await nav(page,'设置').click();const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:18181');
+    >  9 |  await nav(page,destination).click();await nav(page,'设置').click();await expect(proxy).toHaveValue('http://127.0.0.1:18181');
+         |                                                                                       ^
+      10 |  expect(await calls(page,'network_save_proxy')).toBe(0);expect(await calls(page,'network_apply_saved')).toBe(0);expect(await calls(page,'diagnostics_start')).toBe(0);
+      11 | });
+      12 | test('binding replacement isolates unsaved settings drafts',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:9:87
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-settin-1b4f4--page-round-trip-through-概览-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-settin-1b4f4--page-round-trip-through-概览-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-settin-1b4f4--page-round-trip-through-概览-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('本机 HTTP 代理', { exact: true })
+    Expected: "http://127.0.0.1:18181"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('本机 HTTP 代理', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('本机 HTTP 代理', { exact: true })
+        14 × locator resolved to <input value="" type="text" id="ns-proxy" maxlength="256" autocorrect="off" spellcheck="false" autocapitalize="none" placeholder="http://127.0.0.1:7890"/>
+           - unexpected value ""
+
+
+       7 | for(const destination of ['概览','诊断','AI 账号'])test('settings draft survives a real page round trip through '+destination,async({page})=>{
+       8 |  await open(page);await nav(page,'设置').click();const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:18181');
+    >  9 |  await nav(page,destination).click();await nav(page,'设置').click();await expect(proxy).toHaveValue('http://127.0.0.1:18181');
+         |                                                                                       ^
+      10 |  expect(await calls(page,'network_save_proxy')).toBe(0);expect(await calls(page,'network_apply_saved')).toBe(0);expect(await calls(page,'diagnostics_start')).toBe(0);
+      11 | });
+      12 | test('binding replacement isolates unsaved settings drafts',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:9:87
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-settin-be510--page-round-trip-through-诊断-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-settin-be510--page-round-trip-through-诊断-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-settin-be510--page-round-trip-through-诊断-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 
+
+    Error: expect(locator).toHaveValue(expected) failed
+
+    Locator:  getByLabel('本机 HTTP 代理', { exact: true })
+    Expected: "http://127.0.0.1:18181"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveValue" getByLabel('本机 HTTP 代理', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('本机 HTTP 代理', { exact: true })
+        14 × locator resolved to <input value="" type="text" id="ns-proxy" maxlength="256" autocorrect="off" spellcheck="false" autocapitalize="none" placeholder="http://127.0.0.1:7890"/>
+           - unexpected value ""
+
+
+       7 | for(const destination of ['概览','诊断','AI 账号'])test('settings draft survives a real page round trip through '+destination,async({page})=>{
+       8 |  await open(page);await nav(page,'设置').click();const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:18181');
+    >  9 |  await nav(page,destination).click();await nav(page,'设置').click();await expect(proxy).toHaveValue('http://127.0.0.1:18181');
+         |                                                                                       ^
+      10 |  expect(await calls(page,'network_save_proxy')).toBe(0);expect(await calls(page,'network_apply_saved')).toBe(0);expect(await calls(page,'diagnostics_start')).toBe(0);
+      11 | });
+      12 | test('binding replacement isolates unsaved settings drafts',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:9:87
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-settin-1c039-ge-round-trip-through-AI-账号-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-settin-1c039-ge-round-trip-through-AI-账号-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-settin-1c039-ge-round-trip-through-AI-账号-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft 
+
+    Error: locator.click: Error: strict mode violation: getByRole('dialog').getByRole('button', { name: '查看设置', exact: true }) resolved to 2 elements:
+        1) <button data-size="sm" data-slot="button" class="ui-button  " data-variant="outline">查看设置</button> aka getByRole('group').filter({ hasText: '凭证读取方式读取官方客户端已保存的登录；目录留空使用默认位置。自定义目录存储方式自动文件钥匙串已保存的网络设置尚未应用。请在设置的网络页签应用已保存的网络设置，' }).getByRole('button')
+        2) <button data-size="sm" data-slot="button" class="ui-button  " data-variant="outline">查看设置</button> aka getByRole('button', { name: '查看设置' }).nth(1)
+
+    Call log:
+      - waiting for getByRole('dialog').getByRole('button', { name: '查看设置', exact: true })
+
+
+      18 |  await nav(page,'AI 账号').click();await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+      19 |  const directory=page.getByRole('dialog').getByLabel('自定义目录',{exact:true});await directory.fill('/tmp/unsaved-source');await directory.press('Tab');
+    > 20 |  await page.getByRole('dialog').getByRole('button',{name:'查看设置',exact:true}).click();
+         |                                                                              ^
+      21 |  await expect(page.getByRole('tab',{name:'网络与代理',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toBeFocused();
+      22 |  await page.getByRole('button',{name:'返回原处',exact:true}).click();
+      23 |  await expect(page.getByRole('dialog')).toBeVisible();await expect(directory).toHaveValue('/tmp/unsaved-source');await expect(directory).toBeFocused();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:20:78
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByRole('heading', { name: '诊断', exact: true, level: 1 })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" getByRole('heading', { name: '诊断', exact: true, level: 1 }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: '诊断', exact: true, level: 1 })
+        14 × locator resolved to <h1>诊断</h1>
+           - unexpected value "inactive"
+
+
+      32 | test('page navigation reveals the heading while background refresh preserves scroll and focus',async({page})=>{
+      33 |  await page.setViewportSize({width:860,height:600});await open(page);await page.locator('main').evaluate(el=>el.scrollTop=el.scrollHeight);await nav(page,'诊断').click();
+    > 34 |  const heading=page.getByRole('heading',{name:'诊断',exact:true,level:1});await expect(heading).toBeFocused();
+         |                                                                                               ^
+      35 |  const bounds=await heading.boundingBox(),toolbar=await page.locator('.toolbar').boundingBox();expect(bounds!.y).toBeGreaterThanOrEqual(toolbar!.y+toolbar!.height);expect(await calls(page,'diagnostics_start')).toBe(0);
+      36 |  await nav(page,'AI 账号').click();await page.locator('main').evaluate(el=>el.scrollTop=el.scrollHeight);const button=page.getByRole('button',{name:'Claude 详情',exact:true});await button.focus();
+      37 |  const before=await page.locator('main').evaluate(el=>el.scrollTop);await page.clock.runFor(10100);await expect(button).toBeFocused();expect(await page.locator('main').evaluate(el=>el.scrollTop)).toBe(before);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:34:95
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-page-n-b75c9--preserves-scroll-and-focus-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-page-n-b75c9--preserves-scroll-and-focus-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-page-n-b75c9--preserves-scroll-and-focus-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 
+    [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 
+    [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 
+    [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft 
+    [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus 
+  2 passed (18.0s)
+[WebServer] (node:39126) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:39161) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39162) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39563) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39562) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39640) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+npm notice
+npm notice New major version of npm available! 11.19.1 -> 12.2.1
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v12.2.1
+npm notice To update run: npm install -g npm@12.2.1
+npm notice
+
+exit=1

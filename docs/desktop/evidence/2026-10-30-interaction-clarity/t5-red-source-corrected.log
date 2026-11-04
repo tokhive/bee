@@ -1,0 +1,54 @@
+time=2026-11-02T08:26:45.387512+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=isolated git archive; only corrected source test/config copied; node_modules symlink; no product edits
+archive=/var/folders/6p/7_k4z27j63l2p6bbs1p4yhc80000gn/T/bee-t5-baseline-dtlmem0e
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'recovery-navigation.spec.ts', '-g', 'source repair']
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft (6.0s)
+
+
+  1) [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByLabel('本机 HTTP 代理', { exact: true })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" getByLabel('本机 HTTP 代理', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('本机 HTTP 代理', { exact: true })
+        14 × locator resolved to <input value="" type="text" id="ns-proxy" maxlength="256" autocorrect="off" spellcheck="false" autocapitalize="none" placeholder="http://127.0.0.1:7890"/>
+           - unexpected value "inactive"
+
+
+      19 |  const directory=page.getByRole('dialog').getByLabel('自定义目录',{exact:true});await directory.fill('/tmp/unsaved-source');await directory.press('Tab');
+      20 |  await page.getByRole('dialog').getByRole('button',{name:'查看设置',exact:true}).first().click();
+    > 21 |  await expect(page.getByRole('tab',{name:'网络与代理',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toBeFocused();
+         |                                                                                                                                                                 ^
+      22 |  await page.getByRole('button',{name:'返回原处',exact:true}).click();
+      23 |  await expect(page.getByRole('dialog')).toBeVisible();await expect(directory).toHaveValue('/tmp/unsaved-source');await expect(directory).toBeFocused();
+      24 |  expect(await calls(page,'network_save_proxy')).toBe(0);expect(await calls(page,'authorize_start')).toBe(0);expect(await calls(page,'account_action')).toBe(0);
+        at /private/var/folders/6p/7_k4z27j63l2p6bbs1p4yhc80000gn/T/bee-t5-baseline-dtlmem0e/desktop/tests/recovery-navigation.spec.ts:21:161
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-source-70f8d--to-the-same-platform-draft-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft 
+[WebServer] (node:88734) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:88736) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+exit=1

@@ -1,0 +1,15 @@
+UTC: 2026-11-02T10:46:38.626077+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npm', 'run', 'typecheck']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+Exit: 0
+UTC end: 2026-11-02T10:46:39.714344+00:00

@@ -64,6 +64,11 @@ pub fn bridge_status(bridge: tauri::State<'_, Bridge>) -> BridgeStatus {
 }
 
 #[tauri::command]
+pub fn bridge_pending_requests(bridge: tauri::State<'_, Bridge>) -> crate::sidecar::PendingRequests {
+    bridge.pending_requests()
+}
+
+#[tauri::command]
 pub async fn account_defaults(
     bridge: tauri::State<'_, Bridge>,
 ) -> Result<BridgeReply, BridgeError> {
@@ -95,8 +100,10 @@ pub async fn account_action(
 }
 
 #[tauri::command]
-pub async fn device_status(bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
-    bridge.device_status().await
+pub async fn device_status(app: tauri::AppHandle, bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
+    let reply = bridge.device_status().await?;
+    crate::experience::observe_device(&app, &bridge, &reply.result).await;
+    Ok(reply)
 }
 
 #[tauri::command]
@@ -411,24 +418,12 @@ pub async fn runtime_snapshot(
 #[tauri::command]
 pub async fn runtime_start(
     bridge: tauri::State<'_, Bridge>,
-    mut request: crate::runtime_protocol::RuntimeStartRequest,
+    request: crate::runtime_protocol::RuntimeStartRequest,
     gate: tauri::State<'_, crate::experience::StartupGate>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
 ) -> Result<BridgeReply, BridgeError> {
-    gate.check()?;
-    request.validate()?;
-    let device = bridge.device_status().await?;
-    let scope=controller.bind_verified_device(&store,&device.result)?.ok_or_else(||BridgeError{ details: None,code:"NETWORK_SCOPE_REQUIRED".into(),message:"runtime start requires a freshly verified bound device; actual=no trusted device scope".into()})?;
-    request.expected_revision = controller
-        .prepare_start(
-            &store,
-            &crate::network_native::BridgeNetworkRuntime(&bridge),
-            &scope,
-            request.expected_revision,
-        )
-        .await?;
-    bridge.runtime_start(request).await
+    crate::experience::start_with_presence(&bridge, &store, &controller, &gate, request).await
 }
 #[tauri::command]
 pub async fn runtime_stop(
@@ -584,16 +579,21 @@ pub async fn notification_permission(
     })?
 }
 #[tauri::command]
-pub fn notification_delivery_status(
-    state: tauri::State<'_, crate::notification_poll::NotificationPollState>,
-) -> serde_json::Value {
-    serde_json::json!({"error":state.error()})
+pub async fn notification_delivery_status(
+    app: tauri::AppHandle,
+) -> Result<serde_json::Value, BridgeError> {
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<crate::notification_poll::NotificationPollState>()
+            .delivery_status(&app.state::<crate::notifications::NotificationService>())
+    }).await.map_err(|error| {
+        notification_join_failure("NOTIFICATION_STATUS_JOIN", "notification delivery status", error)
+    })?
 }
 #[tauri::command]
-pub async fn notification_retry(app: tauri::AppHandle) -> Result<(), BridgeError> {
+pub async fn notification_retry(app: tauri::AppHandle) -> Result<serde_json::Value, BridgeError> {
     tauri::async_runtime::spawn_blocking(move || {
         app.state::<crate::notifications::NotificationService>()
-            .allow_failed_retry()
+            .allow_failed_retry().map(|count| serde_json::json!({"retryable_count":count}))
     })
     .await
     .map_err(|error| {

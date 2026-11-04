@@ -18,17 +18,17 @@ test('coordinator refreshes stopped account and supply observations once for all
  m.subscribe(()=>{});await tick();assert.equal(accountReads,2);m.dispose();
 });
 // S1's approved automatic read recovery now runs through the single S2 owner.
-test('failed platform reads retry after ten seconds without hiding the other platform or overlapping',async t=>{
+test('structured failed platform reads retry after two seconds without hiding the other platform or overlapping',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date']});
  const f=fixture();let active=0,max=0,reads=0,failed=true;
- f.deps.intervalMs=10000;
+ f.deps.intervalMs=10000;f.deps.random=()=>1;
  f.deps.device.status=async()=>({state:'bound',hive:'https://hive.example',identity:{id:'device'}});
- f.deps.supply=()=>({status:async(platform:string)=>{reads++;active++;max=Math.max(max,active);await Promise.resolve();active--;if(failed&&platform==='openai')throw new Error('SUPPLY_READ_FAILED: HTTP 503');return {platform,checked_at:new Date().toISOString()};}});
+ f.deps.supply=()=>({status:async(platform:string)=>{reads++;active++;max=Math.max(max,active);await Promise.resolve();active--;if(failed&&platform==='openai')throw {code:'http_rejected',message:'SUPPLY_READ_FAILED: HTTP 503',evidence:{http_status:'503'}};return {platform,checked_at:new Date().toISOString()};}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
  assert.equal(reads,2);assert.equal(max,2);assert.match(m.getSnapshot().supplyErrors.openai?.message??'',/HTTP 503/);
  assert.ok(m.getSnapshot().supplies.claude);assert.equal(m.getSnapshot().error,null);
- t.mock.timers.tick(9999);await tick();assert.equal(reads,2);
- failed=false;t.mock.timers.tick(1);await tick();assert.equal(reads,4);assert.equal(max,2);
+ t.mock.timers.tick(1999);await tick();assert.equal(reads,2);
+ failed=false;t.mock.timers.tick(1);await tick();assert.equal(reads,3);assert.equal(max,2);
  assert.ok(m.getSnapshot().supplies.openai);assert.deepEqual(m.getSnapshot().supplyErrors,{});
 });
 test('uncertain writes invalidate late results and recover with one read after ten seconds',async t=>{

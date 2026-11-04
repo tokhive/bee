@@ -1,0 +1,32 @@
+{"utc": "2026-11-02T16:03:17.076641+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri", "argv": ["cargo", "test", "--lib", "network::tests", "--", "--nocapture"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.04s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 23 tests
+test network::tests::network_corrupt_preferences_block_apply_without_stopping ... ok
+test network::tests::network_does_not_apply_to_replaced_management_instance ... ok
+test network::tests::network_bootstrap_applies_saved_proxy_before_any_restore ... ok
+test network::tests::network_applies_only_after_owned_stop_and_restores_saved_intent ... ok
+test network::tests::network_apply_failure_configure_retains_actual_stage ... ok
+test network::tests::network_apply_failure_observe_retains_actual_stage ... ok
+test network::tests::network_apply_failure_configure_readback_retains_actual_stage ... ok
+test network::tests::network_apply_failure_stop_retains_actual_stage ... ok
+test network::tests::network_apply_failure_restore_retains_actual_stage ... ok
+test network::tests::network_scope_accepts_only_actual_device_status_states ... ok
+test network::tests::network_scope_matches_go_json_array_sha256_contract ... ok
+test network::tests::network_status_contract_rejects_unknown_fields_paths_and_sensitive_values ... ok
+test network::tests::network_restart_requires_explicit_confirmation_before_stopping ... ok
+test network::tests::network_prepare_start_applies_trusted_saved_scope_without_changing_resume_intent ... ok
+test network::tests::network_saved_preferences_are_pending_without_applying_running_runtime ... ok
+test network::tests::network_failures_preserve_effective_values_and_never_restore_after_failed_config ... ok
+test network::tests::network_bootstrap_requires_initial_stopped_runtime_and_confirmed_configuration ... ok
+test network::tests::network_prepare_start_blocks_start_when_saved_preferences_change_during_configuration ... ok
+test network::tests::network_rechecks_saved_revision_after_stop_before_apply ... ok
+test network::tests::network_stale_stop_and_mismatched_configuration_readback_block_restore ... ok
+test network::tests::network_rejects_each_untrusted_stop_receipt_before_configure_or_restore ... ok
+test network::tests::network_verified_scope_binds_draft_without_cross_device_copy ... ok
+test network::tests::network_prepare_start_avoids_unnecessary_config_and_rejects_untrusted_preconditions ... ok
+
+test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 202 filtered out; finished in 0.29s
+
+{"exit": 0, "utc": "2026-11-02T16:03:18.872426+00:00"}

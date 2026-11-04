@@ -1,0 +1,88 @@
+UTC: 2026-11-02T10:46:38.656052+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['node', '--test', 'tests/desktopState.test.ts', 'tests/desktopStatus.test.ts', 'tests/device.test.ts', 'tests/problems.test.ts']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (11.541291ms)
+✔ old child and network revision results never replace current state (9.887417ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (2.2635ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (6.434333ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (1.157875ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (1.6215ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (1.799875ms)
+✔ device read failure stays on the device and still publishes account defaults (1.536459ms)
+✔ replacement refresh starts after the status listener returns (3.873834ms)
+✔ a superseded initial status rejection cannot block a ready event (1.210167ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (2.547583ms)
+✔ shared and independent platform facts publish before slow openai account (0.702333ms)
+✔ shared and independent platform facts publish before slow claude account (0.949541ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (3.704416ms)
+✔ failed platform reads retain confirmed history and its real retry time (2.538333ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (4.147875ms)
+✔ supply progress follows its platform request rather than another platform busy flag (15.824333ms)
+✔ coordinator preserves the actual retry timer for reconciling (12.359625ms)
+✔ coordinator preserves the actual retry timer for pending (5.351291ms)
+✔ coordinator preserves the actual retry timer for running (13.1055ms)
+✔ identity failure still fences each local account receipt before publishing local facts (1.346833ms)
+✔ existing credential recovery is discovered by the shared reader and stale revisions are rejected (4.261541ms)
+✔ only a typed absent recovery is ignored; corrupt records remain visible (0.684042ms)
+✔ recovery completion changes binding within the same refresh before publishing new scoped facts (2.044375ms)
+✔ binding is isolated when recoveryStatus saves config but its response fails (3.040833ms)
+✔ binding is isolated when status saves config but its response fails (5.229166ms)
+✔ fresh ready (4.682625ms)
+✔ shared failed read suppresses old success (0.328333ms)
+✔ confirmed revocation precedes stopped and unknown accounts (0.629833ms)
+✔ startup rejection does not depend on accounts (0.290916ms)
+✔ starting precedes empty accounts (1.410625ms)
+✔ known empty accounts (0.216292ms)
+✔ selected stopped (0.07725ms)
+✔ unknown accounts are not zero (0.062042ms)
+✔ first read (0.240833ms)
+✔ all paused (0.471375ms)
+✔ expired success cannot be ready (0.155917ms)
+✔ one platform failure preserves the other confirmed ready platform (2.219625ms)
+✔ paused keeps independent blockers in the original snapshot (1.535583ms)
+✔ preparation closes after a selected account, including ordinary stop (0.460625ms)
+✔ initial transaction awaiting_confirmation stays pairing (0.185959ms)
+✔ initial transaction creation_unknown stays pairing (0.25075ms)
+✔ initial transaction redemption_unknown stays pairing (0.124375ms)
+✔ initial transaction saving stays pairing (0.139292ms)
+✔ initial transaction awaiting_owner_confirmation stays pairing (0.045875ms)
+✔ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (10.66775ms)
+✔ device replies only expose validated public binding data (10.146917ms)
+✔ business rejection preserves operation evidence (0.851666ms)
+✔ device rejection retains structured failure before binding validation (2.717291ms)
+✔ device error details reject unknown fields and invalid observations (0.900541ms)
+✔ native device client uses fixed commands and no frontend config path (1.053458ms)
+✔ native context failures retain only a validated observed binding revision (1.262041ms)
+✔ DeviceRecovery client provides explicit prepare confirm and status operations (0.528958ms)
+✔ DeviceRecovery strict public contract rejects secrets missing fields and conflicting URL (3.492166ms)
+✔ DeviceRecovery initial pairing reports the same public transaction with consistent state (2.017042ms)
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (22.7175ms)
+✔ device replacement keeps its exact cause and provides the device entry (1.656792ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.354666ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.437583ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (1.949042ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.544875ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (1.748208ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (11.405708ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.20475ms)
+✔ explicit locale formatting and placeholders follow the App language (4.625417ms)
+✔ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.603208ms)
+✔ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.322834ms)
+✔ known unsent failures use the App locale and retain evidence without guessing from messages (0.294125ms)
+✔ unsent classification uses validated codes and rejects malformed details (0.74075ms)
+ℹ tests 69
+ℹ suites 0
+ℹ pass 69
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 500.866916
+
+Exit: 0
+UTC end: 2026-11-02T10:46:39.347931+00:00

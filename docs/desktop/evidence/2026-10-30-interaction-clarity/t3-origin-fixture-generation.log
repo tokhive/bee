@@ -1,0 +1,4 @@
+=== RUN   TestT3OriginGenerateFixture
+--- PASS: TestT3OriginGenerateFixture (0.00s)
+PASS
+ok  	github.com/tokhive/bee/agent	0.483s

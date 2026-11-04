@@ -1,0 +1,37 @@
+=== RUN   TestDetailedSupplyOptionValidationPrecedesPauseWrite
+2026/11/02 11:30:58 INFO http request module=http method=POST path=/api/auth/register status=201 duration=5ms
+2026/11/02 11:30:58 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/02 11:30:58 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=2ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=2ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=400 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=400 duration=0s
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    supply_control_test.go:217: invalid detail option accepted: method=GET query=reason_detail=%zz status=200 state=map[paused:false platform:openai ready:false reasons:[offline not_configured]]
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=2ms
+2026/11/02 11:30:58 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=3ms
+    supply_control_test.go:217: invalid detail option accepted: method=PUT query=reason_detail=%zz status=200 state=map[paused:true platform:openai ready:false reasons:[manually_paused offline not_configured]]
+2026/11/02 11:30:58 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    supply_control_test.go:221: invalid detail option changed pause state
+--- FAIL: TestDetailedSupplyOptionValidationPrecedesPauseWrite (0.45s)
+FAIL
+FAIL	github.com/tokhive/hive/hive/internal/integration	0.908s
+FAIL

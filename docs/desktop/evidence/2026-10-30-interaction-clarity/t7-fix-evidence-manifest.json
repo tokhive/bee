@@ -1,0 +1,354 @@
+{
+  "utc": "2026-11-02T15:05:40.629677+00:00",
+  "workspace": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+  "base": "267a33d38db3a09f0c47917419e36055a6660ee6",
+  "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+  "dirty": "M Makefile\n M desktop/README.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md",
+  "artifacts": [
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-commit.log",
+      "sha256": "896866a63a5aa9f6a9d6308d158d0448f6456890c99d77223f59c122d12b1745",
+      "bytes": 1805
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ego-history.mjs",
+      "sha256": "cc2dba7167de3f590d8463816d2266ec9e3b387f438b23b62bc9ecff02943910",
+      "bytes": 2788
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ego-readability.mjs",
+      "sha256": "b8ff995b662c9998d47e238b3723e17afeaddac8477f80b68f65ead9d59f188b",
+      "bytes": 3580
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1000-en-dark.png",
+      "sha256": "918c51d96524f988cdbbb00e5b5504b44ec86e9380aa2d9fd692b4ef1f06ac23",
+      "bytes": 107107
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1000-en-light.png",
+      "sha256": "68ecee6a5d0274f9a23bb1767cc8706ccb87e86c5a6457410ce7f106e01b7590",
+      "bytes": 106191
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1000-zh-dark.png",
+      "sha256": "93401eca8744d9e2ff4658a01319c7a7a4580e917ef40cebd5120e49eb7ad52d",
+      "bytes": 99074
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1000-zh-light.png",
+      "sha256": "26904fa5c5aa9066e6eeefa8e975324beeadd83dbf55431c10d70c006fb07171",
+      "bytes": 99608
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1080-en-dark.png",
+      "sha256": "65a2da34681f6321055adb0082921fb7e5dbaf82ab56ec9601dcbec6c3214df6",
+      "bytes": 120126
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1080-en-light.png",
+      "sha256": "1088611ad86399b48a40252754cf5b96775628609f44b139ca4280bfcb573bbf",
+      "bytes": 119858
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1080-zh-dark.png",
+      "sha256": "f1dea2f2d4b0f2c522cd08766871ba141ca852a0b03c386d4caeffada2b41753",
+      "bytes": 142223
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-1080-zh-light.png",
+      "sha256": "ea8041f1a535eab23dcc55db67899472d04d7df8fccaca8f887162e8945941f9",
+      "bytes": 141995
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-860-en-dark.png",
+      "sha256": "f7956c4fc662b3a62c59bec0246b2cf1eca8e1c48d3f057a633a0ce8539f8b51",
+      "bytes": 92600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-860-en-light.png",
+      "sha256": "52480effaa8d1f0a8b6640da042b420e3eed6dde003a3bf644c07a1c7ca582db",
+      "bytes": 91844
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-860-zh-dark.png",
+      "sha256": "18756befecd807288d55535f8f8239b1e4bb1af33476b75fb24d5650fead6564",
+      "bytes": 110957
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-row-860-zh-light.png",
+      "sha256": "2c270920719628166f8f4b1c70284c5dce22587a955b124740fc63ff6e6792b1",
+      "bytes": 110269
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1000-en-dark.png",
+      "sha256": "ee26b4b7621bd6924f844c87e342b75edc5c88776ef143021882448afc2521ae",
+      "bytes": 148099
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1000-en-light.png",
+      "sha256": "962adc008d5502f9628c448b9575af0ac26532bead3a23e133e080b2bcaac44b",
+      "bytes": 151422
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1000-zh-dark.png",
+      "sha256": "fdd8c9c5efcdc3176bd6553508568f0d165548aa58153626f3305492243c0b14",
+      "bytes": 130444
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1000-zh-light.png",
+      "sha256": "737b2e4b795dcefe575d943c975f07fff6dd14e93e93129fe64231e70cdb72b7",
+      "bytes": 134428
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1080-en-dark.png",
+      "sha256": "1b592762f0f0188657f3415e7ba1908226e8ae2fdc82cdb41ee7347946d7f14e",
+      "bytes": 156238
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1080-en-light.png",
+      "sha256": "4b74253bac38f99cb0b2805d999cf2fe222d794ae08eed67186df396eaf55a5e",
+      "bytes": 160716
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1080-zh-dark.png",
+      "sha256": "224f0b9f729fdb37a1c548fc97704629229b0cf8746ede85a02fad43954a7ae8",
+      "bytes": 190049
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-1080-zh-light.png",
+      "sha256": "f10b334fab22b058d8595e2b1dfec15380ec725d3c9df40020fae89e7c7b098c",
+      "bytes": 194116
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-860-en-dark.png",
+      "sha256": "f64168fb9658cc5b25bb876188150e0168a62baec2fea18af3582dee2b396d2f",
+      "bytes": 118514
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-860-en-light.png",
+      "sha256": "2176fc2d70d9af737483dd589ecee7b5d8d0cffa9db2a69a05792a6daf6f6970",
+      "bytes": 121213
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-860-zh-dark.png",
+      "sha256": "3355acbc1fa263570c933b5cf633a29393048ae1db2fd93ce1e86f4bda27e8b6",
+      "bytes": 134648
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-error-target-860-zh-light.png",
+      "sha256": "8de76ed94eec22efa3878ebb63c9c33004599921b4d83ff47a4e54afbfdb1ede",
+      "bytes": 137880
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-green-node.log",
+      "sha256": "e6f10f34e9436735cff8dec7c633000813cfea27bbefa9d15d999b3a1cfc84ae",
+      "bytes": 8532
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-green-targeted-ui-output/.last-run.json",
+      "sha256": "8d301a4c76c0740497a788d1c0a69fe3dcf74dd8c26f8612257e9ed0866ea3f2",
+      "bytes": 96
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-green-targeted-ui-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/error-context.md",
+      "sha256": "9b7f8201b73ce80467b392329ecd9c343717fa605a73ccdd5df5c2db7886d5c1",
+      "bytes": 23486
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-green-targeted-ui-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/trace.zip",
+      "sha256": "0ec50e5fa7b5404c998b6ad18a6c735d51d25a66238d1a0c6353a7a292fcf7fc",
+      "bytes": 408916
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-green-targeted-ui.log",
+      "sha256": "f8d635bac8970fa7d34c579d87a01ef52f622a4d0c48d95b1b1d26881596d379",
+      "bytes": 5361
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-history-detail-en-dark.png",
+      "sha256": "785ed7cfb41168a361d7c01aab9d2a15b450121f9dd10584396737eb84cb0b32",
+      "bytes": 131990
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-history-en-dark.png",
+      "sha256": "180a01aff89c65f73ddb585343b1eb74759e84078d39f35eb8c711ff22df11d9",
+      "bytes": 100704
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-history-manual.json",
+      "sha256": "a8c0b814853e8c35e189a3c45d53f146a8f25b69e2560b01f265b2a2ef7b09ce",
+      "bytes": 693
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-manifest.py",
+      "sha256": "0e5a4194660f105c9781276a20baf7091f5a7e3ab25b5c79ce086e856612664b",
+      "bytes": 2376
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-node-final.log",
+      "sha256": "b666dbe2c9371dc89325c267eeff1f06f7db15854cb9e17720bbbd5b95d8a1c0",
+      "bytes": 8572
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-green-output/.last-run.json",
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-green.log",
+      "sha256": "6d554a164eb17bac5596954641cb5914cb129cd20bd759fca4cb42b66a8b62ea",
+      "bytes": 3745
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/.last-run.json",
+      "sha256": "5298d0f930399ef24b0f64e2ef2f1026619437826f939293c3fa8838965a5638",
+      "bytes": 243
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-03c1e-failed-terminal-observation-chromium/error-context.md",
+      "sha256": "ba40859f8e464716a4fa47b4171fd273b2de99c95085bdb0887b8d3ad9777c4e",
+      "bytes": 11930
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-03c1e-failed-terminal-observation-chromium/trace.zip",
+      "sha256": "d6731acbe95e3f4ef23f37f45f854d285c48db58071dc46a9d558184ed8d6cc6",
+      "bytes": 21023
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-0a65c-celled-terminal-observation-chromium/error-context.md",
+      "sha256": "4957d2ac00ceaa0337c1464bf7184b1d35da124676a8e81fa9eda86768928a26",
+      "bytes": 11933
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-0a65c-celled-terminal-observation-chromium/trace.zip",
+      "sha256": "a236375afd8fbee8214da009ef4195b3db3d0dff37ebda035b78d04988d140e3",
+      "bytes": 21066
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-1121d-ceeded-terminal-observation-chromium/error-context.md",
+      "sha256": "50da87ac8e3be193cbac724fc6acfa587a05b27a04e9830339af13b9fade2126",
+      "bytes": 11933
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/account-auto-read-owned-of-1121d-ceeded-terminal-observation-chromium/trace.zip",
+      "sha256": "8e89dc5fc902e2e6ffcd576713af4b371329f45c5cae6a53865d852677f662e2",
+      "bytes": 21087
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/error-context.md",
+      "sha256": "d1f61935018a1c234d39826dd16c0ff9a14127c386fbb14ec03b14a0239dd055",
+      "bytes": 23426
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/trace.zip",
+      "sha256": "e8d14f23cd598643916f2144b475565006606eec1d4804fca78145e8cc139a7d",
+      "bytes": 385859
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red-timeline.json",
+      "sha256": "e5dc85e917719861ef24dbc113ecb832ef5c4b976f35ece661c6afd90e519790",
+      "bytes": 46670
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-red.log",
+      "sha256": "b425c48061046cbdfc87bacb306d15fcb5a1e76ffb4e67ac16fdb8830ea222f5",
+      "bytes": 14089
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-readability.json",
+      "sha256": "fa2ca678c70bd2954cb7e1a62a540bbcefd01f6b0bcd5ef17969f81e695d03c0",
+      "bytes": 19017
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-presenter.log",
+      "sha256": "cd3dc1266eb816c2fbc46b090f5e581d3f5be56327bd5fa866b534a01d5ffda4",
+      "bytes": 5699
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-remote-quota.log",
+      "sha256": "9336269bc81115079c631e73b3831524b6de53e00eeaa596995b9cbfec578589",
+      "bytes": 4288
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/.last-run.json",
+      "sha256": "499bbaf0fd4b52a023eeb2c03ba3bfd5aeedf0310adaf6218d6468eb5716bdea",
+      "bytes": 194
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/error-context.md",
+      "sha256": "cf069c8fb0165c9dea20d69f876f7ffc4882d4abcb2368a12efd198216e71461",
+      "bytes": 40644
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-background-1835c-er-invents-a-cancel-request-chromium/trace.zip",
+      "sha256": "0299996d3ab0e00e296c7c656d795821a77a20e76638806400db5c223bf47207",
+      "bytes": 700117
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-openai-rea-9a30f-ry-without-automatic-writes-chromium/error-context.md",
+      "sha256": "3fbe9e8262dd7c7f888c808f5c34a5eab2751566f854d3664a68ee7fba413406",
+      "bytes": 23292
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-openai-rea-9a30f-ry-without-automatic-writes-chromium/trace.zip",
+      "sha256": "16992beb9dba91f8d78d69c750730c4a62bb1b30ad5dd070ad728cbfab361951",
+      "bytes": 140725
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-runtime-re-3fcba-ry-without-automatic-writes-chromium/error-context.md",
+      "sha256": "7c699ee63d27ecf6bd8ad3e32e56309f6a3195ae97b43f6553c29a1f825f3581",
+      "bytes": 23043
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui-output/native-accounts-runtime-re-3fcba-ry-without-automatic-writes-chromium/trace.zip",
+      "sha256": "04ee41c6cbcf3421e0864b861f491e0371f4c67e1a3e3e2cc3483b2655b1957b",
+      "bytes": 162916
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-red-ui.log",
+      "sha256": "7f0acd655f217446cabcd3947af98d5613ad12570b79e18be67c65dfe7d011a0",
+      "bytes": 28989
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-run.py",
+      "sha256": "3e4a607d90075bde73920f34733cde4104bd3ba95f238770d81975e17a96d124",
+      "bytes": 982
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-typecheck-final-v2.log",
+      "sha256": "f0b92f757b048f8f9ba6a6f4599941a6029b3992052d32d9ebc88cb2155e049d",
+      "bytes": 1581
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-typecheck-final.log",
+      "sha256": "5cde0a79318111af5da7b805ab028dc3b9eb3909262fc83250a9f4400b11f608",
+      "bytes": 1581
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-typecheck.log",
+      "sha256": "c73a6831a7f0a445ac7d93e920ae2ee45a12a4b86852ce38793f438fcd677db0",
+      "bytes": 1759
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ui-final-output/.last-run.json",
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ui-final-v2-output/.last-run.json",
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ui-final-v2.log",
+      "sha256": "fbd60aadbcf4a02dd29ae765ce99ddf42bee320520140e95b717bfc10961fdf6",
+      "bytes": 10802
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-ui-final.log",
+      "sha256": "5b2daf1449a5a431904187d0fc7abb4f78d709ba9a67970f8c2d8d5f38b986e8",
+      "bytes": 10796
+    }
+  ]
+}

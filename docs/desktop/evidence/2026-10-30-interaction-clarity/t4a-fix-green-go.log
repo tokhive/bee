@@ -1,0 +1,6 @@
+ok  	github.com/tokhive/bee/agent	1.711s
+--- FAIL: TestDeviceContextBridgePreservesRevisionOnlyForObservedFailure (0.00s)
+    startup_context_test.go:75: observed failure revision lost: {"error":{"code":"DEVICE_CONTEXT_INVALID","message":"DEVICE_CONTEXT_INVALID: saved record rejected"},"binding_revision":3}
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	1.268s
+FAIL

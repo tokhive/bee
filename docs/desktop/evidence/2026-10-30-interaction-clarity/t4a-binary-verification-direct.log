@@ -1,0 +1,10 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.60s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+T4a protected verification actual: path=/Users/dayong/.nvm/versions/node/v24.22.1/bin/node bytes=122545856 elapsed_ms=6093
+test update_install_tests::temporary_t4a_binary_verification_timing ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 194 filtered out; finished in 12.25s
+

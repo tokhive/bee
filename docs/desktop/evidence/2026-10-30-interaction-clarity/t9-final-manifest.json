@@ -1,0 +1,1659 @@
+{
+  "created_at_utc": "2026-11-02T18:01:04.339934+00:00",
+  "workspace": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+  "base": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+  "commit": "ce2b542117c9332561f28d0fa6955b5070b1ef9c",
+  "dirty_status": " M Makefile\n M desktop/README.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .vite/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+  "task_files": {
+    "desktop/src-tauri/src/lib.rs": {
+      "sha256": "b1665efd769421c4693e420d00a04c7113477e4d48192649440cc9e62e2c3828",
+      "git_blob": "5ab61724b7516ec0943e74ff285dcd107c79303d",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/lifecycle.rs": {
+      "sha256": "2f8f168a6396d5596b30c65b9087c505dce61edda7465881bcda2db774f878ed",
+      "git_blob": "c29aec833ca1db5ea0e180a709bf0b2e9ae2aab6",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/lifecycle_tests.rs": {
+      "sha256": "8a0717a2472cc3ece161614d0fb039f7419fe89e2f9198b23fc2346a01f32e9d",
+      "git_blob": "abc8f0385bde41df90071845d651d7ac7f1f96c3",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/notification_poll.rs": {
+      "sha256": "188c8878996469ceb4108ca72b0634a030b07497913aca6d7530214e5874f61e",
+      "git_blob": "dcf7f02bf4e837e3fbf4d445fb670cd63dd7e68a",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/notification_poll_tests.rs": {
+      "sha256": "4d2bea0509eb6cd7ab148c5e1117b7f7b47ce6ae59f53c5b6af45ba0e9e0e1af",
+      "git_blob": "97db22d2a999aca84e17c1f0215f993653dd80ad",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/notifications.rs": {
+      "sha256": "613e687e62a11c17714e4fe3638d171070e70baab006dca05b8e77b7094c883b",
+      "git_blob": "b809d550292ff18845ff11455fb4c34300eac543",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/notifications_tests.rs": {
+      "sha256": "39116f7efdb240d3bc2a3a4d81353b723c57de1b76717a8e79f1be2faad0619e",
+      "git_blob": "58c313ac5fca67f685a3f7a13c1f2acb4d398917",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/updater.rs": {
+      "sha256": "c35f2b7f9f4e632b9d5465e46e5e55d414443ba614eba1058a3ece36408896d7",
+      "git_blob": "dce5f227921bd968b6e40da8830b486f5c9aab42",
+      "commit_matches_worktree": true
+    },
+    "desktop/src-tauri/src/updater_tests.rs": {
+      "sha256": "52984ef1fca390068ccb1c85a314bc828eb29ed9b90446c6dae62c3d9a069bcb",
+      "git_blob": "30308e85a84308c65872e9419c9b488b2da49a40",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/app/NativeApp.tsx": {
+      "sha256": "ad230c656bbc462d29091fe87a1f9b9da60ca3f0cd07db7770c18b1fbf59168c",
+      "git_blob": "c926b3e679c1e377d7ace2b44ce086c1e05efe36",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/features/settings/NativeUpdateControls.tsx": {
+      "sha256": "91dd712d68213a99c71ffff8bcbf1c6577fe0ec069daa904c99e34838efa5019",
+      "git_blob": "819fcabe6fd4e24639fcd92c6c11d2eab4fe2201",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/features/settings/native-update.css": {
+      "sha256": "8cc13ff78b147a502362dbdba9a091b20e54d1e33bef15e0dcf77992dedd3b31",
+      "git_blob": "e3454c06e3797761b9b53cace0441609dc6ccb02",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/i18n/en.ts": {
+      "sha256": "7d354071ee0612461afbd2d42c1bddac106d9f8c17c2bc16e3fb6368f8982210",
+      "git_blob": "f5a0bf327ba08d79b9958e56ec6ca32daef19752",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/i18n/zh.ts": {
+      "sha256": "ebe65c874a0fce2534d6204a42ca91ead7fdd829ce5589aff6a5191357da2224",
+      "git_blob": "d42f62ad14591d98cd0c02b66dbd299c974923ad",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/presentation/problems.ts": {
+      "sha256": "b1f1001ea318d5c1d0c383b0843820fd4b04b8641d8a13d84c77f3abd6ea0aaf",
+      "git_blob": "03cd631db74237d8234eb1b9019ad6e0164be867",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/system/bridge.ts": {
+      "sha256": "21d0280040f3c36e49ee753487ad5e8277320578c445ba78fbbe62f02d1b569b",
+      "git_blob": "ab8b2e299d733ab7ec56de43f166356553a7d932",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/system/updater.ts": {
+      "sha256": "cc71337b7d676ef96bc47b23c1199c6a2851e211e0b28c7d62acb3c839dcc8c1",
+      "git_blob": "49f361f5f7006db1d0102b51363573b134b05859",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/fixtures/native-accounts.mjs": {
+      "sha256": "200bff5b89dbbf624716a859d5cae4a3c6b2d9c67cb3937f0ac3c6c525ec2920",
+      "git_blob": "aa6b43d83190bb7006ec81da0f8f3d4d56842ad4",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/fixtures/native-updater.tsx": {
+      "sha256": "008b822a30c1b5035fb8902024f9e01ead582366f010662f707a83bdbb1db12e",
+      "git_blob": "4f4e24329109a87809d39b77f5957498583c3415",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/lifecycle.test.ts": {
+      "sha256": "81446ccf3be485ded5bec053c9df83dcbd8f9ed7371b29138f1de2dc19061a6a",
+      "git_blob": "b2533538b184dddfc8ac664dedb1e339af85d7ec",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/native-updater.spec.ts": {
+      "sha256": "90c95eed78bde431f7e9b4e6fe9c25bb966551af50534d5cb1cda962cd47b48a",
+      "git_blob": "f40245247c6803de25f6fa32a73e8ae4ca3404c0",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/updater.test.ts": {
+      "sha256": "eb40511b3079e99c9f4de52445819413e9386edcd32c8179859adf168043f5a5",
+      "git_blob": "de3a174382c25dc733667b0263af41247be1b269",
+      "commit_matches_worktree": true
+    }
+  },
+  "verification_scope_matches": [
+    {
+      "metadata": "t9-final-node24-v3.json",
+      "scope": "all",
+      "files_matched": 191,
+      "exit": 0,
+      "all_sources_match_committed_task_and_current_worktree": true
+    },
+    {
+      "metadata": "t9-final-build24-v3.json",
+      "scope": "all",
+      "files_matched": 191,
+      "exit": 0,
+      "all_sources_match_committed_task_and_current_worktree": true
+    },
+    {
+      "metadata": "t9-final-playwright24-v3.json",
+      "scope": "all",
+      "files_matched": 191,
+      "exit": 0,
+      "all_sources_match_committed_task_and_current_worktree": true
+    },
+    {
+      "metadata": "t9-final-rust194-v2.json",
+      "scope": "rust",
+      "files_matched": 45,
+      "exit": 0,
+      "all_sources_match_committed_task_and_current_worktree": true
+    }
+  ],
+  "runs": [
+    {
+      "metadata": "t9-final-build24-v3.json",
+      "log": "t9-final-build24-v3.log",
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:54:41.964510+00:00",
+      "end_utc": "2026-11-02T17:54:43.325106+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-build24-v3.json"
+    },
+    {
+      "metadata": "t9-final-build24.json",
+      "log": "t9-final-build24.log",
+      "argv": [
+        "npm",
+        "run",
+        "build"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:46:23.648457+00:00",
+      "end_utc": "2026-11-02T17:46:25.235433+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-build24.json"
+    },
+    {
+      "metadata": "t9-final-node24-v3.json",
+      "log": "t9-final-node24-v3.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts",
+        "tests/lifecycle.test.ts",
+        "tests/notifications.test.ts",
+        "tests/bridge.test.ts",
+        "tests/preferences.test.ts",
+        "tests/problems.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:54:41.965277+00:00",
+      "end_utc": "2026-11-02T17:54:42.467706+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-node24-v3.json"
+    },
+    {
+      "metadata": "t9-final-node24.json",
+      "log": "t9-final-node24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts",
+        "tests/lifecycle.test.ts",
+        "tests/notifications.test.ts",
+        "tests/bridge.test.ts",
+        "tests/preferences.test.ts",
+        "tests/problems.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:37:01.595274+00:00",
+      "end_utc": "2026-11-02T17:37:02.797664+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-node24.json"
+    },
+    {
+      "metadata": "t9-final-playwright24-v2.json",
+      "log": "t9-final-playwright24-v2.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "native-experience.spec.ts",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-final-v2-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:46:24.814589+00:00",
+      "end_utc": "2026-11-02T17:46:52.995772+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-playwright24-v2.json"
+    },
+    {
+      "metadata": "t9-final-playwright24-v3.json",
+      "log": "t9-final-playwright24-v3.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "native-experience.spec.ts",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-final-playwright-v3"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:54:41.964492+00:00",
+      "end_utc": "2026-11-02T17:55:07.405710+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-playwright24-v3.json"
+    },
+    {
+      "metadata": "t9-final-playwright24.json",
+      "log": "t9-final-playwright24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "native-experience.spec.ts",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-final-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:38:17.890730+00:00",
+      "end_utc": "2026-11-02T17:39:13.647472+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-playwright24.json"
+    },
+    {
+      "metadata": "t9-final-rust194-v2.json",
+      "log": "t9-final-rust194-v2.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:45:16.061714+00:00",
+      "end_utc": "2026-11-02T17:46:59.412906+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-rust194-v2.json"
+    },
+    {
+      "metadata": "t9-final-rust194.json",
+      "log": "t9-final-rust194.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:38:16.796693+00:00",
+      "end_utc": "2026-11-02T17:40:33.407679+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-rust194.json"
+    },
+    {
+      "metadata": "t9-final-typecheck24.json",
+      "log": "t9-final-typecheck24.log",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:37:55.757709+00:00",
+      "end_utc": "2026-11-02T17:37:56.659801+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-final-typecheck24.json"
+    },
+    {
+      "metadata": "t9-green-background-client24.json",
+      "log": "t9-green-background-client24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:53:18.157029+00:00",
+      "end_utc": "2026-11-02T17:53:18.959795+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-background-client24.json"
+    },
+    {
+      "metadata": "t9-green-background-ui24.json",
+      "log": "t9-green-background-ui24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "T9.*(background status|closes an unsubmitted)|keyboard confirmation|quit and install",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-green-background-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:53:18.186662+00:00",
+      "end_utc": "2026-11-02T17:53:23.359455+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-background-ui24.json"
+    },
+    {
+      "metadata": "t9-green-client-locale24.json",
+      "log": "t9-green-client-locale24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts",
+        "tests/lifecycle.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:31:01.704252+00:00",
+      "end_utc": "2026-11-02T17:31:02.373450+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-client-locale24.json"
+    },
+    {
+      "metadata": "t9-green-error-chain194.json",
+      "log": "t9-green-error-chain194.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "plugin_download_transport_keeps_nested_source_chain",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:44:34.742492+00:00",
+      "end_utc": "2026-11-02T17:44:44.832156+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-error-chain194.json"
+    },
+    {
+      "metadata": "t9-green-lifecycle-ui24.json",
+      "log": "t9-green-lifecycle-ui24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "T9 StrictMode",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-green-lifecycle-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:54:23.788231+00:00",
+      "end_utc": "2026-11-02T17:54:28.173224+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-lifecycle-ui24.json"
+    },
+    {
+      "metadata": "t9-green-recovery-ui24.json",
+      "log": "t9-green-recovery-ui24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "native-experience.spec.ts",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-recovery-green-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:44:06.713925+00:00",
+      "end_utc": "2026-11-02T17:44:29.002902+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-green-recovery-ui24.json"
+    },
+    {
+      "metadata": "t9-playwright-1.json",
+      "log": "t9-playwright-1.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "native-experience.spec.ts",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-green1-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:34:07.396167+00:00",
+      "end_utc": "2026-11-02T17:34:32.403706+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-playwright-1.json"
+    },
+    {
+      "metadata": "t9-red-background-busy24.json",
+      "log": "t9-red-background-busy24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "between pointer down",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red-background-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:48:39.438431+00:00",
+      "end_utc": "2026-11-02T17:48:48.034020+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-background-busy24.json"
+    },
+    {
+      "metadata": "t9-red-client-locale24.json",
+      "log": "t9-red-client-locale24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts",
+        "tests/lifecycle.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:30:12.776334+00:00",
+      "end_utc": "2026-11-02T17:30:13.089454+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-client-locale24.json"
+    },
+    {
+      "metadata": "t9-red-error-chain194-retry.json",
+      "log": "t9-red-error-chain194-retry.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "plugin_download_transport_keeps_nested_source_chain",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:40:20.119514+00:00",
+      "end_utc": "2026-11-02T17:40:27.651093+00:00",
+      "exit": 101,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-error-chain194-retry.json"
+    },
+    {
+      "metadata": "t9-red-error-chain194.json",
+      "log": "t9-red-error-chain194.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "plugin_download_transport_keeps_nested_source_chain",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:39:20.764395+00:00",
+      "end_utc": "2026-11-02T17:39:30.277047+00:00",
+      "exit": 101,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-error-chain194.json"
+    },
+    {
+      "metadata": "t9-red-locale-ack24.json",
+      "log": "t9-red-locale-ack24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/lifecycle.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:35:41.566850+00:00",
+      "end_utc": "2026-11-02T17:35:41.884104+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-locale-ack24.json"
+    },
+    {
+      "metadata": "t9-red-node.json",
+      "log": "t9-red-node.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:18:53.638973+00:00",
+      "end_utc": "2026-11-02T17:18:54.121268+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v26.12.0",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-node.json"
+    },
+    {
+      "metadata": "t9-red-node24.json",
+      "log": "t9-red-node24.log",
+      "argv": [
+        "/Users/dayong/.nvm/versions/node/v24.22.1/bin/node",
+        "--test",
+        "tests/updater.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:20:25.955408+00:00",
+      "end_utc": "2026-11-02T17:20:26.215159+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-node24.json"
+    },
+    {
+      "metadata": "t9-red-pending-cancel24.json",
+      "log": "t9-red-pending-cancel24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "during a pending status poll",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red-pending-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:43:20.123740+00:00",
+      "end_utc": "2026-11-02T17:43:29.153860+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-pending-cancel24.json"
+    },
+    {
+      "metadata": "t9-red-plugin-class24.json",
+      "log": "t9-red-plugin-class24.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "plugin_signature_errors_are_distinct",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:31:40.663357+00:00",
+      "end_utc": "2026-11-02T17:31:57.560971+00:00",
+      "exit": 101,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-plugin-class24.json"
+    },
+    {
+      "metadata": "t9-red-rust.json",
+      "log": "t9-red-rust.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "update_failures_keep_the_real_phase_and_raw_evidence",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:23:51.147702+00:00",
+      "end_utc": "2026-11-02T17:24:02.978019+00:00",
+      "exit": 101,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-rust.json"
+    },
+    {
+      "metadata": "t9-red-superseded-code24.json",
+      "log": "t9-red-superseded-code24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:52:57.577343+00:00",
+      "end_utc": "2026-11-02T17:52:57.946119+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-superseded-code24.json"
+    },
+    {
+      "metadata": "t9-red-superseded-session24.json",
+      "log": "t9-red-superseded-session24.log",
+      "argv": [
+        "node",
+        "--test",
+        "tests/updater.test.ts"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:49:10.404788+00:00",
+      "end_utc": "2026-11-02T17:49:10.753760+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-superseded-session24.json"
+    },
+    {
+      "metadata": "t9-red-ui.json",
+      "log": "t9-red-ui.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "T9",
+        "--workers=1",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:19:36.190576+00:00",
+      "end_utc": "2026-11-02T17:19:51.684012+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v26.12.0",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-ui.json"
+    },
+    {
+      "metadata": "t9-red-ui24.json",
+      "log": "t9-red-ui24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "T9",
+        "--workers=1",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red24-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:21:03.460615+00:00",
+      "end_utc": "2026-11-02T17:21:24.633514+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-ui24.json"
+    },
+    {
+      "metadata": "t9-red-unread-locale24.json",
+      "log": "t9-red-unread-locale24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1489",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "unread preferences",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red-unread-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:35:51.078435+00:00",
+      "end_utc": "2026-11-02T17:35:59.802004+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-unread-locale24.json"
+    },
+    {
+      "metadata": "t9-red-unsent-ui24.json",
+      "log": "t9-red-unsent-ui24.log",
+      "argv": [
+        "env",
+        "BEE_DEVICE_TEST_PORT=1491",
+        "npx",
+        "playwright",
+        "test",
+        "--config",
+        "playwright.device.config.ts",
+        "native-updater.spec.ts",
+        "--grep",
+        "proven unsent install",
+        "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t9-red-unsent-playwright"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:45:06.369667+00:00",
+      "end_utc": "2026-11-02T17:45:11.092684+00:00",
+      "exit": 1,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-red-unsent-ui24.json"
+    },
+    {
+      "metadata": "t9-rust-focused-1.json",
+      "log": "t9-rust-focused-1.log",
+      "argv": [
+        "cargo",
+        "test",
+        "--locked",
+        "--manifest-path",
+        "desktop/src-tauri/Cargo.toml",
+        "--lib",
+        "--",
+        "--nocapture"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:32:45.141421+00:00",
+      "end_utc": "2026-11-02T17:34:38.215354+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-rust-focused-1.json"
+    },
+    {
+      "metadata": "t9-sidecar-base.json",
+      "log": "t9-sidecar-base.log",
+      "argv": [
+        "node",
+        "desktop/scripts/build-bee.mjs"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:19:36.190576+00:00",
+      "end_utc": "2026-11-02T17:19:43.152253+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v26.12.0",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-sidecar-base.json"
+    },
+    {
+      "metadata": "t9-sidecar-base24.json",
+      "log": "t9-sidecar-base24.log",
+      "argv": [
+        "node",
+        "desktop/scripts/build-bee.mjs"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+      "start_utc": "2026-11-02T17:21:33.580936+00:00",
+      "end_utc": "2026-11-02T17:21:35.372005+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-sidecar-base24.json"
+    },
+    {
+      "metadata": "t9-typecheck-1.json",
+      "log": "t9-typecheck-1.log",
+      "argv": [
+        "npm",
+        "run",
+        "typecheck"
+      ],
+      "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+      "start_utc": "2026-11-02T17:32:10.580504+00:00",
+      "end_utc": "2026-11-02T17:32:11.333716+00:00",
+      "exit": 0,
+      "head": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+      "toolchain": {
+        "node": "v24.22.1",
+        "rust": "1.94"
+      },
+      "source_sha_map": "t9-typecheck-1.json"
+    }
+  ],
+  "artifacts": {
+    "t9-cancel-poll-trace-extraction.json": {
+      "sha256": "f329e478cdee9afd4b290f63f7a00176c290afc222adb890c8258c7c78209215",
+      "bytes": 8775
+    },
+    "t9-ego-01.log": {
+      "sha256": "f42d18128750e821cc71269af3af9b1021979d699b7a207e0ded3eb98d2eedeb",
+      "bytes": 470
+    },
+    "t9-ego-01.mjs": {
+      "sha256": "391308d31efdcdd30aa90a85e3f8ca7893ea1e6911bc256b99f6a97051dda22f",
+      "bytes": 1084
+    },
+    "t9-ego-02.log": {
+      "sha256": "4f7bbc1f72fce0d3ac3253b88b793152f284d2e35fe6cc33814e8b368ec256fb",
+      "bytes": 1350
+    },
+    "t9-ego-02.mjs": {
+      "sha256": "1a1dd171d74bc26c60657b52b69cc25e89799a24d625d02dd656dd05934fcbd5",
+      "bytes": 197
+    },
+    "t9-ego-03.log": {
+      "sha256": "a8f682645fec9fd6750e00f4387645db3dd905e1ee858cf8da1382f62f9bedda",
+      "bytes": 522
+    },
+    "t9-ego-03.mjs": {
+      "sha256": "afedc1c62fab2395c6df27197eac66d0ffd134498ff6903546405226be8ca2b3",
+      "bytes": 940
+    },
+    "t9-ego-04.log": {
+      "sha256": "8cd1e384a07de0dbc529949a6bc01244b32f68c452648f559fac363e5b993ff8",
+      "bytes": 2925
+    },
+    "t9-ego-04.mjs": {
+      "sha256": "c8a69b107f54ef7195d44ea66fac33651137d4cf91a63554d20b51a36e1a8c77",
+      "bytes": 882
+    },
+    "t9-ego-05.log": {
+      "sha256": "f9826f6123ac6fbdc053de175ec00995cc690036b7e575e278c06d733805886b",
+      "bytes": 2621
+    },
+    "t9-ego-05.mjs": {
+      "sha256": "f50e7ec334f40b135115b44eb4bc30d3a56e2c4adcd808746b42512ff798f3f8",
+      "bytes": 2295
+    },
+    "t9-ego-06.log": {
+      "sha256": "837bf882c078c3e5e1470cb7253a752c6214177c1c97d24f197dca19c18a6be7",
+      "bytes": 3927
+    },
+    "t9-ego-06.mjs": {
+      "sha256": "3b3bc9b025eabbae3cc5e732391622c2a1906068773a6e442ae0a566206f6a6e",
+      "bytes": 1762
+    },
+    "t9-ego-07.log": {
+      "sha256": "0d27120a3dd91ff2e3d578d1fc1fc333736421e078b495de3b2b032102b136a8",
+      "bytes": 1093
+    },
+    "t9-ego-07.mjs": {
+      "sha256": "07fbf073b7ccf79ebc61efcbc7e7faedd18dff589b912fd3f1a31f6fbaa5ffed",
+      "bytes": 6010
+    },
+    "t9-ego-08.log": {
+      "sha256": "e6f2658a5830a30026c8f7542b95677ecad5c9a2d7d5d703b782b28c266c3e4e",
+      "bytes": 1183
+    },
+    "t9-ego-08.mjs": {
+      "sha256": "5286aa6d4c814431b99093243d785f594208219eb49ba3d0d53f5c3ba079d652",
+      "bytes": 6058
+    },
+    "t9-ego-09.log": {
+      "sha256": "fa3cfd290d8c7474eaded1978463efff1212bb863d63461ac6632a66a09a2766",
+      "bytes": 5662
+    },
+    "t9-ego-09.mjs": {
+      "sha256": "ffe56267e9288e7c4c021f7900ccfd80435a2a9996cbdb4c837b7a9c2c58a7b5",
+      "bytes": 4838
+    },
+    "t9-ego-10.log": {
+      "sha256": "b711c74ab19320a3a578769c22c3e5a0e048bab2207d4e6c9fed71495e2374e8",
+      "bytes": 3193
+    },
+    "t9-ego-10.mjs": {
+      "sha256": "2b2faa91791aac05f763e56df83ee15e09cce5576b8823a966a3babcf3ed24df",
+      "bytes": 3897
+    },
+    "t9-ego-en-dark-860.png": {
+      "sha256": "6e145de95d52fcd4b31d1d9b4c437d14e3e7359fff3df9d2389edf80aabf0ca8",
+      "bytes": 62149
+    },
+    "t9-ego-en-light-1180.png": {
+      "sha256": "a08a5811e9815d82f830c1d0467e2f7481a7823ada20dd4daad99d64ed8b28c5",
+      "bytes": 86206
+    },
+    "t9-ego-final-en-confirmation-860.png": {
+      "sha256": "4e56f35ebaa4871e90d133a0d43c96c4ab84ce3293ec14a741f487a4c7c90b48",
+      "bytes": 84002
+    },
+    "t9-ego-final-en-dark-download-860.png": {
+      "sha256": "16dbdd8cffde084f7cead4f295b4145311ed69ba365fed5c2f61f81804dacd05",
+      "bytes": 66320
+    },
+    "t9-ego-final-en-dark-long-notes-860.png": {
+      "sha256": "489afc1a848cb0a88fa74cb37277c5be01f5ec7c5688d8993b79d6047686f891",
+      "bytes": 105795
+    },
+    "t9-ego-final-en-light-download-860.png": {
+      "sha256": "6627b0c04392932b23e107b1506fd55adae4ea0f9e2763f090cc6f60bd8be7c7",
+      "bytes": 66513
+    },
+    "t9-ego-final-zh-light-long-error-860.png": {
+      "sha256": "c556c15c689e79c6a9d486227158640364a0a26657ad25c9e303b32a9076b70e",
+      "bytes": 114956
+    },
+    "t9-ego-server.log": {
+      "sha256": "0b73b4c6f39dc9b459ba8143eab58b30b18fb4ab8b2634e6c985c61585322bfd",
+      "bytes": 108
+    },
+    "t9-ego-server2.log": {
+      "sha256": "d5c2647b1b442fe99a011e44b296e90c1cce13fa45a6013885f85f651b54567b",
+      "bytes": 567
+    },
+    "t9-ego-zh-dark-860.png": {
+      "sha256": "71369a9bfe40df4abca19362875fe62574820e920a299f92a0d0662a967324d4",
+      "bytes": 55649
+    },
+    "t9-ego-zh-light-860-final.png": {
+      "sha256": "dc9ebdeda0f24937793eaf5ec2f95e4b2611eed2684caea352e3ba0af18efa80",
+      "bytes": 55317
+    },
+    "t9-ego-zh-light-860.png": {
+      "sha256": "72b7f9cd466a06d4ae19fb4c375d1e1e5057b0bc017293e57cbf3548edff8032",
+      "bytes": 60245
+    },
+    "t9-ego-zh-long-error-860.png": {
+      "sha256": "9588b1d9a19810351dcad2f2a15d2566e25b65b726206f524cd0aac61dcd9048",
+      "bytes": 121713
+    },
+    "t9-final-build24-v3.json": {
+      "sha256": "01e6872cd372ce8049c438eaf09f7bce214d5e2d274c6bd6892c521f8c5dac84",
+      "bytes": 23839
+    },
+    "t9-final-build24-v3.log": {
+      "sha256": "d71ace0c75b2e6167cfd822c57f7e7879fe2cf8ad88668dd36cff7dc9da488d1",
+      "bytes": 24881
+    },
+    "t9-final-build24.json": {
+      "sha256": "b820843b6c4d40ce858c02da12c4792664876bd1e297387cc75de624fe693d1a",
+      "bytes": 23793
+    },
+    "t9-final-build24.log": {
+      "sha256": "e5c3e375b77e4989fd54628e220f5152aec760f4e407bf73eb7cddaac63efb62",
+      "bytes": 24835
+    },
+    "t9-final-node24-v3.json": {
+      "sha256": "9f213db47dd8d8e2128370e1e3e41a096030fa98d4c6f912defd102591f635f8",
+      "bytes": 24016
+    },
+    "t9-final-node24-v3.log": {
+      "sha256": "bcb80bf630a13f29534c0f329f8919a431dca2ed6ea874351200b94244b032a0",
+      "bytes": 28248
+    },
+    "t9-final-node24.json": {
+      "sha256": "f0f935707be02161ca6fefec21874d796be524020e67f197482fa277dceb80ee",
+      "bytes": 23959
+    },
+    "t9-final-node24.log": {
+      "sha256": "c6304c689427aceed50750cdbe41131796134c83dd51c86dcf811dc1c1b80103",
+      "bytes": 28094
+    },
+    "t9-final-playwright/.last-run.json": {
+      "sha256": "c5308af688b9e0aa6d374fbedf2ea06a148c0164fc06dfc0150eab29cda920ca",
+      "bytes": 145
+    },
+    "t9-final-playwright/native-experience-failed-p-c0553-nd-English-copy-stay-usable-chromium/error-context.md": {
+      "sha256": "a531cf753f3067453b82c40b6c6e41c6557d82ec4e08219b8337071b9ead7f24",
+      "bytes": 22860
+    },
+    "t9-final-playwright/native-experience-failed-p-c0553-nd-English-copy-stay-usable-chromium/trace.zip": {
+      "sha256": "4030bc4347598bed8d13df142bbb7ee47be86e1ae4b082559fea0d6f47127460",
+      "bytes": 205875
+    },
+    "t9-final-playwright/native-updater-quit-and-in-8249f--state-never-claims-success-chromium/error-context.md": {
+      "sha256": "90655f87c99ab0374aee27d86a8b217f04eaa31f7b94daeca76c866e350a02b6",
+      "bytes": 18131
+    },
+    "t9-final-playwright/native-updater-quit-and-in-8249f--state-never-claims-success-chromium/trace.zip": {
+      "sha256": "57f4f5f4974ae296bd36b3573bf84012d1888e3debe8b21b4c6e10467be5e2ad",
+      "bytes": 143380
+    },
+    "t9-final-playwright-v3/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "t9-final-playwright24-v2.json": {
+      "sha256": "689bcd583f636263e6a034f325570a20dffc04b6ede8b1e7bc198e891eaf9009",
+      "bytes": 24052
+    },
+    "t9-final-playwright24-v2.log": {
+      "sha256": "b2804ecac3f3dde23e6f7add98d6d08f0de1704b17095a4520e1ed2965c2e973",
+      "bytes": 37806
+    },
+    "t9-final-playwright24-v3.json": {
+      "sha256": "6e1477405d2f83b8f3b6799dd4d495c7a0e0b374bf5e10a6d4e6a892a5019dee",
+      "bytes": 24098
+    },
+    "t9-final-playwright24-v3.log": {
+      "sha256": "c73bf7e93f1094d8dc646cdcc683e1443a6b99ae98c1678bd5d0ebca449a6270",
+      "bytes": 35313
+    },
+    "t9-final-playwright24.json": {
+      "sha256": "5eb757112a47db9796120fd7b36b1d18af03c7951078d28e28cd2dd0f41385ea",
+      "bytes": 24038
+    },
+    "t9-final-playwright24.log": {
+      "sha256": "0b560164eb0d066c3320a65975c254f95a35c1bdcf5f748ad142b0238410217f",
+      "bytes": 40588
+    },
+    "t9-final-rust194-v2.json": {
+      "sha256": "f91f8977a3782a01518ac74508e27937af809b33741c5717675c736589dd5e12",
+      "bytes": 23863
+    },
+    "t9-final-rust194-v2.log": {
+      "sha256": "aa761976b8cff8aae88d78b2beab50b429ac2c026515eaec9b3e8bc80395df6d",
+      "bytes": 46836
+    },
+    "t9-final-rust194.json": {
+      "sha256": "72c643ba017b7b7bb1383b588398e7d3530a99d89457c8e9b710986aa42f29f5",
+      "bytes": 23852
+    },
+    "t9-final-rust194.log": {
+      "sha256": "c7ec4f56508bcff74d8a750184e5bf373ab197508f84b14fa20fc9d1345f3fd3",
+      "bytes": 46864
+    },
+    "t9-final-typecheck24.json": {
+      "sha256": "6cf716c5dc86622c18a34b41003670c8b8ef22ff160bd8fb00a152d2fe8f6594",
+      "bytes": 23786
+    },
+    "t9-final-typecheck24.log": {
+      "sha256": "148593548e62395e7c668bd1017392d3c27fcceae9d2d3b3b97959e60490224b",
+      "bytes": 23831
+    },
+    "t9-final-v2-playwright/.last-run.json": {
+      "sha256": "d0b9320cc6e81ab22a37d7258460056274ba441ee6e531973fc3f3c5aa69f8da",
+      "bytes": 96
+    },
+    "t9-final-v2-playwright/native-updater-quit-and-in-8249f--state-never-claims-success-chromium/error-context.md": {
+      "sha256": "eefff1635fa3333c2742596b2cd9ddc74e59c7d348ce19e1a862c45ebc347c6d",
+      "bytes": 17432
+    },
+    "t9-final-v2-playwright/native-updater-quit-and-in-8249f--state-never-claims-success-chromium/trace.zip": {
+      "sha256": "08c03f1087aed8e6a088fa6549e4fb21ec13a541390cf291018e3a54c8c2f282",
+      "bytes": 63024
+    },
+    "t9-green-background-client24.json": {
+      "sha256": "a3ab29e7a50ff8a862a0d56be5ac070222830c8216c8b3ef00fc0aac4f2381fb",
+      "bytes": 23813
+    },
+    "t9-green-background-client24.log": {
+      "sha256": "486e1138599ed002c5ac5e870ecaeaff3920015eefa2b187a4b450de4d5b0999",
+      "bytes": 25140
+    },
+    "t9-green-background-playwright/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "t9-green-background-ui24.json": {
+      "sha256": "269725759dc9a13f5dfd31100ac25bfd076e13b8a3ab68d03d2e29d2a7ed4eb5",
+      "bytes": 24133
+    },
+    "t9-green-background-ui24.log": {
+      "sha256": "8cf675e3b65ca7aca1234652e62c41777ec24dcba3ad4416fcf5a5d96c1b177b",
+      "bytes": 24799
+    },
+    "t9-green-client-locale24.json": {
+      "sha256": "5e75170568af9ee580068bc1a90a691f63c8f2ed0bab30d623addd2b2a89de90",
+      "bytes": 11246
+    },
+    "t9-green-client-locale24.log": {
+      "sha256": "e230a0ea1063432abc7e1858cb34a1f6a765493969ec646a5853df15282e5553",
+      "bytes": 12823
+    },
+    "t9-green-error-chain194.json": {
+      "sha256": "4389aae4ba74c0e818c3feb3ef573ac82d9458e8b9aa11ef96e1025c6ebd2356",
+      "bytes": 23951
+    },
+    "t9-green-error-chain194.log": {
+      "sha256": "4c301ca36ec31e1399023aac560852ec86c774067d9dc1cbb1245c04106cfdbf",
+      "bytes": 24437
+    },
+    "t9-green-lifecycle-playwright/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "t9-green-lifecycle-ui24.json": {
+      "sha256": "d26756d57ff89deb251b4cead723df039be44d7352866111f7ddf68c071bcfec",
+      "bytes": 24107
+    },
+    "t9-green-lifecycle-ui24.log": {
+      "sha256": "8b075b6994cca5516f7461b83ac1f6a5d0bca6ba9c439c9967a848cff6948637",
+      "bytes": 24325
+    },
+    "t9-green-recovery-ui24.json": {
+      "sha256": "f0a1b2c43c8541ac271837f5242377968c562f17189c0dc0957e56b8bc01360d",
+      "bytes": 24058
+    },
+    "t9-green-recovery-ui24.log": {
+      "sha256": "f863d405506079571cb65860a51114f15068d5d8da4aa39df24a3a15769933e0",
+      "bytes": 34774
+    },
+    "t9-green1-playwright/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "t9-playwright-1.json": {
+      "sha256": "c7bda8433ecd3fd0b34a3ed6cef971d65aba98aa410a44c537613178b5c60d5b",
+      "bytes": 23992
+    },
+    "t9-playwright-1.log": {
+      "sha256": "bb75c4b1525181c0fe9ea05fdc56062efa9822669b078f49fc49809021115559",
+      "bytes": 34210
+    },
+    "t9-recovery-green-playwright/.last-run.json": {
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903",
+      "bytes": 45
+    },
+    "t9-red-background-busy24.json": {
+      "sha256": "d449b61ee18ee4ab83cba080c2239b6f480df5c710606043c93ab031a1dd84ea",
+      "bytes": 24067
+    },
+    "t9-red-background-busy24.log": {
+      "sha256": "95486465961a83baea266a725eeab2e4f3872321fbe4de859dec5412d5bd4bdc",
+      "bytes": 27392
+    },
+    "t9-red-background-playwright/.last-run.json": {
+      "sha256": "8bd8daedab41b57127dc32ad4ad24ccac5a30ee55efc997837820980c1f65d4d",
+      "bytes": 96
+    },
+    "t9-red-background-playwright/native-updater-T9-backgrou-1f2f0-between-pointer-down-and-up-chromium/error-context.md": {
+      "sha256": "39052eaebed9e8d358ab2973be5920e0130ad6c5cfedfd6d1babe6a8fb2a6ebc",
+      "bytes": 14625
+    },
+    "t9-red-background-playwright/native-updater-T9-backgrou-1f2f0-between-pointer-down-and-up-chromium/trace.zip": {
+      "sha256": "b61b7d029d65888454980bd3f8538dfbdeec25997607ac41f9f000abe175e881",
+      "bytes": 63080
+    },
+    "t9-red-client-locale24.json": {
+      "sha256": "573095169940c39d336a4d8ba875383be8f057d82a4a67ba9a06f6269cbd9eb5",
+      "bytes": 11179
+    },
+    "t9-red-client-locale24.log": {
+      "sha256": "7a5de9d450b22041cd8fafb8806d6371484770d66feaa8b52080930f33229f37",
+      "bytes": 14879
+    },
+    "t9-red-error-chain194-retry.json": {
+      "sha256": "8ce2e1a140d64a3ee50f2f038af76974235d01478b45656c515c8652a16421d1",
+      "bytes": 23953
+    },
+    "t9-red-error-chain194-retry.log": {
+      "sha256": "80b57a4487c9f70d55c7a68ce8a71721c99f60395892fb7473672c957026b40f",
+      "bytes": 24950
+    },
+    "t9-red-error-chain194.json": {
+      "sha256": "33cb95b130d7c262009c4889fe16f8355272866dffa389460db061203f054433",
+      "bytes": 23953
+    },
+    "t9-red-error-chain194.log": {
+      "sha256": "d4eef3acbf3c775610afdd186324a6fdf82cc2e1d1b9b3cbdaee547bbd98dd5b",
+      "bytes": 25188
+    },
+    "t9-red-locale-ack24.json": {
+      "sha256": "b475f8747e501ccced34876b7f3636bba73ff9ddd441caf8c519766f96f528e4",
+      "bytes": 23757
+    },
+    "t9-red-locale-ack24.log": {
+      "sha256": "4153ef35c9fe6e31b938672680c11a53f6cf090b8790fb462e896d76ea23a03a",
+      "bytes": 24903
+    },
+    "t9-red-node.json": {
+      "sha256": "bcdcebf2613a21ff511e5b19f9eee52cb16fb9f46b30f775a1cbe611b8a78fa8",
+      "bytes": 10719
+    },
+    "t9-red-node.log": {
+      "sha256": "fb68ec437f78014c3cf59d9cd11dfe01b166f4243b0ece469e76eb73e9379776",
+      "bytes": 12511
+    },
+    "t9-red-node24.json": {
+      "sha256": "db0f016dd80e4294edd656b427b555b030bafc8522cadaf3ae264f5925e698f7",
+      "bytes": 10765
+    },
+    "t9-red-node24.log": {
+      "sha256": "7c432525641c1c0b78bb984864120b715e45c3e5e6fbfbdae73f856915956b2e",
+      "bytes": 12556
+    },
+    "t9-red-pending-cancel24.json": {
+      "sha256": "2c18c56b62b48ce6b979fb256258fcabcfeeb9ab915cdee4a21f573873c608ee",
+      "bytes": 24072
+    },
+    "t9-red-pending-cancel24.log": {
+      "sha256": "ad9ab3bc033daf46625a8aff6375efb2da2bf99c9225da2732f774fe8ca02753",
+      "bytes": 29949
+    },
+    "t9-red-pending-playwright/.last-run.json": {
+      "sha256": "dd3554e5d233f47cfab20ab5bf9678dfcf06eedd51aa3f7c22e7e2559cf6783e",
+      "bytes": 145
+    },
+    "t9-red-pending-playwright/native-updater-T9-cancel-c-d1144-uring-a-pending-status-poll-chromium/error-context.md": {
+      "sha256": "935c7611babccb951e73792e034c09ddba9e9f306940c45fae07080b56ca9b82",
+      "bytes": 14529
+    },
+    "t9-red-pending-playwright/native-updater-T9-cancel-c-d1144-uring-a-pending-status-poll-chromium/trace.zip": {
+      "sha256": "a64a84f1fb61433b3dffc0f6cb0f56f0b7ea8ff99867179f783b080abdc6c868",
+      "bytes": 83301
+    },
+    "t9-red-pending-playwright/native-updater-T9-escape-c-9d277-uring-a-pending-status-poll-chromium/error-context.md": {
+      "sha256": "7ef58c77104e1c3f804726135a4804a7e5e2c35377dd47cc14061af61a8b8764",
+      "bytes": 14009
+    },
+    "t9-red-pending-playwright/native-updater-T9-escape-c-9d277-uring-a-pending-status-poll-chromium/trace.zip": {
+      "sha256": "7b580a5ec5865b1d2d3802345eddbf1f949263fabf47ca7ec5c083e7672ab038",
+      "bytes": 83275
+    },
+    "t9-red-playwright/.last-run.json": {
+      "sha256": "f5a171eac200c0a8566eb0f9363147150779062773cd043585e0188f1850c4be",
+      "bytes": 145
+    },
+    "t9-red-playwright/native-updater-T9-an-unkno-39bd2-only-reading-that-operation-chromium/error-context.md": {
+      "sha256": "c6ec335237799cb78a9cab2f4afc360a7170d8df9851f4e2ed221d62b7e28aed",
+      "bytes": 12765
+    },
+    "t9-red-playwright/native-updater-T9-an-unkno-39bd2-only-reading-that-operation-chromium/trace.zip": {
+      "sha256": "b64763f59fd0edb29975e2ae239aeace586fe8aed99146db3d842462515fcae1",
+      "bytes": 308151
+    },
+    "t9-red-playwright/native-updater-T9-known-up-4eb4b-evidence-in-the-same-notice-chromium/error-context.md": {
+      "sha256": "dc8e6ef21ee1afe2f7aa69959d21f1f6ecd3581b7d16d21a4e19b641ca233915",
+      "bytes": 13934
+    },
+    "t9-red-playwright/native-updater-T9-known-up-4eb4b-evidence-in-the-same-notice-chromium/trace.zip": {
+      "sha256": "8ef0a67eab69b36911b0ed7ddca182129cda97719ede10e333ef2c5a499ce55e",
+      "bytes": 43320
+    },
+    "t9-red-plugin-class24.json": {
+      "sha256": "d467a8294578969d1617bec8f01e881a8752649e670b81960502a6073d08ca86",
+      "bytes": 23730
+    },
+    "t9-red-plugin-class24.log": {
+      "sha256": "896d411da796e642dbf5ffca6d3b4ea866051087c486017ac1bbe9ecd69c1644",
+      "bytes": 24751
+    },
+    "t9-red-rust.json": {
+      "sha256": "80beff0cf96779b7fceead814167419edcfe372ed023370aceed904859108d95",
+      "bytes": 11091
+    },
+    "t9-red-rust.log": {
+      "sha256": "88a43e2531099e6d87b52a3c0f9fdedd3ffd29a1a45ee6b8c56dc22ef1edacc1",
+      "bytes": 12006
+    },
+    "t9-red-superseded-code24.json": {
+      "sha256": "2192f6d41e347d55fd879c6f6d3557db04bc6100c8ecc70f7c7afd86a0b8d4a5",
+      "bytes": 23813
+    },
+    "t9-red-superseded-code24.log": {
+      "sha256": "ba3971f6549c9cb34948313f911555102f4836b7df6f0005496cdfd25215ff5b",
+      "bytes": 28242
+    },
+    "t9-red-superseded-session24.json": {
+      "sha256": "4a9723eec49aa3c1433f028033d5a2cb7e16e66134b04812d2a8dcbd2b03a646",
+      "bytes": 23813
+    },
+    "t9-red-superseded-session24.log": {
+      "sha256": "611bb54b08a8ecf925e9923571435bd2e77fcd30ea13c3afb7f6361b9aaecd6d",
+      "bytes": 26179
+    },
+    "t9-red-ui.json": {
+      "sha256": "e5dd906906e3796e6ab7a9103671e671528a6a58edb070b9a0f3a191a17508da",
+      "bytes": 10963
+    },
+    "t9-red-ui.log": {
+      "sha256": "6a38a045d41a2781d0282ce6c3094d82ab55c234fe2f2c7b3a5db8c0411e22d5",
+      "bytes": 17847
+    },
+    "t9-red-ui24.json": {
+      "sha256": "8b486c600c1e911f9959887ee85cf35d9a56cbe698a1548a326c569efe6cef6d",
+      "bytes": 10965
+    },
+    "t9-red-ui24.log": {
+      "sha256": "990d6714fb7978b38d6949b44d8b08eddf8c07767fd8b4f2ea609826ea1c444d",
+      "bytes": 21118
+    },
+    "t9-red-unread-locale24.json": {
+      "sha256": "8a562c733a487a5224bf8a794dcb80d07eb151a934bdb8aac62b92848f647b60",
+      "bytes": 24003
+    },
+    "t9-red-unread-locale24.log": {
+      "sha256": "4615a07edb1f1a8c257f84208e6503d70c5dbc699f22dc43381a20a063a4ed0a",
+      "bytes": 27370
+    },
+    "t9-red-unread-playwright/.last-run.json": {
+      "sha256": "139121fca7624f3eb6807de4dd4295b5d7d569c3c6a825afb6910d176cc1dd16",
+      "bytes": 96
+    },
+    "t9-red-unread-playwright/native-updater-T9-unread-p-e4184--reads-before-synchronizing-chromium/error-context.md": {
+      "sha256": "ed873bc38941677ecc608ab59eb370cb9b26b5f986e9a94353494421d40b5c92",
+      "bytes": 15531
+    },
+    "t9-red-unread-playwright/native-updater-T9-unread-p-e4184--reads-before-synchronizing-chromium/trace.zip": {
+      "sha256": "eeadf56b8015260e7fc58d410e6f359fea59b341a8b44be5cf914fdd78b216b8",
+      "bytes": 112492
+    },
+    "t9-red-unsent-playwright/.last-run.json": {
+      "sha256": "7587e103624bae725476c2e3bb79e80c7bf09074dd0bf275772c048071f05c42",
+      "bytes": 96
+    },
+    "t9-red-unsent-playwright/native-updater-T9-a-proven-2e228-a-new-explicit-confirmation-chromium/error-context.md": {
+      "sha256": "a342b13d170be3cb6bfb5e7589aafedca69ec209db01303cdaf4b2ededfc422d",
+      "bytes": 14093
+    },
+    "t9-red-unsent-playwright/native-updater-T9-a-proven-2e228-a-new-explicit-confirmation-chromium/trace.zip": {
+      "sha256": "fa26ee0f969635705a6676191249106b4506368563fea61276be559f781bc8ae",
+      "bytes": 103842
+    },
+    "t9-red-unsent-ui24.json": {
+      "sha256": "af114d10a31112cc73b174d4f2d16ae7bb7b4e8124ed843a89dedf10d6a3f197",
+      "bytes": 24064
+    },
+    "t9-red-unsent-ui24.log": {
+      "sha256": "6d78112b2c5e64139009f36b110e08a1df391369ab7f6328de9e67e60470b747",
+      "bytes": 27121
+    },
+    "t9-red24-playwright/.last-run.json": {
+      "sha256": "1bc57e4df2e74c4abc0a0dd73fb979caee2397c897960223e070afa29cdeeda3",
+      "bytes": 194
+    },
+    "t9-red24-playwright/native-updater-T9-an-unkno-39bd2-only-reading-that-operation-chromium/error-context.md": {
+      "sha256": "79a1b9a2bd03ca2be727ce80ca0d99dbcfe1f694cb69e52efa91db3fe70568cf",
+      "bytes": 15485
+    },
+    "t9-red24-playwright/native-updater-T9-an-unkno-39bd2-only-reading-that-operation-chromium/trace.zip": {
+      "sha256": "2dc8631672c17325914ce75d3dd488fe163256792a023f9cc5daee653486ddd3",
+      "bytes": 309013
+    },
+    "t9-red24-playwright/native-updater-T9-known-up-4eb4b-evidence-in-the-same-notice-chromium/error-context.md": {
+      "sha256": "65bb9d838e0cb2f24ea0e677988eeb18c2adf6fb773a3968393d1833de93228b",
+      "bytes": 16654
+    },
+    "t9-red24-playwright/native-updater-T9-known-up-4eb4b-evidence-in-the-same-notice-chromium/trace.zip": {
+      "sha256": "4e1f20e024339920f77c68a0139477f3034f6e7b860ddb6ca680a7f8350b0e15",
+      "bytes": 44591
+    },
+    "t9-red24-playwright/native-updater-T9-saved-la-7fb12-ification-or-runtime-writes-chromium/error-context.md": {
+      "sha256": "b3380191e02e7dba04bafe44c179f51f25574b5638b38fbe78a68215e0dbb325",
+      "bytes": 17817
+    },
+    "t9-red24-playwright/native-updater-T9-saved-la-7fb12-ification-or-runtime-writes-chromium/trace.zip": {
+      "sha256": "5c6c2882ee2b180ccbe9bf704fc7fd265c30cd207b53c830b8308c3d290b3cc0",
+      "bytes": 82164
+    },
+    "t9-rust-focused-1.json": {
+      "sha256": "9ca23b6a41cd9d96acf956d77be164f2212f6f4ac358e050e3fef459037544b1",
+      "bytes": 23782
+    },
+    "t9-rust-focused-1.log": {
+      "sha256": "0e5ada330a38910cf4f764bf1d554a0bc0a0e9a3fd35f8f4c638f7563b9bed7d",
+      "bytes": 47085
+    },
+    "t9-sidecar-base.json": {
+      "sha256": "881719ec20ce0b376b9f79abdda9f1938e97cf70ef63cfb81aa8b9bd3cf3ec73",
+      "bytes": 10705
+    },
+    "t9-sidecar-base.log": {
+      "sha256": "bad5cdee1fd3621e5e4c6c29217e03b25c62be65439c3c5826c5239c42da4a2c",
+      "bytes": 10919
+    },
+    "t9-sidecar-base24.json": {
+      "sha256": "005bb904c8d6123eb7c7ac7576f38d18272b2e9a22552bc42625bcf1f1a9edfb",
+      "bytes": 10748
+    },
+    "t9-sidecar-base24.log": {
+      "sha256": "b3f815adf753c96f5de8149709056de50788990ec7f7db7c0976ce564088b50d",
+      "bytes": 10962
+    },
+    "t9-typecheck-1.json": {
+      "sha256": "b51eb75f7850f784e37934092fdc9423ad819b39f2ad638cbbd613b7c643ac37",
+      "bytes": 23634
+    },
+    "t9-typecheck-1.log": {
+      "sha256": "168195a30ea561ef8a64ea32d965d443513ec631e5b4a8207dbe8f761a7e2bb8",
+      "bytes": 23679
+    }
+  },
+  "screenshots": {
+    "t9-ego-en-dark-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-en-light-1180.png": {
+      "width": 1180,
+      "height": 800
+    },
+    "t9-ego-final-en-confirmation-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-final-en-dark-download-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-final-en-dark-long-notes-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-final-en-light-download-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-final-zh-light-long-error-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-zh-dark-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-zh-light-860-final.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-ego-zh-light-860.png": {
+      "width": 1512,
+      "height": 833
+    },
+    "t9-ego-zh-long-error-860.png": {
+      "width": 860,
+      "height": 600
+    }
+  },
+  "tool_versions": {
+    "node": "v24.22.1",
+    "rustc": "1.94.0 (4a4ef493e 2026-03-02)",
+    "cargo": "1.94.0 (85eff7c80 2026-01-15)",
+    "ego_browser": "0.6.1.13",
+    "chromium": "156.0.8078.48"
+  },
+  "boundaries": [
+    "Ego uses TaskSpace 40 / p1, formal NativeApp plus synthetic IPC; no real account/device/contribution writes or OS update installation",
+    "t9-ego-zh-light-860.png is actually 1512x833 and is not 860 evidence",
+    "Ego 07 failed on stored Settings tab; Ego 08 failed on an invalid role locator; neither counts as validation",
+    "Ego 09 scroll baseline 228->270 was during wheel motion; Ego 10 settled baseline 270->270 over reads 106->108 is the actual scroll-retention evidence",
+    "t9-red-error-chain194 is a crypto-provider test-setup panic; valid behavior RED is t9-red-error-chain194-retry",
+    "Earlier Node26 runs retained; final Node24 records are authoritative",
+    "Rust final result applies to unchanged Rust source; no Rust rerun after only UI changes or the source-identical commit",
+    "TaskSpace 40 remains open for T10; own Vite session 80800 on port1490 stopped with Ctrl-C"
+  ]
+}

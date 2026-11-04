@@ -1,0 +1,10 @@
+time=2026-11-02T08:31:57.633657+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8 + T5 precommit
+source=T5 coordinator/read-only derivation/NativeApp fixture; no real accounts
+command=['npm', 'run', 'typecheck']
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+exit=0

@@ -1,0 +1,57 @@
+UTC: 2026-11-02T10:54:09.171506+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'native-runtime.spec.ts', '--grep', 'recovery.*failure|identity recovery', '--workers=2']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 3 tests using 2 workers
+
+  ✓  2 [chromium] › tests/native-runtime.spec.ts:193:43 › recovery failure allows local login and cancellation but keeps account selection blocked (1.4s)
+  ✓  1 [chromium] › tests/native-runtime.spec.ts:182:56 › identity recovery still permits one trusted local stop (1.5s)
+  ✘  3 [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview (596ms)
+
+
+  1) [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('alert')
+    Expected substring: "recovery admission rejected: account_workers=1"
+    Error: strict mode violation: getByRole('alert') resolved to 3 elements:
+        1) <div role="alert" class="problem-notice device-error">…</div> aka getByText('本次操作失败，原因尚未确认。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: DEVICE_RECOVERY_FAILED').first()
+        2) <div role="alert" class="problem-notice device-error">…</div> aka getByRole('region', { name: 'OpenAI 账号' }).getByText('本次操作失败，原因尚未确认。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: DEVICE_RECOVERY_FAILED')
+        3) <div role="alert" class="problem-notice device-error">…</div> aka getByRole('region', { name: 'Claude 账号' }).getByText('本次操作失败，原因尚未确认。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: DEVICE_RECOVERY_FAILED')
+
+    Call log:
+      - Expect "toContainText" getByRole('alert') with timeout 5000ms
+      - waiting for getByRole('alert')
+
+
+      212 |  await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status','unconfirmed');await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeDisabled();
+      213 |  expect(await calls(page,'account_snapshot')).toHaveLength(before);expect(await calls(page,'supply_set_paused')).toEqual([]);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+    > 214 |  await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await expect(page.getByRole('alert')).toContainText('recovery admission rejected: account_workers=1');
+          |                                                                                                                                 ^
+      215 | });
+      216 |
+      217 | for(const command of ['account_action','runtime_start'])test('known unsent '+command+' recovers at the same revision without replay',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:214:129
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview 
+  2 passed (3.0s)
+
+Exit: 1
+UTC end: 2026-11-02T10:54:12.904347+00:00

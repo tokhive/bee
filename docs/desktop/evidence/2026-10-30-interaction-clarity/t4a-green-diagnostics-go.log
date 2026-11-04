@@ -1,0 +1,7 @@
+2026/11/02 12:53:55 http: TLS handshake error from 127.0.0.1:49359: remote error: tls: bad certificate
+--- FAIL: TestDesktopDiagnosticsBindingChangeInvalidatesReportWithoutRelabelling (0.02s)
+    desktop_runtime_test.go:176: runtime mutated device config: <nil>
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.357s
+ok  	github.com/tokhive/bee/desktopbridge	1.330s
+FAIL

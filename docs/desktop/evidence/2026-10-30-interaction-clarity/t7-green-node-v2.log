@@ -1,0 +1,97 @@
+{"utc": "2026-11-02T13:16:21.476843+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/accountPresentation.test.ts", "tests/nativeAccounts.test.ts", "tests/supply.test.ts", "tests/problems.test.ts", "tests/authorize.test.ts"], "dirty": " M Makefile\n M agent/desktop_authorize.go\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/NativeAccountsPage.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/supply/SupplyPanel.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/problems.test.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+✔ selection identifies the account and mismatched candidate never lends its quota (3.537166ms)
+✔ unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent (0.564125ms)
+✔ fresh matching Hive wins over stale official and expiry invalidates official (0.500958ms)
+✔ valid_until determines freshness without imposing a ten minute report age (1.255125ms)
+✔ historical quota carries the observation actually used and never borrows a different identity (0.273791ms)
+✔ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (0.591917ms)
+✔ official login uses fixed start/status/cancel requests and platform/revision checks (2.887916ms)
+✔ official login rejects stale instance and private payload without exposing values (0.341292ms)
+✔ account decoder accepts full public DTO and nanosecond UTC timestamps, preserving unknowns and 120% (7.255208ms)
+✔ account decoder rejects missing, unknown, unsafe identity/time/quota fields without echoing payload (2.462958ms)
+✔ defaults decode both platform store capabilities and reject unknown fields (0.270625ms)
+✔ typed client sends fixed commands, never replays writes, and invalidates old source promises (0.970708ms)
+✔ selected account and asynchronous operation are strictly decoded (0.4765ms)
+✔ clearing a saved selection uses its revision without a detected credential (0.223583ms)
+✔ an older account read cannot replace a newer operation receipt (0.55975ms)
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (16.530042ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.990625ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.249583ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.138292ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.841167ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.170417ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.466ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (9.748916ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.225542ms)
+✔ explicit locale formatting and placeholders follow the App language (4.051875ms)
+✔ saved context rejection has a known local impact and an available diagnostic next step in both locales (1.720792ms)
+✔ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.447292ms)
+✔ known unsent failures use the App locale and retain evidence without guessing from messages (0.383ms)
+✔ unsent classification uses validated codes and rejects malformed details (0.359875ms)
+✖ official client failures use stable codes, keep safe evidence and never infer reasons from English (0.976375ms)
+✔ supply decoder accepts explicit false, both platforms and all matching reasons (1.530917ms)
+✔ supply decoder rejects missing, null, incorrect types, owner mismatch and invariants without leaking payload (0.717875ms)
+✔ business failures retain method and HTTP evidence; failed writes are never replayed (0.987583ms)
+✔ same-platform clients serialize across replacement bindings and validate before IPC (3.440333ms)
+✔ decoder independently enforces the platform whitelist (0.235542ms)
+✔ invalid paused undefined reports its actual type before IPC (0.116042ms)
+✔ invalid paused null reports its actual type before IPC (0.067042ms)
+✔ invalid paused string reports its actual type before IPC (0.058292ms)
+✔ shared supply model preserves per-platform failures and never repeats an uncertain write (6.497625ms)
+✔ pending account confirmation blocks writes in the shared supply model (0.689667ms)
+✔ coordinated supply consumes adopted snapshots and routes every read through the shared refresh (0.608167ms)
+✔ coordinated supply preserves an uncertain write until an explicit refreshed adoption (0.936ms)
+✔ a stopped supply owner cannot pause a newer coordinator when its write fails late (0.210541ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late success (0.257542ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late failure (0.169917ms)
+✔ a fresh background read keeps supply writable and one explicit write waits for it (0.298709ms)
+✔ a waiting supply write is cancelled when its refreshed state is failed (0.853625ms)
+✔ a waiting supply write is cancelled when its refreshed state is expired (0.358333ms)
+✔ a waiting supply write is cancelled when its refreshed state is stopped (0.198334ms)
+✔ failed supply reads retry every ten seconds and preserve the other fresh platform (0.422792ms)
+✔ supply retries are GET only after uncertain writes and slow reads never overlap (0.324125ms)
+✔ supply progress stays quiet for fresh background reads and expires while a request is pending (0.307833ms)
+✔ expiry triggers a read and late stopped results cannot publish or schedule retries (0.271458ms)
+✔ expiry does not shorten a failed read retry interval (0.333083ms)
+✔ restarting a stopped model waits for its old request and discards the late result (0.237417ms)
+✔ each platform expires on its own timestamp during a slow shared read (0.262375ms)
+✔ first supply load is quiet and retry progress follows the platform actually being read (0.230208ms)
+✔ a waiting supply resume is cancelled after context changed (0.252458ms)
+✔ a waiting supply resume is cancelled after context changed-back (0.875292ms)
+✔ a waiting supply resume is cancelled after context runtime-stopped (0.275458ms)
+✔ a supply click observes central busy before the React adoption effect and cancels a changed identity (0.423667ms)
+✔ a queued supply click reports a rejected central read without submitting or rejecting its caller (0.551291ms)
+✔ a successful supply PUT stays blocked after a failed readback until a fresh supply observation (0.617208ms)
+✔ detailed supply reasons are accepted without relaxing platform or readiness invariants (1.503709ms)
+✔ independent platform reads reach the transport before a slow platform completes (4.521917ms)
+✔ known unsent supply writes retain evidence without pausing the healthy coordinator (0.371916ms)
+✔ all supply reasons identify their actual handling object without false login or resume repairs (0.280916ms)
+ℹ tests 67
+ℹ suites 0
+ℹ pass 66
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 367.83475
+
+✖ failing tests:
+
+test at tests/problems.test.ts:105:1
+✖ official client failures use stable codes, keep safe evidence and never infer reasons from English (0.976375ms)
+  AssertionError [ERR_ASSERTION]: authorization_timeout
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:107:280)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'Official sign-in timed out.',
+    expected: /login.*timed out/i,
+    operator: 'match',
+    diff: 'simple'
+  }
+{"exit": 1, "utc": "2026-11-02T13:16:22.442118+00:00"}

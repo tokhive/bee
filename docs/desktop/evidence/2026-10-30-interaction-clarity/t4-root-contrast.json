@@ -1,0 +1,22 @@
+{
+  "scope": "ProblemNotice inherited ink/paper CSS tokens; static contrast calculation, not native functional acceptance",
+  "source": "00b13dd",
+  "results": [
+    {
+      "theme": "light",
+      "foreground": "#2c2b28",
+      "background": "#ffffff",
+      "contrast": 14.158,
+      "required": 4.5,
+      "passed": true
+    },
+    {
+      "theme": "dark",
+      "foreground": "#e5e4df",
+      "background": "#242421",
+      "contrast": 12.224,
+      "required": 4.5,
+      "passed": true
+    }
+  ]
+}

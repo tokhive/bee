@@ -1,0 +1,8 @@
+Error: page.goto failed: net::ERR_HTTP_RESPONSE_CODE_FAILURE
+    at navigateInPage (file:////[eval1]:16596:19)
+    at async file:////[eval1]:18533:13
+    at async file:////[eval1]:19242:29
+    at async file:////[eval1]:16940:28
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+
+ego's nodejs process exited with code 1.

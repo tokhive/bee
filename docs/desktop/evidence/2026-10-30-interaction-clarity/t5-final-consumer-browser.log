@@ -1,0 +1,765 @@
+time=2026-11-02T08:35:05.701616+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8 + T5 precommit
+source=existing directly affected consumer regression suites + supply transport concurrency
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'native-runtime.spec.ts', 'native-experience.spec.ts', 'account-auto-read.spec.ts']
+
+Running 72 tests using 5 workers
+
+  ✓   4 [chromium] › tests/account-auto-read.spec.ts:43:1 › uncertain writes survive passive runtime, old snapshots and pending replies until explicit terminal confirmation (1.1s)
+  ✓   6 [chromium] › tests/account-auto-read.spec.ts:55:1 › official retry_at defers reads and unchanged failed observations never create a prompt loop (297ms)
+  ✓   1 [chromium] › tests/account-auto-read.spec.ts:51:1 › source replacement rejects a late previous-source reply (1.6s)
+  ✓   3 [chromium] › tests/account-auto-read.spec.ts:17:1 › selected matching candidate automatically reads official quota once and retains the raw percentage (3.2s)
+  ✓   2 [chromium] › tests/account-auto-read.spec.ts:5:1 › account entry reads each source once and never performs automatic writes or sign-in (3.3s)
+  ✓   9 [chromium] › tests/account-auto-read.spec.ts:78:47 › reconciling select retries refreshed snapshots at ten seconds without replaying actions (264ms)
+  ✓  10 [chromium] › tests/account-auto-read.spec.ts:78:47 › reconciling confirm_change retries refreshed snapshots at ten seconds without replaying actions (275ms)
+  ✘   5 [chromium] › tests/account-auto-read.spec.ts:37:1 › failed account snapshots retry after ten seconds without replaying writes (5.9s)
+  ✘   7 [chromium] › tests/account-auto-read.spec.ts:64:1 › failed local sources remain diagnosed without automatic prompts and retry once on account re-entry (5.2s)
+  ✓  13 [chromium] › tests/account-auto-read.spec.ts:94:1 › a late coordinated readback cannot confirm a replacement credential source (344ms)
+  ✘   8 [chromium] › tests/account-auto-read.spec.ts:72:1 › one platform snapshot error does not slow the other pending operation or starve its retry (5.2s)
+  ✓  14 [chromium] › tests/account-auto-read.spec.ts:126:75 › a waiting account action never writes after failed (182ms)
+  ✓  15 [chromium] › tests/account-auto-read.spec.ts:126:75 › a waiting account action never writes after expired (199ms)
+  ✓  17 [chromium] › tests/account-auto-read.spec.ts:126:75 › a waiting account action never writes after unmounted (436ms)
+  ✓  16 [chromium] › tests/account-auto-read.spec.ts:119:1 › account action waits for a background snapshot and submits once using the refreshed revision (398ms)
+  ✓  18 [chromium] › tests/account-auto-read.spec.ts:126:75 › a waiting account action never writes after candidate-changed (329ms)
+  ✓  21 [chromium] › tests/account-auto-read.spec.ts:157:55 › waiting login cancellation revalidates the same operation when it becomes running (171ms)
+  ✓  22 [chromium] › tests/account-auto-read.spec.ts:157:55 › waiting login cancellation revalidates the same operation when it becomes succeeded (176ms)
+  ✓  23 [chromium] › tests/account-auto-read.spec.ts:157:55 › waiting login cancellation revalidates the same operation when it becomes replaced (159ms)
+  ✘  11 [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved permission_denied source failures retry on re-entry without repeated permission prompts (5.2s)
+  ✘  12 [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved source_unavailable source failures retry on re-entry without repeated permission prompts (5.1s)
+  ✓  24 [chromium] › tests/native-experience.spec.ts:25:1 › four native pages share one poller; diagnostics starts only on click and survives navigation (1.3s)
+  ✓  25 [chromium] › tests/native-experience.spec.ts:39:1 › safe logs load manually with module/platform/level filters and native cursors (1.7s)
+  ✓  27 [chromium] › tests/native-experience.spec.ts:59:1 › failed preference save keeps the saved appearance; recovery and English copy stay usable (1.7s)
+  ✓  28 [chromium] › tests/native-experience.spec.ts:71:1 › Hive entry asks native code to open only the saved origin root without frontend URL input (680ms)
+  ✓  29 [chromium] › tests/native-experience.spec.ts:76:44 › late Hive open success from the previous instance cannot refresh the new owner (467ms)
+  ✓  30 [chromium] › tests/native-experience.spec.ts:76:44 › late Hive open failure from the previous instance cannot refresh the new owner (544ms)
+  ✓  31 [chromium] › tests/native-experience.spec.ts:86:1 › notification delivery failures stay visible and retry requires an explicit action (827ms)
+  ✘  19 [chromium] › tests/account-auto-read.spec.ts:137:1 › account read errors remain visible throughout the retry and clear only after success (5.4s)
+  ✓  32 [chromium] › tests/native-experience.spec.ts:98:44 › a delayed initial preference success cannot roll back a newer saved appearance (879ms)
+  ✘  20 [chromium] › tests/account-auto-read.spec.ts:145:1 › repeated account read failures keep retrying until a successful snapshot (5.3s)
+  ✓  33 [chromium] › tests/native-experience.spec.ts:98:44 › a delayed initial preference failure cannot roll back a newer saved appearance (846ms)
+  ✓  34 [chromium] › tests/native-experience.spec.ts:135:1 › new management instance discards a pending diagnostic from the previous instance (609ms)
+  ✓  38 [chromium] › tests/native-experience.spec.ts:173:1 › settings device replacement offers overview navigation without replaying the proxy write (1.0s)
+  ✓  36 [chromium] › tests/native-experience.spec.ts:158:1 › settings categories preserve the proxy draft and test result without querying the OS again (1.2s)
+  ✓  37 [chromium] › tests/native-experience.spec.ts:142:1 › diagnostic tabs keep reads explicit and preserve the running report (1.6s)
+  ✘  26 [chromium] › tests/native-experience.spec.ts:50:1 › management startup failure keeps safe native logs accessible without enabling diagnostics (6.0s)
+  ✓  40 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes empty reports (892ms)
+  ✓  39 [chromium] › tests/native-experience.spec.ts:193:1 › problem-first sections retain every platform reason and its original safe evidence (1.0s)
+  ✓  35 [chromium] › tests/native-experience.spec.ts:113:1 › export confirms scope and waits for matched native success/failure/unknown receipts (2.0s)
+  ✓  41 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes skipped reports (1.1s)
+  ✓  42 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes passed reports (951ms)
+  ✓  43 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes unknown reports (1.1s)
+  ✓  44 [chromium] › tests/native-experience.spec.ts:231:1 › log filters distinguish unread and empty and reject a late result from an older filter (1.7s)
+  ✓  45 [chromium] › tests/native-experience.spec.ts:250:1 › older initial network observation cannot replace an explicit refresh or an edited proxy (977ms)
+  ✓  47 [chromium] › tests/native-experience.spec.ts:263:1 › denied notifications and unknown autostart remain distinct without requesting OS changes (1.1s)
+  ✓  48 [chromium] › tests/native-experience.spec.ts:275:1 › about shows a missing Bee version as unread while retaining the real build version (911ms)
+  ✓  46 [chromium] › tests/native-experience.spec.ts:215:83 › diagnostic summary distinguishes cancelled reports (1.3s)
+  ✓  49 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 1440 zh light (2.0s)
+  ✓  50 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 1440 en dark (2.3s)
+  ✓  52 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 860 zh dark (2.2s)
+  ✓  51 [chromium] › tests/native-experience.spec.ts:282:149 › S2 tabs, dialogs and narrow layout remain usable at 860 en light (2.3s)
+  ✓  56 [chromium] › tests/native-runtime.spec.ts:50:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart (1.4s)
+  ✓  57 [chromium] › tests/native-runtime.spec.ts:61:100 › late account_action success from the previous owner cannot refresh or pause the current instance (1.3s)
+  ✓  59 [chromium] › tests/native-runtime.spec.ts:61:100 › late runtime_start success from the previous owner cannot refresh or pause the current instance (684ms)
+  ✓  58 [chromium] › tests/native-runtime.spec.ts:61:100 › late account_action failure from the previous owner cannot refresh or pause the current instance (704ms)
+  ✓  60 [chromium] › tests/native-runtime.spec.ts:61:100 › late runtime_start failure from the previous owner cannot refresh or pause the current instance (697ms)
+  ✓  61 [chromium] › tests/native-runtime.spec.ts:76:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (914ms)
+  ✓  62 [chromium] › tests/native-runtime.spec.ts:85:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them (1.2s)
+  ✓  63 [chromium] › tests/native-runtime.spec.ts:93:1 › official login warns about official account, supports cancellation, and completed login remains a candidate (973ms)
+  ✘  53 [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (6.0s)
+  ✓  65 [chromium] › tests/native-runtime.spec.ts:104:1 › completed login cannot clear a later source edit, and write admission locks the source (1.8s)
+  ✓  66 [chromium] › tests/native-runtime.spec.ts:111:1 › account change remains paused and a platform failure leaves the other platform visible (990ms)
+  ✘  55 [chromium] › tests/native-runtime.spec.ts:42:1 › a successful account write still requires a verified read when central readback fails (6.5s)
+  ✓  68 [chromium] › tests/native-runtime.spec.ts:129:1 › English runtime and login confirmation support keyboard at minimum window size (960ms)
+  ✓  67 [chromium] › tests/native-runtime.spec.ts:121:1 › only proven unsubmitted confirmation can continue after reconciliation (1.4s)
+  ✓  70 [chromium] › tests/native-runtime.spec.ts:147:1 › runtime observations preserve newer candidates and edited sources (982ms)
+  ✓  69 [chromium] › tests/native-runtime.spec.ts:137:1 › runtime account revisions reach an open confirmation without changing its candidate (1.1s)
+  ✓  72 [chromium] › tests/native-runtime.spec.ts:177:1 › unregistered selection can be cancelled only after confirmation and never starts runtime (757ms)
+  ✘  64 [chromium] › tests/native-runtime.spec.ts:98:1 › uncertain runtime start is never replayed and requires a fresh query (5.6s)
+  ✘  71 [chromium] › tests/native-runtime.spec.ts:156:1 › start preserves paused platforms and uncertain start recovers by reading only (5.6s)
+  ✘  54 [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot (30.1s)
+
+
+  1) [chromium] › tests/account-auto-read.spec.ts:37:1 › failed account snapshots retry after ten seconds without replaying writes 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      37 | test('failed account snapshots retry after ten seconds without replaying writes',async({page})=>{
+      38 |  await page.clock.install();await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';w.model.refresh('openai');});
+    > 39 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+         |                                                                                ^
+      40 |  const reads=await page.evaluate(()=>(window as any).counts.snapshot);await page.clock.runFor(9000);expect(await page.evaluate(()=>(window as any).counts.snapshot)).toBe(reads);
+      41 |  await page.evaluate(()=>{(window as any).snapshotFail='';});await page.clock.runFor(1000);await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toBe('');expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+      42 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:39:80
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/account-auto-read.spec.ts:64:1 › failed local sources remain diagnosed without automatic prompts and retry once on account re-entry 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      64 | test('failed local sources remain diagnosed without automatic prompts and retry once on account re-entry',async({page})=>{
+      65 |  await page.clock.install();await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.detectFail='openai';w.autoRead=true;w.rerender();});
+    > 66 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toContain('permission_denied');expect(await page.evaluate(()=>(window as any).model.dirty.openai)).toBe(true);await page.clock.runFor(30000);
+         |                                                                                          ^
+      67 |  expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(1);expect(await page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toContain('permission_denied');
+      68 |  await page.evaluate(()=>{const w=window as any;w.autoRead=false;w.rerender();});await page.waitForTimeout(20);await page.evaluate(()=>{const w=window as any;w.detectFail='';w.autoRead=true;w.rerender();});
+      69 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toBe('');expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(2);expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='claude').length)).toBe(1);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:66:90
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-failed-l-6bf67-ry-once-on-account-re-entry-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-failed-l-6bf67-ry-once-on-account-re-entry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-failed-l-6bf67-ry-once-on-account-re-entry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/account-auto-read.spec.ts:72:1 › one platform snapshot error does not slow the other pending operation or starve its retry 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      72 | test('one platform snapshot error does not slow the other pending operation or starve its retry',async({page})=>{
+      73 |  await page.clock.install();await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';const view=w.data.claude;view.operation={id:'d'.repeat(48),kind:'select',state:'pending',platform:'claude',revision:view.revision,error:null};w.model.refresh('openai');w.model.refresh('claude');});
+    > 74 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');const before=await page.evaluate(()=>(window as any).snapshotPlatforms.filter((p:string)=>p==='claude').length);await page.clock.runFor(450);expect(await page.evaluate(()=>(window as any).snapshotPlatforms.filter((p:string)=>p==='claude').length)).toBeGreaterThan(before);
+         |                                                                                ^
+      75 |  await page.evaluate(()=>{(window as any).snapshotFail='';});await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toBe('');
+      76 | });
+      77 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:74:80
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-one-plat-c9fba-eration-or-starve-its-retry-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-one-plat-c9fba-eration-or-starve-its-retry-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-one-plat-c9fba-eration-or-starve-its-retry-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved permission_denied source failures retry on re-entry without repeated permission prompts 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      85 | for(const code of ['permission_denied','source_unavailable'])test(`resolved ${code} source failures retry on re-entry without repeated permission prompts`,async({page})=>{
+      86 |  await page.clock.install();await hookHarness(page);await page.evaluate(code=>{const w=window as any;const view=structuredClone(w.data.openai);view.revision++;view.candidate={...view.candidate,state:code,reference:null,source:null,fingerprint:null,error:{code,check:'source_read',platform:'openai',message:'source access failed',evidence:{permission_denied:String(code==='permission_denied')}}};w.detectFailureReply=view;w.autoRead=true;w.rerender();},code);
+    > 87 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.candidate.state)).toBe(code);await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toContain(code);
+         |                                                                                                                                                                                                  ^
+      88 |  await page.clock.runFor(30000);expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(1);
+      89 |  await page.evaluate(()=>{const w=window as any;w.autoRead=false;w.rerender();});await page.waitForTimeout(20);await page.evaluate(()=>{const w=window as any;w.data.openai.revision++;w.detectFailureReply=null;w.autoRead=true;w.rerender();});
+      90 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toBe('');await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.candidate.state)).toBe('available');expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(2);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:87:194
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-resolved-a9d33-repeated-permission-prompts-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-resolved-a9d33-repeated-permission-prompts-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-resolved-a9d33-repeated-permission-prompts-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved source_unavailable source failures retry on re-entry without repeated permission prompts 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      85 | for(const code of ['permission_denied','source_unavailable'])test(`resolved ${code} source failures retry on re-entry without repeated permission prompts`,async({page})=>{
+      86 |  await page.clock.install();await hookHarness(page);await page.evaluate(code=>{const w=window as any;const view=structuredClone(w.data.openai);view.revision++;view.candidate={...view.candidate,state:code,reference:null,source:null,fingerprint:null,error:{code,check:'source_read',platform:'openai',message:'source access failed',evidence:{permission_denied:String(code==='permission_denied')}}};w.detectFailureReply=view;w.autoRead=true;w.rerender();},code);
+    > 87 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.candidate.state)).toBe(code);await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toContain(code);
+         |                                                                                                                                                                                                  ^
+      88 |  await page.clock.runFor(30000);expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(1);
+      89 |  await page.evaluate(()=>{const w=window as any;w.autoRead=false;w.rerender();});await page.waitForTimeout(20);await page.evaluate(()=>{const w=window as any;w.data.openai.revision++;w.detectFailureReply=null;w.autoRead=true;w.rerender();});
+      90 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.sourceReadFailed.openai)).toBe('');await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.candidate.state)).toBe('available');expect(await page.evaluate(()=>(window as any).detected.filter((r:any)=>r.platform==='openai').length)).toBe(2);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:87:194
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-resolved-3ed75-repeated-permission-prompts-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-resolved-3ed75-repeated-permission-prompts-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-resolved-3ed75-repeated-permission-prompts-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/account-auto-read.spec.ts:137:1 › account read errors remain visible throughout the retry and clear only after success 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      137 | test('account read errors remain visible throughout the retry and clear only after success',async({page})=>{
+      138 |  await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';w.model.refresh('openai');});
+    > 139 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+          |                                                                                ^
+      140 |  await page.evaluate(()=>(window as any).snapshotFail='');await holdSnapshot(page);
+      141 |  expect(await page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+      142 |  await page.evaluate(()=>(window as any).releaseSnapshot());await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toBe('');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:139:80
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-account--4031b-nd-clear-only-after-success-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-account--4031b-nd-clear-only-after-success-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-account--4031b-nd-clear-only-after-success-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/account-auto-read.spec.ts:145:1 › repeated account read failures keep retrying until a successful snapshot 
+
+    Error: received is not iterable
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      145 | test('repeated account read failures keep retrying until a successful snapshot',async({page})=>{
+      146 |  await page.clock.install();await hookHarness(page);await page.evaluate(()=>{const w=window as any;w.snapshotFail='openai';w.model.refresh('openai');});
+    > 147 |  await expect.poll(()=>page.evaluate(()=>(window as any).model.errors.openai)).toContain('snapshot unavailable');
+          |                                                                                ^
+      148 |  for(let attempt=0;attempt<3;attempt++){
+      149 |   const before=await page.evaluate(()=>(window as any).counts.snapshot);await page.clock.runFor(10000);
+      150 |   await expect.poll(()=>page.evaluate(()=>(window as any).counts.snapshot)).toBeGreaterThan(before);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:147:80
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-repeated-78ce8-until-a-successful-snapshot-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-repeated-78ce8-until-a-successful-snapshot-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-repeated-78ce8-until-a-successful-snapshot-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests/native-experience.spec.ts:50:1 › management startup failure keeps safe native logs accessible without enabling diagnostics 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('SIDECAR_EXIT: owned management child exited: status=1', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('SIDECAR_EXIT: owned management child exited: status=1', { exact: true }) with timeout 5000ms
+      - waiting for getByText('SIDECAR_EXIT: owned management child exited: status=1', { exact: true })
+
+
+      51 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      52 |  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
+    > 53 |  await page.goto('/');await expect(page.getByText('SIDECAR_EXIT: owned management child exited: status=1',{exact:true})).toBeVisible();
+         |                                                                                                                          ^
+      54 |  await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+      55 |  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
+      56 |  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:53:122
+
+    Error Context: ../.cache/device-pairing/playwright/native-experience-manageme-8c802-ithout-enabling-diagnostics-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-experience-manageme-8c802-ithout-enabling-diagnostics-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-experience-manageme-8c802-ithout-enabling-diagnostics-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 3
+
+      Object {
+        "account_defaults": 1,
+    -   "account_snapshot": 6,
+    -   "runtime_snapshot": 3,
+    -   "supply_status": 6,
+    +   "account_snapshot": 8,
+    +   "runtime_snapshot": 4,
+    +   "supply_status": 8,
+      }
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      15 |  await page.clock.runFor(1);await expect.poll(counts).toEqual({runtime_snapshot:2,account_defaults:1,account_snapshot:4,supply_status:4});
+      16 |  await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+    > 17 |  await expect.poll(counts).toEqual({runtime_snapshot:3,account_defaults:1,account_snapshot:6,supply_status:6});
+         |                            ^
+      18 |  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
+      19 | });
+      20 | test('unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:17:28
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('代理草稿的 Hive 地址', { exact: true })
+
+
+      31 |  });
+      32 |  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();
+    > 33 |  await page.getByLabel('代理草稿的 Hive 地址',{exact:true}).fill('https://draft.hive.example');await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:7890');
+         |                                                      ^
+      34 |  await page.getByRole('button',{name:'保存代理',exact:true}).click();
+      35 |  await expect(page.getByRole('alert')).toHaveCount(0);await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7890');
+      36 |  expect((await calls(page,'network_save_proxy'))[0].args).toEqual({proxy:'http://127.0.0.1:7890',origin:'https://draft.hive.example',expectedRevision:0});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:33:54
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-unpaired-pr-0289a--effective-network-snapshot-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-unpaired-pr-0289a--effective-network-snapshot-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-unpaired-pr-0289a--effective-network-snapshot-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests/native-runtime.spec.ts:42:1 › a successful account write still requires a verified read when central readback fails 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true })
+
+
+      44 |  await page.evaluate(()=>{const w=window as any,native=w.__TAURI_INTERNALS__,invoke=native.invoke;native.invoke=async(command:string,args:unknown)=>{const result=await invoke(command,args);if(command==='account_action')w.deviceFail=true;return result;};});
+      45 |  await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
+    > 46 |  await expect(card(page).getByText('等待自动重试…',{exact:true})).toBeVisible();
+         |                                                             ^
+      47 |  await page.evaluate(()=>{(window as any).deviceFail=false;});await reconcile(page);
+      48 |  await expect(card(page).getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toHaveLength(1);
+      49 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:46:61
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-a-successfu-e4036-when-central-readback-fails-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-a-successfu-e4036-when-central-readback-fails-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-a-successfu-e4036-when-central-readback-fails-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests/native-runtime.spec.ts:98:1 › uncertain runtime start is never replayed and requires a fresh query 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '贡献运行' })
+    Timeout: 5000ms
+    - Expected substring  - 1
+    + Received string     + 3
+
+    - 正在自动核对
+    + 贡献状态待确认开始后建立连接；接单需单独恢复。开始贡献Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    + 失败环节: runtime_operation
+    + 原始原因: RESPONSE_TIMEOUT: start result unconfirmed
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '贡献运行' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' })
+        14 × locator resolved to <section aria-label="贡献运行" class="native-runtime-summary">…</section>
+           - unexpected value "贡献状态待确认开始后建立连接；接单需单独恢复。开始贡献Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    失败环节: runtime_operation
+    原始原因: RESPONSE_TIMEOUT: start result unconfirmed"
+
+
+       98 | test('uncertain runtime start is never replayed and requires a fresh query',async({page})=>{
+       99 |  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;(window as any).runtimeUnknown=true;});
+    > 100 |  await reconcile(page);await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('正在自动核对');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+          |                                                                                                                                             ^
+      101 |  await reconcile(page);await expect(page.getByText('贡献已启动',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(1);
+      102 | });
+      103 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:100:141
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [chromium] › tests/native-runtime.spec.ts:156:1 › start preserves paused platforms and uncertain start recovers by reading only 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: getByRole('region', { name: '贡献运行' })
+    Timeout: 5000ms
+    - Expected substring  - 1
+    + Received string     + 3
+
+    - 正在自动核对
+    + 贡献状态待确认开始后建立连接；接单需单独恢复。开始贡献Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    + 失败环节: runtime_operation
+    + 原始原因: RESPONSE_TIMEOUT: start result unconfirmed
+
+    Call log:
+      - Expect "toContainText" getByRole('region', { name: '贡献运行' }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' })
+        14 × locator resolved to <section aria-label="贡献运行" class="native-runtime-summary">…</section>
+           - unexpected value "贡献状态待确认开始后建立连接；接单需单独恢复。开始贡献Bee 状态待确认Hive 状态待确认贡献状态待确认，等待已安排的核对。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: unknown_failure
+    失败环节: runtime_operation
+    原始原因: RESPONSE_TIMEOUT: start result unconfirmed"
+
+
+      163 |  await page.evaluate(()=>{(window as any).runtimeUnknown=true;});
+      164 |  await page.getByRole('button',{name:'开始贡献',exact:true}).click();
+    > 165 |  await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('正在自动核对');
+          |                                                       ^
+      166 |  await page.clock.runFor(10001);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      167 |  const starts=await calls(page,'runtime_start');expect(starts).toHaveLength(1);
+      168 |  expect(starts[0].args.request.resume_platforms).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:165:55
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-start-prese-50d60-rt-recovers-by-reading-only-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-start-prese-50d60-rt-recovers-by-reading-only-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-start-prese-50d60-rt-recovers-by-reading-only-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13 failed
+    [chromium] › tests/account-auto-read.spec.ts:37:1 › failed account snapshots retry after ten seconds without replaying writes 
+    [chromium] › tests/account-auto-read.spec.ts:64:1 › failed local sources remain diagnosed without automatic prompts and retry once on account re-entry 
+    [chromium] › tests/account-auto-read.spec.ts:72:1 › one platform snapshot error does not slow the other pending operation or starve its retry 
+    [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved permission_denied source failures retry on re-entry without repeated permission prompts 
+    [chromium] › tests/account-auto-read.spec.ts:85:62 › resolved source_unavailable source failures retry on re-entry without repeated permission prompts 
+    [chromium] › tests/account-auto-read.spec.ts:137:1 › account read errors remain visible throughout the retry and clear only after success 
+    [chromium] › tests/account-auto-read.spec.ts:145:1 › repeated account read failures keep retrying until a successful snapshot 
+    [chromium] › tests/native-experience.spec.ts:50:1 › management startup failure keeps safe native logs accessible without enabling diagnostics 
+    [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh 
+    [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot 
+    [chromium] › tests/native-runtime.spec.ts:42:1 › a successful account write still requires a verified read when central readback fails 
+    [chromium] › tests/native-runtime.spec.ts:98:1 › uncertain runtime start is never replayed and requires a fresh query 
+    [chromium] › tests/native-runtime.spec.ts:156:1 › start preserves paused platforms and uncertain start recovers by reading only 
+  59 passed (51.2s)
+[WebServer] 4:34:25 PM [vite] (client) [console.error] In HTML, <p> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer] >                         <p style={{fontWeight:600}}>
+[WebServer]                           ...
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:25 PM [vite] (client) [console.error] <p> cannot contain a nested <p>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:25 PM [vite] (client) [console.error] In HTML, <summary> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer]                           <details>
+[WebServer] >                           <summary style={{minHeight:32,cursor:"pointer"}}>
+[WebServer]                             ...
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:25 PM [vite] (client) [console.error] <p> cannot contain a nested <summary>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:25 PM [vite] (client) [console.error] In HTML, <pre> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer]                           <details>
+[WebServer]                             <summary>
+[WebServer] >                           <pre style={{whiteSpace:"pre-wrap",font:"inherit",fontSize:12}}>
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:25 PM [vite] (client) [console.error] <p> cannot contain a nested <pre>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:25 PM [vite] (client) [console.error] In HTML, <details> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer] >                         <details>
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:25 PM [vite] (client) [console.error] <p> cannot contain a nested <details>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:25 PM [vite] (client) [console.error] In HTML, <div> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer] >                       <div
+[WebServer] >                         className="problem-notice device-error"
+[WebServer] >                         role="alert"
+[WebServer] >                         style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}
+[WebServer] >                       >
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:25 PM [vite] (client) [console.error] <p> cannot contain a nested <div>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:33 PM [vite] (client) [console.error] In HTML, <p> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer] >                         <p style={{fontWeight:600}}>
+[WebServer]                           ...
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:33 PM [vite] (client) [console.error] <p> cannot contain a nested <p>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:33 PM [vite] (client) [console.error] In HTML, <summary> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer]                           <details>
+[WebServer] >                           <summary style={{minHeight:32,cursor:"pointer"}}>
+[WebServer]                             ...
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:33 PM [vite] (client) [console.error] <p> cannot contain a nested <summary>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:33 PM [vite] (client) [console.error] In HTML, <pre> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer]                           <details>
+[WebServer]                             <summary>
+[WebServer] >                           <pre style={{whiteSpace:"pre-wrap",font:"inherit",fontSize:12}}>
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:33 PM [vite] (client) [console.error] <p> cannot contain a nested <pre>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:33 PM [vite] (client) [console.error] In HTML, <details> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer]                         <div className="problem-no..." role="alert" style={{fontSize:13, ...}}>
+[WebServer]                           <p>
+[WebServer]                           <p>
+[WebServer] >                         <details>
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:33 PM [vite] (client) [console.error] <p> cannot contain a nested <details>.
+[WebServer] See this log for the ancestor stack trace.
+[WebServer] 4:34:33 PM [vite] (client) [console.error] In HTML, <div> cannot be a descendant of <p>.
+[WebServer] This will cause a hydration error.
+[WebServer] 
+[WebServer]   <NativeApp updateClient={{...}} preferencesClient={{...}} notificationsClient={{...}} networkClient={{...}} ...>
+[WebServer]     <NativeWorkspace props={{...}} snapshot={{native:{...}, ...}} model={{...}} page="overview" ...>
+[WebServer]       <AppShell desktopStatus={{kind:"failed", ...}} navigationRequest={{target:{...}, ...}} page="overview" ...>
+[WebServer]         <div data-desktop-status="failed" className="app-shell ...">
+[WebServer]           <aside>
+[WebServer]           <div className="workspace">
+[WebServer]             <header>
+[WebServer]             <main ref={{...}}>
+[WebServer]               <div>
+[WebServer]               <StatusView kind="error" title="原生管理进程">
+[WebServer]                 <section className="status-view" aria-busy={false} role="alert">
+[WebServer]                   <h3>
+[WebServer] >                 <p>
+[WebServer]                     <FailureNotice failure={{code:"SIDE...", ...}} check="bridge_sta..." onNavigate={function navigate}>
+[WebServer]                       <ProblemNotice problem={{summary:"本...", ...}} onNavigate={function navigate}>
+[WebServer] >                       <div
+[WebServer] >                         className="problem-notice device-error"
+[WebServer] >                         role="alert"
+[WebServer] >                         style={{fontSize:13,lineHeight:1.5,overflowWrap:"anywhere"}}
+[WebServer] >                       >
+[WebServer]             ...
+[WebServer] 
+[WebServer] 4:34:33 PM [vite] (client) [console.error] <p> cannot contain a nested <div>.
+[WebServer] See this log for the ancestor stack trace.
+
+exit=1

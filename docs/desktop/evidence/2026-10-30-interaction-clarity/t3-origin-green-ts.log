@@ -1,0 +1,26 @@
+✔ runtime uses the shared Go/Rust contract and preserves absent supply (2.09825ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (0.68725ms)
+✔ runtime client sends only fixed typed commands and rejects older snapshots (0.569958ms)
+✔ runtime operation receipts advance the same revision gate as snapshots (0.288708ms)
+✔ runtime requires an explicit nullable connection detail (0.138708ms)
+✔ runtime accepts observed failures and actual scheduled retry times (1.681958ms)
+✔ runtime rejects malformed or unsafe connection details (0.373708ms)
+✔ runtime connection origin rejects lookalike loopback domains (0.07025ms)
+✔ runtime consumes the actual Go connection origin https://HIVE.test (0.093166ms)
+✔ runtime consumes the actual Go connection origin https://hive.test:443 (0.117542ms)
+✔ runtime consumes the actual Go connection origin http://localhost:80 (0.072458ms)
+✔ runtime consumes the actual Go connection origin https://HIVE.test:8443 (0.064709ms)
+✔ runtime consumes the actual Go connection origin https://[2001:0DB8:0:0:0:0:0:1]:443 (0.0835ms)
+✔ runtime consumes the actual Go connection origin http://[0:0:0:0:0:0:0:1]:80 (0.069875ms)
+✔ runtime consumes the actual Go connection origin http://[::ffff:127.0.0.1]:80 (0.086ms)
+✔ runtime consumes the actual Go connection origin https://例子.test:443 (2.638917ms)
+✔ runtime consumes the actual Go connection origin https://127.1:443 (0.057625ms)
+✔ runtime rejects unsafe original origin structures and non-loopback HTTP hosts (0.338417ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 18
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 75.200792

@@ -1,0 +1,21 @@
+{
+  "utc": "2026-11-02T16:31:49.911Z",
+  "fixture": true,
+  "taskSpace": 40,
+  "facts": [
+    {
+      "scenario": "real-Hive-identity-401",
+      "focus": "<div data-nav-section=\"device\" tabindex=\"-1\"><section class=\"native-device-summary device-pairing\" aria-label=\"设备配对\"><div class=\"device-section-heading\"><h2>本机设备</h2><button data-slot=\"button\" data-variant=\"outline\" data-size=\"sm\" class=\"ui-button  \"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" class=\"lucide lucide-refresh-cw\" aria-hidden=\"true\"><path d=\"M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8\"></path><path d=\"M21 3v5h-5\"></path><path d=\"M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16\"></path><path d=\"M8 16H3v5\"></path></svg>重新核对设备</button></div><div class=\"device-facts\"><div><p>本机设备</p><strong>Bee Desktop</strong><small role=\"status\">上次确认的设备，当前待核对。</small></div><div><p>归属账号</p><strong>owner@example.test</strong><small>设备所属账号</small></div><div><p>Hive</p><strong>https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example</strong><small>配对不会自动开始贡献</small></div></div><div class=\"problem-notice device-error\" role=\"alert\" style=\"font-size: 13px; line-height: 1.5; overflow-wrap: anywhere;\"><p style=\"font-weight: 600;\">Hive 已拒绝此设备凭据。</p><p>设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。</p><button data-slot=\"button\" data-variant=\"outline\" data-size=\"sm\" class=\"ui-button  \">查看设备</button><details><summary style=\"min-height: 32px; cursor: pointer;\">查看失败详情</summary><pre style=\"white-space: pre-wrap; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; font-size: 12px; line-height: inherit; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-language-override: inherit;\">错误码: invalid_device_credential\n失败环节: device_identity\n观察时间: 2026年11月3日 00:31:45\nHTTP 状态: 401\n路径: /api/bee/identity\n远端错误码: invalid_device_credential\n原始原因: Hive identity check http_rejected HTTP 401</pre></details></div><div class=\"device-recovery-action\"><p>原凭据已明确撤销。重新绑定需再次在 Hive 网页确认，完成后贡献保持停止。</p><button data-slot=\"button\" data-variant=\"default\" data-size=\"sm\" class=\"ui-button primary \">重新绑定设备</button></div></section></div>",
+      "recovers": 1,
+      "details": [
+        "Hive 已拒绝此设备凭据。设备身份已失效，无法开始贡献；请先在 Hive 核对设备归属。查看设备查看失败详情错误码: invalid_device_credential\n失败环节: device_identity\n观察时间: 2026年11月3日 00:31:45\nHTTP 状态: 401\n路径: /api/bee/identity\n远端错误码: invalid_device_credential\n原始原因: Hive identity check http_rejected HTTP 401"
+      ]
+    },
+    {
+      "scenario": "return-original-check",
+      "focus": "<li data-status=\"fail\" data-nav-section=\"connection\" tabindex=\"-1\"><div class=\"nd-check-heading\"><div><h3>Hive 连接</h3><p>Hive 已拒绝此设备凭据。</p></div><span class=\"nd-status nd-status-fail\">检查失败</span></div><div class=\"nd-check-footer\"><details><summary>检查详情</summary><p>http_rejected</p><dl><div><dt>method</dt><dd>GET</dd></div><div><dt>path</dt><dd>/api/bee/identity</dd></div><div><dt>http_status</dt><dd>401</dd></div><div><dt>server_code</dt><dd>invalid_device_credential</dd></div></dl><time datetime=\"2026-11-02T16:31:45.254Z\">2026年11月3日 00:31:45</time></details><button class=\"quiet\">查看概览</button></div></li>",
+      "starts": 1,
+      "writes": []
+    }
+  ]
+}

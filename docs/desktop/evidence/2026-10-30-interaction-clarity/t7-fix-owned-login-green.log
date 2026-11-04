@@ -1,0 +1,19 @@
+{"utc": "2026-11-02T14:46:52.453630+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["env", "-u", "NO_COLOR", "BEE_DEVICE_TEST_PORT=1477", "npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-accounts.spec.ts", "account-auto-read.spec.ts", "--grep", "background snapshot failure|owned official login|unknown cancel|read failure marks", "--workers=1", "--output=../docs/desktop/evidence/2026-10-30-interaction-clarity/t7-fix-owned-login-green-output"], "head": "267a33d38db3a09f0c47917419e36055a6660ee6", "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/account-auto-read.spec.ts\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/problems.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "node": "v24.22.1"}
+
+Running 11 tests using 1 worker
+
+  ✓   1 [chromium] › tests/account-auto-read.spec.ts:195:57 › owned official login releases pending confirmation only after its succeeded terminal observation (959ms)
+  ✓   2 [chromium] › tests/account-auto-read.spec.ts:195:57 › owned official login releases pending confirmation only after its failed terminal observation (399ms)
+  ✓   3 [chromium] › tests/account-auto-read.spec.ts:195:57 › owned official login releases pending confirmation only after its cancelled terminal observation (350ms)
+  ✓   4 [chromium] › tests/account-auto-read.spec.ts:199:94 › owned official login ignores old-revision terminal confirmation (449ms)
+  ✓   5 [chromium] › tests/account-auto-read.spec.ts:199:94 › owned official login ignores other-operation terminal confirmation (270ms)
+  ✓   6 [chromium] › tests/account-auto-read.spec.ts:199:94 › owned official login ignores other-platform terminal confirmation (225ms)
+  ✓   7 [chromium] › tests/account-auto-read.spec.ts:199:94 › owned official login ignores other-generation terminal confirmation (223ms)
+  ✓   8 [chromium] › tests/native-accounts.spec.ts:101:1 › unknown cancel only queries the same official operation and late success remains an unconnected candidate (1.0s)
+  ✓   9 [chromium] › tests/native-accounts.spec.ts:106:1 › background snapshot failure during official login never invents a cancel request (1.0s)
+  ✓  10 [chromium] › tests/native-accounts.spec.ts:119:52 › runtime read failure marks retained account facts until recovery without automatic writes (917ms)
+  ✓  11 [chromium] › tests/native-accounts.spec.ts:119:52 › openai read failure marks retained account facts until recovery without automatic writes (900ms)
+
+  11 passed (8.7s)
+
+exit_code=0

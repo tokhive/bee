@@ -1,0 +1,21 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.54s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'experience::tests::recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime' (9807680) panicked at src/experience_tests.rs:172:5:
+assertion `left == right` failed
+  left: "ready"
+ right: "blocked"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test experience::tests::recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime ... FAILED
+
+failures:
+
+failures:
+    experience::tests::recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 196 filtered out; finished in 12.43s
+
+error: test failed, to rerun pass `--lib`

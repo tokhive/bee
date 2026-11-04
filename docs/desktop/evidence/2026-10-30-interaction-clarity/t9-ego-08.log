@@ -1,0 +1,10 @@
+ElementResolutionError: Invalid locator: loc=role:dialog. Expected loc=role:<role>[name="<exact name>"], loc=role:<role>[name*="<name part>"], loc=css:<selector>, loc=href:<substring>, text=..., css=..., a terminal :has-text(...) or :text-is(...), or a terminal >> nth=N
+    at parseLocatorOrThrow (file:////[eval1]:11219:15)
+    at resolveElementObjectId (file:////[eval1]:9836:21)
+    at waitForSelectorInPage (file:////[eval1]:16350:30)
+    at async file:////[eval1]:16940:28
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+{ start: '2026-11-02T17:56:58.882Z', sources: { 'desktop/src/features/settings/NativeUpdateControls.tsx': '91dd712d68213a99c71ffff8bcbf1c6577fe0ec069daa904c99e34838efa5019', 'desktop/src/features/settings/native-update.css': '8cc13ff78b147a502362dbdba9a091b20e54d1e33bef15e0dcf77992dedd3b31', 'desktop/src/system/updater.ts': 'cc71337b7d676ef96bc47b23c1199c6a2851e211e0b28c7d62acb3c839dcc8c1' } }
+{ space: 40, ownership: 'agent', url: 'http://127.0.0.1:1490/' }
+
+ego's nodejs process exited with code 1.

@@ -1,0 +1,16 @@
+UTC: 2026-11-02T10:38:24.204922+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npm', 'run', 'typecheck']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+src/i18n/en.ts(754,3): error TS1117: An object literal cannot have multiple properties with the same name.
+
+Exit: 1
+UTC end: 2026-11-02T10:38:25.161365+00:00

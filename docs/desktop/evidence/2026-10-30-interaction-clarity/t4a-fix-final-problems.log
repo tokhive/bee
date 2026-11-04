@@ -1,0 +1,20 @@
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (17.011ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.978792ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.239417ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.130375ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.829084ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.1955ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.466083ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (8.686375ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.202292ms)
+✔ explicit locale formatting and placeholders follow the App language (3.612875ms)
+✔ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.681958ms)
+✔ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.209792ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 12
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 293.043041

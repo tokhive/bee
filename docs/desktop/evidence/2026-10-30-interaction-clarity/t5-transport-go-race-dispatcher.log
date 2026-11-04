@@ -1,0 +1,19 @@
+{"time": "2026-11-02T09:23:44.250567+00:00", "command": ["go", "test", "-race", "./desktopbridge", "-count=1", "-timeout=60s"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+--- FAIL: TestAccountsFixedMethodsAndOrderedCapabilities (0.00s)
+panic: runtime error: index out of range [3] with length 3 [recovered, repanicked]
+
+goroutine 43 [running]:
+testing.tRunner.func1.2({0x1023dc200, 0xc00004f548})
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2125 +0x2b8
+testing.tRunner.func1()
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2128 +0x438
+panic({0x1023dc200?, 0xc00004f548?})
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/runtime/panic.go:859 +0x120
+github.com/tokhive/bee/desktopbridge_test.TestAccountsFixedMethodsAndOrderedCapabilities(0xc0003ea6c8)
+	/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktopbridge/accounts_test.go:62 +0xc50
+testing.tRunner(0xc0003ea6c8, 0x10244b110)
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2195 +0x168
+created by testing.(*T).Run in goroutine 1
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2260 +0x7c0
+FAIL	github.com/tokhive/bee/desktopbridge	1.488s
+FAIL

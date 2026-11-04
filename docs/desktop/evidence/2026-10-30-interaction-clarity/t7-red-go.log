@@ -1,0 +1,25 @@
+{"utc": "2026-11-02T13:04:31.925005+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0", "argv": ["go", "test", "./agent", "-run", "TestDesktopAuthorize", "-count=1"], "dirty": " M Makefile\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+--- FAIL: TestDesktopAuthorizeRequiresVerifiedNewSource (0.45s)
+    --- FAIL: TestDesktopAuthorizeRequiresVerifiedNewSource/exit_error (0.11s)
+        desktop_authorize_test.go:124: mode=exit_error required_code=authorization_process_failed actual=account authorization_unconfirmed: official login process failed: official process exited: exit_code=7; check=official_login, platform=openai, evidence=map[]
+    --- FAIL: TestDesktopAuthorizeRequiresVerifiedNewSource/unsupported (0.03s)
+        desktop_authorize_test.go:124: mode=unsupported required_code=client_version_unsupported actual=account authorization_unconfirmed: official client version unsupported: platform=openai response_bytes=15; supported=Codex 0.162.x/0.163.x or Claude Code 2.1.153+ within 2.1.x; check=official_login, platform=openai, evidence=map[]
+    --- FAIL: TestDesktopAuthorizeRequiresVerifiedNewSource/help_missing (0.06s)
+        desktop_authorize_test.go:124: mode=help_missing required_code=client_capability_missing actual=account authorization_unconfirmed: official login help lacks required command capability: platform=openai response_bytes=18; check=official_login, platform=openai, evidence=map[]
+--- FAIL: TestDesktopAuthorizeTimeoutBeforeOwnedProcessStarts (0.15s)
+    desktop_authorize_test.go:156: preflight timeout actual={ID:ed6773e166b631819d257be257192213f4218880652ef8c8 Kind:authorize Platform:0x7283ddc5a330 State:failed Revision:2 Error:account authorization_unconfirmed: context deadline exceeded; check=official_login, platform=openai, evidence=map[]} error=account authorization_unconfirmed: context deadline exceeded; check=official_login, platform=openai, evidence=map[]; required=authorization_timeout at official_version
+--- FAIL: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess (0.15s)
+    --- FAIL: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/cancel (0.05s)
+        desktop_authorize_test.go:200: owned process terminal failure lacks stage: action=cancel error=account authorization_unconfirmed: context canceled; check=official_login, platform=openai, evidence=map[]
+    --- FAIL: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/close (0.05s)
+        desktop_authorize_test.go:200: owned process terminal failure lacks stage: action=close error=account authorization_unconfirmed: context canceled; check=official_login, platform=openai, evidence=map[]
+    --- FAIL: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/timeout (0.05s)
+        desktop_authorize_test.go:200: owned process terminal failure lacks stage: action=timeout error=account authorization_unconfirmed: context deadline exceeded; check=official_login, platform=openai, evidence=map[]
+--- FAIL: TestDesktopAuthorizeUnchangedExistingSource (0.06s)
+    desktop_authorize_test.go:260: unchanged source failure=account authorization_unconfirmed: official login exited successfully but selected source revision is unchanged; recheck official account before retrying; check=official_login, platform=openai, evidence=map[]
+--- FAIL: TestDesktopAuthorizeNamespaceAndEnvironment (0.00s)
+    desktop_authorize_test.go:356: wrong namespace lacks stable cause: official Claude login namespace mismatch: selected_store=file required_store=keychain OS=darwin
+FAIL
+FAIL	github.com/tokhive/bee/agent	4.325s
+FAIL
+{"exit": 1, "utc": "2026-11-02T13:04:40.042684+00:00"}

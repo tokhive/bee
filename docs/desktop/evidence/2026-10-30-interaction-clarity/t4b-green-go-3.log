@@ -1,0 +1,20 @@
+--- FAIL: TestDesktopDeviceUncertainRedeemKeepsTransaction (0.05s)
+    desktop_device_test.go:266: lost failure evidence: unavailable: POST /api/bee/pairings/redeem: HTTP 503, code="unavailable", error_json_valid=true: Hive request failed (HTTP 503); response_body={"error":{"code":"unavailable"}}
+--- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown (0.10s)
+    --- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming (0.03s)
+        desktop_device_test.go:374: prior unknown exchange cleared by later expiry: {State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} http_rejected: GET /api/bee/identity: HTTP 401, code="", error_json_valid=false: Hive request failed (HTTP 401)
+--- FAIL: TestDesktopDeviceRemoteErrorCannotEchoPairingToken (0.03s)
+    desktop_device_test.go:427: unsafe remote error: <nil>
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.893s
+--- FAIL: TestDeviceRecoveryBridgeStrictCommands (0.00s)
+    device_test.go:82: unsafe recovery params accepted: {"protocol":1,"id":"hello-1","instance":"d4f0d86ed7ed10b417317bffe3ae508a","result":{"bee_version":"test","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
+        {"protocol":1,"id":"p","instance":"d4f0d86ed7ed10b417317bffe3ae508a","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"s","instance":"d4f0d86ed7ed10b417317bffe3ae508a","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"c","instance":"d4f0d86ed7ed10b417317bffe3ae508a","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"bad","instance":"d4f0d86ed7ed10b417317bffe3ae508a","error":{"code":"INVALID_REQUEST","message":"recovery confirmation fields=0 required=3"}}
+        {"protocol":1,"id":"bad","instance":"d4f0d86ed7ed10b417317bffe3ae508a","error":{"code":"DUPLICATE_ID","message":"id already has an unfinished response; required=no pending ID reuse"}}
+        {"protocol":1,"id":"bad","instance":"d4f0d86ed7ed10b417317bffe3ae508a","error":{"code":"INVALID_REQUEST","message":"recovery confirmation fields rejected; required=unique operation_id,expected_revision,decision"}}
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	0.936s
+FAIL

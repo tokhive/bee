@@ -1,0 +1,114 @@
+{
+  "utc": "2026-11-02T13:47:37.832Z",
+  "url": "http://127.0.0.1:1478",
+  "facts": [
+    {
+      "name": "t7-before-1080-zh-light.png",
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "427.633px 356.359px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "427.633px 356.359px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-before-1000-zh-light.png",
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 751
+          },
+          "columns": "715px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 751
+          },
+          "columns": "715px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-before-860-zh-light.png",
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "575px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "575px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            25,
+            25
+          ]
+        }
+      ]
+    }
+  ]
+}

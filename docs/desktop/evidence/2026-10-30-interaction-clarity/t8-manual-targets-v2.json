@@ -1,0 +1,36 @@
+{
+  "utc": "2026-11-02T16:20:02.548Z",
+  "taskSpace": 40,
+  "fixture": true,
+  "facts": [
+    {
+      "scenario": "source-target",
+      "focus": "<input placeholder=\"/tmp/claude\" value=\"\" tabindex=\"0\">",
+      "dialog": true
+    },
+    {
+      "scenario": "source-return",
+      "focus": "<li data-status=\"fail\" data-nav-section=\"source\" data-nav-platform=\"claude\" tabindex=\"-1\"><div class=\"nd-check-heading\"><div><h3><span class=\"nd-platform\">Claude</span>官方登录来源</h3><p>未找到所选凭证来源。</p></div><span class=\"nd-status nd-status-fail\">检查失败</span></div><div class=\"nd-check-footer\"><details><summary>检查详情</summary><p>source_missing</p><dl><div><dt>source_type</dt><dd>file</dd></div></dl><time datetime=\"2026-11-02T16:19:46.222Z\">2026年11月3日 00:19:46</time></details><button class=\"quiet\">前往账号</button></div></li>",
+      "dialog": false,
+      "starts": 1
+    },
+    {
+      "scenario": "N02-separate-network-targets",
+      "hiveFailure": "Hive 拒绝了本次请求（HTTP 503）。本次设备状态不可确认，依赖设备身份的操作保持不可用。查看失败详情错误码: http_rejected\n失败环节: device_identity\n观察时间: 2026年11月3日 00:19:49\nHTTP 状态: 503\n路径: /api/bee/identity\n原始原因: controlled Hive returned HTTP 503: retry later",
+      "upstream": "这三个目标只检查上游网络可达性，不检查 Hive；HTTP 401、403、429 不证明授权或额度。本机代理连接可达直连CONNECT chatgpt.com:443检查详情read-only endpoint reachable2026年11月3日 00:19:55OpenAI 只读端点可达直连 · HTTP 401GET https://chatgpt.com/backend-api/wham/usage检查详情read-only endpoint reachable2026年11月3日 00:19:55Claude 只读端点可达直连 · HTTP 429GET https://api.anthropic.com/api/oauth/profile检查详情read-only endpoint reachable2026年11月3日 00:19:55",
+      "starts": 1,
+      "writes": []
+    },
+    {
+      "scenario": "N06-last-confirmed",
+      "width": 860,
+      "height": 600,
+      "status": [
+        "System permissionNot yet allowed",
+        "Last confirmed system registrationNot registered"
+      ],
+      "desired": true,
+      "sets": 1
+    }
+  ]
+}

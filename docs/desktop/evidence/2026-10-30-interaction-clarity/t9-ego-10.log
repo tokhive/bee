@@ -1,0 +1,60 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+{ start: '2026-11-02T17:58:45.296Z', sources: { 'desktop/src/features/settings/NativeUpdateControls.tsx': '91dd712d68213a99c71ffff8bcbf1c6577fe0ec069daa904c99e34838efa5019', 'desktop/src/features/settings/native-update.css': '8cc13ff78b147a502362dbdba9a091b20e54d1e33bef15e0dcf77992dedd3b31', 'desktop/src/system/updater.ts': 'cc71337b7d676ef96bc47b23c1199c6a2851e211e0b28c7d62acb3c839dcc8c1' } }
+{ phase: 'settled wheel then two polls', before: { scroll: 270, active: 'Release notes', reads: 106 }, after: { scroll: 270, active: 'Release notes', reads: 108, notesOpen: true } }
+/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-final-en-dark-long-notes-860.png
+/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-final-zh-light-long-error-860.png
+{ phase: 'zh expanded error', value: { width: 860, height: 600, lang: 'zh', theme: 'light', overflow: false, details: [ true, true ], minimumFont: 12 }, end: '2026-11-02T17:58:57.450Z', writes: [] }
+[p1 "Bee" | space "Bee desktop interaction implementation 2026-11-02 continued"(40): 1 managed, 0 untracked — p1* "Bee"]
+root
+  container
+    container
+      image
+      text "Bee"
+    container "主导航"
+      button [ref=241]
+        svg_root
+        text "概览"
+      button [ref=242]
+        svg_root
+        text "AI 账号"
+      button [ref=243]
+        svg_root
+        text "诊断"
+      button [ref=244]
+        svg_root
+        text "设置"
+    container
+      container
+        text "hive.example"
+        paragraph
+          text "尚未接入 AI 账号"
+      container
+        svg_root
+        container
+          text "Fixture"
+          text "设备与平台控制"
+  container
+    container
+      svg_root
+      text "本机设备"
+    container [ref=254]
+      tabpanel "关于" [ref=257, loc=role:tabpanel[name="关于"]]
+        container "关于 Bee" [ref=261]
+          container "应用更新"
+            container "发布说明"
+              paragraph
+                text "Publisher release notes: Long public release notes retain their original language and wrap at the window edge. Long public release notes retain their original language and wrap at the window edge. Lon..."
+            alert
+              paragraph
+                text "更新签名验证失败，未允许安装。"
+              paragraph
+                text "当前更新包不可安装。可重新检查并下载；若仍无法核验，请使用可信来源的安装包。"
+              container
+                container [ref=262]
+                  text "查看失败详情"
+                text "错误码: UPDATE_SIGNATURE_FAILED 失败环节: update_signature 观察时间: 2026年11月2日 20:00:00 实际值: 0.2.0 要求: 0.3.0 原始原因: signed=0.2.0; announced=0.3.0; installer not call..."
+    container
+      text "Bee"
+      text "设备绑定不自动开始贡献"
+
+

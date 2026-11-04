@@ -1,0 +1,5 @@
+--- FAIL: TestDesktopFailureDetailsRejectInvalidAndDuplicateEvidence (0.00s)
+    desktop_failure_test.go:89: unsafe details accepted: {"check":"device_identity","check":"supply_read","observed_at":"2026-10-30T12:00:00Z","evidence":{}}
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.504s
+FAIL

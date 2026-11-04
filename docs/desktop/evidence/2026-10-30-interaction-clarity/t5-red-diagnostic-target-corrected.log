@@ -1,0 +1,49 @@
+time=2026-11-02T08:46:02.697126+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=T5 WIP before missing-report-target fix; corrected Vite harness preamble
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'recovery-navigation.spec.ts', '-g', 'target absent']
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/recovery-navigation.spec.ts:57:1 › a diagnostic target absent from a partial report focuses its summary once without starting a run (6.2s)
+
+
+  1) [chromium] › tests/recovery-navigation.spec.ts:57:1 › a diagnostic target absent from a partial report focuses its summary once without starting a run 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  locator('.nd-report-meta')
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" locator('.nd-report-meta') with timeout 5000ms
+      - waiting for locator('.nd-report-meta')
+        14 × locator resolved to <div class="nd-report-meta">…</div>
+           - unexpected value "inactive"
+
+
+      64 |  ReactDOM.createRoot(document.getElementById('harness')).render(React.createElement(Harness));</script>`}));
+      65 |  await page.goto('/diagnostic-target-harness');await page.getByRole('button',{name:'Locate Claude source',exact:true}).click();
+    > 66 |  const summary=page.locator('.nd-report-meta');await expect(summary).toBeFocused();expect(await page.evaluate(()=>(window as any).starts)).toBe(0);
+         |                                                                      ^
+      67 |  const heading=page.getByRole('heading',{level:1});await heading.focus();await page.evaluate(()=>(window as any).addCheck());await expect(page.locator('[data-nav-section="source"][data-nav-platform="claude"]')).toBeAttached();await expect(heading).toBeFocused();expect(await page.evaluate(()=>(window as any).starts)).toBe(0);
+      68 | });
+      69 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:66:70
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-a-diag-a0ca2-once-without-starting-a-run-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-a-diag-a0ca2-once-without-starting-a-run-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-a-diag-a0ca2-once-without-starting-a-run-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/recovery-navigation.spec.ts:57:1 › a diagnostic target absent from a partial report focuses its summary once without starting a run 
+
+exit=1

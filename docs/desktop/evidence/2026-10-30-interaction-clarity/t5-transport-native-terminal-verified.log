@@ -1,0 +1,33 @@
+{"time": "2026-11-02T09:38:59.395473+00:00", "command": ["cargo", "test", "--lib", "native_", "--", "--nocapture"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.29s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 22 tests
+test lifecycle::tests::native_close_hides_instead_of_quitting_the_management_process ... ok
+test lifecycle::tests::tray_and_native_menu_share_the_same_window_intents ... ok
+test notifications::tests::notifications_native_constructor_is_inert_without_application_bundle ... ok
+test network_native::tests::network_native_restore_uses_saved_intent_and_accepts_s1_stopped_success ... ok
+test network_native::tests::network_native_operation_failure_keeps_safe_s1_evidence ... ok
+test network_native::tests::network_native_observation_binds_both_runtime_reads_and_network_revision ... ok
+test diagnostics_native::tests::diagnostics_native_runtime_rejects_unknown_dto_without_persisting_untrusted_errors ... ok
+test network_native::tests::network_native_stop_rejects_wrong_operation_stale_revision_and_untrusted_receipts ... ok
+test network_native::tests::network_native_pending_operation_times_out_without_replaying_stop ... ok
+test singleton_tests::windows_registration::tests::null_mutex_and_window_handles_fail_with_the_native_error ... ok
+test updater_tests::updater_installation_directory_uses_native_binary_when_appimage_is_absent ... ok
+test updater_tests::updater_native_install_space_probe_reports_real_volume_before_any_installation ... ok
+test network_native::tests::network_native_stop_uses_fixed_reason_and_awaits_owned_operation_receipt ... ok
+test lifecycle::tests::unexpected_parent_death_closes_stdin_and_native_management_process_exits ... ok
+test network_native::tests::network_native_wait_tracks_runtime_and_operation_revisions_independently ... ok
+test diagnostics_native::tests::diagnostics_native_runtime_logs_validated_safe_facts_without_repeating_identical_reads ... ok
+test sidecar::tests::native_go_management_binary_can_handshake_ping_and_stop ... ok
+native CONNECT slow=openai fast=claude prepared_ms=7 fast_reply_ms=3; fast reply observed before release; instance and failure evidence verified
+native CONNECT slow=claude fast=openai prepared_ms=7 fast_reply_ms=4; fast reply observed before release; instance and failure evidence verified
+test sidecar::tests::native_concurrency::native_bee_platform_reads_cross_local_connect_independently ... ok
+test sidecar::tests::account_native_commands_validate_typed_requests_without_expanding_generic_access ... ok
+test sidecar::tests::authorize_native_commands_bind_operation_and_keep_shell_private ... ok
+test sidecar::tests::supply_native_commands_require_platform_and_an_explicit_boolean ... ok
+test sidecar::tests::runtime_native_commands_fix_stop_reason_and_keep_internal_actions_private ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 193 filtered out; finished in 8.90s
+

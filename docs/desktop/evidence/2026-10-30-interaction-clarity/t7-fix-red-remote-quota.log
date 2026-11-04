@@ -1,0 +1,64 @@
+{"utc": "2026-11-02T14:39:18.498551+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/accountPresentation.test.ts"], "head": "267a33d38db3a09f0c47917419e36055a6660ee6", "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/problems.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "node": "v24.22.1"}
+✔ selection identifies the account and mismatched candidate never lends its quota (2.465917ms)
+✔ unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent (0.255709ms)
+✔ fresh matching Hive wins over stale official and expiry invalidates official (0.15125ms)
+✔ valid_until determines freshness without imposing a ten minute report age (0.842708ms)
+✔ historical quota carries the observation actually used and never borrows a different identity (0.145541ms)
+✖ remote identity failure leaves fresh local quota current and marks retained fresh Hive quota unconfirmed (0.774583ms)
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (0.43725ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 5
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 102.502542
+
+✖ failing tests:
+
+test at tests/accountPresentation.test.ts:21:1
+✖ remote identity failure leaves fresh local quota current and marks retained fresh Hive quota unconfirmed (0.774583ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'current'
+  - 'unconfirmed'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/accountPresentation.test.ts:26:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'current',
+    expected: 'unconfirmed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accountPresentation.test.ts:28:1
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (0.43725ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /共享状态读取未确认/. Input:
+  
+  '接入前需先恢复设备身份；本机来源仍可读取。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/accountPresentation.test.ts:41:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '接入前需先恢复设备身份；本机来源仍可读取。',
+    expected: /共享状态读取未确认/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+exit_code=1

@@ -1,0 +1,116 @@
+{
+  "start_utc": "2026-11-02T16:54:22.396611+00:00",
+  "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+  "argv": [
+    "env",
+    "-u",
+    "NO_COLOR",
+    "BEE_DEVICE_TEST_PORT=1422",
+    "npx",
+    "playwright",
+    "test",
+    "--config",
+    "playwright.device.config.ts",
+    "native-experience.spec.ts",
+    "--grep",
+    "T8 failed autostart reads|T8 null autostart set",
+    "--output",
+    "../.superpowers/sdd/t8-fix-red-missing-registration"
+  ],
+  "head": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n"
+}
+
+Running 2 tests using 2 workers
+
+  ✘  2 [chromium] › tests/native-experience.spec.ts:478:1 › T8 null autostart set registration remains unknown without inventing a mismatch (6.1s)
+  ✘  1 [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence (6.4s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence 
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: getByTestId('native-settings')
+    Expected substring: not "系统启动登记与期望不一致。"
+    Received string: "通用网络与代理通知与启动关于通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: IPC_TIMEOUT
+    失败环节: autostart_set
+    原始原因: autostart accepted; receipt lost: enabled=true系统启动登记与期望不一致。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: AUTOSTART_UNCONFIRMED
+    失败环节: autostart_status
+    原始原因: autostart status missing registration: desired=false registered=null; required=boolean重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "not toContainText" getByTestId('native-settings') with timeout 5000ms
+      - waiting for getByTestId('native-settings')
+        14 × locator resolved to <div dir="ltr" data-orientation="horizontal" data-testid="native-settings" class="native-settings section-tabs">…</div>
+           - unexpected value "通用网络与代理通知与启动关于通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: IPC_TIMEOUT
+    失败环节: autostart_set
+    原始原因: autostart accepted; receipt lost: enabled=true系统启动登记与期望不一致。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: AUTOSTART_UNCONFIRMED
+    失败环节: autostart_status
+    原始原因: autostart status missing registration: desired=false registered=null; required=boolean重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。"
+
+
+      453 |   await expect(settings).toContainText('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。');
+      454 |   await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+    > 455 |   await expect(settings).not.toContainText('系统启动登记与期望不一致。');
+          |                              ^
+      456 |   await expect(settings.getByRole('alert')).toHaveCount(2);await expect(settings).toContainText('autostart accepted; receipt lost: enabled=true');
+      457 |   if(outcome==='null-error'||outcome==='bool-error')await expect(settings).toContainText('autostart query failed: kind=PermissionDenied os_code=13');
+      458 |   if(outcome==='null-only')await expect(settings).toContainText('registered=null; required=boolean');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:455:30
+
+    Error Context: ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/native-experience.spec.ts:478:1 › T8 null autostart set registration remains unknown without inventing a mismatch 
+
+    Error: expect(locator).not.toContainText(expected) failed
+
+    Locator: getByTestId('native-settings')
+    Expected substring: not "不一致"
+    Received string: "通用网络与代理通知与启动关于通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。系统启动登记与期望不一致。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: AUTOSTART_UNCONFIRMED
+    失败环节: autostart_set
+    原始原因: autostart set missing registration: desired=true registered=null; required=boolean重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "not toContainText" getByTestId('native-settings') with timeout 5000ms
+      - waiting for getByTestId('native-settings')
+        14 × locator resolved to <div dir="ltr" data-orientation="horizontal" data-testid="native-settings" class="native-settings section-tabs">…</div>
+           - unexpected value "通用网络与代理通知与启动关于通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。系统启动登记与期望不一致。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: AUTOSTART_UNCONFIRMED
+    失败环节: autostart_set
+    原始原因: autostart set missing registration: desired=true registered=null; required=boolean重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。"
+
+
+      481 |  const desired=page.getByLabel('登录系统后启动 Bee',{exact:true}),settings=page.getByTestId('native-settings');
+      482 |  await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+    > 483 |  await expect(settings).toContainText('registered=null; required=boolean');await expect(settings).not.toContainText('不一致');
+          |                                                                                                       ^
+      484 |  await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(desired).toBeEnabled();
+      485 |  expect((await calls(page,'autostart_set')).length).toBe(1);
+      486 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:483:103
+
+    Error Context: ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence 
+    [chromium] › tests/native-experience.spec.ts:478:1 › T8 null autostart set registration remains unknown without inventing a mismatch 
+
+{"end_utc": "2026-11-02T16:54:31.773863+00:00", "exit": 1}

@@ -1,0 +1,39 @@
+✖ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (6.03625ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.950875
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:40:1
+✖ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (6.03625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+  +   code: 'unknown_failure',
+  +   evidence: {},
+  +   reads: 3
+  -   code: 'DESKTOP_STALE_RESULT',
+  -   evidence: {
+  -     actual: '1',
+  -     required: 'runtime revision >=9 from confirmed operation receipt'
+  -   },
+  -   reads: 2
+    }
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:46:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { code: 'unknown_failure', evidence: {}, reads: 3 },
+    expected: { code: 'DESKTOP_STALE_RESULT', evidence: { actual: '1', required: 'runtime revision >=9 from confirmed operation receipt' }, reads: 2 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

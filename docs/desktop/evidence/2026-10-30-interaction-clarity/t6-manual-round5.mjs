@@ -1,0 +1,12 @@
+const fs=await import('node:fs/promises'),task=await taskSpace(36),page=task.page('p1');
+const base='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity',records=[];
+for(const scene of ['device-loading','device-draining','device-redemption-unknown','recovery-owner']){
+ await page.cdp('Emulation.setDeviceMetricsOverride',{width:860,height:600,deviceScaleFactor:1,mobile:false});await page.cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await page.goto(`http://127.0.0.1:1421/tests/fixtures/bee-preview/app.html?scene=${scene}&locale=zh&theme=light&long=1`);await page.waitForFunction(()=>window.__beePreviewReady&&!window.__beePreviewError,undefined,{timeout:15000});
+ if(scene!=='device-loading'){await page.waitForSelector('.pairing-phase');await page.evaluate(()=>document.querySelector('.device-pairing').scrollIntoView({block:'start'}));}
+ const before=scene==='recovery-owner'?await page.evaluate(()=>{const c=document.querySelector('.problem-notice'),b=c.querySelector('button');return {actionX:b.getBoundingClientRect().x,actionTopRelative:b.getBoundingClientRect().y-c.getBoundingClientRect().y};}):null;
+ if(scene==='recovery-owner')await page.click('.device-pairing .problem-notice summary');
+ const result=await page.evaluate(()=>{const c=document.querySelector('.problem-notice'),b=c?.querySelector('button');return {viewport:[innerWidth,innerHeight],overflow:document.documentElement.scrollWidth>innerWidth,title:document.querySelector('.native-runtime-title h2').textContent,phase:document.querySelector('.pairing-phase')?.textContent,unboundForm:!!document.querySelector('.device-pairing form'),action:b?{actionX:b.getBoundingClientRect().x,actionTopRelative:b.getBoundingClientRect().y-c.getBoundingClientRect().y}:null,writes:window.calls.filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','account_action','supply_set_paused'].includes(c.command))};});
+ await page.screenshot({path:`${base}/t6-manual-${scene}-860-zh-light-boundary.png`});records.push({scene,utc:new Date().toISOString(),before,result});
+}
+await fs.writeFile(base+'/t6-manual-round5.json',JSON.stringify({utc:new Date().toISOString(),runtime:process.version,space:36,page:'p1',script:'/tmp/t6-manual-round5.mjs',records},null,2));console.log(JSON.stringify(records,null,2));

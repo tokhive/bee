@@ -1,0 +1,116 @@
+{"utc": "2026-11-02T16:00:02.536315+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-experience.spec.ts", "--grep", "T8 unknown proxy save|T8 restore failure|T8 pending network apply|T8 lost notification|T8 repeated original|T8 export waiting", "--output", "../.cache/t8-ui-boundaries-first"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+
+Running 6 tests using 5 workers
+
+  ✓  3 [chromium] › tests/native-experience.spec.ts:397:1 › T8 repeated original-report read failures preserve cancel evidence and share a pending reread (2.4s)
+  ✓  5 [chromium] › tests/native-experience.spec.ts:374:1 › T8 restore failure preserves the applied network and the separate stopped runtime (2.4s)
+  ✓  6 [chromium] › tests/native-experience.spec.ts:405:1 › T8 export waiting and unknown receipts survive navigation and translate with the app language (1.2s)
+  ✘  4 [chromium] › tests/native-experience.spec.ts:367:1 › T8 unknown proxy save permits a new explicit save only after current scoped reads succeed (7.3s)
+  ✘  1 [chromium] › tests/native-experience.spec.ts:390:1 › T8 lost notification permission receipt survives navigation and is reconciled only by OS reads (7.4s)
+  ✘  2 [chromium] › tests/native-experience.spec.ts:382:1 › T8 pending network apply receives one result after navigating away without replay (30.1s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:367:1 › T8 unknown proxy save permits a new explicit save only after current scoped reads succeed 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.ns-network-summary')
+    Expected substring: "18392"
+    Received string:    "已保存配置http://127.0.0.1:18391当前生效配置代理未启用"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('.ns-network-summary') with timeout 5000ms
+      - waiting for locator('.ns-network-summary')
+        14 × locator resolved to <dl class="ns-network-summary">…</dl>
+           - unexpected value "已保存配置http://127.0.0.1:18391当前生效配置代理未启用"
+
+
+      369 |  await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18391');const save=page.getByRole('button',{name:'保存代理',exact:true});await save.click();await expect(save).toBeDisabled();
+      370 |  await page.getByRole('button',{name:'核对当前保存配置',exact:true}).click();await expect(save).toBeEnabled();expect((await calls(page,'network_save_proxy')).length).toBe(1);
+    > 371 |  await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18392');await save.click();await expect(page.locator('.ns-network-summary')).toContainText('18392');expect((await calls(page,'network_save_proxy')).length).toBe(2);
+          |                                                                                                                                                       ^
+      372 | });
+      373 |
+      374 | test('T8 restore failure preserves the applied network and the separate stopped runtime',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:371:151
+
+    Error Context: ../.cache/t8-ui-boundaries-first/native-experience-T8-unkno-f2d9e-urrent-scoped-reads-succeed-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-ui-boundaries-first/native-experience-T8-unkno-f2d9e-urrent-scoped-reads-succeed-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-ui-boundaries-first/native-experience-T8-unkno-f2d9e-urrent-scoped-reads-succeed-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/native-experience.spec.ts:382:1 › T8 pending network apply receives one result after navigating away without replay 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('navigation').getByRole('button', { name: '诊断', exact: true })
+
+
+      384 |  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='network_apply_saved')return new Promise(resolve=>w.releaseApply=()=>resolve(value));return value;};});
+      385 |  await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'停止并重新启动',exact:true}).click();await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseApply)).toBe('function');
+    > 386 |  await nav(page,'诊断').click();await nav(page,'设置').click();await expect(page.getByText('正在等待网络应用回执…',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'保存代理',exact:true})).toBeDisabled();
+          |                       ^
+      387 |  await page.evaluate(()=>(window as any).releaseApply());await expect(page.getByText('已收到网络应用回执；贡献状态以当前读取为准。',{exact:true})).toBeVisible();expect((await calls(page,'network_apply_saved')).length).toBe(1);
+      388 | });
+      389 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:386:23
+
+    Error Context: ../.cache/t8-ui-boundaries-first/native-experience-T8-pendi-20f9f-igating-away-without-replay-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-ui-boundaries-first/native-experience-T8-pendi-20f9f-igating-away-without-replay-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-ui-boundaries-first/native-experience-T8-pendi-20f9f-igating-away-without-replay-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/native-experience.spec.ts:390:1 › T8 lost notification permission receipt survives navigation and is reconciled only by OS reads 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.ns-os-status').first()
+    Expected substring: "已允许"
+    Received string:    "系统权限尚未允许"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('.ns-os-status').first() with timeout 5000ms
+      - waiting for locator('.ns-os-status').first()
+        14 × locator resolved to <div class="ns-os-status">…</div>
+           - unexpected value "系统权限尚未允许"
+
+
+      392 |  await page.getByLabel('接收系统通知',{exact:true}).check();await expect(page.getByText('通知授权请求结果尚未确认；请重新检查系统状态，不会重复请求授权。',{exact:true})).toBeVisible();
+      393 |  await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();expect((await calls(page,'notification_enable')).length).toBe(1);
+    > 394 |  await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();await expect(page.locator('.ns-os-status').first()).toContainText('已允许');expect((await calls(page,'notification_enable')).length).toBe(1);expect(await calls(page,'autostart_set')).toEqual([]);
+          |                                                                                                                          ^
+      395 | });
+      396 |
+      397 | test('T8 repeated original-report read failures preserve cancel evidence and share a pending reread',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:394:122
+
+    Error Context: ../.cache/t8-ui-boundaries-first/native-experience-T8-lost--55602-reconciled-only-by-OS-reads-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-ui-boundaries-first/native-experience-T8-lost--55602-reconciled-only-by-OS-reads-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-ui-boundaries-first/native-experience-T8-lost--55602-reconciled-only-by-OS-reads-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › tests/native-experience.spec.ts:367:1 › T8 unknown proxy save permits a new explicit save only after current scoped reads succeed 
+    [chromium] › tests/native-experience.spec.ts:382:1 › T8 pending network apply receives one result after navigating away without replay 
+    [chromium] › tests/native-experience.spec.ts:390:1 › T8 lost notification permission receipt survives navigation and is reconciled only by OS reads 
+  3 passed (32.3s)
+{"exit": 1, "utc": "2026-11-02T16:00:35.913817+00:00"}

@@ -1,0 +1,45 @@
+UTC: 2026-11-02T10:36:15.029990+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['node', '--test', 'tests/desktopState.test.ts']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (4.556375ms)
+✔ old child and network revision results never replace current state (0.962459ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (0.776083ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (1.225083ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (0.452291ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (0.524834ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (0.473375ms)
+✔ device read failure stays on the device and still publishes account defaults (0.966625ms)
+✔ replacement refresh starts after the status listener returns (0.438583ms)
+✔ a superseded initial status rejection cannot block a ready event (0.541834ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (0.917875ms)
+✔ shared and independent platform facts publish before slow openai account (0.335541ms)
+✔ shared and independent platform facts publish before slow claude account (0.195834ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.34575ms)
+✔ failed platform reads retain confirmed history and its real retry time (0.281041ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.438459ms)
+✔ supply progress follows its platform request rather than another platform busy flag (5.850708ms)
+✔ coordinator preserves the actual retry timer for reconciling (1.258083ms)
+✔ coordinator preserves the actual retry timer for pending (0.301334ms)
+✔ coordinator preserves the actual retry timer for running (0.287125ms)
+✔ identity failure still fences each local account receipt before publishing local facts (0.311125ms)
+✔ existing credential recovery is discovered by the shared reader and stale revisions are rejected (0.332ms)
+✔ only a typed absent recovery is ignored; corrupt records remain visible (0.306541ms)
+✔ recovery completion changes binding within the same refresh before publishing new scoped facts (0.78475ms)
+✔ binding is isolated when recoveryStatus saves config but its response fails (0.607666ms)
+✔ binding is isolated when status saves config but its response fails (0.84725ms)
+ℹ tests 26
+ℹ suites 0
+ℹ pass 26
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 115.775125
+
+Exit: 0
+UTC end: 2026-11-02T10:36:15.211358+00:00

@@ -1,0 +1,90 @@
+UTC: 2026-11-02T10:53:13.462509+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['node', '--test', '--test-name-pattern', 'recovery (read failure|failure with successful)', 'tests/desktopState.test.ts', 'tests/desktopStatus.test.ts']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+✖ recovery failure with successful identity permits only fenced local account observations (3.882ms)
+✖ recovery read failure suppresses confirmed old success (1.398125ms)
+✖ recovery read failure retains its evidence and blocks every ready platform (0.400083ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 0
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 76.949667
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:160:1
+✖ recovery failure with successful identity permits only fenced local account observations (3.882ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  4 !== 0
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:169:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 4,
+    expected: 0,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:29:38
+✖ recovery read failure suppresses confirmed old success (1.398125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'ready'
+  - 'unconfirmed'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:29:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'ready',
+    expected: 'unconfirmed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:31:1
+✖ recovery read failure retains its evidence and blocks every ready platform (0.400083ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + null
+  - {
+  -   check: 'device_recovery_status',
+  -   code: 'DEVICE_RECOVERY_FAILED',
+  -   evidence: {
+  -     http_status: '401'
+  -   },
+  -   message: 'recovery admission rejected: account_workers=1',
+  -   observedAt: '2026-11-02T04:00:00.000Z'
+  - }
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:31:278)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: null,
+    expected: { code: 'DEVICE_RECOVERY_FAILED', check: 'device_recovery_status', observedAt: '2026-11-02T04:00:00.000Z', evidence: { http_status: '401' }, message: 'recovery admission rejected: account_workers=1' },
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+Exit: 1
+UTC end: 2026-11-02T10:53:13.596559+00:00

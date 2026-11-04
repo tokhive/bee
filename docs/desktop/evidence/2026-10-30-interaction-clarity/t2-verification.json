@@ -1,0 +1,66 @@
+{
+  "task": "T2",
+  "bee_commit": "2c48adb0a67e128c81ce607c5b5088f79ed59a30",
+  "hive_commit": "da161c5600c617652fe70507739809c9427acf49",
+  "hive_bee_gitlink_before": "6fccf3b11a2a430075e4e23634eda4913e3ced08",
+  "hive_bee_gitlink_after": "ab8140a175f1c1c6fd4c689fc1bd1e23e82e180f",
+  "hive_full_selector_results": [
+    [
+      "PASS",
+      "TestDetailedSupplyDatabaseFactsPreserveAdmission"
+    ],
+    [
+      "PASS",
+      "TestDynamicSupplyTakesOverReplacedDeviceWithoutRestart"
+    ],
+    [
+      "PASS",
+      "TestDynamicSupplyFollowsOnlineAccountsAndPlanLimits"
+    ],
+    [
+      "PASS",
+      "TestProviderSelfOnboardingEndToEnd"
+    ],
+    [
+      "PASS",
+      "TestDetailedSupplyDynamicHTTPUsesRegistrationAndCurrentFingerprint"
+    ],
+    [
+      "PASS",
+      "TestBeePausePreservesInFlightResponses"
+    ],
+    [
+      "PASS",
+      "TestBeePlatformPausePersistsAndIsIsolated"
+    ],
+    [
+      "PASS",
+      "TestDetailedSupplyOptionValidationPrecedesPauseWrite"
+    ],
+    [
+      "PASS",
+      "TestDetailedSupplyNoConfigurationReportsOnlyProvenBlockers"
+    ],
+    [
+      "PASS",
+      "TestDetailedSupplyPauseWritesExactlyOnce"
+    ]
+  ],
+  "hive_full_selector_subtests": 15,
+  "logs": [
+    "t2-bee-red.log",
+    "t2-bee-green.log",
+    "t2-bee-green-final.log",
+    "t2-hive-red.log",
+    "t2-hive-red-capability.log",
+    "t2-hive-red-ready.log",
+    "t2-hive-red-query.log",
+    "t2-hive-green-initial.log",
+    "t2-hive-green-ready.log",
+    "t2-hive-green-query.log",
+    "t2-hive-green.log",
+    "t2-hive-green-final.log",
+    "t2-hive-green-ready-final.log",
+    "t2-hive-db.log"
+  ]
+}

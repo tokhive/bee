@@ -1,0 +1,54 @@
+UTC: 2026-11-02T10:53:34.708748+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'native-runtime.spec.ts', '--grep', 'recovery-only failure', '--workers=1']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview (6.0s)
+
+
+  1) [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  locator('.app-shell')
+    Expected: "unconfirmed"
+    Received: "ready"
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveAttribute" locator('.app-shell') with timeout 5000ms
+      - waiting for locator('.app-shell')
+        14 × locator resolved to <div data-desktop-status="ready" class="app-shell native-shell">…</div>
+           - unexpected value "ready"
+
+
+      210 |  await page.goto('/');await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status','ready');await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
+      211 |  const before=(await calls(page,'account_snapshot')).length;await page.evaluate(()=>(window as any).recoveryFail=true);await reconcile(page);
+    > 212 |  await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status','unconfirmed');await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeDisabled();
+          |                                           ^
+      213 |  expect(await calls(page,'account_snapshot')).toHaveLength(before);expect(await calls(page,'supply_set_paused')).toEqual([]);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      214 |  await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await expect(page.getByRole('alert')).toContainText('recovery admission rejected: account_workers=1');
+      215 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:212:43
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-recovery-on-5f7b5--is-visible-beyond-overview-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview 
+
+Exit: 1
+UTC end: 2026-11-02T10:53:42.322941+00:00

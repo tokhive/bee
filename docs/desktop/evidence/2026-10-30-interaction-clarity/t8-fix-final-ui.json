@@ -1,0 +1,33 @@
+{
+  "start_utc": "2026-11-02T16:58:30.651212+00:00",
+  "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+  "argv": [
+    "env",
+    "-u",
+    "NO_COLOR",
+    "BEE_DEVICE_TEST_PORT=1422",
+    "npx",
+    "playwright",
+    "test",
+    "--config",
+    "playwright.device.config.ts",
+    "native-experience.spec.ts",
+    "recovery-navigation.spec.ts",
+    "--output",
+    "../.superpowers/sdd/t8-fix-final-ui"
+  ],
+  "head": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+  "source_sha256": {
+    "desktop/src/features/settings/NativeSettingsPage.tsx": "b1800a6661248796ea788646b7c6c385362baa140338a2d30a3a2876ca493834",
+    "desktop/tests/native-experience.spec.ts": "3e2ba2972bcac82a34001ecaae16e9d13d753b9238b718e0e3c6a19bf73dad74"
+  },
+  "test_environment": {
+    "BEE_DEVICE_TEST_PORT": "1422",
+    "BEE_E2E_PORT": null,
+    "NO_COLOR": null,
+    "FORCE_COLOR": null
+  },
+  "end_utc": "2026-11-02T16:58:53.669931+00:00",
+  "exit": 0
+}

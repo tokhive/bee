@@ -32,6 +32,7 @@ type request struct {
 	Stop             bee.DesktopStopRequest
 	NetworkTest      bee.DesktopNetworkTestRequest
 	Network          bee.DesktopNetworkConfig
+	Presence         bee.DesktopPresenceRequest
 	Authorize        bee.DesktopAuthorizeRequest
 	OperationID      string
 	RecoveryRevision int64

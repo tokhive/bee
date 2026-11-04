@@ -1,0 +1,17 @@
+{
+  "utc": "2026-11-02T13:58:14.668Z",
+  "before": {
+    "scrollTop": 250,
+    "focused": true,
+    "reads": 6,
+    "value": ""
+  },
+  "after": {
+    "scrollTop": 250,
+    "sameElement": true,
+    "focused": true,
+    "reads": 8,
+    "value": "",
+    "writes": 0
+  }
+}

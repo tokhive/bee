@@ -1,7 +1,21 @@
 import type {BridgeError} from './bridge';
 export interface UiFailure {code:string;check:string;observedAt:string|null;evidence:Record<string,string>;message:string}
 export interface FailureDetails {check:string;observed_at:string;evidence:Record<string,string>}
-const keys=['target_origin','path','http_status','remote_code','response_body','source_type','actual','required'];
+export const requestMethods='hello ping shutdown device_status device_begin device_context device_recovery_prepare device_recovery_confirm device_recovery_status account_defaults account_detect account_snapshot account_action supply_status supply_set_paused authorize_start authorize_status authorize_cancel diagnostics_start diagnostics_snapshot diagnostics_cancel runtime_snapshot runtime_start runtime_stop runtime_restore runtime_configure_network runtime_enable_presence runtime_verify network_status network_test notification_snapshot'.split(' ');
+export const failureKinds='timeout dns_temporary dns_failed tls_failed connection_refused connection_closed http_rejected unknown_failure'.split(' ');
+export function retryEvidence(key:string,value:string):boolean|undefined {
+ const integer=(max:number)=>/^(0|[1-9]\d{0,15})$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)<=max;
+ if(key==='request_id')return /^shell-[1-9]\d{0,19}$/.test(value)&&BigInt(value.slice(6))<=18446744073709551615n;
+ if(key==='method')return ['GET','PUT','POST',...requestMethods].includes(value);
+ if(key==='platform')return ['none','openai','claude'].includes(value);
+ if(key==='phase')return ['queue','write','response','http_start','http_end','http_error'].includes(value);
+ if(key==='failure_kind')return failureKinds.includes(value);
+ if(['fully_sent','in_flight'].includes(key))return ['true','false'].includes(value);
+ if(['queue_ms','execution_ms','elapsed_ms'].includes(key))return integer(Number.MAX_SAFE_INTEGER);
+ if(key==='retry_after_seconds')return integer(2147483647);
+ return undefined;
+}
+const keys=['request_id','method','platform','phase','queue_ms','execution_ms','elapsed_ms','retry_after_seconds','fully_sent','in_flight','failure_kind','target_origin','path','http_status','remote_code','response_body','source_type','actual','required'];
 const accountKeys=['not_found','permission_denied','os_error','cause','parsed','profile_scope','inference_scope','expires_at','source_revision_match','transport_failed','confirmed'];
 const record=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!==null&&!Array.isArray(v);
 const bytes=(v:string)=>new TextEncoder().encode(v).length;
@@ -42,6 +56,7 @@ export function decodeBridgeError(value:unknown,invalidCode='BRIDGE_REPLY_INVALI
   if(typeof d.check!=='string'||! /^[a-z][a-z0-9_]{0,79}$/.test(d.check)||!validFailureTime(d.observed_at)||!record(d.evidence))return invalid('details requires bounded public check, valid UTC observation and evidence object');
   for(const [key,v]of Object.entries(d.evidence)){
    if(!keys.includes(key)||typeof v!=='string'||bytes(v)>32768||safeFailureText(v)!==v)return invalid(`details evidence rejected at key=${keys.includes(key)?key:'unknown'}; required=fixed safe fields at most 32768 bytes`);
+   if(retryEvidence(key,v)===false)return invalid(`details evidence ${key} rejected; required=fixed retry evidence value`);
    if(key==='target_origin'&&!safeOrigin(v)||key==='path'&&!/^\/api\/bee\/[a-z0-9/_-]+$/.test(v)||key==='http_status'&&!/^[1-5][0-9]{2}$/.test(v)||key==='remote_code'&&!/^[a-z][a-z0-9_]{0,127}$/.test(v)||key==='source_type'&&!/^[a-z][a-z0-9_]{0,79}$/.test(v))return invalid(`details evidence ${key} rejected; required=safe public value`);
   }
  }
@@ -59,6 +74,7 @@ export function normalizeFailure(cause:unknown,check:string):UiFailure {
  if(validFailureTime(cause.observedAt))fallback.observedAt=cause.observedAt;
  const account=typeof cause.check==='string'&&(typeof cause.platform==='string'||Object.hasOwn(cause,'observedAt'));
  const source=record(cause.evidence)?cause.evidence:null;
+ if(account&&source&&validFailureTime(source.observed_at))fallback.observedAt=source.observed_at;
  if(source)for(const [k,v]of Object.entries(source))if((keys.includes(k)||account&&accountKeys.includes(k))&&typeof v==='string')fallback.evidence[k]=safeFailureText(v);
  if('details'in cause){
   try{const e=decodeBridgeError({code:fallback.code,message:fallback.message,details:cause.details});if(e.details){fallback.check=e.details.check;fallback.observedAt=e.details.observed_at;fallback.evidence={...e.details.evidence};}}

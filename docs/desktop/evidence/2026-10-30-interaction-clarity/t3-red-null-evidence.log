@@ -1,0 +1,5 @@
+--- FAIL: TestDesktopConnectionStrictDetailDecoding (0.00s)
+    desktop_connection_test.go:344: unsafe or contradictory detail accepted: {"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{"response_body":null}},"retry":"halted","next_retry_at":null}
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.510s
+FAIL

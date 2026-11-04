@@ -1,0 +1,49 @@
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+[p1 "Bee" | space "Bee desktop interaction implementation 2026-11-02 continued"(40): 1 managed, 0 untracked — p1* "Bee"]
+root
+  container
+    container
+      image
+      text "Bee"
+    container "主导航"
+      button [ref=186]
+        svg_root
+        text "概览"
+      button [ref=187]
+        svg_root
+        text "AI 账号"
+      button [ref=188]
+        svg_root
+        text "诊断"
+      button [ref=189]
+        svg_root
+        text "设置"
+    container
+      container
+        text "尚未接通真实供给"
+        paragraph
+          text "Hive 未连接"
+      container
+        svg_root
+        container
+          text "Bee 桌面端"
+          text "等待业务接入"
+  container
+    container
+      svg_root
+      text "本机设备"
+    container
+      container
+        heading [ref=190]
+          text "概览"
+        paragraph
+          text "查看设备状态与贡献摘要。"
+      alert
+        heading
+          text "业务服务未接通"
+        text "业务服务未接通：当前构建尚未配置真实 Bee/Hive 业务适配器。"
+    container
+      text "Bee"
+      text "真实业务未接通"
+
+

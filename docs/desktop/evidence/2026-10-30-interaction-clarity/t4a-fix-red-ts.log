@@ -1,0 +1,43 @@
+✔ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (10.417875ms)
+✔ device replies only expose validated public binding data (3.807583ms)
+✔ business rejection preserves operation evidence (0.879042ms)
+✔ device rejection retains structured failure before binding validation (3.325208ms)
+✔ device error details reject unknown fields and invalid observations (0.719792ms)
+✔ native device client uses fixed commands and no frontend config path (0.35725ms)
+✖ native context failures retain only a validated observed binding revision (0.410583ms)
+✔ startup status survives a bridge query that settles later and rejects old instances (7.96375ms)
+✔ binding replacement invalidates operation generations and clears old facts before new reads (2.795458ms)
+✔ startup decoder rejects malformed context and state/failure contradictions (2.758125ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (2.604708ms)
+✖ absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state (2.522083ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 10
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 155.900958
+
+✖ failing tests:
+
+test at desktop/tests/device.test.ts:39:1
+✖ native context failures retain only a validated observed binding revision (0.410583ms)
+  Error: DEVICE_REPLY_INVALID: context failure fields rejected
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/device.ts:24:48)
+      at decodeDeviceContext (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/device.ts:56:76)
+      at Object.context (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/device.ts:68:29)
+      at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.test.ts:41:15)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/startup-recovery.test.ts:44:1
+✖ absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state (2.522083ms)
+  Error: DIAGNOSTICS_REPLY_INVALID: report binding revision differs from current context
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:20:45)
+      at gate (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:100:76)
+      at request (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:104:91)
+      at async Object.start (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:110:98)
+      at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/startup-recovery.test.ts:49:156)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

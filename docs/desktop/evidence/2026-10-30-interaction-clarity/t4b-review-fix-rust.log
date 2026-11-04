@@ -1,0 +1,36 @@
+command: cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml --lib -- device_ initial_device_ native_go_management_binary_can_handshake_ping_and_stop
+time: 2026-11-02T07:54:58.926689+00:00
+baseline: a114c99ba4131ed11847e0bec0daf5861b045a72
+coverage: Existing initial device/recovery contracts, recovery bridge/startup protections, current real Go sidecar handshake/ping/stop; no real user configuration
+sha256 0d236f987fa0ae8efb71fa114ea7f430cef1eda21b7f70e0632bc69a709e183b agent/desktop_device.go
+sha256 453ab81073aa34cfe5a1c941e5519fab25a9cdcd8a67c8d6e9b615610f1908c3 agent/desktop_device_recovery.go
+sha256 a1964f4e05f0cb1d8cfe18caa611e7b983e39b8b034c284c3b48589f5c21ae59 agent/desktop_device_recovery_test.go
+environment: PATH=/Users/dayong/.nvm/versions/node/v24.22.1/bin:$PATH RUSTUP_TOOLCHAIN=1.94
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.88s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 15 tests
+test network::tests::network_scope_accepts_only_actual_device_status_states ... ok
+test protocol::tests::initial_device_reply_rejects_unknown_or_secret_fields ... ok
+test protocol::tests::initial_device_state_never_claims_an_unverified_identity ... ok
+test protocol::tests::device_recovery_public_contract_is_strict_and_keeps_initial_pairing_separate ... ok
+test protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision ... ok
+test commands::device_tests::browser_url_is_limited_to_saved_pairing ... ok
+test network::desktop_failure_tests::device_rejection_precedes_scope_validation ... ok
+test protocol::device_context_tests::context_keeps_go_origins_and_rejects_incomplete_or_secret_fields ... ok
+test network::tests::network_verified_scope_binds_draft_without_cross_device_copy ... ok
+test sidecar::tests::native_go_management_binary_can_handshake_ping_and_stop ... ok
+test sidecar::tests::device_business_failure_keeps_owned_bridge_ready ... ok
+test experience::tests::device_recovery_retains_update_data_and_owned_exit_protection ... ok
+test experience::tests::device_recovery_stays_stopped_until_explicit_recheck_and_completed_status_is_stable ... ok
+test sidecar::tests::device_recovery_methods_keep_fixed_contract_and_startup_hold_exit_boundaries ... ok
+test sidecar::tests::unsent_queue_timeout_does_not_kill_a_healthy_device_session ... ok
+
+test result: ok. 15 passed; 0 failed; 0 ignored; 0 measured; 190 filtered out; finished in 13.68s
+
+
+exit_code: 0
+
+binary evidence: {"beeVersion": "dev+a114c99ba413-dirty", "binarySha256": "ac50a6b030ae6ab98fca130acc31807ffb3e260e34aaf70a6edd2ce177a1d5b9", "go": "go version go1.27.3 darwin/arm64", "goarch": "arm64", "goos": "darwin", "revision": "a114c99ba4131ed11847e0bec0daf5861b045a72", "target": "aarch64-apple-darwin", "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254"}
+Scope note: embedded revision is baseline only; task source SHA-256 entries above identify tested dirty source. No claim of final full-plan verification.

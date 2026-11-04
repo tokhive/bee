@@ -1,0 +1,35 @@
+{
+  "utc": "2026-11-02T13:55:45.898Z",
+  "facts": [
+    {
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "sheetOverflow": false,
+      "sourceOpen": true,
+      "sourceErrorCount": 1,
+      "sourceValue": "/tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check/",
+      "muted": "rgb(105, 102, 95)",
+      "background": "rgb(255, 255, 255)",
+      "contrast": 5.727619510827418,
+      "accountWrites": 0,
+      "missing": [],
+      "phase": "所选来源暂不能提供可接入账号，请查看具体原因。"
+    },
+    {
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "sheetOverflow": false,
+      "sourceOpen": true,
+      "sourceErrorCount": 1,
+      "sourceValue": "/tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check//tmp/long-source-check/",
+      "muted": "rgb(160, 157, 148)",
+      "background": "rgb(36, 36, 33)",
+      "contrast": 5.740001455899978,
+      "accountWrites": 0,
+      "missing": [],
+      "phase": "The selected source cannot currently provide a connectable account. Review the specific cause."
+    }
+  ]
+}

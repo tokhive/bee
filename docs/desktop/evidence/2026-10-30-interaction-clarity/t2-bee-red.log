@@ -1,0 +1,37 @@
+--- FAIL: TestDesktopSupplyPlatformIsolationExplicitFalseAndRestart (0.02s)
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+--- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay (0.08s)
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/lost_put_response (0.02s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/put_http_error (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/put_wrong_target (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_http_error (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_lost_response (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_opposite (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_invalid_schema (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=PUT query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.581s
+FAIL

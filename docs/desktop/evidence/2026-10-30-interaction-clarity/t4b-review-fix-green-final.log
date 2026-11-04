@@ -1,0 +1,241 @@
+command: go test ./agent ./desktopbridge -run 'DesktopDevice|DeviceRecovery|DesktopSession' -count=1 -v
+time: 2026-11-02T07:52:34.015554+00:00
+baseline: a114c99ba4131ed11847e0bec0daf5861b045a72
+coverage: DesktopDevice/DeviceRecovery/DesktopSession; initialization disk failures, original HTTP503 evidence, legacy and attempted creation bounds
+sha256 0d236f987fa0ae8efb71fa114ea7f430cef1eda21b7f70e0632bc69a709e183b agent/desktop_device.go
+sha256 453ab81073aa34cfe5a1c941e5519fab25a9cdcd8a67c8d6e9b615610f1908c3 agent/desktop_device_recovery.go
+sha256 a1964f4e05f0cb1d8cfe18caa611e7b983e39b8b034c284c3b48589f5c21ae59 agent/desktop_device_recovery_test.go
+=== RUN   TestDeviceRecoveryInitialUnknownCreateNeverReplays
+--- PASS: TestDeviceRecoveryInitialUnknownCreateNeverReplays (0.07s)
+=== RUN   TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays
+--- PASS: TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays (0.05s)
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/owner
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/different-owner
+--- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption (0.18s)
+    --- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/owner (0.07s)
+    --- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/different-owner (0.10s)
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/device_replacedƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/invalid_device_credentialƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/Ƒ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/unknownƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/device_replacedƓ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/unavailableǷ
+--- PASS: TestDeviceRecoveryEligibilityFailsClosed (0.09s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/device_replacedƑ (0.02s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/invalid_device_credentialƑ (0.02s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/Ƒ (0.02s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/unknownƑ (0.01s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/device_replacedƓ (0.01s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/unavailableǷ (0.01s)
+=== RUN   TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate
+--- PASS: TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate (0.04s)
+=== RUN   TestDeviceRecoveryDrainingAndAuthoritativeExpiry
+--- PASS: TestDeviceRecoveryDrainingAndAuthoritativeExpiry (0.09s)
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/running
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker_exit
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/pending
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/unclean
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/network_race
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/new_scope
+--- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation (0.23s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/running (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker_exit (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/pending (0.02s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/unclean (0.02s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/network_race (0.08s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/new_scope (0.08s)
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/token_save
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/config_save
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/transaction_finish
+--- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts (0.18s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/token_save (0.03s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/config_save (0.07s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/transaction_finish (0.08s)
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/null_attempt
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/unknown_field
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/duplicate
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/binding_changed
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/missing_binding
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/occupied
+--- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed (0.13s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/null_attempt (0.02s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/unknown_field (0.02s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/duplicate (0.02s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/binding_changed (0.03s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/missing_binding (0.02s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/occupied (0.02s)
+=== RUN   TestDeviceRecoveryUnknownExchangeSurvivesApprovedExpiryAndRestart
+--- PASS: TestDeviceRecoveryUnknownExchangeSurvivesApprovedExpiryAndRestart (0.71s)
+=== RUN   TestDeviceRecoveryRejectsAnAlreadyAdmittedSupplyWrite
+--- PASS: TestDeviceRecoveryRejectsAnAlreadyAdmittedSupplyWrite (0.02s)
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/stopping
+--- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure (0.23s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/recovery (0.02s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/recovery (0.02s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/recovery (0.02s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/recovery (0.02s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/stopping (0.01s)
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true
+--- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof (2.39s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false (0.06s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true (0.05s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false (0.05s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true (0.05s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false (1.12s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true (1.05s)
+=== RUN   TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential
+--- PASS: TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential (0.06s)
+=== RUN   TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin
+--- PASS: TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin (0.05s)
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false
+--- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence (0.09s)
+    --- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true (0.05s)
+    --- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false (0.04s)
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control
+--- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts (0.03s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed (0.01s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run (0.01s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control (0.01s)
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=false
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=true
+--- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence (0.08s)
+    --- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=false (0.04s)
+    --- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=true (0.03s)
+=== RUN   TestDesktopDevicePairingAndRestart
+--- PASS: TestDesktopDevicePairingAndRestart (0.11s)
+=== RUN   TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin
+--- PASS: TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin (0.01s)
+=== RUN   TestDesktopDeviceBoundCredentialNeverRebinds
+--- PASS: TestDesktopDeviceBoundCredentialNeverRebinds (0.01s)
+=== RUN   TestDesktopDeviceRejectsChangedIdentity
+--- PASS: TestDesktopDeviceRejectsChangedIdentity (0.01s)
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://other.example/devices/pair
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/devices/pair?code=bad
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/other
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/javascript:alert(1)
+--- PASS: TestDesktopDeviceRejectsUnsafePairingURL (0.14s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://other.example/devices/pair (0.04s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/devices/pair?code=bad (0.04s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/other (0.03s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/javascript:alert(1) (0.03s)
+=== RUN   TestDesktopDeviceLockConflict
+--- PASS: TestDesktopDeviceLockConflict (0.00s)
+=== RUN   TestDesktopDeviceHiveExpiryAllowsExplicitNewCode
+--- PASS: TestDesktopDeviceHiveExpiryAllowsExplicitNewCode (0.06s)
+=== RUN   TestDesktopDeviceUncertainRedeemKeepsTransaction
+--- PASS: TestDesktopDeviceUncertainRedeemKeepsTransaction (0.05s)
+=== RUN   TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry
+--- PASS: TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry (0.07s)
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/pending
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming
+--- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown (0.13s)
+    --- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/pending (0.09s)
+    --- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming (0.04s)
+=== RUN   TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind
+--- PASS: TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind (0.02s)
+=== RUN   TestDesktopDeviceRemoteErrorCannotEchoPairingToken
+--- PASS: TestDesktopDeviceRemoteErrorCannotEchoPairingToken (0.03s)
+=== RUN   TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests
+--- PASS: TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests (0.04s)
+=== RUN   TestDesktopDeviceContextDistinguishesAbsentAndCorruptLocalRecords
+--- PASS: TestDesktopDeviceContextDistinguishesAbsentAndCorruptLocalRecords (0.00s)
+=== RUN   TestDesktopDeviceContextFailuresKeepObservedBindingRevision
+--- PASS: TestDesktopDeviceContextFailuresKeepObservedBindingRevision (0.00s)
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/credential
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/empty
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/length
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/controls
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_parse
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_host
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_opaque
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_fragment
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_auth
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_query
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_path
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_slash
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_http
+--- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts (0.11s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/credential (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/empty (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/length (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/controls (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_parse (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_host (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_opaque (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_fragment (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_auth (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_query (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_path (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_slash (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_http (0.01s)
+=== RUN   TestDesktopSessionOwnsLockUntilClose
+--- PASS: TestDesktopSessionOwnsLockUntilClose (0.00s)
+=== RUN   TestDesktopSessionNetworkDoesNotBlockOtherPlatform
+--- PASS: TestDesktopSessionNetworkDoesNotBlockOtherPlatform (0.01s)
+=== RUN   TestDesktopSessionCloseWaitsForInFlightRead
+--- PASS: TestDesktopSessionCloseWaitsForInFlightRead (0.02s)
+PASS
+ok  	github.com/tokhive/bee/agent	6.374s
+=== RUN   TestDeviceRecoveryBridgeStrictCommands
+--- PASS: TestDeviceRecoveryBridgeStrictCommands (0.00s)
+PASS
+ok  	github.com/tokhive/bee/desktopbridge	1.267s
+
+exit_code: 0

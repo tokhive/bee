@@ -1,0 +1,54 @@
+time=2026-11-02T10:04:40.881834+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/native-runtime.spec.ts', 'tests/recovery-navigation.spec.ts', '--grep', 'identity .* (still permits|allows local)|Claude inline', '--workers=3']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+Running 4 tests using 3 workers
+
+  ✓  2 [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked (1.5s)
+  ✓  1 [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop (1.6s)
+  ✓  4 [chromium] › tests/recovery-navigation.spec.ts:70:1 › Claude inline source recovery keeps its platform, drafts and return focus without writes (866ms)
+  ✘  3 [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop (6.8s)
+
+
+  1) [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: '开始贡献', exact: true })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: '开始贡献', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '开始贡献', exact: true })
+        14 × locator resolved to <button data-size="sm" data-slot="button" data-variant="default" class="ui-button primary ">…</button>
+           - unexpected value "enabled"
+
+
+      186 |  else{await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot')result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
+      187 |  const stop=page.getByRole('button',{name:'停止贡献',exact:true});await expect(stop).toBeEnabled();await stop.click();await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+    > 188 |  await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+          |                                                                                                                                                ^
+      189 |  expect(await calls(page,'runtime_start')).toHaveLength(1);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
+      190 | });
+      191 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:188:144
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop 
+  3 passed (7.9s)
+
+exit=1

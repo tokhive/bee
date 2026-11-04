@@ -52,3 +52,19 @@ test('an older account read cannot replace a newer operation receipt',async()=>{
  await assert.rejects(client.snapshot('openai',true),/revision/);
  current={...current,revision:6};await client.snapshot('openai',false);
 });
+
+test('embedded Hive account failures accept only bounded HTTP retry evidence',()=>{
+ const account=fixtureAccount(),failure={code:'http_rejected',check:'hive_account',platform:'openai',message:'Hive GET returned HTTP 429',evidence:{method:'GET',phase:'http_error',elapsed_ms:'12000',retry_after_seconds:'30',http_status:'429',failure_kind:'http_rejected'}};
+ (account.hive as any).error=failure;assert.deepEqual(decodeAccountReply(wrap(account),'openai','one').hive.error,failure);
+ for(const value of ['-1','2147483648','1.2']){(account.hive as any).error={...failure,evidence:{...failure.evidence,retry_after_seconds:value}};assert.throws(()=>decodeAccountReply(wrap(account),'openai','one'),/ACCOUNT_REPLY_INVALID/);}
+});
+
+test('embedded Hive failure preserves the original HTTP observation time and rejects invalid times',()=>{
+ const account=fixtureAccount(),failure={code:'connection_closed',check:'identity',platform:'openai',message:'GET /api/bee/identity: unexpected EOF',evidence:{observed_at:'2026-11-03T10:30:20.123456789Z',failure_kind:'connection_closed'}};
+ (account.hive as any).error=failure;
+ assert.deepEqual(decodeAccountReply(wrap(account),'openai','one').hive.error,failure);
+ for(const observed_at of ['2026-02-30T00:00:00Z','2099-01-01T00:00:00Z','not-a-time']){
+  (account.hive as any).error={...failure,evidence:{...failure.evidence,observed_at}};
+  assert.throws(()=>decodeAccountReply(wrap(account),'openai','one'),/ACCOUNT_REPLY_INVALID/);
+ }
+});

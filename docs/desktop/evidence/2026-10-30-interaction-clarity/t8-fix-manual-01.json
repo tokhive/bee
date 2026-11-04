@@ -1,0 +1,46 @@
+{
+  "utc": "2026-11-02T17:00:11.344Z",
+  "space": 40,
+  "page": "p1",
+  "mode": "formal NativeApp with simulated IPC; no real OS registration",
+  "before": {
+    "checked": false,
+    "disabled": false,
+    "registration": "系统登记未登记",
+    "calls": [
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      }
+    ]
+  },
+  "after": {
+    "checked": true,
+    "disabled": true,
+    "text": "通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: IPC_TIMEOUT\n失败环节: autostart_set\n原始原因: autostart accepted; receipt lost: enabled=true重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。",
+    "calls": [
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_set",
+        "args": {
+          "enabled": true
+        }
+      }
+    ],
+    "viewport": {
+      "width": 860,
+      "height": 600
+    }
+  }
+}

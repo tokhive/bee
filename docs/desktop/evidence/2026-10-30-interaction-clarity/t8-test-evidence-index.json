@@ -1,0 +1,1516 @@
+{
+  "utc": "2026-11-02T16:36:38.879094+00:00",
+  "runs": [
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-desktop-state.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:30.215682+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/desktopState.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:31.155078+00:00"
+      },
+      "results": [
+        "ℹ tests 28",
+        "ℹ pass 28",
+        "ℹ fail 0"
+      ],
+      "sha256": "451dc9de19a239fa2c85a374e6f071e9347c17b0ad15c56822b0cab6b3bb2ff7"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-node-fixed.log",
+      "metadata": {
+        "utc": "2026-11-02T16:32:17.754936+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:32:18.200721+00:00"
+      },
+      "results": [
+        "ℹ tests 38",
+        "ℹ pass 38",
+        "ℹ fail 0"
+      ],
+      "sha256": "6385b514153e73996b09c5a1211008d8abeafe569c1da2897415ae117ef2519e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-node.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:30.208362+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:31.141521+00:00"
+      },
+      "results": [
+        "ℹ tests 38",
+        "ℹ pass 38",
+        "ℹ fail 0"
+      ],
+      "sha256": "7b9e5b4bff285aad94ecde4a9489cc1e33ef02841ee6a252f644f895a56a61c7"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-typecheck-fixed.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:58.760455+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:59.701926+00:00"
+      },
+      "results": [],
+      "sha256": "317e69f8ccd1c85576a367b32193c0046f038fa1e305d0e75a04ae7b717bc02d"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-typecheck.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:30.202346+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:30:31.497653+00:00"
+      },
+      "results": [],
+      "sha256": "45d3a280a59814f2d23cc09605c324118a4ba0c0065d819040027a980794943f"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:30.201477+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--output",
+          "../.cache/t8-accepted-final-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:52.697843+00:00"
+      },
+      "results": [
+        "  59 passed (21.1s)"
+      ],
+      "sha256": "27e804bad7665d090fe8c51b6bc617561e768c599dff85d3937c9c32f66670ea"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-diff-check.log",
+      "metadata": {
+        "utc": "2026-11-02T16:36:38.192050+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+        "argv": [
+          "git",
+          "diff",
+          "--check"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:36:38.549864+00:00"
+      },
+      "results": [],
+      "sha256": "bfdbcdc0df0a46ed7e9d21ae7c62c0fd3ea8c33f7e90c5b5f5b976eb0159a02e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-node-second.log",
+      "metadata": {
+        "utc": "2026-11-02T16:10:37.926781+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:10:38.571969+00:00"
+      },
+      "results": [
+        "ℹ tests 36",
+        "ℹ pass 36",
+        "ℹ fail 0"
+      ],
+      "sha256": "bbad943a90613120d2482426cef0444cd913f842feb4d4aa2e3d9fbcedb8667d"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-node.log",
+      "metadata": {
+        "utc": "2026-11-02T16:03:17.076613+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:03:17.729059+00:00"
+      },
+      "results": [
+        "ℹ tests 36",
+        "ℹ pass 36",
+        "ℹ fail 0"
+      ],
+      "sha256": "42c07899ad4c8b0b463ea4b507f24491ec3505bd7fa721e9b5e04a842f0721f1"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-rust-network.log",
+      "metadata": {
+        "utc": "2026-11-02T16:03:17.076641+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri",
+        "argv": [
+          "cargo",
+          "test",
+          "--lib",
+          "network::tests",
+          "--",
+          "--nocapture"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:03:18.872426+00:00"
+      },
+      "results": [
+        "test result: ok. 23 passed; 0 failed; 0 ignored; 0 measured; 202 filtered out; finished in 0.29s"
+      ],
+      "sha256": "69ac5a0e52c847c8621977d51c77610bda85ecfdc95d3935c52c1caf902e3e47"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-typecheck-second.log",
+      "metadata": {
+        "utc": "2026-11-02T16:10:37.926775+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:10:38.980956+00:00"
+      },
+      "results": [],
+      "sha256": "032dc3ea77430ed8f50c6833b2017b7a89718787347d5a93bb456f7e1693a943"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-typecheck.log",
+      "metadata": {
+        "utc": "2026-11-02T16:03:17.076649+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:03:18.223973+00:00"
+      },
+      "results": [],
+      "sha256": "aac18c7de47244c89a7a18ac91bf52d629b61a3d3cc705d9d2572a66c46f146d"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-ui-second.log",
+      "metadata": {
+        "utc": "2026-11-02T16:10:37.926773+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--output",
+          "../.cache/t8-final-ui-second"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:11:01.683182+00:00"
+      },
+      "results": [
+        "  55 passed (22.4s)"
+      ],
+      "sha256": "ebd3a3b8dd6ff5808e8b1289a3a4676050a2018996c8e30f34d25859a6fc756e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T16:03:17.079651+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--output",
+          "../.cache/t8-final-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:04:09.700421+00:00"
+      },
+      "results": [
+        "  5 failed",
+        "  50 passed (51.1s)"
+      ],
+      "sha256": "a0c178cc0115b345ffae8b222106238f79164a84cc72fec3abb80763763f5afd"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-autostart-unknown-previous.log",
+      "metadata": {
+        "utc": "2026-11-02T16:17:24.514646+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 lost autostart receipt",
+          "--output",
+          "../.cache/t8-green-autostart-unknown"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:17:28.755235+00:00"
+      },
+      "results": [
+        "  1 passed (2.8s)"
+      ],
+      "sha256": "1fda5b9fa32a752f81ddbc0f5ff28dfbdb4274423cec94350c68718a24e47321"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-client-boundaries.log",
+      "metadata": {
+        "utc": "2026-11-02T16:00:01.197258+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern",
+          "a running cancel receipt|a late export payload|a failed read after|a late original",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:00:02.104423+00:00"
+      },
+      "results": [
+        "ℹ tests 4",
+        "ℹ pass 4",
+        "ℹ fail 0"
+      ],
+      "sha256": "849a06cbee3ecbf14b73f5e8a3776abaed6f64a840b0c8a3f5c5dd9f18aa8bb6"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-client-focused.log",
+      "metadata": {
+        "utc": "2026-11-02T15:39:16.079994+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=lost start|lost cancel|concurrent reads",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:39:16.635574+00:00"
+      },
+      "results": [
+        "ℹ tests 3",
+        "ℹ pass 3",
+        "ℹ fail 0"
+      ],
+      "sha256": "f0bc864f18cf9e71485803b61fa0d592830feb1623e6dba5f5f41fbbd4fc89ff"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-network-stages.log",
+      "metadata": {
+        "utc": "2026-11-02T15:49:11.152057+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri",
+        "argv": [
+          "cargo",
+          "test",
+          "--lib",
+          "network::tests::network_apply_failure_",
+          "--",
+          "--nocapture"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:49:21.977486+00:00"
+      },
+      "results": [
+        "test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 220 filtered out; finished in 0.10s"
+      ],
+      "sha256": "6c415a5fcfe98c2cb51f76662e3780340a019d378c60b32a515af3e14a039bb6"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-node-first.log",
+      "metadata": {
+        "utc": "2026-11-02T15:50:06.600606+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:50:07.435015+00:00"
+      },
+      "results": [
+        "✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (14.26925ms)",
+        "ℹ tests 32",
+        "ℹ pass 31",
+        "ℹ fail 1",
+        "✖ failing tests:",
+        "✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (14.26925ms)"
+      ],
+      "sha256": "10ddd6b6cbab0de001badb05ef43ebf2221730520e839d1268fef72e1c750b6e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-node-second.log",
+      "metadata": {
+        "utc": "2026-11-02T15:50:37.394154+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:50:38.114873+00:00"
+      },
+      "results": [
+        "ℹ tests 32",
+        "ℹ pass 32",
+        "ℹ fail 0"
+      ],
+      "sha256": "6dda621aedc0fffde5547eec526fac321455fca689f77da534739ae83321a9bd"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-real-hive-dto.log",
+      "metadata": {
+        "utc": "2026-11-02T16:26:25.639792+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=real Hive device replacement|only proven Hive identity",
+          "tests/diagnostic-presentation.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:26:26.145188+00:00"
+      },
+      "results": [
+        "ℹ tests 2",
+        "ℹ pass 2",
+        "ℹ fail 0"
+      ],
+      "sha256": "5d8952465eee98d3336de619afac42c79194b832411c56371edd30e0009496ef"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-recovery-target-and-upstream.log",
+      "metadata": {
+        "utc": "2026-11-02T16:14:05.434154+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--grep",
+          "T8 diagnostic source recovery|T8 successful upstream",
+          "--output",
+          "../.cache/t8-green-recovery-upstream"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:14:09.970415+00:00"
+      },
+      "results": [
+        "  2 passed (3.4s)"
+      ],
+      "sha256": "806ae2a870e2e4a5bf9b51153f26d4f0bc107dd6cb01bd9c5a5ae007749acb70"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-report-races.log",
+      "metadata": {
+        "utc": "2026-11-02T15:57:18.572245+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern",
+          "a failed read after|a late original",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:57:19.656022+00:00"
+      },
+      "results": [
+        "ℹ tests 2",
+        "ℹ pass 2",
+        "ℹ fail 0"
+      ],
+      "sha256": "c31993154f6b544d01ad8104541f67909c6b6db0e6de528fe4d92412d979ec2c"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-saved-device-scope.log",
+      "metadata": {
+        "utc": "2026-11-02T15:59:01.012992+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "confirmed proxy save never",
+          "--output",
+          "../.cache/t8-green-saved-scope"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:59:05.357755+00:00"
+      },
+      "results": [
+        "  1 passed (3.0s)"
+      ],
+      "sha256": "eda9ce1c46dda43e64c615ceaf965502bbac5b9c7448df790c14f9e492e096ee"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-shared-credential-fact.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:11.610486+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=diagnostic credential recovery requires|diagnostic identity observations",
+          "tests/desktopState.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:12.109189+00:00"
+      },
+      "results": [
+        "ℹ tests 2",
+        "ℹ pass 2",
+        "ℹ fail 0"
+      ],
+      "sha256": "92ae80eef41f0e920f9ecf16a027fddf190034ebb165729e520f5b2d3c76f19f"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-shared-credential-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T16:30:11.610475+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 diagnostic local binding",
+          "--output",
+          "../.cache/t8-green-shared-credential-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:30:15.897943+00:00"
+      },
+      "results": [
+        "  2 passed (3.1s)"
+      ],
+      "sha256": "5f6e68d430afc7869f56a1bc1841c96d26693258450e3d2768fa0f8e3756f6e5"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-boundaries.log",
+      "metadata": {
+        "utc": "2026-11-02T16:01:48.632681+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 unknown proxy save|T8 restore failure|T8 pending network apply|T8 lost notification|T8 repeated original|T8 export waiting",
+          "--output",
+          "../.cache/t8-green-ui-boundaries"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:01:55.511566+00:00"
+      },
+      "results": [
+        "  6 passed (5.6s)"
+      ],
+      "sha256": "c45fcbcd650cdc9723b9336063d872a0df4fdf6d04fb78ba8dae3f0e5f9f5bdd"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-focused.log",
+      "metadata": {
+        "utc": "2026-11-02T15:51:30.831518+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 ",
+          "--workers=4",
+          "--output",
+          "../.cache/t8-green-ui-focused"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:51:37.234344+00:00"
+      },
+      "results": [
+        "  8 passed (5.2s)"
+      ],
+      "sha256": "11ca2fa6ef0157754083b6c5fdcfdb79603cfdc1a3b08d13faa16156ca4fb6ff"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-integration.log",
+      "metadata": {
+        "utc": "2026-11-02T16:06:05.631006+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--grep",
+          "failed preference save keeps|S2 tabs|newer diagnostic identity|Claude inline source",
+          "--output",
+          "../.cache/t8-green-ui-integration"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:06:13.411240+00:00"
+      },
+      "results": [
+        "  7 passed (6.4s)"
+      ],
+      "sha256": "5ebd7169919c0eb58f7dd1a3dd18f0d372bb731c73aeee57d49f4b905bb3fb72"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-autostart-unknown-previous.log",
+      "metadata": {
+        "utc": "2026-11-02T16:16:46.720285+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 lost autostart receipt",
+          "--output",
+          "../.cache/t8-red-autostart-unknown"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:16:56.523848+00:00"
+      },
+      "results": [
+        "  1 failed"
+      ],
+      "sha256": "4412d427517683e36e15d9cf7527627274f80b98f274779401fdb2bd8442e650"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-cancel-running.log",
+      "metadata": {
+        "utc": "2026-11-02T15:59:20.185026+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern",
+          "a running cancel receipt",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:59:21.196450+00:00"
+      },
+      "results": [
+        "✖ a running cancel receipt remains unconfirmed and only a terminal read settles it (77.592292ms)",
+        "ℹ tests 1",
+        "ℹ pass 0",
+        "ℹ fail 1",
+        "✖ failing tests:",
+        "✖ a running cancel receipt remains unconfirmed and only a terminal read settles it (77.592292ms)"
+      ],
+      "sha256": "1bf3dca79f24e1dd929632f8f774f927e8bf320c53fff98e7994a5a90f31f35e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-check-presentation.log",
+      "metadata": {
+        "utc": "2026-11-02T15:42:30.053719+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=diagnostic presentation separates",
+          "tests/diagnostic-presentation.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:42:30.494101+00:00"
+      },
+      "results": [
+        "✖ diagnostic presentation separates local binding proof and exact remote recovery targets (0.723708ms)",
+        "ℹ tests 1",
+        "ℹ pass 0",
+        "ℹ fail 1",
+        "✖ failing tests:",
+        "✖ diagnostic presentation separates local binding proof and exact remote recovery targets (0.723708ms)"
+      ],
+      "sha256": "28ed822232445b75e5c2841bf28aed531fed0e7e6081c44bf81e45599719d46e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-client.log",
+      "metadata": {
+        "utc": "2026-11-02T15:37:23.689691+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=lost start|lost cancel|concurrent reads",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:37:24.189570+00:00"
+      },
+      "results": [
+        "✖ lost start receipt fences another start until the diagnostic scope changes (1.53725ms)",
+        "✖ lost cancel receipt permits only reading the original ID, never another cancel (1.91125ms)",
+        "✖ concurrent reads of the original report share one request and preserve its last checks on failure (0.282917ms)",
+        "ℹ tests 3",
+        "ℹ pass 0",
+        "ℹ fail 3",
+        "✖ failing tests:",
+        "✖ lost start receipt fences another start until the diagnostic scope changes (1.53725ms)",
+        "✖ lost cancel receipt permits only reading the original ID, never another cancel (1.91125ms)",
+        "✖ concurrent reads of the original report share one request and preserve its last checks on failure (0.282917ms)"
+      ],
+      "sha256": "164e9c132da4fc62ab535309591c316953f08f76df407a8471ffdc6e749e77ec"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-all-stages.log",
+      "metadata": {
+        "utc": "2026-11-02T15:47:02.577651+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri",
+        "argv": [
+          "cargo",
+          "test",
+          "--lib",
+          "network::tests::network_apply_failure_",
+          "--",
+          "--nocapture"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 101,
+        "utc": "2026-11-02T15:47:11.662730+00:00"
+      },
+      "results": [
+        "test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 220 filtered out; finished in 0.10s"
+      ],
+      "sha256": "f7fa973cc3e1270cda7d927179a1d8caa29464a864014bce3582babe9a6ad61f"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-copy-corrected.log",
+      "metadata": {
+        "utc": "2026-11-02T15:48:15.116847+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=network stage feedback",
+          "tests/network.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:48:15.601790+00:00"
+      },
+      "results": [
+        "✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (33.664958ms)",
+        "ℹ tests 1",
+        "ℹ pass 0",
+        "ℹ fail 1",
+        "✖ failing tests:",
+        "✖ network stage feedback preserves concrete producer cause while naming only its proven failed stage (33.664958ms)"
+      ],
+      "sha256": "19068bf4be1d334c006e3a7fde54cecb98b637a5e1e0003e9f208079571852cd"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-copy.log",
+      "metadata": {
+        "utc": "2026-11-02T15:47:57.471684+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=network stage feedback",
+          "tests/network.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:47:58.950707+00:00"
+      },
+      "results": [
+        "ℹ tests 1",
+        "ℹ pass 1",
+        "ℹ fail 0"
+      ],
+      "sha256": "29774535de976eb3b3d8eb39d8a04178fdb94841becba037892e6b14052c23c9"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-stages.log",
+      "metadata": {
+        "utc": "2026-11-02T15:41:00.247129+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri",
+        "argv": [
+          "cargo",
+          "test",
+          "--lib",
+          "network::tests::network_apply_failures_identify_the_actual_stage_without_replacing_original_errors",
+          "--",
+          "--nocapture"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 101,
+        "utc": "2026-11-02T15:41:12.765276+00:00"
+      },
+      "results": [
+        "test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 220 filtered out; finished in 0.06s"
+      ],
+      "sha256": "16645d63c7cdacdcefb25dfd7a9cf64f0d3bb2022ac84513a2cb22ebf6c65d44"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-os-presentation.log",
+      "metadata": {
+        "utc": "2026-11-02T15:40:08.406684+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 (denied|autostart|diagnostic local)",
+          "--workers=3",
+          "--output",
+          "../.cache/t8-red-os-presentation"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:40:17.985588+00:00"
+      },
+      "results": [
+        "  3 failed"
+      ],
+      "sha256": "1556cf811dd0257d22a2e762cdcc25aee1a60daaa8f9fb069356a47e2ca73228"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-real-hive-dto.log",
+      "metadata": {
+        "utc": "2026-11-02T16:25:49.088409+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=real Hive device replacement|only proven Hive identity",
+          "tests/diagnostic-presentation.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:25:49.535314+00:00"
+      },
+      "results": [
+        "✖ real Hive device replacement DTO overrides its generic diagnostics next action (3.733708ms)",
+        "✖ only proven Hive identity 401 evidence presents an invalid device credential recovery (0.576833ms)",
+        "ℹ tests 2",
+        "ℹ pass 0",
+        "ℹ fail 2",
+        "✖ failing tests:",
+        "✖ real Hive device replacement DTO overrides its generic diagnostics next action (3.733708ms)",
+        "✖ only proven Hive identity 401 evidence presents an invalid device credential recovery (0.576833ms)"
+      ],
+      "sha256": "4690acea715be805fffcde536735fa24f76a51e4b85012ce7e60144ea2c22982"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-report-races.log",
+      "metadata": {
+        "utc": "2026-11-02T15:53:11.239077+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=failed read after|late original report",
+          "tests/diagnostics.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:53:11.641626+00:00"
+      },
+      "results": [
+        "✖ a failed read after unknown cancellation retains both exact failures in the scoped session (3.559ms)",
+        "✖ a late original report read cannot replace a newer explicitly started diagnostic in the same scope (0.642375ms)",
+        "ℹ tests 2",
+        "ℹ pass 0",
+        "ℹ fail 2",
+        "✖ failing tests:",
+        "✖ a failed read after unknown cancellation retains both exact failures in the scoped session (3.559ms)",
+        "✖ a late original report read cannot replace a newer explicitly started diagnostic in the same scope (0.642375ms)"
+      ],
+      "sha256": "7faff3087b9f614d124c6aa605dadf4c7d9a2bba1188de459e599506d6c95b2e"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-saved-device-scope.log",
+      "metadata": {
+        "utc": "2026-11-02T15:58:26.535928+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "confirmed proxy save never",
+          "--output",
+          "../.cache/t8-red-saved-scope"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:58:36.543027+00:00"
+      },
+      "results": [
+        "  1 failed"
+      ],
+      "sha256": "a6bb3a5d4dd5b700aa7799fe25b36303a7a9cdab96203126d8da4125b3973a9f"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-shared-credential-fact.log",
+      "metadata": {
+        "utc": "2026-11-02T16:28:30.150750+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "--test-name-pattern=diagnostic credential recovery requires",
+          "tests/desktopState.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:28:30.676268+00:00"
+      },
+      "results": [
+        "✖ diagnostic credential recovery requires exact Hive identity evidence and retains the original cause (6.263917ms)",
+        "ℹ tests 1",
+        "ℹ pass 0",
+        "ℹ fail 1",
+        "✖ failing tests:",
+        "✖ diagnostic credential recovery requires exact Hive identity evidence and retains the original cause (6.263917ms)"
+      ],
+      "sha256": "e7112e7ddea7a95b37434142af6258d898ba72c21cc7ef29ade31994c968f2fd"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-shared-credential-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T16:28:53.582045+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 diagnostic local binding",
+          "--output",
+          "../.cache/t8-red-shared-credential-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:29:03.287574+00:00"
+      },
+      "results": [
+        "  1 failed",
+        "  1 passed (8.4s)"
+      ],
+      "sha256": "78a9a87cf2e1a16f53730b5fd063a762769b3015e5718937c5e64d76884446a1"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T15:37:39.170204+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 ",
+          "--workers=4",
+          "--output",
+          "../.cache/t8-red-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:38:20.035619+00:00"
+      },
+      "results": [
+        "  7 failed"
+      ],
+      "sha256": "ec11c7573fc1ca10afb92e4822a5cbe7b21ea81390ee1bdfa9f4079676d2b4cf"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-sidecar-build.log",
+      "metadata": {
+        "utc": "2026-11-02T15:40:34.906042+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/..",
+        "argv": [
+          "node",
+          "desktop/scripts/build-bee.mjs",
+          "--target",
+          "aarch64-apple-darwin"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:40:42.936007+00:00"
+      },
+      "results": [],
+      "sha256": "f0f721567080c360acb86a2f8f2fcc434777061ea838ec2badd4d5480e89305c"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-typecheck-first.log",
+      "metadata": {
+        "utc": "2026-11-02T15:46:42.631847+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T15:46:43.794518+00:00"
+      },
+      "results": [],
+      "sha256": "2ea8d18aad2c395aef250a37f8846dde8e5ea7479eb088fe17b798f8d9b7d8ac"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-typecheck-second.log",
+      "metadata": {
+        "utc": "2026-11-02T15:50:37.366024+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T15:50:38.499697+00:00"
+      },
+      "results": [],
+      "sha256": "ca297a14db56cbbd3b5882ab925e46d3610aa6c6a21cb25b151178428379b8d2"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-ui-boundaries-first.log",
+      "metadata": {
+        "utc": "2026-11-02T16:00:02.536315+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "--grep",
+          "T8 unknown proxy save|T8 restore failure|T8 pending network apply|T8 lost notification|T8 repeated original|T8 export waiting",
+          "--output",
+          "../.cache/t8-ui-boundaries-first"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 1,
+        "utc": "2026-11-02T16:00:35.913817+00:00"
+      },
+      "results": [
+        "  3 failed",
+        "  3 passed (32.3s)"
+      ],
+      "sha256": "44b133287564d551f077bf7d9f20eae2c1a1eb3f972132032f5c2698116eeb6f"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-node.log",
+      "metadata": {
+        "utc": "2026-11-02T16:18:09.510061+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "node",
+          "--test",
+          "tests/network.test.ts",
+          "tests/diagnostics.test.ts",
+          "tests/diagnostic-presentation.test.ts",
+          "tests/preferences.test.ts",
+          "tests/notifications.test.ts"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:18:10.520835+00:00"
+      },
+      "results": [
+        "ℹ tests 36",
+        "ℹ pass 36",
+        "ℹ fail 0"
+      ],
+      "sha256": "b32b4573b02e6dd282f81a50e80fc42aae0291ab6b86ce346c8e9e876e48b8cc"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-typecheck.log",
+      "metadata": {
+        "utc": "2026-11-02T16:18:09.510054+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npm",
+          "run",
+          "typecheck"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:18:10.932030+00:00"
+      },
+      "results": [],
+      "sha256": "8601128efe1c227f47c274c2cf86b5644b43181e77d08cc5171a1f9b4640e7ab"
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-ui.log",
+      "metadata": {
+        "utc": "2026-11-02T16:18:09.510289+00:00",
+        "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+        "argv": [
+          "npx",
+          "playwright",
+          "test",
+          "--config",
+          "playwright.device.config.ts",
+          "native-experience.spec.ts",
+          "recovery-navigation.spec.ts",
+          "--output",
+          "../.cache/t8-verified-final-ui"
+        ],
+        "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+        "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+        "node": "v24.22.1",
+        "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)",
+        "port": "1487"
+      },
+      "completion": {
+        "exit": 0,
+        "utc": "2026-11-02T16:18:33.267245+00:00"
+      },
+      "results": [
+        "  58 passed (22.1s)"
+      ],
+      "sha256": "37b610422cd7b09f5b95af8263968635f274c2c7eff9d42510f340eff8c063a5"
+    }
+  ]
+}

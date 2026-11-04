@@ -1,0 +1,4 @@
+const root='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0',page=(await taskSpace(40)).page('p1');
+await page.click('loc=role:button[name="设置"]');await page.click('loc=role:tab[name="关于"]');await page.waitForSelector('loc=role:region[name="应用更新"]');
+console.log(await page.evaluate(()=>({viewport:{width:innerWidth,height:innerHeight},title:document.querySelector('.nu-version-row h3')?.textContent,buttonHeight:document.querySelector('.nu-version-row button')?.getBoundingClientRect().height,fonts:[...document.querySelectorAll('.native-update .nu-platform,.native-update .nu-note')].map(e=>getComputedStyle(e).fontSize),overflow:document.documentElement.scrollWidth>innerWidth})));
+console.log(await page.screenshot({path:root+'/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-zh-light-860.png'}));console.log(await page.snapshot());

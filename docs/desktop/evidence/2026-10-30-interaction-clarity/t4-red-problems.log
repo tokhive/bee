@@ -1,0 +1,98 @@
+✖ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (2.337792ms)
+✖ device replacement keeps its exact cause and provides the device entry (0.247125ms)
+✖ selected source missing and denied access do not claim the whole machine has no login (0.1035ms)
+✖ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.128625ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.420959ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (1.7505ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 2
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 74.236334
+
+✖ failing tests:
+
+test at desktop/tests/problems.test.ts:7:1
+✖ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (2.337792ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /503/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:9:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /503/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at desktop/tests/problems.test.ts:11:1
+✖ device replacement keeps its exact cause and provides the device entry (0.247125ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /替换/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:13:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /替换/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at desktop/tests/problems.test.ts:15:1
+✖ selected source missing and denied access do not claim the whole machine has no login (0.1035ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /所选|选定/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:18:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /所选|选定/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at desktop/tests/problems.test.ts:21:1
+✖ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.128625ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /替换/. Input:
+  
+  ''
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:23:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '',
+    expected: /替换/,
+    operator: 'match',
+    diff: 'simple'
+  }

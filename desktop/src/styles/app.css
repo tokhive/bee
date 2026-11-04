@@ -297,6 +297,25 @@ nav button { border:1px solid transparent; }
 .account-operation-status { font-size:12px; color:var(--muted); overflow-wrap:anywhere; }
 .account-operation-status:not(:empty) { margin-top:6px; }
 .native-account-row-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; align-items:center; gap:8px; grid-column:2; justify-self:end; margin-top:-4px; }
+.native-account-login { grid-column:1 / -1; display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:start; gap:16px 24px; margin-left:44px; padding-top:20px; border-top:1px solid var(--line); outline-offset:6px; }
+.account-login-copy { display:flex; gap:10px; min-width:0; }
+.account-login-icon { flex:none; color:var(--accent-ink); padding-top:3px; }
+.account-login-icon svg { width:18px; height:18px; }
+.account-login-icon.is-good { color:var(--good); }
+.account-login-icon.is-error { color:var(--accent-ink); }
+.account-login-message { min-width:0; font-size:12px; line-height:1.8; color:var(--muted); overflow-wrap:anywhere; }
+.account-login-message h4 { margin:0; font-size:13px; font-weight:550; color:var(--ink); }
+.account-login-message p { margin:3px 0 0; max-width:58ch; }
+.account-login-message details { margin-top:9px; }
+.account-login-message summary { width:fit-content; min-height:32px; cursor:pointer; }
+.account-login-message pre { margin-top:5px; padding:12px; border-radius:5px; background:var(--panel); white-space:pre-wrap; font:inherit; font-size:12px; }
+.account-login-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; }
+.account-login-actions .ui-button { font-size:12px; min-height:36px; }
+.account-login-spinner { animation:account-login-spin 1s linear infinite; }
+@keyframes account-login-spin { to { transform:rotate(360deg); } }
+@media(prefers-reduced-motion:reduce) { .account-login-spinner { animation:none; } }
+@media(max-width:1050px) { .native-account-login { grid-template-columns:minmax(0,1fr); } .account-login-actions { justify-content:flex-start; padding-left:28px; } }
+@media(max-width:740px) { .native-account-login { margin-left:0; } }
 .native-account-row-actions:empty { display:none; }
 .native-account-row-actions .account-actions { display:contents; }
 .native-account-row-actions .ui-button { font-size:12px; min-height:32px; height:auto; padding:0 12px; background:var(--panel); }
@@ -380,6 +399,11 @@ nav button { border:1px solid transparent; }
 .device-facts { padding:0; gap:0; }
 .device-facts p,.device-facts small { font-size:12px; }
 .device-facts strong { font-size:13px; }
+.device-loading .device-skeleton-line { display:block; width:80%; height:19.5px; border-radius:3px; background:var(--line); }
+.device-loading small.device-skeleton-line { width:65%; height:18px; }
+.device-refreshing { animation:device-refresh-spin 1s linear infinite; }
+.device-section-heading .ui-button[aria-disabled=true] { cursor:wait; opacity:.5; }
+@keyframes device-refresh-spin { to { transform:rotate(360deg); } }
 .device-note,.saved-device-context { font-size:12px; color:var(--muted); margin-block:12px; overflow-wrap:anywhere; }
 .device-transaction>p { margin-block:12px; }
 .device-transaction .pairing-phase { font-size:16px; font-weight:600; color:var(--ink); }

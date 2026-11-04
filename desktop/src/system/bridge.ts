@@ -1,4 +1,4 @@
-import {normalizeFailure,decodeBridgeError,validFailureTime,type UiFailure,type FailureDetails} from './failures.ts';
+import {normalizeFailure,decodeBridgeError,validFailureTime,requestMethods,retryEvidence,type UiFailure,type FailureDetails} from './failures.ts';
 export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
   state: 'starting' | 'ready' | 'failed' | 'stopped';
@@ -20,7 +20,28 @@ export function decodeStartupStatus(value:unknown):StartupStatus {
  const failure=v.failure===null?null:normalizeFailure(decodeBridgeError(v.failure,'STARTUP_STATUS_INVALID'),'startup_check');
  return {...v,failure} as unknown as StartupStatus;
 }
+export interface PendingRequest {id:string;method:string;platform:'openai'|'claude'|null}
+export interface RequestSettled extends PendingRequest {instance:string}
+export interface PendingRequests {instance:string|null;requests:PendingRequest[]}
+function decodePendingRequest(value:unknown,settled=false):PendingRequest|RequestSettled {
+ const invalid=():never=>{throw new Error('BRIDGE_PENDING_INVALID: request requires exact bounded id, method, platform and current instance');};
+ if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
+ const v=value as Record<string,unknown>,fields=settled?['instance','id','method','platform']:['id','method','platform'];
+ if(Object.keys(v).length!==fields.length||!fields.every(k=>Object.hasOwn(v,k))||typeof v.id!=='string'||retryEvidence('request_id',v.id)!==true||typeof v.method!=='string'||!requestMethods.includes(v.method)||![null,'openai','claude'].includes(v.platform as null)||settled&&(typeof v.instance!=='string'||!/^[a-f0-9]{32}$/.test(v.instance)))return invalid();
+ return structuredClone(v) as unknown as PendingRequest|RequestSettled;
+}
+export const decodeRequestSettled=(value:unknown):RequestSettled=>decodePendingRequest(value,true) as RequestSettled;
+export function decodePendingRequests(value:unknown):PendingRequests {
+ const invalid=():never=>{throw new Error('BRIDGE_PENDING_INVALID: pending read requires instance and at most 16 unique requests');};
+ if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
+ const v=value as Record<string,unknown>;
+ if(Object.keys(v).length!==2||!Object.hasOwn(v,'instance')||!Object.hasOwn(v,'requests')||v.instance!==null&&(typeof v.instance!=='string'||!/^[a-f0-9]{32}$/.test(v.instance))||!Array.isArray(v.requests)||v.requests.length>16||v.instance===null&&v.requests.length)return invalid();
+ const requests=v.requests.map(r=>decodePendingRequest(r));if(new Set(requests.map(r=>r.id)).size!==requests.length)return invalid();
+ return {instance:v.instance as string|null,requests};
+}
 export interface SystemBridge {
+ pendingRequests?():Promise<PendingRequests>;
+ onRequestSettled?(listener:(event:RequestSettled)=>void):Promise<Unlisten>;
  syncNativeLocale?(locale:'zh'|'en',revision:number):Promise<void>;
  startupStatus?():Promise<StartupStatus>;
  startupRecheck?():Promise<StartupStatus>;
@@ -52,6 +73,8 @@ export function createSystemBridge(): SystemBridge {
       return result;
     },
     status: () => invoke<BridgeStatus>('bridge_status'),
+ pendingRequests:async()=>decodePendingRequests(await invoke('bridge_pending_requests')),
+ async onRequestSettled(listener){let active=true;const off=await listen<unknown>('bee://request-settled',event=>{if(active)listener(decodeRequestSettled(event.payload));});return()=>{active=false;off();};},
  startupStatus: async()=>decodeStartupStatus(await invoke('startup_status')),
  startupRecheck: async()=>decodeStartupStatus(await invoke('startup_recheck')),
  async onStartup(listener){let active=true;const off=await listen<unknown>('bee://startup-status',event=>{if(active)listener(decodeStartupStatus(event.payload));});return()=>{active=false;off();};},

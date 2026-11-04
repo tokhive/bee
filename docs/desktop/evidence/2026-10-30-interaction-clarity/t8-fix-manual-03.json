@@ -1,0 +1,57 @@
+{
+  "utc": "2026-11-02T17:02:04.631Z",
+  "space": 40,
+  "page": "p1",
+  "state": {
+    "checked": true,
+    "disabled": true,
+    "registration": "Last confirmed system registrationNot registered",
+    "text": "Notifications and startupPreferences and actual system status are shown separately.   Receive system notificationsAuthorization, account changes, offline status and quota issues remain visible in the app.System permissionNot yet allowedStart Bee after signing in to the systemAfter system sign-in, restore the existing run intent. This does not authorize, connect accounts, or remove a manual pause.Last confirmed system registrationNot registeredThe startup registration result is unconfirmed. Only registration and preferences will be read; registration will not be repeated.This operation failed; its cause is unconfirmed.This operation could not complete. Check again to confirm its state.View failure detailsError code: IPC_TIMEOUT\nFailed check: autostart_set\nOriginal cause: autostart accepted; receipt lost: enabled=trueReading system startup registration failed.This operation could not complete. Check again to confirm its state.View failure detailsError code: AUTOSTART_QUERY_FAILED\nFailed check: autostart_status\nOriginal cause: autostart query failed: kind=PermissionDenied os_code=13Recheck system statusContinues in the background after closing. Reopen from the tray, menu, or by launching Bee again.",
+    "alerts": 2,
+    "calls": [
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_set",
+        "args": {
+          "enabled": true
+        }
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      }
+    ],
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "focus": "Recheck system status",
+    "overflow": false
+  },
+  "screenshot": {
+    "path": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.superpowers/sdd/t8-fix-manual-03-failed-read-en-dark-860.png",
+    "imageSize": {
+      "width": 860,
+      "height": 600
+    }
+  }
+}

@@ -1,0 +1,237 @@
+{
+  "utc": "2026-11-02T13:53:08.372Z",
+  "facts": [
+    {
+      "name": "t7-v2-detail-1080-zh-light",
+      "before": {
+        "open": true,
+        "scrollHeight": 884,
+        "clientHeight": 838,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 45.5,
+        "lastButton": {
+          "x": 676,
+          "y": 780.9765625,
+          "width": 84,
+          "height": 33.1953125,
+          "top": 780.9765625,
+          "right": 760,
+          "bottom": 814.171875,
+          "left": 676
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI 详情"
+    },
+    {
+      "name": "t7-v2-detail-1080-en-dark",
+      "before": {
+        "open": true,
+        "scrollHeight": 1008,
+        "clientHeight": 838,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 170,
+        "lastButton": {
+          "x": 676,
+          "y": 780.875,
+          "width": 161.40625,
+          "height": 33.1953125,
+          "top": 780.875,
+          "right": 837.40625,
+          "bottom": 814.0703125,
+          "left": 676
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI details"
+    },
+    {
+      "name": "t7-v2-detail-1000-zh-light",
+      "before": {
+        "open": true,
+        "scrollHeight": 884,
+        "clientHeight": 698,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 185.5,
+        "lastButton": {
+          "x": 596,
+          "y": 640.9765625,
+          "width": 84,
+          "height": 33.1953125,
+          "top": 640.9765625,
+          "right": 680,
+          "bottom": 674.171875,
+          "left": 596
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI 详情"
+    },
+    {
+      "name": "t7-v2-detail-1000-en-dark",
+      "before": {
+        "open": true,
+        "scrollHeight": 1008,
+        "clientHeight": 698,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 310,
+        "lastButton": {
+          "x": 596,
+          "y": 640.875,
+          "width": 161.40625,
+          "height": 33.1953125,
+          "top": 640.875,
+          "right": 757.40625,
+          "bottom": 674.0703125,
+          "left": 596
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI details"
+    },
+    {
+      "name": "t7-v2-detail-860-zh-light",
+      "before": {
+        "open": true,
+        "scrollHeight": 884,
+        "clientHeight": 598,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 285.5,
+        "lastButton": {
+          "x": 456,
+          "y": 540.9765625,
+          "width": 84,
+          "height": 33.1953125,
+          "top": 540.9765625,
+          "right": 540,
+          "bottom": 574.171875,
+          "left": 456
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI 详情"
+    },
+    {
+      "name": "t7-v2-detail-860-en-dark",
+      "before": {
+        "open": true,
+        "scrollHeight": 1008,
+        "clientHeight": 598,
+        "overflow": false
+      },
+      "bottom": {
+        "scrollTop": 410,
+        "lastButton": {
+          "x": 456,
+          "y": 540.875,
+          "width": 161.40625,
+          "height": 33.1953125,
+          "top": 540.875,
+          "right": 617.40625,
+          "bottom": 574.0703125,
+          "left": 456
+        },
+        "focus": "INPUT"
+      },
+      "closed": true,
+      "returnFocus": "OpenAI details"
+    },
+    {
+      "scene": "confirm-select",
+      "dialog": {
+        "text": "接入\n\n将目标账号接入当前设备，并核验 Hive 注册；此 Hive 账号的平台接单将保持暂停，不会开始贡献。\n\n目标账号\nbbbbbbbbbbbbbbbb\n平台\nOpenAI\n取消\n确认接入",
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "取消",
+            "height": 32
+          },
+          {
+            "text": "确认接入",
+            "height": 32
+          }
+        ]
+      }
+    },
+    {
+      "scene": "confirm-change",
+      "dialog": {
+        "text": "换号\n\n将此平台切换到目标账号，核对 Hive 注册与已有请求收尾；完成后仍保持暂停，不会开始贡献。\n\n当前账号\nbbbbbbbbbbbbbbbb\n目标账号\nffffffffffffffff\n平台\nOpenAI\n取消\n确认更换",
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "取消",
+            "height": 32
+          },
+          {
+            "text": "确认更换",
+            "height": 32
+          }
+        ]
+      }
+    },
+    {
+      "scene": "confirm-login",
+      "dialog": {
+        "text": "登录 OpenAI\n\n将调用已安装的 Codex 官方客户端，可能改变该客户端当前登录。完成后仅成为候选，不会自动接入、开始贡献或恢复接单。\n\n取消\n开始官方登录",
+        "overflow": false,
+        "buttons": [
+          {
+            "text": "取消",
+            "height": 32
+          },
+          {
+            "text": "开始官方登录",
+            "height": 32
+          }
+        ]
+      }
+    },
+    {
+      "scene": "account-error",
+      "overflow": false
+    },
+    {
+      "scene": "supply-blocked",
+      "overflow": false
+    },
+    {
+      "scene": "quota-expired",
+      "overflow": false
+    },
+    {
+      "scene": "quota-over",
+      "overflow": false
+    },
+    {
+      "scene": "background-source-focus",
+      "before": {
+        "calls": 8,
+        "top": 0,
+        "value": "/tmp/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/"
+      },
+      "after": {
+        "top": 0,
+        "value": "/tmp/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/long-official-client-source-directory/",
+        "focus": true,
+        "reduced": true,
+        "transition": "0s"
+      }
+    }
+  ]
+}

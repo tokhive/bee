@@ -1,0 +1,10 @@
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+src/app/NativeApp.tsx(84,209): error TS2345: Argument of type '() => Promise<void> | undefined' is not assignable to parameter of type '() => Promise<unknown>'.
+  Type 'Promise<void> | undefined' is not assignable to type 'Promise<unknown>'.
+    Type 'undefined' is not assignable to type 'Promise<unknown>'.
+src/app/NativeApp.tsx(88,301): error TS2345: Argument of type '() => Promise<void> | undefined' is not assignable to parameter of type '() => Promise<unknown>'.
+  Type 'Promise<void> | undefined' is not assignable to type 'Promise<unknown>'.
+    Type 'undefined' is not assignable to type 'Promise<unknown>'.

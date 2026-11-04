@@ -1,0 +1,118 @@
+{
+  "utc": "2026-11-02T10:58:05.053Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "script": "/tmp/t6-manual-round3.mjs",
+  "records": [
+    {
+      "case": "copy success/failure, open failure retains request, background refresh",
+      "utc": "2026-11-02T10:58:02.591Z",
+      "viewport": [
+        860,
+        600
+      ],
+      "copy": {
+        "value": "ABCD-EFGH",
+        "feedback": "This deviceVerify device againWaiting for website confirmationOpen Hive confirmation pagePairing codeABCD-EFGHCopy pairing codeValid untilNov 2, 2026, 7:07:55 PM598 seconds remaininghttps://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example/devices/pair?code=ABCD-EFGHCopy confirmation URLReturn to Bee after confirming on the website. If the browser cannot open, copy the URL above manually. The current request is retained.Pairing code copied"
+      },
+      "before": {
+        "code": "ABCD-EFGH",
+        "url": "https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example/devices/pair?code=ABCD-EFGH",
+        "scroll": 276.5,
+        "reads": 3
+      },
+      "after": {
+        "code": "ABCD-EFGH",
+        "url": "https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example/devices/pair?code=ABCD-EFGH",
+        "scroll": 276.5,
+        "focus": "Copy confirmation URL",
+        "focusOutline": "none",
+        "reduced": true,
+        "animation": "0s",
+        "transition": "0s",
+        "writes": []
+      }
+    },
+    {
+      "case": "recovery cancel by keyboard",
+      "utc": "2026-11-02T10:58:03.113Z",
+      "viewport": [
+        860,
+        600
+      ],
+      "dialogFocus": {
+        "focus": "取消",
+        "inside": true
+      },
+      "result": {
+        "closed": true,
+        "restoredFocus": false,
+        "writes": []
+      }
+    },
+    {
+      "case": "different owner long identifiers and focus trap cancellation",
+      "utc": "2026-11-02T10:58:04.522Z",
+      "owner": {
+        "viewport": [
+          860,
+          600
+        ],
+        "inside": true,
+        "focus": "取消",
+        "overflow": false,
+        "dialogRect": {
+          "x": 230,
+          "y": 183.25,
+          "width": 400,
+          "height": 233.5,
+          "top": 183.25,
+          "right": 630,
+          "bottom": 416.75,
+          "left": 230
+        },
+        "writes": []
+      }
+    },
+    {
+      "case": "navigation title remains visible",
+      "utc": "2026-11-02T10:58:04.670Z",
+      "result": {
+        "title": "AI 账号",
+        "rect": {
+          "x": 207,
+          "y": 77,
+          "width": 186.046875,
+          "height": 31.1953125,
+          "top": 77,
+          "right": 393.046875,
+          "bottom": 108.1953125,
+          "left": 207
+        },
+        "scroll": 0,
+        "focus": "H1"
+      }
+    },
+    {
+      "case": "completed fixture corrected to native scope reset",
+      "utc": "2026-11-02T10:58:05.051Z",
+      "result": {
+        "viewport": [
+          1080,
+          840
+        ],
+        "status": "no_accounts",
+        "selections": {
+          "openai": "not_selected",
+          "claude": "not_selected"
+        },
+        "paused": {
+          "openai": true,
+          "claude": true
+        },
+        "writes": []
+      }
+    }
+  ]
+}

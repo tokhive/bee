@@ -1,0 +1,20 @@
+{"time": "2026-11-02T09:25:53.778554+00:00", "command": ["cargo", "test", "--lib", "owned_exit_reclaims_full_budget_before_internal_requests", "--", "--nocapture"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.15s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'sidecar::tests::owned_exit_reclaims_full_budget_before_internal_requests' (11036677) panicked at src/sidecar_tests.rs:388:21:
+owned exit must wait within its existing deadline for budget reclamation: BridgeError { code: "REQUEST_NOT_QUEUED", message: "runtime_snapshot rejected: outstanding request budget exhausted; maximum=16 including queued and in-flight requests", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test sidecar::tests::owned_exit_reclaims_full_budget_before_internal_requests ... FAILED
+
+failures:
+
+failures:
+    sidecar::tests::owned_exit_reclaims_full_budget_before_internal_requests
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 214 filtered out; finished in 8.55s
+
+error: test failed, to rerun pass `--lib`

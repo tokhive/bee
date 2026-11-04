@@ -1,0 +1,52 @@
+UTC: 2026-11-02T10:45:18.918569+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', '--grep', 'presents saving', '--workers=1']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents saving from its durable transaction (5.9s)
+
+
+  1) [chromium] › tests/device.spec.ts:151:201 › initial pairing presents saving from its durable transaction 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('本机保存未完成，需重新核对', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('本机保存未完成，需重新核对', { exact: true }) with timeout 5000ms
+      - waiting for getByText('本机保存未完成，需重新核对', { exact: true })
+
+
+      152 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      153 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 154 |  await page.goto('/');await expect(page.getByText(phase==='saving'?'本机保存未完成，需重新核对':copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                                                        ^
+      155 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      156 | });
+      157 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:154:104
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/device.spec.ts:151:201 › initial pairing presents saving from its durable transaction 
+
+Exit: 1
+UTC end: 2026-11-02T10:45:26.413261+00:00

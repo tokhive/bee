@@ -1,0 +1,23 @@
+✔ account decoder accepts full public DTO and nanosecond UTC timestamps, preserving unknowns and 120% (1.43425ms)
+✔ account decoder rejects missing, unknown, unsafe identity/time/quota fields without echoing payload (1.682667ms)
+✔ defaults decode both platform store capabilities and reject unknown fields (0.172541ms)
+✔ typed client sends fixed commands, never replays writes, and invalidates old source promises (0.557208ms)
+✔ selected account and asynchronous operation are strictly decoded (0.397625ms)
+✔ clearing a saved selection uses its revision without a detected credential (0.142625ms)
+✔ an older account read cannot replace a newer operation receipt (0.180042ms)
+✔ runtime uses the shared Go/Rust contract and preserves absent supply (2.539917ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (0.846625ms)
+✔ runtime client sends only fixed typed commands and rejects older snapshots (0.597208ms)
+✔ runtime operation receipts advance the same revision gate as snapshots (0.279417ms)
+✔ runtime requires an explicit nullable connection detail (0.141791ms)
+✔ runtime accepts observed failures and actual scheduled retry times (2.547416ms)
+✔ runtime rejects malformed or unsafe connection details (0.455167ms)
+✔ runtime connection origin rejects lookalike loopback domains (0.135666ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 81.233583

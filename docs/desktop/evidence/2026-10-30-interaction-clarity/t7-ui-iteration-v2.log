@@ -1,0 +1,189 @@
+{"utc": "2026-11-02T13:21:33.476033+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-accounts.spec.ts", "supply.spec.ts", "polling-stability.spec.ts", "--workers=4"], "dirty": " M Makefile\n M agent/desktop_authorize.go\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/NativeAccountsPage.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/supply/SupplyPanel.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.d.mts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/polling-stability.spec.ts\n M desktop/tests/problems.test.ts\n M desktop/tests/supply.spec.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+
+Running 62 tests using 4 workers
+
+  ✓   3 [chromium] › tests/native-accounts.spec.ts:9:1 › account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus (2.3s)
+  ✓   2 [chromium] › tests/native-accounts.spec.ts:26:1 › overview and accounts share per-platform pause state; resume never starts contribution (2.3s)
+  ✓   4 [chromium] › tests/native-accounts.spec.ts:30:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota (2.4s)
+  ✓   5 [chromium] › tests/native-accounts.spec.ts:34:1 › uncertain per-platform pause preserves the other platform and does not replay a write (1.0s)
+  ✓   6 [chromium] › tests/native-accounts.spec.ts:37:1 › device verification failure permits local reads and preserves selected historical Hive quota (1.1s)
+  ✓   7 [chromium] › tests/native-accounts.spec.ts:42:1 › approved shared rows show saved identity and a keyboard-accessible compact detail (1.1s)
+  ✓   1 [chromium] › tests/native-accounts.spec.ts:17:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme (3.6s)
+  ✓   8 [chromium] › tests/native-accounts.spec.ts:58:1 › unconnected candidate shows its target and exact pause impact before connecting (1.0s)
+  ✓  10 [chromium] › tests/native-accounts.spec.ts:75:1 › candidate expiring at the safety boundary explains zero-write refusal (1.0s)
+  ✓   9 [chromium] › tests/native-accounts.spec.ts:68:1 › running official login explains its stopped precondition and provides the runtime location (1.1s)
+  ✓  11 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_missing stays scoped and leaves the other platform usable (1.1s)
+  ✓  12 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source permission_denied stays scoped and leaves the other platform usable (1.1s)
+  ✓  13 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source expired stays scoped and leaves the other platform usable (1.3s)
+  ✓  14 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_changed stays scoped and leaves the other platform usable (1.3s)
+  ✓  15 [chromium] › tests/native-accounts.spec.ts:89:1 › confirmation invalidates a changed candidate while retaining the original target and zero writes (1.5s)
+  ✓  16 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_missing is actionable without automatically connecting (1.2s)
+  ✓  17 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_version_unsupported is actionable without automatically connecting (1.4s)
+  ✓  18 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_source_unchanged is actionable without automatically connecting (1.4s)
+  ✓  19 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_timeout is actionable without automatically connecting (1.3s)
+  ✓  20 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_namespace_mismatch is actionable without automatically connecting (1.1s)
+  ✓  22 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: running (828ms)
+  ✓  23 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: stopped (789ms)
+  ✓  21 [chromium] › tests/native-accounts.spec.ts:101:1 › unknown cancel only queries the same official operation and late success remains an unconnected candidate (1.3s)
+  ✓  24 [chromium] › tests/polling-stability.spec.ts:34:1 › an explicit start during a runtime read waits and submits once (816ms)
+  ✓  25 [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay (954ms)
+  ✓  26 [chromium] › tests/polling-stability.spec.ts:52:1 › fresh supply reads keep pause available and serialize a single explicit change (904ms)
+  ✓  27 [chromium] › tests/polling-stability.spec.ts:63:1 › pairing polling keeps the website action stable (975ms)
+  ✓  29 [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery (1.0s)
+  ✓  30 [chromium] › tests/polling-stability.spec.ts:104:1 › a waiting platform resume cannot apply to a replacement account (1.1s)
+  ✓  28 [chromium] › tests/polling-stability.spec.ts:71:1 › account status polling never disables cancel login and the explicit cancel is not lost (1.7s)
+  ✓  31 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: fresh-revision (1.3s)
+  ✓  33 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: read-failed (1.1s)
+  ✓  32 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: candidate-changed (1.4s)
+  ✓  35 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (1.0s)
+  ✓  36 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt (749ms)
+  ✓  37 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt (884ms)
+  ✓  38 [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence (947ms)
+  ✓  39 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision (1.0s)
+  ✓  40 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision (1.2s)
+  ✓  41 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (755ms)
+  ✓  42 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (877ms)
+  ✓  43 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (1.0s)
+  ✓  44 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (1.1s)
+  ✓  45 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (1.1s)
+  ✓  46 [chromium] › tests/supply.spec.ts:49:1 › two verified shared account rows show real reasons and explicit pause/resume semantics at 860x600 (896ms)
+  ✓  47 [chromium] › tests/supply.spec.ts:62:1 › an uncertain write retries GET automatically, preserves diagnostics and never repeats PUT (965ms)
+  ✘  48 [chromium] › tests/supply.spec.ts:76:1 › serial polling waits ten seconds after completion and repeats failures without overlapping slow reads (645ms)
+  ✓  49 [chromium] › tests/supply.spec.ts:85:1 › expired snapshots never show a current successful state or enable writes (517ms)
+  ✘  50 [chromium] › tests/supply.spec.ts:89:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire (600ms)
+  ✘  34 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (6.1s)
+  ✓  51 [chromium] › tests/supply.spec.ts:103:1 › English platform controls and reason copy are complete at minimum width (858ms)
+  ✓  53 [chromium] › tests/supply.spec.ts:125:1 › a delayed expiry timer cannot authorize a write from a stale rendered button (723ms)
+  ✓  52 [chromium] › tests/supply.spec.ts:96:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance (1.2s)
+  ✓  54 [chromium] › tests/supply.spec.ts:111:1 › unverified devices never issue supply IPC (767ms)
+  ✓  56 [chromium] › tests/supply.spec.ts:132:1 › manager replacement invalidates device data while preserving this run’s language and navigation (882ms)
+  ✓  57 [chromium] › tests/supply.spec.ts:139:1 › one platform read failure preserves the other platform fresh report (915ms)
+  ✓  58 [chromium] › tests/supply.spec.ts:148:254 › detailed supply account_not_registered preserves pause and offers its real handling object (1.0s)
+  ✓  59 [chromium] › tests/supply.spec.ts:148:254 › detailed supply market_not_open preserves pause and offers its real handling object (952ms)
+  ✓  60 [chromium] › tests/supply.spec.ts:148:254 › detailed supply supply_not_enabled preserves pause and offers its real handling object (1.2s)
+  ✓  61 [chromium] › tests/supply.spec.ts:148:254 › detailed supply supply_device_restricted preserves pause and offers its real handling object (1.0s)
+  ✓  62 [chromium] › tests/supply.spec.ts:148:254 › detailed supply account_not_admitted preserves pause and offers its real handling object (816ms)
+  ✘  55 [chromium] › tests/supply.spec.ts:115:1 › an old in-flight successful read cannot overwrite replacement-instance failure or continue its next platform (5.8s)
+
+
+  1) [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByText('等待自动重试…', { exact: true })
+
+
+      140 |  const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+      141 |  await page.evaluate(()=>(window as any).fail='openai');await page.clock.runFor(10100);
+    > 142 |  await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();
+          |                                                       ^
+      143 |  await page.evaluate(()=>(window as any).fail='');await page.clock.runFor(10100);
+      144 |  await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+      145 |  await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:142:55
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-a-coordi-b608b-ts-the-next-explicit-action-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-a-coordi-b608b-ts-the-next-explicit-action-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-a-coordi-b608b-ts-the-next-explicit-action-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/supply.spec.ts:76:1 › serial polling waits ten seconds after completion and repeats failures without overlapping slow reads 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 4
+
+      77 |  await fixture(page,{delay:700});await page.clock.install();await page.goto('/');await page.clock.runFor(1600);
+      78 |  await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+    > 79 |  const before=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(before);
+         |                                                                                                                                                                                                                     ^
+      80 |  await page.evaluate(()=>{(window as unknown as {fail:string}).fail='GET /api/bee/platforms/openai HTTP 502';});await page.clock.runFor(2500);await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+      81 |  const failed=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(12000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(failed+2);
+      82 |  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:79:213
+
+    Error Context: ../.cache/device-pairing/playwright/supply-serial-polling-wait-55af1-hout-overlapping-slow-reads-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/supply-serial-polling-wait-55af1-hout-overlapping-slow-reads-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/supply-serial-polling-wait-55af1-hout-overlapping-slow-reads-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/supply.spec.ts:89:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+      92 |  await expect(openai.getByText('可接单',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('核对中…',{exact:true})).toHaveCount(0);
+      93 |  await page.clock.runFor(20000);await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('核对中…',{exact:true})).toBeVisible();await expect(openai.getByText('可接单',{exact:true})).toHaveCount(0);await expect(openai.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+    > 94 |  expect(await page.evaluate(()=> (window as unknown as {maxActive:number}).maxActive)).toBe(1);
+         |                                                                                        ^
+      95 | });
+      96 | test('navigation keeps one application poller and old results cannot repopulate a new manager instance',async({page})=>{
+      97 |  await fixture(page);await page.clock.install();await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:94:88
+
+    Error Context: ../.cache/device-pairing/playwright/supply-fresh-background-re-7440d--when-thirty-seconds-expire-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/supply-fresh-background-re-7440d--when-thirty-seconds-expire-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/supply-fresh-background-re-7440d--when-thirty-seconds-expire-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/supply.spec.ts:115:1 › an old in-flight successful read cannot overwrite replacement-instance failure or continue its next platform 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 4
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      116 |  await fixture(page,{ready:true});await page.clock.install();await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+      117 |  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.clock.runFor(10001);
+    > 118 |  await expect.poll(()=>page.evaluate(()=>(window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
+          |                                                                                                  ^
+      119 |  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='replacement GET HTTP 503';w.emit('c'.repeat(32));});await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);await page.clock.runFor(1500);
+      120 |  await diagnostics(page,'replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);
+      121 |  expect(await page.evaluate(()=>(window as unknown as {calls:{platform:string}[]}).calls.map(c=>c.platform))).toEqual(['openai','claude','openai','openai','claude']);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.spec.ts:118:98
+
+    Error Context: ../.cache/device-pairing/playwright/supply-an-old-in-flight-su-4b5a3--continue-its-next-platform-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/supply-an-old-in-flight-su-4b5a3--continue-its-next-platform-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/supply-an-old-in-flight-su-4b5a3--continue-its-next-platform-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4 failed
+    [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action 
+    [chromium] › tests/supply.spec.ts:76:1 › serial polling waits ten seconds after completion and repeats failures without overlapping slow reads 
+    [chromium] › tests/supply.spec.ts:89:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire 
+    [chromium] › tests/supply.spec.ts:115:1 › an old in-flight successful read cannot overwrite replacement-instance failure or continue its next platform 
+  58 passed (24.8s)
+{"exit": 1, "utc": "2026-11-02T13:21:59.119301+00:00"}

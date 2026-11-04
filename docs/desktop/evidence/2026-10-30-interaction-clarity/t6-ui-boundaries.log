@@ -1,0 +1,24 @@
+UTC: 2026-11-02T10:44:13.924986+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', '--grep', 'local expiry|stale owner|pairing copy|initial pairing presents', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 8 tests using 4 workers
+
+  ✓  4 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents redeeming from its durable transaction (1.5s)
+  ✓  2 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents draining from its durable transaction (1.5s)
+  ✓  3 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents creation_unknown from its durable transaction (1.5s)
+  ✓  1 [chromium] › tests/device.spec.ts:142:1 › pairing copy feedback and failed browser opening retain the same request (1.7s)
+  ✓  5 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents redemption_unknown from its durable transaction (683ms)
+  ✓  7 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents saving from its durable transaction (740ms)
+  ✓  6 [chromium] › tests/device.spec.ts:177:1 › local expiry waits for Hive confirmation before offering another pairing request (804ms)
+  ✓  8 [chromium] › tests/device.spec.ts:184:1 › a stale owner dialog cannot submit after the coordinator sees a newer transaction revision (796ms)
+
+  8 passed (3.7s)
+
+Exit: 0
+UTC end: 2026-11-02T10:44:18.270641+00:00

@@ -1,0 +1,81 @@
+--- FAIL: TestDesktopConnectionSnapshotRequiresNullableDetail (0.00s)
+    desktop_connection_test.go:18: runtime connection_detail must be present and null before observation; actual={"run_id":null,"revision":0,"network_revision":0,"observed_at":"2026-11-02T03:23:49.63529Z","local":"stopped","connection":"disconnected","platforms":{"claude":{"account":{"operation":null,"platform":"claude","revision":0,"candidate":{"state":"not_checked","reference":null,"source":null,"fingerprint":null,"plan":null,"expires_at":null,"identity_verified":false,"observed_at":null,"error":null},"selection":{"state":"not_selected","fingerprint":null,"observed_at":null,"error":null},"hive":{"state":"not_checked","fingerprint":null,"observed_at":null,"error":null,"pending_fingerprint":null,"generation":null},"authorization":{"state":"not_checked","fingerprint":null,"observed_at":null,"error":null},"capabilities":[{"origin":"official","status":"unknown","observed_at":null,"metadata_observed_at":null,"valid_until":null,"retry_at":null,"plan":null,"windows":[],"models":[],"error":null},{"origin":"hive","status":"unknown","observed_at":null,"metadata_observed_at":null,"valid_until":null,"retry_at":null,"plan":null,"windows":[],"models":[],"error":null}],"features":{"detect":{"available":true,"reason":null},"check":{"available":true,"reason":null},"select":{"available":true,"reason":null},"confirm_change":{"available":true,"reason":null},"remove":{"available":false,"reason":"runtime_drain_and_detach_required"},"clear_selection":{"available":true,"reason":null},"authorize":{"available":false,"reason":"verified_official_authorization_adapter_required"},"system_notifications":{"available":false,"reason":"system_notification_service_required"}},"issues":[],"checked_at":null},"supply":null,"selection_revision":0},"openai":{"account":{"operation":null,"platform":"openai","revision":0,"candidate":{"state":"not_checked","reference":null,"source":null,"fingerprint":null,"plan":null,"expires_at":null,"identity_verified":false,"observed_at":null,"error":null},"selection":{"state":"not_selected","fingerprint":null,"observed_at":null,"error":null},"hive":{"state":"not_checked","fingerprint":null,"observed_at":null,"error":null,"pending_fingerprint":null,"generation":null},"authorization":{"state":"not_checked","fingerprint":null,"observed_at":null,"error":null},"capabilities":[{"origin":"official","status":"unknown","observed_at":null,"metadata_observed_at":null,"valid_until":null,"retry_at":null,"plan":null,"windows":[],"models":[],"error":null},{"origin":"hive","status":"unknown","observed_at":null,"metadata_observed_at":null,"valid_until":null,"retry_at":null,"plan":null,"windows":[],"models":[],"error":null}],"features":{"detect":{"available":true,"reason":null},"check":{"available":true,"reason":null},"select":{"available":true,"reason":null},"confirm_change":{"available":true,"reason":null},"remove":{"available":false,"reason":"runtime_drain_and_detach_required"},"clear_selection":{"available":true,"reason":null},"authorize":{"available":false,"reason":"verified_official_authorization_adapter_required"},"system_notifications":{"available":false,"reason":"system_notification_service_required"}},"issues":[],"checked_at":null},"supply":null,"selection_revision":0}},"operation":null,"stop_receipt":null}
+2026/11/02 11:23:49 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53606/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:50 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53611/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:50 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:50 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:50 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53611/api/bee/agent delay_backoff=2s
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53622/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53627/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53635/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53640/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53647/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53652/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:51 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:51 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:51 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53662/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53662/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53668/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53668/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53676/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53676/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53682/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53687/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53687/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53693/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:52 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53698/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:52 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:52 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:52 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:53 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53703/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:53 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 11:23:53 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 11:23:53 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 11:23:53 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53709/api/bee/agent delay_backoff=1s
+2026/11/02 11:23:53 WARN Hive connection lost module=connect error="failed to ping: failed to wait for pong: context canceled"
+2026/11/02 11:23:54 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53709/api/bee/agent delay_backoff=2s
+2026/11/02 11:23:56 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:53709/api/bee/agent delay_backoff=10ms
+FAIL
+FAIL	github.com/tokhive/bee/agent	7.888s
+ok  	github.com/tokhive/bee/desktopbridge	0.870s
+FAIL

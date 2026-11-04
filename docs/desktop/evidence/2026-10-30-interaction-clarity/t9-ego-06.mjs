@@ -1,0 +1,8 @@
+const root='/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0',page=(await taskSpace(40)).page('p1');await page.cdp('Emulation.setDeviceMetricsOverride',{width:860,height:600,deviceScaleFactor:1,mobile:false});await page.cdp('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+await page.selectOption('loc=role:combobox[name="外观"]','dark');await page.click('loc=role:tab[name="关于"]');
+console.log(await page.screenshot({path:root+'/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-zh-dark-860.png'}));
+await page.click('loc=role:tab[name="通用"]');await page.selectOption('loc=role:combobox[name="语言"]','en');await page.click('loc=role:tab[name="About"]');
+console.log(await page.screenshot({path:root+'/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-en-dark-860.png'}));
+console.log(await page.evaluate(()=>({width:innerWidth,height:innerHeight,lang:document.documentElement.lang,theme:document.documentElement.dataset.theme,overflow:document.documentElement.scrollWidth>innerWidth,untranslated:[...document.querySelectorAll('.native-update')].map(e=>e.textContent.match(/[\u4e00-\u9fff]+/g)),writes:window.calls.filter(c=>['notification_enable','notification_retry','runtime_start','runtime_stop'].includes(c.command))})));
+await page.click('loc=role:tab[name="General"]');await page.selectOption('loc=role:combobox[name="Appearance"]','light');await page.click('loc=role:tab[name="About"]');await page.cdp('Emulation.setDeviceMetricsOverride',{width:1180,height:800,deviceScaleFactor:1,mobile:false});
+console.log(await page.screenshot({path:root+'/docs/desktop/evidence/2026-10-30-interaction-clarity/t9-ego-en-light-1180.png'}));console.log(await page.snapshot());

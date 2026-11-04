@@ -1,0 +1,57 @@
+command: go test ./agent -run TestDeviceRecovery(InitialReadFailure|InitialRecord|UnknownCreationPreserves|AdmissionReports) -count=1 -v
+time: 2026-11-02T07:49:03.363843+00:00
+baseline: a114c99ba4131ed11847e0bec0daf5861b045a72
+coverage: I1/I2/M1 behavior; corrected fixture invalid_device_credential and explicit awaiting_confirmation checks
+sha256 aa31f85095382033b3b343e2f9ec3fa83f84dea37b6d7005c445d66f21079de0 agent/desktop_device.go
+sha256 923f80cfcb6e761cb092f841b7bd5dcbcfa88812c6f760b4b82b6e28067accf8 agent/desktop_device_recovery.go
+sha256 328740dfa867c6bfd5303033eaa192399d6b72b67cd9d93730a2cdcbfb2758da agent/desktop_device_recovery_test.go
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true
+    desktop_device_recovery_test.go:730: lost durable unsubmitted proof: record=<nil> err=<nil>
+--- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof (2.08s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false (0.03s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true (0.03s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false (0.01s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true (0.01s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false (1.00s)
+    --- FAIL: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true (1.00s)
+=== RUN   TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential
+    desktop_device_recovery_test.go:767: required record write failure before config: save Bee configuration: open /var/folders/6p/7_k4z27j63l2p6bbs1p4yhc80000gn/T/TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredenti2773648123/001/.bee-303427219: permission denied
+--- FAIL: TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential (0.02s)
+=== RUN   TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin
+    desktop_device_recovery_test.go:807: record-only Status {State: Recovery:<nil> Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} recovery original binding changed; late transaction result rejected and current configuration preserved POST=0
+--- FAIL: TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin (0.02s)
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true
+    desktop_device_recovery_test.go:881: original failure replaced: got={"code":"DEVICE_RECOVERY_BLOCKED","message":"pairing creation result unknown without token; verify the original request in the Hive console and export diagnostics; existing protocol cannot retrieve its token","details":{"check":"device_recovery","observed_at":"2026-11-02T07:49:11.210825Z","evidence":{}}} want={"code":"unknown_failure","message":"unknown_failure: POST /api/bee/pairings HTTP 200: invalid JSON at byte=1","details":{"check":"pairing_create","observed_at":"2026-11-02T07:49:11.161878Z","evidence":{"http_status":"200","path":"/api/bee/pairings","target_origin":"http://127.0.0.1:57995"}}} err=<nil>
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false
+    desktop_device_recovery_test.go:881: original failure replaced: got={"code":"DEVICE_RECOVERY_BLOCKED","message":"pairing creation result unknown without token; verify the original request in the Hive console and export diagnostics; existing protocol cannot retrieve its token","details":{"check":"device_recovery","observed_at":"2026-11-02T07:49:11.345422Z","evidence":{}}} want={"code":"unknown_failure","message":"unknown_failure: POST /api/bee/pairings HTTP 200: invalid JSON at byte=1","details":{"check":"pairing_create","observed_at":"2026-11-02T07:49:11.317903Z","evidence":{"http_status":"200","path":"/api/bee/pairings","target_origin":"http://127.0.0.1:57997"}}} err=<nil>
+--- FAIL: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence (0.24s)
+    --- FAIL: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true (0.14s)
+    --- FAIL: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false (0.10s)
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed
+    desktop_device_recovery_test.go:916: admission lacks actual cause: err=device recovery admission rejected: local=stopped active_actions=0 account_workers=0; required=stopped and all workers exited required=runtime_closed=true POST=0
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run
+    desktop_device_recovery_test.go:916: admission lacks actual cause: err=device recovery admission rejected: local=stopped active_actions=0 account_workers=0; required=stopped and all workers exited required=run_worker_pending=true POST=0
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control
+    desktop_device_recovery_test.go:916: admission lacks actual cause: err=device recovery admission rejected: local=stopped active_actions=0 account_workers=0; required=stopped and all workers exited required=control_worker_pending=true POST=0
+--- FAIL: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts (0.03s)
+    --- FAIL: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed (0.01s)
+    --- FAIL: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run (0.01s)
+    --- FAIL: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control (0.01s)
+FAIL
+FAIL	github.com/tokhive/bee/agent	2.844s
+FAIL
+
+exit_code: 1

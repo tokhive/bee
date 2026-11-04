@@ -1,0 +1,68 @@
+UTC: 2026-11-02T10:54:42.256390+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', 'native-runtime.spec.ts', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 52 tests using 4 workers
+
+  ✓   1 [chromium] › tests/device.spec.ts:90:1 › an old native status rejection cannot overwrite a newer ready event (1.4s)
+  ✓   2 [chromium] › tests/device.spec.ts:67:1 › failed verification blocks success and remains retryable (1.4s)
+  ✓   5 [chromium] › tests/device.spec.ts:96:1 › opening after website confirmation consumes the latest bound result (664ms)
+  ✓   6 [chromium] › tests/device.spec.ts:104:1 › English device entry and settings have complete translations (726ms)
+  ✓   3 [chromium] › tests/device.spec.ts:76:1 › retrying a failed bound-device check does not revive cached success (2.4s)
+  ✓   7 [chromium] › tests/device.spec.ts:111:1 › diagnostics preserve runtime operation and platform authorization failure evidence (521ms)
+  ✓   8 [chromium] › tests/device.spec.ts:133:1 › initial device facts stay unknown until the first read finishes (435ms)
+  ✓   4 [chromium] › tests/device.spec.ts:48:1 › normal native build pairs and verifies without demo balances or starting supply (2.9s)
+  ✓   9 [chromium] › tests/device.spec.ts:142:1 › pairing copy feedback and failed browser opening retain the same request (737ms)
+  ✓  10 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents creation_unknown from its durable transaction (587ms)
+  ✓  11 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents draining from its durable transaction (594ms)
+  ✓  12 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents redeeming from its durable transaction (576ms)
+  ✓  13 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents redemption_unknown from its durable transaction (615ms)
+  ✓  14 [chromium] › tests/device.spec.ts:151:201 › initial pairing presents saving from its durable transaction (745ms)
+  ✓  16 [chromium] › tests/device.spec.ts:166:1 › restarted unknown recovery queries the existing transaction without writes (690ms)
+  ✓  15 [chromium] › tests/device.spec.ts:157:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation (1.1s)
+  ✓  17 [chromium] › tests/device.spec.ts:171:1 › adopting a different owner requires its own current revision confirmation (752ms)
+  ✓  18 [chromium] › tests/device.spec.ts:177:1 › local expiry waits for Hive confirmation before offering another pairing request (679ms)
+  ✓  19 [chromium] › tests/device.spec.ts:184:1 › a stale owner dialog cannot submit after the coordinator sees a newer transaction revision (718ms)
+  ✓  20 [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (781ms)
+  ✓  21 [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot (983ms)
+  ✓  22 [chromium] › tests/native-runtime.spec.ts:43:1 › a successful account write still requires a verified read when central readback fails (983ms)
+  ✓  24 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action success from the previous owner cannot refresh or pause the current instance (1.0s)
+  ✓  23 [chromium] › tests/native-runtime.spec.ts:51:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart (1.2s)
+  ✓  25 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action failure from the previous owner cannot refresh or pause the current instance (863ms)
+  ✓  26 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start success from the previous owner cannot refresh or pause the current instance (910ms)
+  ✓  27 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start failure from the previous owner cannot refresh or pause the current instance (784ms)
+  ✓  28 [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (1.0s)
+  ✓  29 [chromium] › tests/native-runtime.spec.ts:86:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them (1.1s)
+  ✓  31 [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query (672ms)
+  ✓  30 [chromium] › tests/native-runtime.spec.ts:94:1 › official login warns about official account, supports cancellation, and completed login remains a candidate (1.2s)
+  ✓  33 [chromium] › tests/native-runtime.spec.ts:112:1 › account change remains paused and a platform failure leaves the other platform visible (1.1s)
+  ✓  35 [chromium] › tests/native-runtime.spec.ts:130:1 › English runtime and login confirmation support keyboard at minimum window size (1.0s)
+  ✓  34 [chromium] › tests/native-runtime.spec.ts:122:1 › only proven unsubmitted confirmation can continue after reconciliation (1.0s)
+  ✓  32 [chromium] › tests/native-runtime.spec.ts:105:1 › completed login cannot clear a later source edit, and write admission locks the source (2.4s)
+  ✓  38 [chromium] › tests/native-runtime.spec.ts:157:1 › start preserves paused platforms and uncertain start recovers by reading only (1.1s)
+  ✓  36 [chromium] › tests/native-runtime.spec.ts:138:1 › runtime account revisions reach an open confirmation without changing its candidate (1.4s)
+  ✓  37 [chromium] › tests/native-runtime.spec.ts:148:1 › runtime observations preserve newer candidates and edited sources (1.5s)
+  ✓  40 [chromium] › tests/native-runtime.spec.ts:182:56 › identity device still permits one trusted local stop (1.3s)
+  ✓  39 [chromium] › tests/native-runtime.spec.ts:178:1 › unregistered selection can be cancelled only after confirmation and never starts runtime (1.4s)
+  ✓  41 [chromium] › tests/native-runtime.spec.ts:182:56 › identity diagnostic still permits one trusted local stop (1.4s)
+  ✓  42 [chromium] › tests/native-runtime.spec.ts:182:56 › identity recovery still permits one trusted local stop (1.2s)
+  ✓  43 [chromium] › tests/native-runtime.spec.ts:193:43 › device failure allows local login and cancellation but keeps account selection blocked (1.2s)
+  ✓  44 [chromium] › tests/native-runtime.spec.ts:193:43 › recovery failure allows local login and cancellation but keeps account selection blocked (1.2s)
+  ✓  45 [chromium] › tests/native-runtime.spec.ts:203:1 › recovery-only failure hides ready supply, blocks resume, and is visible beyond overview (1.0s)
+  ✓  46 [chromium] › tests/native-runtime.spec.ts:217:57 › known unsent account_action recovers at the same revision without replay (1.4s)
+  ✓  48 [chromium] › tests/native-runtime.spec.ts:230:244 › shared connecting status never presents running as ready (711ms)
+  ✓  49 [chromium] › tests/native-runtime.spec.ts:230:244 › shared reconnecting status never presents running as ready (792ms)
+  ✓  47 [chromium] › tests/native-runtime.spec.ts:217:57 › known unsent runtime_start recovers at the same revision without replay (989ms)
+  ✓  50 [chromium] › tests/native-runtime.spec.ts:230:244 › shared disconnected status never presents running as ready (679ms)
+  ✓  51 [chromium] › tests/native-runtime.spec.ts:230:244 › shared rejected status never presents running as ready (583ms)
+  ✓  52 [chromium] › tests/native-runtime.spec.ts:230:244 › shared occupied status never presents running as ready (649ms)
+
+  52 passed (15.1s)
+
+Exit: 0
+UTC end: 2026-11-02T10:54:57.976987+00:00

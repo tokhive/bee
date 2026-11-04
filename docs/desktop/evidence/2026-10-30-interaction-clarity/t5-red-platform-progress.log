@@ -1,0 +1,36 @@
+time=2026-11-02T08:15:49.611160+00:00
+base=8897183
+source=coordinator/status/navigation WIP, useSupply base
+command=/Users/dayong/.nvm/versions/node/v24.22.1/bin/node --test --test-name-pattern=supply progress tests/desktopState.test.ts
+✖ supply progress follows its platform request rather than another platform busy flag (11.09125ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 136.137042
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:132:1
+✖ supply progress follows its platform request rather than another platform busy flag (11.09125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'checking'
+  - 'waiting'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:136:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'checking',
+    expected: 'waiting',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit=1

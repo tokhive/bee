@@ -1,0 +1,17 @@
+{
+  "baseline": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "commit": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+  "files": [
+    {
+      "path": "desktop/src/features/settings/NativeSettingsPage.tsx",
+      "sha256": "b1800a6661248796ea788646b7c6c385362baa140338a2d30a3a2876ca493834",
+      "git_blob": "a53a9c41cebf9a6bcef42a5882539b0dafb23836"
+    },
+    {
+      "path": "desktop/tests/native-experience.spec.ts",
+      "sha256": "3e2ba2972bcac82a34001ecaae16e9d13d753b9238b718e0e3c6a19bf73dad74",
+      "git_blob": "3b47fd0b721d16e0daa4748eb3db2d9f98bb2df6"
+    }
+  ],
+  "verification_source_hashes_match": true
+}

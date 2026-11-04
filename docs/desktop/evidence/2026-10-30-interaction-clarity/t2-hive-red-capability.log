@@ -1,0 +1,8 @@
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty
+    dynamic_supply_unit_test.go:187: detailed supply API missing; cannot explain current admission facts
+--- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission (0.39s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty (0.39s)
+FAIL
+FAIL	github.com/tokhive/hive/hive/internal/service	0.850s
+FAIL

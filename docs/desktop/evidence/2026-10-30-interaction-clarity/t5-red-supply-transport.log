@@ -1,0 +1,38 @@
+time=2026-11-02T08:33:33.551304+00:00
+base=8897183 + T5 prior to supply transport change
+source=actual createSupplyClient transport queue
+command=['node', '--test', '--test-name-pattern=independent platform reads', 'tests/supply.test.ts']
+✖ independent platform reads reach the transport before a slow platform completes (2.647625ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.263042
+
+✖ failing tests:
+
+test at tests/supply.test.ts:253:1
+✖ independent platform reads reach the transport before a slow platform completes (2.647625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    [
+      'openai',
+  -   'claude'
+    ]
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.test.ts:257:13)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ 'openai', 'claude' ],
+    expected: [ 'openai', 'claude' ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+exit=1

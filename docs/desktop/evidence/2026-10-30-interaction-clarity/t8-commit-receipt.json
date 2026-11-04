@@ -1,0 +1,33 @@
+{
+  "utc": "2026-11-02T16:38:09.430602+00:00",
+  "commit": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "subject": "feat(desktop): make settings and diagnostics recovery actionable",
+  "parent": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+  "file_count": 19,
+  "source_tree_sha256": "57a2a1dd5c999db80df5d9edf8169c995c77aa654593e16c7541f7c483890ca6",
+  "source_files": [
+    "desktop/src-tauri/src/network.rs",
+    "desktop/src-tauri/src/network_tests.rs",
+    "desktop/src/app/NativeApp.tsx",
+    "desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx",
+    "desktop/src/features/diagnostics/native-diagnostics.css",
+    "desktop/src/features/diagnostics/presentation.ts",
+    "desktop/src/features/settings/NativeSettingsPage.tsx",
+    "desktop/src/features/settings/native-settings.css",
+    "desktop/src/i18n/en.ts",
+    "desktop/src/presentation/problems.ts",
+    "desktop/src/styles/section-tabs.css",
+    "desktop/src/system/desktopState.ts",
+    "desktop/src/system/diagnostics.ts",
+    "desktop/tests/desktopState.test.ts",
+    "desktop/tests/diagnostic-presentation.test.ts",
+    "desktop/tests/diagnostics.test.ts",
+    "desktop/tests/native-experience.spec.ts",
+    "desktop/tests/network.test.ts",
+    "desktop/tests/recovery-navigation.spec.ts"
+  ],
+  "commit_blobs_working_copy_and_manifest_match": true,
+  "index_empty": true,
+  "remaining_status": " M Makefile\n M desktop/README.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+  "report_sha256": "30ed661fecd146ce8759ed34ff6025968519a7911324c3a691268bb03cd55d05"
+}

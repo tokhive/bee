@@ -1,0 +1,32 @@
+time=2026-11-02T10:03:43.412654+00:00
+command=['cargo', 'test', '--lib', 'sidecar::tests::unsent_', '--', '--nocapture']
+cwd=desktop/src-tauri
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.47s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 3 tests
+
+thread 'sidecar::tests::unsent_waiters_keep_the_sent_request_terminal_evidence' (11275081) panicked at src/sidecar_tests.rs:1293:5:
+missing cause: ping rejected before any bytes were sent because owned session ended; cause=PIPE_READ_FAILED
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test sidecar::tests::unsent_waiters_keep_the_sent_request_terminal_evidence ... FAILED
+
+thread 'sidecar::tests::unsent_mpsc_requests_keep_terminal_evidence' (11275079) panicked at src/sidecar_tests.rs:1307:5:
+missing code: ping rejected before any bytes were sent because owned Bee stopped
+test sidecar::tests::unsent_mpsc_requests_keep_terminal_evidence ... FAILED
+test sidecar::tests::unsent_queue_timeout_does_not_kill_a_healthy_device_session ... ok
+
+failures:
+
+failures:
+    sidecar::tests::unsent_mpsc_requests_keep_terminal_evidence
+    sidecar::tests::unsent_waiters_keep_the_sent_request_terminal_evidence
+
+test result: FAILED. 1 passed; 2 failed; 0 ignored; 0 measured; 214 filtered out; finished in 9.93s
+
+error: test failed, to rerun pass `--lib`
+
+exit=101

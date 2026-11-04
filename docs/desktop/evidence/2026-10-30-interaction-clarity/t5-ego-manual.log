@@ -1,0 +1,55 @@
+{
+  "time": "2026-11-02T08:29:48.234Z",
+  "command": "ego-browser nodejs; TaskSpace 35 / p1; settings round trip, keyboard Tab, locale/theme controls, CDP viewport/reduced motion",
+  "base": "889718306c3ec999cce141f3f6e94478b0f96ff8 + T5 WIP",
+  "source": "formal NativeApp with preview fixture; not real business acceptance",
+  "small": {
+    "locale": "en",
+    "theme": "dark",
+    "heading": "Diagnostics",
+    "headingY": 77,
+    "toolbarBottom": 52,
+    "active": "H1",
+    "reducedMotion": false,
+    "diagnosticStarts": 0
+  },
+  "regular": {
+    "draft": "http://127.0.0.1:18181",
+    "headingY": 77,
+    "toolbarBottom": 52,
+    "viewport": 1280,
+    "networkWrites": 0
+  },
+  "initialZhLight": {
+    "draft": "http://127.0.0.1:18181",
+    "focused": "H1",
+    "headingY": 77,
+    "toolbarBottom": 52,
+    "writes": []
+  },
+  "notes": [
+    "First English tab locator was guessed incorrectly; snapshot corrected it. Fixture edit then reloaded page; state re-established through UI.",
+    "Ego update notice already reported by root; no upgrade",
+    "CDP emulation is round-local: first dark screenshot was1920 and renamed accordingly; this round reapplied860/reduced motion and verified actual media state."
+  ],
+  "smallCorrected": {
+    "locale": "en",
+    "theme": "dark",
+    "viewport": [
+      860,
+      600
+    ],
+    "headingY": 77,
+    "toolbarBottom": 52,
+    "active": "H1",
+    "reducedMotion": true,
+    "diagnosticStarts": 0
+  },
+  "longSource": {
+    "directory": "/tmp/long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-long-folder-unsaved",
+    "active": "INPUT",
+    "dialogWidth": 413,
+    "dialogScrollWidth": 413,
+    "writes": 0
+  }
+}

@@ -1,0 +1,136 @@
+$ git diff --check
+exit=0
+$ git diff --cached --check
+exit=0
+$ git diff --cached --stat
+ agent/desktop_device.go                   |  66 +++++++++-
+ agent/desktop_device_test.go              |  61 ++++++++++
+ agent/desktop_diagnostics_test.go         |  32 +++++
+ desktop/src-tauri/src/commands.rs         |  14 +--
+ desktop/src-tauri/src/experience.rs       |  74 ++++++++++--
+ desktop/src-tauri/src/experience_tests.rs | 192 +++++++++++++++++++++++++++++-
+ desktop/src-tauri/src/network.rs          |  14 +++
+ desktop/src-tauri/src/protocol.rs         |  67 +++++++++++
+ desktop/src-tauri/src/sidecar.rs          |   5 +-
+ desktop/src/app/NativeApp.tsx             |   6 +-
+ desktop/src/i18n/en.ts                    |   7 ++
+ desktop/src/presentation/problems.ts      |   9 +-
+ desktop/src/system/desktopState.ts        |  22 ++--
+ desktop/src/system/device.ts              |  17 ++-
+ desktop/tests/device.test.ts              |  10 ++
+ desktop/tests/fixtures/bridge-child.mjs   |  17 ++-
+ desktop/tests/problems.test.ts            |  20 ++++
+ desktop/tests/startup-recovery.test.ts    |  19 +++
+ desktopbridge/server.go                   |   5 +-
+ desktopbridge/startup_context_test.go     |  19 ++-
+ 20 files changed, 622 insertions(+), 54 deletions(-)
+exit=0
+$ git diff --cached --name-only
+agent/desktop_device.go
+agent/desktop_device_test.go
+agent/desktop_diagnostics_test.go
+desktop/src-tauri/src/commands.rs
+desktop/src-tauri/src/experience.rs
+desktop/src-tauri/src/experience_tests.rs
+desktop/src-tauri/src/network.rs
+desktop/src-tauri/src/protocol.rs
+desktop/src-tauri/src/sidecar.rs
+desktop/src/app/NativeApp.tsx
+desktop/src/i18n/en.ts
+desktop/src/presentation/problems.ts
+desktop/src/system/desktopState.ts
+desktop/src/system/device.ts
+desktop/tests/device.test.ts
+desktop/tests/fixtures/bridge-child.mjs
+desktop/tests/problems.test.ts
+desktop/tests/startup-recovery.test.ts
+desktopbridge/server.go
+desktopbridge/startup_context_test.go
+exit=0
+$ git status --short
+ M Makefile
+M  agent/desktop_device.go
+M  agent/desktop_device_test.go
+M  agent/desktop_diagnostics_test.go
+ M desktop/README.md
+M  desktop/src-tauri/src/commands.rs
+M  desktop/src-tauri/src/experience.rs
+M  desktop/src-tauri/src/experience_tests.rs
+M  desktop/src-tauri/src/network.rs
+M  desktop/src-tauri/src/protocol.rs
+M  desktop/src-tauri/src/sidecar.rs
+M  desktop/src/app/NativeApp.tsx
+M  desktop/src/i18n/en.ts
+M  desktop/src/presentation/problems.ts
+M  desktop/src/system/desktopState.ts
+M  desktop/src/system/device.ts
+M  desktop/tests/device.test.ts
+M  desktop/tests/fixtures/bridge-child.mjs
+M  desktop/tests/problems.test.ts
+M  desktop/tests/startup-recovery.test.ts
+M  desktopbridge/server.go
+M  desktopbridge/startup_context_test.go
+ M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md
+ M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md
+?? .DS_Store
+?? desktop/tests/fixtures/bee-preview/interaction-prototype.html
+?? docs/.DS_Store
+?? docs/desktop/evidence/2026-10-30-interaction-clarity/
+?? docs/desktop/interaction-clarity-validation.md
+?? docs/superpowers/.DS_Store
+?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md
+?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md
+?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md
+exit=0
+Verified exact task scope: 20 staged files; report/evidence and existing unrelated changes excluded.
+$ git commit -m fix(desktop): unblock diagnostics and explicit network recovery
+[feat/bee-desktop-p0 9dd0492] fix(desktop): unblock diagnostics and explicit network recovery
+ 20 files changed, 622 insertions(+), 54 deletions(-)
+exit=0
+$ git rev-parse HEAD
+9dd0492530eede3031c62467ea1df6624fff9505
+exit=0
+$ git show --format=fuller --stat --oneline HEAD
+9dd0492 fix(desktop): unblock diagnostics and explicit network recovery
+ agent/desktop_device.go                   |  66 +++++++++-
+ agent/desktop_device_test.go              |  61 ++++++++++
+ agent/desktop_diagnostics_test.go         |  32 +++++
+ desktop/src-tauri/src/commands.rs         |  14 +--
+ desktop/src-tauri/src/experience.rs       |  74 ++++++++++--
+ desktop/src-tauri/src/experience_tests.rs | 192 +++++++++++++++++++++++++++++-
+ desktop/src-tauri/src/network.rs          |  14 +++
+ desktop/src-tauri/src/protocol.rs         |  67 +++++++++++
+ desktop/src-tauri/src/sidecar.rs          |   5 +-
+ desktop/src/app/NativeApp.tsx             |   6 +-
+ desktop/src/i18n/en.ts                    |   7 ++
+ desktop/src/presentation/problems.ts      |   9 +-
+ desktop/src/system/desktopState.ts        |  22 ++--
+ desktop/src/system/device.ts              |  17 ++-
+ desktop/tests/device.test.ts              |  10 ++
+ desktop/tests/fixtures/bridge-child.mjs   |  17 ++-
+ desktop/tests/problems.test.ts            |  20 ++++
+ desktop/tests/startup-recovery.test.ts    |  19 +++
+ desktopbridge/server.go                   |   5 +-
+ desktopbridge/startup_context_test.go     |  19 ++-
+ 20 files changed, 622 insertions(+), 54 deletions(-)
+exit=0
+$ git diff --cached --check
+exit=0
+$ git diff --check
+exit=0
+$ git status --short
+ M Makefile
+ M desktop/README.md
+ M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md
+ M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md
+?? .DS_Store
+?? desktop/tests/fixtures/bee-preview/interaction-prototype.html
+?? docs/.DS_Store
+?? docs/desktop/evidence/2026-10-30-interaction-clarity/
+?? docs/desktop/interaction-clarity-validation.md
+?? docs/superpowers/.DS_Store
+?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md
+?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md
+?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md
+exit=0
+Temporary Vite session 30628 stopped with Ctrl-C; exit=130. TaskSpace33 and TaskSpace34 finished.

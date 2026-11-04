@@ -1,0 +1,20 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision' (9789479) panicked at src/protocol.rs:1044:3:
+assertion `left == right` failed
+  left: "INVALID_REPLY"
+ right: "DEVICE_CONTEXT_INVALID"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision ... FAILED
+
+failures:
+
+failures:
+    protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 195 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

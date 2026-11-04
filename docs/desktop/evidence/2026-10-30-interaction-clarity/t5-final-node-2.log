@@ -1,0 +1,50 @@
+time=2026-11-02T08:41:30.546428+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=T5 frontend working tree
+command=['node', '--test', 'tests/desktopStatus.test.ts', 'tests/desktopState.test.ts']
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (20.248625ms)
+✔ old child and network revision results never replace current state (6.700375ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (1.968ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (4.592375ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (2.972875ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (6.823208ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (2.091291ms)
+✔ device read failure stays on the device and still publishes account defaults (1.869375ms)
+✔ replacement refresh starts after the status listener returns (1.845625ms)
+✔ a superseded initial status rejection cannot block a ready event (5.518583ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (22.157875ms)
+✔ shared and independent platform facts publish before slow openai account (4.599625ms)
+✔ shared and independent platform facts publish before slow claude account (0.815334ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (19.720667ms)
+✔ failed platform reads retain confirmed history and its real retry time (10.373041ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (5.969125ms)
+✔ supply progress follows its platform request rather than another platform busy flag (50.078584ms)
+✔ fresh ready (2.775166ms)
+✔ shared failed read suppresses old success (0.288791ms)
+✔ confirmed revocation precedes stopped and unknown accounts (0.128875ms)
+✔ startup rejection does not depend on accounts (0.413375ms)
+✔ starting precedes empty accounts (0.284959ms)
+✔ known empty accounts (0.221583ms)
+✔ selected stopped (0.161917ms)
+✔ unknown accounts are not zero (0.200416ms)
+✔ first read (0.241042ms)
+✔ all paused (0.260292ms)
+✔ expired success cannot be ready (0.086041ms)
+✔ one platform failure preserves the other confirmed ready platform (0.4795ms)
+✔ paused keeps independent blockers in the original snapshot (0.081042ms)
+✔ preparation closes after a selected account, including ordinary stop (0.105417ms)
+✔ initial transaction awaiting_confirmation stays pairing (0.093834ms)
+✔ initial transaction creation_unknown stays pairing (0.04925ms)
+✔ initial transaction redemption_unknown stays pairing (0.030917ms)
+✔ initial transaction saving stays pairing (0.040792ms)
+✔ initial transaction awaiting_owner_confirmation stays pairing (0.025791ms)
+ℹ tests 36
+ℹ suites 0
+ℹ pass 36
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 490.332625
+
+exit=0

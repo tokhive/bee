@@ -1,0 +1,67 @@
+{
+  "utc": "2026-11-02T16:13:08.146Z",
+  "taskSpace": 40,
+  "fixture": true,
+  "facts": [
+    {
+      "scenario": "G02-background",
+      "before": {
+        "focus": "重新读取原报告",
+        "scroll": 510.5,
+        "reads": 1
+      },
+      "after": {
+        "focus": "重新读取原报告",
+        "scroll": 510.5,
+        "reduced": true,
+        "starts": 1,
+        "reads": [
+          {
+            "command": "diagnostics_snapshot",
+            "args": {
+              "id": "000000000000000000000000000000000000000000000001"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "scenario": "G02-recovered",
+      "starts": 1,
+      "ids": [
+        "000000000000000000000000000000000000000000000001",
+        "000000000000000000000000000000000000000000000001"
+      ]
+    },
+    {
+      "scenario": "G03-after-navigation",
+      "starts": 1,
+      "reads": 0,
+      "buttons": [
+        {
+          "text": "Run diagnostics",
+          "disabled": true
+        },
+        {
+          "text": "Export sanitized report",
+          "disabled": true
+        }
+      ],
+      "focus": "H1"
+    },
+    {
+      "scenario": "N04-escape",
+      "dialog": false,
+      "focus": "停止并重新启动以应用",
+      "applies": 0
+    },
+    {
+      "scenario": "N04-after-navigation",
+      "applies": 1,
+      "stops": 0,
+      "starts": 0,
+      "draft": "http://127.0.0.1:18491",
+      "unknown": true
+    }
+  ]
+}

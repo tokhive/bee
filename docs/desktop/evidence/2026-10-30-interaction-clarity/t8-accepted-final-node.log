@@ -1,0 +1,48 @@
+{"utc": "2026-11-02T16:30:30.208362+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/network.test.ts", "tests/diagnostics.test.ts", "tests/diagnostic-presentation.test.ts", "tests/preferences.test.ts", "tests/notifications.test.ts"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? .firecrawl/\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+✔ presentation preserves each check and every reason while prioritizing device and platform issues (6.495333ms)
+✔ empty, pending and unknown observations never become passed checks (0.944208ms)
+✔ diagnostic presentation separates local binding proof and exact remote recovery targets (1.792375ms)
+✔ real Hive device replacement DTO overrides its generic diagnostics next action (26.141583ms)
+✔ only proven Hive identity 401 evidence presents an invalid device credential recovery (8.637042ms)
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (8.796542ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (1.037917ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (0.661458ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.301583ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (2.587625ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (0.354708ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.264875ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (1.801625ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (27.144833ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (2.867584ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (8.120125ms)
+✔ diagnostic reports logs and exports retain defined detailed supply reason evidence (2.793167ms)
+✔ binding changes invalidate cached and in-flight diagnostic reports (1.607583ms)
+✔ completed reports cannot be displayed or exported under a replacement binding (0.244208ms)
+✔ lost start receipt fences another start until the diagnostic scope changes (0.279333ms)
+✔ lost cancel receipt permits only reading the original ID, never another cancel (0.267792ms)
+✔ concurrent reads of the original report share one request and preserve its last checks on failure (0.153458ms)
+✔ a failed read after unknown cancellation retains both exact failures in the scoped session (0.17975ms)
+✔ a late original report read cannot replace a newer explicitly started diagnostic in the same scope (0.177958ms)
+✔ a running cancel receipt remains unconfirmed and only a terminal read settles it (0.18325ms)
+✔ a late export payload or delivery receipt cannot alter a newer report session (2.871584ms)
+✔ network snapshot decodes the seven fixed saved and effective fields (4.454667ms)
+✔ network tests accept exactly the three fixed checks and preserve HTTP evidence (3.707167ms)
+✔ network client uses fixed native commands and revisioned scope-free save input (0.927041ms)
+✔ network client rejects unsafe proxy, origin, revision, scope and unconfirmed restart before invocation (0.448042ms)
+✔ network client preserves failed save and failed apply snapshots (0.262791ms)
+✔ network stage feedback preserves concrete producer cause while naming only its proven failed stage (109.279917ms)
+✔ OS permission decoder rejects unknown and autostart never infers registration from desire (2.904792ms)
+✔ permission is requested only at explicit enable and no arbitrary notification payload is exposed (0.592083ms)
+✔ delivery failure remains observable and retry is an explicit fixed action (0.467958ms)
+✔ native preferences defaults and strict public schema exclude demo state and secrets (9.204834ms)
+✔ proxy validation accepts only explicit loopback IP HTTP with port and no credentials (0.865542ms)
+✔ native preferences client sends revisioned commands and preserves failure snapshot (2.711416ms)
+ℹ tests 38
+ℹ suites 0
+ℹ pass 38
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 489.403708
+{"exit": 0, "utc": "2026-11-02T16:30:31.141521+00:00"}

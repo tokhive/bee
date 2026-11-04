@@ -1,0 +1,23 @@
+{"utc": "2026-11-02T12:42:12.013781+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri", "argv": ["cargo", "test", "--lib", "experience::tests::absent_device_recovery_status_preserves_startup_and_network_scope", "--", "--nocapture"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 17.35s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'experience::tests::absent_device_recovery_status_preserves_startup_and_network_scope' (11817901) panicked at src/experience_tests.rs:342:9:
+assertion `left == right` failed: status-only absence changed ready gate
+  left: Object {"binding_revision": Null, "failure": Object {"code": String("DEVICE_RECOVERY_NONE"), "message": String("fixture recovery read rejected: DEVICE_RECOVERY_NONE")}, "instance": String("ffffffffffffffffffffffffffffffff"), "network_revision": Null, "observed_at": String("2026-11-02T12:42:43.111204Z"), "revision": Number(4), "state": String("blocked")}
+ right: Object {"binding_revision": Number(1), "failure": Null, "instance": String("ffffffffffffffffffffffffffffffff"), "network_revision": Number(0), "observed_at": String("2026-11-02T12:42:43.106919Z"), "revision": Number(2), "state": String("ready")}
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test experience::tests::absent_device_recovery_status_preserves_startup_and_network_scope ... FAILED
+
+failures:
+
+failures:
+    experience::tests::absent_device_recovery_status_preserves_startup_and_network_scope
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 219 filtered out; finished in 12.61s
+
+error: test failed, to rerun pass `--lib`
+{"exit": 101, "utc": "2026-11-02T12:42:43.121929+00:00"}

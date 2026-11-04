@@ -1,0 +1,10 @@
+time=2026-11-02T08:26:17.087486+00:00
+base=8897183 + T5 WIP
+source=coordinator/read-only derive/NativeApp browser fixtures
+command=['npm', 'run', 'typecheck']
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+exit=0

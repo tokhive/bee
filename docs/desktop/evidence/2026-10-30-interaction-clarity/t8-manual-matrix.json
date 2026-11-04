@@ -1,0 +1,1760 @@
+{
+  "utc": "2026-11-02T16:11:32.445Z",
+  "url": "http://127.0.0.1:1421/tests/fixtures/bee-preview/app.html",
+  "taskSpace": 40,
+  "fixture": true,
+  "facts": [
+    {
+      "name": "860-zh-light",
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 467,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 466.5,
+          "scrollMax": 467,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 320,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 319.5,
+          "scrollMax": 320,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1668,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 2101.5,
+          "scrollMax": 2102,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-860-zh-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "860-zh-dark",
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 467,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 466.5,
+          "scrollMax": 467,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 320,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 319.5,
+          "scrollMax": 320,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1668,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 2101.5,
+          "scrollMax": 2102,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-860-zh-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "860-en-light",
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 512,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 511.5,
+          "scrollMax": 512,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 366,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 366.5,
+          "scrollMax": 366,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1507,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 2101.5,
+          "scrollMax": 2102,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-860-en-light.png",
+          "width": 860,
+          "height": 600,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "860-en-dark",
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 512,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 511.5,
+          "scrollMax": 512,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 366,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 366.5,
+          "scrollMax": 366,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1668,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 2101.5,
+          "scrollMax": 2102,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-860-en-dark.png",
+          "width": 860,
+          "height": 600,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 28,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1000-zh-light",
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 318,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 318,
+          "scrollMax": 318,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 220,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 219.5,
+          "scrollMax": 220,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1568,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 2001.5,
+          "scrollMax": 2002,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1000-zh-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1000-zh-dark",
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 318,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 318,
+          "scrollMax": 318,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 220,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 219.5,
+          "scrollMax": 220,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1568,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 2001.5,
+          "scrollMax": 2002,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1000-zh-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1000-en-light",
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 339,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 339.5,
+          "scrollMax": 339,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 266,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 266.5,
+          "scrollMax": 266,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1568,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 2001.5,
+          "scrollMax": 2002,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1000-en-light.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1000-en-dark",
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 339,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 339.5,
+          "scrollMax": 339,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 266,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 266.5,
+          "scrollMax": 266,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1568,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 2001.5,
+          "scrollMax": 2002,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1000-en-dark.png",
+          "width": 1000,
+          "height": 700,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1080-zh-light",
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 11,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 11.5,
+          "scrollMax": 11,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1398,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 1992.5,
+          "scrollMax": 1992,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1080-zh-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1080-zh-dark",
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "刷新生效路径",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 11,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 11.5,
+          "scrollMax": 11,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 1398,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 1831.5,
+          "scrollMax": 1831,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1080-zh-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "zh",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1080-en-light",
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "light",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 47,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 58,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 58,
+          "scrollMax": 58,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1398,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 1992.5,
+          "scrollMax": 1992,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1080-en-light.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "light",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    },
+    {
+      "name": "1080-en-dark",
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "dark",
+      "states": [
+        {
+          "part": "settings-network",
+          "file": "t8-settings-network-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-paths",
+          "file": "t8-settings-paths-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 47,
+          "scrollMax": 47,
+          "overflow": false,
+          "focus": "H1",
+          "small": [],
+          "shortButtons": [
+            {
+              "text": "Refresh active paths",
+              "height": 30.3984375
+            }
+          ]
+        },
+        {
+          "part": "settings-general",
+          "file": "t8-settings-general-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system",
+          "file": "t8-settings-system-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 58,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-system-bottom",
+          "file": "t8-settings-system-bottom-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 58,
+          "scrollMax": 58,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "settings-about",
+          "file": "t8-settings-about-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics",
+          "file": "t8-diagnostics-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 1398,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "diagnostics-bottom",
+          "file": "t8-diagnostics-bottom-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 1992.5,
+          "scrollMax": 1992,
+          "overflow": false,
+          "focus": "SUMMARY",
+          "small": [],
+          "shortButtons": []
+        },
+        {
+          "part": "logs",
+          "file": "t8-logs-1080-en-dark.png",
+          "width": 1080,
+          "height": 840,
+          "theme": "dark",
+          "lang": "en",
+          "scroll": 0,
+          "scrollMax": 0,
+          "overflow": false,
+          "focus": "BUTTON",
+          "small": [],
+          "shortButtons": []
+        }
+      ],
+      "missing": []
+    }
+  ]
+}

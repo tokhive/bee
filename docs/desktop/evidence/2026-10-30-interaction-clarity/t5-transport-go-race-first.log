@@ -1,0 +1,20 @@
+--- FAIL: TestRunEncodedResponseStaysWithinOneMiB (0.03s)
+    server_test.go:357: oversized response did not terminate with a bounded protocol error: frames=2; error=<nil>
+--- FAIL: TestSupplyDetailedReasonsSurviveBridgeEnvelope (0.00s)
+panic: runtime error: index out of range [1] with length 1 [recovered, repanicked]
+
+goroutine 540 [running]:
+testing.tRunner.func1.2({0x105d47af0, 0xc00004f338})
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2125 +0x2b8
+testing.tRunner.func1()
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2128 +0x438
+panic({0x105d47af0?, 0xc00004f338?})
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/runtime/panic.go:859 +0x120
+github.com/tokhive/bee/desktopbridge_test.TestSupplyDetailedReasonsSurviveBridgeEnvelope(0xc000574908)
+	/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktopbridge/supply_test.go:185 +0x834
+testing.tRunner(0xc000574908, 0x105db6600)
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2195 +0x168
+created by testing.(*T).Run in goroutine 1
+	/Users/dayong/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.27.3.darwin-arm64/src/testing/testing.go:2260 +0x7c0
+FAIL	github.com/tokhive/bee/desktopbridge	0.537s
+FAIL

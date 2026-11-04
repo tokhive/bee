@@ -1,0 +1,73 @@
+{
+  "utc": "2026-11-02T18:21:03.189781+00:00",
+  "base": "ce2b542117c9332561f28d0fa6955b5070b1ef9c",
+  "commit": "3b0b747ff2ca60f8cab621056207971806c75c43",
+  "task_files": {
+    "desktop/src-tauri/src/notifications.rs": {
+      "sha256": "d2a2f40aa91ec86d669a3162667bc14d6f92beaf6830ea95c24d74a09b8f6901",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/i18n/en.ts": {
+      "sha256": "f1cd29d66abd4ce8eefd3026d1435b5f78ff322ae200cd6621c580cda0b31a81",
+      "commit_matches_worktree": true
+    },
+    "desktop/src/presentation/problems.ts": {
+      "sha256": "e0dea7ec93b416ca29b39f2f437c5248de374d93e32bad7b793bcd6828c85bbd",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/native-updater.spec.ts": {
+      "sha256": "db980acca32615a8bf6ff3fa8d080bbc47596cb1d706e8043b2c2badb4d46e9b",
+      "commit_matches_worktree": true
+    },
+    "desktop/tests/problems.test.ts": {
+      "sha256": "c5cfe35278da14c6f8b26739644c378552190c9bd8d6eabb6dc32786ae9187e5",
+      "commit_matches_worktree": true
+    }
+  },
+  "verification_scope_matches": {
+    "t9-fix-green-node24": {
+      "source_count": 237,
+      "mismatches": []
+    },
+    "t9-fix-green-updater-ui24": {
+      "source_count": 237,
+      "mismatches": []
+    },
+    "t9-fix-typecheck24": {
+      "source_count": 237,
+      "mismatches": []
+    },
+    "t9-fix-notifications194": {
+      "source_count": 237,
+      "mismatches": []
+    },
+    "t9-fix-manual-ego24": {
+      "source_count": 237,
+      "mismatches": []
+    }
+  },
+  "screenshots": {
+    "t9-fix-ego-zh-previous-860.png": {
+      "width": 860,
+      "height": 600
+    },
+    "t9-fix-ego-en-previous-860.png": {
+      "width": 860,
+      "height": 600
+    }
+  },
+  "preserved_previous_artifacts": 147,
+  "previous_manifest_sha256": "da25dae2387720749fe1024f9d8857f9212d6cad087de987d7ef88d401300ded",
+  "clean_task_worktree_and_index": true,
+  "sidecar_provenance": {
+    "revision": "ce2b542117c9332561f28d0fa6955b5070b1ef9c",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+ce2b542117c9-dirty",
+    "binarySha256": "57bf4b8a1043a543c533b5d78f1dcfa60a05cbfdab8c877c0c56d474b4cbe272"
+  },
+  "sidecar_note": "Cargo tested before commit at BASE; source unchanged. Rebuild sidecar before any future Cargo at new HEAD."
+}

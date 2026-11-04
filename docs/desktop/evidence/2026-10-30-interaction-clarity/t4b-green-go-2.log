@@ -1,0 +1,11 @@
+--- FAIL: TestDesktopDeviceUncertainRedeemKeepsTransaction (0.05s)
+    desktop_device_test.go:266: lost failure evidence: unavailable: POST /api/bee/pairings/redeem: HTTP 503, code="unavailable", error_json_valid=true: Hive request failed (HTTP 503); response_body={"error":{"code":"unavailable"}}
+--- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown (0.11s)
+    --- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming (0.03s)
+        desktop_device_test.go:374: prior unknown exchange cleared by later expiry: {State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} http_rejected: GET /api/bee/identity: HTTP 401, code="", error_json_valid=false: Hive request failed (HTTP 401)
+--- FAIL: TestDesktopDeviceRemoteErrorCannotEchoPairingToken (0.03s)
+    desktop_device_test.go:427: unsafe remote error: <nil>
+FAIL
+FAIL	github.com/tokhive/bee/agent	2.228s
+ok  	github.com/tokhive/bee/desktopbridge	1.341s [no tests to run]
+FAIL

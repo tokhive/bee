@@ -1,0 +1,361 @@
+{
+  "commit": "49f72989f38a07e83fe9614ef15a69a82397ff1d",
+  "created_utc": "2026-11-02T17:05:07.885436+00:00",
+  "file_count": 70,
+  "excluded": [
+    ".superpowers/sdd/t8-fix-evidence-manifest.json",
+    ".superpowers/sdd/T8-fix-report.md"
+  ],
+  "files": [
+    {
+      "path": ".superpowers/sdd/t8-fix-commit-state.json",
+      "bytes": 1258,
+      "sha256": "2ae65bcc5c5b07979917d768216fb910470b414ad6506b3373a85a17da6367f6"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-commit.json",
+      "bytes": 1526,
+      "sha256": "11d59e825d83ce630afb88165bbcb0a76cd62bf30034ac7487c951a671dceb70"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-commit.log",
+      "bytes": 1662,
+      "sha256": "0f86759d983e811973d47dc53af2b69aacafb6a9b37c8349b741d6681ab0b11d"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-diff-check.json",
+      "bytes": 1466,
+      "sha256": "69f8b6c885f3e9d6418779a4cf9d91cf7aef4d491e1356ef1369372a59673250"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-diff-check.log",
+      "bytes": 1464,
+      "sha256": "bcc0a76a487804af55fb4c552c3090549d34f3c1bd95003711ac66aebe7d33d0"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-typecheck.json",
+      "bytes": 1475,
+      "sha256": "3f54b0a8b6daa4a1d4d481c318fc7a5dc1e385d74cf81d5f830c6d7077d048d5"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-typecheck.log",
+      "bytes": 1520,
+      "sha256": "f9fe8dba946c12b445454c15f37ece9babb1dc8319610565afe92d69037b2e5a"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-ui/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-ui.json",
+      "bytes": 1728,
+      "sha256": "4b0766553012da02d91994555d4a2aa46461104dc45de84bc6d05ea4d0334db3"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-final-ui.log",
+      "bytes": 11739,
+      "sha256": "f90848794e449e5fac031ba66c91b4f7737d01a0839bae5eee0ee5406b0e2128"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-finalize.py",
+      "bytes": 3964,
+      "sha256": "710f7d51bafea249c8b934d62747fccf25a1dbe48514bc0b669e0bf97b6bd43a"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-corrected-focused/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-corrected-focused.json",
+      "bytes": 1833,
+      "sha256": "7f3524d7f82bbed0847fc10db4bbd2e14b852892b2f136f5a4ddf4a391d9025f"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-corrected-focused.log",
+      "bytes": 2630,
+      "sha256": "c1fee774045fef42bfec37e23e86c2821380bde7ef9079c718b6cd8c940c123a"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-focused/.last-run.json",
+      "bytes": 45,
+      "sha256": "91d1c43004802cd49950d78eb11c8fa7d05da8ffffe219a8b13b2f561bc00903"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-focused.json",
+      "bytes": 1345,
+      "sha256": "d58a3c25b6b40f8213a28f2c00300428dab8827ab578f1cb211a4e2f6a8f89ff"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-green-focused.log",
+      "bytes": 2532,
+      "sha256": "3a01b14cba23dd469d71ca9e2f04281e08155af35dabc164e0fbb0138f7fe40d"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-image-sizes.json",
+      "bytes": 1427,
+      "sha256": "d53267aae0810468ea6351f60c670cba2d6a99b2a247394a6223104dbed6656a"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01-command.json",
+      "bytes": 1606,
+      "sha256": "ad6b0a2448002f1667c266b50efb0744655aa4e178718020eeb3341d103a971b"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01-command.log",
+      "bytes": 5790,
+      "sha256": "fc546107ce34089e7a8df1a3654b0f9c4a86f7c6c086f76f20a974ba20d9d67c"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01-unknown-write-zh-dark-860.png",
+      "bytes": 79923,
+      "sha256": "59b819f9684a6db91569514036d815c045205bd7195d6b578c69f1feb98d9a7d"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01.json",
+      "bytes": 1616,
+      "sha256": "2dc651bade19c4ce1349c4c87ab18dcdb9f26219cac82abaf45ee28a5f25639d"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01.mjs",
+      "bytes": 2798,
+      "sha256": "6fcc257b133d0db12341962c46cef94350b3f2769ebe5dbef96e20acd12d127c"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02-command.json",
+      "bytes": 1606,
+      "sha256": "bfc44e31dac71fc604794e003c258d987766d1e2c980b4fd3ae142d3ac47daad"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02-command.log",
+      "bytes": 6653,
+      "sha256": "762140cfc068a9ab736f71989ed64aa0f40bcfccccf21cb5ae35b72d76667df6"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02-null-error-read-zh-dark-860.png",
+      "bytes": 116933,
+      "sha256": "026a90d3e2c8d3b8dd521e12a3e9a2290b4eefd7c417fd5f3d35a84b7257ae05"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02.json",
+      "bytes": 1674,
+      "sha256": "3a449a70ca4ab7d9824454759d4a2c51613f3bf0bdacfde4fe385182ea002d89"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02.mjs",
+      "bytes": 1537,
+      "sha256": "acf0593ded50e2fc3b34e052ff5035c9f39b60c06939b155182eff5c2b85740c"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03-command.json",
+      "bytes": 1606,
+      "sha256": "56872d30f6db2c9cca5e757410e79e71feac18bd052338b062c8ce0f9b48206e"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03-command.log",
+      "bytes": 6091,
+      "sha256": "b79952d8660f20ef2d3419e1ffa3204090a42c3ae10001dcca03bf2fab67a6f1"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03-failed-read-en-dark-860.png",
+      "bytes": 79959,
+      "sha256": "f7af612db91463e54c6243a615a3ba847ce1e734ddfc903b50a56acc58ba0ca7"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03.json",
+      "bytes": 2387,
+      "sha256": "a3fbce2c93266ac090cb334ec636dd5fe8053d850e847238e4561db0b66836bb"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03.mjs",
+      "bytes": 2608,
+      "sha256": "820a7536cd0334e7a08db77989b8f5670e2f07bd755d85559b7ecef5369bfb7e"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04-command.json",
+      "bytes": 1606,
+      "sha256": "e78b299d910bf9c2b40af0e18b9615c400ebf2fef6fc571333b868c54a0cb47e"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04-command.log",
+      "bytes": 5417,
+      "sha256": "066a947ea9b80c92c7f38957c3fd2c572677ade490bcfd5c55102266c21795ea"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04-trusted-result-en-dark-860.png",
+      "bytes": 79326,
+      "sha256": "7601b6890bb5c912e694fda5a62c2fd34122e0c8ba11c4468195f8a2ec491438"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04.json",
+      "bytes": 1799,
+      "sha256": "93eb782ae505171a717a1fc9fdf32f1ab6f2ec03df84f1946f5c389b8c1ee99e"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04.mjs",
+      "bytes": 2136,
+      "sha256": "1283a4be0808b83a817077306d81f8681e221c4b071fc30b670904cc889d58d3"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/.last-run.json",
+      "bytes": 243,
+      "sha256": "77711f50de6fc475bedd50eddf0a6eb3899434e0bb1eae6c94ef4a789f5b2c72"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-autos-1e751-n-boolean-registration-true-chromium/error-context.md",
+      "bytes": 14698,
+      "sha256": "a1db425f8e19f8d980c0a3b1402183d2c8cd43290aa75b796930759b99ce71f3"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-autos-1e751-n-boolean-registration-true-chromium/trace.zip",
+      "bytes": 184208,
+      "sha256": "d1f6ac541b481ee0ffc8cc41f30f147a6ba5ce9a4ae37ed1b7582b45e1e8ff87"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-autos-cd26b--boolean-registration-false-chromium/error-context.md",
+      "bytes": 14699,
+      "sha256": "2c90ae96a658e9e063f38505b2191b655cd8151ac81f4400236e2cd416b024da"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-autos-cd26b--boolean-registration-false-chromium/trace.zip",
+      "bytes": 185211,
+      "sha256": "44deef340ef36051020e6f00dcc96230232788cf57cba0be290ff2f6f5849878"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/error-context.md",
+      "bytes": 28059,
+      "sha256": "8c212064c01ceb6af75c20975039ffaa85bdff108bd29a295c282dc20ee7af38"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip",
+      "bytes": 286317,
+      "sha256": "69bea85ccc545b6d21e91e368314f2b9a0c011eced005580d205c2a7494afde4"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/error-context.md",
+      "bytes": 22163,
+      "sha256": "0e00748ef4447556c67880fec85d12c9401d0f5f436bc4028117d239fd099f47"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/trace.zip",
+      "bytes": 188132,
+      "sha256": "f75cb25b04c1d9e20bb1576ef20b9c1e6e79bfff3183b807c65abcfdc094d492"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics.json",
+      "bytes": 1406,
+      "sha256": "46b0333b6c90656fd9432ee84654c26e5ada146572922ce33d7106df80cd6448"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-corrected-producer-semantics.log",
+      "bytes": 18306,
+      "sha256": "2583fe4b717295229833466bbd57dadd1a276f0ca3503286f2edddb2fd675c52"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration/.last-run.json",
+      "bytes": 145,
+      "sha256": "b42a23ed4bfbdbe1dfbafabc8d222264c6d364f550036634a415a149fbb8e0e7"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/error-context.md",
+      "bytes": 26086,
+      "sha256": "bb336510943144b32b008b09ee0a76ea0baa25732a7631e5690c1dcb480fda9b"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip",
+      "bytes": 275740,
+      "sha256": "8249827536ded957e688ae3c12051ce5ddf1563bef458dcec56fa1ab19a0cdfb"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/error-context.md",
+      "bytes": 20192,
+      "sha256": "b1d93a9c04e5c1799bd357b4e52a38e40184b0ac51f2ad34a65841f57ff107ee"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration/native-experience-T8-null--096f8-ithout-inventing-a-mismatch-chromium/trace.zip",
+      "bytes": 187408,
+      "sha256": "ff83a648e91f629b87e5af1dc6703feb023456981ad5c4fde82a5ce8469ec63c"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration.json",
+      "bytes": 1373,
+      "sha256": "239ce82e6aeaa7ef4a6888240899a2ae4af12ce654fdb2a25f62d11478b47f92"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-missing-registration.log",
+      "bytes": 11140,
+      "sha256": "75076425d52c9cbace1634ee22b4ec0b216deefa818f2ece3a5e0fea69f673d5"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui/.last-run.json",
+      "bytes": 45,
+      "sha256": "e22df5d0991eb28c09093b1e678b3fa8cd1fab48185d38e67cf79fb6e63ad5ea"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/.last-run.json",
+      "bytes": 194,
+      "sha256": "761bf4c385b6b6806a77b6ee8f8ca618a3bd6d43d1fa8486cea25a4f9f3f74dc"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-7cef3-nown-with-registration-null-chromium/error-context.md",
+      "bytes": 16815,
+      "sha256": "abdef287713facef5e166b68f00d3da6881f8740da14ebe397a85cd4685cb357"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-7cef3-nown-with-registration-null-chromium/trace.zip",
+      "bytes": 183999,
+      "sha256": "86d351b4638b043711d4df8030ca970044b3e4fc7852fe02a1f6eb8f5a97b2df"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-c830d-own-with-registration-false-chromium/error-context.md",
+      "bytes": 16816,
+      "sha256": "3b13920427aa7f5cf0761ca2aee0207ed686d632e115e645953c5ca98f4a2cd3"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-c830d-own-with-registration-false-chromium/trace.zip",
+      "bytes": 170743,
+      "sha256": "9402dcbeef544a97d6e2351b30e353fa108915a6e5dbe1cb61c8e1c0cf338583"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/error-context.md",
+      "bytes": 21785,
+      "sha256": "331eb0e230df72d325fa8afbc07f1ed525b5571a083bb9d68250235ea47e8de0"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip",
+      "bytes": 220419,
+      "sha256": "4ec25594575ed91c0ac1fd8ded0f8108a2ca9acc0c2580c5501e746b6e6720ca"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422.json",
+      "bytes": 1290,
+      "sha256": "f6c776b0143a517e2ad5ba7b4b8b803f65f2a5cdb8f474ae7e026060dca4d752"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui-port1422.log",
+      "bytes": 11125,
+      "sha256": "0de4129064849d14cfe8546c332d1a5813e499355e7763765abb9c29997794cd"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui.json",
+      "bytes": 1237,
+      "sha256": "b3f472eb55f1ab4da17851a0d00baaeab056847b3d922eb8701a4d949b997369"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-red-ui.log",
+      "bytes": 1385,
+      "sha256": "3ba4a15a28808b8be4b79fe5ccaddedc99ce37a18640ea3583a33450b324fd8d"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-run.py",
+      "bytes": 1895,
+      "sha256": "0510a278e269e30db2b4766b5f786f5f1bc078cf262dc34b699799ed53dc591e"
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-source-manifest.json",
+      "bytes": 621,
+      "sha256": "4b37e078cc6440c4cf57c847e4cb9e9f40b92678cab7758e6d0aefb8193562ee"
+    }
+  ]
+}

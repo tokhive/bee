@@ -1,0 +1,4 @@
+docker compose up -d --wait postgres
+ Container tokhive-postgres-1  Running
+ Container tokhive-postgres-1  Waiting
+ Container tokhive-postgres-1  Healthy

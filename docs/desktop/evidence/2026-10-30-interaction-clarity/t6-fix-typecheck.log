@@ -1,0 +1,10 @@
+{"utc": "2026-11-02T12:45:57.168882+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npm", "run", "typecheck"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+tests/device.spec.ts(139,125): error TS2551: Property 'click' does not exist on type 'HTMLElement | SVGElement'. Did you mean 'onclick'?
+  Property 'click' does not exist on type 'SVGElement'.
+tests/device.spec.ts(139,140): error TS2551: Property 'click' does not exist on type 'HTMLElement | SVGElement'. Did you mean 'onclick'?
+  Property 'click' does not exist on type 'SVGElement'.
+{"exit": 1, "utc": "2026-11-02T12:45:58.096483+00:00"}

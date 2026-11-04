@@ -4,7 +4,7 @@ use crate::lifecycle::{NativeLanguage, NativeLocale};
 use crate::protocol::BridgeError;
 use serde::{Deserialize, Serialize};
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     path::{Path, PathBuf},
     sync::{Arc, Mutex},
 };
@@ -89,6 +89,13 @@ pub struct DeliveryOutcome {
     pub state: DeliveryState,
     pub error: Option<BridgeError>,
 }
+#[derive(Clone, Debug, Serialize)]
+pub struct DeliveryStatus {
+    pub error: Option<BridgeError>,
+    pub retryable_count: usize,
+    pub pending_count: usize,
+    pub uncertain_count: usize,
+}
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct DeliveryRecord {
@@ -125,17 +132,17 @@ impl Default for Ledger {
 pub struct NotificationService {
     path: PathBuf,
     adapter: Arc<dyn NotificationAdapter>,
-    gate: Mutex<()>,
+    gate: Mutex<HashMap<String, BridgeError>>,
 }
 impl NotificationService {
     pub fn new(path: PathBuf, adapter: Arc<dyn NotificationAdapter>) -> Self {
         Self {
             path,
             adapter,
-            gate: Mutex::new(()),
+            gate: Mutex::new(HashMap::new()),
         }
     }
-    fn lock(&self) -> Result<std::sync::MutexGuard<'_, ()>, BridgeError> {
+    fn lock(&self) -> Result<std::sync::MutexGuard<'_, HashMap<String, BridgeError>>, BridgeError> {
         self.gate.lock().map_err(|_| {
             failure(
                 "NOTIFICATION_LOCK",
@@ -159,11 +166,47 @@ impl NotificationService {
     }
     /// Explicit user action can retry definite rejection; uncertain attempts and accepted
     /// submissions remain suppressed until S1 reports authoritative recovery.
-    pub fn allow_failed_retry(&self) -> Result<(), BridgeError> {
+    pub fn allow_failed_retry(&self) -> Result<usize, BridgeError> {
         let _gate = self.lock()?;
         let mut ledger = read_ledger(&self.path)?;
+        let count = ledger.records.iter().filter(|record| {
+            record.state == DeliveryState::Failed && record.attempt_revision == ledger.retry_revision
+        }).count();
+        if count == 0 {
+            return Ok(0);
+        }
         bump_retry(&mut ledger)?;
-        write_ledger(&self.path, &ledger)
+        write_ledger(&self.path, &ledger)?;
+        Ok(count)
+    }
+    /// Counts and diagnostic selection share the same gate as retry and submission.
+    /// Reading status never queries permission or authorizes an external side effect.
+    pub fn delivery_status(&self) -> Result<DeliveryStatus, BridgeError> {
+        let errors = self.lock()?;
+        let ledger = read_ledger(&self.path)?;
+        let mut status = DeliveryStatus {
+            error: None,
+            retryable_count: 0,
+            pending_count: 0,
+            uncertain_count: 0,
+        };
+        for record in &ledger.records {
+            match record.state {
+                DeliveryState::Accepted => continue,
+                DeliveryState::Attempted => status.uncertain_count += 1,
+                DeliveryState::Failed if record.attempt_revision == ledger.retry_revision => status.retryable_count += 1,
+                DeliveryState::Failed => status.pending_count += 1,
+            }
+            if status.error.is_none() {
+                status.error = Some(errors.get(&record.notice.identity).cloned().unwrap_or_else(|| {
+                    failure(
+                        record.error_code.as_deref().unwrap_or("NOTIFICATION_SUBMISSION_UNCERTAIN"),
+                        format!("persisted notification delivery unresolved: state={:?} attempt_revision={} retry_revision={}; full native diagnostic is not stored in the durable ledger; retry_authorized={}", record.state, record.attempt_revision, ledger.retry_revision, record.state == DeliveryState::Failed && record.attempt_revision < ledger.retry_revision),
+                    )
+                }));
+            }
+        }
+        Ok(status)
     }
     fn observe_permission(&self, ledger: &mut Ledger) -> Result<Permission, BridgeError> {
         let actual = self.adapter.permission()?;
@@ -181,7 +224,7 @@ impl NotificationService {
         enabled: bool,
         events: &[NotificationEvent],
     ) -> Result<Vec<DeliveryOutcome>, BridgeError> {
-        let _gate = self.lock()?;
+        let mut errors = self.lock()?;
         let mut ledger = read_ledger(&self.path)?;
         let mut identities = HashSet::new();
         if events.len() > 256 {
@@ -217,6 +260,7 @@ impl NotificationService {
         ledger.records.retain(|r|!events.iter().any(|e|matches!(e,NotificationEvent::Recovered{identity} if identity==&r.notice.identity)));
         if before != ledger.records.len() {
             write_ledger(&self.path, &ledger)?;
+            errors.retain(|identity, _| ledger.records.iter().any(|r| &r.notice.identity == identity));
         }
         // Recovery is durable even when disabled or when the OS query is unavailable.
         if !enabled {
@@ -266,6 +310,9 @@ impl NotificationService {
             };
             // This write must finish before any external side effect.
             write_ledger(&self.path, &ledger)?;
+            // The previous definite rejection no longer describes this attempt.
+            // If the final write fails, durable Attempted must report uncertainty.
+            errors.remove(&notice.identity);
             let error = match self.adapter.submit(notice) {
                 Ok(SubmissionReceipt::Accepted) => {
                     ledger.records[index].state = DeliveryState::Accepted;
@@ -280,7 +327,13 @@ impl NotificationService {
                 }
             };
             // An error still leaves a durable attempt or terminal record, suppressing blind resend.
+            if let Some(error) = &error {
+                errors.insert(notice.identity.clone(), error.clone());
+            }
             write_ledger(&self.path, &ledger)?;
+            if error.is_none() {
+                errors.remove(&notice.identity);
+            }
             outcomes.push(DeliveryOutcome {
                 identity: notice.identity.clone(),
                 state: ledger.records[index].state,

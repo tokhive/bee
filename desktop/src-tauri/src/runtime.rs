@@ -16,6 +16,7 @@ use tokio::time::{sleep, timeout, Duration};
 pub enum OwnedExitReason {
     AppExit,
     Update,
+    StartupRecovery,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize)]
@@ -161,7 +162,7 @@ impl Bridge {
     pub(crate) async fn stop_failed_restore(&self) -> Result<(), BridgeError> {
         let stopped = timeout(
             Duration::from_secs(12),
-            self.persist_owned_exit(OwnedExitReason::AppExit),
+            self.persist_owned_exit(OwnedExitReason::StartupRecovery),
         )
         .await
         .unwrap_or_else(|_| {
@@ -200,10 +201,9 @@ impl Bridge {
         let mut admitted = None;
         for _ in 0..4 {
             let snapshot = &initial.result["runtime"];
-            if snapshot["local"] == "stopping" {
-                admitted = Some(snapshot["operation"].clone());
-                break;
-            }
+            // Even an in-flight user Stop must receive the exit reason: its
+            // normal completion keeps device presence alive. Go coalesces the
+            // stop operation while suppressing that reconnect before returning.
             let result = checked(
                 self.exit_request(
                     "runtime_stop",

@@ -1,0 +1,6 @@
+{"time": "2026-11-02T09:20:43.170404+00:00", "command": ["go", "test", "./desktopbridge", "-run", "^TestEOFCancelsReadsBehindAcceptedBarrier$", "-count=1", "-timeout=15s"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+--- FAIL: TestEOFCancelsReadsBehindAcceptedBarrier (0.25s)
+    concurrency_test.go:167: EOF behind an accepted barrier did not cancel and join the slow read
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	1.183s
+FAIL

@@ -1,0 +1,41 @@
+{"utc": "2026-11-02T15:47:02.577651+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri", "argv": ["cargo", "test", "--lib", "network::tests::network_apply_failure_", "--", "--nocapture"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.26s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 5 tests
+
+thread 'network::tests::network_apply_failure_observe_retains_actual_stage' (12658427) panicked at src/network_tests.rs:679:41:
+an apply failure must preserve its actual stage
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+thread 'network::tests::network_apply_failure_restore_retains_actual_stage' (12658428) panicked at src/network_tests.rs:679:41:
+an apply failure must preserve its actual stage
+
+thread 'network::tests::network_apply_failure_stop_retains_actual_stage' (12658429) panicked at src/network_tests.rs:679:41:
+an apply failure must preserve its actual stage
+test network::tests::network_apply_failure_observe_retains_actual_stage ... FAILED
+
+thread 'network::tests::network_apply_failure_configure_retains_actual_stage' (12658426) panicked at src/network_tests.rs:679:41:
+an apply failure must preserve its actual stage
+test network::tests::network_apply_failure_restore_retains_actual_stage ... FAILED
+test network::tests::network_apply_failure_stop_retains_actual_stage ... FAILED
+test network::tests::network_apply_failure_configure_retains_actual_stage ... FAILED
+
+thread 'network::tests::network_apply_failure_configure_readback_retains_actual_stage' (12658425) panicked at src/network_tests.rs:679:41:
+an apply failure must preserve its actual stage
+test network::tests::network_apply_failure_configure_readback_retains_actual_stage ... FAILED
+
+failures:
+
+failures:
+    network::tests::network_apply_failure_configure_readback_retains_actual_stage
+    network::tests::network_apply_failure_configure_retains_actual_stage
+    network::tests::network_apply_failure_observe_retains_actual_stage
+    network::tests::network_apply_failure_restore_retains_actual_stage
+    network::tests::network_apply_failure_stop_retains_actual_stage
+
+test result: FAILED. 0 passed; 5 failed; 0 ignored; 0 measured; 220 filtered out; finished in 0.10s
+
+error: test failed, to rerun pass `--lib`
+{"exit": 101, "utc": "2026-11-02T15:47:11.662730+00:00"}

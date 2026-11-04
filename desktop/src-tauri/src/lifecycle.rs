@@ -19,6 +19,49 @@ impl NativeLocale {
         }
     }
 }
+
+struct EditMenuLabels {
+    title: &'static str,
+    undo: &'static str,
+    redo: &'static str,
+    cut: &'static str,
+    copy: &'static str,
+    paste: &'static str,
+    select_all: &'static str,
+}
+impl EditMenuLabels {
+    fn for_locale(locale: Option<NativeLocale>) -> Self {
+        match locale {
+            Some(NativeLocale::Zh) => Self {
+                title: "编辑",
+                undo: "撤销",
+                redo: "重做",
+                cut: "剪切",
+                copy: "复制",
+                paste: "粘贴",
+                select_all: "全选",
+            },
+            Some(NativeLocale::En) => Self {
+                title: "Edit",
+                undo: "Undo",
+                redo: "Redo",
+                cut: "Cut",
+                copy: "Copy",
+                paste: "Paste",
+                select_all: "Select All",
+            },
+            None => Self {
+                title: "编辑 / Edit",
+                undo: "撤销 / Undo",
+                redo: "重做 / Redo",
+                cut: "剪切 / Cut",
+                copy: "复制 / Copy",
+                paste: "粘贴 / Paste",
+                select_all: "全选 / Select All",
+            },
+        }
+    }
+}
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct LocaleRequest {
@@ -108,6 +151,13 @@ impl NativeLanguage {
 struct NativeMenu {
     open: tauri::menu::MenuItem<tauri::Wry>,
     quit: tauri::menu::MenuItem<tauri::Wry>,
+    edit: tauri::menu::Submenu<tauri::Wry>,
+    undo: tauri::menu::PredefinedMenuItem<tauri::Wry>,
+    redo: tauri::menu::PredefinedMenuItem<tauri::Wry>,
+    cut: tauri::menu::PredefinedMenuItem<tauri::Wry>,
+    copy: tauri::menu::PredefinedMenuItem<tauri::Wry>,
+    paste: tauri::menu::PredefinedMenuItem<tauri::Wry>,
+    select_all: tauri::menu::PredefinedMenuItem<tauri::Wry>,
 }
 #[tauri::command]
 pub fn native_locale_sync(
@@ -122,6 +172,28 @@ pub fn native_locale_sync(
             for (id, item, text) in [
                 ("bee-open", &menu.open, open),
                 ("bee-quit", &menu.quit, quit),
+            ] {
+                item.set_text(text).map_err(|cause| {
+                    BridgeError::new(
+                        "NATIVE_LOCALE_MENU_FAILED",
+                        format!("native menu set_text failed: item={id}; actual={cause}"),
+                    )
+                })?;
+            }
+            let labels = EditMenuLabels::for_locale(Some(locale));
+            menu.edit.set_text(labels.title).map_err(|cause| {
+                BridgeError::new(
+                    "NATIVE_LOCALE_MENU_FAILED",
+                    format!("native menu set_text failed: item=bee-edit; actual={cause}"),
+                )
+            })?;
+            for (id, item, text) in [
+                ("undo", &menu.undo, labels.undo),
+                ("redo", &menu.redo, labels.redo),
+                ("cut", &menu.cut, labels.cut),
+                ("copy", &menu.copy, labels.copy),
+                ("paste", &menu.paste, labels.paste),
+                ("select-all", &menu.select_all, labels.select_all),
             ] {
                 item.set_text(text).map_err(|cause| {
                     BridgeError::new(
@@ -233,23 +305,55 @@ pub fn background_should_hide(background: bool, tray_available: bool) -> bool {
 }
 
 pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
-    use tauri::menu::{Menu, MenuItem, Submenu};
-    let (open_text, quit_text) = app
-        .state::<Arc<NativeLanguage>>()
-        .current()
+    use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+    let locale = app.state::<Arc<NativeLanguage>>().current();
+    let (open_text, quit_text) = locale
         .map(NativeLocale::labels)
         .unwrap_or(("打开 Bee / Open Bee", "退出 Bee / Quit Bee"));
     let open = MenuItem::with_id(app, "bee-open", open_text, true, Some("CmdOrCtrl+O"))?;
     let quit = MenuItem::with_id(app, "bee-quit", quit_text, true, Some("CmdOrCtrl+Q"))?;
     let app_menu = Submenu::with_items(app, "Bee", true, &[&open, &quit])?;
-    app.set_menu(Menu::with_items(app, &[&app_menu])?)?;
+    let labels = EditMenuLabels::for_locale(locale);
+    // macOS routes WebView editing shortcuts through native predefined menu items.
+    let undo = PredefinedMenuItem::undo(app, Some(labels.undo))?;
+    let redo = PredefinedMenuItem::redo(app, Some(labels.redo))?;
+    let cut = PredefinedMenuItem::cut(app, Some(labels.cut))?;
+    let copy = PredefinedMenuItem::copy(app, Some(labels.copy))?;
+    let paste = PredefinedMenuItem::paste(app, Some(labels.paste))?;
+    let select_all = PredefinedMenuItem::select_all(app, Some(labels.select_all))?;
+    let edit = Submenu::with_id_and_items(
+        app,
+        "bee-edit",
+        labels.title,
+        true,
+        &[
+            &undo,
+            &redo,
+            &PredefinedMenuItem::separator(app)?,
+            &cut,
+            &copy,
+            &paste,
+            &select_all,
+        ],
+    )?;
+    app.set_menu(Menu::with_items(app, &[&app_menu, &edit])?)?;
     app.on_menu_event(|app, event| match event.id().as_ref() {
         "bee-open" => dispatch(app, WindowEvent::Menu(WindowIntent::Show)),
         "bee-quit" => dispatch(app, WindowEvent::Menu(WindowIntent::Quit)),
         _ => {}
     });
     let tray_menu = Menu::with_items(app, &[&open, &quit])?;
-    app.manage(NativeMenu { open, quit });
+    app.manage(NativeMenu {
+        open,
+        quit,
+        edit,
+        undo,
+        redo,
+        cut,
+        copy,
+        paste,
+        select_all,
+    });
     let mut tray = tauri::tray::TrayIconBuilder::with_id("bee")
         .tooltip("Bee")
         .menu(&tray_menu)

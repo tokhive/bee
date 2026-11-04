@@ -1,0 +1,48 @@
+{"utc": "2026-11-02T13:39:19.688762+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "supply.spec.ts", "polling-stability.spec.ts", "--grep", "independent platform polling|fresh background reads|old in-flight platform|recovers at the same revision|failed device read"], "dirty": " M Makefile\n M agent/desktop_authorize.go\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/NativeAccountsPage.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/src/features/supply/SupplyPanel.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.d.mts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/polling-stability.spec.ts\n M desktop/tests/problems.test.ts\n M desktop/tests/supply.spec.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+
+Running 5 tests using 5 workers
+
+  ✓  2 [chromium] › tests/supply.spec.ts:97:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire (2.4s)
+  ✓  5 [chromium] › tests/supply.spec.ts:77:1 › independent platform polling waits ten seconds after completion and never overlaps the same platform (2.5s)
+  ✓  1 [chromium] › tests/supply.spec.ts:124:1 › old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round (2.6s)
+  ✓  3 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (2.9s)
+  ✘  4 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (7.7s)
+
+
+  1) [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.accounts-device-problem').getByText('本次设备状态不可确认，依赖设备身份的操作保持不可用。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" locator('.accounts-device-problem').getByText('本次设备状态不可确认，依赖设备身份的操作保持不可用。', { exact: true }) with timeout 5000ms
+      - waiting for locator('.accounts-device-problem').getByText('本次设备状态不可确认，依赖设备身份的操作保持不可用。', { exact: true })
+
+
+      155 |  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
+      156 |  await confirm.click();await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
+    > 157 |  await expect(page.locator('.accounts-device-problem').getByText('本次设备状态不可确认，依赖设备身份的操作保持不可用。',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:'接入',exact:true})).toBeDisabled();await expect(page.locator('.accounts-device-problem .problem-notice pre')).toContainText('GET fixture HTTP 503');expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
+          |                                                                                                              ^
+      158 | });
+      159 |
+      160 | for(const kind of ['start','stop'])test('central readback rejects runtime revision below the '+kind+' receipt',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:157:110
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-an-accou-a4f7b-celled-without-a-page-error-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-an-accou-a4f7b-celled-without-a-page-error-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-an-accou-a4f7b-celled-without-a-page-error-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error 
+  4 passed (9.3s)
+{"exit": 1, "utc": "2026-11-02T13:39:30.175772+00:00"}

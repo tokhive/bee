@@ -1,0 +1,5 @@
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+tests/startup-recovery.test.ts(17,129): error TS2739: Type '{ context: () => Promise<{ hive: string; name: string; device_id: string; owner_id: string; binding_revision: number; }>; status: () => Promise<{ state: "unbound"; }>; }' is missing the following properties from type 'DeviceClient': begin, open

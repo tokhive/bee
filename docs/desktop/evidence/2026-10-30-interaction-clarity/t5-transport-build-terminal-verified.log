@@ -1,0 +1,2 @@
+{"time": "2026-11-02T09:38:55.386125+00:00", "command": ["node", "desktop/scripts/build-bee.mjs", "--target", "aarch64-apple-darwin"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+Bee sidecar built: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/binaries/bee-aarch64-apple-darwin; revision=cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5; target=aarch64-apple-darwin

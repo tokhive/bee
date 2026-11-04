@@ -1,0 +1,463 @@
+{
+  "utc": "2026-11-02T14:46:03.764Z",
+  "space": 39,
+  "page": "p1",
+  "facts": [
+    {
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 418.2890625,
+        "width": 344,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 473.2890625,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 514.7890625,
+        "width": 344,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 670,
+        "y": 839.7890625,
+        "width": 345,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 418.2890625,
+        "width": 344,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 473.2890625,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 514.7890625,
+        "width": 344,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 670,
+        "y": 839.7890625,
+        "width": 345,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 459.0859375,
+        "width": 344,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 553.0859375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 594.5859375,
+        "width": 344,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 670,
+        "y": 973.5859375,
+        "width": 345,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 459.0859375,
+        "width": 344,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 553.0859375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 594.5859375,
+        "width": 344,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 670,
+        "y": 973.5859375,
+        "width": 345,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 413.7890625,
+        "width": 300.359375,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 488.2890625,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 529.7890625,
+        "width": 300.359375,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 626.359375,
+        "y": 872.7890625,
+        "width": 308.640625,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 413.7890625,
+        "width": 300.359375,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 488.2890625,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 529.7890625,
+        "width": 300.359375,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 626.359375,
+        "y": 872.7890625,
+        "width": 308.640625,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 130.5859375,
+        "width": 300.359375,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 224.5859375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 266.0859375,
+        "width": 300.359375,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 626.359375,
+        "y": 681.0859375,
+        "width": 308.640625,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 130.5859375,
+        "width": 300.359375,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 224.5859375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 266.0859375,
+        "width": 300.359375,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 626.359375,
+        "y": 681.0859375,
+        "width": 308.640625,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 94.5859375,
+        "width": 224,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 169.0859375,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 210.5859375,
+        "width": 224,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 550,
+        "y": 625.5859375,
+        "width": 245,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 94.5859375,
+        "width": 224,
+        "height": 19.5
+      },
+      "button": {
+        "x": 289,
+        "y": 169.0859375,
+        "width": 102,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 210.5859375,
+        "width": 224,
+        "height": 32
+      },
+      "buttonText": "检查凭证来源",
+      "summaryText": "查看失败详情",
+      "detailText": "错误码: source_unavailable\n失败环节: file_read\npermission_denied: true\n路径: /preview/codex/auth.json\n原始原因: file_read permission_denied=true; check=file_read; 官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。官方客户端无法读取此较长嵌套位置中的凭证来源。",
+      "primaryActions": {
+        "x": 550,
+        "y": 625.5859375,
+        "width": 245,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 55.484375,
+        "width": 224,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 168.984375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 210.484375,
+        "width": 224,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 550,
+        "y": 715.484375,
+        "width": 245,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    },
+    {
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "noticeOverflow": false,
+      "paragraph": {
+        "x": 289,
+        "y": 55.484375,
+        "width": 224,
+        "height": 39
+      },
+      "button": {
+        "x": 289,
+        "y": 168.984375,
+        "width": 173.9609375,
+        "height": 33.5
+      },
+      "summary": {
+        "x": 289,
+        "y": 210.484375,
+        "width": 224,
+        "height": 32
+      },
+      "buttonText": "Check credential source",
+      "summaryText": "View failure details",
+      "detailText": "Error code: source_unavailable\nFailed check: file_read\npermission_denied: true\nPath: /preview/codex/auth.json\nOriginal cause: file_read permission_denied=true; check=file_read; The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. The official client cannot read this long nested credential source path. ",
+      "primaryActions": {
+        "x": 550,
+        "y": 715.484375,
+        "width": 245,
+        "height": 32
+      },
+      "automaticWrites": 0,
+      "missing": [],
+      "sourceFocused": true
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+✖ runtime uses the shared Go/Rust contract and preserves absent supply (0.490791ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (0.946ms)
+✖ runtime client sends only fixed typed commands and rejects older snapshots (0.128417ms)
+✖ runtime operation receipts advance the same revision gate as snapshots (0.088292ms)
+✖ runtime requires an explicit nullable connection detail (1.684208ms)
+✖ runtime accepts observed failures and actual scheduled retry times (0.089625ms)
+✖ runtime rejects malformed or unsafe connection details (0.366375ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 1
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 78.62675
+
+✖ failing tests:
+
+test at desktop/tests/runtime.test.ts:7:1
+✖ runtime uses the shared Go/Rust contract and preserves absent supply (0.490791ms)
+  Error: RUNTIME_REPLY_INVALID: runtime has missing or unknown fields
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:19:46)
+      at object (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:23:76)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:43:10)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:8:19)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+
+test at desktop/tests/runtime.test.ts:17:1
+✖ runtime client sends only fixed typed commands and rejects older snapshots (0.128417ms)
+  Error: RUNTIME_REPLY_INVALID: runtime has missing or unknown fields
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:19:46)
+      at object (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:23:76)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:43:10)
+      at Object.snapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:64:28)
+      at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:20:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:26:1
+✖ runtime operation receipts advance the same revision gate as snapshots (0.088292ms)
+  Error: RUNTIME_REPLY_INVALID: runtime has missing or unknown fields
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:19:46)
+      at object (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:23:76)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:43:10)
+      at Object.snapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:64:28)
+      at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:29:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:39:1
+✖ runtime requires an explicit nullable connection detail (1.684208ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:41:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /missing/,
+    operator: 'throws',
+    diff: 'simple'
+  }
+
+test at desktop/tests/runtime.test.ts:48:1
+✖ runtime accepts observed failures and actual scheduled retry times (0.089625ms)
+  Error: RUNTIME_REPLY_INVALID: runtime has missing or unknown fields
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:19:46)
+      at object (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:23:76)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:43:10)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:51:17)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:55:1
+✖ runtime rejects malformed or unsafe connection details (0.366375ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:64:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /RUNTIME_REPLY_INVALID/,
+    operator: 'throws',
+    diff: 'simple'
+  }

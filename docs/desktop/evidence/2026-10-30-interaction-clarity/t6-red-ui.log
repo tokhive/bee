@@ -1,0 +1,559 @@
+UTC: 2026-11-02T10:32:45.308724+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', 'native-runtime.spec.ts', '--grep', 'initial device facts|pairing copy|initial pairing presents|revoked credential recovery|restarted unknown|adopting a different|shared .* status never', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+[WebServer] (node:68712) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 15 tests using 4 workers
+
+(node:68742) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68744) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68741) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:68743) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   3 [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes (6.4s)
+  ✘   4 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents creation_unknown from its durable transaction (6.4s)
+(node:69159) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69160) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   5 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redemption_unknown from its durable transaction (5.4s)
+  ✘   6 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redeeming from its durable transaction (5.4s)
+(node:69374) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:69375) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   7 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents saving from its durable transaction (5.5s)
+(node:69714) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   9 [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes (5.4s)
+(node:70030) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  10 [chromium] › tests/device.spec.ts:170:1 › adopting a different owner requires its own current revision confirmation (5.4s)
+(node:70281) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘   1 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents draining from its durable transaction (30.0s)
+  ✘   2 [chromium] › tests/device.spec.ts:141:1 › pairing copy feedback and failed browser opening retain the same request (30.1s)
+(node:70291) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:70321) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  11 [chromium] › tests/native-runtime.spec.ts:215:244 › shared connecting status never presents running as ready (5.4s)
+(node:70671) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  12 [chromium] › tests/native-runtime.spec.ts:215:244 › shared reconnecting status never presents running as ready (5.4s)
+  ✘  13 [chromium] › tests/native-runtime.spec.ts:215:244 › shared disconnected status never presents running as ready (5.4s)
+(node:70676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  14 [chromium] › tests/native-runtime.spec.ts:215:244 › shared rejected status never presents running as ready (5.4s)
+  ✘  15 [chromium] › tests/native-runtime.spec.ts:215:244 › shared occupied status never presents running as ready (5.4s)
+  ✘   8 [chromium] › tests/device.spec.ts:156:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation (30.1s)
+
+
+  1) [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('正在读取设备与账号状态', { exact: true }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('正在读取设备与账号状态', { exact: true }).first() with timeout 5000ms
+      - waiting for getByText('正在读取设备与账号状态', { exact: true }).first()
+
+
+      132 | test('initial device facts stay unknown until the first read finishes',async({page})=>{
+      133 |  await page.addInitScript(()=>{(window as any).deviceHold=true;});await page.goto('/');
+    > 134 |  await expect(page.getByText('正在读取设备与账号状态',{exact:true}).first()).toBeVisible();
+          |                                                                   ^
+      135 |  await expect(page.getByRole('button',{name:'生成配对码',exact:true})).toHaveCount(0);
+      136 |  await expect(page.getByRole('heading',{name:'连接本机设备',exact:true})).toHaveCount(0);
+      137 |  await page.evaluate(()=>{const w=window as any;w.deviceHold=false;w.releaseDevice();});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:134:67
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/device.spec.ts:141:1 › pairing copy feedback and failed browser opening retain the same request 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '复制配对码', exact: true })
+
+
+      142 |  await context.grantPermissions(['clipboard-read','clipboard-write']);await page.goto('/');
+      143 |  await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');await page.getByRole('button',{name:'生成配对码',exact:true}).click();
+    > 144 |  await page.getByRole('button',{name:'复制配对码',exact:true}).click();await expect(page.getByText('配对码已复制',{exact:true})).toBeVisible();
+          |                                                           ^
+      145 |  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('clipboard permission denied');}}});(window as any).openFailure=true;});
+      146 |  await page.getByRole('button',{name:'复制确认网址',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'clipboard permission denied'})).toBeVisible();
+      147 |  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();await expect(page.getByText('https://hive.example/devices/pair?code=ABCD-EFGH',{exact:true})).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:144:59
+
+    Error Context: ../.cache/device-pairing/playwright/device-pairing-copy-feedba-7b985-ing-retain-the-same-request-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-pairing-copy-feedba-7b985-ing-retain-the-same-request-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-pairing-copy-feedba-7b985-ing-retain-the-same-request-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/device.spec.ts:150:201 › initial pairing presents creation_unknown from its durable transaction 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('创建结果未知', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('创建结果未知', { exact: true }) with timeout 5000ms
+      - waiting for getByText('创建结果未知', { exact: true })
+
+
+      151 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      152 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 153 |  await page.goto('/');await expect(page.getByText(copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                       ^
+      154 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      155 | });
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:153:71
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-c9b1d-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-c9b1d-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-c9b1d-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/device.spec.ts:150:201 › initial pairing presents draining from its durable transaction 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新核对设备', exact: true })
+
+
+      151 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      152 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 153 |  await page.goto('/');await expect(page.getByText(copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                                                                                               ^
+      154 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      155 | });
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:153:143
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-0952d-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-0952d-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-0952d-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redeeming from its durable transaction 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('兑换已提交，正在核对新设备身份', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('兑换已提交，正在核对新设备身份', { exact: true }) with timeout 5000ms
+      - waiting for getByText('兑换已提交，正在核对新设备身份', { exact: true })
+
+
+      151 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      152 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 153 |  await page.goto('/');await expect(page.getByText(copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                       ^
+      154 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      155 | });
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:153:71
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-d431e-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-d431e-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-d431e-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redemption_unknown from its durable transaction 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('兑换结果未知，正在核对新设备身份', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('兑换结果未知，正在核对新设备身份', { exact: true }) with timeout 5000ms
+      - waiting for getByText('兑换结果未知，正在核对新设备身份', { exact: true })
+
+
+      151 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      152 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 153 |  await page.goto('/');await expect(page.getByText(copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                       ^
+      154 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      155 | });
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:153:71
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-ec23c-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-ec23c-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-ec23c-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/device.spec.ts:150:201 › initial pairing presents saving from its durable transaction 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('新设备身份已核对，正在保存本机配置', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('新设备身份已核对，正在保存本机配置', { exact: true }) with timeout 5000ms
+      - waiting for getByText('新设备身份已核对，正在保存本机配置', { exact: true })
+
+
+      151 |  const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
+      152 |  await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
+    > 153 |  await page.goto('/');await expect(page.getByText(copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                       ^
+      154 |  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      155 | });
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:153:71
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-pairing-pre-6045e-rom-its-durable-transaction-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests/device.spec.ts:156:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+
+
+      156 | test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
+      157 |  await page.addInitScript(()=>{const w=window as any;w.deviceFailure={code:'device_replaced',message:'HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'Old Mac',device_id:'old-1',owner_id:'old-owner',binding_revision:1};});await page.goto('/');
+    > 158 |  await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
+          |                                                            ^
+      159 |  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      160 |  await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
+      161 |  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:158:60
+
+    Error Context: ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('兑换结果未知，正在核对新设备身份', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('兑换结果未知，正在核对新设备身份', { exact: true }) with timeout 5000ms
+      - waiting for getByText('兑换结果未知，正在核对新设备身份', { exact: true })
+
+
+      165 | test('restarted unknown recovery queries the existing transaction without writes',async({page})=>{
+      166 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'HTTP 401 invalid_device_credential'};},recoveryView('redemption_unknown'));
+    > 167 |  await page.goto('/');await expect(page.getByText('兑换结果未知，正在核对新设备身份',{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+          |                                                                                     ^
+      168 |  expect((await deviceCalls(page,'device_recovery_status')).length).toBeGreaterThan(1);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+      169 | });
+      170 | test('adopting a different owner requires its own current revision confirmation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:167:85
+
+    Error Context: ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests/device.spec.ts:170:1 › adopting a different owner requires its own current revision confirmation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('new@example.test', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('new@example.test', { exact: true }) with timeout 5000ms
+      - waiting for getByText('new@example.test', { exact: true })
+
+
+      170 | test('adopting a different owner requires its own current revision confirmation',async({page})=>{
+      171 |  await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
+    > 172 |  await expect(page.getByText('new@example.test',{exact:true})).toBeVisible();await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+          |                                                                ^
+      173 |  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
+      174 |  await expect(page.getByText('重新绑定已完成，贡献保持停止。',{exact:true})).toBeVisible();expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);expect(await deviceCalls(page,'account_action')).toHaveLength(0);
+      175 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:172:64
+
+    Error Context: ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests/native-runtime.spec.ts:215:244 › shared connecting status never presents running as ready 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true })
+
+
+      216 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      217 |  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
+    > 218 |  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+          |                                                                                                                                            ^
+      219 |  await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      220 | });
+      221 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:218:140
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-shared-conn-48915-r-presents-running-as-ready-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-shared-conn-48915-r-presents-running-as-ready-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-shared-conn-48915-r-presents-running-as-ready-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests/native-runtime.spec.ts:215:244 › shared reconnecting status never presents running as ready 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '正在连接 Hive', exact: true })
+
+
+      216 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      217 |  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
+    > 218 |  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+          |                                                                                                                                            ^
+      219 |  await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      220 | });
+      221 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:218:140
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-shared-reco-0ac2e-r-presents-running-as-ready-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-shared-reco-0ac2e-r-presents-running-as-ready-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-shared-reco-0ac2e-r-presents-running-as-ready-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  13) [chromium] › tests/native-runtime.spec.ts:215:244 › shared disconnected status never presents running as ready 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: 'Hive 连接已中断', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: 'Hive 连接已中断', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: 'Hive 连接已中断', exact: true })
+
+
+      216 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      217 |  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
+    > 218 |  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+          |                                                                                                                                            ^
+      219 |  await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      220 | });
+      221 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:218:140
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-shared-disc-9ba4d-r-presents-running-as-ready-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-shared-disc-9ba4d-r-presents-running-as-ready-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-shared-disc-9ba4d-r-presents-running-as-ready-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  14) [chromium] › tests/native-runtime.spec.ts:215:244 › shared rejected status never presents running as ready 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备身份被拒绝', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备身份被拒绝', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备身份被拒绝', exact: true })
+
+
+      216 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      217 |  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
+    > 218 |  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+          |                                                                                                                                            ^
+      219 |  await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      220 | });
+      221 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:218:140
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-shared-reje-ad29b-r-presents-running-as-ready-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-shared-reje-ad29b-r-presents-running-as-ready-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-shared-reje-ad29b-r-presents-running-as-ready-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15) [chromium] › tests/native-runtime.spec.ts:215:244 › shared occupied status never presents running as ready 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备连接已被占用', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备连接已被占用', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByRole('heading', { name: '设备连接已被占用', exact: true })
+
+
+      216 |  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+      217 |  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
+    > 218 |  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+          |                                                                                                                                            ^
+      219 |  await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+      220 | });
+      221 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:218:140
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-shared-occu-4965f-r-presents-running-as-ready-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-shared-occu-4965f-r-presents-running-as-ready-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-shared-occu-4965f-r-presents-running-as-ready-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  15 failed
+    [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+    [chromium] › tests/device.spec.ts:141:1 › pairing copy feedback and failed browser opening retain the same request 
+    [chromium] › tests/device.spec.ts:150:201 › initial pairing presents creation_unknown from its durable transaction 
+    [chromium] › tests/device.spec.ts:150:201 › initial pairing presents draining from its durable transaction 
+    [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redeeming from its durable transaction 
+    [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redemption_unknown from its durable transaction 
+    [chromium] › tests/device.spec.ts:150:201 › initial pairing presents saving from its durable transaction 
+    [chromium] › tests/device.spec.ts:156:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation 
+    [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+    [chromium] › tests/device.spec.ts:170:1 › adopting a different owner requires its own current revision confirmation 
+    [chromium] › tests/native-runtime.spec.ts:215:244 › shared connecting status never presents running as ready 
+    [chromium] › tests/native-runtime.spec.ts:215:244 › shared reconnecting status never presents running as ready 
+    [chromium] › tests/native-runtime.spec.ts:215:244 › shared disconnected status never presents running as ready 
+    [chromium] › tests/native-runtime.spec.ts:215:244 › shared rejected status never presents running as ready 
+    [chromium] › tests/native-runtime.spec.ts:215:244 › shared occupied status never presents running as ready 
+
+Exit: 1
+UTC end: 2026-11-02T10:33:30.217369+00:00

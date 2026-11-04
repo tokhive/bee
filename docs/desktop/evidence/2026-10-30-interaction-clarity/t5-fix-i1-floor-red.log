@@ -1,0 +1,37 @@
+time=2026-11-02T10:02:28.071826+00:00
+command=['node', '--test', '--test-name-pattern=identity failure still fences', 'tests/desktopState.test.ts']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+✖ identity failure still fences each local account receipt before publishing local facts (14.265042ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 160.346167
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:151:1
+✖ identity failure still fences each local account receipt before publishing local facts (14.265042ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'DESKTOP_STALE_RESULT'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:156:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'DESKTOP_STALE_RESULT',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit=1

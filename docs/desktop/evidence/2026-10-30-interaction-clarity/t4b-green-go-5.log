@@ -1,0 +1,9 @@
+# github.com/tokhive/bee/desktopbridge_test [github.com/tokhive/bee/desktopbridge.test]
+desktopbridge/device_test.go:37:6: declared and not used: i
+--- FAIL: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation (0.22s)
+    --- FAIL: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/pending (0.01s)
+        desktop_device_recovery_test.go:296: account state pre-write validation: account operation provenance rejected: platform=openai generation=0; required=timestamp and valid identity revisions
+FAIL
+FAIL	github.com/tokhive/bee/agent	2.719s
+FAIL	github.com/tokhive/bee/desktopbridge [build failed]
+FAIL

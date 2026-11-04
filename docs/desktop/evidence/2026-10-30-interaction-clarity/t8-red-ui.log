@@ -1,0 +1,243 @@
+{"utc": "2026-11-02T15:37:39.170204+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-experience.spec.ts", "--grep", "T8 ", "--workers=4", "--output", "../.cache/t8-red-ui"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+
+Running 7 tests using 4 workers
+
+  ✘  1 [chromium] › tests/native-experience.spec.ts:301:1 › T8 original report read pauses after one failure and explicit reread completes without another start (7.2s)
+  ✘  2 [chromium] › tests/native-experience.spec.ts:326:1 › T8 saved proxy survives a failed network read and is never reported as a failed save (7.2s)
+  ✘  3 [chromium] › tests/native-experience.spec.ts:319:1 › T8 lost cancel receipt is checked by original report reads across navigation (7.4s)
+  ✘  4 [chromium] › tests/native-experience.spec.ts:311:1 › T8 lost start receipt remains unknown across all pages and only logs are available without an ID (7.6s)
+  ✘  5 [chromium] › tests/native-experience.spec.ts:332:1 › T8 unknown network apply preserves the draft and only rereads network and runtime after navigation (6.2s)
+  ✘  6 [chromium] › tests/native-experience.spec.ts:341:1 › T8 denied notification keeps the saved preference and gives the actual OS settings location (30.1s)
+  ✘  7 [chromium] › tests/native-experience.spec.ts:346:1 › T8 autostart read failure retains the desired choice and actual registration receipt (30.0s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:301:1 › T8 original report read pauses after one failure and explicit reread completes without another start 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('报告读取已暂停，已返回的检查仍保留。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('报告读取已暂停，已返回的检查仍保留。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('报告读取已暂停，已返回的检查仍保留。', { exact: true })
+
+
+      303 |  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let failed=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='diagnostics_snapshot'&&!failed){failed=true;w.calls.push({command,args});throw {code:'IPC_TIMEOUT',message:'snapshot read timed out: report retained'};}return invoke(command,args);};});
+      304 |  await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);
+    > 305 |  await expect(page.getByText('报告读取已暂停，已返回的检查仍保留。',{exact:true})).toBeVisible();
+          |                                                                  ^
+      306 |  await expect(page.locator('.nd-report-meta')).toBeVisible();await page.clock.runFor(5000);expect((await calls(page,'diagnostics_snapshot')).length).toBe(1);
+      307 |  await page.getByRole('button',{name:'重新读取原报告',exact:true}).click();await expect(page.getByText('检查已完成',{exact:true})).toBeVisible();
+      308 |  expect((await calls(page,'diagnostics_start')).length).toBe(1);const reads=await calls(page,'diagnostics_snapshot');expect(new Set(reads.map((c:any)=>c.args.id)).size).toBe(1);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:305:66
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-origi-71b84-letes-without-another-start-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-origi-71b84-letes-without-another-start-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-origi-71b84-letes-without-another-start-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/native-experience.spec.ts:311:1 › T8 lost start receipt remains unknown across all pages and only logs are available without an ID 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。', { exact: true })
+
+
+      313 |  await page.getByRole('button',{name:'运行诊断',exact:true}).click();
+      314 |  for(const destination of ['概览','设置','AI 账号']){await nav(page,destination).click();await nav(page,'诊断').click();}
+    > 315 |  await expect(page.getByText('诊断开始结果尚未确认；没有报告 ID，不能重新开始或查询原报告。',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+          |                                                                                ^
+      316 |  expect(await calls(page,'diagnostics_snapshot')).toEqual([]);expect((await calls(page,'diagnostics_start')).length).toBe(1);
+      317 |  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toBeVisible();
+      318 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:315:80
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-lost--4f9f2-are-available-without-an-ID-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-lost--4f9f2-are-available-without-an-ID-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-lost--4f9f2-are-available-without-an-ID-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/native-experience.spec.ts:319:1 › T8 lost cancel receipt is checked by original report reads across navigation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('取消结果尚未确认；仅核对原报告，不会重复取消。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('取消结果尚未确认；仅核对原报告，不会重复取消。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('取消结果尚未确认；仅核对原报告，不会重复取消。', { exact: true })
+
+
+      320 |  await setup(page);await nav(page,'诊断').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.diagnosticsStayRunning=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_cancel')throw {code:'IPC_TIMEOUT',message:'cancel accepted; reply unavailable'};return result;};});
+      321 |  await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.getByRole('button',{name:'取消诊断',exact:true}).click();
+    > 322 |  await nav(page,'设置').click();await nav(page,'诊断').click();await expect(page.getByText('取消结果尚未确认；仅核对原报告，不会重复取消。',{exact:true})).toBeVisible();
+          |                                                                                                                                 ^
+      323 |  await expect(page.getByRole('button',{name:'取消诊断',exact:true})).toBeDisabled();await page.getByRole('button',{name:'重新读取原报告',exact:true}).click();
+      324 |  await expect(page.getByText('诊断已取消',{exact:true})).toBeVisible();expect((await calls(page,'diagnostics_cancel')).length).toBe(1);expect((await calls(page,'diagnostics_start')).length).toBe(1);
+      325 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:322:129
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-lost--391fa-ort-reads-across-navigation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-lost--391fa-ort-reads-across-navigation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-lost--391fa-ort-reads-across-navigation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/native-experience.spec.ts:326:1 › T8 saved proxy survives a failed network read and is never reported as a failed save 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('代理配置已保存；生效状态尚未确认。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('代理配置已保存；生效状态尚未确认。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('代理配置已保存；生效状态尚未确认。', { exact: true })
+
+
+      327 |  await setup(page);await nav(page,'设置').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let saved=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='network_snapshot'&&saved){w.calls.push({command,args});throw {code:'NETWORK_RUNTIME_UNCONFIRMED',message:'network read unavailable after preference saved'};}const value=await invoke(command,args);if(command==='network_save_proxy')saved=true;return value;};});
+      328 |  await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18381');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+    > 329 |  await expect(page.getByText('代理配置已保存；生效状态尚未确认。',{exact:true})).toBeVisible();await expect(page.locator('.ns-network-summary')).toContainText('http://127.0.0.1:18381');
+          |                                                                 ^
+      330 |  await nav(page,'概览').click();await nav(page,'设置').click();await expect(page.getByText('代理配置已保存；生效状态尚未确认。',{exact:true})).toBeVisible();expect((await calls(page,'network_save_proxy')).length).toBe(1);
+      331 | });
+      332 | test('T8 unknown network apply preserves the draft and only rereads network and runtime after navigation',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:329:65
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-saved-f7d75-r-reported-as-a-failed-save-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-saved-f7d75-r-reported-as-a-failed-save-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-saved-f7d75-r-reported-as-a-failed-save-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/native-experience.spec.ts:332:1 › T8 unknown network apply preserves the draft and only rereads network and runtime after navigation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。', { exact: true })
+
+
+      334 |  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='network_apply_saved')throw {code:'IPC_TIMEOUT',message:'apply accepted; reply lost'};return result;};});
+      335 |  await page.getByRole('button',{name:'停止并重新启动以应用',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'停止并重新启动',exact:true}).click();
+    > 336 |  await expect(page.getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。',{exact:true})).toBeVisible();
+          |                                                                                  ^
+      337 |  for(const destination of ['诊断','AI 账号','概览']){await nav(page,destination).click();await nav(page,'设置').click();}
+      338 |  await expect(page.getByText('应用请求结果尚未确认；只读取当前配置与运行状态，不会再次停止或应用。',{exact:true})).toBeVisible();await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:18382');
+      339 |  await page.getByRole('button',{name:'刷新生效路径',exact:true}).click();expect((await calls(page,'network_apply_saved')).length).toBe(1);expect(await calls(page,'runtime_stop')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:336:82
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-unkno-6730c-nd-runtime-after-navigation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-unkno-6730c-nd-runtime-after-navigation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-unkno-6730c-nd-runtime-after-navigation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/native-experience.spec.ts:341:1 › T8 denied notification keeps the saved preference and gives the actual OS settings location 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.check: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('接收系统通知', { exact: true })
+
+
+      341 | test('T8 denied notification keeps the saved preference and gives the actual OS settings location',async({page})=>{
+      342 |  await setup(page);await page.evaluate(()=>{(window as any).notificationPermission='denied';});await nav(page,'设置').click();await tab(page,'通知与启动').click();
+    > 343 |  await page.getByLabel('接收系统通知',{exact:true}).check();await expect(page.getByLabel('接收系统通知',{exact:true})).toBeChecked();await expect(page.getByText('已拒绝',{exact:true})).toBeVisible();
+          |                                               ^
+      344 |  await expect(page.getByText('在 macOS“系统设置 → 通知 → Bee”中允许通知。应用内提醒会继续显示。',{exact:true})).toBeVisible();expect((await calls(page,'notification_enable')).length).toBe(1);
+      345 | });
+      346 | test('T8 autostart read failure retains the desired choice and actual registration receipt',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:343:47
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/native-experience.spec.ts:346:1 › T8 autostart read failure retains the desired choice and actual registration receipt 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.check: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('登录系统后启动 Bee', { exact: true })
+
+
+      346 | test('T8 autostart read failure retains the desired choice and actual registration receipt',async({page})=>{
+      347 |  await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let changed=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='preferences_read'&&changed)throw {code:'PREFERENCES_READ_FAILED',message:'preferences read failed after autostart receipt'};const value=await invoke(command,args);if(command==='autostart_set')changed=true;return value;};});
+    > 348 |  await page.getByLabel('登录系统后启动 Bee',{exact:true}).check();await expect(page.getByLabel('登录系统后启动 Bee',{exact:true})).toBeChecked();await expect(page.getByText('已登记',{exact:true})).toBeVisible();
+          |                                                    ^
+      349 |  await expect(page.getByText('系统登记回执已保留，偏好读取尚未确认。',{exact:true})).toBeVisible();await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByLabel('登录系统后启动 Bee',{exact:true})).toBeChecked();expect((await calls(page,'autostart_set')).length).toBe(1);
+      350 | });
+      351 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:348:52
+
+    Error Context: ../.cache/t8-red-ui/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-ui/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-ui/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7 failed
+    [chromium] › tests/native-experience.spec.ts:301:1 › T8 original report read pauses after one failure and explicit reread completes without another start 
+    [chromium] › tests/native-experience.spec.ts:311:1 › T8 lost start receipt remains unknown across all pages and only logs are available without an ID 
+    [chromium] › tests/native-experience.spec.ts:319:1 › T8 lost cancel receipt is checked by original report reads across navigation 
+    [chromium] › tests/native-experience.spec.ts:326:1 › T8 saved proxy survives a failed network read and is never reported as a failed save 
+    [chromium] › tests/native-experience.spec.ts:332:1 › T8 unknown network apply preserves the draft and only rereads network and runtime after navigation 
+    [chromium] › tests/native-experience.spec.ts:341:1 › T8 denied notification keeps the saved preference and gives the actual OS settings location 
+    [chromium] › tests/native-experience.spec.ts:346:1 › T8 autostart read failure retains the desired choice and actual registration receipt 
+{"exit": 1, "utc": "2026-11-02T15:38:20.035619+00:00"}

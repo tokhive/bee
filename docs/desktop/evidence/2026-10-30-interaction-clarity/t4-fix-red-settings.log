@@ -1,0 +1,45 @@
+[WebServer] (node:4676) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:4682) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/native-experience.spec.ts:173:1 › settings device replacement offers overview navigation without replaying the proxy write (6.4s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:173:1 › settings device replacement offers overview navigation without replaying the proxy write 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').getByRole('button', { name: '查看设备', exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('alert').getByRole('button', { name: '查看设备', exact: true }) with timeout 5000ms
+      - waiting for getByRole('alert').getByRole('button', { name: '查看设备', exact: true })
+
+
+      185 |  const failure=page.getByRole('alert');await expect(failure).toContainText('此设备已被替换，原设备凭据已撤销。');
+      186 |  expect((await calls(page,'network_save_proxy')).length).toBe(1);
+    > 187 |  const viewDevice=failure.getByRole('button',{name:'查看设备',exact:true});await expect(viewDevice).toBeVisible();await viewDevice.click();
+          |                                                                                                 ^
+      188 |  await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();await expect(page.getByTestId('native-settings')).toHaveCount(0);
+      189 |  await page.clock.runFor(10000);expect((await calls(page,'network_save_proxy')).length).toBe(1);
+      190 |  expect(await calls(page,'network_apply_saved')).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:187:97
+
+    Error Context: ../.cache/device-pairing/playwright/native-experience-settings-e70b1-t-replaying-the-proxy-write-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-experience-settings-e70b1-t-replaying-the-proxy-write-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-experience-settings-e70b1-t-replaying-the-proxy-write-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-experience.spec.ts:173:1 › settings device replacement offers overview navigation without replaying the proxy write 

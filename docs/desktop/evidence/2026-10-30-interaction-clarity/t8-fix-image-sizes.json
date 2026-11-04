@@ -1,0 +1,34 @@
+{
+  "images": [
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-01-unknown-write-zh-dark-860.png",
+      "actual_png_width": 860,
+      "actual_png_height": 600,
+      "sha256": "59b819f9684a6db91569514036d815c045205bd7195d6b578c69f1feb98d9a7d",
+      "note": "Original screenshot; no crop or resampling."
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-02-null-error-read-zh-dark-860.png",
+      "actual_png_width": 1512,
+      "actual_png_height": 833,
+      "sha256": "026a90d3e2c8d3b8dd521e12a3e9a2290b4eefd7c417fd5f3d35a84b7257ae05",
+      "note": "Filename says 860; actual 1512x833. Original retained, use manual-03/04 for 860 evidence."
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-03-failed-read-en-dark-860.png",
+      "actual_png_width": 860,
+      "actual_png_height": 600,
+      "sha256": "f7af612db91463e54c6243a615a3ba847ce1e734ddfc903b50a56acc58ba0ca7",
+      "note": "Original screenshot; no crop or resampling."
+    },
+    {
+      "path": ".superpowers/sdd/t8-fix-manual-04-trusted-result-en-dark-860.png",
+      "actual_png_width": 860,
+      "actual_png_height": 600,
+      "sha256": "7601b6890bb5c912e694fda5a62c2fd34122e0c8ba11c4468195f8a2ec491438",
+      "note": "Original screenshot; no crop or resampling."
+    }
+  ],
+  "path_mapping": [],
+  "path_mapping_note": "All evidence was created under .superpowers/sdd/t8-fix-* and remains at its original path; nothing moved."
+}

@@ -1,0 +1,5 @@
+--- FAIL: TestDesktopAccountsStartupVerificationNeverStartsRuntime (0.00s)
+    desktop_device_test.go:498: read-only startup verification is unavailable without Restore
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.969s
+FAIL

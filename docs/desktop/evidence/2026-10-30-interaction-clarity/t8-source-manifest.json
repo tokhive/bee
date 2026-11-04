@@ -1,0 +1,158 @@
+{
+  "task": "T8",
+  "utc": "2026-11-02T16:36:38.879094+00:00",
+  "root": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0",
+  "base": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+  "verification_head": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+  "source_tree_sha256": "57a2a1dd5c999db80df5d9edf8169c995c77aa654593e16c7541f7c483890ca6",
+  "status_before_commit": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/native-diagnostics.css\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/features/settings/native-settings.css\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/section-tabs.css\n M desktop/src/system/desktopState.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/desktopState.test.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n",
+  "files": [
+    {
+      "path": "desktop/src-tauri/src/network.rs",
+      "sha256": "e8738cf68b3f054ec507718753ce213c0917e26df9b8edf8a4271c4216d29fa8",
+      "bytes": 27341,
+      "git_blob": "be51af1840ff37689e8ad556e778db29f60c1cf0",
+      "base_blob": "42eb338b166043831b20ceb0badde688028380c7"
+    },
+    {
+      "path": "desktop/src-tauri/src/network_tests.rs",
+      "sha256": "f2401d74ddd80a9bb3aee2bd158c69496e2bda58cf7ef261e66976fbf9db2ce5",
+      "bytes": 27448,
+      "git_blob": "8e5ad5cb9151b526a5da6d2d750075cc89a2ec92",
+      "base_blob": "63d236a41b89f6731319bec752dfa2c5743e7bb7"
+    },
+    {
+      "path": "desktop/src/app/NativeApp.tsx",
+      "sha256": "e45538d995a621e2d313626a2c37e1b202184b5924cfcb811a57dbbaa98eb80b",
+      "bytes": 19344,
+      "git_blob": "380724da463f4044a8ff6222918d2e620d3e2bcf",
+      "base_blob": "4b6c330607e25fe3f7a767f19c6c5f350a8d325c"
+    },
+    {
+      "path": "desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx",
+      "sha256": "beaa9cc1799da34ae8406dda5864d6c7b651444c39f2eb5548d4e866c92d4c4b",
+      "bytes": 17095,
+      "git_blob": "a7374682ccf0ea028ea8c2c72c8140e40fefaf02",
+      "base_blob": "4b80ab5689363089bff5bfacbf222a7d10f14f66"
+    },
+    {
+      "path": "desktop/src/features/diagnostics/native-diagnostics.css",
+      "sha256": "7988a76da2d3308005dfb88c6396e4d0d01de11494ced7a92570c7faf29c042c",
+      "bytes": 7449,
+      "git_blob": "9c02a292ae91d3614829528d6d742777c76becb1",
+      "base_blob": "3273b585c88a6efed103af6050cf550fbd7e4b93"
+    },
+    {
+      "path": "desktop/src/features/diagnostics/presentation.ts",
+      "sha256": "422ccac7ddb302a0964d06369508958554539df1401d437f32be150e053c46c7",
+      "bytes": 3857,
+      "git_blob": "e1d763d6a7aa940b0bb7d4e0059ab1c0f9eea60c",
+      "base_blob": "8fbeeb7901b4b1d468f46d77afb715d8b381e0c8"
+    },
+    {
+      "path": "desktop/src/features/settings/NativeSettingsPage.tsx",
+      "sha256": "f95c5d15ac4781d05b0bef411f4205e8f2f4c5ee0d38ad567df63d6d4414ea0e",
+      "bytes": 27860,
+      "git_blob": "b4826878a4966853a820acf54df43576c0489b07",
+      "base_blob": "f9fcaf09d01344a409f123979ef0f0445fa1a4af"
+    },
+    {
+      "path": "desktop/src/features/settings/native-settings.css",
+      "sha256": "4d371041e933b78eaacaac26f8283472a11424e4c434d76aee6225aa6ddd338a",
+      "bytes": 7506,
+      "git_blob": "fd7c4b943215ba5dc02464b93211ce47a26717fd",
+      "base_blob": "6e2806b3fa4577414e10f03e1b481af25dc4e61e"
+    },
+    {
+      "path": "desktop/src/i18n/en.ts",
+      "sha256": "14306c365e872d5af3cbb7ff0e0ce15971048e1703358892e09c244abeb4c250",
+      "bytes": 105665,
+      "git_blob": "a5c679cbadd845813f38e6d404e6814e503ed967",
+      "base_blob": "135de162ac74abdf531029fd6b8345dbe086867e"
+    },
+    {
+      "path": "desktop/src/presentation/problems.ts",
+      "sha256": "575de4abf2fd41fd14d5f4f86506638c71ee4ccef670b83563f725473fe71415",
+      "bytes": 9256,
+      "git_blob": "5b850e5755d8ff4b39bf4e55d69f34f8c81dd2a6",
+      "base_blob": "2079b9f9cd6b9cd998f9e6c2f7f284be078e04f8"
+    },
+    {
+      "path": "desktop/src/styles/section-tabs.css",
+      "sha256": "bf2aea3b5ae3be7be079492e44215bfca8230fbb1ffdfa554a569a6ca5294707",
+      "bytes": 648,
+      "git_blob": "c3cdbdc21ffe3dfee35615fea17616f9c0a55361",
+      "base_blob": "d3f92e373d10297cbaca287878622eb1f0fdfc99"
+    },
+    {
+      "path": "desktop/src/system/desktopState.ts",
+      "sha256": "16e56fca34f3a2b8879a381bfd24b7a9bbd299f230ffc188c486c14b5cace74c",
+      "bytes": 19273,
+      "git_blob": "14945c565baa2c1dd1771b1c6bfc04179f888ca9",
+      "base_blob": "ea467d7c5904b555b9a622aed11b973c69698fab"
+    },
+    {
+      "path": "desktop/src/system/diagnostics.ts",
+      "sha256": "be6496b978c747f60fb8f7e5a5e47c9e380230ee75aef5576a9b2d39d3fe167a",
+      "bytes": 20745,
+      "git_blob": "61d2b8691611cd5d436a1b7c3a16db462c990b81",
+      "base_blob": "dad5a78563ac9ad148eae67c661731e0cbddd6b5"
+    },
+    {
+      "path": "desktop/tests/desktopState.test.ts",
+      "sha256": "20357211601f3aae0a9dccb81de2b14db79a435d1a64c9c1b3df2a46bb97ef28",
+      "bytes": 24207,
+      "git_blob": "c63aac9dac6b398f38e48fc88473a27ba9ab16d0",
+      "base_blob": "785dec135fe50b30f0f321dfd5b016e5519cdbf2"
+    },
+    {
+      "path": "desktop/tests/diagnostic-presentation.test.ts",
+      "sha256": "289d68d4ef57c88644349cb0815e478d063685ec35b23150791a4714b69bc71e",
+      "bytes": 5139,
+      "git_blob": "3886be984803c11e7d81956c7e2c31bb48f1ecb2",
+      "base_blob": "054ab09748e820c24f115a6e61e2792e348a1b11"
+    },
+    {
+      "path": "desktop/tests/diagnostics.test.ts",
+      "sha256": "47c3b6d4f7d75cc1793a41a392e40f73e8ce67febe125cbcdf35b053a528cd53",
+      "bytes": 18955,
+      "git_blob": "4fc754d3fb3a60bab047d603e5669623932c480f",
+      "base_blob": "848ef3ba13ae7d7186b1f39d91ea8ce9f1a4b931"
+    },
+    {
+      "path": "desktop/tests/native-experience.spec.ts",
+      "sha256": "5e8f02510b08859ded0bb4792e1bd1b8eae37dd5b15ddfaa7cfd5d4d17a83201",
+      "bytes": 55556,
+      "git_blob": "9149c6bcbd32823fcf98618f9a7c73afdf9ee9ae",
+      "base_blob": "e3b8225246fbbe8fdbec2e7659b3b4a6a003b63f"
+    },
+    {
+      "path": "desktop/tests/network.test.ts",
+      "sha256": "6a5be75fcc83b51d3852ab5294076ec8823c0c6474c40a5ab49d7c3dcd2874a3",
+      "bytes": 5848,
+      "git_blob": "3134852c401dd830f8584bf0a6b7310449f76dfa",
+      "base_blob": "48f4a556bfbc744909bea20cd2dfdd519dfbae80"
+    },
+    {
+      "path": "desktop/tests/recovery-navigation.spec.ts",
+      "sha256": "1b08c7534b95a0bb70e3ffa9bfce93c0d7d2575b69124692c8ca801667561eb3",
+      "bytes": 13698,
+      "git_blob": "2a800c5d555572d7507ce82d92468d03c82da1fa",
+      "base_blob": "f439b1cd21dcc56f6997c0225e86301f6af84271"
+    }
+  ],
+  "verification_logs": [
+    "t8-accepted-final-node-fixed.log",
+    "t8-accepted-final-desktop-state.log",
+    "t8-accepted-final-ui.log",
+    "t8-accepted-final-typecheck-fixed.log",
+    "t8-final-rust-network.log",
+    "t8-final-diff-check.log"
+  ],
+  "version_boundary": "Final product sources match latest 38 Node, 28 state, 59 UI and typecheck; diagnostics presentation test gained only an explicit array type between UI and final Node/typecheck. Rust was unchanged after its 23 passing tests. Earlier manual screenshots have no captured per-file source hashes; only real-Hive screenshots postdate the final product edits.",
+  "commit": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "commit_subject": "feat(desktop): make settings and diagnostics recovery actionable",
+  "commit_tree": "64d3547bc441c205c6437338d2d74959d145b983",
+  "commit_verified_utc": "2026-11-02T16:38:09.430602+00:00",
+  "commit_working_copy_manifest_match": true
+}

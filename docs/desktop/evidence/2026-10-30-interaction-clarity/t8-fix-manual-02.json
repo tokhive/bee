@@ -1,0 +1,34 @@
+{
+  "utc": "2026-11-02T17:00:45.886Z",
+  "space": 40,
+  "page": "p1",
+  "state": {
+    "checked": true,
+    "disabled": true,
+    "registration": "上次确认的系统登记未登记",
+    "text": "通知与启动偏好与系统实际状态分别显示。   接收系统通知授权、换号、离线和额度问题仍会保留在应用内。系统权限尚未允许登录系统后启动 Bee登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。上次确认的系统登记未登记启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。本次操作失败，原因尚未确认。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: IPC_TIMEOUT\n失败环节: autostart_set\n原始原因: autostart accepted; receipt lost: enabled=true系统启动登记读取失败。本次操作未能完成；后续状态以重新核对的结果为准。查看失败详情错误码: AUTOSTART_QUERY_FAILED\n失败环节: autostart_status\n原始原因: autostart query failed: kind=PermissionDenied os_code=13重新检查系统状态关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。",
+    "alerts": 2,
+    "calls": [
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_set",
+        "args": {
+          "enabled": true
+        }
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      }
+    ],
+    "focus": "重新检查系统状态",
+    "overflow": false
+  }
+}

@@ -2,18 +2,20 @@ import type {RefreshStatus} from '../../system/desktopState';
 import {requestNotSent,type UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
+import {accountConfirmationKey} from '../../system/accounts';
 import type {AuthorizeClient} from '../../system/authorize';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
+export interface CoordinatedAccounts {refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
  useEffect(()=>{if(!enabled||!autoRead)return;const timer=setInterval(()=>setClock(v=>v+1),10000);return()=>clearInterval(timer);},[enabled,autoRead]);
  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
+ const [loginFlows,setLoginFlows]=useState<Partial<Record<AccountPlatform,{confirmation:string|null;rechecked:boolean;checking:boolean}>>>({});
  const [writeBusy,setWriteBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const [cancelUnconfirmed,setCancelUnconfirmed]=useState<Partial<Record<AccountPlatform,{operationId:string;failure:UiFailure}>>>({});
  // An ignored old reply or unchanged error must still schedule the next poll.
@@ -75,7 +77,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     try{
      const result=await operation(latest.current[platform]);
      if(!current())return;
-     if(result)central.current?.recordReceipt?.(platform,result.revision);
+     if(result)central.current?.recordReceipt?.(platform,result.revision,write);
      const view=result&&'selection'in result?result:undefined;
      if(write&&result)receiptOperation='selection'in result?result.operation??undefined:result;
      if(view&&publish(platform,view,detected))setErrors(v=>({...v,[platform]:undefined}));
@@ -105,7 +107,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   if(!write)return execute();
   const runtimeIntent=currentRuntime.current;
   const intent=latest.current[platform],epoch=epochs.current[platform],prior=requests.current[platform];
-  const identity=(s:AccountSnapshot|undefined)=>JSON.stringify([s?.selection.state,s?.selection.fingerprint,s?.hive.fingerprint,s?.hive.generation,s?.candidate.reference,!!s?.candidate.expires_at&&Date.parse(s.candidate.expires_at)>Date.now()+30000,s?.features,s?.operation?.id,cancel&&s?.operation&&['pending','running'].includes(s.operation.state)?'cancellable':s?.operation?.state]);
+  const identity=(s:AccountSnapshot|undefined)=>accountConfirmationKey(s,Date.now(),cancel);
   const expected=identity(intent);
   writing.current[platform]=true;setWriteBusy(v=>({...v,[platform]:true}));
   const rejectSubmission=(check:string,actual:string,required:string)=>{
@@ -134,10 +136,10 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    await execute();
   })().catch(cause=>{if(active.current&&epoch===epochs.current[platform]&&central.current?.generation?.()===started){verified.current[platform]=false;setErrors(v=>({...v,[platform]:failure(cause,'account_operation')}));}}).finally(()=>{writing.current[platform]=false;if(active.current)setWriteBusy(v=>({...v,[platform]:false}));});
  },[publish,refreshCentral,pauseCentral]);
- const detectLocal=useCallback(async(platform:AccountPlatform,source:AccountSource)=>{
+ const detectLocal=useCallback(async(platform:AccountPlatform,source:AccountSource,mode:'local'|'official'='local')=>{
   const epoch=epochs.current[platform];
   try{
-   const view=await client!.detect({platform,...source,mode:'local'});
+   const view=await client!.detect({platform,...source,mode});
    // Source access failures are valid snapshots with candidate.error, not IPC rejections.
    if(active.current&&epoch===epochs.current[platform])setSourceReadFailed(v=>({...v,[platform]:!view.candidate.source&&view.candidate.error?failure(view.candidate.error,'source_read'):undefined}));
    return view;
@@ -171,7 +173,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  useEffect(()=>{
   if(!enabled||!autoRead||!client||!savedDefaults||centralError)return;
   for(const p of platforms){
-   if(busy[p]||running.current[p]||accountErrors[p]||errors[p]||uncertain[p]||accountPending(views[p]))continue;
+   if(coordinated?.accountRefresh?.[p]?.state==='waiting'||busy[p]||running.current[p]||accountErrors[p]||errors[p]||uncertain[p]||accountPending(views[p]))continue;
    const source=sources[p]??{directory:null,store:savedDefaults.platforms.find(d=>d.platform===p)?.default_store??'file'};
    const key=JSON.stringify(source);
    if(detectedSources.current.get(p)!==key){
@@ -192,16 +194,26 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    officialReads.current.set(officialKey,stamp(view));
    void run(p,async()=>{const next=await client.detect({platform:p,...source,mode:'official'});officialReads.current.set(officialKey,stamp(next));return next;},true);
   }
- },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
+ },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,coordinated?.accountRefresh,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
  const sourceFor=(p:AccountPlatform)=>sources[p]??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
- return {submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
+ return {submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,loginFlows,
+  openLogin(platform:AccountPlatform,confirmation:string){setLoginFlows(v=>({...v,[platform]:{confirmation,rechecked:false,checking:false}}));},
+  dismissLogin(platform:AccountPlatform){setLoginFlows(v=>({...v,[platform]:undefined}));},
+  recheckLogin(platform:AccountPlatform,mode:'local'|'official'){
+   if(!client||!savedDefaults||centralError||running.current[platform]||writing.current[platform]||uncertain[platform]||accountPending(views[platform]))return;
+   const generation=central.current?.generation?.();
+   setLoginFlows(v=>({...v,[platform]:{confirmation:null,rechecked:false,checking:true}}));
+   const request=run(platform,()=>detectLocal(platform,sourceFor(platform),mode),true),epoch=epochs.current[platform];
+   void request.finally(()=>{if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation)setLoginFlows(v=>({...v,[platform]:{confirmation:null,rechecked:true,checking:false}}));});
+  },
+  defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
   edit(platform:AccountPlatform,source:AccountSource){
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;
-   delete resolutions.current[platform];verified.current[platform]=false;
+   delete resolutions.current[platform];verified.current[platform]=false;setLoginFlows(v=>({...v,[platform]:undefined}));
    setSourceReadFailed(v=>({...v,[platform]:undefined}));client?.invalidate(platform);epochs.current[platform]++;running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSources(v=>({...v,[platform]:source}));setDirty(v=>({...v,[platform]:true}));setErrors(v=>({...v,[platform]:undefined}));
   },
-  detect(platform:AccountPlatform,mode:'local'|'official'){if(client&&savedDefaults&&!centralError)void run(platform,()=>client.detect({platform,...sourceFor(platform),mode}),true);},
+  detect(platform:AccountPlatform,mode:'local'|'official'){if(client&&savedDefaults&&!centralError)void run(platform,()=>detectLocal(platform,sourceFor(platform),mode),true);},
   refresh(platform:AccountPlatform){void read(platform,true,views[platform]?.operation?.kind==='authorize'?views[platform]?.operation?.id:undefined);},
   action(platform:AccountPlatform,action:AccountActionRequest['action']){
    const view=views[platform];if(!client||!view||uncertain[platform]||centralError)return;
@@ -209,6 +221,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   },
   authorize(platform:AccountPlatform){
    const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError)return;
+   if(platform==='claude')setLoginFlows(v=>({...v,[platform]:{confirmation:null,rechecked:false,checking:false}}));
    void run(platform,async current=>{setCancelUnconfirmed(v=>({...v,[platform]:undefined}));const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true);
   },
   cancelAuthorize(platform:AccountPlatform){

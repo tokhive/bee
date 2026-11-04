@@ -1,0 +1,154 @@
+✔ runtime uses the shared Go/Rust contract and preserves absent supply (3.006208ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (1.2535ms)
+✔ runtime client sends only fixed typed commands and rejects older snapshots (0.864208ms)
+✔ runtime operation receipts advance the same revision gate as snapshots (0.550834ms)
+✔ runtime requires an explicit nullable connection detail (0.176875ms)
+✔ runtime accepts observed failures and actual scheduled retry times (2.698375ms)
+✔ runtime rejects malformed or unsafe connection details (0.666ms)
+✔ runtime connection origin rejects lookalike loopback domains (0.197083ms)
+✖ runtime consumes the actual Go connection origin https://HIVE.test (0.916875ms)
+✖ runtime consumes the actual Go connection origin https://hive.test:443 (0.143542ms)
+✖ runtime consumes the actual Go connection origin http://localhost:80 (0.062167ms)
+✖ runtime consumes the actual Go connection origin https://HIVE.test:8443 (0.08325ms)
+✖ runtime consumes the actual Go connection origin https://[2001:0DB8:0:0:0:0:0:1]:443 (0.264792ms)
+✖ runtime consumes the actual Go connection origin http://[0:0:0:0:0:0:0:1]:80 (0.067084ms)
+✖ runtime consumes the actual Go connection origin http://[::ffff:127.0.0.1]:80 (0.0465ms)
+✖ runtime consumes the actual Go connection origin https://例子.test:443 (4.738458ms)
+✖ runtime consumes the actual Go connection origin https://127.1:443 (0.393917ms)
+✔ runtime rejects unsafe original origin structures and non-loopback HTTP hosts (0.421417ms)
+ℹ tests 18
+ℹ suites 0
+ℹ pass 9
+ℹ fail 9
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 92.474958
+
+✖ failing tests:
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://HIVE.test (0.916875ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://hive.test:443 (0.143542ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin http://localhost:80 (0.062167ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://HIVE.test:8443 (0.08325ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://[2001:0DB8:0:0:0:0:0:1]:443 (0.264792ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin http://[0:0:0:0:0:0:0:1]:80 (0.067084ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin http://[::ffff:127.0.0.1]:80 (0.0465ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://例子.test:443 (4.738458ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at desktop/tests/runtime.test.ts:74:2
+✖ runtime consumes the actual Go connection origin https://127.1:443 (0.393917ms)
+  Error: RUNTIME_REPLY_INVALID: connection target_origin requires safe origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:22:46)
+      at connectionDetail (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:51:122)
+      at decodeRuntimeSnapshot (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/runtime.ts:78:2)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:76:20)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

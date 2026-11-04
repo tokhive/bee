@@ -1,0 +1,116 @@
+UTC: 2026-11-02T10:54:09.171963+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['node', '--test', 'tests/desktopState.test.ts', 'tests/desktopStatus.test.ts', 'tests/device.test.ts', 'tests/problems.test.ts']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (8.109417ms)
+✔ old child and network revision results never replace current state (1.070792ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (1.084583ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (2.172667ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (1.042542ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (1.170125ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (1.399292ms)
+✔ device read failure stays on the device and still publishes account defaults (2.029708ms)
+✔ replacement refresh starts after the status listener returns (1.129416ms)
+✔ a superseded initial status rejection cannot block a ready event (0.6385ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (1.203375ms)
+✔ shared and independent platform facts publish before slow openai account (0.720542ms)
+✔ shared and independent platform facts publish before slow claude account (0.247792ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.409459ms)
+✔ failed platform reads retain confirmed history and its real retry time (0.38ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.491834ms)
+✔ supply progress follows its platform request rather than another platform busy flag (3.641458ms)
+✔ coordinator preserves the actual retry timer for reconciling (1.279042ms)
+✔ coordinator preserves the actual retry timer for pending (0.466875ms)
+✔ coordinator preserves the actual retry timer for running (0.310458ms)
+✔ identity failure still fences each local account receipt before publishing local facts (0.330042ms)
+✔ recovery failure with successful identity permits only fenced local account observations (0.272042ms)
+✔ existing credential recovery is discovered by the shared reader and stale revisions are rejected (0.324459ms)
+✔ only a typed absent recovery is ignored; corrupt records remain visible (0.252792ms)
+✔ recovery completion changes binding within the same refresh before publishing new scoped facts (0.635292ms)
+✔ binding is isolated when recoveryStatus saves config but its response fails (0.522917ms)
+✔ binding is isolated when status saves config but its response fails (0.847625ms)
+✔ fresh ready (7.153333ms)
+✔ shared failed read suppresses old success (0.124125ms)
+✖ recovery read failure suppresses confirmed old success (0.527208ms)
+✔ confirmed revocation precedes stopped and unknown accounts (0.373625ms)
+✔ startup rejection does not depend on accounts (0.261209ms)
+✔ starting precedes empty accounts (0.265292ms)
+✔ known empty accounts (0.298542ms)
+✔ selected stopped (0.342209ms)
+✔ unknown accounts are not zero (0.238917ms)
+✔ first read (0.3305ms)
+✔ all paused (0.504166ms)
+✔ expired success cannot be ready (0.377792ms)
+✔ one platform failure preserves the other confirmed ready platform (0.511958ms)
+✔ recovery read failure retains its evidence and blocks every ready platform (0.09325ms)
+✔ paused keeps independent blockers in the original snapshot (0.082ms)
+✔ preparation closes after a selected account, including ordinary stop (0.052792ms)
+✔ initial transaction awaiting_confirmation stays pairing (0.053291ms)
+✔ initial transaction creation_unknown stays pairing (0.0305ms)
+✔ initial transaction redemption_unknown stays pairing (0.229125ms)
+✔ initial transaction saving stays pairing (0.055ms)
+✔ initial transaction awaiting_owner_confirmation stays pairing (0.040125ms)
+✔ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (7.602875ms)
+✔ device replies only expose validated public binding data (2.21025ms)
+✔ business rejection preserves operation evidence (0.34575ms)
+✔ device rejection retains structured failure before binding validation (0.842542ms)
+✔ device error details reject unknown fields and invalid observations (0.169708ms)
+✔ native device client uses fixed commands and no frontend config path (0.141125ms)
+✔ native context failures retain only a validated observed binding revision (0.311792ms)
+✔ DeviceRecovery client provides explicit prepare confirm and status operations (0.055125ms)
+✔ DeviceRecovery strict public contract rejects secrets missing fields and conflicting URL (0.509666ms)
+✔ DeviceRecovery initial pairing reports the same public transaction with consistent state (0.664042ms)
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (12.313375ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.874583ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.214167ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.105334ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.857125ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.160792ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.392333ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (7.455541ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.236708ms)
+✔ explicit locale formatting and placeholders follow the App language (2.623208ms)
+✔ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.87125ms)
+✔ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.421ms)
+✔ known unsent failures use the App locale and retain evidence without guessing from messages (0.54775ms)
+✔ unsent classification uses validated codes and rejects malformed details (0.282917ms)
+ℹ tests 72
+ℹ suites 0
+ℹ pass 71
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 219.984417
+
+✖ failing tests:
+
+test at tests/desktopStatus.test.ts:29:38
+✖ recovery read failure suppresses confirmed old success (0.527208ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'rejected'
+  - 'unconfirmed'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:29:88)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'rejected',
+    expected: 'unconfirmed',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+Exit: 1
+UTC end: 2026-11-02T10:54:09.467937+00:00

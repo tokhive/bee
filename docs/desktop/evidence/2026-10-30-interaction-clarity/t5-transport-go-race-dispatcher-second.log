@@ -1,0 +1,2 @@
+{"time": "2026-11-02T09:25:04.104813+00:00", "command": ["go", "test", "-race", "./desktopbridge", "-count=1", "-timeout=60s"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+ok  	github.com/tokhive/bee/desktopbridge	2.042s

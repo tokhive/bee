@@ -1,0 +1,191 @@
+{"utc": "2026-11-02T13:52:18.011962+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-accounts.spec.ts", "account-auto-read.spec.ts", "supply.spec.ts", "polling-stability.spec.ts"], "dirty": " M Makefile\n M agent/desktop_authorize.go\n M agent/desktop_authorize_test.go\n M desktop/README.md\n M desktop/src/features/accounts/AccountDisplay.tsx\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/NativeAccountDetails.tsx\n M desktop/src/features/accounts/NativeAccountList.tsx\n M desktop/src/features/accounts/NativeAccountsPage.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/src/features/supply/SupplyPanel.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/i18n/zh.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/styles/app.css\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.d.mts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/polling-stability.spec.ts\n M desktop/tests/problems.test.ts\n M desktop/tests/supply.spec.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+
+Running 86 tests using 5 workers
+
+[WebServer] The file does not exist at "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/.vite/deps/react-dom_client.js" which is in the optimize deps directory. The dependency might be incompatible with the dep optimizer. Try adding it to `optimizeDeps.exclude`.
+[WebServer] The file does not exist at "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/.vite/deps/react-dom_client.js" which is in the optimize deps directory. The dependency might be incompatible with the dep optimizer. Try adding it to `optimizeDeps.exclude`.
+[WebServer] The file does not exist at "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/.vite/deps/react-dom_client.js" which is in the optimize deps directory. The dependency might be incompatible with the dep optimizer. Try adding it to `optimizeDeps.exclude`.
+  ✓   5 [chromium] › tests/account-auto-read.spec.ts:18:1 › selected matching candidate automatically reads official quota once and retains the raw percentage (3.1s)
+  ✓   4 [chromium] › tests/account-auto-read.spec.ts:6:1 › account entry reads each source once and never performs automatic writes or sign-in (3.1s)
+  ✓   6 [chromium] › tests/account-auto-read.spec.ts:56:1 › official retry_at defers reads and unchanged failed observations never create a prompt loop (687ms)
+  ✓   7 [chromium] › tests/account-auto-read.spec.ts:65:1 › failed local sources remain diagnosed without automatic prompts and retry once on account re-entry (717ms)
+  ✓   8 [chromium] › tests/account-auto-read.spec.ts:73:1 › one platform snapshot error does not slow the other pending operation or starve its retry (314ms)
+  ✓   9 [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling select retries refreshed snapshots at ten seconds without replaying actions (309ms)
+  ✓  10 [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling confirm_change retries refreshed snapshots at ten seconds without replaying actions (286ms)
+  ✓  11 [chromium] › tests/account-auto-read.spec.ts:86:62 › resolved permission_denied source failures retry on re-entry without repeated permission prompts (358ms)
+  ✓  12 [chromium] › tests/account-auto-read.spec.ts:86:62 › resolved source_unavailable source failures retry on re-entry without repeated permission prompts (319ms)
+  ✓  13 [chromium] › tests/account-auto-read.spec.ts:95:1 › a late coordinated readback cannot confirm a replacement credential source (364ms)
+  ✓  14 [chromium] › tests/account-auto-read.spec.ts:120:1 › account action waits for a background snapshot and submits once using the refreshed revision (214ms)
+  ✓  15 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after failed (229ms)
+  ✓  16 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after candidate-changed (241ms)
+  ✓  17 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after expired (234ms)
+  ✓  18 [chromium] › tests/account-auto-read.spec.ts:127:75 › a waiting account action never writes after unmounted (223ms)
+  ✓  19 [chromium] › tests/account-auto-read.spec.ts:138:1 › account read errors remain visible throughout the retry and clear only after success (207ms)
+  ✓  20 [chromium] › tests/account-auto-read.spec.ts:146:1 › repeated account read failures keep retrying until a successful snapshot (253ms)
+  ✓  21 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes running (258ms)
+  ✓  22 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes succeeded (276ms)
+  ✘   3 [chromium] › tests/account-auto-read.spec.ts:38:1 › failed account snapshots retry after ten seconds without replaying writes (5.9s)
+  ✘   2 [chromium] › tests/account-auto-read.spec.ts:52:1 › source replacement rejects a late previous-source reply (5.9s)
+  ✘   1 [chromium] › tests/account-auto-read.spec.ts:44:1 › uncertain writes survive passive runtime, old snapshots and pending replies until explicit terminal confirmation (5.9s)
+  ✓  23 [chromium] › tests/account-auto-read.spec.ts:158:55 › waiting login cancellation revalidates the same operation when it becomes replaced (323ms)
+  ✓  24 [chromium] › tests/account-auto-read.spec.ts:171:1 › NativeApp reconciling coordinator waits exactly ten seconds without replaying writes (724ms)
+  ✓  25 [chromium] › tests/native-accounts.spec.ts:30:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota (1.6s)
+  ✓  26 [chromium] › tests/native-accounts.spec.ts:34:1 › uncertain per-platform pause preserves the other platform and does not replay a write (1.4s)
+  ✓  27 [chromium] › tests/native-accounts.spec.ts:26:1 › overview and accounts share per-platform pause state; resume never starts contribution (1.9s)
+  ✓  28 [chromium] › tests/native-accounts.spec.ts:9:1 › account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus (2.0s)
+  ✓  30 [chromium] › tests/native-accounts.spec.ts:37:1 › device verification failure permits local reads and preserves selected historical Hive quota (1.8s)
+  ✓  31 [chromium] › tests/native-accounts.spec.ts:42:1 › approved shared rows show saved identity and a keyboard-accessible compact detail (1.7s)
+  ✓  32 [chromium] › tests/native-accounts.spec.ts:58:1 › unconnected candidate shows its target and exact pause impact before connecting (1.3s)
+  ✓  34 [chromium] › tests/native-accounts.spec.ts:75:1 › candidate expiring at the safety boundary explains zero-write refusal (1.2s)
+  ✓  33 [chromium] › tests/native-accounts.spec.ts:68:1 › running official login explains its stopped precondition and provides the runtime location (1.7s)
+  ✓  29 [chromium] › tests/native-accounts.spec.ts:17:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme (3.7s)
+  ✓  35 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_missing stays scoped and leaves the other platform usable (1.3s)
+  ✓  36 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source permission_denied stays scoped and leaves the other platform usable (1.4s)
+  ✓  37 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source expired stays scoped and leaves the other platform usable (1.2s)
+  ✓  38 [chromium] › tests/native-accounts.spec.ts:81:85 › selected source source_changed stays scoped and leaves the other platform usable (1.5s)
+  ✓  39 [chromium] › tests/native-accounts.spec.ts:89:1 › confirmation invalidates a changed candidate while retaining the original target and zero writes (1.8s)
+  ✓  40 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_missing is actionable without automatically connecting (2.1s)
+  ✓  41 [chromium] › tests/native-accounts.spec.ts:95:267 › official login client_version_unsupported is actionable without automatically connecting (1.8s)
+  ✓  42 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_source_unchanged is actionable without automatically connecting (1.7s)
+  ✓  43 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_timeout is actionable without automatically connecting (1.9s)
+  ✓  44 [chromium] › tests/native-accounts.spec.ts:95:267 › official login authorization_namespace_mismatch is actionable without automatically connecting (1.9s)
+  ✓  46 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: running (1.0s)
+  ✓  47 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: stopped (1.1s)
+  ✓  45 [chromium] › tests/native-accounts.spec.ts:101:1 › unknown cancel only queries the same official operation and late success remains an unconnected candidate (1.9s)
+  ✓  48 [chromium] › tests/polling-stability.spec.ts:34:1 › an explicit start during a runtime read waits and submits once (986ms)
+  ✓  49 [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay (1.1s)
+  ✓  50 [chromium] › tests/polling-stability.spec.ts:52:1 › fresh supply reads keep pause available and serialize a single explicit change (1.3s)
+  ✓  51 [chromium] › tests/polling-stability.spec.ts:63:1 › pairing polling keeps the website action stable (1.4s)
+  ✓  53 [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery (1.7s)
+  ✓  52 [chromium] › tests/polling-stability.spec.ts:71:1 › account status polling never disables cancel login and the explicit cancel is not lost (2.1s)
+  ✓  54 [chromium] › tests/polling-stability.spec.ts:104:1 › a waiting platform resume cannot apply to a replacement account (1.6s)
+  ✓  55 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: fresh-revision (1.9s)
+  ✓  56 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: candidate-changed (2.3s)
+  ✓  57 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: read-failed (1.6s)
+  ✓  58 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (1.9s)
+  ✓  59 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (1.8s)
+  ✓  60 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt (1.3s)
+  ✓  61 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt (1.3s)
+  ✓  62 [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence (1.6s)
+  ✓  65 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (1.3s)
+  ✓  63 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision (1.8s)
+  ✓  66 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (1.1s)
+  ✓  64 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision (1.9s)
+  ✓  67 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (1.4s)
+  ✓  68 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (1.5s)
+  ✓  69 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (1.7s)
+  ✓  70 [chromium] › tests/supply.spec.ts:51:1 › two verified shared account rows show real reasons and explicit pause/resume semantics at 860x600 (1.6s)
+  ✓  72 [chromium] › tests/supply.spec.ts:78:1 › independent platform polling waits ten seconds after completion and never overlaps the same platform (1.2s)
+  ✓  71 [chromium] › tests/supply.spec.ts:64:1 › an uncertain write retries GET automatically, preserves diagnostics and never repeats PUT (1.9s)
+  ✓  73 [chromium] › tests/supply.spec.ts:94:1 › expired snapshots never show a current successful state or enable writes (990ms)
+  ✓  74 [chromium] › tests/supply.spec.ts:98:1 › fresh background reads stay quiet and hide previous success only when thirty seconds expire (1.3s)
+  ✓  77 [chromium] › tests/supply.spec.ts:121:1 › unverified devices never issue supply IPC (1.5s)
+  ✓  75 [chromium] › tests/supply.spec.ts:106:1 › navigation keeps one application poller and old results cannot repopulate a new manager instance (1.9s)
+  ✓  76 [chromium] › tests/supply.spec.ts:113:1 › English platform controls and reason copy are complete at minimum width (2.0s)
+  ✓  79 [chromium] › tests/supply.spec.ts:141:1 › a delayed expiry timer cannot authorize a write from a stale rendered button (1.2s)
+  ✓  78 [chromium] › tests/supply.spec.ts:125:1 › old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round (2.0s)
+  ✓  80 [chromium] › tests/supply.spec.ts:148:1 › manager replacement invalidates device data while preserving this run’s language and navigation (1.4s)
+  ✓  81 [chromium] › tests/supply.spec.ts:155:1 › one platform read failure preserves the other platform fresh report (1.4s)
+  ✓  82 [chromium] › tests/supply.spec.ts:164:254 › detailed supply account_not_registered preserves pause and offers its real handling object (1.6s)
+  ✓  84 [chromium] › tests/supply.spec.ts:164:254 › detailed supply supply_not_enabled preserves pause and offers its real handling object (1.7s)
+  ✓  83 [chromium] › tests/supply.spec.ts:164:254 › detailed supply market_not_open preserves pause and offers its real handling object (1.8s)
+  ✓  85 [chromium] › tests/supply.spec.ts:164:254 › detailed supply supply_device_restricted preserves pause and offers its real handling object (1.2s)
+  ✓  86 [chromium] › tests/supply.spec.ts:164:254 › detailed supply account_not_admitted preserves pause and offers its real handling object (1.4s)
+
+
+  1) [chromium] › tests/account-auto-read.spec.ts:38:1 › failed account snapshots retry after ten seconds without replaying writes 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      33 |  import React from '/node_modules/.vite/deps/react.js';import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';import {useAccounts} from '/src/features/accounts/useAccounts.ts';
+      34 |  const root=ReactDOM.createRoot(document.getElementById('harness'));window.unmount=()=>root.unmount();function Harness(){window.model=useAccounts(window.client,true,window.authorizer,window.runtime,window.autoRead??false,window.coordinated);return null;}window.rerender=()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Harness)));window.rerender();</script>`}));
+    > 35 |  await page.goto('/model-harness');await expect.poll(()=>page.evaluate(()=>!!(window as any).model?.defaults)).toBe(true);
+         |                                                                                                                ^
+      36 |  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).model.busy).every(v=>!v))).toBe(true);
+      37 | }
+      38 | test('failed account snapshots retry after ten seconds without replaying writes',async({page})=>{
+        at hookHarness (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:35:112)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:39:29
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-failed-a-0d86a-ds-without-replaying-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/account-auto-read.spec.ts:44:1 › uncertain writes survive passive runtime, old snapshots and pending replies until explicit terminal confirmation 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      33 |  import React from '/node_modules/.vite/deps/react.js';import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';import {useAccounts} from '/src/features/accounts/useAccounts.ts';
+      34 |  const root=ReactDOM.createRoot(document.getElementById('harness'));window.unmount=()=>root.unmount();function Harness(){window.model=useAccounts(window.client,true,window.authorizer,window.runtime,window.autoRead??false,window.coordinated);return null;}window.rerender=()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Harness)));window.rerender();</script>`}));
+    > 35 |  await page.goto('/model-harness');await expect.poll(()=>page.evaluate(()=>!!(window as any).model?.defaults)).toBe(true);
+         |                                                                                                                ^
+      36 |  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).model.busy).every(v=>!v))).toBe(true);
+      37 | }
+      38 | test('failed account snapshots retry after ten seconds without replaying writes',async({page})=>{
+        at hookHarness (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:35:112)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:45:29
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-uncertai-35f02-licit-terminal-confirmation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-uncertai-35f02-licit-terminal-confirmation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-uncertai-35f02-licit-terminal-confirmation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/account-auto-read.spec.ts:52:1 › source replacement rejects a late previous-source reply 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      33 |  import React from '/node_modules/.vite/deps/react.js';import ReactDOM from '/node_modules/.vite/deps/react-dom_client.js';import {useAccounts} from '/src/features/accounts/useAccounts.ts';
+      34 |  const root=ReactDOM.createRoot(document.getElementById('harness'));window.unmount=()=>root.unmount();function Harness(){window.model=useAccounts(window.client,true,window.authorizer,window.runtime,window.autoRead??false,window.coordinated);return null;}window.rerender=()=>root.render(React.createElement(React.StrictMode,null,React.createElement(Harness)));window.rerender();</script>`}));
+    > 35 |  await page.goto('/model-harness');await expect.poll(()=>page.evaluate(()=>!!(window as any).model?.defaults)).toBe(true);
+         |                                                                                                                ^
+      36 |  await expect.poll(()=>page.evaluate(()=>Object.values((window as any).model.busy).every(v=>!v))).toBe(true);
+      37 | }
+      38 | test('failed account snapshots retry after ten seconds without replaying writes',async({page})=>{
+        at hookHarness (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:35:112)
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/account-auto-read.spec.ts:53:2
+
+    Error Context: ../.cache/device-pairing/playwright/account-auto-read-source-r-04b50--late-previous-source-reply-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/account-auto-read-source-r-04b50--late-previous-source-reply-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/account-auto-read-source-r-04b50--late-previous-source-reply-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › tests/account-auto-read.spec.ts:38:1 › failed account snapshots retry after ten seconds without replaying writes 
+    [chromium] › tests/account-auto-read.spec.ts:44:1 › uncertain writes survive passive runtime, old snapshots and pending replies until explicit terminal confirmation 
+    [chromium] › tests/account-auto-read.spec.ts:52:1 › source replacement rejects a late previous-source reply 
+  83 passed (29.9s)
+{"exit": 1, "utc": "2026-11-02T13:52:49.140416+00:00"}

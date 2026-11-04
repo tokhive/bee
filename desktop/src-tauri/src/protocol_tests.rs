@@ -371,6 +371,16 @@ fn account_operation_requires_current_platform_and_known_state() {
     )
     .is_ok());
 }
+
+#[test]
+fn account_operation_failure_accepts_only_valid_http_observation_time() {
+    let mut result = json!({"account":{"platform":"openai","operation":{"id":"a".repeat(48),"kind":"select","platform":"openai","state":"failed","revision":3,"error":{"code":"connection_closed","check":"identity","platform":"openai","message":"unexpected EOF","evidence":{"observed_at":"2026-11-03T10:30:20.123456789Z"}}}}});
+    assert!(super::validate_account_operation(&result, super::SupplyPlatform::Openai).is_ok());
+    for value in ["2026-02-30T00:00:00Z", "2099-01-01T00:00:00Z", "not-a-time"] {
+        result["account"]["operation"]["error"]["evidence"]["observed_at"] = json!(value);
+        assert!(super::validate_account_operation(&result, super::SupplyPlatform::Openai).is_err());
+    }
+}
 #[test]
 fn clear_selection_accepts_revision_without_candidate_but_select_does_not() {
     let mut request = super::AccountActionRequest {

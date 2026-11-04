@@ -1,0 +1,6 @@
+{"utc": "2026-11-02T12:48:33.421127+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npm", "run", "typecheck"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+{"exit": 0, "utc": "2026-11-02T12:48:34.443591+00:00"}

@@ -1,0 +1,53 @@
+time=2026-11-02T08:24:53.309056+00:00
+base=8897183 + T5 WIP before diagnostic write gate
+source=NativeApp fixture
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'recovery-navigation.spec.ts', '-g', 'newer diagnostic']
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/recovery-navigation.spec.ts:49:1 › a newer diagnostic identity rejection blocks account submission and runtime start (6.8s)
+
+
+  1) [chromium] › tests/recovery-navigation.spec.ts:49:1 › a newer diagnostic identity rejection blocks account submission and runtime start 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('region', { name: 'OpenAI 账号', exact: true }).getByRole('button', { name: '接入', exact: true })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('region', { name: 'OpenAI 账号', exact: true }).getByRole('button', { name: '接入', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: 'OpenAI 账号', exact: true }).getByRole('button', { name: '接入', exact: true })
+        14 × locator resolved to <button type="button" data-size="sm" data-slot="button" data-state="closed" aria-expanded="false" data-variant="default" aria-haspopup="dialog" class="ui-button primary ">接入</button>
+           - unexpected value "enabled"
+
+
+      51 |  await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot'){result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'device_replaced'},next_action:'overview'};}return result;};});
+      52 |  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);
+    > 53 |  await expect(page.getByText('此设备已被替换，原设备凭据已撤销。',{exact:true})).toBeVisible();await nav(page,'AI 账号').click();await expect(card.getByRole('button',{name:'接入',exact:true})).toBeDisabled();
+         |                                                                                                                                                                             ^
+      54 |  expect(await calls(page,'account_action')).toBe(0);expect(await calls(page,'runtime_start')).toBe(0);
+      55 | });
+      56 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:53:173
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-a-newe-631c9-ubmission-and-runtime-start-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-a-newe-631c9-ubmission-and-runtime-start-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-a-newe-631c9-ubmission-and-runtime-start-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/recovery-navigation.spec.ts:49:1 › a newer diagnostic identity rejection blocks account submission and runtime start 
+[WebServer] (node:82954) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+(node:83077) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+exit=1

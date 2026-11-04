@@ -1,0 +1,8 @@
+time=2026-11-02T10:03:23.482141+00:00
+command=['cargo', 'test', '--lib', 'sidecar::tests::unsent_', '--', '--nocapture']
+cwd=desktop/src-tauri
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+error: the 'cargo' binary, normally provided by the 'cargo' component, is not applicable to the '1.94.0-aarch64-apple-darwin' toolchain
+
+exit=1

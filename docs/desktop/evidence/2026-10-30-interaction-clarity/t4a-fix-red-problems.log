@@ -1,0 +1,64 @@
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (17.254ms)
+✔ device replacement keeps its exact cause and provides the device entry (1.068167ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.251625ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.139125ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.910209ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.187083ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.489291ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (8.861083ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.271625ms)
+✔ explicit locale formatting and placeholders follow the App language (3.543ms)
+✖ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.732958ms)
+✖ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.229542ms)
+ℹ tests 12
+ℹ suites 0
+ℹ pass 10
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 226.452958
+
+✖ failing tests:
+
+test at desktop/tests/problems.test.ts:69:1
+✖ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.732958ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /尚未确认|cause is unconfirmed/i. Input:
+  
+  '本次操作失败，原因尚未确认。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:74:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '本次操作失败，原因尚未确认。',
+    expected: /尚未确认|cause is unconfirmed/i,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }
+
+test at desktop/tests/problems.test.ts:80:1
+✖ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.229542ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /网络.*尚未应用/. Input:
+  
+  '本次操作失败，原因尚未确认。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:84:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '本次操作失败，原因尚未确认。',
+    expected: /网络.*尚未应用/,
+    operator: 'match',
+    diff: 'simple'
+  }

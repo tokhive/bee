@@ -1,0 +1,11 @@
+
+  VITE v8.2.4  ready in 144 ms
+
+  ➜  Local:   http://127.0.0.1:1490/
+  ➜  press h + enter to show help
+1:44:06 AM [vite] (client) hmr update /src/app/NativeApp.tsx
+1:44:06 AM [vite] (client) hmr update /src/features/settings/NativeUpdateControls.tsx
+1:46:23 AM [vite] (client) hmr update /src/features/settings/NativeUpdateControls.tsx
+1:46:23 AM [vite] (client) hmr update /src/features/settings/native-update.css
+1:53:17 AM [vite] (client) page reload src/system/updater.ts
+1:53:17 AM [vite] (client) hmr update /src/features/settings/NativeUpdateControls.tsx

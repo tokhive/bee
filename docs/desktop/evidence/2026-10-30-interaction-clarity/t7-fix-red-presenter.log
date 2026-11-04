@@ -1,0 +1,76 @@
+{"utc": "2026-11-02T14:38:38.131804+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/accountPresentation.test.ts", "tests/problems.test.ts"], "head": "267a33d38db3a09f0c47917419e36055a6660ee6", "dirty": " M Makefile\n M desktop/README.md\n M desktop/src/features/accounts/NativeAccountActions.tsx\n M desktop/src/features/accounts/accountPresentation.ts\n M desktop/src/features/accounts/useAccounts.ts\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/fixtures/native-accounts.mjs\n M desktop/tests/native-accounts.spec.ts\n M desktop/tests/problems.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "node": "v24.22.1"}
+✔ selection identifies the account and mismatched candidate never lends its quota (2.375ms)
+✔ unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent (0.255917ms)
+✔ fresh matching Hive wins over stale official and expiry invalidates official (0.158375ms)
+✔ valid_until determines freshness without imposing a ten minute report age (0.117208ms)
+✔ historical quota carries the observation actually used and never borrows a different identity (0.117ms)
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (0.769ms)
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (17.384792ms)
+✖ device replacement keeps its exact cause and provides the device entry (1.933ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.261792ms)
+✔ recovery navigation rejects invalid page/section/platform combinations and types (0.13775ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.8885ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.198583ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.475125ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (10.133666ms)
+✔ invalid detail rejection retains the safe original failure without unsafe evidence (0.206792ms)
+✔ explicit locale formatting and placeholders follow the App language (3.58975ms)
+✔ saved context rejection has a known local impact and an available diagnostic next step in both locales (0.635833ms)
+✔ network apply blocker explains the explicit settings action before recheck without guessing from messages (0.193125ms)
+✔ known unsent failures use the App locale and retain evidence without guessing from messages (0.28575ms)
+✔ unsent classification uses validated codes and rejects malformed details (0.169583ms)
+✔ official client failures use stable codes, keep safe evidence and never infer reasons from English (0.501417ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 19
+ℹ fail 2
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 238.79475
+
+✖ failing tests:
+
+test at tests/accountPresentation.test.ts:21:1
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (0.769ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /共享状态读取未确认/. Input:
+  
+  '接入前需先恢复设备身份；本机来源仍可读取。'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/accountPresentation.test.ts:34:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '接入前需先恢复设备身份；本机来源仍可读取。',
+    expected: /共享状态读取未确认/,
+    operator: 'match',
+    diff: 'simple'
+  }
+
+test at tests/problems.test.ts:13:1
+✖ device replacement keeps its exact cause and provides the device entry (1.933ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  
+  '查看设备' !== '查看账号详情'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:19:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '查看设备',
+    expected: '查看账号详情',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit_code=1

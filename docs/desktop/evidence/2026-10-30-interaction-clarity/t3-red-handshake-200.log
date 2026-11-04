@@ -1,0 +1,11 @@
+2026/11/02 11:40:58 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61232/api/bee/connect delay_backoff=1s
+2026/11/02 11:40:58 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61234/api/bee/connect delay_backoff=1s
+2026/11/02 11:40:58 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61237/api/bee/connect delay_backoff=1s
+2026/11/02 11:40:58 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61240/api/bee/connect delay_backoff=1s
+2026/11/02 11:40:58 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61242/api/bee/connect delay_backoff=1s
+--- FAIL: TestDesktopConnectionHTTPObservations (0.01s)
+    --- FAIL: TestDesktopConnectionHTTPObservations/200 (0.00s)
+        desktop_connection_test.go:95: real handshake rejection cannot cross contract: status=200 error=connection evidence rejected at key=http_status; required=safe public field and bounded value
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.822s
+FAIL

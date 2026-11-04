@@ -1,0 +1,175 @@
+{
+  "utc": "2026-11-02T16:14:39.936Z",
+  "fixture": true,
+  "taskSpace": 40,
+  "facts": [
+    {
+      "name": "860-zh-light",
+      "width": 860,
+      "height": 600,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "860-zh-dark",
+      "width": 860,
+      "height": 600,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    },
+    {
+      "name": "860-en-light",
+      "width": 860,
+      "height": 600,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "860-en-dark",
+      "width": 860,
+      "height": 600,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    },
+    {
+      "name": "1000-zh-light",
+      "width": 1000,
+      "height": 700,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "1000-zh-dark",
+      "width": 1000,
+      "height": 700,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    },
+    {
+      "name": "1000-en-light",
+      "width": 1000,
+      "height": 700,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "1000-en-dark",
+      "width": 1000,
+      "height": 700,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    },
+    {
+      "name": "1080-zh-light",
+      "width": 1080,
+      "height": 840,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "1080-zh-dark",
+      "width": 1080,
+      "height": 840,
+      "button": {
+        "text": "刷新生效路径",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    },
+    {
+      "name": "1080-en-light",
+      "width": 1080,
+      "height": 840,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(105, 102, 95)",
+        "bg": "#ffffff",
+        "contrast": 5.727619510827418
+      },
+      "overflow": false
+    },
+    {
+      "name": "1080-en-dark",
+      "width": 1080,
+      "height": 840,
+      "button": {
+        "text": "Refresh active paths",
+        "height": 32,
+        "font": "12px",
+        "fg": "rgb(160, 157, 148)",
+        "bg": "#242421",
+        "contrast": 5.740001455899978
+      },
+      "overflow": false
+    }
+  ]
+}

@@ -1,0 +1,131 @@
+{"utc": "2026-11-02T13:03:02.849643+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["node", "--test", "tests/accountPresentation.test.ts", "tests/nativeAccounts.test.ts", "tests/supply.test.ts"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/tests/accountPresentation.test.ts\n M desktop/tests/supply.test.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1477"}
+✔ selection identifies the account and mismatched candidate never lends its quota (4.897833ms)
+✔ unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent (1.138667ms)
+✔ fresh matching Hive wins over stale official and expiry invalidates official (0.278041ms)
+✔ valid_until determines freshness without imposing a ten minute report age (0.141209ms)
+✖ historical quota carries the observation actually used and never borrows a different identity (0.898958ms)
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (2.575375ms)
+✔ account decoder accepts full public DTO and nanosecond UTC timestamps, preserving unknowns and 120% (4.956583ms)
+✔ account decoder rejects missing, unknown, unsafe identity/time/quota fields without echoing payload (1.78ms)
+✔ defaults decode both platform store capabilities and reject unknown fields (0.293208ms)
+✔ typed client sends fixed commands, never replays writes, and invalidates old source promises (1.001042ms)
+✔ selected account and asynchronous operation are strictly decoded (0.498666ms)
+✔ clearing a saved selection uses its revision without a detected credential (0.21675ms)
+✔ an older account read cannot replace a newer operation receipt (0.259542ms)
+✔ supply decoder accepts explicit false, both platforms and all matching reasons (1.904583ms)
+✔ supply decoder rejects missing, null, incorrect types, owner mismatch and invariants without leaking payload (0.818417ms)
+✔ business failures retain method and HTTP evidence; failed writes are never replayed (0.887875ms)
+✔ same-platform clients serialize across replacement bindings and validate before IPC (3.684708ms)
+✔ decoder independently enforces the platform whitelist (0.229ms)
+✔ invalid paused undefined reports its actual type before IPC (0.123416ms)
+✔ invalid paused null reports its actual type before IPC (0.115625ms)
+✔ invalid paused string reports its actual type before IPC (0.075042ms)
+✔ shared supply model preserves per-platform failures and never repeats an uncertain write (9.749625ms)
+✔ pending account confirmation blocks writes in the shared supply model (0.727667ms)
+✔ coordinated supply consumes adopted snapshots and routes every read through the shared refresh (0.491875ms)
+✔ coordinated supply preserves an uncertain write until an explicit refreshed adoption (1.033208ms)
+✔ a stopped supply owner cannot pause a newer coordinator when its write fails late (0.189375ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late success (0.244375ms)
+✔ a previous supply generation cannot refresh or pause its replacement after late failure (0.157375ms)
+✔ a fresh background read keeps supply writable and one explicit write waits for it (0.296625ms)
+✔ a waiting supply write is cancelled when its refreshed state is failed (0.716833ms)
+✔ a waiting supply write is cancelled when its refreshed state is expired (0.266542ms)
+✔ a waiting supply write is cancelled when its refreshed state is stopped (0.179291ms)
+✔ failed supply reads retry every ten seconds and preserve the other fresh platform (0.374292ms)
+✔ supply retries are GET only after uncertain writes and slow reads never overlap (0.321ms)
+✔ supply progress stays quiet for fresh background reads and expires while a request is pending (0.298541ms)
+✔ expiry triggers a read and late stopped results cannot publish or schedule retries (0.198958ms)
+✔ expiry does not shorten a failed read retry interval (0.246791ms)
+✔ restarting a stopped model waits for its old request and discards the late result (0.174792ms)
+✔ each platform expires on its own timestamp during a slow shared read (0.2485ms)
+✔ first supply load is quiet and retry progress follows the platform actually being read (0.213542ms)
+✔ a waiting supply resume is cancelled after context changed (0.234583ms)
+✔ a waiting supply resume is cancelled after context changed-back (0.7385ms)
+✔ a waiting supply resume is cancelled after context runtime-stopped (0.152209ms)
+✔ a supply click observes central busy before the React adoption effect and cancels a changed identity (0.244875ms)
+✔ a queued supply click reports a rejected central read without submitting or rejecting its caller (0.236833ms)
+✔ a successful supply PUT stays blocked after a failed readback until a fresh supply observation (0.195ms)
+✔ detailed supply reasons are accepted without relaxing platform or readiness invariants (1.179292ms)
+✔ independent platform reads reach the transport before a slow platform completes (4.095ms)
+✔ known unsent supply writes retain evidence without pausing the healthy coordinator (0.381792ms)
+✖ all supply reasons identify their actual handling object without false login or resume repairs (0.835125ms)
+ℹ tests 50
+ℹ suites 0
+ℹ pass 47
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 169.74775
+
+✖ failing tests:
+
+test at tests/accountPresentation.test.ts:15:1
+✖ historical quota carries the observation actually used and never borrows a different identity (0.898958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - '2026-11-02T12:03:03.335Z'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/accountPresentation.test.ts:18:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: '2026-11-02T12:03:03.335Z',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/accountPresentation.test.ts:21:1
+✖ candidate expiry and changed source explain blocked submission; official login requires stopped runtime (2.575375ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/accountPresentation.test.ts:22:62)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/supply.test.ts:271:1
+✖ all supply reasons identify their actual handling object without false login or resume repairs (0.835125ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/supply.test.ts:272:66)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+{"exit": 1, "utc": "2026-11-02T13:03:03.401923+00:00"}

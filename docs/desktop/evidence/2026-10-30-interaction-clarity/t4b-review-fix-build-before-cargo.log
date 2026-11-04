@@ -1,0 +1,14 @@
+command: node desktop/scripts/build-bee.mjs --target aarch64-apple-darwin
+time: 2026-11-02T07:54:15.391655+00:00
+baseline: a114c99ba4131ed11847e0bec0daf5861b045a72
+coverage: Rebuild current dirty Go source before Cargo; source hashes identify code, embedded revision remains baseline
+sha256 0d236f987fa0ae8efb71fa114ea7f430cef1eda21b7f70e0632bc69a709e183b agent/desktop_device.go
+sha256 453ab81073aa34cfe5a1c941e5519fab25a9cdcd8a67c8d6e9b615610f1908c3 agent/desktop_device_recovery.go
+sha256 a1964f4e05f0cb1d8cfe18caa611e7b983e39b8b034c284c3b48589f5c21ae59 agent/desktop_device_recovery_test.go
+environment: PATH=/Users/dayong/.nvm/versions/node/v24.22.1/bin:$PATH RUSTUP_TOOLCHAIN=1.94
+Bee sidecar built: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri/binaries/bee-aarch64-apple-darwin; revision=a114c99ba4131ed11847e0bec0daf5861b045a72; target=aarch64-apple-darwin
+
+exit_code: 0
+
+binary evidence: {"beeVersion": "dev+a114c99ba413-dirty", "binarySha256": "ac50a6b030ae6ab98fca130acc31807ffb3e260e34aaf70a6edd2ce177a1d5b9", "go": "go version go1.27.3 darwin/arm64", "goarch": "arm64", "goos": "darwin", "revision": "a114c99ba4131ed11847e0bec0daf5861b045a72", "target": "aarch64-apple-darwin", "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254"}
+Scope note: embedded revision is baseline only; task source SHA-256 entries above identify tested dirty source. No claim of final full-plan verification.

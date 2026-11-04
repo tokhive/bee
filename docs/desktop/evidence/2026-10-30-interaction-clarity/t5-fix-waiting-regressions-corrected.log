@@ -1,0 +1,17 @@
+time=2026-11-02T10:10:10.750007+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/polling-stability.spec.ts', '--grep', 'rechecks', '--workers=3']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+Running 5 tests using 3 workers
+
+  ✓  2 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (1.6s)
+  ✓  3 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (1.7s)
+  ✓  1 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (1.8s)
+  ✓  4 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (979ms)
+  ✓  5 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (1.0s)
+
+  5 passed (4.0s)
+
+exit=0

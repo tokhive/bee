@@ -1,0 +1,16 @@
+{
+  "corrupt": {
+    "summary": "已保存的本机设备配置未通过校验。",
+    "details": "错误码: DEVICE_CONTEXT_INVALID\n失败环节: device_context\n观察时间: 2026年11月2日 14:23:18\n实际值: characters=81\n要求: characters<=80\n原始原因: saved device name length rejected; actual=characters=81; required=characters<=80",
+    "action": [
+      "查看诊断"
+    ]
+  },
+  "network": {
+    "summary": "已保存的网络设置尚未应用。",
+    "impact": "请在设置的网络页签应用已保存的网络设置，然后重新检查设备。重新检查不会自动应用网络设置。",
+    "action": [
+      "查看设置"
+    ]
+  }
+}

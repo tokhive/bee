@@ -1,0 +1,576 @@
+time=2026-11-02T08:05:33.854500+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=tests only; existing product base
+command=/Users/dayong/.nvm/versions/node/v24.22.1/bin/node --test tests/desktopStatus.test.ts tests/desktopState.test.ts
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (4.293167ms)
+✔ old child and network revision results never replace current state (1.679875ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (3.458084ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (1.793709ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (0.591542ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (0.728583ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (0.627125ms)
+✔ device read failure stays on the device and still publishes account defaults (0.410875ms)
+✔ replacement refresh starts after the status listener returns (0.479625ms)
+✔ a superseded initial status rejection cannot block a ready event (0.519584ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (2.254125ms)
+✖ shared and independent platform facts publish before slow openai account (1.061458ms)
+✖ shared and independent platform facts publish before slow claude account (0.82975ms)
+✖ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.5215ms)
+✖ failed platform reads retain confirmed history and its real retry time (0.487875ms)
+✖ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.454625ms)
+✖ fresh ready (1.459208ms)
+✖ shared failed read suppresses old success (0.175ms)
+✖ confirmed revocation precedes stopped and unknown accounts (0.138ms)
+✖ startup rejection does not depend on accounts (0.142875ms)
+✖ starting precedes empty accounts (0.145708ms)
+✖ known empty accounts (0.112292ms)
+✖ selected stopped (0.092709ms)
+✖ unknown accounts are not zero (0.091041ms)
+✖ first read (0.112584ms)
+✖ all paused (0.166083ms)
+✖ expired success cannot be ready (0.099834ms)
+✖ one platform failure preserves the other confirmed ready platform (0.102625ms)
+✖ paused keeps independent blockers in the original snapshot (0.092291ms)
+✖ preparation closes after a selected account, including ordinary stop (0.074ms)
+✖ initial transaction awaiting_confirmation stays pairing (0.072625ms)
+✖ initial transaction creation_unknown stays pairing (0.058459ms)
+✖ initial transaction redemption_unknown stays pairing (0.077791ms)
+✖ initial transaction saving stays pairing (0.083958ms)
+✖ initial transaction awaiting_owner_confirmation stays pairing (0.0685ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 11
+ℹ fail 24
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 126.033
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:98:39
+✖ shared and independent platform facts publish before slow openai account (1.061458ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'bound'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:105:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'bound',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopState.test.ts:98:39
+✖ shared and independent platform facts publish before slow claude account (0.82975ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'bound'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:105:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'bound',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopState.test.ts:109:1
+✖ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.5215ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'state')
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:111:38)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/desktopState.test.ts:117:1
+✖ failed platform reads retain confirmed history and its real retry time (0.487875ms)
+  TypeError [Error]: Cannot read properties of undefined (reading 'openai')
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:120:141)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+
+test at tests/desktopState.test.ts:123:1
+✖ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.454625ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:127:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ fresh ready (1.459208ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ shared failed read suppresses old success (0.175ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ confirmed revocation precedes stopped and unknown accounts (0.138ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ startup rejection does not depend on accounts (0.142875ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ starting precedes empty accounts (0.145708ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ known empty accounts (0.112292ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ selected stopped (0.092709ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ unknown accounts are not zero (0.091041ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ first read (0.112584ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ all paused (0.166083ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:28:38
+✖ expired success cannot be ready (0.099834ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:28:94)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:29:1
+✖ one platform failure preserves the other confirmed ready platform (0.102625ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:29:163)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:30:1
+✖ paused keeps independent blockers in the original snapshot (0.092291ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:30:224)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:31:1
+✖ preparation closes after a selected account, including ordinary stop (0.074ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:31:139)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:32:125
+✖ initial transaction awaiting_confirmation stays pairing (0.072625ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:32:269)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:32:125
+✖ initial transaction creation_unknown stays pairing (0.058459ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:32:269)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:32:125
+✖ initial transaction redemption_unknown stays pairing (0.077791ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:32:269)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:32:125
+✖ initial transaction saving stays pairing (0.083958ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:32:269)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/desktopStatus.test.ts:32:125
+✖ initial transaction awaiting_owner_confirmation stays pairing (0.0685ms)
+  AssertionError [ERR_ASSERTION]: shared desktop status derivation must exist
+  + actual - expected
+  
+  + 'undefined'
+  - 'function'
+  
+      at derive (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:14:52)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopStatus.test.ts:32:269)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'undefined',
+    expected: 'function',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit=1

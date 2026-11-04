@@ -22,14 +22,16 @@ export function useAccountClock(accounts:AccountsModel){
 }
 export function AccountCheckStatus({supply,platform}:{supply?:SharedSupply;platform?:AccountPlatform}){
  const progress=supply?(platform?[supplyProgress(supply.state,platform)]:platforms.map(p=>supplyProgress(supply.state,p))):[];
- const copy=progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
- return copy?<span className="account-check-status" role="status">{t(copy)}</span>:null;
+ const copy=progress.includes('inflight')?'前次核对尚未结束，结束后重试。':progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
+ const at=platform?supply?.state.supplyRefresh?.[platform]?.nextRetryAt:Object.values(supply?.state.supplyRefresh??{}).flatMap(v=>v?.state==='scheduled'&&v.nextRetryAt?[v.nextRetryAt]:[]).sort()[0];
+ return copy?<span className="account-check-status" role="status"><span>{t(copy)}</span>{progress.includes('waiting')&&at&&<> <time dateTime={at}>{formatDate(at,currentLocale())}</time></>}</span>:null;
 }
 export function AccountReadHistory({accounts,platform}:{accounts:AccountsModel;platform:AccountPlatform}){
  const snapshot=accounts.views[platform];
  if(!snapshot)return null;
  if(accounts.readFailures[platform]){
-  const confirmed=accounts.accountRefresh?.[platform]?.lastConfirmedAt??accounts.refreshStatus?.lastConfirmedAt;
+  const refresh=accounts.accountRefresh?.[platform];
+  const confirmed=refresh?.lastConfirmedAt??accounts.refreshStatus?.lastConfirmedAt;
   return <div className="account-read-history"><p>{t('上次确认的账号事实；当前状态待核对。')}</p><p>{t('历史事实不能支持当前可接单结论或账号写操作。')}</p>{confirmed&&<p>{t('上次确认')}: <time dateTime={confirmed}>{formatDate(confirmed,currentLocale())}</time></p>}</div>;
  }
  return accounts.deviceFailure&&snapshot.hive.observed_at?<div className="account-remote-history"><p>{t('Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。')}</p><p>{t('上次 Hive 观测')}: <time dateTime={snapshot.hive.observed_at}>{formatDate(snapshot.hive.observed_at,currentLocale())}</time></p></div>:null;

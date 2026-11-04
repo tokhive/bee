@@ -1,0 +1,56 @@
+=== RUN   TestDesktopConnectionOriginContract
+=== RUN   TestDesktopConnectionOriginContract/https://HIVE.test
+=== RUN   TestDesktopConnectionOriginContract/https://hive.test:443
+=== RUN   TestDesktopConnectionOriginContract/http://localhost:80
+=== RUN   TestDesktopConnectionOriginContract/https://HIVE.test:8443
+=== RUN   TestDesktopConnectionOriginContract/https://[2001:0DB8:0:0:0:0:0:1]:443
+=== RUN   TestDesktopConnectionOriginContract/http://[0:0:0:0:0:0:0:1]:80
+=== RUN   TestDesktopConnectionOriginContract/http://[::ffff:127.0.0.1]:80
+=== RUN   TestDesktopConnectionOriginContract/https://例子.test:443
+=== RUN   TestDesktopConnectionOriginContract/https://127.1:443
+=== RUN   TestDesktopConnectionOriginContract/reject_https://user:secret@hive.test
+=== RUN   TestDesktopConnectionOriginContract/reject_https://@hive.test
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test/
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test/path
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test/..
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test?token=secret
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test?
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test#fragment
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test#
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test\path
+=== RUN   TestDesktopConnectionOriginContract/reject_https://hive.test_
+=== RUN   TestDesktopConnectionOriginContract/reject_http://127.evil.example
+=== RUN   TestDesktopConnectionOriginContract/reject_http://127.1
+=== RUN   TestDesktopConnectionOriginContract/reject_http://2130706433
+=== RUN   TestDesktopConnectionOriginContract/reject_http://127.000.000.001
+=== RUN   TestDesktopConnectionOriginContract/reject_http://LOCALHOST
+=== RUN   TestDesktopConnectionOriginContract/reject_http://[::ffff:192.0.2.1]
+--- PASS: TestDesktopConnectionOriginContract (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://HIVE.test (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://hive.test:443 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/http://localhost:80 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://HIVE.test:8443 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://[2001:0DB8:0:0:0:0:0:1]:443 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/http://[0:0:0:0:0:0:0:1]:80 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/http://[::ffff:127.0.0.1]:80 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://例子.test:443 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/https://127.1:443 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://user:secret@hive.test (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://@hive.test (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test/ (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test/path (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test/.. (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test?token=secret (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test? (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test#fragment (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test# (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test\path (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_https://hive.test_ (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://127.evil.example (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://127.1 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://2130706433 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://127.000.000.001 (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://LOCALHOST (0.00s)
+    --- PASS: TestDesktopConnectionOriginContract/reject_http://[::ffff:192.0.2.1] (0.00s)
+PASS
+ok  	github.com/tokhive/bee/agent	0.421s

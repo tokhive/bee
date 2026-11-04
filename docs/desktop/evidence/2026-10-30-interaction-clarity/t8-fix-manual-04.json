@@ -1,0 +1,62 @@
+{
+  "utc": "2026-11-02T17:03:08.542Z",
+  "space": 40,
+  "page": "p1",
+  "state": {
+    "checked": true,
+    "disabled": false,
+    "registration": "System registrationRegistered",
+    "text": "Notifications and startupPreferences and actual system status are shown separately.   Receive system notificationsAuthorization, account changes, offline status and quota issues remain visible in the app.System permissionNot yet allowedStart Bee after signing in to the systemAfter system sign-in, restore the existing run intent. This does not authorize, connect accounts, or remove a manual pause.System registrationRegisteredRecheck system statusContinues in the background after closing. Reopen from the tray, menu, or by launching Bee again.",
+    "alerts": 0,
+    "calls": [
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_set",
+        "args": {
+          "enabled": true
+        }
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      },
+      {
+        "command": "autostart_status",
+        "args": {}
+      }
+    ],
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "keyboardFocusOnStartup": true,
+    "focusVisible": true,
+    "overflow": false
+  },
+  "screenshot": {
+    "path": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.superpowers/sdd/t8-fix-manual-04-trusted-result-en-dark-860.png",
+    "imageSize": {
+      "width": 860,
+      "height": 600
+    }
+  }
+}

@@ -1,0 +1,27 @@
+✔ device replies only expose validated public binding data (7.541541ms)
+✔ business rejection preserves operation evidence (0.638292ms)
+✔ device rejection retains structured failure before binding validation (2.71075ms)
+✔ device error details reject unknown fields and invalid observations (0.536875ms)
+✔ native device client uses fixed commands and no frontend config path (0.237667ms)
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (2.949334ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (0.625417ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (0.954583ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.397167ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (1.018459ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (0.842208ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.846208ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (0.969333ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (17.872875ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (2.460875ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (4.425708ms)
+✔ diagnostic reports logs and exports retain defined detailed supply reason evidence (1.111ms)
+✔ binding changes invalidate cached and in-flight diagnostic reports (0.12275ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (7.916458ms)
+ℹ tests 19
+ℹ suites 0
+ℹ pass 19
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 218.663167

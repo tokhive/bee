@@ -1,0 +1,22 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.05s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+test protocol::failure_safety_contract_tests::details_use_go_origin_contract_and_safe_response_fields ... FAILED
+
+failures:
+
+---- protocol::failure_safety_contract_tests::details_use_go_origin_contract_and_safe_response_fields stdout ----
+
+thread 'protocol::failure_safety_contract_tests::details_use_go_origin_contract_and_safe_response_fields' (9348598) panicked at src/protocol.rs:674:13:
+unsafe response accepted
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    protocol::failure_safety_contract_tests::details_use_go_origin_contract_and_safe_response_fields
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 186 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

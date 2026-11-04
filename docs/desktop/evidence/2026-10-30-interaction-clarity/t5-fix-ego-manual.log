@@ -1,0 +1,18 @@
+{
+  "time": "2026-11-02T10:19:24.182Z",
+  "baseline": "987ca4caa58fccbbb61daa2d348a0d36830a146b",
+  "taskSpace": 36,
+  "page": "p1",
+  "method": "Read existing synthetic preview after earlier device_replaced injection, enabled stop click and confirmation; no new write in this capture.",
+  "observed": {
+    "url": "http://127.0.0.1:1421/tests/fixtures/bee-preview/app.html?scene=running&theme=light",
+    "width": 1920,
+    "height": 944,
+    "stopCalls": 1,
+    "startDisabled": true,
+    "identityMessage": true
+  },
+  "screenshot": "t5-fix-identity-stop.png",
+  "screenshotDimensions": "1920x944",
+  "limitation": "Synthetic native IPC, not official identity or native platform acceptance."
+}

@@ -1,0 +1,147 @@
+{
+  "start_utc": "2026-11-02T16:51:58.471664+00:00",
+  "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop",
+  "argv": [
+    "env",
+    "BEE_DEVICE_TEST_PORT=1422",
+    "npx",
+    "playwright",
+    "test",
+    "--config",
+    "playwright.device.config.ts",
+    "native-experience.spec.ts",
+    "--grep",
+    "T8 failed autostart reads|T8 error-bearing autostart set",
+    "--output",
+    "../.superpowers/sdd/t8-fix-red-ui-port1422"
+  ],
+  "head": "c3cc10284f8379a5343bc52b0b6a73292d22276d",
+  "dirty": " M Makefile\n M desktop/README.md\n M desktop/tests/native-experience.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n"
+}
+[WebServer] (node:59834) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 3 tests using 3 workers
+
+(node:59870) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59868) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:59869) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=false (6.9s)
+  ✘  3 [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=null (6.9s)
+  ✘  1 [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence (7.0s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence 
+
+    Error: expect(locator).toBeChecked() failed
+
+    Locator:  getByLabel('登录系统后启动 Bee', { exact: true })
+    Expected: checked
+    Received: unchecked
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeChecked" getByLabel('登录系统后启动 Bee', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('登录系统后启动 Bee', { exact: true })
+        14 × locator resolved to <input type="checkbox"/>
+           - unexpected value "unchecked"
+
+
+      448 |   await page.evaluate(outcome=>{(window as any).autostartReadOutcome=outcome;},outcome);
+      449 |   await page.getByRole('button',{name:'重新检查系统状态',exact:true}).click();
+    > 450 |   await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+          |                         ^
+      451 |   await expect(registration).toContainText('上次确认的系统登记');await expect(registration).toContainText('未登记');
+      452 |   await expect(settings).toContainText('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。');
+      453 |   await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:450:25
+
+    Error Context: ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-faile-fcdea-ite-or-replace-its-evidence-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=null 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByLabel('登录系统后启动 Bee', { exact: true })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByLabel('登录系统后启动 Bee', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('登录系统后启动 Bee', { exact: true })
+        14 × locator resolved to <input type="checkbox"/>
+           - unexpected value "enabled"
+
+
+      477 |  await expect(registration).toContainText('未登记');
+      478 |  await page.evaluate(registered=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='autostart_set')return {desired:args.enabled,registered,error:{code:registered===null?'AUTOSTART_QUERY_FAILED':'AUTOSTART_UNCONFIRMED',message:`autostart readback failed: desired=true registered=${registered}; os_code=13`}};return value;};},registered);
+    > 479 |  await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+          |                                                                                  ^
+      480 |  await expect(registration).toContainText('上次确认的系统登记');await expect(registration).toContainText('未登记');
+      481 |  await expect(settings).toContainText(`autostart readback failed: desired=true registered=${registered}; os_code=13`);
+      482 |  await expect(settings).not.toContainText('已核对系统启动登记。');await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:479:82
+
+    Error Context: ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-7cef3-nown-with-registration-null-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-7cef3-nown-with-registration-null-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-7cef3-nown-with-registration-null-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=false 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByLabel('登录系统后启动 Bee', { exact: true })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByLabel('登录系统后启动 Bee', { exact: true }) with timeout 5000ms
+      - waiting for getByLabel('登录系统后启动 Bee', { exact: true })
+        14 × locator resolved to <input type="checkbox"/>
+           - unexpected value "enabled"
+
+
+      477 |  await expect(registration).toContainText('未登记');
+      478 |  await page.evaluate(registered=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='autostart_set')return {desired:args.enabled,registered,error:{code:registered===null?'AUTOSTART_QUERY_FAILED':'AUTOSTART_UNCONFIRMED',message:`autostart readback failed: desired=true registered=${registered}; os_code=13`}};return value;};},registered);
+    > 479 |  await desired.check();await expect(desired).toBeChecked();await expect(desired).toBeDisabled();
+          |                                                                                  ^
+      480 |  await expect(registration).toContainText('上次确认的系统登记');await expect(registration).toContainText('未登记');
+      481 |  await expect(settings).toContainText(`autostart readback failed: desired=true registered=${registered}; os_code=13`);
+      482 |  await expect(settings).not.toContainText('已核对系统启动登记。');await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:479:82
+
+    Error Context: ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-c830d-own-with-registration-false-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-c830d-own-with-registration-false-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.superpowers/sdd/t8-fix-red-ui-port1422/native-experience-T8-error-c830d-own-with-registration-false-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › tests/native-experience.spec.ts:430:1 › T8 failed autostart reads cannot confirm an unknown write or replace its evidence 
+    [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=null 
+    [chromium] › tests/native-experience.spec.ts:474:38 › T8 error-bearing autostart set receipt stays unknown with registration=false 
+
+{"end_utc": "2026-11-02T16:52:08.439576+00:00", "exit": 1}

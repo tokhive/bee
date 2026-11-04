@@ -1,0 +1,11 @@
+--- FAIL: TestDesktopFailurePreservesHTTPFactsAndTypedCause (0.00s)
+    --- FAIL: TestDesktopFailurePreservesHTTPFactsAndTypedCause/Unauthorized (0.00s)
+        desktop_failure_test.go:32: machine reason lost: {}
+    --- FAIL: TestDesktopFailurePreservesHTTPFactsAndTypedCause/Service_Unavailable (0.00s)
+        desktop_failure_test.go:32: machine reason lost: {}
+--- FAIL: TestDesktopFailureSupplyPreservesRemoteRejection (0.00s)
+    desktop_failure_test.go:47: supply HTTP cause missing: GET /api/bee/platforms/openai?reason_detail=1: HTTP 503, code="unavailable", error_json_valid=true
+FAIL
+FAIL	github.com/tokhive/bee/agent	2.799s
+ok  	github.com/tokhive/bee/desktopbridge	1.818s
+FAIL

@@ -1,0 +1,54 @@
+UTC: 2026-11-02T10:58:42.563627+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', '--grep', 'revoked credential recovery', '--workers=1']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/device.spec.ts:157:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation (6.1s)
+
+
+  1) [chromium] › tests/device.spec.ts:157:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation 
+
+    Error: expect(locator).toBeFocused() failed
+
+    Locator:  getByRole('button', { name: '重新绑定设备', exact: true })
+    Expected: focused
+    Received: inactive
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeFocused" getByRole('button', { name: '重新绑定设备', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+        14 × locator resolved to <button data-size="sm" data-slot="button" data-variant="default" class="ui-button primary ">重新绑定设备</button>
+           - unexpected value "inactive"
+
+
+      158 |  await page.addInitScript(()=>{const w=window as any;w.deviceFailure={code:'device_replaced',message:'HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'Old Mac',device_id:'old-1',owner_id:'old-owner',binding_revision:1};});await page.goto('/');
+      159 |  await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
+    > 160 |  await expect(page.getByRole('button',{name:'重新绑定设备',exact:true})).toBeFocused();
+          |                                                                    ^
+      161 |  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      162 |  await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
+      163 |  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:160:68
+
+    Error Context: ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-revoked-credential--6992a-ansaction-across-navigation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/device.spec.ts:157:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation 
+
+Exit: 1
+UTC end: 2026-11-02T10:58:50.283234+00:00

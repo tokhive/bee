@@ -1,0 +1,206 @@
+time=2026-11-02T10:02:26.797876+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/native-runtime.spec.ts', '--grep', 'identity .* (still permits|allows local)|known unsent', '--workers=3']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+[WebServer] (node:76606) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 3 workers
+
+(node:76613) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76614) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:76612) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked (6.7s)
+  ✘  3 [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop (6.7s)
+  ✘  1 [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop (6.8s)
+(node:77031) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:77030) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  5 [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent runtime_start recovers at the same revision without replay (5.7s)
+  ✘  4 [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent account_action recovers at the same revision without replay (5.7s)
+
+
+  1) [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: '停止贡献', exact: true })
+    Expected: enabled
+    Received: disabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: '停止贡献', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '停止贡献', exact: true })
+        14 × locator resolved to <button disabled type="button" data-size="sm" data-slot="button" data-state="closed" aria-expanded="false" data-variant="default" aria-haspopup="dialog" class="ui-button primary ">…</button>
+           - unexpected value "disabled"
+
+
+      185 |  if(denial==='device'){await page.evaluate(()=>(window as any).deviceFail=true);await reconcile(page);}
+      186 |  else{await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot')result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
+    > 187 |  const stop=page.getByRole('button',{name:'停止贡献',exact:true});await expect(stop).toBeEnabled();await stop.click();await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+          |                                                                                  ^
+      188 |  await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+      189 |  expect(await calls(page,'runtime_start')).toHaveLength(1);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
+      190 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:187:82
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-identity-de-8d340-mits-one-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('button', { name: '停止贡献', exact: true })
+    Expected: enabled
+    Received: disabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: '停止贡献', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '停止贡献', exact: true })
+        14 × locator resolved to <button disabled type="button" data-size="sm" data-slot="button" data-state="closed" aria-expanded="false" data-variant="default" aria-haspopup="dialog" class="ui-button primary ">…</button>
+           - unexpected value "disabled"
+
+
+      185 |  if(denial==='device'){await page.evaluate(()=>(window as any).deviceFail=true);await reconcile(page);}
+      186 |  else{await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot')result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
+    > 187 |  const stop=page.getByRole('button',{name:'停止贡献',exact:true});await expect(stop).toBeEnabled();await stop.click();await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();
+          |                                                                                  ^
+      188 |  await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+      189 |  expect(await calls(page,'runtime_start')).toHaveLength(1);expect(await calls(page,'supply_set_paused')).toHaveLength(0);
+      190 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:187:82
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-identity-di-8a3f6-mits-one-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator:  getByRole('dialog').getByRole('button', { name: '登录 Claude', exact: true })
+    Expected: enabled
+    Received: disabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('dialog').getByRole('button', { name: '登录 Claude', exact: true }) with timeout 5000ms
+      - waiting for getByRole('dialog').getByRole('button', { name: '登录 Claude', exact: true })
+        14 × locator resolved to <button disabled type="button" data-size="sm" data-slot="button" class="ui-button  " data-state="closed" aria-expanded="false" data-variant="outline" aria-haspopup="dialog">登录 Claude</button>
+           - unexpected value "disabled"
+
+
+      193 |  await setup(page);await page.evaluate(()=>(window as any).deviceFail=true);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+      194 |  await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeDisabled();await openDetails(page,'Claude');
+    > 195 |  const login=page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true});await expect(login).toBeEnabled();await login.click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();
+          |                                                                                                             ^
+      196 |  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+      197 |  const cancel=page.getByRole('button',{name:'取消官方登录',exact:true}).last();await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
+      198 |  await expect(page.getByRole('dialog').getByText('操作已取消',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:195:109
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-identity-fa-d6430-s-account-selection-blocked-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent account_action recovers at the same revision without replay 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('本次请求未发送，操作未提交。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('本次请求未发送，操作未提交。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('本次请求未发送，操作未提交。', { exact: true })
+
+
+      206 |  if(command==='account_action'){await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();}
+      207 |  else await page.getByRole('button',{name:'开始贡献',exact:true}).click();
+    > 208 |  await expect(page.getByText('本次请求未发送，操作未提交。',{exact:true})).toBeVisible();await page.clock.runFor(10100);expect(await page.evaluate(()=>(window as any).unsentAttempts)).toBe(1);
+          |                                                              ^
+      209 |  if(command==='account_action'){await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();}
+      210 |  else{await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeEnabled();await page.getByRole('button',{name:'开始贡献',exact:true}).click();}
+      211 |  await expect.poll(async()=>(await calls(page,command)).length).toBe(1);expect(await page.evaluate(()=>(window as any).unsentAttempts)).toBe(2);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:208:62
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-known-unsen-043fb-ame-revision-without-replay-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-known-unsen-043fb-ame-revision-without-replay-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-known-unsen-043fb-ame-revision-without-replay-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent runtime_start recovers at the same revision without replay 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('本次请求未发送，操作未提交。', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('本次请求未发送，操作未提交。', { exact: true }) with timeout 5000ms
+      - waiting for getByText('本次请求未发送，操作未提交。', { exact: true })
+
+
+      206 |  if(command==='account_action'){await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();}
+      207 |  else await page.getByRole('button',{name:'开始贡献',exact:true}).click();
+    > 208 |  await expect(page.getByText('本次请求未发送，操作未提交。',{exact:true})).toBeVisible();await page.clock.runFor(10100);expect(await page.evaluate(()=>(window as any).unsentAttempts)).toBe(1);
+          |                                                              ^
+      209 |  if(command==='account_action'){await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();}
+      210 |  else{await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeEnabled();await page.getByRole('button',{name:'开始贡献',exact:true}).click();}
+      211 |  await expect.poll(async()=>(await calls(page,command)).length).toBe(1);expect(await page.evaluate(()=>(window as any).unsentAttempts)).toBe(2);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:208:62
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-known-unsen-a5da2-ame-revision-without-replay-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-known-unsen-a5da2-ame-revision-without-replay-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-known-unsen-a5da2-ame-revision-without-replay-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop 
+    [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop 
+    [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked 
+    [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent account_action recovers at the same revision without replay 
+    [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent runtime_start recovers at the same revision without replay 
+
+exit=1

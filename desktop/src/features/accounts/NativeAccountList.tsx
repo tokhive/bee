@@ -6,6 +6,7 @@ import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {platforms,supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {accountPresentation,accountPhase,supplyProblem,sameAccountFailure} from './accountPresentation';
 import {NativeAccountActions,AccountOperationStatus} from './NativeAccountActions';
+import {NativeAccountLogin,hasClaudeLogin,claudeLoginFailure} from './NativeAccountLogin';
 import {NativeAccountDetails} from './NativeAccountDetails';
 import {AccountQuota,AccountCheckStatus,AccountReadHistory,useAccountClock} from './AccountDisplay';
 import {Badge,Button} from '../../components/ui';
@@ -32,6 +33,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
    const localReason=readFailed?'':accountPhase(snapshot,dirty,!!accounts.busy[platform]&&!accountPending(snapshot),now);
    const copy=current?ready?'可接单':'不能接单':view||supply?.state.errors[platform]?'状态待更新':'状态待确认';
    const paused=view?.paused===true;
+   const inlineLogin=platform==='claude'&&hasClaudeLogin(accounts),loginFailure=inlineLogin?claudeLoginFailure(accounts):undefined;
    const localErrors=!dirty?[candidate?.error,snapshot?.authorization.error,snapshot?.capabilities[0]?.error]:[];
    return <section className="native-account-row" aria-label={t('{platform} 账号',{platform:label})} key={platform} data-account-platform={platform} data-nav-section="account" data-nav-platform={platform} tabIndex={-1}>
     <div className="native-account-identity"><span className={`platform-mark ${platform}`}>{platform==='openai'?<Sparkles aria-hidden="true"/>:<span aria-hidden="true">✳</span>}</span><div className="native-account-copy">
@@ -42,9 +44,9 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
      {localReason&&<p className="native-account-reason">{t(localReason)}</p>}
      {current&&!running&&!view!.reasons.includes('offline')&&<p className="native-account-reason">{t('贡献尚未启动')}</p>}
      {reasons.length>0&&<ul className="native-account-reasons">{reasons.map(problem=><li key={problem.reason}><span>{t(problem.summary,{platform:label})}</span><p>{t(problem.impact)}</p>{problem.target&&navigate&&<Button variant="ghost" onClick={()=>navigate(problem.target!)}>{t(problem.target.section==='connection'?'查看连接':problem.target.section==='source'?'检查凭证来源':'查看账号详情')}</Button>}</li>)}</ul>}
-     {[...new Map([...localErrors,snapshot?.hive.error].filter(e=>!!e).map(e=>[JSON.stringify([e.code,e.check,e.evidence,e.message]),e])).entries()].map(([key,e])=><FailureNotice key={key} failure={e} check="source_read" onNavigate={navigate}/>)}
+     {[...new Map([...localErrors,snapshot?.hive.error].filter(e=>!!e).filter(e=>!sameAccountFailure(e,loginFailure)).map(e=>[JSON.stringify([e.code,e.check,e.evidence,e.message]),e])).entries()].map(([key,e])=><FailureNotice key={key} failure={e} check="source_read" onNavigate={navigate}/>)}
      {snapshot?.issues.filter(issue=>!current||!view!.reasons.includes(issue.code)&&!view!.reasons.includes(`${platform==='openai'?'codex':'claude'}_${issue.code}`)).map((issue,i)=><FailureNotice key={`${issue.code}:${i}`} failure={{...issue,check:'account_issue',evidence:{}}} check="account_issue" onNavigate={navigate}/>)}
-     <AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate}/>
+     {!inlineLogin&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate}/>}
      {supply?.state.errors[platform]&&!sameAccountFailure(supply.state.errors[platform],accounts.sharedFailure)&&<FailureNotice failure={supply.state.errors[platform]} check="supply_read" onNavigate={navigate}/>}
     </div></div>
     <AccountQuota presentation={presentation}/>
@@ -54,6 +56,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
      {running&&selected&&supply&&(!current||!!accounts.uncertain[platform]||!supply.model.canWrite(platform,!paused))&&<p className="account-action-help">{t(!current?'当前平台接单状态待核对，暂不能修改暂停。':accounts.uncertain[platform]?'账号操作结果待核对，暂不能修改暂停。':'当前平台操作条件不满足，请先处理账号与供给阻塞。')}</p>}
      {context==='accounts'&&<NativeAccountDetails navigationRequest={navigationRequest} onNavigate={onNavigate} accounts={accounts} platform={platform} runtime={runtime} supply={supply}/>}
     </div>
+    {inlineLogin&&<NativeAccountLogin accounts={accounts} runtime={runtime} onNavigate={navigate}/>}
    </section>;
   })}</div>
   <p className="native-accounts-footnote"><ShieldCheck aria-hidden="true"/>{t('授权信息保留在本机')}</p>

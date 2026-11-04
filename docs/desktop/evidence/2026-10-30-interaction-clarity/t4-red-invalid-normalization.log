@@ -1,0 +1,40 @@
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (13.228875ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.806042ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.169208ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.657458ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.135541ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.354333ms)
+✔ details preserve all safe Go origin spellings and reject unsafe authority spellings (6.197458ms)
+✖ invalid detail rejection retains the safe original failure without unsafe evidence (0.433417ms)
+✔ explicit locale formatting and placeholders follow the App language (4.943708ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 8
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 112.56425
+
+✖ failing tests:
+
+test at tests/problems.test.ts:47:1
+✖ invalid detail rejection retains the safe original failure without unsafe evidence (0.433417ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /HTTP 503 upstream maintenance/. Input:
+  
+  'Failure details rejected; required=valid safe private protocol fields'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:49:61)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'Failure details rejected; required=valid safe private protocol fields',
+    expected: /HTTP 503 upstream maintenance/,
+    operator: 'match',
+    diff: 'simple'
+  }

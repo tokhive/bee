@@ -1,0 +1,34 @@
+{
+  "utc": "2026-11-02T13:57:19.558044+00:00",
+  "source_manifest": "t7-source-manifest.json",
+  "base": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04",
+  "ego_space": 38,
+  "page": "p1",
+  "preview_port": 1421,
+  "baseline": {
+    "base": "6fa2eba2ec0665005d441db5aa7a3dd2cebd5c04",
+    "path": "/var/folders/6p/7_k4z27j63l2p6bbs1p4yhc80000gn/T/bee-t7-base-5oux672c",
+    "fixture": "BASE tracked fixture, unchanged"
+  },
+  "baseline_server": {
+    "port": 1478,
+    "session": 99805,
+    "stopped": true
+  },
+  "scripts": [
+    ".superpowers/sdd/t7-ego-interactions.mjs",
+    ".superpowers/sdd/t7-ego-matrix.mjs",
+    ".superpowers/sdd/t7-ego-matrix-v2.mjs",
+    ".superpowers/sdd/t7-ego-before.mjs",
+    ".superpowers/sdd/t7-ego-interactions-v2.mjs",
+    ".superpowers/sdd/t7-ego-final-source.mjs",
+    ".superpowers/sdd/t7-ego-scroll-focus.mjs"
+  ],
+  "image_boundary": "t7-accounts-v2矩阵在最后t(localReason)修复前拍摄，正常分支无该文案；t7-v2-detail与t7-final-source-error为修复后；最后3个11→12px状态字号之后以t7-final-source-error为准",
+  "limits": [
+    "正式React组件+模拟IPC，未操作真实绑定或官方账号",
+    "英文预览自动导航大小写缺陷由正式设置切语言绕开，未改共享preview",
+    "Ego Lite更新提示已知，未升级；空间留给主控T10结束"
+  ],
+  "commit": "267a33d38db3a09f0c47917419e36055a6660ee6"
+}

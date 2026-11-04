@@ -1,0 +1,33 @@
+✔ runtime uses the shared Go/Rust contract and preserves absent supply (5.481458ms)
+✔ runtime rejects stale instance, unknown states and unsafe revisions without echoing payload (1.48ms)
+✔ runtime client sends only fixed typed commands and rejects older snapshots (2.039208ms)
+✔ runtime operation receipts advance the same revision gate as snapshots (0.733333ms)
+✖ runtime requires an explicit nullable connection detail (1.3995ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 4
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 252.297041
+
+✖ failing tests:
+
+test at tests/runtime.test.ts:39:1
+✖ runtime requires an explicit nullable connection detail (1.3995ms)
+  AssertionError [ERR_ASSERTION]: Missing expected exception.
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/runtime.test.ts:41:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: /missing/,
+    operator: 'throws',
+    diff: 'simple'
+  }

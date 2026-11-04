@@ -1,0 +1,59 @@
+{"utc": "2026-11-02T12:44:04.427612+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "device.spec.ts", "--grep", "completed recovery|repeated recovery|adopting a different owner", "--workers=4"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+[WebServer] (node:38452) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 4 workers
+
+(node:38624) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:38625) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:38623) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:38622) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  3 [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation (1.7s)
+  ✓  2 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read (1.7s)
+  ✓  4 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read (1.7s)
+  ✓  1 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read (1.8s)
+  ✓  5 [chromium] › tests/device.spec.ts:158:1 › a historical completed recovery yields preparation guidance to current account and runtime facts (789ms)
+  ✘  6 [chromium] › tests/device.spec.ts:207:1 › adopting a different owner requires its own current revision confirmation (5.9s)
+
+
+  1) [chromium] › tests/device.spec.ts:207:1 › adopting a different owner requires its own current revision confirmation 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('button', { name: '前往准备账号', exact: true }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('button', { name: '前往准备账号', exact: true }).first() with timeout 5000ms
+      - waiting for getByRole('button', { name: '前往准备账号', exact: true }).first()
+
+
+      209 |  await expect(page.getByText('new@example.test',{exact:true})).toBeVisible();await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      210 |  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
+    > 211 |  await expect(page.getByText('上次重新绑定已完成，未自动开始贡献。',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'前往准备账号',exact:true}).first()).toBeVisible();expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);expect(await deviceCalls(page,'account_action')).toHaveLength(0);
+          |                                                                                                                                                          ^
+      212 | });
+      213 | test('local expiry waits for Hive confirmation before offering another pairing request',async({page})=>{
+      214 |  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:211:154
+
+    Error Context: ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-adopting-a-differen-5a13f-rrent-revision-confirmation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/device.spec.ts:207:1 › adopting a different owner requires its own current revision confirmation 
+  5 passed (10.2s)
+{"exit": 1, "utc": "2026-11-02T12:44:15.674972+00:00"}

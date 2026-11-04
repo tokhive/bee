@@ -1,0 +1,23 @@
+{"utc": "2026-11-02T12:46:20.999843+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "device.spec.ts", "--grep", "completed recovery|repeated recovery|adopting a different owner", "--workers=4"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+[WebServer] (node:45124) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 6 tests using 4 workers
+
+(node:45154) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:45157) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:45155) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:45156) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation (2.3s)
+  ✓  4 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read (2.3s)
+  ✓  2 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read (2.3s)
+  ✓  3 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read (2.4s)
+  ✓  5 [chromium] › tests/device.spec.ts:158:1 › a historical completed recovery yields preparation guidance to current account and runtime facts (747ms)
+  ✓  6 [chromium] › tests/device.spec.ts:207:1 › adopting a different owner requires its own current revision confirmation (890ms)
+
+  6 passed (4.6s)
+{"exit": 0, "utc": "2026-11-02T12:46:26.818238+00:00"}

@@ -1,0 +1,51 @@
+--- FAIL: TestDesktopAccountsHive (0.19s)
+    --- FAIL: TestDesktopAccountsHive/ready (0.07s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/fingerprint_changed (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/generation_changed (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/revision_changed (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/unknown (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/quota_exhausted (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/rate_limited (0.02s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/stale (0.01s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/old_rate_limited (0.02s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    --- FAIL: TestDesktopAccountsHive/pending (0.02s)
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+        desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+--- FAIL: TestDesktopAccountsHiveScopedQuotaIsNotPlatformExhaustion (0.01s)
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+    desktop_supply_test.go:37: desktop supply must opt in to details: method=GET query=""
+--- FAIL: TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests (0.01s)
+    desktop_device_test.go:448: device_context is unavailable during identity rejection
+FAIL
+FAIL	github.com/tokhive/bee/agent	3.207s
+ok  	github.com/tokhive/bee/desktopbridge	0.908s [no tests to run]
+FAIL

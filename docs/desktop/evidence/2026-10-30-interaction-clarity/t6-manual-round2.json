@@ -1,0 +1,177 @@
+{
+  "utc": "2026-11-02T10:56:28.082Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "script": "/tmp/t6-manual-round2.mjs",
+  "records": [
+    {
+      "case": {
+        "scene": "recovery-creation-unknown",
+        "width": 1000,
+        "height": 700,
+        "locale": "en",
+        "theme": "light",
+        "device": true
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:56:26.865Z",
+        "viewport": [
+          1000,
+          700
+        ],
+        "lang": "en",
+        "theme": "light",
+        "reduced": true,
+        "overflow": false,
+        "status": "rejected",
+        "title": "Device identity rejected",
+        "side": "Device identity rejected",
+        "phase": "Pairing creation result unknown",
+        "preparation": false,
+        "buttons": [
+          {
+            "text": "Start contributing",
+            "disabled": true
+          }
+        ],
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-recovery-creation-unknown-1000-en-light.png"
+    },
+    {
+      "case": {
+        "scene": "runtime-disconnected",
+        "width": 860,
+        "height": 600,
+        "locale": "zh",
+        "theme": "dark"
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:56:27.134Z",
+        "viewport": [
+          860,
+          600
+        ],
+        "lang": "zh",
+        "theme": "dark",
+        "reduced": true,
+        "overflow": false,
+        "status": "connecting",
+        "title": "正在连接 Hive",
+        "side": "正在连接 Hive",
+        "preparation": false,
+        "buttons": [
+          {
+            "text": "停止贡献",
+            "disabled": false
+          }
+        ],
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-runtime-disconnected-860-zh-dark.png"
+    },
+    {
+      "case": {
+        "scene": "supply-partial",
+        "width": 1080,
+        "height": 840,
+        "locale": "en",
+        "theme": "light"
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:56:27.502Z",
+        "viewport": [
+          1080,
+          840
+        ],
+        "lang": "en",
+        "theme": "light",
+        "reduced": true,
+        "overflow": false,
+        "status": "ready",
+        "title": "Ready for tasks",
+        "side": "Ready for tasks",
+        "preparation": false,
+        "buttons": [
+          {
+            "text": "Stop contribution",
+            "disabled": false
+          }
+        ],
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-supply-partial-1080-en-light.png"
+    },
+    {
+      "case": {
+        "scene": "supply-paused",
+        "width": 1000,
+        "height": 700,
+        "locale": "zh",
+        "theme": "light"
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:56:27.760Z",
+        "viewport": [
+          1000,
+          700
+        ],
+        "lang": "zh",
+        "theme": "light",
+        "reduced": true,
+        "overflow": false,
+        "status": "paused",
+        "title": "接单已暂停",
+        "side": "接单已暂停",
+        "preparation": false,
+        "buttons": [
+          {
+            "text": "停止贡献",
+            "disabled": false
+          }
+        ],
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-supply-paused-1000-zh-light.png"
+    },
+    {
+      "case": {
+        "scene": "recovery-completed",
+        "width": 1080,
+        "height": 840,
+        "locale": "en",
+        "theme": "light",
+        "device": true
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:56:28.023Z",
+        "viewport": [
+          1080,
+          840
+        ],
+        "lang": "en",
+        "theme": "light",
+        "reduced": true,
+        "overflow": false,
+        "status": "stopped",
+        "title": "Contribution has not started",
+        "side": "Contribution has not started",
+        "phase": "Device rebound. Contribution remains stopped.",
+        "preparation": false,
+        "buttons": [
+          {
+            "text": "Start contributing",
+            "disabled": false
+          },
+          {
+            "text": "Prepare accounts",
+            "disabled": false
+          }
+        ],
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-recovery-completed-1080-en-light.png"
+    }
+  ]
+}

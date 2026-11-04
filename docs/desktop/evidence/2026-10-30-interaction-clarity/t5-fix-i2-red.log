@@ -1,0 +1,9 @@
+time=2026-11-02T10:01:16.086115+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/recovery-navigation.spec.ts', '--grep', 'Claude inline', '--workers=1']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+Error: http://127.0.0.1:1421 is already used, make sure that nothing is running on the port/url or set reuseExistingServer:true in config.webServer.
+
+
+exit=1

@@ -1,0 +1,45 @@
+{"utc": "2026-11-02T15:58:26.535928+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "native-experience.spec.ts", "--grep", "confirmed proxy save never", "--output", "../.cache/t8-red-saved-scope"], "dirty": " M Makefile\n M desktop/README.md\n M desktop/src-tauri/src/network.rs\n M desktop/src-tauri/src/network_tests.rs\n M desktop/src/app/NativeApp.tsx\n M desktop/src/features/diagnostics/NativeDiagnosticsPage.tsx\n M desktop/src/features/diagnostics/presentation.ts\n M desktop/src/features/settings/NativeSettingsPage.tsx\n M desktop/src/i18n/en.ts\n M desktop/src/presentation/problems.ts\n M desktop/src/system/diagnostics.ts\n M desktop/tests/diagnostic-presentation.test.ts\n M desktop/tests/diagnostics.test.ts\n M desktop/tests/native-experience.spec.ts\n M desktop/tests/network.test.ts\n M desktop/tests/recovery-navigation.spec.ts\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design-decision-trace.md\n M docs/superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md\n?? .DS_Store\n?? desktop/tests/fixtures/bee-preview/interaction-prototype.html\n?? docs/.DS_Store\n?? docs/desktop/evidence/2026-10-30-interaction-clarity/\n?? docs/desktop/interaction-clarity-validation.md\n?? docs/superpowers/.DS_Store\n?? docs/superpowers/plans/2026-10-30-desktop-interaction-clarity.md\n?? docs/superpowers/reports/2026-11-01-desktop-full-scenario-review.md\n?? docs/superpowers/reports/2026-11-02-desktop-layout-review.md\n", "head": "5bd9c786cd21747323afdb99e59a3d9d1889068e", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1487"}
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › tests/native-experience.spec.ts:359:1 › T8 confirmed proxy save never selects an older device scope when its network read fails (6.6s)
+
+
+  1) [chromium] › tests/native-experience.spec.ts:359:1 › T8 confirmed proxy save never selects an older device scope when its network read fails 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('.ns-network-summary>div').first()
+    Expected substring: "http://127.0.0.1:18389"
+    Received string:    "已保存配置http://127.0.0.1:17001"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('.ns-network-summary>div').first() with timeout 5000ms
+      - waiting for locator('.ns-network-summary>div').first()
+        14 × locator resolved to <div>…</div>
+           - unexpected value "已保存配置http://127.0.0.1:17001"
+
+
+      361 |  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let saved=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='network_snapshot'&&saved){w.calls.push({command,args});throw {code:'NETWORK_RUNTIME_UNCONFIRMED',message:'network observation unavailable after current-device save'};}const value=await invoke(command,args);if(command==='network_save_proxy'){saved=true;value.preferences.proxies.unshift({origin:'https://hive.example',device_scope:'previous-device',connect_proxy:'http://127.0.0.1:17001'});}return value;};});
+      362 |  await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:18389');await page.getByRole('button',{name:'保存代理',exact:true}).click();
+    > 363 |  const saved=page.locator('.ns-network-summary>div').first();await expect(saved).toContainText('http://127.0.0.1:18389');await expect(saved).not.toContainText('17001');
+          |                                                                                  ^
+      364 |  await nav(page,'概览').click();await nav(page,'设置').click();await expect(saved).toContainText('http://127.0.0.1:18389');expect((await calls(page,'network_save_proxy')).length).toBe(1);
+      365 | });
+      366 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-experience.spec.ts:363:82
+
+    Error Context: ../.cache/t8-red-saved-scope/native-experience-T8-confi-fd38e-when-its-network-read-fails-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/t8-red-saved-scope/native-experience-T8-confi-fd38e-when-its-network-read-fails-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/t8-red-saved-scope/native-experience-T8-confi-fd38e-when-its-network-read-fails-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/native-experience.spec.ts:359:1 › T8 confirmed proxy save never selects an older device scope when its network read fails 
+{"exit": 1, "utc": "2026-11-02T15:58:36.543027+00:00"}

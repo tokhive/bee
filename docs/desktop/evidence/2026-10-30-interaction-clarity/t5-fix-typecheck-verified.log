@@ -1,0 +1,13 @@
+time=2026-11-02T10:15:37.555639+00:00
+command=['npm', 'run', 'typecheck']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+tests/account-auto-read.spec.ts(172,40): error TS18046: 'openai' is of type 'unknown'.
+tests/account-auto-read.spec.ts(172,137): error TS18046: 'openai' is of type 'unknown'.
+
+exit=1

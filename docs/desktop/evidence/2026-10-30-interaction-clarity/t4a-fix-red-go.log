@@ -1,0 +1,26 @@
+--- FAIL: TestDesktopDeviceContextFailuresKeepObservedBindingRevision (0.00s)
+    desktop_device_test.go:559: context revision=0 actual session=1 previous=0
+--- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts (0.11s)
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/credential (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/empty (0.03s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/length (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/controls (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved device metadata rejected; required=valid credential and nonempty name <=80 characters without controls
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_parse (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_auth (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_query (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_path (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_slash (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+    --- FAIL: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_http (0.01s)
+        desktop_device_test.go:581: failure lacks specific facts: DEVICE_CONTEXT_INVALID: saved Hive origin rejected; required=canonical secure origin
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.013s
+FAIL

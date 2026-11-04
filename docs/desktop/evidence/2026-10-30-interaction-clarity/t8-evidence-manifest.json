@@ -1,0 +1,1641 @@
+{
+  "task": "T8",
+  "utc": "2026-11-02T16:38:09.430602+00:00",
+  "base": "5bd9c786cd21747323afdb99e59a3d9d1889068e",
+  "source_tree_sha256": "57a2a1dd5c999db80df5d9edf8169c995c77aa654593e16c7541f7c483890ca6",
+  "self_excluded": true,
+  "historical_trace_count": 21,
+  "files": [
+    {
+      "path": ".cache/t8-final-ui/native-experience-S2-tabs--125d1-main-usable-at-860-en-light-chromium/error-context.md",
+      "sha256": "5ad28cb470fcb5e87837a26fb7b876d65f94df1d32d1822b903aa001d5897ca0",
+      "bytes": 35124
+    },
+    {
+      "path": ".cache/t8-final-ui/native-experience-S2-tabs--125d1-main-usable-at-860-en-light-chromium/trace.zip",
+      "sha256": "bdc54e74b327eacf9501dae43c7793bfe27bf3e90991db28df436b5ee7edd912",
+      "bytes": 987020
+    },
+    {
+      "path": ".cache/t8-final-ui/native-experience-S2-tabs--b0bda-main-usable-at-1440-en-dark-chromium/error-context.md",
+      "sha256": "108a14400fae0f9ef35a4db156a9ef903e10c3153f48957a35ac401eedcf4af0",
+      "bytes": 35124
+    },
+    {
+      "path": ".cache/t8-final-ui/native-experience-S2-tabs--b0bda-main-usable-at-1440-en-dark-chromium/trace.zip",
+      "sha256": "e161b4da85528fa5eb53c3c2041e679618ce8b839a7d658c4cf4eaf2f6773ffb",
+      "bytes": 691933
+    },
+    {
+      "path": ".cache/t8-final-ui/native-experience-failed-p-c0553-nd-English-copy-stay-usable-chromium/error-context.md",
+      "sha256": "b003756d543c4a5c2bd50f3975f30e71d74360d5ff58610d95268cbd16e71cfa",
+      "bytes": 21929
+    },
+    {
+      "path": ".cache/t8-final-ui/native-experience-failed-p-c0553-nd-English-copy-stay-usable-chromium/trace.zip",
+      "sha256": "73461544a858ce15225770222c70e1e39428f40fd345945ee84df34bdf09ced5",
+      "bytes": 269132
+    },
+    {
+      "path": ".cache/t8-final-ui/recovery-navigation-Claude-37b0b-return-focus-without-writes-chromium/error-context.md",
+      "sha256": "fe22a084f8778a4c53bde582bfcd7f2577df75813a2e687a08e3f31b84915b22",
+      "bytes": 24398
+    },
+    {
+      "path": ".cache/t8-final-ui/recovery-navigation-Claude-37b0b-return-focus-without-writes-chromium/trace.zip",
+      "sha256": "30d7a8a83b3b25f250337241928b254817a4c5a3698bbba128790c14b250c268",
+      "bytes": 1770582
+    },
+    {
+      "path": ".cache/t8-final-ui/recovery-navigation-a-newe-631c9-ubmission-and-runtime-start-chromium/error-context.md",
+      "sha256": "fccaf3223c8b88e9ef18d31baf420472ccc19dd09a618d53c31acb539084307b",
+      "bytes": 17966
+    },
+    {
+      "path": ".cache/t8-final-ui/recovery-navigation-a-newe-631c9-ubmission-and-runtime-start-chromium/trace.zip",
+      "sha256": "75afacf6d2b5d17de4bbeacb5ff4b86c9934ea9c11f075d32502dbc450a3631f",
+      "bytes": 197844
+    },
+    {
+      "path": ".cache/t8-red-autostart-unknown/native-experience-T8-lost--145b9-from-the-new-desired-choice-chromium/error-context.md",
+      "sha256": "afbd52dab4beb5ff0be72e78598e0ebb62c6950c80527aef31e229d126391f4f",
+      "bytes": 20677
+    },
+    {
+      "path": ".cache/t8-red-autostart-unknown/native-experience-T8-lost--145b9-from-the-new-desired-choice-chromium/trace.zip",
+      "sha256": "6a9767a3209b5377ad627688e9d682e2a51e51137999b1c379939c19aff6f7b8",
+      "bytes": 194064
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/error-context.md",
+      "sha256": "efc484f787f01c4e84ab1703006825782680809cd6428dabe54d560d373cfced",
+      "bytes": 22395
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/trace.zip",
+      "sha256": "3351953fe1243097a9e5f7a39299ccdc61db55354d0456368b9caf14b0b79e4e",
+      "bytes": 185658
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/error-context.md",
+      "sha256": "93c77896562ceaf77ea79fdd32db273ce00ac007d0def5d5747fe6ec48cf28b5",
+      "bytes": 21529
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/trace.zip",
+      "sha256": "d1ea09c321d2bdd8019816cdaf7380fdefb5e00c3e08d702432f274f2151fde9",
+      "bytes": 174760
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-diagn-2e3e9-ain-separate-concrete-facts-chromium/error-context.md",
+      "sha256": "9ea9bde22bbaa0b4c8786e72ebbb111a8e9cac4838ddaa3f213d26dd4763bbc2",
+      "bytes": 20433
+    },
+    {
+      "path": ".cache/t8-red-os-presentation/native-experience-T8-diagn-2e3e9-ain-separate-concrete-facts-chromium/trace.zip",
+      "sha256": "7660d0c8d29fd94b0b81b21d2404b2a06629111f6cf416931c47d21a39d6943a",
+      "bytes": 230627
+    },
+    {
+      "path": ".cache/t8-red-saved-scope/native-experience-T8-confi-fd38e-when-its-network-read-fails-chromium/error-context.md",
+      "sha256": "a86841ad076d4d5c4860f518006f570185599e256c45c6ed7588c677a3520e6d",
+      "bytes": 19481
+    },
+    {
+      "path": ".cache/t8-red-saved-scope/native-experience-T8-confi-fd38e-when-its-network-read-fails-chromium/trace.zip",
+      "sha256": "3804cc9c9bace666e0db658a18799e68c1b44605d81cda32c906286c040a2ee1",
+      "bytes": 209916
+    },
+    {
+      "path": ".cache/t8-red-shared-credential-ui/native-experience-T8-diagn-c163e-s-invalid-device-credential-chromium/error-context.md",
+      "sha256": "155aad582d7ac8beb0869525d7e4a40e9ff333e40ec8d4cd6a1d735e929ea9ec",
+      "bytes": 34392
+    },
+    {
+      "path": ".cache/t8-red-shared-credential-ui/native-experience-T8-diagn-c163e-s-invalid-device-credential-chromium/trace.zip",
+      "sha256": "f8d5d487ddb95b19ba483f8f4e4b0758c992427e5f3301285f7a131b6263afc9",
+      "bytes": 197856
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/error-context.md",
+      "sha256": "7f14f6388b694d3822d0cf532be9e1be539df1ad78ad0327bfeff5662d840e4d",
+      "bytes": 20414
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-autos-ecf98-actual-registration-receipt-chromium/trace.zip",
+      "sha256": "348f9be71cd96215266fb62bef474269b793cc710ddca99aa4453dcc52b340d8",
+      "bytes": 170373
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/error-context.md",
+      "sha256": "f23f8ae132557e492de83b0148ea5415d9b4288de778a99da40425b2bf853e64",
+      "bytes": 21375
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-denie-56bc0-actual-OS-settings-location-chromium/trace.zip",
+      "sha256": "54603495f6040fbf1e828d2eac9e72d909c20ef941bd3856b183158f42749826",
+      "bytes": 173650
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-lost--391fa-ort-reads-across-navigation-chromium/error-context.md",
+      "sha256": "e1545ccd04cc56a1c2ba4717a4c0ca61e3cec14645e954f0e68a738749a99ae1",
+      "bytes": 21479
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-lost--391fa-ort-reads-across-navigation-chromium/trace.zip",
+      "sha256": "1634bf62d5e11be4b52eb70a6d16a4414572c9bd183f3b8ef6cb49e35ba7cdd6",
+      "bytes": 223503
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-lost--4f9f2-are-available-without-an-ID-chromium/error-context.md",
+      "sha256": "cd0da4bc67968d872921401aa512455325f450199b29601e7e47603d88397ad7",
+      "bytes": 22068
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-lost--4f9f2-are-available-without-an-ID-chromium/trace.zip",
+      "sha256": "5c5dbf17e9a0cbbec05030d7c23644bce1326675fc4e8f7e2daba3493f3829f0",
+      "bytes": 258326
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-origi-71b84-letes-without-another-start-chromium/error-context.md",
+      "sha256": "dbba0ca10472515d33ab3785bf3f832168932e403eaa5265dced16fb25bccc01",
+      "bytes": 23721
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-origi-71b84-letes-without-another-start-chromium/trace.zip",
+      "sha256": "83ac88229a6ce2ee13a909129829e5cca5647af409e08aad6a5f8e44cd24a0ff",
+      "bytes": 159400
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-saved-f7d75-r-reported-as-a-failed-save-chromium/error-context.md",
+      "sha256": "f6148652d3c22ccbcce12581cd1d675cf1f7f7091669224645384023d88d81d9",
+      "bytes": 22366
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-saved-f7d75-r-reported-as-a-failed-save-chromium/trace.zip",
+      "sha256": "d9c6f6d1d44f01f299614df1cccdf2b705e1eb5f0fd2b80e8fc814da250d532a",
+      "bytes": 206849
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-unkno-6730c-nd-runtime-after-navigation-chromium/error-context.md",
+      "sha256": "053b05dfaacbda1ce684af966319e09fc5214738686ca2d6fad281f6ce170798",
+      "bytes": 22242
+    },
+    {
+      "path": ".cache/t8-red-ui/native-experience-T8-unkno-6730c-nd-runtime-after-navigation-chromium/trace.zip",
+      "sha256": "ff8bb81ad2a2ae59b493290da30f35e8af3350b1d5040a881bfac10f2e3c5931",
+      "bytes": 324883
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-lost--55602-reconciled-only-by-OS-reads-chromium/error-context.md",
+      "sha256": "79acef16ddc7da55ec6f04663272014446908b1de284fd9f53d8a2edcc24d3fb",
+      "bytes": 22231
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-lost--55602-reconciled-only-by-OS-reads-chromium/trace.zip",
+      "sha256": "28929a53a0c8c11cded05002be51e9a88d74d07a19f7b80d40d63dbabd7e3b6f",
+      "bytes": 260576
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-pendi-20f9f-igating-away-without-replay-chromium/error-context.md",
+      "sha256": "9f8af732e35879eda4d9dbcb9062d2224d56a02f5feda0a60d216376f3b4e17d",
+      "bytes": 28512
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-pendi-20f9f-igating-away-without-replay-chromium/trace.zip",
+      "sha256": "300dd1937648fd4e80c742417a3fcce25c5905ce997588e0d3efda699222338e",
+      "bytes": 326163
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-unkno-f2d9e-urrent-scoped-reads-succeed-chromium/error-context.md",
+      "sha256": "987cacffc3363d9e406b57a56479176bd04b4f47d18f9babbc9fa005d969e75f",
+      "bytes": 27531
+    },
+    {
+      "path": ".cache/t8-ui-boundaries-first/native-experience-T8-unkno-f2d9e-urrent-scoped-reads-succeed-chromium/trace.zip",
+      "sha256": "96aa0757993248c86eecb35ecf40640b8e206e87fc4f497051b2bc1dca8dc924",
+      "bytes": 290218
+    },
+    {
+      "path": ".superpowers/sdd/T8-report.md",
+      "sha256": "30ed661fecd146ce8759ed34ff6025968519a7911324c3a691268bb03cd55d05",
+      "bytes": 18570
+    },
+    {
+      "path": ".superpowers/sdd/t8-copy.py",
+      "sha256": "c24b8e7b4c7f531891e5f57b9ca03814d250fea3d91db28dc3fd915dbeccc214",
+      "bytes": 8359
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-final-paths.mjs",
+      "sha256": "f22014dc4c0be55ed3e24b5b0c2c7bd3de14c2e73dd8bc00bad0157505c8f769",
+      "bytes": 2221
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-guide.md",
+      "sha256": "fda27e8639c68c6745e63e49199ac39c8aa93d083303512376f9f27577edb25d",
+      "bytes": 23156
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-hive-dto.mjs",
+      "sha256": "6be1ba5d3258327c84bdc6d45b416361361424b6b9614715e92a256190c7c9a0",
+      "bytes": 2619
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-interactions.mjs",
+      "sha256": "e503e09ee94f966dd0832c5c857479dc99a661584f2e449dcc0015ad0dc7bb90",
+      "bytes": 6373
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-matrix.mjs",
+      "sha256": "132d2117cf3bdc3d80c4cdd5aefdf8fec9e29a42dfb9b13f8db6e39a743c1c83",
+      "bytes": 5437
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-targets-v2.mjs",
+      "sha256": "2058f05006910517d155204291558869ffcfefa0fb1683d79759b2e2eda5c04b",
+      "bytes": 5076
+    },
+    {
+      "path": ".superpowers/sdd/t8-ego-targets.mjs",
+      "sha256": "a1ffd38a0764e7c57c24da1ad9690e135f5f480c21ed2d581996ae03dad10335",
+      "bytes": 4754
+    },
+    {
+      "path": ".superpowers/sdd/t8-files.json",
+      "sha256": "cf5540d6f6affbe99ce9a917fdbc62a98360041910c245e86303a3591538948f",
+      "bytes": 859
+    },
+    {
+      "path": ".superpowers/sdd/t8-run.py",
+      "sha256": "e934f3ca7c4443c870f5d5d05165a401c6c94728f18ba4d748c1221a6c352b6f",
+      "bytes": 1296
+    },
+    {
+      "path": ".superpowers/sdd/t8-settings-edit.py",
+      "sha256": "70535e0cdc7f59f1f2ce4d9ee5e569b1c10a1e586027ca5c0f13f2d0de5a48d7",
+      "bytes": 18776
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-desktop-state.log",
+      "sha256": "451dc9de19a239fa2c85a374e6f071e9347c17b0ad15c56822b0cab6b3bb2ff7",
+      "bytes": 4711
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-node-fixed.log",
+      "sha256": "6385b514153e73996b09c5a1211008d8abeafe569c1da2897415ae117ef2519e",
+      "bytes": 6063
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-node.log",
+      "sha256": "7b9e5b4bff285aad94ecde4a9489cc1e33ef02841ee6a252f644f895a56a61c7",
+      "bytes": 6072
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-typecheck-fixed.log",
+      "sha256": "317e69f8ccd1c85576a367b32193c0046f038fa1e305d0e75a04ae7b717bc02d",
+      "bytes": 1914
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-typecheck.log",
+      "sha256": "45d3a280a59814f2d23cc09605c324118a4ba0c0065d819040027a980794943f",
+      "bytes": 2914
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-accepted-final-ui.log",
+      "sha256": "27e804bad7665d090fe8c51b6bc617561e768c599dff85d3937c9c32f66670ea",
+      "bytes": 11280
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-commit-receipt.json",
+      "sha256": "4add0aaef386aa4c69bb6c7c42d10e637723d78bc5fc9d7b36d488b1a56c185b",
+      "bytes": 2110
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1000-en-dark.png",
+      "sha256": "4aa593601865389926f8dc1a5afc0e0286e0198db048c5a7ff21b7b863159b24",
+      "bytes": 83717,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1000-en-light.png",
+      "sha256": "6bc132ce84ccad2ed5b9605cb8fc455caf340d9a6620be8072f5dbff1affabb9",
+      "bytes": 83874,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1000-zh-dark.png",
+      "sha256": "02984cf8ea19b60919810daf68237aec716bd39c6d38f2257322149253439d44",
+      "bytes": 83217,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1000-zh-light.png",
+      "sha256": "702eb8c0d75751752db16611b7c9894a3022f2c0cba78f723654cbef98b2c493",
+      "bytes": 83828,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1080-en-dark.png",
+      "sha256": "e681fdb9e1d8834132d19646fc173f434e94afd3b04740adf0ed7ddb4461e32a",
+      "bytes": 98247,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1080-en-light.png",
+      "sha256": "736fb24ed8ea9a5b29522d0427bad5e7338ad33a396e817d4c1d88f29dc7ea33",
+      "bytes": 98592,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1080-zh-dark.png",
+      "sha256": "f42bd3d7ddcb9b14150aa16e549ba3cc06988cb5fd53c9ff38f9987e02a5735b",
+      "bytes": 96496,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-1080-zh-light.png",
+      "sha256": "a7e55adf5bf3326919010034417013a5685f2d47294f80e96cf406fb4c56537e",
+      "bytes": 97316,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-860-en-dark.png",
+      "sha256": "ebc605e767034be1240dc40240ec2d29774906f4be27128fac17b4aaa982ee5f",
+      "bytes": 73122,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-860-en-light.png",
+      "sha256": "856575ca51dededa9c4e4ca7bceec0ed3ee39a245560aaa4b892864cca44e244",
+      "bytes": 71838,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-860-zh-dark.png",
+      "sha256": "c2708f2a13a66a47f6987ab76144ae8b1e5e6fe503f5b697ae4002fb125c7fcd",
+      "bytes": 72768,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-860-zh-light.png",
+      "sha256": "61019d51dff9eba4ef6cc68492d851a67df3cfe675e48a31b7964a7fbaebde6b",
+      "bytes": 73211,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1000-en-dark.png",
+      "sha256": "8de63ef58cfd219f1a33259915e2b6ff54a6e4053c23fa62fe12654d60f48cea",
+      "bytes": 73645,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1000-en-light.png",
+      "sha256": "e3f4e26cbf8a677bb33153be808101227a6ee172228698ff18e62e16a2a9f22b",
+      "bytes": 74330,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1000-zh-dark.png",
+      "sha256": "823bd56e188450926d68130165934b3550f49c8aa009484d86de80707f257e13",
+      "bytes": 66938,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1000-zh-light.png",
+      "sha256": "3f571c17dfa3fa7f7994d3310a61921c4ceeb40d2a1da352367cdcc69c1abb5c",
+      "bytes": 67762,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1080-en-dark.png",
+      "sha256": "88bf8eadc8dbd96f05fe7b2bf3605f3405a0d2a0652a41c8dac5acba980a72cf",
+      "bytes": 84091,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1080-en-light.png",
+      "sha256": "24d8637875cd971d16ce1bc368b99f9315ffeac8a4891fa3237352db718d1033",
+      "bytes": 84557,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1080-zh-dark.png",
+      "sha256": "bcb026387ae0d7736072b7a1f40fa3ac09cebb86aba5cae21ed983206b5fc7e3",
+      "bytes": 76375,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-1080-zh-light.png",
+      "sha256": "ee2b6f3d3412b0131886f01ed66fe8636f7c90fd21dc2db2954100859fa51932",
+      "bytes": 77219,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-860-en-dark.png",
+      "sha256": "b73d81596f7aef5c15da735e1a860ea557a52f3b1c48ae1d6f9622f6202599d6",
+      "bytes": 62311,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-860-en-light.png",
+      "sha256": "fe832abbc7c195c46243ae755c50f492146e28d9bf3567a79cfe48bf6e06943f",
+      "bytes": 62875,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-860-zh-dark.png",
+      "sha256": "1f2c1f7fd5fd684cfa7d30b2ef3949bdbbc1ed2d65688468ead5b627c39bfed8",
+      "bytes": 56830,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-diagnostics-bottom-860-zh-light.png",
+      "sha256": "f22362534813da98015800efe3cd3c94b8b590432d11dd7117ae49a3cb418fb4",
+      "bytes": 57397,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-diff-check.log",
+      "sha256": "bfdbcdc0df0a46ed7e9d21ae7c62c0fd3ea8c33f7e90c5b5f5b976eb0159a02e",
+      "bytes": 1858
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-node-second.log",
+      "sha256": "bbad943a90613120d2482426cef0444cd913f842feb4d4aa2e3d9fbcedb8667d",
+      "bytes": 5775
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-node.log",
+      "sha256": "42c07899ad4c8b0b463ea4b507f24491ec3505bd7fa721e9b5e04a842f0721f1",
+      "bytes": 5786
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-rust-network.log",
+      "sha256": "69ac5a0e52c847c8621977d51c77610bda85ecfdc95d3935c52c1caf902e3e47",
+      "bytes": 4242
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1000-en-dark.png",
+      "sha256": "2d9bb200233fdc2140cdd8b880eb3fd3acd702165623b1195989afcb063b0bcb",
+      "bytes": 88273,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1000-en-light.png",
+      "sha256": "6776165491107403275dd26ad71cbc69e7a8e2d453f4020bd791e9d718ec697f",
+      "bytes": 88586,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1000-zh-dark.png",
+      "sha256": "7902e8dc66340131394e647d1d4a1f568d666d71a2603d1ccd22ac34fffe6c09",
+      "bytes": 79672,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1000-zh-light.png",
+      "sha256": "a7bff78414527ae201a8d92861311ba3e4725aeb71e9b22694773e321f315d38",
+      "bytes": 80459,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1080-en-dark.png",
+      "sha256": "0a71b5434275ca03ae1a8aa8c77a93b007647418c910719a48bf3efa35eda702",
+      "bytes": 122790,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1080-en-light.png",
+      "sha256": "748f248acadb38bde6019e04a40be9ceef55974e28beb84f3af8ac1b362e18cc",
+      "bytes": 123198,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1080-zh-dark.png",
+      "sha256": "f362ef22739a852ea394f5d2632a5269b4e969e437461b02627806910c865603",
+      "bytes": 108809,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-1080-zh-light.png",
+      "sha256": "957b2685c457ecfe73a85ebcd5fe0c808c9eecfe280972ae58b619c40211ddd3",
+      "bytes": 111379,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-860-en-dark.png",
+      "sha256": "c85a564fdfd28ab3de453d3672fbd8b865ef26005d30239b104d330da6b80c54",
+      "bytes": 75548,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-860-en-light.png",
+      "sha256": "816a56d6bdb12c9836b5dcee49ecf2ce29aea53388490e30c807a50d6a36e4be",
+      "bytes": 76297,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-860-zh-dark.png",
+      "sha256": "c6d25dba4e2c8e5c1961b3de005181eda4d6be481de8fad7246c20c1072bf65c",
+      "bytes": 68569,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-network-860-zh-light.png",
+      "sha256": "b18059512f7550bedef20dfbca5a42f278c1c65a340cc13e86b90b307e107330",
+      "bytes": 69283,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1000-en-dark.png",
+      "sha256": "b7a3d0cc11598d733ac040ac26bef7517bb42665ba7036dc285c27e21cda3135",
+      "bytes": 85030,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1000-en-light.png",
+      "sha256": "4879a1b1f50d0353e35cf8c653c36de1e81a94a66d4c2b1ae90504c7fafc3de2",
+      "bytes": 85457,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1000-zh-dark.png",
+      "sha256": "9b6f1ee34fbd3106d4f7e44141554d636de1cbcf1978fa1f6931a213ce745616",
+      "bytes": 80694,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1000-zh-light.png",
+      "sha256": "7d016ccdbca1d2618d59c783a0c3ffc9ac64a5c672dda1461b14339ff072aec5",
+      "bytes": 81482,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1080-en-dark.png",
+      "sha256": "02f98e08500548434c258f7abe73d04bdcba2cadd5682243cd63e94b20e75d41",
+      "bytes": 122309,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1080-en-light.png",
+      "sha256": "ff6a7adfa60a1ba127e77c450f38cbf4270098ceff6d55ee6f8f8da09c5bf238",
+      "bytes": 122649,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1080-zh-dark.png",
+      "sha256": "f362ef22739a852ea394f5d2632a5269b4e969e437461b02627806910c865603",
+      "bytes": 108809,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-1080-zh-light.png",
+      "sha256": "957b2685c457ecfe73a85ebcd5fe0c808c9eecfe280972ae58b619c40211ddd3",
+      "bytes": 111379,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-860-en-dark.png",
+      "sha256": "ed9738e3e50e026dcb1b9817292d17b75f566479e3c861fefcb47e62027044c8",
+      "bytes": 72994,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-860-en-light.png",
+      "sha256": "cf212be73bfc3b169f3f0aeabcecaa98a138e76871e15f4e106584c70bb6dc29",
+      "bytes": 73213,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-860-zh-dark.png",
+      "sha256": "aee58ee5daed4b16692c0d9e31429ec1f13af9d96429a3ad45bceed9ff8f88ae",
+      "bytes": 67949,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-settings-paths-860-zh-light.png",
+      "sha256": "f25abd63eb608442c15dceb2d2ba0b6abf69598eb7317fab1c21dbd025818b74",
+      "bytes": 68398,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-typecheck-second.log",
+      "sha256": "032dc3ea77430ed8f50c6833b2017b7a89718787347d5a93bb456f7e1693a943",
+      "bytes": 1836
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-typecheck.log",
+      "sha256": "aac18c7de47244c89a7a18ac91bf52d629b61a3d3cc705d9d2572a66c46f146d",
+      "bytes": 1836
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-ui-second.log",
+      "sha256": "ebd3a3b8dd6ff5808e8b1289a3a4676050a2018996c8e30f34d25859a6fc756e",
+      "bytes": 10480
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-final-ui.log",
+      "sha256": "a0c178cc0115b345ffae8b222106238f79164a84cc72fec3abb80763763f5afd",
+      "bytes": 29321
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-g02-details-bottom-860-zh-light.png",
+      "sha256": "7cb9cf15bd50f1eb7afbe35e7f9fb25ee704a19a037fa649c759ff75a28c9be5",
+      "bytes": 56509,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-g02-paused-860-zh-light.png",
+      "sha256": "53ac62d587d8c077a156fb355ff807c7ba2c936d8d9d7b385a6d62b3808df40a",
+      "bytes": 75306,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-g02-recovered-860-zh-light.png",
+      "sha256": "82d2cc11c7e01c15552c7d2423d4f61699c1e4c269c2ff2bfd4137aa6a9d04a1",
+      "bytes": 62228,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-g03-start-unknown-1000-en-dark.png",
+      "sha256": "d54a8d14e85a8c1435c4c8d6c1c3a50f46fe3c99910f044c45580aae66ae8f71",
+      "bytes": 77496,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-autostart-unknown-previous.log",
+      "sha256": "1fda5b9fa32a752f81ddbc0f5ff28dfbdb4274423cec94350c68718a24e47321",
+      "bytes": 2169
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-client-boundaries.log",
+      "sha256": "849a06cbee3ecbf14b73f5e8a3776abaed6f64a840b0c8a3f5c5dd9f18aa8bb6",
+      "bytes": 2279
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-client-focused.log",
+      "sha256": "f0bc864f18cf9e71485803b61fa0d592830feb1623e6dba5f5f41fbbd4fc89ff",
+      "bytes": 1634
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-network-stages.log",
+      "sha256": "6c415a5fcfe98c2cb51f76662e3780340a019d378c60b32a515af3e14a039bb6",
+      "bytes": 2461
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-node-first.log",
+      "sha256": "10ddd6b6cbab0de001badb05ef43ebf2221730520e839d1268fef72e1c750b6e",
+      "bytes": 6615
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-node-second.log",
+      "sha256": "6dda621aedc0fffde5547eec526fac321455fca689f77da534739ae83321a9bd",
+      "bytes": 5202
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-real-hive-dto.log",
+      "sha256": "5d8952465eee98d3336de619afac42c79194b832411c56371edd30e0009496ef",
+      "bytes": 2213
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-recovery-target-and-upstream.log",
+      "sha256": "806ae2a870e2e4a5bf9b51153f26d4f0bc107dd6cb01bd9c5a5ae007749acb70",
+      "bytes": 2413
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-report-races.log",
+      "sha256": "c31993154f6b544d01ad8104541f67909c6b6db0e6de528fe4d92412d979ec2c",
+      "bytes": 2040
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-saved-device-scope.log",
+      "sha256": "eda9ce1c46dda43e64c615ceaf965502bbac5b9c7448df790c14f9e492e096ee",
+      "bytes": 1991
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-shared-credential-fact.log",
+      "sha256": "92ae80eef41f0e920f9ecf16a027fddf190034ebb165729e520f5b2d3c76f19f",
+      "bytes": 2323
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-shared-credential-ui.log",
+      "sha256": "5f6e68d430afc7869f56a1bc1841c96d26693258450e3d2768fa0f8e3756f6e5",
+      "bytes": 2452
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-boundaries.log",
+      "sha256": "c45fcbcd650cdc9723b9336063d872a0df4fdf6d04fb78ba8dae3f0e5f9f5bdd",
+      "bytes": 3078
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-focused.log",
+      "sha256": "11ca2fa6ef0157754083b6c5fdcfdb79603cfdc1a3b08d13faa16156ca4fb6ff",
+      "bytes": 3130
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-green-ui-integration.log",
+      "sha256": "5ebd7169919c0eb58f7dd1a3dd18f0d372bb731c73aeee57d49f4b905bb3fb72",
+      "bytes": 3133
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-historical-failures.tar.gz",
+      "sha256": "cab6ef6cc0e48d89916f687840aa81824a9b876e6fde37ef0d0ba4dbf5669c21",
+      "bytes": 6828626
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1000-en-dark.png",
+      "sha256": "8e12ae18f6a7b93e1cbac9997c6cd73e45ab32a62b061d6dc110409bc07594ef",
+      "bytes": 67038,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1000-en-light.png",
+      "sha256": "8379b8005ec4ba06d8001bd085235b3be5e82a4bc9db91d7be856c0666378e90",
+      "bytes": 67826,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1000-zh-dark.png",
+      "sha256": "82b184d88585dbc14b81d805be34ac658fb1f4d70370c8f2955c61b0bdb533c8",
+      "bytes": 62531,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1000-zh-light.png",
+      "sha256": "384617ad28d24621caedbb366038b9e02e976c59c42c58c6b5d638af976beb5d",
+      "bytes": 63823,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1080-en-dark.png",
+      "sha256": "b60b43743226cf5ce6a6c6905bf38f4926bd2a1cf2f7f969be5e9248343b0898",
+      "bytes": 68064,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1080-en-light.png",
+      "sha256": "bf3ff50f72e328dda4953d688b545bdfebe4fc22943fecea731c9f65179e0c43",
+      "bytes": 68878,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1080-zh-dark.png",
+      "sha256": "1f7d6c9375218daa5b025fc3c430d1333d1c078f11727188bfd7b672726fb9c4",
+      "bytes": 63561,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-1080-zh-light.png",
+      "sha256": "66abfb5d04c73ab6917f46cca0318fe65e7ee6feec3ec3055c1b8132b8178bab",
+      "bytes": 65072,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-860-en-dark.png",
+      "sha256": "0e028eefb1bfb0fc7c121563e3728aa9fa3c5ba3374a4cdbacc122093d5ac76f",
+      "bytes": 66048,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-860-en-light.png",
+      "sha256": "2920f784d82eef862c93d71c1451df5cfe55663bef9b5c6b539f140c2bc39ffc",
+      "bytes": 66547,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-860-zh-dark.png",
+      "sha256": "67aecc5a5ecbb13f8082fbd9fb6950ba70264af07c3964f049abf26c7559e12c",
+      "bytes": 61269,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-logs-860-zh-light.png",
+      "sha256": "8ffa8e4131e9c61f9868cc42b11e6d10751f309c5b6475c5a503971cd7625412",
+      "bytes": 62198,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-manual-final-paths.json",
+      "sha256": "99e99fe77887efaabdcd47426eb4be25acccf91c8512a629697fd738fe80f539",
+      "bytes": 3926
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-manual-interactions.json",
+      "sha256": "5f7056ad11558fc59d2fbc35343c2d9cd899745a5a6d9ffb4982a46d4e79a19d",
+      "bytes": 1438
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-manual-matrix.json",
+      "sha256": "f8a4932ade76e0bf92fbf64c8d89ade290d95ad6e8408bfcd357cfcbcd60dfda",
+      "bytes": 45754
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-manual-real-hive-dto.json",
+      "sha256": "f6330d34f6c4ada700cdae7fb0b4c20fbe05c22dca9720c9cc0fd22ef6d7ca65",
+      "bytes": 4081
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-manual-targets-v2.json",
+      "sha256": "7e3e91d0ec2095360f5abe48f840e0614dbc7ae4e2efe9b31d35e9b2110d0e53",
+      "bytes": 2243
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-metrics-check-860.png",
+      "sha256": "1086ab0f5ecbe2f5a2457a4c9c6f067a121b9191f327b6eea61b7cad23d02e55",
+      "bytes": 68434,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-n04-apply-details-bottom-1080-zh-dark.png",
+      "sha256": "08a88fd5742ce3e330ddee7a983ea22e3964cad1e8f6bbae9d5571c8de3bd885",
+      "bytes": 152249,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-n04-apply-unknown-1080-zh-dark.png",
+      "sha256": "b7a19a5893e4c21d852aa27b76a029fc9ab1b2c7e628ef74682637e5593623ba",
+      "bytes": 139773,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-network-initial-1080.png",
+      "sha256": "71695aa1706593ad8b745e5719f2746255a7a2da5b12add7d8f49c3c264f2ffa",
+      "bytes": 113646,
+      "width": 1512,
+      "height": 833
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-real-hive-credential-device-860-zh-dark.png",
+      "sha256": "8ae00d44975be4d35a838f834619683d5e145b8b9286bfd5fe56521d20c53b57",
+      "bytes": 87205,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-real-hive-credential-diagnostics-860-zh-dark.png",
+      "sha256": "292fc5268af763d47978b994a6a0199678a4aa2c4bdf2f7582e68ab6f3564dd2",
+      "bytes": 74300,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-autostart-unknown-previous.log",
+      "sha256": "4412d427517683e36e15d9cf7527627274f80b98f274779401fdb2bd8442e650",
+      "bytes": 5436
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-cancel-running.log",
+      "sha256": "1bf3dca79f24e1dd929632f8f774f927e8bf320c53fff98e7994a5a90f31f35e",
+      "bytes": 2615
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-check-presentation.log",
+      "sha256": "28ed822232445b75e5c2841bf28aed531fed0e7e6081c44bf81e45599719d46e",
+      "bytes": 2081
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-client.log",
+      "sha256": "164e9c132da4fc62ab535309591c316953f08f76df407a8471ffdc6e749e77ec",
+      "bytes": 3611
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-all-stages.log",
+      "sha256": "f7fa973cc3e1270cda7d927179a1d8caa29464a864014bce3582babe9a6ad61f",
+      "bytes": 3777
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-copy-corrected.log",
+      "sha256": "19068bf4be1d334c006e3a7fde54cecb98b637a5e1e0003e9f208079571852cd",
+      "bytes": 2660
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-copy.log",
+      "sha256": "29774535de976eb3b3d8eb39d8a04178fdb94841becba037892e6b14052c23c9",
+      "bytes": 1808
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-network-stages.log",
+      "sha256": "16645d63c7cdacdcefb25dfd7a9cf64f0d3bb2022ac84513a2cb22ebf6c65d44",
+      "bytes": 2276
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-os-presentation.log",
+      "sha256": "1556cf811dd0257d22a2e762cdcc25aee1a60daaa8f9fb069356a47e2ca73228",
+      "bytes": 11617
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-real-hive-dto.log",
+      "sha256": "4690acea715be805fffcde536735fa24f76a51e4b85012ce7e60144ea2c22982",
+      "bytes": 3882
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-report-races.log",
+      "sha256": "7faff3087b9f614d124c6aa605dadf4c7d9a2bba1188de459e599506d6c95b2e",
+      "bytes": 3252
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-saved-device-scope.log",
+      "sha256": "a6bb3a5d4dd5b700aa7799fe25b36303a7a9cdab96203126d8da4125b3973a9f",
+      "bytes": 5143
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-shared-credential-fact.log",
+      "sha256": "e7112e7ddea7a95b37434142af6258d898ba72c21cc7ef29ade31994c968f2fd",
+      "bytes": 2953
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-shared-credential-ui.log",
+      "sha256": "78a9a87cf2e1a16f53730b5fd063a762769b3015e5718937c5e64d76884446a1",
+      "bytes": 5662
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-red-ui.log",
+      "sha256": "ec11c7573fc1ca10afb92e4822a5cbe7b21ea81390ee1bdfa9f4079676d2b4cf",
+      "bytes": 23359
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1000-en-dark.png",
+      "sha256": "9f2e2c4bccc3c5b94592e94eab1e5561875cad0db402b477beaf7961adbd6ab8",
+      "bytes": 75713,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1000-en-light.png",
+      "sha256": "dd886e25d4b9a105b48c57ed2543e5d160f042a880658e321066554681c7ab4d",
+      "bytes": 76781,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1000-zh-dark.png",
+      "sha256": "eb409269367e89fb36b4924a15f610ab8f3e98c5473a9cdb0794f8e6a2e674d2",
+      "bytes": 67337,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1000-zh-light.png",
+      "sha256": "28d00a59c7b45fe5f90cc07212f5fb14339797edf207b0d412b1330fbd6a95f6",
+      "bytes": 68527,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1080-en-dark.png",
+      "sha256": "8ef8d2d2c7a63cc0737dd3c5792d1ff45a9cc54809146bbfc147d9813f90ced4",
+      "bytes": 77515,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1080-en-light.png",
+      "sha256": "960ff8cc1c821cd23950085f0a7cd1a0fdabc7d81b5237e40b2d236fa7440696",
+      "bytes": 78494,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1080-zh-dark.png",
+      "sha256": "29c776b0f43972d4a019e915c1ad6751c56c3c2c8115a60fc9c35b05ccf4fea6",
+      "bytes": 69056,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-1080-zh-light.png",
+      "sha256": "3f647e32acb2743b17b5c1959a0de6404665cd03a7739a47cd5cc9f2f651406f",
+      "bytes": 70287,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-860-en-dark.png",
+      "sha256": "211badaa41a203a79a04a12c967ab008cd93e867d1fb935160487c6dce597a94",
+      "bytes": 74040,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-860-en-light.png",
+      "sha256": "85f56c0644e7568af1f06c80e296ead2631f4f977938bb35bea863d4702885c8",
+      "bytes": 74134,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-860-zh-dark.png",
+      "sha256": "0e3d2e8f8f033b7783d7f9cd43048dabbbb528833835b997f55258360ddff111",
+      "bytes": 66830,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-about-860-zh-light.png",
+      "sha256": "9df38b2934bf357aac7ba5fe4ae0f9f4b1b47d42bbf842152325cd7887a9dc72",
+      "bytes": 67075,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1000-en-dark.png",
+      "sha256": "0798a3cf7accd16f247bc64e302d57071aae31d9126e23d12155b694f0e83d16",
+      "bytes": 58583,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1000-en-light.png",
+      "sha256": "8e24d9cc0c2229279bd174a50ddeda056b323053a9726cc6a05f4f27714e4b7f",
+      "bytes": 59385,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1000-zh-dark.png",
+      "sha256": "1aae917f4270e02961392c3bc46d67c2321ae8e691906c994eb6acea6a2bdfc3",
+      "bytes": 49910,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1000-zh-light.png",
+      "sha256": "a9250db3682bd2bf5237ed4b2e7e8fffaa33de040c26a21662c8e9bc5e72cc6b",
+      "bytes": 50898,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1080-en-dark.png",
+      "sha256": "dfac40cece660ea719378b48dac21f0e367efbc4f596f766ece6b4c2aaa71211",
+      "bytes": 60107,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1080-en-light.png",
+      "sha256": "28f2489fa89697c792410800bf70e526e91deca58cba0c02aac9115fe2b6e2db",
+      "bytes": 60920,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1080-zh-dark.png",
+      "sha256": "d31943b526ec70ad8f047075f2a72ff21ecc44a7b11b6e99521c696b20e6bf4d",
+      "bytes": 51253,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-1080-zh-light.png",
+      "sha256": "7d5295da490927d886c3c143aeecd67f9fb88916edb8c7843a75bfee679a9c2f",
+      "bytes": 52248,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-860-en-dark.png",
+      "sha256": "094459a2a4fd357430ad0f413dcc03766c2f05c54b12064ccaf8a3a045a96bd1",
+      "bytes": 56695,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-860-en-light.png",
+      "sha256": "3f2020ea250e31a867b559df32a9b40f79e7b8d6b78aa97be70b4465c9e7f862",
+      "bytes": 57478,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-860-zh-dark.png",
+      "sha256": "1ce441101617d4946acfe8fa2bd1fd2ddb12aa5a212d0c809b91db176e5b1e1c",
+      "bytes": 47980,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-general-860-zh-light.png",
+      "sha256": "a20e8a1254633162c32e059f9adb68e8d7f52afe6e69e798d621ac3a4bf1c8ee",
+      "bytes": 48962,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1000-en-dark.png",
+      "sha256": "8a5b0db15fc1602c0cb8b6aaf99166356ba3829184b441d2381c5454ddcfd5f5",
+      "bytes": 88043,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1000-en-light.png",
+      "sha256": "52bae382aab6dd5183ef4ce230a4b4430741089e105b5f13a0e60be6b5d2ea51",
+      "bytes": 88411,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1000-zh-dark.png",
+      "sha256": "e0fffaf47bc69ed762bcdbfa2478c58037ba54e56ae0f17469ff69dbad59c2ec",
+      "bytes": 79638,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1000-zh-light.png",
+      "sha256": "4bbad3d1e76e030502adf6a45c19a3760f3990e213bd8f0395eb8defcc09cbca",
+      "bytes": 80436,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1080-en-dark.png",
+      "sha256": "9e4a6b55f1e4bc46ef6855e0b21215f805d798a911fb1e7061d9b409e3e460aa",
+      "bytes": 123228,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1080-en-light.png",
+      "sha256": "907def420f36f84c0caa4f569181a2e8b593ae8f69d82a35e9fb2fe58b0f0aa5",
+      "bytes": 123776,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1080-zh-dark.png",
+      "sha256": "e0c7b5125cf16b2288b07f78a5d387f82afc96762f7e54c7e6748e3ebd7c4e17",
+      "bytes": 108717,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-1080-zh-light.png",
+      "sha256": "5cc528c0181f8a158405efe6f491ab1f2bff21afc66475e6113688fa0d28e05e",
+      "bytes": 111319,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-860-en-dark.png",
+      "sha256": "aec90e070f43d9d7e7052345ba89f7c3f4a4092dff164dc8bc08e6a68417e93b",
+      "bytes": 75559,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-860-en-light.png",
+      "sha256": "fc876e62cb32744ae94871074fbf33fd903e163a843fd7f1bccb7d3e8375f8f0",
+      "bytes": 76303,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-860-zh-dark.png",
+      "sha256": "7a6b0e542790b13316e745ae7200cc5f7cda7e8460b8955a6999c15f35ed95e7",
+      "bytes": 68573,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-network-860-zh-light.png",
+      "sha256": "876b8861ab8f68112aae83310352d6c97112ab4aeb2dd2edbf3036f08017a5b4",
+      "bytes": 69286,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1000-en-dark.png",
+      "sha256": "e1b4141e03ddc7f6b759507cb78d6a4d1ccd68ccb1b60d006c0522f852daca3a",
+      "bytes": 84847,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1000-en-light.png",
+      "sha256": "8c757c222d219cb9f1f1a313ac6b9fdb39dabf700d9739f285815c14d66fb301",
+      "bytes": 85371,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1000-zh-dark.png",
+      "sha256": "1bf3c0619ddae9cd57b153bea2753b37238c48738c3564ffa27ea3b49e4545f7",
+      "bytes": 80763,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1000-zh-light.png",
+      "sha256": "b2aa2d31bab472ab83c566d43635c3b0367c7adde31200c327b266594c9c201d",
+      "bytes": 81534,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1080-en-dark.png",
+      "sha256": "be449705c4fa409e813fac604e0e6d165c5400a7ded78bed3bb54cf741740cfa",
+      "bytes": 122783,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1080-en-light.png",
+      "sha256": "f87e0d9a722cdf9c264768bed14e138a1dd7426d0c5f4ec76f75a0227ee8b9b2",
+      "bytes": 123535,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1080-zh-dark.png",
+      "sha256": "b2615e89cc2be843c25e38f4c31b95d5a2eecbac51cddd663c65f93e7242fbb8",
+      "bytes": 108732,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-1080-zh-light.png",
+      "sha256": "5cc528c0181f8a158405efe6f491ab1f2bff21afc66475e6113688fa0d28e05e",
+      "bytes": 111319,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-860-en-dark.png",
+      "sha256": "893f3502357ae1ff36b04cf15eab710d034b78cf06c43226e3fe01f705187824",
+      "bytes": 73253,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-860-en-light.png",
+      "sha256": "faf6365ca270d62755394061b8de6b5b697b824d1fb21ea9d520e3f6d975829a",
+      "bytes": 73558,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-860-zh-dark.png",
+      "sha256": "c9a2c64f1896f0a74cee99b9b18b7569bf363f060e5f00a9ba7b7bfdb3899aeb",
+      "bytes": 68070,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-paths-860-zh-light.png",
+      "sha256": "dd1fce0e1832f294a03d80be5d58b6b6ba88f18e3a54cda090301188c97e1033",
+      "bytes": 68557,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1000-en-dark.png",
+      "sha256": "b4627df08f9eba46505fc0cc0f82096777318aff866d84669c8d4ce8ea169cad",
+      "bytes": 96876,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1000-en-light.png",
+      "sha256": "827c8b23e244b5541606c344f46a7547086a07d22f661fca96f11376e4f5fb56",
+      "bytes": 97141,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1000-zh-dark.png",
+      "sha256": "726323d24d08507f6111e4793f55a0279b142638bcfa10d983dc35945d766071",
+      "bytes": 88684,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1000-zh-light.png",
+      "sha256": "d5585833c10ae2971237fe70b4fd49aae2e99423dfc6c8a39e5b801f3c7c3be0",
+      "bytes": 89414,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1080-en-dark.png",
+      "sha256": "57281bfa34f60d86d25c9335b4069298cdba7a6f8c230a2c43f5b92ba1f30713",
+      "bytes": 111578,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1080-en-light.png",
+      "sha256": "21e8a5e3d3697712ddf727123fbeccc49ca52d53e5c2f49877feb23793400d76",
+      "bytes": 111094,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1080-zh-dark.png",
+      "sha256": "dbb29cced5cd1f8241a4d8ac6f7a98dc250b8d3854e72e7fca7d4487f128b277",
+      "bytes": 113008,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-1080-zh-light.png",
+      "sha256": "8ad3bb9a3ddd3048395475dd6f7a7e22619aed779005098bdca0b0c96e7b9dcd",
+      "bytes": 113586,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-860-en-dark.png",
+      "sha256": "99ad3ea09fe0948d54f977aea1b75047a0b25873be89abd8dab4757b9c086bae",
+      "bytes": 83964,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-860-en-light.png",
+      "sha256": "fcb5985d78fcff1c6a6774ad10e253c526da5c7940297ad0e1c519474aa159b0",
+      "bytes": 84124,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-860-zh-dark.png",
+      "sha256": "3740a1f2762faabd15b81d0f2aa1d63ae113f4c67db62c394f4c59298a213c40",
+      "bytes": 78722,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-860-zh-light.png",
+      "sha256": "9ae0103a502b56069b2dde5217a6ed724078602442952b9d54e70c294118c0b5",
+      "bytes": 79229,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1000-en-dark.png",
+      "sha256": "69f875d599bfcc1656e7ec64ebceee3fa12c8001ff622a9861674638e6ed4064",
+      "bytes": 93636,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1000-en-light.png",
+      "sha256": "ecf3a69ab684c3d8b91381fa3a35da09343fddb663701da8ce5adaf8f574dbad",
+      "bytes": 93488,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1000-zh-dark.png",
+      "sha256": "29a5f8dc7e3cbd30c52f97eae99ba3f8d0b1fd4ba9bbbe45f2b7237fc96b9262",
+      "bytes": 94078,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1000-zh-light.png",
+      "sha256": "3b442238363f555ef09e985ea55c6497882dd0a68c5fc7bb6dd9bcf092e214bb",
+      "bytes": 94486,
+      "width": 1000,
+      "height": 700
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1080-en-dark.png",
+      "sha256": "5e680edf6d3d0b89dd0d6606180c5ed733aa1c5b8b6d8ac82a07ad5a5d7e9343",
+      "bytes": 114588,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1080-en-light.png",
+      "sha256": "b43ad4a623ac6775b389a6d730de8355a2c0ac97c80a8c0c4d19058318bd9b95",
+      "bytes": 114239,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1080-zh-dark.png",
+      "sha256": "7393f4f55ba26f049bb73e8511b9758fe83daa975d4b12a8524443e019fd3cb8",
+      "bytes": 113022,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-1080-zh-light.png",
+      "sha256": "d35c023c401e89a27b211f3e2c53854b26175cbe2c8b72de164e77532ecf38be",
+      "bytes": 113324,
+      "width": 1080,
+      "height": 840
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-860-en-dark.png",
+      "sha256": "92657505a8b1126699abf12a8de4609d4646e7503071284ab34fba2626a31b93",
+      "bytes": 79677,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-860-en-light.png",
+      "sha256": "3a1c1f1a3619c1b3f1c3c1d000e816a5528b83bf72cc15d55bcb7c6dc5cf04d4",
+      "bytes": 79836,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-860-zh-dark.png",
+      "sha256": "27bb7fde0b678565c7795b34ea3c36a56f0c244b2557a82651bdc4a2d97400e3",
+      "bytes": 82159,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-settings-system-bottom-860-zh-light.png",
+      "sha256": "3459d0d200155356789581e74f0eb336074b106836c61c78e9b67ecd156d91fd",
+      "bytes": 82500,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-sidecar-build.log",
+      "sha256": "f0f721567080c360acb86a2f8f2fcc434777061ea838ec2badd4d5480e89305c",
+      "bytes": 1446
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-source-manifest.json",
+      "sha256": "c5812071285f8926fa17bdade95d222cbbfd53cdb24e4aa7b59e48db4070e247",
+      "bytes": 8523
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-source-recovery-focused-860-zh-light.png",
+      "sha256": "2e0ecbd6304927400175d479303ad7672614d096c755704da5d5d2ed1b73727a",
+      "bytes": 95434,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-test-evidence-index.json",
+      "sha256": "0345af27d0be0f4ab75e788fecf512004d8b4446a7a9f3291dfab9fdc09db56b",
+      "bytes": 117434
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-typecheck-first.log",
+      "sha256": "2ea8d18aad2c395aef250a37f8846dde8e5ea7479eb088fe17b798f8d9b7d8ac",
+      "bytes": 1909
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-typecheck-second.log",
+      "sha256": "ca297a14db56cbbd3b5882ab925e46d3610aa6c6a21cb25b151178428379b8d2",
+      "bytes": 1666
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-ui-boundaries-first.log",
+      "sha256": "44b133287564d551f077bf7d9f20eae2c1a1eb3f972132032f5c2698116eeb6f",
+      "bytes": 11467
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-upstream-success-hive-failed-860-zh-light.png",
+      "sha256": "07a4d683454dcf9c48b72bb4d9e6ac4e1e63fd536b7632df9210ccede52fb6aa",
+      "bytes": 71004,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-upstream-targets-bottom-860-zh-light.png",
+      "sha256": "251dc005222120137560a26731b99f0c917434581c56f0f275a7c18db5cdec18",
+      "bytes": 67248,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-v2-autostart-unknown-860-en-dark.png",
+      "sha256": "bd30a83ffa95edaea983ba80b97c4db9d607c678e08f02bfcbf08b215c160c60",
+      "bytes": 84276,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-v2-autostart-unknown-bottom-860-en-dark.png",
+      "sha256": "5d7577c8102b080c1741d1ff6412e8b7457f0b5456733556fcb5bb373f8d5382",
+      "bytes": 81563,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-v2-source-recovery-focused-860-zh-light.png",
+      "sha256": "5928572fb49f7ba79d0a2f58535e89d491c26dadcb34008100a8bd288379ab11",
+      "bytes": 91297,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-v2-upstream-success-hive-failed-860-zh-light.png",
+      "sha256": "f5b132294513c361e627ae8cf9319ed9dbf9e9a1dd4af5c9512e0532e7052420",
+      "bytes": 71715,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-v2-upstream-targets-860-zh-light.png",
+      "sha256": "fa628f747d8ab7b598e3244b74152c4b137df057f7f9c770605fb1ca6f01bd55",
+      "bytes": 68308,
+      "width": 860,
+      "height": 600
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-node.log",
+      "sha256": "b32b4573b02e6dd282f81a50e80fc42aae0291ab6b86ce346c8e9e876e48b8cc",
+      "bytes": 5781
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-typecheck.log",
+      "sha256": "8601128efe1c227f47c274c2cf86b5644b43181e77d08cc5171a1f9b4640e7ab",
+      "bytes": 1836
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-verified-final-ui.log",
+      "sha256": "37b610422cd7b09f5b95af8263968635f274c2c7eff9d42510f340eff8c063a5",
+      "bytes": 10996
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-web-guidelines-review.md",
+      "sha256": "0e5fd638cb1f5c45b806174297774236ccf0f68d503f098d6ee8cfce98fc037e",
+      "bytes": 3242
+    },
+    {
+      "path": "docs/desktop/evidence/2026-10-30-interaction-clarity/t8-web-interface-guidelines.md",
+      "sha256": "d246b026f4f29b5823a9cc857f9edf3d2507002e055e32040cadeaf3b38e0234",
+      "bytes": 8055
+    }
+  ],
+  "commit": "c3cc10284f8379a5343bc52b0b6a73292d22276d"
+}

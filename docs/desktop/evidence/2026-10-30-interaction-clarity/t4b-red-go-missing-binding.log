@@ -1,0 +1,6 @@
+--- FAIL: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed (0.05s)
+    --- FAIL: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/missing_binding (0.05s)
+        desktop_device_recovery_test.go:480: missing binding with existing recovery became {State:unbound Recovery:<nil> Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>}
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.059s
+FAIL

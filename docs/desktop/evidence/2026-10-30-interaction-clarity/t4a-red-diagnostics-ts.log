@@ -1,0 +1,50 @@
+✔ diagnostic DTOs accept the Rust nullable fields and fixed event shape (3.6685ms)
+✔ diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo (0.676709ms)
+✔ logs and exports reject free text, invalid filters, malformed truncation and secret metadata (0.563167ms)
+✔ exports accept the actual development build identity without admitting arbitrary metadata (0.29575ms)
+✔ diagnostics client caches reports without starting on construction and sends only typed commands (0.683333ms)
+✔ safe native logs remain readable without a management instance while report actions fail before transport (0.293ms)
+✔ network/run context changes invalidate the cache and discard in-flight replies (0.21675ms)
+✔ diagnostics rejects wrong report IDs, old revisions and terminal reports returning to running (0.274084ms)
+✔ native payload download waits for matching receipt and keeps success, failure and unknown distinct (10.489042ms)
+✔ native diagnostics and settings copy have complete English translations without translating evidence values (1.282208ms)
+✔ native fixtures use real instance/runtime/preferences contracts and isolate download subscriptions (2.885583ms)
+✔ diagnostic reports logs and exports retain defined detailed supply reason evidence (1.093667ms)
+✖ binding changes invalidate cached and in-flight diagnostic reports (0.492584ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 124.217666
+
+✖ failing tests:
+
+test at tests/diagnostics.test.ts:129:1
+✖ binding changes invalidate cached and in-flight diagnostic reports (0.492584ms)
+  AssertionError [ERR_ASSERTION]: The input did not match the regular expression /context changed/. Input:
+  
+  'Error: DIAGNOSTICS_REPLY_INVALID: report has missing or unknown fields'
+  
+      at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/diagnostics.test.ts:134:2)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: Error: DIAGNOSTICS_REPLY_INVALID: report has missing or unknown fields
+        at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:20:45)
+        at object (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:24:86)
+        at report (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:52:10)
+        at decodeDiagnosticReport (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:76:9)
+        at request (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:102:11)
+        at async Object.start (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/diagnostics.ts:108:98)
+        at async waitForActual (node:assert:646:5)
+        at async strict.rejects (node:assert:769:25)
+        at async TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/diagnostics.test.ts:134:2)
+        at async Test.run (node:internal/test_runner/test:1409:7),
+    expected: /context changed/,
+    operator: 'rejects',
+    diff: 'simple'
+  }

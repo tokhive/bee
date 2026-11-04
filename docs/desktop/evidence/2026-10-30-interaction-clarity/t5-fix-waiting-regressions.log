@@ -1,0 +1,122 @@
+time=2026-11-02T10:09:03.742759+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/polling-stability.spec.ts', '--grep', 'rechecks', '--workers=3']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+Running 5 tests using 3 workers
+
+  ✓  3 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (1.3s)
+  ✘  1 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (6.2s)
+  ✘  2 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (6.3s)
+  ✘  4 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (5.6s)
+  ✓  5 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (691ms)
+
+
+  1) [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator: getByRole('button', { name: '开始贡献', exact: true })
+    Expected: disabled
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: '开始贡献', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '开始贡献', exact: true })
+
+
+      199 |  await page.evaluate(()=>{const w=window as any;w.deviceFail=true;w.release();});
+      200 |  if(action==='stop')await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);
+    > 201 |  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+          |                                                                  ^
+      202 |  await page.clock.runFor(10100);expect(await calls(page,'runtime_'+action)).toHaveLength(action==='stop'?1:0);
+      203 | });
+      204 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:201:66
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-waiting--8f409-blocking-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-waiting--8f409-blocking-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-waiting--8f409-blocking-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop 
+
+    Error: expect(locator).toBeDisabled() failed
+
+    Locator:  getByRole('button', { name: '开始贡献', exact: true })
+    Expected: disabled
+    Received: enabled
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toBeDisabled" getByRole('button', { name: '开始贡献', exact: true }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '开始贡献', exact: true })
+        14 × locator resolved to <button data-size="sm" data-slot="button" data-variant="default" class="ui-button primary ">…</button>
+           - unexpected value "enabled"
+
+
+      199 |  await page.evaluate(()=>{const w=window as any;w.deviceFail=true;w.release();});
+      200 |  if(action==='stop')await expect.poll(async()=>(await calls(page,'runtime_stop')).length).toBe(1);
+    > 201 |  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+          |                                                                  ^
+      202 |  await page.clock.runFor(10100);expect(await calls(page,'runtime_'+action)).toHaveLength(action==='stop'?1:0);
+      203 | });
+      204 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:201:66
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-waiting--32204-blocking-trusted-local-stop-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-waiting--32204-blocking-trusted-local-stop-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-waiting--32204-blocking-trusted-local-stop-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('账号提交条件已经变化，本次未提交。', { exact: true }).last()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('账号提交条件已经变化，本次未提交。', { exact: true }).last() with timeout 5000ms
+      - waiting for getByText('账号提交条件已经变化，本次未提交。', { exact: true }).last()
+
+
+      209 |  await page.evaluate(outcome=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;if(outcome==='identity')w.deviceFail=true;if(outcome==='features')w.accounts.claude.features.authorize={available:false,reason:'update_pending'};if(outcome==='runtime')w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_snapshot'){result.result.runtime.local='running';result.result.runtime.run_id='a'.repeat(32);}return result;};w.release();},outcome);
+      210 |  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+    > 211 |  else{await expect(page.getByText('账号提交条件已经变化，本次未提交。',{exact:true}).last()).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);}
+          |                                                                             ^
+      212 | });
+      213 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/polling-stability.spec.ts:211:77
+
+    Error Context: ../.cache/device-pairing/playwright/polling-stability-official-782d6-hared-read-rechecks-runtime-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/polling-stability-official-782d6-hared-read-rechecks-runtime-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/polling-stability-official-782d6-hared-read-rechecks-runtime-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3 failed
+    [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop 
+    [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop 
+    [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime 
+  2 passed (8.5s)
+
+exit=1

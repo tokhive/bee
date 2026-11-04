@@ -1,0 +1,6 @@
+{"time": "2026-11-02T09:37:45.658877+00:00", "command": ["go", "test", "./desktopbridge", "-run", "^TestOversizedReadResponseTerminatesDispatcher$", "-count=1", "-timeout=15s"], "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+--- FAIL: TestOversizedReadResponseTerminatesDispatcher (5.01s)
+    concurrency_test.go:217: management transport did not reach expected I/O boundary
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	6.936s
+FAIL

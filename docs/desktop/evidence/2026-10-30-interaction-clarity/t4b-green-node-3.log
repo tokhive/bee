@@ -1,0 +1,23 @@
+✔ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (8.827667ms)
+✔ device replies only expose validated public binding data (1.72175ms)
+✔ business rejection preserves operation evidence (0.496584ms)
+✔ device rejection retains structured failure before binding validation (1.336958ms)
+✔ device error details reject unknown fields and invalid observations (0.250125ms)
+✔ native device client uses fixed commands and no frontend config path (0.197ms)
+✔ native context failures retain only a validated observed binding revision (1.277792ms)
+✔ DeviceRecovery client provides explicit prepare confirm and status operations (0.099417ms)
+✔ DeviceRecovery strict public contract rejects secrets missing fields and conflicting URL (0.755917ms)
+✔ DeviceRecovery initial pairing reports the same public transaction with consistent state (0.269458ms)
+✔ startup status survives a bridge query that settles later and rejects old instances (4.383917ms)
+✔ binding replacement invalidates operation generations and clears old facts before new reads (1.472792ms)
+✔ startup decoder rejects malformed context and state/failure contradictions (5.214625ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (1.793584ms)
+✔ absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state (2.764875ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 135.096792

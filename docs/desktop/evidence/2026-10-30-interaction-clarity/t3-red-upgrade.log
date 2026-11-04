@@ -1,0 +1,6 @@
+2026/11/02 11:41:28 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:61442/api/bee/connect delay_backoff=1s
+--- FAIL: TestDesktopConnectionMalformedUpgradeKeepsConnectStage (0.00s)
+    desktop_connection_test.go:385: malformed handshake misclassified: &{Code:unknown_failure Stage:heartbeat OccurredAt:2026-11-02T03:41:28.486448Z Message:failed to WebSocket dial: WebSocket protocol violation: Connection header "" does not contain Upgrade Evidence:map[path:/api/bee/connect target_origin:http://127.0.0.1:61442]} err=<nil>
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.474s
+FAIL

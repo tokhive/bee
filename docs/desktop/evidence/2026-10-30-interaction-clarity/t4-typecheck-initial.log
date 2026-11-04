@@ -1,0 +1,48 @@
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+src/i18n/en.ts(388,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/i18n/en.ts(690,3): error TS1117: An object literal cannot have multiple properties with the same name.
+src/i18n/en.ts(1013,3): error TS1117: An object literal cannot have multiple properties with the same name.
+tests/desktopState.test.ts(27,57): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/desktopState.test.ts(47,15): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/desktopState.test.ts(58,15): error TS2345: Argument of type 'UiFailure | null' is not assignable to parameter of type 'string'.
+  Type 'null' is not assignable to type 'string'.
+tests/desktopState.test.ts(80,15): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/desktopState.test.ts(81,15): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(56,87): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(58,48): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(71,64): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(72,35): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(75,21): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(76,21): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(84,64): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(84,138): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(85,48): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(86,21): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(92,158): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(101,97): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(102,87): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(212,97): error TS2345: Argument of type '() => { views: { openai: { hive: string; device_id: string; paused: boolean; ready: boolean; reasons: string[]; platform: 'openai'; checked_at: string; }; }; error: string; busy: boolean; writeContext: { openai: string; }; }' is not assignable to parameter of type '() => SupplyObservation'.
+  Type '{ views: { openai: { hive: string; device_id: string; paused: boolean; ready: boolean; reasons: string[]; platform: 'openai'; checked_at: string; }; }; error: string; busy: boolean; writeContext: { openai: string; }; }' is not assignable to type 'SupplyObservation'.
+    Types of property 'error' are incompatible.
+      Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(212,136): error TS2345: Argument of type '{ views: { openai: { hive: string; device_id: string; paused: boolean; ready: boolean; reasons: string[]; platform: 'openai'; checked_at: string; }; }; error: string; busy: boolean; writeContext: { openai: string; }; }' is not assignable to parameter of type 'SupplyObservation'.
+  Types of property 'error' are incompatible.
+    Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(223,161): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(225,15): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(232,161): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(234,21): error TS2322: Type 'string' is not assignable to type 'UiFailure'.
+tests/supply.test.ts(234,56): error TS2345: Argument of type '"" | UiFailure' is not assignable to parameter of type 'string'.
+  Type 'UiFailure' is not assignable to type 'string'.
+tests/supply.test.ts(236,88): error TS2322: Type 'string' is not assignable to type 'UiFailure'.

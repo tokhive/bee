@@ -1,0 +1,51 @@
+{
+  "time": "2026-11-02T10:21:39.730800+00:00",
+  "baseline": "987ca4caa58fccbbb61daa2d348a0d36830a146b",
+  "precommitHead": "987ca4caa58fccbbb61daa2d348a0d36830a146b",
+  "files": {
+    "desktop/src-tauri/src/protocol.rs": "c01514871fe6f98027cbb7fba43b5dd07d251fbe084de227a850e61f5c71976c",
+    "desktop/src-tauri/src/sidecar.rs": "3f9698e2bf815e86c07df5e127ac95f8e1f6f73d10911931c5ed9e519d6faa74",
+    "desktop/src-tauri/src/sidecar_tests.rs": "41d46b6f7b719ef51ee4978e5649cb8fbbf781b0eb92b8522ba73fe32d8c0711",
+    "desktop/src/app/NativeApp.tsx": "124c5c47a95817cce2b568f9f8cf8177700339d060c47b7089e10a3b6caae1bc",
+    "desktop/src/features/accounts/NativeAccountActions.tsx": "464a7691c921c500ffb231f1981d9df0d21eb25df098f34e6dc9f78725c12761",
+    "desktop/src/features/accounts/NativeAccountList.tsx": "fc446a1c816e26f1041142ef2a7c60b5dfc05d2af9be8ff4f37ccb8ba4aa2e56",
+    "desktop/src/features/accounts/useAccounts.ts": "e93ff324ce951f482b6185ad583de009b4388d870f37ed82167f7ad514cc936d",
+    "desktop/src/features/lifecycle/NativeRuntimeControls.tsx": "4695ade088b01810e394f28c536fb3884970c49ad229b6f4b3ab4f5b04d0f3be",
+    "desktop/src/features/lifecycle/useRuntime.ts": "b5cb2eba321548a1d8ed83ccd448f45a2dd5f4e68dc9c62b22f9588f285a3890",
+    "desktop/src/features/supply/useSupply.ts": "47fa23987a611bddb06be85aba6f21d8a27f8f8772d1a351c471d405586c12a0",
+    "desktop/src/i18n/en.ts": "4d55124fd96bf3e8892d2439e9f800b8457d79f762738f49bcec87c872c41a06",
+    "desktop/src/presentation/problems.ts": "92ee6da0ce7ac69467fae2dbbdfda441d2945a2fbd9378ed25dda837fa5017e2",
+    "desktop/src/system/desktopState.ts": "0e4e34a15c7154d675e0214d02ef4ece0662e4a5b6e9934835df521712e58f87",
+    "desktop/src/system/failures.ts": "dba16712e5edf44a277cee57e8e843c28ce4084e6f509b878e20ecc92f2f79b5",
+    "desktop/tests/account-auto-read.spec.ts": "a9dd6e7c9da243ad2ca3e53533fab5919e8d1117e8f531aa89b908ed375ab69d",
+    "desktop/tests/desktopState.test.ts": "07aaa6ceb0c2b5eb9af93bb3da528e1ed9b6dd89c0f9908d5debc666469d3933",
+    "desktop/tests/native-runtime.spec.ts": "c6421ddad42fd2a6d15ba94bed6d8b31118e89e79b1ac6d846149dfaf0f3bbda",
+    "desktop/tests/polling-stability.spec.ts": "ceee6d49c055b7801a8ba599a36a5dd05d85d63924e0b69d2d2b9057314de703",
+    "desktop/tests/problems.test.ts": "d8975c3a5cba5c91bca4012dd3368645be409aab84b0b409a4eed91b38be0ceb",
+    "desktop/tests/recovery-navigation.spec.ts": "17ec7fd797cbeeb073b5edf95625d06377279b74bf18c30c3e881911cf49169b",
+    "desktop/tests/supply.test.ts": "85252822917c3129c459b589ebe5ca9e1db7ac54baf83f305e9f2242c55f5011"
+  },
+  "stagedDiffCheckExit": 0,
+  "commit": "9bcb051bea8f3d10df3e2228663478b7bd61e286",
+  "postcommitTime": "2026-11-02T10:22:51.121056+00:00",
+  "sourceHashesUnchangedSinceFinalTests": true,
+  "taskFilesCleanAfterCommit": true,
+  "build": {
+    "revision": "9bcb051bea8f3d10df3e2228663478b7bd61e286",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+9bcb051bea8f-dirty",
+    "binarySha256": "30b67d44b92ddf1d70bfa0f25a4315c507b996cfe15eca5dd78d8dfc3543257c"
+  },
+  "validation": {
+    "browser": "84 passed / 0 failed",
+    "node": "71 passed / 0 failed",
+    "typecheck": 0,
+    "sidecar": "35 passed / 0 failed / 1 ignored",
+    "protocol": "34 passed / 0 failed / 0 ignored"
+  },
+  "postcommitCargo": "Not repeated: source hashes unchanged; only HEAD provenance caused Bee rebuild; final targeted Cargo evidence remains the precommit same-source run."
+}

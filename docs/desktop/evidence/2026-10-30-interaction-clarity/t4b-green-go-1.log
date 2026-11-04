@@ -1,0 +1,33 @@
+--- FAIL: TestDeviceRecoveryInitialUnknownCreateNeverReplays (0.04s)
+    desktop_device_recovery_test.go:35: unknown creation replayed: POST count=0 required=1
+--- FAIL: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption (0.01s)
+    --- FAIL: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/owner (0.01s)
+        desktop_device_recovery_test.go:146: prepare {OperationID: Revision:0 Phase: OldIdentity:<nil> NewIdentity:<nil> Pairing:<nil> Failure:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential creates=0
+    --- FAIL: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/different-owner (0.01s)
+        desktop_device_recovery_test.go:146: prepare {OperationID: Revision:0 Phase: OldIdentity:<nil> NewIdentity:<nil> Pairing:<nil> Failure:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential creates=0
+--- FAIL: TestDeviceRecoveryEligibilityFailsClosed (0.05s)
+    --- FAIL: TestDeviceRecoveryEligibilityFailsClosed/device_replacedƑ (0.01s)
+        desktop_device_recovery_test.go:219: eligibility {OperationID: Revision:0 Phase: OldIdentity:<nil> NewIdentity:<nil> Pairing:<nil> Failure:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential allowed=true creates=0
+    --- FAIL: TestDeviceRecoveryEligibilityFailsClosed/invalid_device_credentialƑ (0.01s)
+        desktop_device_recovery_test.go:219: eligibility {OperationID: Revision:0 Phase: OldIdentity:<nil> NewIdentity:<nil> Pairing:<nil> Failure:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential allowed=true creates=0
+--- FAIL: TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate (0.01s)
+    desktop_device_recovery_test.go:229: recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+--- FAIL: TestDeviceRecoveryDrainingAndAuthoritativeExpiry (0.01s)
+    desktop_device_recovery_test.go:252: no credential recovery transaction exists; prepare explicitly first
+--- FAIL: TestDesktopDevicePairingAndRestart (0.01s)
+    desktop_device_test.go:86: pending: {State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+--- FAIL: TestDesktopDeviceHiveExpiryAllowsExplicitNewCode (0.01s)
+    desktop_device_test.go:233: expiry: {State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+--- FAIL: TestDesktopDeviceUncertainRedeemKeepsTransaction (0.01s)
+    desktop_device_test.go:266: lost failure evidence: recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+--- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown (0.02s)
+    --- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/pending (0.01s)
+        desktop_device_test.go:357: explicit first-attempt expiry became unknown: view={State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} error=recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+    --- FAIL: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming (0.01s)
+        desktop_device_test.go:374: prior unknown exchange cleared by later expiry: {State: Hive: Name: VerificationURL: UserCode: ExpiresAt:<nil> PollInterval:0 Identity:<nil>} recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+--- FAIL: TestDesktopDeviceRemoteErrorCannotEchoPairingToken (0.01s)
+    desktop_device_test.go:427: unsafe remote error: recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.481s
+ok  	github.com/tokhive/bee/desktopbridge	1.390s [no tests to run]
+FAIL

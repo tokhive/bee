@@ -1,0 +1,450 @@
+{
+  "utc": "2026-11-02T13:46:41.580Z",
+  "url": "http://127.0.0.1:1421",
+  "facts": [
+    {
+      "name": "t7-accounts-v2-1080-zh-light.png",
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1080-zh-dark.png",
+      "width": 1080,
+      "height": 840,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1080-en-light.png",
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1080-en-dark.png",
+      "width": 1080,
+      "height": 840,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 842
+          },
+          "columns": "420px 350px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1000-zh-light.png",
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1000-zh-dark.png",
+      "width": 1000,
+      "height": 700,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1000-en-light.png",
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-1000-en-dark.png",
+      "width": 1000,
+      "height": 700,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 762
+          },
+          "columns": "376.359px 313.641px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-860-zh-light.png",
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-860-zh-dark.png",
+      "width": 860,
+      "height": 600,
+      "locale": "zh",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-860-en-light.png",
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "light",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    },
+    {
+      "name": "t7-accounts-v2-860-en-dark.png",
+      "width": 860,
+      "height": 600,
+      "locale": "en",
+      "theme": "dark",
+      "overflow": false,
+      "missing": [],
+      "rows": [
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        },
+        {
+          "rect": {
+            "x": 208,
+            "width": 611
+          },
+          "columns": "294px 245px",
+          "actionAlign": "flex-end",
+          "bodyFont": "13px",
+          "buttonHeights": [
+            32,
+            32
+          ]
+        }
+      ]
+    }
+  ]
+}

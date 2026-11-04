@@ -1,0 +1,86 @@
+{
+  "recordedAt": "2026-11-02T09:44:05.756963+00:00",
+  "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5",
+  "platform": "macOS arm64",
+  "taskFileSha256": {
+    "desktop/src-tauri/src/runtime.rs": "b4d378a2afa93e976f04114654f8fbd23f321d349d4c295c1c57a92d4e692773",
+    "desktop/src-tauri/src/sidecar.rs": "8b2971babb79137cc44d7e768ad3782232fba4e7250eb5c6f51e536bfe71b1e7",
+    "desktop/src-tauri/src/sidecar_tests.rs": "0235dc4b32c199ed1bfa2d1d60f64aff74eae98290499bff0ca7e510e16bd363",
+    "desktop/src-tauri/src/sidecar_native_concurrency_tests.rs": "aa3d06d74bed137a294a0422393e2c66c5be74bfdd87030206c8c1792ec384d7",
+    "desktop/tests/fixtures/bridge-child.mjs": "511051e98707c7831af59089ca54f7fe5a3efb1f7d65242b91013b3d9754a12a",
+    "desktopbridge/server.go": "df454a443ee10b42595dce1f6b0650dfa7d59e7b377d4e24b2218af3ee429c97",
+    "desktopbridge/server_test.go": "0aa78a5a4f69cd2ce60c5aad14fd3677532b214f1d8e59bbce6352c23b26f4c5",
+    "desktopbridge/accounts_test.go": "487ce65aa5fcf28183723212429af634f3a5b0eb950640379a3abdb7a4977427",
+    "desktopbridge/supply_test.go": "e9d81fe8ea53e3f327ff7f4e7df8ec63e9e994b537d15fff5b32458db88c7392",
+    "desktopbridge/concurrency_test.go": "6ea4b0d12467a57ec31fb426a19d41e64ad3cbc28d7a7c5ae00407878f5675dc"
+  },
+  "nativeBuild": {
+    "revision": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+cf573e404d10-dirty",
+    "binarySha256": "4670c31c074488c08b52b216c65e1396976a616057465ce2abba3f99e5d83b56"
+  },
+  "initialRed": [
+    {
+      "log": "t5-transport-red-go.log",
+      "commandFromSession": "go test ./desktopbridge -run TestPlatformReadsBypassSamePlatformWaiters -count=1 -timeout=20s",
+      "fileMtime": "2026-11-02T08:56:29.739160+00:00",
+      "timeEvidence": "file mtime only; original log has no execution header, not an exact run-start timestamp"
+    },
+    {
+      "log": "t5-transport-red-rust.log",
+      "commandFromSession": "PATH=/Users/dayong/.nvm/versions/node/v24.22.1/bin:$PATH RUSTUP_TOOLCHAIN=1.94 cargo test --lib sidecar::tests::platform_reads_bypass_same_platform_waiters_on_owned_pipe -- --exact --nocapture",
+      "fileMtime": "2026-11-02T08:57:27.610860+00:00",
+      "timeEvidence": "file mtime only; original log has no execution header, not an exact run-start timestamp"
+    }
+  ],
+  "commit": "987ca4caa58fccbbb61daa2d348a0d36830a146b",
+  "nativeBuildCommitted": {
+    "revision": "987ca4caa58fccbbb61daa2d348a0d36830a146b",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+987ca4caa58f-dirty",
+    "binarySha256": "0a66ce5405e5a781e6c3f40f87a81bdb1f982061dfe886e69edf988788a9520c"
+  },
+  "postCommitVerification": {
+    "command": [
+      "cargo",
+      "test",
+      "--lib",
+      "--",
+      "--nocapture"
+    ],
+    "log": "t5-transport-rust-lib-committed.log",
+    "passed": 213,
+    "failed": 0,
+    "ignored": 2,
+    "seconds": 81.16
+  },
+  "goFinalCounts": {
+    "desktopbridge": {
+      "passedIncludingSubtests": 126,
+      "topLevelPassed": 55,
+      "failed": 0,
+      "skipped": 0
+    },
+    "cmd/bee": {
+      "passedIncludingSubtests": 10,
+      "topLevelPassed": 8,
+      "failed": 0,
+      "skipped": 0
+    },
+    "agentTargeted": {
+      "passedIncludingSubtests": 318,
+      "topLevelPassed": 85,
+      "failed": 0,
+      "skipped": 0
+    }
+  }
+}

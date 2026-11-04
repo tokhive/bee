@@ -1,0 +1,8 @@
+--- FAIL: TestDesktopConnectionSnapshotDecodingRequiresExplicitDetail (0.00s)
+    desktop_connection_test.go:347: missing connection_detail accepted
+2026/11/02 11:37:27 WARN Hive request failed module=request method=GET path=/api/bee/credentials error="Get \"https://hive.test/api/bee/credentials\": proxyconnect \"http://user:PROXYSECRET@127.0.0.1:7890/?secret=QUERYSECRET\": request credential=DEVICESECRET denied"
+--- FAIL: TestDesktopConnectionSharedRequestErrorIsSafe (0.00s)
+    desktop_connection_test.go:362: shared request error leaked PROXYSECRET
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.837s
+FAIL

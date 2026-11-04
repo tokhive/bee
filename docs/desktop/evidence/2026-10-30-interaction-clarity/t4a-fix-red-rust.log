@@ -1,0 +1,19 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 9.72s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'experience::tests::saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready' (9787197) panicked at src/experience_tests.rs:153:23:
+called `Result::unwrap()` on an `Err` value: BridgeError { code: "NETWORK_APPLY_REQUIRED", message: "saved network revision=1 effective=0; apply the saved network configuration before rechecking", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test experience::tests::saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready ... FAILED
+
+failures:
+
+failures:
+    experience::tests::saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 195 filtered out; finished in 13.24s
+
+error: test failed, to rerun pass `--lib`

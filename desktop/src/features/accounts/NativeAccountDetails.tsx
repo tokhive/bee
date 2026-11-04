@@ -1,7 +1,7 @@
 import {formatDate,currentLocale} from '../../i18n/index';
 import {FailureNotice} from '../../components/ProblemNotice';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import {ArrowRight} from 'lucide-react';
 import type {AccountError,AccountPlatform} from '../../system/accounts';
 import {DetailSheet} from '../../components/DetailSheet';
@@ -25,14 +25,14 @@ export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigat
  const [localDirectory,setLocalDirectory]=useState(source.directory??'');
  const directory=accounts.sourceDirectories[platform]??localDirectory;
  const setDirectory=(value:string)=>{if(accounts.setSourceDirectory)accounts.setSourceDirectory(platform,value);else setLocalDirectory(value);};
- const [open,setOpen]=useState(false);
+ const [open,setOpen]=useState(false),inlineLogin=useRef(false);
  useEffect(()=>{const target=navigationRequest?.target;if(target?.page==='accounts'&&['source','account'].includes(target.section??'')&&(target.platform??'openai')===platform)setOpen(true);},[navigationRequest?.sequence,platform]);
  useEffect(()=>{if(!open)return;const target=navigationRequest?.target;if(target?.page!=='accounts'||target.platform!==platform)return;const timer=setTimeout(()=>{const field=document.querySelector<HTMLInputElement>(`[data-account-source="${platform}"] input`);if(target.section==='source'){field?.closest('details')?.setAttribute('open','');field?.scrollIntoView({block:'nearest'});field?.focus({preventScroll:true});}},0);return()=>clearTimeout(timer);},[open,navigationRequest?.sequence,platform]);
  const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
  const blocked=accountPending(snapshot)||!!accounts.uncertain[platform]||!!accounts.writeBusy[platform];
  const commitDirectory=()=>{if(directory!==(source.directory??''))accounts.edit(platform,{...source,directory:directory||null});};
  const storeNames:Record<string,string>={auto:'自动',file:'文件',keyring:'钥匙串',keychain:'钥匙串'};
- return <DetailSheet open={open} onOpenChange={setOpen} trigger={<Button variant="ghost" size="icon" aria-label={t('{platform} 详情',{platform:label})} title={t('{platform} 详情',{platform:label})}><ArrowRight aria-hidden="true"/></Button>} title={t('{name} 账号详情',{name:label})} description={t('查看账号与额度，管理凭证读取方式。')}>
+ return <DetailSheet open={open} onOpenChange={setOpen} onCloseAutoFocus={event=>{if(inlineLogin.current){event.preventDefault();inlineLogin.current=false;const login=document.querySelector<HTMLElement>('[data-account-platform="claude"] .native-account-login');login?.scrollIntoView({block:'nearest'});login?.focus({preventScroll:true});}}} trigger={<Button variant="ghost" size="icon" aria-label={t('{platform} 详情',{platform:label})} title={t('{platform} 详情',{platform:label})}><ArrowRight aria-hidden="true"/></Button>} title={t('{name} 账号详情',{name:label})} description={t('查看账号与额度，管理凭证读取方式。')}>
   <AccountCheckStatus supply={supply} platform={platform}/>
   <AccountReadHistory accounts={accounts} platform={platform}/>
   <dl className="account-detail-facts"><div><dt>{t('当前账号标识')}</dt><dd>{presentation.identity??t('尚未接入 {platform} 账号',{platform:label})}</dd></div>{snapshot?.selection.state==='selected'&&<><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan??t('套餐待确认')}</dd></div><div><dt>{t('授权到期')}</dt><dd>{accountTime(presentation.expiresAt)}</dd></div></>}{!accounts.dirty[platform]&&snapshot?.candidate.reference&&<div><dt>{t('候选账号标识')}</dt><dd>{snapshot.candidate.fingerprint?.slice(0,16)??t('账号标识待官方核验')}</dd></div>}</dl>
@@ -48,7 +48,7 @@ export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigat
    <p>{t('修改读取位置不会自动更换已接入账号。')}</p>
    {!defaults&&<p>{t('凭证读取方式尚未确认，暂不能启动官方登录。')}</p>}
   </details>
-  <AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} sourceFailure={accounts.sourceReadFailed[platform]}/>
-  <div className="account-detail-actions"><NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="detail" onNavigate={target=>{if(target.page!=='accounts')setOpen(false);navigate?.(target);}}/></div>
+  {!(platform==='claude'&&(accounts.loginFlows.claude||snapshot?.operation?.kind==='authorize'))&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} sourceFailure={accounts.sourceReadFailed[platform]}/>}
+  <div className="account-detail-actions"><NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="detail" onInlineLogin={()=>{inlineLogin.current=true;setOpen(false);}} onNavigate={target=>{if(target.page!=='accounts')setOpen(false);navigate?.(target);}}/></div>
  </DetailSheet>;
 }

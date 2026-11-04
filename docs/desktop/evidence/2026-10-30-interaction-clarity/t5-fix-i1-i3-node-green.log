@@ -1,0 +1,59 @@
+time=2026-11-02T10:04:30.833280+00:00
+command=['node', '--test', 'tests/desktopState.test.ts']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (4.194875ms)
+✔ old child and network revision results never replace current state (0.959708ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (0.638541ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (1.260875ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (0.46825ms)
+✔ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (0.480208ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (0.425166ms)
+✖ device read failure stays on the device and still publishes account defaults (0.793875ms)
+✔ replacement refresh starts after the status listener returns (1.221458ms)
+✔ a superseded initial status rejection cannot block a ready event (0.293ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (0.787ms)
+✔ shared and independent platform facts publish before slow openai account (0.310292ms)
+✔ shared and independent platform facts publish before slow claude account (0.192333ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.304584ms)
+✔ failed platform reads retain confirmed history and its real retry time (0.269875ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.391083ms)
+✔ supply progress follows its platform request rather than another platform busy flag (4.921791ms)
+✔ coordinator preserves the actual retry timer for reconciling (0.46275ms)
+✔ coordinator preserves the actual retry timer for pending (0.727417ms)
+✔ coordinator preserves the actual retry timer for running (0.364542ms)
+✔ identity failure still fences each local account receipt before publishing local facts (0.455417ms)
+ℹ tests 21
+ℹ suites 0
+ℹ pass 20
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 105.956291
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:61:1
+✖ device read failure stays on the device and still publishes account defaults (0.793875ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + {
+  +   revision: 1
+  + }
+  - undefined
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:70:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { revision: 1 },
+    expected: undefined,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+exit=1

@@ -1,0 +1,12 @@
+time=2026-11-02T08:42:51.861716+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=T5 frontend working tree; browser mocked native IPC
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'native-experience.spec.ts', '-g', 'management startup failure']
+
+Running 1 test using 1 worker
+
+  ✓  1 [chromium] › tests/native-experience.spec.ts:50:1 › management startup failure keeps safe native logs accessible without enabling diagnostics (1.1s)
+
+  1 passed (1.9s)
+
+exit=0

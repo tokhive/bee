@@ -1,0 +1,131 @@
+{
+  "utc": "2026-11-02T11:00:17.576Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "script": "/tmp/t6-manual-round4.mjs",
+  "records": [
+    {
+      "case": "fixed keyboard cancellation returns focus",
+      "utc": "2026-11-02T11:00:15.089Z",
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "closed": true,
+        "focus": "重新绑定设备",
+        "outline": "solid",
+        "outlineWidth": "2px",
+        "animation": "0s",
+        "transition": "0s",
+        "writes": []
+      }
+    },
+    {
+      "case": "final pending first viewport and contrast",
+      "utc": "2026-11-02T11:00:16.145Z",
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "reduced": true,
+        "overflow": false,
+        "items": [
+          {
+            "selector": ".device-transaction-heading button",
+            "text": "打开 Hive 确认网页",
+            "rect": {
+              "x": 664.625,
+              "y": 460.5,
+              "width": 155.375,
+              "height": 33.5,
+              "bottom": 494
+            },
+            "font": "13px",
+            "foreground": "rgb(255, 255, 255)",
+            "background": "rgb(48, 49, 46)",
+            "contrast": 13.09
+          },
+          {
+            "selector": ".pairing-phase",
+            "text": "等待网页确认",
+            "rect": {
+              "x": 207,
+              "y": 460.5,
+              "width": 96,
+              "height": 24,
+              "bottom": 484.5
+            },
+            "font": "16px",
+            "foreground": "rgb(44, 43, 40)",
+            "background": "rgb(255, 255, 255)",
+            "contrast": 14.16
+          },
+          {
+            "selector": ".runtime-note",
+            "text": "请先完成设备核对与绑定。",
+            "rect": {
+              "x": 207,
+              "y": 191.5,
+              "width": 613,
+              "height": 18,
+              "bottom": 209.5
+            },
+            "font": "12px",
+            "foreground": "rgb(105, 102, 95)",
+            "background": "rgb(255, 255, 255)",
+            "contrast": 5.73
+          },
+          {
+            "selector": ".side-note",
+            "text": "long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example等待完成设备配对",
+            "rect": {
+              "x": 17,
+              "y": 382.5,
+              "width": 143,
+              "height": 131,
+              "bottom": 513.5
+            },
+            "font": "12px",
+            "foreground": "rgb(105, 102, 95)",
+            "background": "rgb(247, 246, 243)",
+            "contrast": 5.3
+          },
+          {
+            "selector": ".preparation-steps ol",
+            "text": "绑定本机设备在 Hive 网页确认接入 AI 账号开始贡献并按平台恢复接单",
+            "rect": {
+              "x": 207,
+              "y": 340,
+              "width": 613,
+              "height": 18,
+              "bottom": 358
+            },
+            "font": "12px",
+            "foreground": "rgb(105, 102, 95)",
+            "background": "rgb(255, 255, 255)",
+            "contrast": 5.73
+          }
+        ]
+      }
+    },
+    {
+      "case": "expanded long failure preserves right action and evidence",
+      "utc": "2026-11-02T11:00:16.535Z",
+      "result": {
+        "viewport": [
+          860,
+          600
+        ],
+        "overflow": false,
+        "cardOverflow": false,
+        "detailsOpen": true,
+        "details": "Error code: http_rejected\nFailed check: device_identity\nObserved at: Nov 2, 2026, 7:00:16 PM\nTarget: https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example\nPath: /api/bee/identity\nHTTP status: 503\nSafe response: Hive upstream temporarily unavailable\nOriginal cause: GET /api/bee/identity HTTP 503; preview upstream unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; retry-after observation unavailable; ",
+        "action": [],
+        "writes": []
+      }
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+time=2026-11-02T08:32:14.171663+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8 + T5 precommit
+source=T5 coordinator/read-only derivation/NativeApp fixture; no real accounts
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'recovery-navigation.spec.ts', 'polling-stability.spec.ts']
+
+Running 28 tests using 5 workers
+
+  ✓   2 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: running (2.9s)
+  ✓   3 [chromium] › tests/polling-stability.spec.ts:52:1 › fresh supply reads keep pause available and serialize a single explicit change (3.1s)
+  ✓   5 [chromium] › tests/polling-stability.spec.ts:25:39 › normal runtime polling keeps the main action stable: stopped (3.4s)
+  ✓   1 [chromium] › tests/polling-stability.spec.ts:34:1 › an explicit start during a runtime read waits and submits once (3.4s)
+  ✓   4 [chromium] › tests/polling-stability.spec.ts:43:1 › a failed runtime read cancels the waiting start without replay (3.4s)
+  ✓   6 [chromium] › tests/polling-stability.spec.ts:63:1 › pairing polling keeps the website action stable (1.1s)
+  ✓   7 [chromium] › tests/polling-stability.spec.ts:71:1 › account status polling never disables cancel login and the explicit cancel is not lost (2.5s)
+  ✓   8 [chromium] › tests/polling-stability.spec.ts:90:1 › repeated runtime read failures retain feedback and continue read-only recovery (2.3s)
+  ✓   9 [chromium] › tests/polling-stability.spec.ts:104:1 › a waiting platform resume cannot apply to a replacement account (2.3s)
+  ✓  10 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: fresh-revision (2.5s)
+  ✓  11 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: candidate-changed (3.1s)
+  ✓  14 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (1.9s)
+  ✓  13 [chromium] › tests/polling-stability.spec.ts:136:1 › a coordinated account read recovers at the same revision and accepts the next explicit action (2.0s)
+  ✓  12 [chromium] › tests/polling-stability.spec.ts:113:75 › a coordinated account confirmation revalidates the pending read: read-failed (2.1s)
+  ✓  15 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the start receipt (2.0s)
+  ✓  16 [chromium] › tests/polling-stability.spec.ts:160:36 › central readback rejects runtime revision below the stop receipt (1.3s)
+  ✓  17 [chromium] › tests/polling-stability.spec.ts:171:1 › central account readback below a successful receipt remains blocked with revision evidence (2.1s)
+  ✓  18 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_start receipt revision (2.3s)
+  ✓  20 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 概览 (2.1s)
+  ✓  19 [chromium] › tests/polling-stability.spec.ts:182:61 › central account readback enforces the authorize_cancel receipt revision (2.3s)
+  ✓  21 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through 诊断 (1.8s)
+  ✓  23 [chromium] › tests/recovery-navigation.spec.ts:12:1 › binding replacement isolates unsaved settings drafts (1.4s)
+  ✓  22 [chromium] › tests/recovery-navigation.spec.ts:7:46 › settings draft survives a real page round trip through AI 账号 (1.7s)
+  ✓  24 [chromium] › tests/recovery-navigation.spec.ts:16:1 › source repair navigates to a settings target and returns to the same platform draft (2.1s)
+  ✓  25 [chromium] › tests/recovery-navigation.spec.ts:26:1 › unknown account result remains read only across navigation and a new instance clears the old operation (2.2s)
+  ✓  26 [chromium] › tests/recovery-navigation.spec.ts:32:1 › page navigation reveals the heading while background refresh preserves scroll and focus (2.2s)
+  ✓  28 [chromium] › tests/recovery-navigation.spec.ts:49:1 › a newer diagnostic identity rejection blocks account submission and runtime start (1.5s)
+  ✓  27 [chromium] › tests/recovery-navigation.spec.ts:40:1 › a diagnostic report survives pages and a network change off-page invalidates it (1.7s)
+
+  28 passed (15.6s)
+
+exit=0

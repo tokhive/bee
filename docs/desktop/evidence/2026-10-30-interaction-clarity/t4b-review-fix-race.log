@@ -1,0 +1,1003 @@
+command: go test -race ./agent ./desktopbridge -run 'Desktop(Device|Account|Supply|Authorize|Runtime|Session)|DeviceRecovery' -count=1 -v
+time: 2026-11-02T07:53:05.812597+00:00
+baseline: a114c99ba4131ed11847e0bec0daf5861b045a72
+coverage: DeviceRecovery and all admission consumers: DesktopDevice/Accounts/Supply/Authorize/Runtime/Session; no real account or configuration
+sha256 0d236f987fa0ae8efb71fa114ea7f430cef1eda21b7f70e0632bc69a709e183b agent/desktop_device.go
+sha256 453ab81073aa34cfe5a1c941e5519fab25a9cdcd8a67c8d6e9b615610f1908c3 agent/desktop_device_recovery.go
+sha256 a1964f4e05f0cb1d8cfe18caa611e7b983e39b8b034c284c3b48589f5c21ae59 agent/desktop_device_recovery_test.go
+=== RUN   TestDesktopAccountsHive
+=== RUN   TestDesktopAccountsHive/ready
+=== RUN   TestDesktopAccountsHive/unbound
+=== RUN   TestDesktopAccountsHive/identity_changed
+=== RUN   TestDesktopAccountsHive/revoked
+=== RUN   TestDesktopAccountsHive/fingerprint_changed
+=== RUN   TestDesktopAccountsHive/generation_changed
+=== RUN   TestDesktopAccountsHive/revision_changed
+=== RUN   TestDesktopAccountsHive/unknown
+=== RUN   TestDesktopAccountsHive/quota_exhausted
+=== RUN   TestDesktopAccountsHive/rate_limited
+=== RUN   TestDesktopAccountsHive/stale
+=== RUN   TestDesktopAccountsHive/old_rate_limited
+=== RUN   TestDesktopAccountsHive/pending
+--- PASS: TestDesktopAccountsHive (0.31s)
+    --- PASS: TestDesktopAccountsHive/ready (0.09s)
+    --- PASS: TestDesktopAccountsHive/unbound (0.01s)
+    --- PASS: TestDesktopAccountsHive/identity_changed (0.01s)
+    --- PASS: TestDesktopAccountsHive/revoked (0.01s)
+    --- PASS: TestDesktopAccountsHive/fingerprint_changed (0.01s)
+    --- PASS: TestDesktopAccountsHive/generation_changed (0.01s)
+    --- PASS: TestDesktopAccountsHive/revision_changed (0.01s)
+    --- PASS: TestDesktopAccountsHive/unknown (0.01s)
+    --- PASS: TestDesktopAccountsHive/quota_exhausted (0.02s)
+    --- PASS: TestDesktopAccountsHive/rate_limited (0.02s)
+    --- PASS: TestDesktopAccountsHive/stale (0.02s)
+    --- PASS: TestDesktopAccountsHive/old_rate_limited (0.03s)
+    --- PASS: TestDesktopAccountsHive/pending (0.03s)
+=== RUN   TestDesktopAccountsHiveScopedQuotaIsNotPlatformExhaustion
+--- PASS: TestDesktopAccountsHiveScopedQuotaIsNotPlatformExhaustion (0.01s)
+=== RUN   TestDesktopAccountsOfficialMetadataFIFO
+--- PASS: TestDesktopAccountsOfficialMetadataFIFO (0.00s)
+=== RUN   TestDesktopAccountsOfficialVersionPipeDeadline
+=== RUN   TestDesktopAccountsOfficialVersionPipeDeadline/openai
+=== RUN   TestDesktopAccountsOfficialVersionPipeDeadline/claude
+--- PASS: TestDesktopAccountsOfficialVersionPipeDeadline (1.06s)
+    --- PASS: TestDesktopAccountsOfficialVersionPipeDeadline/openai (0.55s)
+    --- PASS: TestDesktopAccountsOfficialVersionPipeDeadline/claude (0.50s)
+=== RUN   TestDesktopAccountsOfficial
+=== RUN   TestDesktopAccountsOfficial/openai/ready
+=== RUN   TestDesktopAccountsOfficial/openai/source_changed
+=== RUN   TestDesktopAccountsOfficial/openai/token_changed
+=== RUN   TestDesktopAccountsOfficial/openai/expired
+=== RUN   TestDesktopAccountsOfficial/openai/no_scope
+=== RUN   TestDesktopAccountsOfficial/openai/429
+=== RUN   TestDesktopAccountsOfficial/openai/network
+=== RUN   TestDesktopAccountsOfficial/openai/null_quota
+=== RUN   TestDesktopAccountsOfficial/openai/120
+=== RUN   TestDesktopAccountsOfficial/claude/ready
+=== RUN   TestDesktopAccountsOfficial/claude/source_changed
+=== RUN   TestDesktopAccountsOfficial/claude/token_changed
+=== RUN   TestDesktopAccountsOfficial/claude/expired
+=== RUN   TestDesktopAccountsOfficial/claude/no_scope
+=== RUN   TestDesktopAccountsOfficial/claude/429
+=== RUN   TestDesktopAccountsOfficial/claude/network
+=== RUN   TestDesktopAccountsOfficial/claude/null_quota
+=== RUN   TestDesktopAccountsOfficial/claude/120
+--- PASS: TestDesktopAccountsOfficial (0.07s)
+    --- PASS: TestDesktopAccountsOfficial/openai/ready (0.01s)
+    --- PASS: TestDesktopAccountsOfficial/openai/source_changed (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/token_changed (0.01s)
+    --- PASS: TestDesktopAccountsOfficial/openai/expired (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/no_scope (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/429 (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/network (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/null_quota (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/openai/120 (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/ready (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/source_changed (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/token_changed (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/expired (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/no_scope (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/429 (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/network (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/null_quota (0.00s)
+    --- PASS: TestDesktopAccountsOfficial/claude/120 (0.00s)
+=== RUN   TestDesktopAccountsOfficialDefaultSourceChanges
+--- PASS: TestDesktopAccountsOfficialDefaultSourceChanges (0.00s)
+=== RUN   TestDesktopAccountsOfficialCacheBoundaries
+--- PASS: TestDesktopAccountsOfficialCacheBoundaries (0.00s)
+=== RUN   TestDesktopAccountsOfficialReadbackFailureIsUnconfirmed
+--- PASS: TestDesktopAccountsOfficialReadbackFailureIsUnconfirmed (0.00s)
+=== RUN   TestDesktopAccountsOfficialRetainsValidQuotaOnProfileFailure
+--- PASS: TestDesktopAccountsOfficialRetainsValidQuotaOnProfileFailure (0.00s)
+=== RUN   TestDesktopAccountsOfficialProfileSchemaEvidence
+--- PASS: TestDesktopAccountsOfficialProfileSchemaEvidence (0.00s)
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/success
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/lost_put
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/source_changed
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/owner_changed
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/storage_corrupt
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/pause_false
+=== RUN   TestDesktopAccountSelectionDurablePauseAndRecovery/save_failed
+--- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery (0.38s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/success (0.10s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/lost_put (0.10s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/source_changed (0.06s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/owner_changed (0.01s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/storage_corrupt (0.02s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/pause_false (0.04s)
+    --- PASS: TestDesktopAccountSelectionDurablePauseAndRecovery/save_failed (0.05s)
+=== RUN   TestDesktopAccountSelectionPendingDoesNotBlockQueries
+--- PASS: TestDesktopAccountSelectionPendingDoesNotBlockQueries (0.02s)
+=== RUN   TestDesktopAccountSelectionUnknownPauseSurvivesRestartWithoutReplay
+--- PASS: TestDesktopAccountSelectionUnknownPauseSurvivesRestartWithoutReplay (0.06s)
+=== RUN   TestDesktopAccountSelectionClaudeAndLocalClear
+--- PASS: TestDesktopAccountSelectionClaudeAndLocalClear (0.08s)
+=== RUN   TestDesktopAccountStateMigrationPreservesPrivateBackup
+--- PASS: TestDesktopAccountStateMigrationPreservesPrivateBackup (0.02s)
+=== RUN   TestDesktopAccountStateBackupFailurePreservesOriginal
+--- PASS: TestDesktopAccountStateBackupFailurePreservesOriginal (0.00s)
+=== RUN   TestDesktopAccountStateV2ScopeValidation
+=== RUN   TestDesktopAccountStateV2ScopeValidation/valid
+=== RUN   TestDesktopAccountStateV2ScopeValidation/wrong_scope
+=== RUN   TestDesktopAccountStateV2ScopeValidation/null_selections
+=== RUN   TestDesktopAccountStateV2ScopeValidation/missing_clean
+=== RUN   TestDesktopAccountStateV2ScopeValidation/active_and_clean
+=== RUN   TestDesktopAccountStateV2ScopeValidation/unknown_field
+=== RUN   TestDesktopAccountStateV2ScopeValidation/case_alias
+--- PASS: TestDesktopAccountStateV2ScopeValidation (0.01s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/valid (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/wrong_scope (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/null_selections (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/missing_clean (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/active_and_clean (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/unknown_field (0.00s)
+    --- PASS: TestDesktopAccountStateV2ScopeValidation/case_alias (0.00s)
+=== RUN   TestDesktopAccountStateSelectionAndIntentRoundTrip
+=== RUN   TestDesktopAccountStateSelectionAndIntentRoundTrip/missing_selection
+=== RUN   TestDesktopAccountStateSelectionAndIntentRoundTrip/ambiguous_source
+=== RUN   TestDesktopAccountStateSelectionAndIntentRoundTrip/stale_revision
+=== RUN   TestDesktopAccountStateSelectionAndIntentRoundTrip/unsafe_revision
+--- PASS: TestDesktopAccountStateSelectionAndIntentRoundTrip (0.04s)
+    --- PASS: TestDesktopAccountStateSelectionAndIntentRoundTrip/missing_selection (0.01s)
+    --- PASS: TestDesktopAccountStateSelectionAndIntentRoundTrip/ambiguous_source (0.01s)
+    --- PASS: TestDesktopAccountStateSelectionAndIntentRoundTrip/stale_revision (0.00s)
+    --- PASS: TestDesktopAccountStateSelectionAndIntentRoundTrip/unsafe_revision (0.01s)
+=== RUN   TestDesktopAccountsState
+=== RUN   TestDesktopAccountsState/absent
+=== RUN   TestDesktopAccountsState/private
+=== RUN   TestDesktopAccountsState/permission
+=== RUN   TestDesktopAccountsState/symlink
+=== RUN   TestDesktopAccountsState/version
+=== RUN   TestDesktopAccountsState/duplicate
+=== RUN   TestDesktopAccountsState/corrupt
+=== RUN   TestDesktopAccountsState/missing
+=== RUN   TestDesktopAccountsState/null
+--- PASS: TestDesktopAccountsState (0.03s)
+    --- PASS: TestDesktopAccountsState/absent (0.01s)
+    --- PASS: TestDesktopAccountsState/private (0.02s)
+    --- PASS: TestDesktopAccountsState/permission (0.00s)
+    --- PASS: TestDesktopAccountsState/symlink (0.00s)
+    --- PASS: TestDesktopAccountsState/version (0.00s)
+    --- PASS: TestDesktopAccountsState/duplicate (0.00s)
+    --- PASS: TestDesktopAccountsState/corrupt (0.00s)
+    --- PASS: TestDesktopAccountsState/missing (0.00s)
+    --- PASS: TestDesktopAccountsState/null (0.00s)
+=== RUN   TestDesktopAccountsIssues
+--- PASS: TestDesktopAccountsIssues (0.05s)
+=== RUN   TestDesktopAccountsIssuesStorageFailureKeepsProblems
+--- PASS: TestDesktopAccountsIssuesStorageFailureKeepsProblems (0.00s)
+=== RUN   TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover
+=== RUN   TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/unknown
+=== RUN   TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/stale
+=== RUN   TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/rate_limited
+--- PASS: TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover (0.03s)
+    --- PASS: TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/unknown (0.01s)
+    --- PASS: TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/stale (0.01s)
+    --- PASS: TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover/rate_limited (0.01s)
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/success
+2026/11/02 15:53:16 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59486/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/lost_confirm
+2026/11/02 15:53:16 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59489/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/confirm_unknown
+2026/11/02 15:53:16 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59492/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:16 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59492/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59492/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/wrong_generation
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59497/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59497/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59497/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/pending_changed
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59502/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/pause_failed
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/confirm_not_submitted
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59513/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/save_failed
+2026/11/02 15:53:17 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59516/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59516/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/source_changed
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59522/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59522/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59522/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/stop_before_connection
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/committed_token_revision
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59533/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59533/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/final_sync_save_failed
+2026/11/02 15:53:18 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59537/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59537/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/restart_reconcile
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59543/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59543/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/success
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59548/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/lost_confirm
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59551/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/confirm_unknown
+2026/11/02 15:53:19 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59554/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59554/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59554/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/wrong_generation
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59561/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59561/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59561/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/pending_changed
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59568/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/pause_failed
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/confirm_not_submitted
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59573/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/save_failed
+2026/11/02 15:53:20 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59576/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:21 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59576/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/stop_before_connection
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/committed_token_revision
+2026/11/02 15:53:21 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59583/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:21 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59583/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/final_sync_save_failed
+2026/11/02 15:53:21 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59587/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:21 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59587/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/restart_reconcile
+2026/11/02 15:53:22 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59593/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:22 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59593/api/bee/agent delay_backoff=1s
+--- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults (5.81s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/success (0.19s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/lost_confirm (0.19s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/confirm_unknown (0.23s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/wrong_generation (0.22s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/pending_changed (0.14s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/pause_failed (0.10s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/confirm_not_submitted (0.20s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/save_failed (0.51s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/source_changed (0.24s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/stop_before_connection (0.13s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/committed_token_revision (0.29s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/final_sync_save_failed (0.26s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/openai/restart_reconcile (0.30s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/success (0.19s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/lost_confirm (0.20s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/confirm_unknown (0.25s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/wrong_generation (0.28s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/pending_changed (0.15s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/pause_failed (0.11s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/confirm_not_submitted (0.22s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/save_failed (0.27s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/stop_before_connection (0.15s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/committed_token_revision (0.28s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/final_sync_save_failed (0.36s)
+    --- PASS: TestDesktopAccountSwitchDurableConfirmationAndUnknownResults/claude/restart_reconcile (0.35s)
+=== RUN   TestDesktopAccountSwitchConnectionOwnership
+=== RUN   TestDesktopAccountSwitchConnectionOwnership/conflict
+2026/11/02 15:53:22 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59602/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchConnectionOwnership/no_relay
+2026/11/02 15:53:22 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59604/api/bee/agent delay_backoff=1s
+=== RUN   TestDesktopAccountSwitchConnectionOwnership/close
+2026/11/02 15:53:22 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59606/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:22 WARN Hive connection lost module=connect error="failed to ping: failed to wait for pong: context canceled"
+--- PASS: TestDesktopAccountSwitchConnectionOwnership (0.07s)
+    --- PASS: TestDesktopAccountSwitchConnectionOwnership/conflict (0.03s)
+    --- PASS: TestDesktopAccountSwitchConnectionOwnership/no_relay (0.03s)
+    --- PASS: TestDesktopAccountSwitchConnectionOwnership/close (0.01s)
+=== RUN   TestDesktopAccountsDefaults
+--- PASS: TestDesktopAccountsDefaults (0.00s)
+=== RUN   TestDesktopAccountsDetect
+=== RUN   TestDesktopAccountsDetect/openai/valid
+=== RUN   TestDesktopAccountsDetect/openai/expired
+=== RUN   TestDesktopAccountsDetect/openai/missing
+=== RUN   TestDesktopAccountsDetect/openai/corrupt
+=== RUN   TestDesktopAccountsDetect/openai/symlink
+=== RUN   TestDesktopAccountsDetect/openai/permission
+=== RUN   TestDesktopAccountsDetect/claude/valid
+=== RUN   TestDesktopAccountsDetect/claude/expired
+=== RUN   TestDesktopAccountsDetect/claude/missing
+=== RUN   TestDesktopAccountsDetect/claude/corrupt
+=== RUN   TestDesktopAccountsDetect/claude/symlink
+=== RUN   TestDesktopAccountsDetect/claude/permission
+=== RUN   TestDesktopAccountsDetect/directory_validation
+=== RUN   TestDesktopAccountsDetect/Claude_namespace_NFC_without_path_resolution
+--- PASS: TestDesktopAccountsDetect (0.02s)
+    --- PASS: TestDesktopAccountsDetect/openai/valid (0.00s)
+    --- PASS: TestDesktopAccountsDetect/openai/expired (0.00s)
+    --- PASS: TestDesktopAccountsDetect/openai/missing (0.00s)
+    --- PASS: TestDesktopAccountsDetect/openai/corrupt (0.00s)
+    --- PASS: TestDesktopAccountsDetect/openai/symlink (0.00s)
+    --- PASS: TestDesktopAccountsDetect/openai/permission (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/valid (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/expired (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/missing (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/corrupt (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/symlink (0.00s)
+    --- PASS: TestDesktopAccountsDetect/claude/permission (0.00s)
+    --- PASS: TestDesktopAccountsDetect/directory_validation (0.00s)
+    --- PASS: TestDesktopAccountsDetect/Claude_namespace_NFC_without_path_resolution (0.00s)
+=== RUN   TestDesktopAccountsBlockedActions
+--- PASS: TestDesktopAccountsBlockedActions (0.00s)
+=== RUN   TestDesktopAccountsDetectValidationAndAuto
+--- PASS: TestDesktopAccountsDetectValidationAndAuto (0.00s)
+=== RUN   TestDesktopAccountsDetectExpiresWithoutReadingSource
+--- PASS: TestDesktopAccountsDetectExpiresWithoutReadingSource (0.00s)
+=== RUN   TestDesktopAccountsUnknownPlanIsNullInPublicDTO
+--- PASS: TestDesktopAccountsUnknownPlanIsNullInPublicDTO (0.00s)
+=== RUN   TestDesktopAuthorizeProcessHelper
+--- PASS: TestDesktopAuthorizeProcessHelper (0.00s)
+=== RUN   TestDesktopAuthorizeRequiresVerifiedNewSource
+=== RUN   TestDesktopAuthorizeRequiresVerifiedNewSource/success
+=== RUN   TestDesktopAuthorizeRequiresVerifiedNewSource/unchanged
+=== RUN   TestDesktopAuthorizeRequiresVerifiedNewSource/exit_error
+=== RUN   TestDesktopAuthorizeRequiresVerifiedNewSource/unsupported
+--- PASS: TestDesktopAuthorizeRequiresVerifiedNewSource (0.46s)
+    --- PASS: TestDesktopAuthorizeRequiresVerifiedNewSource/success (0.18s)
+    --- PASS: TestDesktopAuthorizeRequiresVerifiedNewSource/unchanged (0.12s)
+    --- PASS: TestDesktopAuthorizeRequiresVerifiedNewSource/exit_error (0.12s)
+    --- PASS: TestDesktopAuthorizeRequiresVerifiedNewSource/unsupported (0.04s)
+=== RUN   TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess
+=== RUN   TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/cancel
+=== RUN   TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/close
+=== RUN   TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/timeout
+--- PASS: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess (0.55s)
+    --- PASS: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/cancel (0.21s)
+    --- PASS: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/close (0.19s)
+    --- PASS: TestDesktopAuthorizeCancelAndCloseJoinOwnedProcess/timeout (0.15s)
+=== RUN   TestDesktopAuthorizeSourceRevisionRace
+    desktop_authorize_test.go:200: source reads=4 operation=failed
+--- PASS: TestDesktopAuthorizeSourceRevisionRace (0.13s)
+=== RUN   TestDesktopAuthorizeStartErrorLeaksPath
+--- PASS: TestDesktopAuthorizeStartErrorLeaksPath (0.01s)
+=== RUN   TestDesktopAuthorizeUnchangedExistingSource
+--- PASS: TestDesktopAuthorizeUnchangedExistingSource (0.12s)
+=== RUN   TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation
+=== RUN   TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation/false
+=== RUN   TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation/true
+--- PASS: TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation (0.25s)
+    --- PASS: TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation/false (0.12s)
+    --- PASS: TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation/true (0.13s)
+=== RUN   TestDesktopAuthorizeNamespaceAndEnvironment
+--- PASS: TestDesktopAuthorizeNamespaceAndEnvironment (0.00s)
+=== RUN   TestDesktopAuthorizeRejectsStaleAndRunningBeforeSourceAccess
+--- PASS: TestDesktopAuthorizeRejectsStaleAndRunningBeforeSourceAccess (0.00s)
+=== RUN   TestDesktopAuthorizeAutoLoginCannotFallBackToAnotherStore
+--- PASS: TestDesktopAuthorizeAutoLoginCannotFallBackToAnotherStore (0.13s)
+=== RUN   TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal
+=== RUN   TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal/normal_exit
+=== RUN   TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal/cancel
+--- PASS: TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal (2.45s)
+    --- PASS: TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal/normal_exit (1.22s)
+    --- PASS: TestDesktopAuthorizeCleansOwnedDescendantsAndPreservesExternal/cancel (1.23s)
+=== RUN   TestDesktopAuthorizeNamespaceHelper
+--- PASS: TestDesktopAuthorizeNamespaceHelper (0.00s)
+=== RUN   TestDesktopAuthorizeMustUseStartedNamespace
+--- PASS: TestDesktopAuthorizeMustUseStartedNamespace (0.14s)
+=== RUN   TestDeviceRecoveryInitialUnknownCreateNeverReplays
+--- PASS: TestDeviceRecoveryInitialUnknownCreateNeverReplays (0.06s)
+=== RUN   TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays
+--- PASS: TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays (0.09s)
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/owner
+=== RUN   TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/different-owner
+--- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption (0.22s)
+    --- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/owner (0.11s)
+    --- PASS: TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption/different-owner (0.12s)
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/device_replacedƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/invalid_device_credentialƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/Ƒ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/unknownƑ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/device_replacedƓ
+=== RUN   TestDeviceRecoveryEligibilityFailsClosed/unavailableǷ
+--- PASS: TestDeviceRecoveryEligibilityFailsClosed (0.09s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/device_replacedƑ (0.03s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/invalid_device_credentialƑ (0.02s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/Ƒ (0.01s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/unknownƑ (0.01s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/device_replacedƓ (0.01s)
+    --- PASS: TestDeviceRecoveryEligibilityFailsClosed/unavailableǷ (0.01s)
+=== RUN   TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate
+--- PASS: TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate (0.06s)
+=== RUN   TestDeviceRecoveryDrainingAndAuthoritativeExpiry
+--- PASS: TestDeviceRecoveryDrainingAndAuthoritativeExpiry (0.09s)
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/running
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker_exit
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/pending
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/unclean
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/network_race
+=== RUN   TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/new_scope
+--- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation (0.31s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/running (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/worker_exit (0.01s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/pending (0.03s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/unclean (0.02s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/network_race (0.12s)
+    --- PASS: TestDeviceRecoveryCoreAdmissionAndNewScopeIsolation/new_scope (0.11s)
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/token_save
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/config_save
+=== RUN   TestDeviceRecoveryCrashPointsPreserveRequestCounts/transaction_finish
+--- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts (0.25s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/token_save (0.05s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/config_save (0.09s)
+    --- PASS: TestDeviceRecoveryCrashPointsPreserveRequestCounts/transaction_finish (0.11s)
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/null_attempt
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/unknown_field
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/duplicate
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/binding_changed
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/missing_binding
+=== RUN   TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/occupied
+--- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed (0.20s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/null_attempt (0.03s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/unknown_field (0.03s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/duplicate (0.03s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/binding_changed (0.04s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/missing_binding (0.05s)
+    --- PASS: TestDeviceRecoveryCorruptRecordAndBindingChangeFailClosed/occupied (0.03s)
+=== RUN   TestDeviceRecoveryUnknownExchangeSurvivesApprovedExpiryAndRestart
+--- PASS: TestDeviceRecoveryUnknownExchangeSurvivesApprovedExpiryAndRestart (1.64s)
+=== RUN   TestDeviceRecoveryRejectsAnAlreadyAdmittedSupplyWrite
+--- PASS: TestDeviceRecoveryRejectsAnAlreadyAdmittedSupplyWrite (0.02s)
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/stopping
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/recovery
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/account_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/runtime_closed
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/starting
+=== RUN   TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/stopping
+--- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure (0.31s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/recovery (0.03s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/select/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/recovery (0.03s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/confirm/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/recovery (0.03s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/starting (0.04s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/reconcile_confirm/stopping (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/recovery (0.03s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/account_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/runtime_closed (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/starting (0.01s)
+    --- PASS: TestDeviceRecoveryAccountWorkerAdmissionPreservesActualFailure/snapshot/stopping (0.01s)
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false
+=== RUN   TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true
+--- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof (2.40s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=false (0.08s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/503/restart=true (0.07s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=false (0.06s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/disconnect/restart=true (0.06s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=false (1.06s)
+    --- PASS: TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof/timeout/restart=true (1.07s)
+=== RUN   TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential
+--- PASS: TestDeviceRecoveryInitialRecordWriteFailureDoesNotOrphanCredential (0.05s)
+=== RUN   TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin
+--- PASS: TestDeviceRecoveryInitialRecordOnlyRestartRequiresBegin (0.08s)
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true
+=== RUN   TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false
+--- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence (0.18s)
+    --- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=true (0.10s)
+    --- PASS: TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence/initial=false (0.08s)
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run
+=== RUN   TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control
+--- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts (0.03s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/closed (0.01s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/run (0.01s)
+    --- PASS: TestDeviceRecoveryAdmissionReportsClosedAndWorkerFacts/control (0.01s)
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=false
+=== RUN   TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=true
+--- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence (0.14s)
+    --- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=false (0.07s)
+    --- PASS: TestDeviceRecoveryLegacyUnknownCreationKeepsOnlyKnownEvidence/attempt_saved=true (0.06s)
+=== RUN   TestDesktopDevicePairingAndRestart
+--- PASS: TestDesktopDevicePairingAndRestart (0.14s)
+=== RUN   TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin
+--- PASS: TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin (0.01s)
+=== RUN   TestDesktopDeviceBoundCredentialNeverRebinds
+--- PASS: TestDesktopDeviceBoundCredentialNeverRebinds (0.01s)
+=== RUN   TestDesktopDeviceRejectsChangedIdentity
+--- PASS: TestDesktopDeviceRejectsChangedIdentity (0.01s)
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://other.example/devices/pair
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/devices/pair?code=bad
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/other
+=== RUN   TestDesktopDeviceRejectsUnsafePairingURL/javascript:alert(1)
+--- PASS: TestDesktopDeviceRejectsUnsafePairingURL (0.16s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://other.example/devices/pair (0.04s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/devices/pair?code=bad (0.04s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/other (0.04s)
+    --- PASS: TestDesktopDeviceRejectsUnsafePairingURL/javascript:alert(1) (0.04s)
+=== RUN   TestDesktopDeviceLockConflict
+--- PASS: TestDesktopDeviceLockConflict (0.00s)
+=== RUN   TestDesktopDeviceHiveExpiryAllowsExplicitNewCode
+--- PASS: TestDesktopDeviceHiveExpiryAllowsExplicitNewCode (0.08s)
+=== RUN   TestDesktopDeviceUncertainRedeemKeepsTransaction
+--- PASS: TestDesktopDeviceUncertainRedeemKeepsTransaction (0.07s)
+=== RUN   TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry
+--- PASS: TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry (0.09s)
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/pending
+=== RUN   TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming
+--- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown (0.16s)
+    --- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/pending (0.11s)
+    --- PASS: TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown/redeeming (0.05s)
+=== RUN   TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind
+--- PASS: TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind (0.01s)
+=== RUN   TestDesktopDeviceRemoteErrorCannotEchoPairingToken
+--- PASS: TestDesktopDeviceRemoteErrorCannotEchoPairingToken (0.03s)
+=== RUN   TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests
+--- PASS: TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests (0.06s)
+=== RUN   TestDesktopDeviceContextDistinguishesAbsentAndCorruptLocalRecords
+--- PASS: TestDesktopDeviceContextDistinguishesAbsentAndCorruptLocalRecords (0.01s)
+=== RUN   TestDesktopAccountsStartupVerificationNeverStartsRuntime
+--- PASS: TestDesktopAccountsStartupVerificationNeverStartsRuntime (0.01s)
+=== RUN   TestDesktopDeviceContextFailuresKeepObservedBindingRevision
+--- PASS: TestDesktopDeviceContextFailuresKeepObservedBindingRevision (0.00s)
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/credential
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/empty
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/length
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/controls
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_parse
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_host
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_opaque
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_fragment
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_auth
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_query
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_path
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_slash
+=== RUN   TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_http
+--- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts (0.12s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/credential (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/empty (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/length (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/controls (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_parse (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_host (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_opaque (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_fragment (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_auth (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_query (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_path (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_slash (0.01s)
+    --- PASS: TestDesktopDeviceContextMetadataFailuresIncludeSafeFacts/origin_http (0.01s)
+=== RUN   TestDesktopRuntimeRejectsKnownGenerationChange
+--- PASS: TestDesktopRuntimeRejectsKnownGenerationChange (0.06s)
+=== RUN   TestDesktopRuntimeRejectsChangedReadback
+--- PASS: TestDesktopRuntimeRejectsChangedReadback (0.05s)
+=== RUN   TestDesktopRuntimeRequiresMatchingSynchronizationReceipt
+--- PASS: TestDesktopRuntimeRequiresMatchingSynchronizationReceipt (0.05s)
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/first
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/stopped
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/unclean
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/dirty
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/corrupt
+=== RUN   TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/revoked
+--- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent (0.29s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/first (0.03s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/stopped (0.06s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/unclean (0.05s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/dirty (0.05s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/corrupt (0.05s)
+    --- PASS: TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent/revoked (0.06s)
+=== RUN   TestDesktopRuntimeFirstConflictDoesNotTakeOverOrRetry
+2026/11/02 15:53:34 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59833/api/bee/agent delay_backoff=1s
+--- PASS: TestDesktopRuntimeFirstConflictDoesNotTakeOverOrRetry (0.16s)
+=== RUN   TestDesktopRuntimeStartRequiresSelectionAndFreshRevision
+--- PASS: TestDesktopRuntimeStartRequiresSelectionAndFreshRevision (0.04s)
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/clean_stop
+2026/11/02 15:53:34 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59838/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:34 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:34 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:34 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:35 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59838/api/bee/agent delay_backoff=2s
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/save_failure
+2026/11/02 15:53:35 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59851/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:35 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:35 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:35 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+    desktop_runtime_test.go:624: after failed user stop, app exit receipt: &{WorkersStopped:true IntentSaved:true SessionClean:true}
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/pause_during_start
+2026/11/02 15:53:36 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59857/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:36 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:36 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:36 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/failed_selection
+2026/11/02 15:53:36 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59863/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:36 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:36 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:36 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/manual_generation_change
+2026/11/02 15:53:36 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59868/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:36 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:36 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:36 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/claude_source_unavailable
+2026/11/02 15:53:36 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59873/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:36 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:36 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:36 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/switch_source
+2026/11/02 15:53:36 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59878/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:36 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:36 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:36 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/stop_during_start
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_running
+2026/11/02 15:53:37 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59886/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:37 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:37 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:37 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59886/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_paused
+2026/11/02 15:53:37 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59892/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:37 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:37 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:37 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59892/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_manual_resume
+2026/11/02 15:53:37 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59900/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:37 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:37 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:37 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59900/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_user_stop
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59906/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:38 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_new_token
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59915/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:38 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59915/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/crash_then_exit
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59921/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:38 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+    desktop_runtime_test.go:549: unclean restore correctly refused: account runtime_failed: automatic recovery rejected: previous recovery guard is not clean; explicit start required; check=contribution_loop, platform=unknown, evidence=map[]
+    desktop_runtime_test.go:554: after blocked restore, app exit receipt: &{WorkersStopped:true IntentSaved:true SessionClean:false}
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_stop_save_failure
+2026/11/02 15:53:38 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59926/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:38 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:38 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:38 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+    desktop_runtime_test.go:677: stop during restore before active marker receipt: &{WorkersStopped:true IntentSaved:false SessionClean:false}
+=== RUN   TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_reservation_save_failure
+2026/11/02 15:53:39 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59931/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:39 INFO openai maintenance task received module=maintenance task=desktop-authorization key_version=1
+2026/11/02 15:53:39 INFO openai maintenance task completed module=maintenance task=desktop-authorization
+2026/11/02 15:53:39 WARN capability query unknown module=capabilities platform=openai reason="/backend-api/codex/models answered HTTP 503"
+    desktop_runtime_test.go:677: stop during restore before active marker receipt: &{WorkersStopped:true IntentSaved:false SessionClean:false}
+--- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop (4.69s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/clean_stop (1.28s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/save_failure (0.27s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/pause_during_start (0.20s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/failed_selection (0.20s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/manual_generation_change (0.20s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/claude_source_unavailable (0.22s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/switch_source (0.30s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/stop_during_start (0.10s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_running (0.27s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_paused (0.32s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_manual_resume (0.31s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_user_stop (0.21s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_new_token (0.25s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/crash_then_exit (0.12s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_stop_save_failure (0.22s)
+    --- PASS: TestDesktopRuntimeRunsRealSynchronizationRelayAndStop/restore_reservation_save_failure (0.22s)
+=== RUN   TestDesktopRuntimeOwnedReconnectStopsAfterPersistentConflict
+2026/11/02 15:53:39 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59935/api/bee/agent delay_backoff=1s
+2026/11/02 15:53:39 WARN Hive connection lost module=connect error="failed to ping: use of closed network connection"
+2026/11/02 15:53:40 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59935/api/bee/agent delay_backoff=2s
+2026/11/02 15:53:42 INFO connecting to Hive module=connect endpoint=ws://127.0.0.1:59935/api/bee/agent delay_backoff=10ms
+--- PASS: TestDesktopRuntimeOwnedReconnectStopsAfterPersistentConflict (3.07s)
+=== RUN   TestDesktopSessionOwnsLockUntilClose
+--- PASS: TestDesktopSessionOwnsLockUntilClose (0.00s)
+=== RUN   TestDesktopSessionNetworkDoesNotBlockOtherPlatform
+--- PASS: TestDesktopSessionNetworkDoesNotBlockOtherPlatform (0.02s)
+=== RUN   TestDesktopSessionCloseWaitsForInFlightRead
+--- PASS: TestDesktopSessionCloseWaitsForInFlightRead (0.01s)
+=== RUN   TestDesktopSupplyPlatformIsolationExplicitFalseAndRestart
+--- PASS: TestDesktopSupplyPlatformIsolationExplicitFalseAndRestart (0.02s)
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/revoked
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/device_changed
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/owner_changed
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/invalid_fields
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/credential_in_identity
+=== RUN   TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/pairing_token_in_identity
+--- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest (0.07s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/revoked (0.01s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/device_changed (0.01s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/owner_changed (0.01s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/invalid_fields (0.01s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/credential_in_identity (0.01s)
+    --- PASS: TestDesktopSupplyRejectsUntrustedIdentityBeforeAnySupplyRequest/pairing_token_in_identity (0.01s)
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/unbound
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/pending
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/bad_credential
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/unsafe_hive
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/noncanonical_hive
+=== RUN   TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/bad_saved_identity
+--- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration (0.05s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/unbound (0.01s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/pending (0.01s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/bad_credential (0.01s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/unsafe_hive (0.01s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/noncanonical_hive (0.01s)
+    --- PASS: TestDesktopSupplyRequiresBoundCanonicalProtectedConfiguration/bad_saved_identity (0.01s)
+=== RUN   TestDesktopSupplyRejectsPlatformBeforeNetwork
+--- PASS: TestDesktopSupplyRejectsPlatformBeforeNetwork (0.01s)
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/platform_number
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/platform_boolean
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/paused_string
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/paused_number
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/ready_array
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/reasons_object
+=== RUN   TestDesktopSupplyTypeErrorsIncludeSafeActualType/reasons_number
+--- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/platform_number (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/platform_boolean (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/paused_string (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/paused_number (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/ready_array (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/reasons_object (0.00s)
+    --- PASS: TestDesktopSupplyTypeErrorsIncludeSafeActualType/reasons_number (0.00s)
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_ready
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reason_type
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/ready_with_reasons
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/invalid_json
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_object
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_platform
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reasons_type
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/not_ready_without_reason
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/oversized
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_reasons
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/platform_type
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/non_object
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_paused
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_reasons
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/unknown_reason
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_ready
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reason_null
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/wrong_platform
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/unknown_field
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/paused_without_reason
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/pause_reason_without_pause
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_paused
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_ready
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_reasons
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_paused
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/ready_type
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_reason
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/paused_type
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/trailing_json
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_platform
+=== RUN   TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_platform
+--- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations (0.40s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_ready (0.02s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reason_type (0.02s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/ready_with_reasons (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/invalid_json (0.02s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_object (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_platform (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reasons_type (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/not_ready_without_reason (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/oversized (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_reasons (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/platform_type (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/non_object (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_paused (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_reasons (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/unknown_reason (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_ready (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/reason_null (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/wrong_platform (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/unknown_field (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/paused_without_reason (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/pause_reason_without_pause (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_paused (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_ready (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_reasons (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/null_paused (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/ready_type (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_reason (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/paused_type (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/trailing_json (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/duplicate_platform (0.01s)
+    --- PASS: TestDesktopSupplyRejectsResponseSchemaAndInvariantViolations/missing_platform (0.01s)
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/manually_paused
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/banned
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/device_draining
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/offline
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/not_configured
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/model_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/authorization_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/capabilities_unknown
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/rate_limited
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/quota_unknown
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/quota_exhausted
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/plan_not_configured
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/concurrency_full
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_source_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_confirmation_required
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_authorization_rejected
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/account_not_registered
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/market_not_open
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/supply_not_enabled
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/supply_device_restricted
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/account_not_admitted
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/manually_paused
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/banned
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/device_draining
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/offline
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/not_configured
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/model_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/authorization_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/capabilities_unknown
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/rate_limited
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/quota_unknown
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/quota_exhausted
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/plan_not_configured
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/concurrency_full
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_source_unavailable
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_confirmation_required
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_authorization_rejected
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/account_not_registered
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/market_not_open
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/supply_not_enabled
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/supply_device_restricted
+=== RUN   TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/account_not_admitted
+--- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons (0.45s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/ (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/manually_paused (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/banned (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/device_draining (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/offline (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/not_configured (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/model_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/authorization_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/capabilities_unknown (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/rate_limited (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/quota_unknown (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/quota_exhausted (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/plan_not_configured (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/concurrency_full (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_source_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_confirmation_required (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/codex_authorization_rejected (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/account_not_registered (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/market_not_open (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/supply_not_enabled (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/supply_device_restricted (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/openai/account_not_admitted (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/ (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/manually_paused (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/banned (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/device_draining (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/offline (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/not_configured (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/model_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/authorization_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/capabilities_unknown (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/rate_limited (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/quota_unknown (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/quota_exhausted (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/plan_not_configured (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/concurrency_full (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_source_unavailable (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_confirmation_required (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/claude_authorization_rejected (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/account_not_registered (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/market_not_open (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/supply_not_enabled (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/supply_device_restricted (0.01s)
+    --- PASS: TestDesktopSupplyAcceptsKnownReasonsAndEmptyReadyReasons/claude/account_not_admitted (0.01s)
+=== RUN   TestDesktopSupplyRejectsReasonsFromOtherPlatform
+=== RUN   TestDesktopSupplyRejectsReasonsFromOtherPlatform/openai
+=== RUN   TestDesktopSupplyRejectsReasonsFromOtherPlatform/claude
+--- PASS: TestDesktopSupplyRejectsReasonsFromOtherPlatform (0.02s)
+    --- PASS: TestDesktopSupplyRejectsReasonsFromOtherPlatform/openai (0.01s)
+    --- PASS: TestDesktopSupplyRejectsReasonsFromOtherPlatform/claude (0.01s)
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/lost_put_response
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/put_http_error
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/put_wrong_target
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/get_http_error
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/get_lost_response
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/get_opposite
+=== RUN   TestDesktopSupplyUnconfirmedWritesNeverReplay/get_invalid_schema
+--- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay (0.10s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/lost_put_response (0.01s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/put_http_error (0.01s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/put_wrong_target (0.01s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_http_error (0.01s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_lost_response (0.02s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_opposite (0.02s)
+    --- PASS: TestDesktopSupplyUnconfirmedWritesNeverReplay/get_invalid_schema (0.02s)
+=== RUN   TestDesktopSupplyLockAndCallerDeadlineBlockWrites
+--- PASS: TestDesktopSupplyLockAndCallerDeadlineBlockWrites (0.04s)
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/account_not_registered
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/market_not_open
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/supply_not_enabled
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/supply_device_restricted
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/account_not_admitted
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/account_not_registered
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/market_not_open
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/supply_not_enabled
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/supply_device_restricted
+=== RUN   TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/account_not_admitted
+--- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract (0.01s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/account_not_registered (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/market_not_open (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/supply_not_enabled (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/supply_device_restricted (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/openai/account_not_admitted (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/account_not_registered (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/market_not_open (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/supply_not_enabled (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/supply_device_restricted (0.00s)
+    --- PASS: TestDesktopSupplyDetailedReasonsPreserveStrictContract/claude/account_not_admitted (0.00s)
+PASS
+ok  	github.com/tokhive/bee/agent	30.741s
+=== RUN   TestDesktopAccountActionClearDoesNotRequireCandidate
+--- PASS: TestDesktopAccountActionClearDoesNotRequireCandidate (0.00s)
+=== RUN   TestDesktopAuthorizeBridgeStrictRequests
+--- PASS: TestDesktopAuthorizeBridgeStrictRequests (0.01s)
+=== RUN   TestDeviceRecoveryBridgeStrictCommands
+--- PASS: TestDeviceRecoveryBridgeStrictCommands (0.00s)
+=== RUN   TestDesktopRuntimeBridgeRejectsUnknownNullAndDuplicateParams
+--- PASS: TestDesktopRuntimeBridgeRejectsUnknownNullAndDuplicateParams (0.00s)
+=== RUN   TestDesktopRuntimeBridgeReturnsQueryableOperation
+--- PASS: TestDesktopRuntimeBridgeReturnsQueryableOperation (0.00s)
+=== RUN   TestDesktopRuntimeBridgePreservesConnectionDetail
+--- PASS: TestDesktopRuntimeBridgePreservesConnectionDetail (0.00s)
+PASS
+ok  	github.com/tokhive/bee/desktopbridge	1.999s
+
+exit_code: 0

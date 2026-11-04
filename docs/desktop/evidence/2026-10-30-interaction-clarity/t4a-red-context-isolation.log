@@ -1,0 +1,66 @@
+✖ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (1.571ms)
+✔ device replies only expose validated public binding data (1.799917ms)
+✔ business rejection preserves operation evidence (0.394042ms)
+✔ device rejection retains structured failure before binding validation (1.970125ms)
+✔ device error details reject unknown fields and invalid observations (0.291375ms)
+✔ native device client uses fixed commands and no frontend config path (0.207875ms)
+✖ startup status survives a bridge query that settles later and rejects old instances (4.744917ms)
+✖ binding replacement invalidates operation generations and clears old facts before new reads (4.035625ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (2.512917ms)
+ℹ tests 9
+ℹ suites 0
+ℹ pass 6
+ℹ fail 3
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 109.445375
+
+✖ failing tests:
+
+test at tests/device.test.ts:6:1
+✖ saved context uses the shared Go origin contract and rejects unsafe or incomplete records (1.571ms)
+  Error: DEVICE_REPLY_INVALID: context requires canonical secure origin
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/device.ts:24:48)
+      at decodeDeviceContext (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/device.ts:63:145)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.test.ts:9:52)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+
+test at tests/startup-recovery.test.ts:6:1
+✖ startup status survives a bridge query that settles later and rejects old instances (4.744917ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'device_replaced'
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/startup-recovery.test.ts:10:73)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'device_replaced',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/startup-recovery.test.ts:14:1
+✖ binding replacement invalidates operation generations and clears old facts before new reads (4.035625ms)
+  AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  
+    assert.ok(model.generation()>before)
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/startup-recovery.test.ts:18:72)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

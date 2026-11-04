@@ -1,0 +1,8 @@
+--- FAIL: TestPlatformReadsBypassSamePlatformWaiters (2.00s)
+    --- FAIL: TestPlatformReadsBypassSamePlatformWaiters/openai (1.00s)
+        concurrency_test.go:124: response did not arrive while controlled slow read remained blocked
+    --- FAIL: TestPlatformReadsBypassSamePlatformWaiters/claude (1.00s)
+        concurrency_test.go:124: response did not arrive while controlled slow read remained blocked
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	2.455s
+FAIL

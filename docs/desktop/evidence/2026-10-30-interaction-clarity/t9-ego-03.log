@@ -1,0 +1,8 @@
+Error: page.waitForFunction timed out after 10000ms on page p1; last URL was "http://127.0.0.1:1490/"; last title was "Bee".
+    at waitForFunctionTimeoutError (file:////[eval1]:19509:12)
+    at file:////[eval1]:18834:19
+    at async file:////[eval1]:16940:28
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+{ identifier: '1' }
+
+ego's nodejs process exited with code 1.

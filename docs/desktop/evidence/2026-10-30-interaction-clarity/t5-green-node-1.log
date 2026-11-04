@@ -1,0 +1,82 @@
+time=2026-11-02T08:08:30.437829+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=desktopState/desktopStatus plus tests
+command=/Users/dayong/.nvm/versions/node/v24.22.1/bin/node --test tests/desktopStatus.test.ts tests/desktopState.test.ts tests/startup-recovery.test.ts
+✔ one coordinator shares snapshots across subscriptions without page-triggered reads (17.179708ms)
+✔ old child and network revision results never replace current state (3.036167ms)
+✔ coordinator refreshes stopped account and supply observations once for all pages (1.6125ms)
+✔ failed platform reads retry after ten seconds without hiding the other platform or overlapping (3.128541ms)
+✔ uncertain writes invalidate late results and recover with one read after ten seconds (1.865583ms)
+✖ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (3.500041ms)
+✔ one account snapshot failure stays on that platform and leaves the other readable (1.939209ms)
+✔ device read failure stays on the device and still publishes account defaults (0.870833ms)
+✔ replacement refresh starts after the status listener returns (1.254542ms)
+✔ a superseded initial status rejection cannot block a ready event (2.528958ms)
+✔ an account receipt floor retains the failing read evidence and resets with its native instance (3.12075ms)
+✔ shared and independent platform facts publish before slow openai account (0.792083ms)
+✔ shared and independent platform facts publish before slow claude account (0.597125ms)
+✔ refresh exposes only the timer actually scheduled and blocked floors never publish stale runtime (0.812541ms)
+✔ failed platform reads retain confirmed history and its real retry time (0.585875ms)
+✔ diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready (0.938125ms)
+✔ fresh ready (3.588583ms)
+✔ shared failed read suppresses old success (0.204291ms)
+✔ confirmed revocation precedes stopped and unknown accounts (0.127458ms)
+✔ startup rejection does not depend on accounts (0.12ms)
+✔ starting precedes empty accounts (0.370917ms)
+✔ known empty accounts (0.21025ms)
+✔ selected stopped (0.12ms)
+✔ unknown accounts are not zero (0.088ms)
+✔ first read (0.110375ms)
+✔ all paused (0.20425ms)
+✔ expired success cannot be ready (0.102042ms)
+✔ one platform failure preserves the other confirmed ready platform (0.6525ms)
+✔ paused keeps independent blockers in the original snapshot (0.116625ms)
+✔ preparation closes after a selected account, including ordinary stop (0.144ms)
+✔ initial transaction awaiting_confirmation stays pairing (0.076875ms)
+✔ initial transaction creation_unknown stays pairing (0.054333ms)
+✔ initial transaction redemption_unknown stays pairing (0.046875ms)
+✔ initial transaction saving stays pairing (0.059333ms)
+✔ initial transaction awaiting_owner_confirmation stays pairing (0.038292ms)
+✔ startup status survives a bridge query that settles later and rejects old instances (7.515ms)
+✔ binding replacement invalidates operation generations and clears old facts before new reads (2.17575ms)
+✔ startup decoder rejects malformed context and state/failure contradictions (1.032333ms)
+✔ rejected identity retains local runtime and context without resuming old account workers (2.085708ms)
+✔ absent and corrupt binding revisions drive diagnostics and isolate valid to corrupt to recovered state (5.141375ms)
+ℹ tests 40
+ℹ suites 0
+ℹ pass 39
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 287.140917
+
+✖ failing tests:
+
+test at tests/desktopState.test.ts:40:1
+✖ a runtime receipt floor retains its machine code and blocks automatic reads after ten seconds (3.500041ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+    {
+      code: 'DESKTOP_STALE_RESULT',
+      evidence: {
+        actual: '1',
+  +     required: 'runtime revision >=9; network revision >=0'
+  -     required: 'runtime revision >=9 from confirmed operation receipt'
+      },
+      reads: 2
+    }
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/desktopState.test.ts:46:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: { code: 'DESKTOP_STALE_RESULT', evidence: { actual: '1', required: 'runtime revision >=9; network revision >=0' }, reads: 2 },
+    expected: { code: 'DESKTOP_STALE_RESULT', evidence: { actual: '1', required: 'runtime revision >=9 from confirmed operation receipt' }, reads: 2 },
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+exit=1

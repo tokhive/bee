@@ -1,0 +1,330 @@
+{
+  "extracted_at_utc": "2026-11-02T17:58:04.672657+00:00",
+  "source": "docs/desktop/evidence/2026-10-30-interaction-clarity/t9-final-playwright/native-updater-quit-and-in-8249f--state-never-claims-success-chromium/trace.zip",
+  "trace_sha256": "57f4f5f4974ae296bd36b3573bf84012d1888e3debe8b21b4c6e10467be5e2ad",
+  "observations": [
+    "25714.28 ms: dialog remains open, aria-busy=false, targeted Cancel button has no disabled attribute",
+    "25721.528 ms: same dialog remains open, aria-busy=true, both action buttons disabled",
+    "Background .nu-version-row and its install button remain in the DOM; parent is aria-hidden=true. The button did not disappear."
+  ],
+  "raw_snapshots": [
+    {
+      "entry": "1-trace.trace",
+      "raw": {
+        "type": "frame-snapshot",
+        "snapshot": {
+          "callId": "call@625",
+          "phase": "action",
+          "pageId": "page@d37be253f45e3c53d8e39817acec3426",
+          "frameId": "frame@6c9ddc232135537d08ef4824fcc9b77e",
+          "frameUrl": "http://127.0.0.1:1489/tests/fixtures/native-updater.html?lang=zh",
+          "doctype": "html",
+          "html": [
+            "HTML",
+            {
+              "lang": "zh"
+            },
+            [
+              [
+                8,
+                2
+              ]
+            ],
+            [
+              "BODY",
+              {
+                "data-scroll-locked": "1",
+                "style": "pointer-events: none;"
+              },
+              [
+                [
+                  8,
+                  3
+                ]
+              ],
+              [
+                [
+                  7,
+                  4
+                ]
+              ],
+              [
+                [
+                  13,
+                  42
+                ]
+              ],
+              [
+                [
+                  8,
+                  11
+                ]
+              ],
+              [
+                "DIV",
+                {
+                  "role": "dialog",
+                  "id": "radix-_r_0_",
+                  "data-state": "open",
+                  "class": "dialog-content nu-install-dialog",
+                  "aria-busy": "false",
+                  "tabindex": "-1",
+                  "aria-labelledby": "radix-_r_1_",
+                  "aria-describedby": "radix-_r_2_",
+                  "style": "pointer-events: auto;"
+                },
+                [
+                  [
+                    8,
+                    13
+                  ]
+                ],
+                [
+                  [
+                    8,
+                    15
+                  ]
+                ],
+                [
+                  "DIV",
+                  {
+                    "class": "dialog-actions"
+                  },
+                  [
+                    "BUTTON",
+                    {
+                      "__playwright_target__": "",
+                      "type": "button"
+                    },
+                    [
+                      [
+                        8,
+                        16
+                      ]
+                    ]
+                  ],
+                  [
+                    [
+                      8,
+                      19
+                    ]
+                  ]
+                ]
+              ],
+              [
+                [
+                  8,
+                  22
+                ]
+              ]
+            ]
+          ],
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "timestamp": 25714.28,
+          "wallTime": 1793641124139,
+          "collectionTime": 0.19999998807907104,
+          "resourceOverrides": [],
+          "isMainFrame": true
+        }
+      }
+    },
+    {
+      "entry": "1-trace.trace",
+      "raw": {
+        "type": "frame-snapshot",
+        "snapshot": {
+          "callId": "call@625",
+          "phase": "after",
+          "pageId": "page@d37be253f45e3c53d8e39817acec3426",
+          "frameId": "frame@6c9ddc232135537d08ef4824fcc9b77e",
+          "frameUrl": "http://127.0.0.1:1489/tests/fixtures/native-updater.html?lang=zh",
+          "doctype": "html",
+          "html": [
+            "HTML",
+            {
+              "lang": "zh"
+            },
+            [
+              [
+                9,
+                2
+              ]
+            ],
+            [
+              "BODY",
+              {
+                "data-scroll-locked": "1",
+                "style": "pointer-events: none;"
+              },
+              [
+                [
+                  9,
+                  3
+                ]
+              ],
+              [
+                "DIV",
+                {
+                  "id": "root"
+                },
+                [
+                  "MAIN",
+                  {
+                    "class": "settings-page"
+                  },
+                  [
+                    [
+                      9,
+                      4
+                    ]
+                  ],
+                  [
+                    "SECTION",
+                    {
+                      "class": "native-update",
+                      "aria-label": "应用更新"
+                    },
+                    [
+                      "DIV",
+                      {
+                        "class": "nu-version-row",
+                        "data-aria-hidden": "true",
+                        "aria-hidden": "true"
+                      },
+                      [
+                        [
+                          14,
+                          20
+                        ]
+                      ],
+                      [
+                        "BUTTON",
+                        {
+                          "class": "primary",
+                          "disabled": ""
+                        },
+                        [
+                          [
+                            14,
+                            21
+                          ]
+                        ]
+                      ]
+                    ],
+                    [
+                      [
+                        14,
+                        31
+                      ]
+                    ],
+                    [
+                      [
+                        9,
+                        6
+                      ]
+                    ],
+                    [
+                      [
+                        9,
+                        7
+                      ]
+                    ]
+                  ]
+                ]
+              ],
+              [
+                [
+                  14,
+                  42
+                ]
+              ],
+              [
+                [
+                  9,
+                  11
+                ]
+              ],
+              [
+                "DIV",
+                {
+                  "role": "dialog",
+                  "id": "radix-_r_0_",
+                  "data-state": "open",
+                  "class": "dialog-content nu-install-dialog",
+                  "aria-busy": "true",
+                  "tabindex": "-1",
+                  "aria-labelledby": "radix-_r_1_",
+                  "aria-describedby": "radix-_r_2_",
+                  "style": "pointer-events: auto;"
+                },
+                [
+                  [
+                    9,
+                    13
+                  ]
+                ],
+                [
+                  [
+                    9,
+                    15
+                  ]
+                ],
+                [
+                  "DIV",
+                  {
+                    "class": "dialog-actions"
+                  },
+                  [
+                    "BUTTON",
+                    {
+                      "__playwright_target__": "",
+                      "type": "button",
+                      "disabled": ""
+                    },
+                    [
+                      [
+                        9,
+                        16
+                      ]
+                    ]
+                  ],
+                  [
+                    "BUTTON",
+                    {
+                      "class": "primary",
+                      "disabled": ""
+                    },
+                    [
+                      [
+                        9,
+                        18
+                      ]
+                    ]
+                  ]
+                ]
+              ],
+              [
+                [
+                  9,
+                  22
+                ]
+              ]
+            ]
+          ],
+          "viewport": {
+            "width": 1280,
+            "height": 720
+          },
+          "timestamp": 25721.528,
+          "wallTime": 1793641124146,
+          "collectionTime": 0.29999998211860657,
+          "resourceOverrides": [],
+          "isMainFrame": true
+        }
+      }
+    }
+  ]
+}

@@ -194,3 +194,10 @@ test('a late export payload or delivery receipt cannot alter a newer report sess
   await assert.rejects(pending,/superseded/);assert.equal(client.getSession().download,'idle');assert.equal(client.getSession().downloadFailure,null);assert.equal(deliveries,delayed==='payload'?0:1);
  }
 });
+
+test('safe request lifecycle logs preserve bounded retry and HTTP failure evidence',()=>{
+ const entry={...log(),code:'request_timed_out',evidence:{request_id:'shell-89',method:'supply_status',platform:'openai',phase:'response',queue_ms:'3',execution_ms:'15000',fully_sent:'true',in_flight:'true'}};
+ assert.equal(decodeLogPage({entries:[entry],next_cursor:null,truncated:false}).entries[0].evidence.request_id,'shell-89');
+ for(const code of ['request_settled','request_http_started','request_http_finished','request_http_failed'])assert.equal(decodeLogPage({entries:[{...entry,code,evidence:{method:'POST',phase:'http_error',elapsed_ms:'12000',retry_after_seconds:'30',failure_kind:'dns_temporary',path:'/api/bee/pairings/redeem'}}],next_cursor:null,truncated:false}).entries[0].code,code);
+ for(const value of ['temporary_network','tls_failure','secret'])assert.throws(()=>decodeLogPage({entries:[{...entry,evidence:{failure_kind:value}}],next_cursor:null,truncated:false}),/contract/);
+});

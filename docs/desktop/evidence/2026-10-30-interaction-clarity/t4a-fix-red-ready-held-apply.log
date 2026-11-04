@@ -1,0 +1,18 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.58s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'experience::tests::network_recovery_keeps_update_identity_data_and_owned_exit_protections' (9837321) panicked at src/experience_tests.rs:226:165:
+called `Option::unwrap()` on a `None` value
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test experience::tests::network_recovery_keeps_update_identity_data_and_owned_exit_protections ... FAILED
+
+failures:
+
+failures:
+    experience::tests::network_recovery_keeps_update_identity_data_and_owned_exit_protections
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 197 filtered out; finished in 12.44s
+
+error: test failed, to rerun pass `--lib`

@@ -1,0 +1,21 @@
+{"utc": "2026-11-02T12:44:04.427608+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri", "argv": ["cargo", "test", "--lib", "experience::tests", "--", "--nocapture"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 8.61s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 11 tests
+test experience::tests::startup_business_check_never_changes_real_management_status ... ok
+test experience::tests::recheck_does_not_bootstrap_saved_proxy_on_fresh_runtime ... ok
+test experience::tests::device_recovery_retains_update_data_and_owned_exit_protection ... ok
+test experience::tests::network_recovery_keeps_update_identity_data_and_owned_exit_protections ... ok
+test experience::tests::device_recovery_stays_stopped_until_explicit_recheck_and_completed_status_is_stable ... ok
+test experience::tests::unbound_recheck_is_ready_but_bridge_failure_cannot_be_cleared ... ok
+test experience::tests::rejected_startup_keeps_local_reads_and_recheck_unlocks_without_runtime_restore ... ok
+test experience::tests::saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready ... ok
+test experience::tests::recovery_errors_and_absent_writes_still_block_startup ... ok
+test experience::tests::absent_device_recovery_status_preserves_startup_and_network_scope ... ok
+test experience::tests::recheck_rejects_changed_binding_network_and_corrupt_local_data ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 209 filtered out; finished in 33.82s
+
+{"exit": 0, "utc": "2026-11-02T12:44:48.344775+00:00"}

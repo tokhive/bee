@@ -1,0 +1,19 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.08s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'sidecar::tests::platform_reads_bypass_same_platform_waiters_on_owned_pipe' (10860195) panicked at src/sidecar_tests.rs:31:9:
+fast platform did not reply before controlled slow platform release
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test sidecar::tests::platform_reads_bypass_same_platform_waiters_on_owned_pipe ... FAILED
+
+failures:
+
+failures:
+    sidecar::tests::platform_reads_bypass_same_platform_waiters_on_owned_pipe
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 205 filtered out; finished in 9.61s
+
+error: test failed, to rerun pass `--lib`

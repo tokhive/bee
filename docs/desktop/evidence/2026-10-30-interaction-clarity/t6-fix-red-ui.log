@@ -1,0 +1,177 @@
+{"utc": "2026-11-02T12:42:00.291369+00:00", "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop", "argv": ["npx", "playwright", "test", "--config", "playwright.device.config.ts", "device.spec.ts", "--grep", "completed recovery|repeated recovery", "--workers=4"], "head": "6022fd76f828101507dbd985960383f98e926526", "node": "v24.22.1", "rust": "rustc 1.94.0 (4a4ef493e 2026-03-02)", "port": "1467"}
+[WebServer] (node:32373) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 5 tests using 4 workers
+
+(node:32435) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32432) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32434) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:32433) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read (30.1s)
+  ✘  1 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read (30.1s)
+  ✘  3 [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation (30.1s)
+  ✘  4 [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read (30.1s)
+(node:33935) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  5 [chromium] › tests/device.spec.ts:157:1 › a historical completed recovery yields preparation guidance to current account and runtime facts (5.8s)
+
+
+  1) [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+
+
+      134 | test('a completed recovery permits another revoked identity only after confirmation with a new operation',async({page})=>{
+      135 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.nextRecoveryOperation='e'.repeat(48);w.deviceFailure={code:'device_replaced',message:'current device GET identity HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};},recoveryView('completed'));
+    > 136 |  await page.goto('/');const begin=page.getByRole('button',{name:'重新绑定设备',exact:true});await begin.click();
+          |                                                                                                   ^
+      137 |  await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(begin).toBeFocused();
+      138 |  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+      139 |  await begin.click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).evaluate(button=>{button.click();button.click();});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:136:99
+
+    Error Context: ../.cache/device-pairing/playwright/device-a-completed-recover-6f8a2-mation-with-a-new-operation-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-a-completed-recover-6f8a2-mation-with-a-new-operation-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-a-completed-recover-6f8a2-mation-with-a-new-operation-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+
+
+      147 |  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
+      148 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'GET identity HTTP 401 invalid_device_credential'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_recovery_status'&&w.holdRecovery){await new Promise(resolve=>{w.releaseRecovery=resolve;});if(w.failRecovery)throw {code:'DEVICE_RECOVERY_BLOCKED',message:'journal read permission denied'};}return invoke(command,args);};},recoveryView('completed'));
+    > 149 |  await page.goto('/');await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();
+          |                                                                                 ^
+      150 |  await page.evaluate(()=>{(window as any).holdRecovery=true;});await page.clock.runFor(10001);
+      151 |  await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRecovery)).toBe('function');
+      152 |  await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:149:81
+
+    Error Context: ../.cache/device-pairing/playwright/device-a-repeated-recovery-1ccdb-lid-after-an-in-flight-read-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-a-repeated-recovery-1ccdb-lid-after-an-in-flight-read-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-a-repeated-recovery-1ccdb-lid-after-an-in-flight-read-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+
+
+      147 |  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
+      148 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'GET identity HTTP 401 invalid_device_credential'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_recovery_status'&&w.holdRecovery){await new Promise(resolve=>{w.releaseRecovery=resolve;});if(w.failRecovery)throw {code:'DEVICE_RECOVERY_BLOCKED',message:'journal read permission denied'};}return invoke(command,args);};},recoveryView('completed'));
+    > 149 |  await page.goto('/');await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();
+          |                                                                                 ^
+      150 |  await page.evaluate(()=>{(window as any).holdRecovery=true;});await page.clock.runFor(10001);
+      151 |  await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRecovery)).toBe('function');
+      152 |  await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:149:81
+
+    Error Context: ../.cache/device-pairing/playwright/device-a-repeated-recovery-b3dc8-ion-after-an-in-flight-read-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-a-repeated-recovery-b3dc8-ion-after-an-in-flight-read-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-a-repeated-recovery-b3dc8-ion-after-an-in-flight-read-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '重新绑定设备', exact: true })
+
+
+      147 |  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
+      148 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'GET identity HTTP 401 invalid_device_credential'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_recovery_status'&&w.holdRecovery){await new Promise(resolve=>{w.releaseRecovery=resolve;});if(w.failRecovery)throw {code:'DEVICE_RECOVERY_BLOCKED',message:'journal read permission denied'};}return invoke(command,args);};},recoveryView('completed'));
+    > 149 |  await page.goto('/');await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();
+          |                                                                                 ^
+      150 |  await page.evaluate(()=>{(window as any).holdRecovery=true;});await page.clock.runFor(10001);
+      151 |  await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRecovery)).toBe('function');
+      152 |  await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:149:81
+
+    Error Context: ../.cache/device-pairing/playwright/device-a-repeated-recovery-2e9d8-led-after-an-in-flight-read-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-a-repeated-recovery-2e9d8-led-after-an-in-flight-read-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-a-repeated-recovery-2e9d8-led-after-an-in-flight-read-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/device.spec.ts:157:1 › a historical completed recovery yields preparation guidance to current account and runtime facts 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByRole('region', { name: '设备配对' }).getByRole('button', { name: '前往准备账号', exact: true })
+    Expected: 0
+    Received: 1
+    Timeout:  5000ms
+
+    Call log:
+      - Expect "toHaveCount" getByRole('region', { name: '设备配对' }).getByRole('button', { name: '前往准备账号', exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '设备配对' }).getByRole('button', { name: '前往准备账号', exact: true })
+        14 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      161 |  await page.evaluate(()=>{const w=window as any,r=w.runtimeOverride;r.local='running';r.run_id='a'.repeat(32);r.connection='connected';r.revision++;r.platforms.openai.account.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='account_snapshot'?{instance:'b'.repeat(32),result:{account:r.platforms[args.platform].account}}:invoke(command,args);});
+      162 |  await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+    > 163 |  await expect(page.getByRole('region',{name:'准备贡献'})).toHaveCount(0);await expect(device.getByRole('button',{name:'前往准备账号',exact:true})).toHaveCount(0);
+          |                                                                                                                                          ^
+      164 |  await expect(device.getByText('重新绑定已完成，贡献保持停止。',{exact:true})).toHaveCount(0);await expect(device.getByText('请重新准备账号；旧账号选择与运行意图不会迁移。',{exact:true})).toHaveCount(0);
+      165 |  expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);
+      166 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:163:138
+
+    Error Context: ../.cache/device-pairing/playwright/device-a-historical-comple-f5513-t-account-and-runtime-facts-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-a-historical-comple-f5513-t-account-and-runtime-facts-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-a-historical-comple-f5513-t-account-and-runtime-facts-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5 failed
+    [chromium] › tests/device.spec.ts:134:1 › a completed recovery permits another revoked identity only after confirmation with a new operation 
+    [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks identity_valid after an in-flight read 
+    [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks pending_transaction after an in-flight read 
+    [chromium] › tests/device.spec.ts:146:87 › a repeated recovery rechecks query_failed after an in-flight read 
+    [chromium] › tests/device.spec.ts:157:1 › a historical completed recovery yields preparation guidance to current account and runtime facts 
+{"exit": 1, "utc": "2026-11-02T12:42:40.023147+00:00"}

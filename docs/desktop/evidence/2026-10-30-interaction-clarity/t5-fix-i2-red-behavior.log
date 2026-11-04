@@ -1,0 +1,47 @@
+time=2026-11-02T10:01:33.783695+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/recovery-navigation.spec.ts', '--grep', 'Claude inline', '--workers=1']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+[WebServer] (node:73912) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:73941) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/recovery-navigation.spec.ts:70:1 › Claude inline source recovery keeps its platform, drafts and return focus without writes (30.1s)
+
+
+  1) [chromium] › tests/recovery-navigation.spec.ts:70:1 › Claude inline source recovery keeps its platform, drafts and return focus without writes 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('region', { name: 'Claude 账号', exact: true }).getByRole('button', { name: '检查凭证来源', exact: true }).first()
+
+
+      74 |   await page.getByRole('button',{name:platform+' 详情',exact:true}).click();await page.getByRole('dialog').getByLabel('自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
+      75 |  }
+    > 76 |  const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'检查凭证来源',exact:true}).first().click();
+         |                                                                                                                                    ^
+      77 |  const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
+      78 |  await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();
+      79 |  await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/openai-draft');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/recovery-navigation.spec.ts:76:132
+
+    Error Context: ../.cache/device-pairing/playwright/recovery-navigation-Claude-37b0b-return-focus-without-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/recovery-navigation-Claude-37b0b-return-focus-without-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/recovery-navigation-Claude-37b0b-return-focus-without-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  1 failed
+    [chromium] › tests/recovery-navigation.spec.ts:70:1 › Claude inline source recovery keeps its platform, drafts and return focus without writes 
+
+exit=1

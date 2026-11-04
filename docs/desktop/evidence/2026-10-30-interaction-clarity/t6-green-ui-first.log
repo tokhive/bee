@@ -1,0 +1,716 @@
+UTC: 2026-11-02T10:38:05.924600+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', 'native-runtime.spec.ts', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 47 tests using 4 workers
+
+[WebServer] 6:38:07 PM [vite] (client) Pre-transform error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer] 6:38:09 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:09 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:09 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:09 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer]       at async viteTransformMiddleware (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:25372:20)
+  ✘   2 [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply (6.4s)
+  ✘   3 [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success (6.4s)
+  ✘   1 [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable (6.4s)
+  ✘   4 [chromium] › tests/device.spec.ts:89:1 › an old native status rejection cannot overwrite a newer ready event (6.4s)
+[WebServer] 6:38:15 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:15 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:15 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer] 6:38:15 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer]       at async viteTransformMiddleware (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:25372:20)
+  ✘   7 [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes (5.6s)
+[WebServer] 6:38:21 PM [vite] Internal server error: Transform failed with 2 errors:
+[WebServer] 
+[WebServer] [PARSE_ERROR] Identifier expected.
+[WebServer]    ╭─[ src/i18n/zh.ts:2:2 ]
+[WebServer]    │
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │  ────────────┬───────────  
+[WebServer]    │              ╰───────────── 
+[WebServer] ───╯
+[WebServer] 
+[WebServer] [PARSE_ERROR] Expected `,` or `}` but found `:`
+[WebServer]    ╭─[ src/i18n/zh.ts:2:26 ]
+[WebServer]    │
+[WebServer]  1 │ import {
+[WebServer]    │        ┬  
+[WebServer]    │        ╰── Opened here
+[WebServer]  2 │  "desktop.status.loading":"正在读取设备与账号状态",
+[WebServer]    │                          ┬   
+[WebServer]    │                          ╰─── `,` or `}` expected
+[WebServer] ───╯
+[WebServer] 
+[WebServer]   Plugin: vite:oxc
+[WebServer]   File: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/i18n/zh.ts
+[WebServer]       at transformWithOxc (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4103:19)
+[WebServer]       at TransformPluginContext.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:4174:26)
+[WebServer]       at EnvironmentPluginContainer.transform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:31102:51)
+[WebServer]       at async loadAndTransform (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:20837:26)
+[WebServer]       at async viteTransformMiddleware (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/node_modules/vite/dist/node/chunks/node.js:25372:20)
+  ✘   5 [chromium] › tests/device.spec.ts:103:1 › English device entry and settings have complete translations (30.1s)
+  ✘   8 [chromium] › tests/device.spec.ts:95:1 › opening after website confirmation consumes the latest bound result (30.1s)
+  ✘   6 [chromium] › tests/device.spec.ts:110:1 › diagnostics preserve runtime operation and platform authorization failure evidence (30.1s)
+  ✓   9 [chromium] › tests/device.spec.ts:141:1 › pairing copy feedback and failed browser opening retain the same request (25.5s)
+  ✓  10 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents creation_unknown from its durable transaction (1.0s)
+  ✓  11 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents draining from its durable transaction (1.1s)
+  ✓  12 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redeeming from its durable transaction (1.1s)
+  ✓  13 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents redemption_unknown from its durable transaction (638ms)
+  ✓  14 [chromium] › tests/device.spec.ts:150:201 › initial pairing presents saving from its durable transaction (598ms)
+  ✘  16 [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes (828ms)
+  ✓  15 [chromium] › tests/device.spec.ts:156:1 › revoked credential recovery asks before preparing and preserves one transaction across navigation (962ms)
+  ✓  17 [chromium] › tests/device.spec.ts:170:1 › adopting a different owner requires its own current revision confirmation (741ms)
+  ✓  19 [chromium] › tests/native-runtime.spec.ts:43:1 › a successful account write still requires a verified read when central readback fails (736ms)
+  ✓  20 [chromium] › tests/native-runtime.spec.ts:51:1 › paired proxy testing leaves effective paths unchanged until the confirmed restart (869ms)
+  ✓  21 [chromium] › tests/native-runtime.spec.ts:20:1 › unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot (771ms)
+  ✓  22 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action success from the previous owner cannot refresh or pause the current instance (760ms)
+  ✓  23 [chromium] › tests/native-runtime.spec.ts:62:100 › late account_action failure from the previous owner cannot refresh or pause the current instance (794ms)
+  ✓  24 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start success from the previous owner cannot refresh or pause the current instance (638ms)
+  ✓  25 [chromium] › tests/native-runtime.spec.ts:62:100 › late runtime_start failure from the previous owner cannot refresh or pause the current instance (631ms)
+  ✓  27 [chromium] › tests/native-runtime.spec.ts:86:1 › uncertain account writes reconcile with reads only and passive runtime cannot clear them (815ms)
+  ✓  28 [chromium] › tests/native-runtime.spec.ts:94:1 › official login warns about official account, supports cancellation, and completed login remains a candidate (853ms)
+  ✓  30 [chromium] › tests/native-runtime.spec.ts:105:1 › completed login cannot clear a later source edit, and write admission locks the source (1.7s)
+  ✘  18 [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (5.5s)
+  ✓  31 [chromium] › tests/native-runtime.spec.ts:112:1 › account change remains paused and a platform failure leaves the other platform visible (846ms)
+  ✓  32 [chromium] › tests/native-runtime.spec.ts:122:1 › only proven unsubmitted confirmation can continue after reconciliation (887ms)
+  ✓  33 [chromium] › tests/native-runtime.spec.ts:130:1 › English runtime and login confirmation support keyboard at minimum window size (770ms)
+  ✓  34 [chromium] › tests/native-runtime.spec.ts:138:1 › runtime account revisions reach an open confirmation without changing its candidate (847ms)
+  ✓  35 [chromium] › tests/native-runtime.spec.ts:148:1 › runtime observations preserve newer candidates and edited sources (881ms)
+  ✘  26 [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (5.4s)
+  ✓  36 [chromium] › tests/native-runtime.spec.ts:157:1 › start preserves paused platforms and uncertain start recovers by reading only (609ms)
+  ✓  37 [chromium] › tests/native-runtime.spec.ts:178:1 › unregistered selection can be cancelled only after confirmation and never starts runtime (913ms)
+  ✘  29 [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query (5.6s)
+  ✓  38 [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop (931ms)
+  ✓  39 [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop (950ms)
+  ✓  40 [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked (863ms)
+  ✓  42 [chromium] › tests/native-runtime.spec.ts:215:244 › shared connecting status never presents running as ready (543ms)
+  ✓  44 [chromium] › tests/native-runtime.spec.ts:215:244 › shared reconnecting status never presents running as ready (585ms)
+  ✓  41 [chromium] › tests/native-runtime.spec.ts:202:57 › known unsent runtime_start recovers at the same revision without replay (886ms)
+  ✓  45 [chromium] › tests/native-runtime.spec.ts:215:244 › shared disconnected status never presents running as ready (541ms)
+  ✓  46 [chromium] › tests/native-runtime.spec.ts:215:244 › shared rejected status never presents running as ready (463ms)
+  ✓  43 [chromium] › tests/native-runtime.spec.ts:202:57 › known unsent account_action recovers at the same revision without replay (1.1s)
+  ✓  47 [chromium] › tests/native-runtime.spec.ts:215:244 › shared occupied status never presents running as ready (561ms)
+
+
+  1) [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('heading', { name: '连接本机设备' })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('heading', { name: '连接本机设备' }) with timeout 5000ms
+      - waiting for getByRole('heading', { name: '连接本机设备' })
+
+
+      47 | test('normal native build pairs and verifies without demo balances or starting supply',async({page})=>{
+      48 |  await page.setViewportSize({width:860,height:600});await page.goto('/');
+    > 49 |  await expect(page.getByRole('heading',{name:'连接本机设备'})).toBeVisible();
+         |                                                          ^
+      50 |  await expect(page.getByText('演示数据',{exact:true})).toHaveCount(0);
+      51 |  await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');
+      52 |  await page.getByLabel('设备名称',{exact:true}).fill('My Mac');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:49:58
+
+    Error Context: ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('button', { name: '重新核对设备' })
+    Expected: enabled
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: '重新核对设备' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '重新核对设备' })
+
+
+      65 | });
+      66 | test('failed verification blocks success and remains retryable',async({page})=>{
+    > 67 |  await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+         |                                                                              ^
+      68 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
+      69 |  await page.getByRole('button',{name:'重新核对设备'}).click();
+      70 |  await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:67:78
+
+    Error Context: ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success 
+
+    Error: expect(locator).toBeEnabled() failed
+
+    Locator: getByRole('button', { name: '重新核对设备' })
+    Expected: enabled
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeEnabled" getByRole('button', { name: '重新核对设备' }) with timeout 5000ms
+      - waiting for getByRole('button', { name: '重新核对设备' })
+
+
+      74 |
+      75 | test('retrying a failed bound-device check does not revive cached success',async({page})=>{
+    > 76 |  await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+         |                                                                              ^
+      77 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
+      78 |  await page.getByRole('button',{name:'重新核对设备'}).click();
+      79 |  await expect(page.getByText('设备已绑定。')).toBeVisible();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:76:78
+
+    Error Context: ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/device.spec.ts:89:1 › an old native status rejection cannot overwrite a newer ready event 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      89 | test('an old native status rejection cannot overwrite a newer ready event',async({page})=>{
+      90 |  await page.goto('/?fixture=stale-status');
+    > 91 |  await expect.poll(()=>page.evaluate(()=>Boolean((window as unknown as {initialRejected:boolean}).initialRejected))).toBe(true);
+         |                                                                                                                      ^
+      92 |  await expect(page.getByRole('heading',{name:'连接本机设备'})).toBeVisible();
+      93 | });
+      94 |
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:91:118
+
+    Error Context: ../.cache/device-pairing/playwright/device-an-old-native-statu-030d6-erwrite-a-newer-ready-event-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-an-old-native-statu-030d6-erwrite-a-newer-ready-event-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-an-old-native-statu-030d6-erwrite-a-newer-ready-event-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/device.spec.ts:95:1 › opening after website confirmation consumes the latest bound result 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.fill: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByLabel('Hive 地址', { exact: true })
+
+
+      94 |
+      95 | test('opening after website confirmation consumes the latest bound result',async({page})=>{
+    > 96 |  await page.goto('/');await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');
+         |                                                                     ^
+      97 |  await page.getByRole('button',{name:'生成配对码'}).click();await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+      98 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
+      99 |  await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:96:69
+
+    Error Context: ../.cache/device-pairing/playwright/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-opening-after-websi-944c7-mes-the-latest-bound-result-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/device.spec.ts:103:1 › English device entry and settings have complete translations 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '设置', exact: true })
+
+
+      102 |
+      103 | test('English device entry and settings have complete translations',async({page})=>{
+    > 104 |  await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
+          |                                                                             ^
+      105 |  await expect(page.getByText('Saved for this system user and retained after restarting.')).toBeVisible();
+      106 |  await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Connect this device'})).toBeVisible();
+      107 |  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:104:77
+
+    Error Context: ../.cache/device-pairing/playwright/device-English-device-entr-a7230--have-complete-translations-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-English-device-entr-a7230--have-complete-translations-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-English-device-entr-a7230--have-complete-translations-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/device.spec.ts:110:1 › diagnostics preserve runtime operation and platform authorization failure evidence 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for getByRole('button', { name: '诊断', exact: true })
+
+
+      121 |   };
+      122 |  });
+    > 123 |  await page.goto('/');await page.getByRole('button',{name:'诊断',exact:true}).click();
+          |                                                                             ^
+      124 |  await page.getByText('核对诊断',{exact:true}).click();
+      125 |  const evidence=page.locator('.native-diagnostic-evidence pre');
+      126 |  await expect(evidence).toContainText('runtime_start_check');await expect(evidence).toContainText('permission_denied');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:123:77
+
+    Error Context: ../.cache/device-pairing/playwright/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-diagnostics-preserv-25708-horization-failure-evidence-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  8) [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('正在读取设备与账号状态', { exact: true }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('正在读取设备与账号状态', { exact: true }).first() with timeout 5000ms
+      - waiting for getByText('正在读取设备与账号状态', { exact: true }).first()
+
+
+      132 | test('initial device facts stay unknown until the first read finishes',async({page})=>{
+      133 |  await page.addInitScript(()=>{(window as any).deviceHold=true;});await page.goto('/');
+    > 134 |  await expect(page.getByText('正在读取设备与账号状态',{exact:true}).first()).toBeVisible();
+          |                                                                   ^
+      135 |  await expect(page.getByRole('button',{name:'生成配对码',exact:true})).toHaveCount(0);
+      136 |  await expect(page.getByRole('heading',{name:'连接本机设备',exact:true})).toHaveCount(0);
+      137 |  await page.evaluate(()=>{const w=window as any;w.deviceHold=false;w.releaseDevice();});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:134:67
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  9) [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1
+    Received:   1
+
+      166 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'HTTP 401 invalid_device_credential'};},recoveryView('redemption_unknown'));
+      167 |  await page.goto('/');await expect(page.getByText('兑换结果未知，正在核对新设备身份',{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+    > 168 |  expect((await deviceCalls(page,'device_recovery_status')).length).toBeGreaterThan(1);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+          |                                                                    ^
+      169 | });
+      170 | test('adopting a different owner requires its own current revision confirmation',async({page})=>{
+      171 |  await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:168:68
+
+    Error Context: ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  10) [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true })
+
+
+       9 | test('coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh',async({page})=>{
+      10 |  const now=new Date('2026-10-27T03:00:00Z');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await setup(page);
+    > 11 |  await expect(page.getByRole('region',{name:'贡献运行'}).getByText('贡献尚未启动',{exact:true})).toBeVisible();
+         |                                                                                        ^
+      12 |  const counts=()=>page.evaluate(()=>Object.fromEntries(['runtime_snapshot','account_defaults','account_snapshot','supply_status'].map(command=>[command,(window as any).calls.filter((call:any)=>call.command===command).length])));
+      13 |  expect(await counts()).toEqual({runtime_snapshot:1,account_defaults:1,account_snapshot:2,supply_status:2});
+      14 |  await page.clock.runFor(9999);expect(await counts()).toEqual({runtime_snapshot:1,account_defaults:1,account_snapshot:2,supply_status:2});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:11:88
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-coordinated-ce816-nd-explicit-runtime-refresh-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  11) [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByText('贡献尚未启动', { exact: true })
+
+
+      76 | });
+      77 | test('ready management stays stopped; select, explicit start, stop and per-platform states are usable',async({page})=>{
+    > 78 |  await setup(page);await expect(page.getByRole('region',{name:'贡献运行'}).getByText('贡献尚未启动',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toEqual([]);
+         |                                                                                                          ^
+      79 |  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+      80 |  await card(page).getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
+      81 |  await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toEqual([]);
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:78:106
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12) [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('贡献已启动', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('贡献已启动', { exact: true }) with timeout 5000ms
+      - waiting for getByText('贡献已启动', { exact: true })
+
+
+      100 |  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;(window as any).runtimeUnknown=true;});
+      101 |  await reconcile(page);await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('等待已安排的核对');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+    > 102 |  await reconcile(page);await expect(page.getByText('贡献已启动',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(1);
+          |                                                                           ^
+      103 | });
+      104 |
+      105 | test('completed login cannot clear a later source edit, and write admission locks the source',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:102:75
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  12 failed
+    [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply 
+    [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable 
+    [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success 
+    [chromium] › tests/device.spec.ts:89:1 › an old native status rejection cannot overwrite a newer ready event 
+    [chromium] › tests/device.spec.ts:95:1 › opening after website confirmation consumes the latest bound result 
+    [chromium] › tests/device.spec.ts:103:1 › English device entry and settings have complete translations 
+    [chromium] › tests/device.spec.ts:110:1 › diagnostics preserve runtime operation and platform authorization failure evidence 
+    [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+    [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+    [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh 
+    [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable 
+    [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query 
+  35 passed (51.3s)
+
+Exit: 1
+UTC end: 2026-11-02T10:38:58.011199+00:00

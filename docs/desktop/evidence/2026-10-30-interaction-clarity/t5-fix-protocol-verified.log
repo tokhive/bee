@@ -1,0 +1,48 @@
+time=2026-11-02T10:15:37.538542+00:00
+command=['cargo', 'test', '--lib', 'protocol::', '--', '--nocapture']
+cwd=desktop/src-tauri
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.05s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 34 tests
+test protocol::tests::account_operation_requires_current_platform_and_known_state ... ok
+test protocol::tests::account_typed_requests_reject_missing_null_and_unknown_fields ... ok
+test authorize_protocol::tests::authorize_requests_and_receipts_are_bound_and_strict ... ok
+test protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision ... ok
+test network_protocol::tests::network_test_rejects_unknown_endpoint_and_missing_nullable ... ok
+test diagnostics_protocol::tests::diagnostics_protocol_rejects_inconsistent_completion_and_missing_nullable ... ok
+test diagnostics_protocol::tests::diagnostics_protocol_strict_identity_schema_and_unknown_checks ... ok
+test protocol::tests::device_recovery_public_contract_is_strict_and_keeps_initial_pairing_separate ... ok
+test protocol::tests::clear_selection_accepts_revision_without_candidate_but_select_does_not ... ok
+test protocol::desktop_failure_tests::structured_errors_retain_details_and_reject_invalid_evidence ... ok
+test protocol::tests::initial_device_reply_rejects_unknown_or_secret_fields ... ok
+test diagnostics_protocol::tests::diagnostic_detailed_supply_reason_evidence_is_preserved ... ok
+test protocol::tests::initial_device_state_never_claims_an_unverified_identity ... ok
+test protocol::tests::error_response_does_not_become_success ... ok
+test protocol::tests::malformed_session_cannot_be_reused_for_a_later_hello ... ok
+test protocol::device_context_tests::context_keeps_go_origins_and_rejects_incomplete_or_secret_fields ... ok
+test protocol::tests::invalid_envelopes_are_rejected_without_echoing_payload ... ok
+test protocol::tests::supply_platform_is_a_closed_enum_without_echoing_rejected_input ... ok
+test protocol::tests::fragmented_utf8_and_combined_frames_preserve_correlation ... ok
+test protocol::tests::stale_response_cannot_complete_a_new_request ... ok
+test protocol::failure_safety_contract_tests::details_use_go_origin_contract_and_safe_response_fields ... ok
+test protocol::tests::handshake_requires_matching_build_and_platform_and_p0_capabilities ... ok
+test protocol::tests::experience_notification_capability_requires_complete_ordered_group ... ok
+test runtime_protocol::tests::runtime_operation_and_fixed_capabilities_are_strict ... ok
+test runtime_protocol::tests::runtime_shared_contract_and_requests ... ok
+test runtime_protocol::tests::runtime_schema_errors_do_not_echo_untrusted_values ... ok
+test runtime_protocol::tests::runtime_snapshot_rejects_unknown_missing_and_cross_platform_fields ... ok
+test protocol::tests::rejected_capabilities_report_first_difference_without_unknown_payload ... ok
+test runtime_protocol::tests::runtime_supply_detailed_reasons_preserve_strict_contract ... ok
+test protocol::tests::supply_handshake_accepts_only_four_exact_capability_groups ... ok
+test runtime_protocol::connection_tests::runtime_connection_rejects_unsafe_and_contradictory_details ... ok
+test runtime_protocol::connection_tests::runtime_connection_details_consume_go_origin_contract ... ok
+test protocol::tests::validates_frame_boundaries_and_eof ... ok
+test runtime_protocol::connection_tests::runtime_connection_accepts_all_failure_stages_and_retry_states ... ok
+
+test result: ok. 34 passed; 0 failed; 0 ignored; 0 measured; 184 filtered out; finished in 0.04s
+
+
+exit=0

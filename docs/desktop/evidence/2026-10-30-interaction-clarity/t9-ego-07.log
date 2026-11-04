@@ -1,0 +1,11 @@
+ElementResolutionError: page.selectOption timed out after 3000ms: Locator loc=role:combobox[name="语言"] matched 0 elements
+    at #retryElementAction (file:////[eval1]:19158:27)
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at listOnTimeout (node:internal/timers:644:9)
+    at process.processTimers (node:internal/timers:618:7)
+    at async file:////[eval1]:16940:28
+[ego-browser:notice] Ego Lite update is available (current 0.6.1.13). Finish the current browser task, then ask the user before running `ego-browser upgrade`; re-read the ego-browser Skill afterward.
+{ start: '2026-11-02T17:56:26.229Z', sources: { 'desktop/src/features/settings/NativeUpdateControls.tsx': '91dd712d68213a99c71ffff8bcbf1c6577fe0ec069daa904c99e34838efa5019', 'desktop/src/features/settings/native-update.css': '8cc13ff78b147a502362dbdba9a091b20e54d1e33bef15e0dcf77992dedd3b31', 'desktop/src/system/updater.ts': 'cc71337b7d676ef96bc47b23c1199c6a2851e211e0b28c7d62acb3c839dcc8c1' } }
+{ space: 40, ownership: 'agent', url: 'http://127.0.0.1:1490/' }
+
+ego's nodejs process exited with code 1.

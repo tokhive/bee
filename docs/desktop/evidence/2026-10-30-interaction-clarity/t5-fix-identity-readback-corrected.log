@@ -1,0 +1,27 @@
+time=2026-11-02T10:13:48.793490+00:00
+command=['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'tests/native-runtime.spec.ts', 'tests/polling-stability.spec.ts', '--grep', 'successful account write|confirmation waiting for a failed device|identity .* (still permits|allows local)|rechecks|known unsent', '--workers=3']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+Running 12 tests using 3 workers
+
+  ✓   2 [chromium] › tests/native-runtime.spec.ts:43:1 › a successful account write still requires a verified read when central readback fails (1.5s)
+  ✓   1 [chromium] › tests/native-runtime.spec.ts:182:45 › identity device still permits one trusted local stop (1.6s)
+  ✓   3 [chromium] › tests/native-runtime.spec.ts:182:45 › identity diagnostic still permits one trusted local stop (1.7s)
+[WebServer] 6:13:52 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+[WebServer] 6:13:52 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+[WebServer] 6:13:52 PM [vite] (client) [console.error] Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+  ✓   4 [chromium] › tests/native-runtime.spec.ts:192:1 › identity failure allows local login and cancellation but keeps account selection blocked (917ms)
+  ✓   6 [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent runtime_start recovers at the same revision without replay (788ms)
+  ✓   5 [chromium] › tests/native-runtime.spec.ts:201:57 › known unsent account_action recovers at the same revision without replay (950ms)
+  ✓   7 [chromium] › tests/polling-stability.spec.ts:149:1 › an account confirmation waiting for a failed device read is cancelled without a page error (721ms)
+  ✓   8 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting start rechecks identity without blocking trusted local stop (641ms)
+  ✓   9 [chromium] › tests/polling-stability.spec.ts:196:38 › waiting stop rechecks identity without blocking trusted local stop (693ms)
+  ✓  10 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks identity (778ms)
+  ✓  11 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks runtime (820ms)
+  ✓  12 [chromium] › tests/polling-stability.spec.ts:205:56 › official login waiting on a shared read rechecks features (875ms)
+
+  12 passed (5.2s)
+
+exit=0

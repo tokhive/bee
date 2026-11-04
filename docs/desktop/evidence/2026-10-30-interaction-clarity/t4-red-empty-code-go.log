@@ -1,0 +1,9 @@
+--- FAIL: TestDesktopFailureWithoutRemoteCodeStillHasValidDetails (0.00s)
+    desktop_failure_test.go:117: failure evidence rejected: key=remote_code; required=fixed safe evidence field and value
+FAIL
+FAIL	github.com/tokhive/bee/agent	0.861s
+--- FAIL: TestDesktopFailureProtocolErrorStrictDetailsAndLegacyCompatibility (0.00s)
+    desktop_failure_test.go:32: invalid failure accepted
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	0.432s
+FAIL

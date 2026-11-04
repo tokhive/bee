@@ -1,0 +1,31 @@
+{
+  "transport": "synthetic IPC only",
+  "pages": [
+    {
+      "page": "AI 账号",
+      "mounted": true
+    },
+    {
+      "page": "诊断",
+      "mounted": true
+    },
+    {
+      "page": "设置",
+      "mounted": true
+    },
+    {
+      "page": "概览",
+      "mounted": true
+    }
+  ],
+  "before": {
+    "snapshots": 0,
+    "detects": 2,
+    "writes": 0
+  },
+  "after": {
+    "rechecks": 1,
+    "restores": 0,
+    "starts": 0
+  }
+}

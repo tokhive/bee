@@ -1,0 +1,11 @@
+time=2026-11-02T10:15:51.069759+00:00
+command=['npm', 'run', 'typecheck']
+cwd=desktop
+baseline=987ca4caa58fccbbb61daa2d348a0d36830a146b
+HEAD=987ca4caa58fccbbb61daa2d348a0d36830a146b
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+exit=0

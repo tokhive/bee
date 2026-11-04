@@ -1,0 +1,10 @@
+time=2026-11-02T08:46:35.110633+00:00
+base=889718306c3ec999cce141f3f6e94478b0f96ff8
+source=T5 frontend working tree; mocked IPC and direct real-component navigation harness
+command=['npm', 'run', 'typecheck']
+
+> bee-desktop@0.1.0 typecheck
+> tsc --noEmit
+
+
+exit=0

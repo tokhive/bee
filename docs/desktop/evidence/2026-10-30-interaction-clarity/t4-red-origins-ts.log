@@ -1,0 +1,26 @@
+✔ Chinese 503 device feedback includes fact, target, impact and safe original in one notice (11.889833ms)
+✔ device replacement keeps its exact cause and provides the device entry (0.606209ms)
+✔ selected source missing and denied access do not claim the whole machine has no login (0.143875ms)
+✔ the same stored error immediately renders in either locale and unknown codes do not invent a reason (0.558625ms)
+✔ normalization never serializes arbitrary exceptions or sensitive text (0.117625ms)
+✔ private details enforce fields, calendar, future bounds, safe evidence and lengths while legacy errors remain valid (0.310167ms)
+✖ details preserve all safe Go origin spellings and reject unsafe authority spellings (3.092625ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 6
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 94.193083
+
+✖ failing tests:
+
+test at desktop/tests/problems.test.ts:39:1
+✖ details preserve all safe Go origin spellings and reject unsafe authority spellings (3.092625ms)
+  Error: BRIDGE_REPLY_INVALID: details evidence target_origin rejected; required=safe public value
+      at invalid (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/failures.ts:29:45)
+      at decodeBridgeError (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src/system/failures.ts:38:267)
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/problems.test.ts:42:69)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7)

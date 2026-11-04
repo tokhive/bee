@@ -1,0 +1,189 @@
+{
+  "utc": "2026-11-02T10:55:23.225Z",
+  "runtime": "v24.22.1",
+  "space": 36,
+  "page": "p1",
+  "script": "/tmp/t6-manual-round1.mjs",
+  "records": [
+    {
+      "case": {
+        "scene": "device-pending",
+        "width": 1000,
+        "height": 700,
+        "locale": "en",
+        "theme": "dark",
+        "long": true,
+        "device": true
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:55:20.702Z",
+        "viewport": [
+          1000,
+          700
+        ],
+        "lang": "en",
+        "theme": "dark",
+        "reduced": true,
+        "overflow": {
+          "document": false,
+          "device": false
+        },
+        "status": "pairing",
+        "phase": {
+          "text": "Waiting for website confirmation",
+          "rect": {
+            "x": 207,
+            "y": 125.5,
+            "width": 246.234375,
+            "height": 24,
+            "bottom": 149.5
+          },
+          "font": "16px",
+          "color": "rgb(229, 228, 223)",
+          "background": "rgb(36, 36, 33)",
+          "contrast": 12.22,
+          "opacity": "1"
+        },
+        "primary": {
+          "text": "Open Hive confirmation page",
+          "rect": {
+            "x": 736.703125,
+            "y": 125.5,
+            "width": 223.296875,
+            "height": 33.5,
+            "bottom": 159
+          },
+          "font": "13px",
+          "color": "rgb(39, 39, 33)",
+          "background": "rgb(229, 227, 220)",
+          "contrast": 11.69,
+          "opacity": "1"
+        },
+        "note": {
+          "text": "Return to Bee after confirming on the website.If the browser cannot open, copy the URL above manually. The current request is retained.",
+          "rect": {
+            "x": 207,
+            "y": 395,
+            "width": 753,
+            "height": 36,
+            "bottom": 431
+          },
+          "font": "12px",
+          "color": "rgb(160, 157, 148)",
+          "background": "rgb(36, 36, 33)",
+          "contrast": 5.74,
+          "opacity": "1"
+        },
+        "url": {
+          "text": "https://long-hive-addresslong-hive-addresslong-hive-address.pairing-verificationpairing-verification.example/devices/pair?code=ABCD-EFGH",
+          "rect": {
+            "x": 207,
+            "y": 298.5,
+            "width": 753,
+            "height": 39,
+            "bottom": 337.5
+          },
+          "font": "13px",
+          "color": "rgb(160, 157, 148)",
+          "background": "rgb(36, 36, 33)",
+          "contrast": 5.74,
+          "opacity": "1"
+        },
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-device-pending-1000-en-dark.png"
+    },
+    {
+      "case": {
+        "scene": "recovery-owner",
+        "width": 860,
+        "height": 600,
+        "locale": "zh",
+        "theme": "light",
+        "long": true,
+        "device": true
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:55:22.899Z",
+        "viewport": [
+          860,
+          600
+        ],
+        "lang": "zh",
+        "theme": "light",
+        "reduced": true,
+        "overflow": {
+          "document": false,
+          "device": false
+        },
+        "status": "rejected",
+        "phase": {
+          "text": "新设备归属与原设备不同",
+          "rect": {
+            "x": 207,
+            "y": 306.5,
+            "width": 176,
+            "height": 24,
+            "bottom": 330.5
+          },
+          "font": "16px",
+          "color": "rgb(44, 43, 40)",
+          "background": "rgb(255, 255, 255)",
+          "contrast": 14.16,
+          "opacity": "1"
+        },
+        "primary": null,
+        "note": null,
+        "url": null,
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-recovery-owner-860-zh-light.png"
+    },
+    {
+      "case": {
+        "scene": "recovery-saving",
+        "width": 1080,
+        "height": 840,
+        "locale": "en",
+        "theme": "dark",
+        "long": true,
+        "device": true
+      },
+      "metrics": {
+        "utc": "2026-11-02T10:55:23.155Z",
+        "viewport": [
+          1080,
+          840
+        ],
+        "lang": "en",
+        "theme": "dark",
+        "reduced": true,
+        "overflow": {
+          "document": false,
+          "device": false
+        },
+        "status": "rejected",
+        "phase": {
+          "text": "Local storage is incomplete; recheck to continue",
+          "rect": {
+            "x": 207,
+            "y": 306.5,
+            "width": 366.1875,
+            "height": 24,
+            "bottom": 330.5
+          },
+          "font": "16px",
+          "color": "rgb(229, 228, 223)",
+          "background": "rgb(36, 36, 33)",
+          "contrast": 12.22,
+          "opacity": "1"
+        },
+        "primary": null,
+        "note": null,
+        "url": null,
+        "writes": []
+      },
+      "screenshot": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/docs/desktop/evidence/2026-10-30-interaction-clarity/t6-manual-recovery-saving-1080-en-dark.png"
+    }
+  ]
+}

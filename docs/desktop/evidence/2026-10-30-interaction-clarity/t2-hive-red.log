@@ -1,0 +1,67 @@
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/disabled_supply
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/unregistered
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/authorization
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/restricted_device
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/fingerprint_rejected
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/all_models_disabled
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/incomplete_price
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/device_subset_empty
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty
+    dynamic_supply_unit_test.go:157: ERROR: relation "provider_platform_capabilities" does not exist (SQLSTATE 42P01)
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/static_without_registration
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/paused_with_independent_blockers
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+=== RUN   TestDetailedSupplyDatabaseFactsPreserveAdmission/catalog_read_failure
+    dynamic_supply_unit_test.go:183: detailed supply API missing; cannot explain current admission facts
+--- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission (4.85s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/disabled_supply (0.61s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/unregistered (0.52s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/authorization (0.40s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/restricted_device (0.38s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/fingerprint_rejected (0.37s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/all_models_disabled (0.32s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/incomplete_price (0.58s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/device_subset_empty (0.33s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/account_models_empty (0.32s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/static_without_registration (0.37s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/paused_with_independent_blockers (0.33s)
+    --- FAIL: TestDetailedSupplyDatabaseFactsPreserveAdmission/catalog_read_failure (0.33s)
+FAIL
+FAIL	github.com/tokhive/hive/hive/internal/service	5.986s
+=== RUN   TestDetailedSupplyOptionValidationPrecedesPauseWrite
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/auth/register status=201 duration=6ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+    supply_control_test.go:216: invalid detail option accepted: method=GET query=reason_detail=0 status=200 state=map[paused:false platform:openai ready:false reasons:[offline not_configured]]
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+2026/11/02 11:25:45 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=3ms
+    supply_control_test.go:216: invalid detail option accepted: method=PUT query=reason_detail=0 status=200 state=map[paused:true platform:openai ready:false reasons:[manually_paused offline not_configured]]
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=2ms
+    supply_control_test.go:220: invalid detail option changed pause state
+--- FAIL: TestDetailedSupplyOptionValidationPrecedesPauseWrite (0.44s)
+=== RUN   TestDetailedSupplyNoConfigurationReportsOnlyProvenBlockers
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/auth/register status=201 duration=5ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/02 11:25:45 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=3ms
+2026/11/02 11:25:45 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=1ms
+    supply_control_test.go:250: nil supply was not explained by actual configuration: map[paused:false platform:openai ready:false reasons:[offline not_configured]]
+--- FAIL: TestDetailedSupplyNoConfigurationReportsOnlyProvenBlockers (0.43s)
+FAIL
+FAIL	github.com/tokhive/hive/hive/internal/integration	2.239s
+FAIL

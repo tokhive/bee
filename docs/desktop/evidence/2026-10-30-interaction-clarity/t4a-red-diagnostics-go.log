@@ -1,0 +1,7 @@
+2026/11/02 12:51:26 http: TLS handshake error from 127.0.0.1:65049: remote error: tls: bad certificate
+--- FAIL: TestDesktopDiagnosticsBindingChangeInvalidatesReportWithoutRelabelling (0.01s)
+    desktop_diagnostics_test.go:566: diagnostic report has no captured binding_revision
+FAIL
+FAIL	github.com/tokhive/bee/agent	1.492s
+ok  	github.com/tokhive/bee/desktopbridge	1.372s
+FAIL

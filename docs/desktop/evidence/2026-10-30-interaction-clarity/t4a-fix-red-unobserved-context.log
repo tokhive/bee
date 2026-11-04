@@ -1,0 +1,21 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 7.96s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision' (9836303) panicked at src/protocol.rs:1080:9:
+assertion `left == right` failed
+  left: "INVALID_REPLY"
+ right: "DEVICE_CONTEXT_FAILED"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision ... FAILED
+
+failures:
+
+failures:
+    protocol::device_context_state_tests::observed_binding_failure_is_strict_and_retains_revision
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 197 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `--lib`

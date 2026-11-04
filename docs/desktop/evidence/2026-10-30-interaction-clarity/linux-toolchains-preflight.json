@@ -1,0 +1,67 @@
+{
+  "observed_at": "2026-11-02T04:21:07.295758+00:00",
+  "scope": "Linux verification runtime availability and cached archive integrity; not product acceptance",
+  "image": "bee-linux-minimum-window-qa:20261023",
+  "image_short_id": "ef455d7cb089",
+  "isolated_commands": {
+    "network": "none",
+    "home_override": false,
+    "codex_home_override": false,
+    "go": "go version go1.27.3 linux/arm64",
+    "node": "v24.22.1",
+    "exit_code": 0
+  },
+  "go_archive": {
+    "file": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/toolchains/go1.27.3.linux-arm64.tar.gz",
+    "size": 67076044,
+    "sha256": "a06e99309dbcbdca1a8ccd2282c3ee146e55930886e26b4f1193269587165f49",
+    "metadata": ".cache/qa/linux-go/official-linux-arm64-release.json",
+    "verified_executables": [
+      {
+        "path": "go/bin/go",
+        "sha256": "d487fddb6939f3e78f7293fcbdeae610ba8ceae966d3faa4b2094a5688559230"
+      },
+      {
+        "path": "go/bin/gofmt",
+        "sha256": "ef252ad5d8231b7416651f28cfcf03d05a8b11b4eff764f60b8a25ea03b8afdf"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/asm",
+        "sha256": "b859fbc087b7cca55e1d0c7f5a729044751a2d10fff638cbdc48c37f94988d23"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/cgo",
+        "sha256": "b96e40475be917901e19b6667364b1fb5b5d45c9d466b27646dce578ecc19a41"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/compile",
+        "sha256": "35ce75b8723ca02313089c8d307a11d2a3b07bfb0a64561bdabc67d6ed516246"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/cover",
+        "sha256": "69ac24a44441281b0617fdf764afe32f01d1fb27918c374da14775c65bddbb3a"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/fix",
+        "sha256": "1f628db2e59d783875bba66e6b4766f85139546fa3828670dc955efc379bba92"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/link",
+        "sha256": "a9c068b577e6cd8074fb24dbdffe8762dcbad11e41b7ba1f2f1af6aa1fd37352"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/preprofile",
+        "sha256": "e6aa458f100c1720486d8a1c3d2014f395b6f146f3eb10ac5bfd79daa398abda"
+      },
+      {
+        "path": "go/pkg/tool/linux_arm64/vet",
+        "sha256": "9a855830835bcd860592989adf8d8274ca77cbb71cecb6eae4630f5ccc6b04da"
+      }
+    ]
+  },
+  "node_archive": {
+    "file": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/.cache/qa/p1-linux-minimum-window-environment/node-v24.22.1-linux-arm64.tar.xz",
+    "sha256": "dbabf7a1cbf947e6059ffad2c27b80041db97dea1e553b62afdee7f13fca336e",
+    "installed_binary_matches_archive": true
+  }
+}

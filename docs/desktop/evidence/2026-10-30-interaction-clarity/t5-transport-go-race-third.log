@@ -1,0 +1,6 @@
+--- FAIL: TestReadWorkersJoinOnTerminalInput (0.00s)
+    --- FAIL: TestReadWorkersJoinOnTerminalInput/shutdown (0.00s)
+        concurrency_test.go:153: shutdown response absent after worker join
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	2.109s
+FAIL

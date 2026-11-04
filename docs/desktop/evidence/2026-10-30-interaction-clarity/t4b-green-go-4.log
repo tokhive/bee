@@ -1,0 +1,22 @@
+--- FAIL: TestDesktopDeviceRejectsUnsafePairingURL (0.13s)
+    --- FAIL: TestDesktopDeviceRejectsUnsafePairingURL/https://other.example/devices/pair (0.03s)
+        desktop_device_test.go:186: accepted untrusted verification URL
+    --- FAIL: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/devices/pair?code=bad (0.03s)
+        desktop_device_test.go:186: accepted untrusted verification URL
+    --- FAIL: TestDesktopDeviceRejectsUnsafePairingURL/https://hive.example/other (0.03s)
+        desktop_device_test.go:186: accepted untrusted verification URL
+    --- FAIL: TestDesktopDeviceRejectsUnsafePairingURL/javascript:alert(1) (0.03s)
+        desktop_device_test.go:186: accepted untrusted verification URL
+FAIL
+FAIL	github.com/tokhive/bee/agent	2.540s
+--- FAIL: TestDeviceRecoveryBridgeStrictCommands (0.00s)
+    device_test.go:82: unsafe recovery params accepted: {"protocol":1,"id":"hello-1","instance":"dff186fc981fd4c43a83e025f0df2b17","result":{"bee_version":"test","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
+        {"protocol":1,"id":"p","instance":"dff186fc981fd4c43a83e025f0df2b17","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"s","instance":"dff186fc981fd4c43a83e025f0df2b17","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"c","instance":"dff186fc981fd4c43a83e025f0df2b17","result":{"recovery":{"operation_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null}}}
+        {"protocol":1,"id":"bad","instance":"dff186fc981fd4c43a83e025f0df2b17","error":{"code":"INVALID_REQUEST","message":"recovery confirmation fields=0 required=3"}}
+        {"protocol":1,"id":"bad","instance":"dff186fc981fd4c43a83e025f0df2b17","error":{"code":"DUPLICATE_ID","message":"id already has an unfinished response; required=no pending ID reuse"}}
+        {"protocol":1,"id":"bad","instance":"dff186fc981fd4c43a83e025f0df2b17","error":{"code":"DUPLICATE_ID","message":"id already has an unfinished response; required=no pending ID reuse"}}
+FAIL
+FAIL	github.com/tokhive/bee/desktopbridge	0.848s
+FAIL

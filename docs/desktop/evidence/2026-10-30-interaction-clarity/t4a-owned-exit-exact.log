@@ -1,0 +1,19 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 6.75s
+     Running unittests src/lib.rs (desktop/src-tauri/target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+
+thread 'update_install_tests::update_install_real_owned_exit_reaps_before_installer_and_blocks_on_failed_save' (9663613) panicked at src/update_install_tests.rs:175:10:
+called `Result::unwrap()` on an `Err` value: Elapsed(())
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test update_install_tests::update_install_real_owned_exit_reaps_before_installer_and_blocks_on_failed_save ... FAILED
+
+failures:
+
+failures:
+    update_install_tests::update_install_real_owned_exit_reaps_before_installer_and_blocks_on_failed_save
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 193 filtered out; finished in 11.36s
+
+error: test failed, to rerun pass `--lib`

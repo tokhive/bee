@@ -1,0 +1,258 @@
+UTC: 2026-11-02T10:39:41.604729+00:00
+cwd: /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop
+argv: ['npx', 'playwright', 'test', '--config', 'playwright.device.config.ts', 'device.spec.ts', 'native-runtime.spec.ts', '--grep', 'normal native|failed verification|retrying a failed|old native|opening after|English device|diagnostics preserve|initial device|restarted unknown|coordinated hooks|ready management|uncertain runtime start', '--workers=4']
+baseline: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+HEAD: 9bcb051bea8f3d10df3e2228663478b7bd61e286
+
+Node: v24.22.1
+
+
+Running 12 tests using 4 workers
+
+  ✓   4 [chromium] › tests/device.spec.ts:89:1 › an old native status rejection cannot overwrite a newer ready event (1.5s)
+  ✓   5 [chromium] › tests/device.spec.ts:95:1 › opening after website confirmation consumes the latest bound result (555ms)
+  ✓   6 [chromium] › tests/device.spec.ts:103:1 › English device entry and settings have complete translations (531ms)
+  ✘   2 [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply (2.9s)
+  ✓   7 [chromium] › tests/device.spec.ts:110:1 › diagnostics preserve runtime operation and platform authorization failure evidence (456ms)
+  ✘   1 [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable (6.4s)
+  ✘   3 [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success (6.4s)
+  ✓  10 [chromium] › tests/native-runtime.spec.ts:9:1 › coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh (664ms)
+  ✘  12 [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query (507ms)
+  ✘   8 [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes (5.4s)
+  ✘   9 [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes (5.4s)
+  ✘  11 [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable (5.9s)
+
+
+  1) [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      61 |  await expect(page.getByText('设备 ID',{exact:true})).toHaveCount(0);
+      62 |  await expect(page.locator('.device-facts>div')).toHaveCount(3);
+    > 63 |  expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>/start|supply_set_paused|run/.test(c)))).toBe(false);
+         |                                                                                                                                             ^
+      64 |  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+      65 | });
+      66 | test('failed verification blocks success and remains retryable',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:63:141
+
+    Error Context: ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-normal-native-build-6ef7b-balances-or-starting-supply-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('alert').filter({ hasText: 'HTTP 503' }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('alert').filter({ hasText: 'HTTP 503' }).first() with timeout 5000ms
+      - waiting for getByRole('alert').filter({ hasText: 'HTTP 503' }).first()
+
+
+      68 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
+      69 |  await page.getByRole('button',{name:'重新核对设备'}).click();
+    > 70 |  await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
+         |                                                                             ^
+      71 |  await expect(page.getByText('设备已绑定。')).toHaveCount(0);
+      72 |  await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+      73 | });
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:70:77
+
+    Error Context: ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-failed-verification-d859b-ccess-and-remains-retryable-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  3) [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('设备已绑定。')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('设备已绑定。') with timeout 5000ms
+      - waiting for getByText('设备已绑定。')
+
+
+      77 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
+      78 |  await page.getByRole('button',{name:'重新核对设备'}).click();
+    > 79 |  await expect(page.getByText('设备已绑定。')).toBeVisible();
+         |                                         ^
+      80 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
+      81 |  await page.getByRole('button',{name:'重新核对设备'}).click();await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
+      82 |  await page.evaluate(()=>{(window as unknown as {deviceStage:string;deviceDelay:number}).deviceStage='bound';(window as unknown as {deviceDelay:number}).deviceDelay=500;});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:79:41
+
+    Error Context: ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-retrying-a-failed-b-e128e-s-not-revive-cached-success-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  4) [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('正在读取设备与账号状态', { exact: true }).first()
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByText('正在读取设备与账号状态', { exact: true }).first() with timeout 5000ms
+      - waiting for getByText('正在读取设备与账号状态', { exact: true }).first()
+
+
+      132 | test('initial device facts stay unknown until the first read finishes',async({page})=>{
+      133 |  await page.addInitScript(()=>{(window as any).deviceHold=true;});await page.goto('/');
+    > 134 |  await expect(page.getByText('正在读取设备与账号状态',{exact:true}).first()).toBeVisible();
+          |                                                                   ^
+      135 |  await expect(page.getByRole('button',{name:'生成配对码',exact:true})).toHaveCount(0);
+      136 |  await expect(page.getByRole('heading',{name:'连接本机设备',exact:true})).toHaveCount(0);
+      137 |  await page.evaluate(()=>{const w=window as any;w.deviceHold=false;w.releaseDevice();});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:134:67
+
+    Error Context: ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-initial-device-fact-42c7b-til-the-first-read-finishes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  5) [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+
+    Error: expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1
+    Received:   1
+
+    Call Log:
+    - Timeout 5000ms exceeded while waiting on the predicate
+
+      166 |  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'HTTP 401 invalid_device_credential'};},recoveryView('redemption_unknown'));
+      167 |  await page.goto('/');await expect(page.getByText('兑换结果未知，正在核对新设备身份',{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+    > 168 |  await expect.poll(async()=>(await deviceCalls(page,'device_recovery_status')).length).toBeGreaterThan(1);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+          |                                                                                        ^
+      169 | });
+      170 | test('adopting a different owner requires its own current revision confirmation',async({page})=>{
+      171 |  await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/device.spec.ts:168:88
+
+    Error Context: ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/device-restarted-unknown-r-b4ae4--transaction-without-writes-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  6) [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByRole('region', { name: '贡献运行' }).getByText('接单条件尚未满足', { exact: true })
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" getByRole('region', { name: '贡献运行' }).getByText('接单条件尚未满足', { exact: true }) with timeout 5000ms
+      - waiting for getByRole('region', { name: '贡献运行' }).getByText('接单条件尚未满足', { exact: true })
+
+
+      81 |  await expect(card(page).getByText('b'.repeat(16),{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toEqual([]);
+      82 |  await page.getByRole('button',{name:'概览',exact:true}).click();await expect(page.getByRole('checkbox',{name:'允许 OpenAI 恢复接单'})).toHaveCount(0);await page.getByRole('button',{name:'开始贡献',exact:true}).click();
+    > 83 |  await expect(page.getByRole('region',{name:'贡献运行'}).getByText('接单条件尚未满足',{exact:true})).toBeVisible();expect((await calls(page,'runtime_start'))[0].args.request.resume_platforms).toEqual([]);
+         |                                                                                          ^
+      84 |  await page.getByRole('button',{name:'停止贡献',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认停止',exact:true}).click();await expect(page.getByText('停止已确认，下次打开保持停止。')).toBeVisible();
+      85 | });
+      86 | test('uncertain account writes reconcile with reads only and passive runtime cannot clear them',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:83:90
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-ready-manag-3a2cb--platform-states-are-usable-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7) [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByText('接单条件尚未满足', { exact: true })
+    Expected: visible
+    Error: strict mode violation: getByText('接单条件尚未满足', { exact: true }) resolved to 2 elements:
+        1) <p data-severity="warning" class="desktop-side-status">接单条件尚未满足</p> aka getByRole('complementary').getByText('接单条件尚未满足')
+        2) <h2>接单条件尚未满足</h2> aka getByRole('heading', { name: '接单条件尚未满足' })
+
+    Call log:
+      - Expect "toBeVisible" getByText('接单条件尚未满足', { exact: true }) with timeout 5000ms
+      - waiting for getByText('接单条件尚未满足', { exact: true })
+
+
+      100 |  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;(window as any).runtimeUnknown=true;});
+      101 |  await reconcile(page);await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(page.getByRole('region',{name:'贡献运行'})).toContainText('等待已安排的核对');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+    > 102 |  await reconcile(page);await expect(page.getByText('接单条件尚未满足',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(1);
+          |                                                                              ^
+      103 | });
+      104 |
+      105 | test('completed login cannot clear a later source edit, and write admission locks the source',async({page})=>{
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/tests/native-runtime.spec.ts:102:78
+
+    Error Context: ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/device-pairing/playwright/native-runtime-uncertain-r-be396--and-requires-a-fresh-query-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  7 failed
+    [chromium] › tests/device.spec.ts:47:1 › normal native build pairs and verifies without demo balances or starting supply 
+    [chromium] › tests/device.spec.ts:66:1 › failed verification blocks success and remains retryable 
+    [chromium] › tests/device.spec.ts:75:1 › retrying a failed bound-device check does not revive cached success 
+    [chromium] › tests/device.spec.ts:132:1 › initial device facts stay unknown until the first read finishes 
+    [chromium] › tests/device.spec.ts:165:1 › restarted unknown recovery queries the existing transaction without writes 
+    [chromium] › tests/native-runtime.spec.ts:77:1 › ready management stays stopped; select, explicit start, stop and per-platform states are usable 
+    [chromium] › tests/native-runtime.spec.ts:99:1 › uncertain runtime start is never replayed and requires a fresh query 
+  5 passed (13.7s)
+
+Exit: 1
+UTC end: 2026-11-02T10:39:55.900871+00:00

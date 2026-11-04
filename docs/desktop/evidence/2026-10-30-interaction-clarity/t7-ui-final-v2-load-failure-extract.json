@@ -1,0 +1,26 @@
+{
+  "provenance": "本会话在复跑前实际解包原trace.zip的输出摘录。后续Playwright清理共享outputDir，原zip未能保留；本文件不冒充原trace。",
+  "test": "account-auto-read source replacement rejects a late previous-source reply",
+  "console": {
+    "messageType": "error",
+    "text": "Failed to load resource: the server responded with a status of 404 (Not Found)",
+    "location": {
+      "url": "http://127.0.0.1:1477/node_modules/.vite/deps/react-dom_client.js",
+      "lineNumber": 0,
+      "columnNumber": 0
+    }
+  },
+  "network": {
+    "startedDateTime": "2026-11-02T13:52:21.684Z",
+    "request": {
+      "method": "GET",
+      "url": "http://127.0.0.1:1477/node_modules/.vite/deps/react-dom_client.js"
+    },
+    "response": {
+      "status": 404,
+      "statusText": "Not Found"
+    },
+    "_failureText": "net::ERR_ABORTED"
+  },
+  "cause_limit": "三个失败均发生于hookHarness创建model之前；共享node_modules/独立BASE服务预构建缓存仅为可能关联，停止后定向通过不足以证明根因。"
+}

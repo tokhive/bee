@@ -1,0 +1,44 @@
+{
+  "utc": "2026-11-02T12:51:01.667234+00:00",
+  "baseline": "6022fd76f828101507dbd985960383f98e926526",
+  "sources": {
+    "desktop/src-tauri/src/experience.rs": "8873c018cbd1605272fb961e19ec05c69bd1a571e8f7f5a98d7a11697efa60db",
+    "desktop/src-tauri/src/experience_tests.rs": "f5a8c8ce068da9bef9b06cd0e872cbc886c2967165e0232db798307dc49bcd22",
+    "desktop/src/app/NativeApp.tsx": "98198f55af44444333ec560f5496b234f6fb1855c5200889ba94cc20cae2a132",
+    "desktop/src/features/device/DevicePairingPage.tsx": "f6dfa281272634bf9835991908b48af3a6bf2d3596142944dda4a3cd0db020fe",
+    "desktop/src/i18n/en.ts": "c82055f049be85f571bb5b057effecf79423efbb1993e55eebf8fb8e3d6d0155",
+    "desktop/tests/device.spec.ts": "afbd386935126257bdfab22929981fa231403eb708003ff8a01168b07d6ce9ca",
+    "desktop/tests/fixtures/bridge-child.mjs": "70cedf7d45af5cfe824db9ddb6d030612e8f6f49ad13e114a6f5cc35f643e955"
+  },
+  "sidecar_source": {
+    "revision": "6022fd76f828101507dbd985960383f98e926526",
+    "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+    "target": "aarch64-apple-darwin",
+    "goos": "darwin",
+    "goarch": "arm64",
+    "go": "go version go1.27.3 darwin/arm64",
+    "beeVersion": "dev+6022fd76f828-dirty",
+    "binarySha256": "a5d7e20a78693cee0cedbcf9fb91fc0bae8f7825731317913e9b6ce8a1ec89a4"
+  },
+  "sidecar_actual_sha256": "a5d7e20a78693cee0cedbcf9fb91fc0bae8f7825731317913e9b6ce8a1ec89a4",
+  "evidence": {
+    "t6-fix-final-native.log": "7ccfb3c801fc9afc592b009426ceb096a14490e731d849fbd3441c14bbd50979",
+    "t6-fix-final-node.log": "540811f8acc7b4a8fddd3362913e3a709e1e6db9a7a6ad9a224a203381865e8f",
+    "t6-fix-final-sidecar.log": "b9182a1b86a08ffd2c629876c23a61772e71923d6f8a828a2d7e4802d5608aa5",
+    "t6-fix-final-typecheck.log": "c02c77952f72869687783d00750f4b076b755b4af4cd0f5ab8f0b92c586f8b63",
+    "t6-fix-final-ui.log": "f98075f4e0cd11e382b67d3f09cdfb42605d7ccdaa074b62af3cff9c905db792",
+    "t6-fix-green-native.log": "a390b76eb8a8fa03dc457fa45a689b06b749061af780b750979ce23e2e09a9a8",
+    "t6-fix-green-ui-v2.log": "60dec08369aa27e8e8144e78f693df0a10aff7364ad1afbd58277347ed7d52fb",
+    "t6-fix-green-ui.log": "19fe753519e55f98940c98f56adfc83fc8445f2605f9dad6e0c8c785ecc4956e",
+    "t6-fix-history-running-860-en-dark.png": "4417cb3b812b2bc0fccc145869186c66e006316e43b46c5ad2f1eb9da4e93794",
+    "t6-fix-history-running-860-zh-light.png": "46fefb53782e92d49333cf1f5e08740cf031361c7999948949c2cc903fff277f",
+    "t6-fix-manual.json": "e4fae63021c3b3b6bb61806f5b517c6157c06dc79bde98eae60beb77354fb69e",
+    "t6-fix-manual.mjs": "c26bee043a82cdf990d6782c8507670bb5027b7cc39976ce0a2eb374190ea5cd",
+    "t6-fix-red-native.log": "db52da373f14edf18308f32905a98ee5ab5deb2594cca2e98eee4f906a92bcc1",
+    "t6-fix-red-ui.log": "cfe95edf238f19860a4d4d184ebd4e5787e6800082ff8ac99ed9d18ab9833bfa",
+    "t6-fix-repeat-confirm-860-en-dark.png": "7f5145f22d27bdf5270f10a6f6d23d3c64981d98b8092ae3f60b1d4c24b28d2e",
+    "t6-fix-repeat-confirm-860-zh-light.png": "78047a498257b961b0ae640de959e920de65c1d049b756d4927999597a5cba2a",
+    "t6-fix-sidecar-build.log": "a3577581fc4516c139643810ba3fa60ff5fd86089024df0ad3186b39cd2cc899",
+    "t6-fix-typecheck.log": "98d4a144282de268b1fc88a6a5d7cbd9db1267e55bfd738a8358336eece8a265"
+  }
+}

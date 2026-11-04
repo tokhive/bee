@@ -1,0 +1,54 @@
+{"time": "2026-11-02T09:09:47.544648+00:00", "command": ["cargo", "test", "--lib", "sidecar::tests", "--", "--nocapture"], "cwd": "/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri", "base": "cf573e404d10f7e84f6334cdcbd5bb6aad07f1a5"}
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-p0/desktop/src-tauri)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.32s
+     Running unittests src/lib.rs (target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 31 tests
+test sidecar::tests::bundled_program_is_always_next_to_the_app_executable ... ok
+test sidecar::tests::cleanup_failure_preserves_the_original_protocol_error ... ok
+test sidecar::tests::emitted_first_byte_cannot_be_reclassified_as_unsent ... ok
+test sidecar::tests::device_business_failure_keeps_owned_bridge_ready ... ok
+test sidecar::tests::authorize_native_commands_bind_operation_and_keep_shell_private ... ok
+test sidecar::tests::child_failure_retains_safe_management_evidence_without_exposing_stderr ... ok
+test sidecar::tests::device_recovery_methods_keep_fixed_contract_and_startup_hold_exit_boundaries ... ok
+test sidecar::tests::account_methods_use_fixed_params_and_survive_business_errors ... ok
+test sidecar::tests::fragmented_child_responses_and_concurrent_requests_are_correlated ... ok
+test sidecar::tests::account_native_commands_validate_typed_requests_without_expanding_generic_access ... ok
+
+thread 'sidecar::tests::canceled_waiters_release_total_budget_without_sending' (10941081) panicked at src/sidecar_tests.rs:188:25:
+called `Result::unwrap()` on an `Err` value: BridgeError { code: "ACCOUNT_REPLY_INVALID", message: "account result missing", details: None }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+test sidecar::tests::canceled_waiters_release_total_budget_without_sending ... FAILED
+test sidecar::tests::account_request_uses_its_15_second_boundary ... ok
+test sidecar::tests::native_go_management_binary_can_handshake_ping_and_stop ... ok
+test sidecar::tests::failed_ping_revokes_ready_before_returning_and_stop_waits_for_reaping ... ok
+test sidecar::tests::concurrent_stop_reaps_stubborn_owned_child_and_preserves_external_process ... ok
+test sidecar::tests::signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup ... ignored, requires a freshly built signed Bee.app; set BEE_TEST_APP_BUNDLE for a release candidate
+test sidecar::tests::missing_and_changed_binaries_fail_before_handshake ... ok
+test sidecar::tests::owned_process_is_reaped_before_singleton_release ... ok
+test sidecar::tests::owned_exit_joins_both_reads_and_rejects_queued_write ... ok
+test sidecar::tests::runtime_native_commands_fix_stop_reason_and_keep_internal_actions_private ... ok
+test sidecar::tests::zero_byte_backpressure_preserves_unsent_cancellation_and_deadline ... ok
+
+thread 'sidecar::tests::shared_barrier_fences_later_platform_on_owned_pipe' (10942658) panicked at src/sidecar_tests.rs:135:25:
+called `Result::unwrap()` on an `Err` value: BridgeError { code: "ACCOUNT_REPLY_INVALID", message: "account result missing", details: None }
+test sidecar::tests::shared_barrier_fences_later_platform_on_owned_pipe ... FAILED
+test sidecar::tests::supply_business_failure_keeps_the_owned_session_ready ... ok
+test sidecar::tests::queued_account_reply_deadline_does_not_wait_for_child_reaping ... ok
+test sidecar::tests::supply_native_commands_require_platform_and_an_explicit_boolean ... ok
+test sidecar::tests::supply_commands_use_fixed_methods_and_params_on_a_six_capability_child ... ok
+test sidecar::tests::platform_reads_bypass_same_platform_waiters_on_owned_pipe ... ok
+test sidecar::tests::unsent_queue_timeout_does_not_kill_a_healthy_device_session ... ok
+test sidecar::tests::sent_deadline_and_abandoned_caller_still_fail_closed ... ok
+test sidecar::tests::invalid_concurrent_replies_revoke_owned_session ... ok
+test sidecar::tests::invalid_utf8_version_exit_and_timeout_never_become_ready ... ok
+
+failures:
+
+failures:
+    sidecar::tests::canceled_waiters_release_total_budget_without_sending
+    sidecar::tests::shared_barrier_fences_later_platform_on_owned_pipe
+
+test result: FAILED. 28 passed; 2 failed; 1 ignored; 0 measured; 182 filtered out; finished in 34.94s
+
+error: test failed, to rerun pass `--lib`

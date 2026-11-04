@@ -39,7 +39,10 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   revisions.current[platform]=view.revision;latest.current[platform]=view;verified.current[platform]=true;setViews(v=>({...v,[platform]:view}));
   const login=view.operation?.kind==='authorize'&&view.operation.state==='succeeded'?view.operation.id:undefined;
   if(detected||login&&!completedLogins.current.has(login))setDirty(v=>({...v,[platform]:false}));
-  if(login)completedLogins.current.add(login);
+  if(login&&!completedLogins.current.has(login)){
+   completedLogins.current.add(login);
+   setSourceReadFailed(v=>({...v,[platform]:undefined}));
+  }
   return true;
  },[]);
  useEffect(()=>{

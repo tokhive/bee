@@ -13,6 +13,8 @@ npm --prefix desktop run dev:ui
 
 预览加载当前源码中的正式 `NativeApp`、页面组件、状态协调器和类型化 Client，由模拟 IPC 提供数据。选择场景后可操作四页、账号详情和确认框，也可切换明暗主题、860×600 窄窗并重置场景。操作只影响当前预览，不连接真实 Hive、不读取真实账号凭据、不启动贡献或安装更新。
 
+同一场景内切页、切换外观或窗口尺寸会保留操作进度；切换场景、刷新和“重置场景”创建新会话。外观与正式设置页共用偏好，语言、主题和修订可回读。预览上方“模拟外部条件”可选择通知权限、自启注册、账号来源、当前登录结果、设备网络、贡献回执、代理故障、诊断结果、当前配对批准和设备凭据撤销；选择结果后点击“应用模拟条件”，再在正式页面继续操作或核对。控制只作用于当前会话和当前操作，旧登录或配对结果不会应用到新事务。
+
 开发时按下面的入口定位修改：
 
 | 内容 | 位置 |
@@ -20,6 +22,7 @@ npm --prefix desktop run dev:ui
 | 正式页面、组件和呈现逻辑 | `src/features/`、`src/components/`、`src/presentation/` |
 | 客户端契约和共享状态 | `src/system/` |
 | 场景目录和状态模拟 | `tests/fixtures/bee-preview/scenarios.mjs`、`fixture.mjs` |
+| 共同事件入口及网络／设备会话 | `tests/fixtures/bee-preview/control.mjs`、`network-session.mjs`、`device-session.mjs` |
 | 共用原生命令替身 | `tests/fixtures/native-accounts.mjs` |
 | 场景断言和业务验收映射 | `tests/preview-scenarios.spec.ts`、`tests/fixtures/t10-layout-cases.json` |
 

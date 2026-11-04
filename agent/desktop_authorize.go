@@ -37,11 +37,12 @@ type DesktopAuthorizer struct {
 	timeout  time.Duration
 	resolve  func(string) (string, error)
 	command  func(string, ...string) *exec.Cmd
+	interact func(context.Context, *exec.Cmd) error
 }
 
 func NewDesktopAuthorizer(parent context.Context, a *DesktopAccounts) *DesktopAuthorizer {
 	ctx, cancel := context.WithCancel(parent)
-	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command}
+	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command, interact: runDesktopInteractiveAuthorization}
 	for _, p := range a.platforms {
 		p.snapshot.Features.Authorize = DesktopAccountAvailability{Available: true}
 	}
@@ -214,7 +215,11 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	check = "official_source_read"
 	before, failure := o.accounts.readAccountSource(ctx, detect)
 	defer before.clear()
-	if failure != nil && failure.Code != "source_missing" {
+	// A readable but malformed old record must not prevent the official client
+	// from replacing it. Access failures still stop here. After login, the same
+	// source must parse and pass all existing identity and revision checks; an
+	// unchanged malformed record therefore cannot be accepted as success.
+	if failure != nil && failure.Code != "source_missing" && failure.Code != "invalid_credentials" {
 		return failure
 	}
 	p, release, err := o.accounts.acquire(ctx, request.Platform)
@@ -234,7 +239,11 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	command.Stdout = io.Discard
 	command.Stderr = io.Discard
 	check = "official_process"
-	if err := runDesktopAuthorization(ctx, command); err != nil {
+	run := runDesktopAuthorization
+	if request.Platform == "claude" {
+		run = o.interact
+	}
+	if err := run(ctx, command); err != nil {
 		return desktopAuthorizationFailure(request.Platform, "authorization_process_failed", check, "official login process failed: "+err.Error(), nil, err)
 	}
 	if err := ctx.Err(); err != nil {

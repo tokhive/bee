@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"slices"
 	"sync"
 	"time"
@@ -37,11 +36,15 @@ type DesktopRuntime struct {
 	targets               map[string]bool
 	syncMu                sync.Mutex
 	connection            *desktopRuntimeConnection
+	presence              desktopPresence
+	connectionGate        desktopRuntimeGate
+	handoff               *desktopConnectionHandoff
 }
 
 func NewDesktopRuntime(parent context.Context, d *DesktopDevice, a *DesktopAccounts) *DesktopRuntime {
 	ctx, cancel := context.WithCancel(parent)
 	r := &DesktopRuntime{ctx: ctx, cancel: cancel, device: d, accounts: a, slots: map[string]*desktopRuntimeSlot{}, targets: map[string]bool{}, snapshot: DesktopRuntimeSnapshot{Local: "stopped", Connection: "disconnected", Platforms: map[string]DesktopRuntimePlatform{}}}
+	r.connectionGate = make(desktopRuntimeGate, 1)
 	for _, platform := range []string{"openai", "claude"} {
 		r.slots[platform] = &desktopRuntimeSlot{gate: make(desktopRuntimeGate, 1), control: make(desktopRuntimeGate, 1)}
 		r.snapshot.Platforms[platform] = DesktopRuntimePlatform{Account: initialAccountSnapshot(platform)}
@@ -152,6 +155,7 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	r.snapshot.Revision++
 	r.snapshot.NetworkRevision = r.network.Revision
 	r.snapshot.Local = "starting"
+	presenceDone := r.cancelPresenceLocked()
 	r.snapshot.Connection = "disconnected"
 	r.snapshot.ConnectionDetail = nil
 	r.snapshot.StopReceipt = nil
@@ -172,6 +176,9 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	go func() {
 		defer r.workers.Done()
 		defer close(done)
+		if presenceDone != nil {
+			<-presenceDone
+		}
 		err := reservationErr
 		if err == nil {
 			err = r.run(live, run, input.ResumePlatforms, pauseRevisions, restoring)
@@ -187,6 +194,7 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 			r.snapshot.Revision++
 			r.snapshot.Operation.State = "succeeded"
 			r.snapshot.Operation.Revision = r.snapshot.Revision
+			r.startPresenceLocked()
 			return
 		}
 		r.snapshot.Local = "failed"
@@ -200,6 +208,9 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 		r.snapshot.Operation.State = "failed"
 		r.snapshot.Operation.Revision = r.snapshot.Revision
 		r.snapshot.Operation.Error = accountFailure("unknown", "runtime_failed", "contribution_loop", err.Error())
+		if r.snapshot.Connection != "occupied" && r.snapshot.Connection != "rejected" {
+			r.startPresenceLocked()
+		}
 	}()
 	return op, nil
 }
@@ -301,7 +312,7 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 		return fmt.Errorf("runtime start has no verified paused platforms; inspect platform errors")
 	}
 	cfg := &egressConfig{Targets: targets, ConnectProxy: network.ConnectProxy, desktop: r}
-	return connectObserved(ctx, state, cfg, io.Discard, func(observation DesktopConnectionObservation) { r.connectionObserved(run, observation) })
+	return r.connectDesktop(ctx, state, cfg, func(observation DesktopConnectionObservation) { r.connectionObserved(run, observation) })
 }
 func (r *DesktopRuntime) connectionObserved(run string, observation DesktopConnectionObservation) {
 	r.mu.Lock()
@@ -329,7 +340,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	if err := ctx.Err(); err != nil {
 		return DesktopOperation{}, err
 	}
-	if !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change"}, input.Reason) {
+	if !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change", "startup_recovery"}, input.Reason) {
 		return DesktopOperation{}, fmt.Errorf("runtime stop reason outside fixed entry points")
 	}
 	r.accounts.lifecycleMu.Lock()
@@ -343,6 +354,10 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 		return DesktopOperation{}, fmt.Errorf("runtime revision changed: actual=%d expected=%d", r.snapshot.Revision, input.ExpectedRevision)
 	}
 	if r.snapshot.Local == "stopping" {
+		if input.Reason == "app_exit" || input.Reason == "update" {
+			r.presence.shutdown = true
+			return *r.snapshot.Operation, nil
+		}
 		return DesktopOperation{}, fmt.Errorf("runtime stop already in progress")
 	}
 	id, err := desktopOperationID()
@@ -351,6 +366,17 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}
 	r.snapshot.Revision++
 	r.snapshot.Local = "stopping"
+	presenceDone := r.cancelPresenceLocked()
+	if input.Reason == "app_exit" || input.Reason == "update" {
+		r.presence.shutdown = true
+	}
+	if input.Reason == "network_change" {
+		r.presence.suspended = true
+		r.presence.enabled = false
+	}
+	if input.Reason == "startup_recovery" {
+		r.presence.enabled = false
+	}
 	r.snapshot.ConnectionDetail = nil
 	if input.Reason == "user_stop" {
 		r.userStopRequested = true
@@ -366,6 +392,9 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	r.workers.Add(1)
 	go func() {
 		defer r.workers.Done()
+		if presenceDone != nil {
+			<-presenceDone
+		}
 		receipt, err := r.stop(stoppedIntent, owned, cancel, done, controlCancel, controlDone, accountWorkers)
 		r.mu.Lock()
 		defer r.mu.Unlock()
@@ -384,6 +413,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 			v.Supply = nil
 			r.snapshot.Platforms[p] = v
 		}
+		r.startPresenceLocked()
 	}()
 	return op, nil
 }
@@ -488,20 +518,39 @@ func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNe
 		return err
 	}
 	r.mu.Lock()
-	defer r.mu.Unlock()
 	if r.closed || len(r.accounts.activeActions) > 0 || r.controlDone != nil {
+		defer r.mu.Unlock()
 		return fmt.Errorf("network change blocked: closed=%t active_account_actions=%d account_connection=%t", r.closed, len(r.accounts.activeActions), r.controlDone != nil)
 	}
 	if r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" {
+		defer r.mu.Unlock()
 		return fmt.Errorf("network change requires stopped runtime: local=%s", r.snapshot.Local)
 	}
 	if network.Revision < r.network.Revision {
+		defer r.mu.Unlock()
 		return fmt.Errorf("network revision moved backwards: actual=%d current=%d", network.Revision, r.network.Revision)
 	}
+	if network.Revision == r.network.Revision && network.ConnectProxy != r.network.ConnectProxy {
+		defer r.mu.Unlock()
+		return fmt.Errorf("network configuration changed without revision advance: revision=%d proxy_match=false", network.Revision)
+	}
+	done := r.cancelPresenceLocked()
+	r.presence.enabled = false
+	r.presence.suspended = true
+	r.snapshot.Connection = "disconnected"
+	r.snapshot.ConnectionDetail = nil
+	r.snapshot.Revision++
+	r.mu.Unlock()
+	if done != nil {
+		<-done
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
 	if err := r.accounts.ConfigureNetwork(ctx, network); err != nil {
 		return err
 	}
 	r.network = network
+	r.presence.suspended = false
 	r.snapshot.NetworkRevision = network.Revision
 	r.snapshot.Revision++
 	return nil

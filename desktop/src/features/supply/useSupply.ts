@@ -7,12 +7,13 @@ export const failure=(cause:unknown,check='supply_read'):UiFailure=>normalizeFai
 export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null;refreshStatus?:RefreshStatus;supplyRefresh?:Partial<Record<SupplyPlatform,RefreshStatus>>}
 export function supplyFresh(state:SupplyState,platform:SupplyPlatform,now=Date.now()):boolean {
  const view=state.views[platform];
- return Boolean(view&&!state.errors[platform]&&Math.max(state.now,now)-Date.parse(view.checked_at)<=30000);
+ return Boolean(view&&!['waiting','blocked'].includes(state.supplyRefresh?.[platform]?.state??'')&&!state.errors[platform]&&Math.max(state.now,now)-Date.parse(view.checked_at)<=30000);
 }
-export function supplyProgress(state:SupplyState,platform:SupplyPlatform,now=Date.now()):'waiting'|'retrying'|'checking'|'blocked'|'stale'|null {
+export function supplyProgress(state:SupplyState,platform:SupplyPlatform,now=Date.now()):'inflight'|'waiting'|'retrying'|'checking'|'blocked'|'stale'|null {
  const refresh=state.supplyRefresh?.[platform];
  if(refresh){
   if(state.operation==='write'&&state.activePlatform===platform)return 'checking';
+  if(refresh.state==='waiting')return 'inflight';
   if(supplyFresh(state,platform,now))return null;
   if(refresh.state==='reading')return state.errors[platform]?'retrying':'checking';
   if(refresh.state==='scheduled'&&refresh.nextRetryAt)return 'waiting';
@@ -39,7 +40,7 @@ export function createSupplyModel(client:SupplyClient){
  const adoptedErrors=()=>externalError?{...writeErrors,...externalErrors,openai:externalError,claude:externalError}:{...writeErrors,...externalErrors};
  const publish=(next:Partial<SupplyState>)=>{state={...state,...next};listeners.forEach(listener=>listener());};
  const readFailed=(cause:unknown,affected:SupplyPlatform[]=platforms)=>{uncertainViews=observedViews;for(const p of affected)writeErrors[p]=failure(cause);publish({errors:adoptedErrors(),now:Date.now()});};
- const usable=(p:SupplyPlatform,paused=false)=>!blocked&&!state.errors[p]&&!!state.views[p]&&(paused||!pendingPlatforms.includes(p)&&!state.views[p]!.reasons.some(r=>r.endsWith('_confirmation_required')))&&Date.now()-Date.parse(state.views[p]!.checked_at)<=30000;
+ const usable=(p:SupplyPlatform,paused=false)=>!blocked&&supplyFresh(state,p)&&(paused||!pendingPlatforms.includes(p)&&!state.views[p]!.reasons.some(r=>r.endsWith('_confirmation_required')))&&Date.now()-Date.parse(state.views[p]!.checked_at)<=30000;
  const canWrite=(p:SupplyPlatform,paused=false)=>active&&!state.writeBusy&&usable(p,paused);
  function scheduleExpiry(){
   clearTimeout(expiry);

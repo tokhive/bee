@@ -252,7 +252,7 @@ async fn invalid_concurrent_replies_revoke_owned_session() {
 }
 
 #[tokio::test]
-async fn sent_deadline_and_abandoned_caller_still_fail_closed() {
+async fn sent_deadline_and_abandoned_caller_preserve_live_session() {
     for abandon in [false, true] {
         let (_dir, bridge, control) =
             controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
@@ -280,10 +280,12 @@ async fn sent_deadline_and_abandoned_caller_still_fail_closed() {
         } else {
             assert_eq!(slow.await.unwrap().unwrap_err().code, "RESPONSE_TIMEOUT");
         }
-        let failed = wait(&bridge, BridgePhase::Failed).await;
-        assert_eq!(failed.error.unwrap().code, "RESPONSE_TIMEOUT");
+        sleep(Duration::from_millis(250)).await;
+        assert_eq!(bridge.status().state, BridgePhase::Ready);
+        assert_eq!(bridge.0.capacity.available_permits(), 15);
         std::fs::write(control.with_extension("json.release"), b"release").unwrap();
-        assert!(bridge.ping().await.is_err());
+        bridge.ping().await.unwrap();
+        assert_eq!(bridge.0.capacity.available_permits(), 16);
         bridge.stop().await.unwrap();
     }
 }
@@ -846,7 +848,7 @@ fn bundled_program_is_always_next_to_the_app_executable() {
 }
 
 #[tokio::test]
-async fn failed_ping_revokes_ready_before_returning_and_stop_waits_for_reaping() {
+async fn unanswered_ping_preserves_ready_and_stop_waits_for_reaping() {
     let mut spec = fixture("ping-timeout");
     spec.timeout = Duration::from_millis(400);
     let bridge = Bridge::start(spec);
@@ -855,11 +857,10 @@ async fn failed_ping_revokes_ready_before_returning_and_stop_waits_for_reaping()
     assert_eq!(error.code, "RESPONSE_TIMEOUT");
     assert_eq!(
         bridge.status().state,
-        BridgePhase::Failed,
-        "failed ping still exposes ready before child reaping"
+        BridgePhase::Ready,
+        "reply timeout must preserve live owned child"
     );
-    assert!(bridge.status().metadata.is_none());
-    assert!(bridge.ping().await.is_err());
+    assert!(bridge.status().metadata.is_some());
     let (first, second) = tokio::join!(bridge.stop(), bridge.stop());
     first.unwrap();
     second.unwrap();
@@ -1163,6 +1164,7 @@ async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_priva
         "runtime_stop",
         "runtime_configure_network",
         "runtime_restore",
+        "runtime_enable_presence",
     ] {
         assert!(invoke("bridge_request", serde_json::json!({"method":method})).is_err());
     }
@@ -1321,9 +1323,13 @@ async fn unsent_mpsc_requests_keep_terminal_evidence() {
             method: "ping",
             params: serde_json::json!({}),
             deadline: Instant::now() + Duration::from_secs(5),
+            queued_at: Instant::now(),
+            started_at: None,
+            duration: Duration::from_secs(5),
+            timed_out: false,
             phase: Arc::new(StdMutex::new(RequestPhase::Queued)),
             _permit: bridge.0.capacity.clone().acquire_owned().await.unwrap(),
-            reply,
+            reply: Some(reply),
         })
         .await
         .unwrap();
@@ -1374,4 +1380,583 @@ fn unsent_error_preserves_safe_details_and_enforces_public_limits() {
     assert!(!serde_json::to_string(&invalid)
         .unwrap()
         .contains("TEST_SECRET"));
+}
+
+#[tokio::test]
+async fn execution_budget_starts_after_same_platform_queue_wait() {
+    let (_dir, bridge, control) = controlled_bridge(
+        serde_json::json!({"slow":"openai", "delay":100}),
+        "parallel-reads",
+    )
+    .await;
+    let b = bridge.clone();
+    let first = tokio::spawn(async move {
+        b.request(
+            "account_snapshot",
+            serde_json::json!({"platform":"openai"}),
+            Duration::from_secs(1),
+        )
+        .await
+    });
+    observed_requests(&control, 1).await;
+    let b = bridge.clone();
+    let second = tokio::spawn(async move {
+        b.request(
+            "supply_status",
+            serde_json::json!({"platform":"openai"}),
+            Duration::from_millis(250),
+        )
+        .await
+    });
+    sleep(Duration::from_millis(100)).await;
+    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+    first.await.unwrap().unwrap();
+    second
+        .await
+        .unwrap()
+        .expect("queue time consumed the execution budget");
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn timed_out_original_is_queryable_until_settled_without_business_payload() {
+    for fail in [false, true] {
+        let (_dir, bridge, control) = controlled_bridge(
+            serde_json::json!({"slow":"openai", "businessFailure": fail}),
+            "parallel-reads",
+        )
+        .await;
+        let instance = bridge.status().metadata.unwrap().instance;
+        let pid = std::fs::read_to_string(_dir.path().join("pid")).unwrap();
+        let mut settled = bridge.subscribe_settled();
+        let cause = bridge
+            .request(
+                "account_snapshot",
+                serde_json::json!({"platform":"openai"}),
+                Duration::from_millis(100),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(cause.code, "RESPONSE_TIMEOUT");
+        assert_eq!(bridge.status().metadata.unwrap().instance, instance);
+        #[cfg(unix)]
+        assert!(std::process::Command::new("/bin/kill").args(["-0", &pid]).status().unwrap().success(), "original owned PID={pid} exited after request timeout");
+        let details = cause.details.unwrap();
+        details
+            .validate()
+            .expect("timeout evidence must match strict wire contract");
+        let pending = serde_json::to_value(bridge.pending_requests()).unwrap();
+        assert_eq!(
+            pending,
+            serde_json::json!({"instance":instance,"requests":[{"id":"shell-2","method":"account_snapshot","platform":"openai"}]})
+        );
+        assert_eq!(details.evidence["request_id"], "shell-2");
+        assert_eq!(details.evidence["fully_sent"], "true");
+        assert_eq!(details.evidence["in_flight"], "true");
+        assert_eq!(details.evidence["phase"], "response");
+        std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+        let event = timeout(Duration::from_secs(2), settled.recv())
+            .await
+            .unwrap()
+            .unwrap();
+        assert_eq!(
+            serde_json::to_value(event).unwrap(),
+            serde_json::json!({"instance":instance,"id":"shell-2","method":"account_snapshot","platform":"openai"})
+        );
+        assert!(bridge.pending_requests().requests.is_empty());
+        bridge.ping().await.unwrap();
+        assert_eq!(bridge.status().metadata.unwrap().instance, instance);
+        assert_eq!(std::fs::read_to_string(_dir.path().join("pid")).unwrap(), pid);
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn late_reply_still_rejects_forged_duplicate_and_cross_instance_frames() {
+    for fault in ["unknown", "duplicate", "old", "instance"] {
+        let (_dir, bridge, control) = controlled_bridge(
+            serde_json::json!({"slow":"openai", "fault":fault}),
+            "parallel-reads",
+        )
+        .await;
+        assert_eq!(
+            bridge
+                .request(
+                    "account_snapshot",
+                    serde_json::json!({"platform":"openai"}),
+                    Duration::from_millis(100)
+                )
+                .await
+                .unwrap_err()
+                .code,
+            "RESPONSE_TIMEOUT"
+        );
+        std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+        let failed = wait(&bridge, BridgePhase::Failed).await;
+        assert_eq!(
+            failed.error.unwrap().code,
+            if fault == "instance" {
+                "INSTANCE_MISMATCH"
+            } else {
+                "UNEXPECTED_REPLY"
+            }
+        );
+        assert!(bridge.pending_requests().requests.is_empty());
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn partial_frame_survives_deadline_and_caller_drop_and_finishes_exactly_once() {
+    let (mut writer, mut reader) = tokio::io::duplex(1);
+    let phase = Arc::new(StdMutex::new(RequestPhase::Queued));
+    let guard = CancelUnsent(phase.clone(), Arc::new(Notify::new()));
+    let frozen = AtomicBool::new(false);
+    let mut frame = Outgoing {
+        id: "shell-2".into(),
+        bytes: b"abc\n".to_vec(),
+        written: 0,
+    };
+    assert!(!write_step(
+        &mut writer,
+        &mut frame,
+        &phase,
+        Instant::now() + Duration::from_secs(1),
+        &frozen,
+        true
+    )
+    .await
+    .unwrap());
+    drop(guard);
+    frozen.store(true, Ordering::SeqCst);
+    let reading = tokio::spawn(async move {
+        let mut bytes = [0; 4];
+        reader.read_exact(&mut bytes).await.unwrap();
+        bytes
+    });
+    while !write_step(
+        &mut writer,
+        &mut frame,
+        &phase,
+        Instant::now() - Duration::from_secs(1),
+        &frozen,
+        true,
+    )
+    .await
+    .unwrap()
+    {}
+    assert_eq!(reading.await.unwrap(), *b"abc\n");
+    assert_eq!(frame.written, 4);
+}
+
+#[test]
+fn retry_evidence_contract_rejects_noncanonical_and_unbounded_values() {
+    let evidence = serde_json::json!({"request_id":"shell-42","method":"supply_status","platform":"openai","phase":"response","queue_ms":"0","execution_ms":"15000","fully_sent":"true","in_flight":"true","retry_after_seconds":"2147483647","elapsed_ms":"1","failure_kind":"timeout"});
+    let details = |evidence: Value| serde_json::json!({"check":"bridge_request_deadline","observed_at":"2026-10-30T12:00:00Z","evidence":evidence});
+    serde_json::from_value::<protocol::FailureDetails>(details(evidence.clone()))
+        .expect("valid retry evidence");
+    assert_eq!(
+        crate::diagnostic_log::sanitize_evidence(
+            &serde_json::from_value(evidence.clone()).unwrap()
+        ),
+        serde_json::from_value(evidence.clone()).unwrap()
+    );
+    for (key, bad) in [
+        ("request_id", "shell-01"),
+        ("request_id", "arbitrary-secret"),
+        ("method", "DELETE"),
+        ("method", "supply_status;secret"),
+        ("platform", "other"),
+        ("phase", "other"),
+        ("queue_ms", "01"),
+        ("execution_ms", "9007199254740992"),
+        ("fully_sent", "1"),
+        ("in_flight", "yes"),
+        ("retry_after_seconds", "2147483648"),
+        ("elapsed_ms", "-1"),
+        ("failure_kind", "arbitrary-text"),
+    ] {
+        let mut invalid = evidence.clone();
+        invalid[key] = serde_json::json!(bad);
+        assert!(
+            serde_json::from_value::<protocol::FailureDetails>(details(invalid)).is_err(),
+            "accepted {key}={bad}"
+        );
+        let mut fields = std::collections::BTreeMap::new();
+        fields.insert(key.into(), bad.into());
+        assert!(
+            crate::diagnostic_log::sanitize_evidence(&fields).is_empty(),
+            "logged unsafe {key}={bad}"
+        );
+    }
+    for method in ["GET", "POST", "PUT"] {
+        let mut http = evidence.clone();
+        http["method"] = serde_json::json!(method);
+        http["phase"] = serde_json::json!("http_error");
+        serde_json::from_value::<protocol::FailureDetails>(details(http)).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn late_account_payload_must_pass_original_method_validation() {
+    let (_dir, bridge, control) = controlled_bridge(
+        serde_json::json!({"slow":"openai","invalidAccount":true}),
+        "parallel-reads",
+    )
+    .await;
+    assert_eq!(
+        bridge
+            .request(
+                "account_snapshot",
+                serde_json::json!({"platform":"openai"}),
+                Duration::from_millis(100)
+            )
+            .await
+            .unwrap_err()
+            .code,
+        "RESPONSE_TIMEOUT"
+    );
+    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+    let failed = timeout(Duration::from_secs(2), wait(&bridge, BridgePhase::Failed))
+        .await
+        .expect("late invalid method result was accepted");
+    assert_eq!(failed.error.unwrap().code, "ACCOUNT_REPLY_INVALID");
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn pending_command_bypasses_business_queue_and_timeout_events_persist_safely() {
+    let (dir, bridge, control) =
+        controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
+    let mut events = bridge.subscribe_diagnostics();
+    let cause = bridge
+        .request(
+            "account_snapshot",
+            serde_json::json!({"platform":"openai"}),
+            Duration::from_millis(100),
+        )
+        .await
+        .unwrap_err();
+    assert_eq!(cause.code, "RESPONSE_TIMEOUT");
+    let app = tauri::test::mock_builder()
+        .manage(bridge.clone())
+        .invoke_handler(tauri::generate_handler![
+            crate::commands::bridge_pending_requests
+        ])
+        .build(tauri::test::mock_context(tauri::test::noop_assets()))
+        .unwrap();
+    let view = tauri::WebviewWindowBuilder::new(&app, "main", Default::default())
+        .build()
+        .unwrap();
+    let response = tauri::test::get_ipc_response(
+        &view,
+        tauri::webview::InvokeRequest {
+            cmd: "bridge_pending_requests".into(),
+            callback: tauri::ipc::CallbackFn(0),
+            error: tauri::ipc::CallbackFn(1),
+            url: "tauri://localhost".parse().unwrap(),
+            body: tauri::ipc::InvokeBody::Json(serde_json::json!({})),
+            headers: Default::default(),
+            invoke_key: tauri::test::INVOKE_KEY.into(),
+        },
+    )
+    .unwrap()
+    .deserialize::<Value>()
+    .unwrap();
+    assert_eq!(response["requests"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        observed_requests(&control, 1).await.len(),
+        1,
+        "local pending read entered owned pipe"
+    );
+    let diagnostics =
+        crate::diagnostics_native::NativeDiagnostics::new(dir.path().join("safe-logs"));
+    let event = timeout(Duration::from_secs(1), events.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    diagnostics.logs.record(event).unwrap();
+    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+    let event = timeout(Duration::from_secs(2), events.recv())
+        .await
+        .unwrap()
+        .unwrap();
+    diagnostics.logs.record(event).unwrap();
+    let logs = diagnostics.logs.export_entries().unwrap();
+    assert_eq!(logs.len(), 2);
+    let timed_out = logs
+        .iter()
+        .find(|event| event.code == "request_timed_out")
+        .unwrap();
+    let settled = logs
+        .iter()
+        .find(|event| event.code == "request_settled")
+        .unwrap();
+    assert_eq!(timed_out.evidence["in_flight"], "true");
+    assert_eq!(settled.evidence["in_flight"], "false");
+    for event in logs {
+        assert_eq!(event.evidence.len(), 8);
+        assert!(!event.evidence.contains_key("params"));
+    }
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn timed_out_original_retains_shared_barrier_and_total_sixteen_budget() {
+    let (_dir, bridge, control) =
+        controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
+    assert_eq!(
+        bridge
+            .request(
+                "account_snapshot",
+                serde_json::json!({"platform":"openai"}),
+                Duration::from_millis(100)
+            )
+            .await
+            .unwrap_err()
+            .code,
+        "RESPONSE_TIMEOUT"
+    );
+    bridge
+        .request(
+            "supply_status",
+            serde_json::json!({"platform":"claude"}),
+            Duration::from_secs(1),
+        )
+        .await
+        .unwrap();
+    let b = bridge.clone();
+    let write =
+        tokio::spawn(async move { b.supply_set_paused(SupplyPlatform::Openai, true).await });
+    timeout(Duration::from_secs(1), async {
+        while bridge.0.capacity.available_permits() != 14 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    let mut queued = Vec::new();
+    for _ in 0..14 {
+        let b = bridge.clone();
+        queued.push(tokio::spawn(async move {
+            b.supply_status(SupplyPlatform::Claude).await
+        }));
+    }
+    timeout(Duration::from_secs(1), async {
+        while bridge.0.capacity.available_permits() != 0 {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(bridge.ping().await.unwrap_err().code, "REQUEST_NOT_QUEUED");
+    assert_eq!(bridge.pending_requests().requests.len(), 1);
+    sleep(Duration::from_millis(50)).await;
+    assert_eq!(
+        observed_requests(&control, 2).await.len(),
+        2,
+        "queued reads bypassed write barrier after timeout"
+    );
+    for task in queued {
+        task.abort();
+        let _ = task.await;
+    }
+    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+    write.await.unwrap().unwrap();
+    bridge.ping().await.unwrap();
+    let frames = observed_requests(&control, 4).await;
+    assert_eq!(
+        frames
+            .iter()
+            .filter(|v| v["method"] == "supply_set_paused")
+            .count(),
+        1
+    );
+    assert_eq!(
+        frames
+            .iter()
+            .filter(|v| v["method"] == "account_snapshot")
+            .count(),
+        1
+    );
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn late_nested_business_failures_settle_without_killing_owned_session() {
+    let (_dir, bridge, control) = controlled_bridge(serde_json::json!({}), "parallel-reads").await;
+    let mut settled = bridge.subscribe_settled();
+    for (method, code, binding_revision) in [
+        ("device_recovery_prepare", "DEVICE_RECOVERY_FAILED", None),
+        ("device_recovery_confirm", "http_rejected", None),
+        ("device_recovery_status", "timeout", None),
+        ("network_status", "NETWORK_OPERATION_FAILED", None),
+        ("network_test", "NETWORK_OPERATION_FAILED", None),
+        ("diagnostics_start", "DIAGNOSTICS_OPERATION_FAILED", None),
+        ("diagnostics_snapshot", "DIAGNOSTICS_OPERATION_FAILED", None),
+        ("diagnostics_cancel", "DIAGNOSTICS_OPERATION_FAILED", None),
+        (
+            "notification_snapshot",
+            "NOTIFICATIONS_OPERATION_FAILED",
+            None,
+        ),
+        ("device_context", "DEVICE_CONTEXT_FAILED", None),
+        ("device_context", "DEVICE_CONTEXT_INVALID", Some(7)),
+    ] {
+        let mut failure = serde_json::json!({"error":{"code":code,"message":"read failed: fixture HTTP 503","details":{"check":"late_read","observed_at":"2026-10-30T12:00:00Z","evidence":{"http_status":"503"}}}});
+        if let Some(revision) = binding_revision {
+            failure["binding_revision"] = serde_json::json!(revision);
+        }
+        std::fs::write(
+            &control,
+            serde_json::to_vec(&serde_json::json!({"holdMethod":method,"nestedFailure":failure}))
+                .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(
+            bridge
+                .request(method, serde_json::json!({}), Duration::from_millis(100))
+                .await
+                .unwrap_err()
+                .code,
+            "RESPONSE_TIMEOUT"
+        );
+        assert_eq!(bridge.pending_requests().requests.len(), 1);
+        std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+        let event = timeout(Duration::from_secs(2), settled.recv())
+            .await
+            .unwrap_or_else(|_| {
+                panic!("legal nested {method} failure killed the session or did not settle")
+            })
+            .unwrap();
+        assert_eq!(event.method, method);
+        assert_eq!(
+            bridge.status().state,
+            BridgePhase::Ready,
+            "nested failure {method} changed owned lifecycle"
+        );
+        assert!(bridge.pending_requests().requests.is_empty());
+        std::fs::remove_file(control.with_extension("json.release")).unwrap();
+        bridge.ping().await.unwrap();
+    }
+    bridge.stop().await.unwrap();
+}
+
+async fn request_for_late_validation(method: &'static str) -> Request {
+    let (reply, _receive) = oneshot::channel();
+    Request {
+        exit_request: false,
+        method,
+        params: serde_json::json!({}),
+        deadline: Instant::now() + Duration::from_secs(15),
+        queued_at: Instant::now(),
+        started_at: Some(Instant::now()),
+        duration: Duration::from_secs(15),
+        timed_out: true,
+        phase: Arc::new(StdMutex::new(RequestPhase::Sent)),
+        _permit: Arc::new(Semaphore::new(1)).acquire_owned().await.unwrap(),
+        reply: Some(reply),
+    }
+}
+
+#[tokio::test]
+async fn late_nested_failure_validation_preserves_closed_method_contracts() {
+    for method in [
+        "device_recovery_prepare",
+        "network_status",
+        "network_test",
+        "diagnostics_snapshot",
+        "notification_snapshot",
+        "device_context",
+    ] {
+        let request = request_for_late_validation(method).await;
+        let code = match method {
+            "diagnostics_snapshot" => "DIAGNOSTICS_OPERATION_FAILED",
+            "notification_snapshot" => "NOTIFICATIONS_OPERATION_FAILED",
+            _ => "DEVICE_RECOVERY_FAILED",
+        };
+        let failure = serde_json::json!({"error":{"code":code,"message":"fixture failure"}});
+        assert!(
+            validate_late_result(&request, &failure, &"f".repeat(32)).is_ok(),
+            "valid failure rejected for {method}"
+        );
+        for invalid in [
+            serde_json::json!({"error":{"code":"bad-code!","message":"fixture failure"}}),
+            serde_json::json!({"error":{"code":code,"message":"fixture failure","extra":true}}),
+            serde_json::json!({"error":{"code":code,"message":"fixture failure"},"extra":true}),
+            serde_json::json!({"error":{"code":code,"message":"fixture failure","details":{"check":"late_read","observed_at":"2026-10-30T12:00:00Z","evidence":{"token":"PRIVATE"}}}}),
+            serde_json::json!({"error":{"code":code,"message":""}}),
+        ] {
+            assert!(
+                validate_late_result(&request, &invalid, &"f".repeat(32)).is_err(),
+                "invalid nested {method} failure accepted"
+            );
+        }
+        if ["diagnostics_snapshot", "notification_snapshot"].contains(&method) {
+            for invalid in [
+                serde_json::json!({"error":{"code":"OTHER_VALID_CODE","message":"fixture failure"}}),
+                serde_json::json!({"error":{"code":code,"message":"x".repeat(1025)}}),
+            ] {
+                assert!(
+                    validate_late_result(&request, &invalid, &"f".repeat(32)).is_err(),
+                    "method-specific failure restriction bypassed for {method}"
+                );
+            }
+        }
+    }
+    let request = request_for_late_validation("device_context").await;
+    for (code, revision) in [
+        ("DEVICE_CONTEXT_INVALID", 0),
+        ("DEVICE_CONTEXT_INVALID", 9_007_199_254_740_992u64),
+        ("OTHER_VALID_CODE", 7),
+    ] {
+        assert!(validate_late_result(&request,&serde_json::json!({"error":{"code":code,"message":"fixture failure"},"binding_revision":revision}),&"f".repeat(32)).is_err());
+    }
+}
+
+#[tokio::test]
+async fn late_nested_invalid_failure_variants_still_fail_owned_session() {
+    for (method, failure, expected_code) in [
+        (
+            "network_test",
+            serde_json::json!({"error":{"code":"NETWORK_OPERATION_FAILED","message":"fixture failure"},"extra":true}),
+            "INVALID_REPLY",
+        ),
+        (
+            "device_recovery_status",
+            serde_json::json!({"error":{"code":"invalid-code!","message":"fixture failure"}}),
+            "INVALID_REPLY",
+        ),
+        (
+            "diagnostics_snapshot",
+            serde_json::json!({"error":{"code":"OTHER_VALID_CODE","message":"fixture failure"}}),
+            "DIAGNOSTICS_REPLY_INVALID",
+        ),
+    ] {
+        let (_dir, bridge, control) = controlled_bridge(
+            serde_json::json!({"holdMethod":method,"nestedFailure":failure}),
+            "parallel-reads",
+        )
+        .await;
+        let mut settled = bridge.subscribe_settled();
+        assert_eq!(
+            bridge
+                .request(method, serde_json::json!({}), Duration::from_millis(100))
+                .await
+                .unwrap_err()
+                .code,
+            "RESPONSE_TIMEOUT"
+        );
+        std::fs::write(control.with_extension("json.release"), b"release").unwrap();
+        let failed = timeout(Duration::from_secs(2), wait(&bridge, BridgePhase::Failed))
+            .await
+            .expect("invalid nested failure was accepted");
+        assert_eq!(failed.error.unwrap().code, expected_code);
+        assert!(bridge.pending_requests().requests.is_empty());
+        assert!(matches!(
+            settled.try_recv(),
+            Err(tokio::sync::broadcast::error::TryRecvError::Empty)
+        ));
+        bridge.stop().await.unwrap();
+    }
 }

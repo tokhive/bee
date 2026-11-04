@@ -4,7 +4,7 @@ import type {NavigationTarget} from '../../app/navigation';
 import {useState} from 'react';
 import {Dialog} from 'radix-ui';
 import {type AccountsModel} from './useAccounts';
-import type {AccountPlatform} from '../../system/accounts';
+import {accountConfirmationKey,type AccountPlatform} from '../../system/accounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {Button} from '../../components/ui';
 import {t,currentLocale,formatDate} from '../../i18n/index';
@@ -19,7 +19,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
  const showError=error&&!sameAccountFailure(error,accounts.sharedFailure)&&!sameAccountFailure(error,sourceFailure);
  const refresh=accounts.accountRefresh?.[platform];
  const unconfirmed=accounts.uncertain[platform]||op?.state==='reconciling';
- const progress=refresh?.state==='reading'?'重试中…':refresh?.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh?.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。';
+ const progress=refresh?.state==='waiting'?'前次核对尚未结束，结束后重试。':refresh?.state==='reading'?'重试中…':refresh?.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh?.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。';
  const terminal=op?.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':op.kind==='clear_selection'?'已取消未注册的本地选择；Hive 注册账号未被移除。':op.kind==='confirm_change'?'换号已完成，该平台保持暂停。':'接入已完成，该平台保持暂停。':op?.state==='cancelled'?'官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。':'账号操作失败';
  return <div className="account-operation-status">
   {unconfirmed&&!submissionChanged&&<p role="status">{t('账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。')}</p>}
@@ -29,7 +29,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
   {cancellation&&cancellation.operationId===op?.id&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<><p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>{!sameAccountFailure(cancellation.failure,error)&&<FailureNotice failure={cancellation.failure} check="authorize_cancel" onNavigate={onNavigate}/>}</>}
  </div>;
 }
-export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';onNavigate?:(target:NavigationTarget)=>void}){
+export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotSent(accounts.errors[platform]!);
@@ -43,21 +43,21 @@ export function NativeAccountActions({accounts,platform,runtime,placement='row',
   ...(selected&&view?.features.clear_selection.available&&view.hive.fingerprint===null&&view.hive.generation===null?['clear_selection' as const]:[]),
  ];
  const actionLabel=(action:AccountAction)=>action==='authorize'&&!selected?t('登录 {platform}',{platform:label}):t(actions[action].label);
- const stamp=()=>JSON.stringify([view?.revision,view?.candidate.reference,view?.selection.fingerprint,view?.features,accounts.sources[platform],dirty,runtime.view?.local,runtime.view?.run_id]);
+ const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sources[platform],dirty,runtime.view?.local,runtime.view?.run_id]);
  const [confirm,setConfirm]=useState<{action:AccountAction;stamp:string;current:string|null;target:string|null}|null>(null);
  const changed=!!confirm&&confirm.stamp!==stamp();
  const blocks=offered.map(action=>block(action)).filter(b=>!!b);
  const unique=[...new Map(blocks.map(b=>[b.message,b])).values()];
  const targetLabel=(target:NavigationTarget)=>target.page==='overview'&&target.section==='runtime'?'查看贡献运行':target.page==='overview'?'查看设备':target.section==='source'?'检查凭证来源':'查看账号详情';
  return <Dialog.Root open={confirm!==null} onOpenChange={open=>{if(!open)setConfirm(null);}}>
-  <div className="account-actions">{offered.map(action=><Dialog.Trigger asChild key={action}><Button variant={placement==='row'?'default':'outline'} disabled={!!block(action)} onClick={()=>setConfirm({action,stamp:stamp(),current:view?.selection.fingerprint??null,target:view?.candidate.fingerprint??null})}>{actionLabel(action)}</Button></Dialog.Trigger>)}
-   {op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<Button variant="outline" disabled={busy} onClick={()=>accounts.cancelAuthorize(platform)}>{t('取消官方登录')}</Button>}
+  <div className="account-actions">{offered.map(action=>{const button=<Button variant={placement==='row'?'default':'outline'} disabled={!!block(action)} onClick={()=>{if(action==='authorize'&&platform==='claude'){accounts.openLogin(platform,stamp());onInlineLogin?.();}else setConfirm({action,stamp:stamp(),current:view?.selection.fingerprint??null,target:view?.candidate.fingerprint??null});}}>{actionLabel(action)}</Button>;return action==='authorize'&&platform==='claude'?<span key={action}>{button}</span>:<Dialog.Trigger asChild key={action}>{button}</Dialog.Trigger>;})}
+   {platform!=='claude'&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<Button variant="outline" disabled={busy} onClick={()=>accounts.cancelAuthorize(platform)}>{t('取消官方登录')}</Button>}
   </div>
-  {unique.length>0&&<div className="account-action-help">{unique.map(b=><div key={b.message}><p>{t(b.message)}</p>{b.reason&&<details><summary>{t('查看操作限制')}</summary><code>{b.reason}</code></details>}{b.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(b.target!)}>{t(targetLabel(b.target))}</Button>}</div>)}</div>}
+  {unique.length>0&&!(platform==='claude'&&op?.kind==='authorize'&&['pending','running','reconciling'].includes(op.state))&&<div className="account-action-help">{unique.map(b=><div key={b.message}><p>{t(b.message)}</p>{b.reason&&<details><summary>{t('查看操作限制')}</summary><code>{b.reason}</code></details>}{b.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(b.target!)}>{t(targetLabel(b.target))}</Button>}</div>)}</div>}
   {confirm&&<Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content"><Dialog.Title>{actionLabel(confirm.action)}</Dialog.Title><Dialog.Description>{t(actions[confirm.action].description,{client})}</Dialog.Description>
    {['select','confirm_change'].includes(confirm.action)&&<dl className="account-detail-facts">{confirm.action==='confirm_change'&&<div><dt>{t('当前账号')}</dt><dd>{confirm.current?.slice(0,16)??t('未知')}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirm.target?.slice(0,16)??t('账号标识待官方核验')}</dd></div><div><dt>{t('平台')}</dt><dd>{label}</dd></div></dl>}
    {changed?<p role="alert">{t('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。')}</p>:block(confirm.action)&&<p role="alert">{t(block(confirm.action)!.message)}</p>}
-   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={!!block(confirm.action)||changed} onClick={()=>{const action=confirm.action;setConfirm(null);if(action==='authorize')accounts.authorize(platform);else accounts.action(platform,action);}}>{t(actions[confirm.action].confirm)}</Button></div>
+   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={!!block(confirm.action)||changed} onClick={()=>{if(confirm.stamp!==stamp()||accountActionBlock(confirm.action,{...context,now:Date.now()})){setConfirm({...confirm});return;}const action=confirm.action;setConfirm(null);if(action==='authorize')accounts.authorize(platform);else accounts.action(platform,action);}}>{t(actions[confirm.action].confirm)}</Button></div>
   </Dialog.Content></Dialog.Portal>}
  </Dialog.Root>;
 }

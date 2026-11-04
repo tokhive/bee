@@ -95,6 +95,7 @@ impl NetworkStatus {
 }
 
 pub(crate) fn decode_network_status(result: &Value) -> Result<NetworkStatus, BridgeError> {
+    crate::protocol::result_error(result)?;
     #[derive(Deserialize)]
     #[serde(deny_unknown_fields)]
     struct Envelope {

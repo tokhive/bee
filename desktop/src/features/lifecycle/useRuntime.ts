@@ -16,12 +16,12 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  const observe=useCallback(()=>{
   const next=central.current?.snapshot?.()??central.current;
-  if(!next?.view||next.error){verified.current=false;return false;}
+  if(!next?.view||next.error||next.refreshStatus?.state==='waiting'&&!!next.refreshStatus.lastConfirmedAt&&Date.now()-Date.parse(next.refreshStatus.lastConfirmedAt)>30000){verified.current=false;return false;}
   latest.current=next.view;verified.current=true;
   if(!resolution.current||next.view!==resolution.current.previous){resolution.current=undefined;setError(null);setUncertain(false);}
   return true;
  },[]);
- useEffect(()=>{if(external&&!busy)observe();},[external,view,busy,coordinated?.error,observe]);
+ useEffect(()=>{if(external&&!busy)observe();},[external,view,busy,coordinated?.error,coordinated?.refreshStatus,observe]);
  const read=useCallback(()=>{
   if(!client||writing.current)return Promise.resolve(false);
   if(reading.current)return reading.current;
@@ -64,7 +64,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   }catch(cause){if(current()){const problem=failure(cause,'runtime_operation');verified.current=false;resolution.current={previous:latest.current};if(!requestNotSent(problem))central.current?.pause?.();setError(problem);setUncertain(!requestNotSent(problem));}}
   finally{writing.current=false;if(active.current)setBusy(false);}
  };
- return {view,error,startBlocked:!!coordinated?.identityError,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
+ return {view,error,startBlocked:!!coordinated?.identityError,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error||coordinated?.refreshStatus?.state==='waiting'&&!!coordinated.refreshStatus.lastConfirmedAt&&Date.now()-Date.parse(coordinated.refreshStatus.lastConfirmedAt)>30000,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
   start:(resume:AccountPlatform[])=>write('start',resume),stop:()=>write('stop')};
 }
 export type RuntimeModel=ReturnType<typeof useRuntime>;

@@ -135,11 +135,87 @@ test('English runtime and login confirmation support keyboard at minimum window 
 });
 
 
-test('runtime account revisions invalidate an open confirmation until explicitly reopened',async({page})=>{
+for(const action of ['select','confirm_change'] as const)test(`account confirmation survives unchanged background refreshes: ${action}`,async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+ if(action==='confirm_change'){
+  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};a.revision++;});
+  await reconcile(page);await openDetails(page);
+ }
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   // Production loadSelection advances the observation revision even when the
+   // selected account and all submission conditions stay the same.
+   if(command==='account_snapshot'){
+    const a=w.accounts[args.platform];a.revision++;a.checked_at=new Date().toISOString();a.hive.observed_at=a.checked_at;
+    a.capabilities[1]={...a.capabilities[1],observed_at:a.checked_at,metadata_observed_at:a.checked_at,windows:[{scope:'',seconds:18000,used_percent:a.revision,reset_at:null}]};
+   }
+   return invoke(command,args);
+  };
+ });
+ const label=action==='select'?'接入':'换号',confirmLabel=action==='select'?'确认接入':'确认更换';
+ await (action==='select'?card(page):page.getByRole('dialog')).getByRole('button',{name:label,exact:true}).click();
+ const dialog=page.getByRole('dialog').last(),confirm=dialog.getByRole('button',{name:confirmLabel,exact:true});
+ for(let round=0;round<3;round++){
+  const before=await page.evaluate(()=>(window as any).accounts.openai.revision);
+  await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).accounts.openai.revision)).toBeGreaterThan(before);
+  await expect(confirm).toBeEnabled();await expect(dialog.getByRole('alert')).toHaveCount(0);
+ }
+ expect(await calls(page,'account_action')).toHaveLength(0);
+ const expected=await page.evaluate(()=>{const a=(window as any).accounts.openai;return {revision:a.revision,candidate:a.candidate.reference};});
+ await confirm.click();await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);
+ const written=await calls(page,'account_action');expect(written[0].args.request).toMatchObject({action,revision:expected.revision,candidate_ref:expected.candidate,confirmed:true});
+ await expect((action==='select'?card(page):page.getByRole('dialog')).getByText(action==='select'?'接入已完成，该平台保持暂停。':'换号已完成，该平台保持暂停。',{exact:true})).toBeVisible();
+ expect(await calls(page,'runtime_start')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+for(const change of ['candidate','source','selection','hive','pending','operation','feature','runtime','expiry','authorization-state','authorization-fingerprint','authorization-error'] as const)test(`account confirmation rejects changed submission conditions: ${change}`,async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await card(page).getByRole('button',{name:'接入',exact:true}).click();
+ const confirm=page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true});await expect(confirm).toBeEnabled();
+ await page.evaluate(change=>{
+  const w=window as any,a=w.accounts.openai;a.revision++;
+  switch(change){
+   case 'candidate':a.candidate.reference='e'.repeat(48);a.candidate.fingerprint='e'.repeat(64);break;
+   case 'source':a.candidate.source.directory='/tmp/changed-codex-source';break;
+   case 'selection':a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};break;
+   case 'hive':a.hive.fingerprint='f'.repeat(64);a.hive.generation=2;break;
+   case 'pending':a.hive.pending_fingerprint='e'.repeat(64);break;
+   case 'operation':a.operation={id:'c'.repeat(48),kind:'select',platform:'openai',state:'pending',revision:a.revision,error:null};break;
+   case 'feature':a.features.select={available:false,reason:'update_pending'};break;
+   case 'expiry':a.candidate.expires_at=new Date(Date.now()+30000).toISOString();break;
+   case 'authorization-state':a.authorization.state='expired';break;
+   case 'authorization-fingerprint':a.authorization.fingerprint='e'.repeat(64);break;
+   case 'authorization-error':a.authorization.error={code:'expired',check:'expiry',platform:'openai',message:'authorization expires within 30 seconds',evidence:{}};break;
+   case 'runtime':{
+    const invoke=w.__TAURI_INTERNALS__.invoke;
+    w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32)});return reply;};break;
+   }
+  }
+ },change);
+ await reconcile(page);await expect(confirm).toBeDisabled();
+ await expect(page.getByRole('dialog').getByRole('alert')).toContainText('账号、来源或运行条件已变化');
+ expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'runtime_start')).toHaveLength(0);
+});
+
+test('account confirmation rechecks expiry when the clock advances before another render',async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await card(page).getByRole('button',{name:'接入',exact:true}).click();
+ const dialog=page.getByRole('dialog'),confirm=dialog.getByRole('button',{name:'确认接入',exact:true});await expect(confirm).toBeEnabled();
+ const expiry=await page.evaluate(()=>Date.parse((window as any).accounts.openai.candidate.expires_at));
+ // Simulate waking after a clock jump without running polling/render timers.
+ await page.clock.setSystemTime(new Date(expiry-30000));
+ await confirm.evaluate((button:HTMLButtonElement)=>button.click());
+ await expect(confirm).toBeDisabled();await expect(dialog.getByRole('alert')).toBeVisible();
+ expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'runtime_start')).toHaveLength(0);
+});
+
+test('runtime account identity changes invalidate an open confirmation until explicitly reopened',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};a.revision++;w.accounts.openai=a;});
  await reconcile(page);await openDetails(page);await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();
- const before=await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.revision+=2;w.accounts.openai=a;return {reads:w.runtimeReadCount,revision:a.revision,candidate:a.candidate.reference};});
+ const before=await page.evaluate(()=>{const w=window as any;const a=structuredClone(w.accounts.openai);a.revision+=2;a.hive.generation=(a.hive.generation??0)+1;w.accounts.openai=a;return {reads:w.runtimeReadCount,revision:a.revision,candidate:a.candidate.reference};});
  await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before.reads);const stale=page.getByRole('dialog').last();await expect(stale.getByRole('button',{name:'确认更换',exact:true})).toBeDisabled();await expect(stale).toContainText('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。');expect(await calls(page,'account_action')).toEqual([]);await stale.getByRole('button',{name:'取消',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();
  const written=await calls(page,'account_action');expect(written).toHaveLength(1);expect(written[0].args.request.revision).toBe(before.revision);expect(written[0].args.request.candidate_ref).toBe(before.candidate);
  await expect(page.getByRole('dialog').getByText('换号已完成，该平台保持暂停。')).toBeVisible();await expect(page.getByRole('dialog').getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
@@ -231,5 +307,30 @@ for(const [connection,kind,copy] of [['connecting','connecting','正在连接 Hi
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
  await page.goto('/');const region=page.getByRole('region',{name:'贡献运行'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
- await expect(region.getByText('贡献已启动',{exact:true})).toHaveCount(0);await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+ await expect(region.getByRole('heading',{name:'贡献已启动',exact:true})).toHaveCount(0);await expect(region.locator('.native-runtime-health').getByText('贡献已启动',{exact:true})).toBeVisible();await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await expect(region.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+});
+
+for(const connection of ['connected','reconnecting','rejected','occupied'] as const)test(`idle presence ${connection} remains independent from contribution`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(({connection})=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   const reply=await invoke(command,args);
+   if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'stopped',run_id:null,connection,connection_detail:connection==='connected'?null:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 idle connection unavailable',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='reconnecting'?'scheduled':'halted',next_retry_at:connection==='reconnecting'?new Date(Date.now()+15000).toISOString():null}});
+   return reply;
+  };
+ },{connection});
+ await page.goto('/');
+ const region=page.getByRole('region',{name:'贡献运行'}),health=region.locator('.native-runtime-health');
+ await expect(health.getByText('贡献未启动',{exact:true})).toBeVisible();
+ const copy={connected:'Hive 已连接',reconnecting:'正在重新连接 Hive',rejected:'Hive 拒绝连接',occupied:'设备连接已被占用'};
+ await expect(health.getByText(copy[connection],{exact:true})).toBeVisible();
+ await expect(region.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+ if(connection!=='connected'){
+  await expect(region.getByText('Hive 拒绝了本次请求（HTTP 503）。',{exact:true})).toBeVisible();
+  await region.getByText('查看失败详情',{exact:true}).click();
+  await expect(region.getByText('HTTP 503 idle connection unavailable',{exact:false})).toBeVisible();
+  await expect(region.getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeVisible();
+ }
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
 });

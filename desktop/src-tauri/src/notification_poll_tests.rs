@@ -213,9 +213,9 @@ fn preferences_failure_blocks_delivery_but_still_applies_explicit_recovery() {
 }
 
 #[test]
-fn background_delivery_errors_are_retained_and_later_polls_continue() {
+fn delivery_outcome_failures_do_not_become_poll_read_errors() {
     let retained = NotificationPollState::default();
-    let error = apply(decode(&value()).unwrap(), prefs(true), |_, _| {
+    apply(decode(&value()).unwrap(), prefs(true), |_, _| {
         Ok(vec![DeliveryOutcome {
             identity: "a".repeat(64),
             state: DeliveryState::Failed,
@@ -226,10 +226,9 @@ fn background_delivery_errors_are_retained_and_later_polls_continue() {
             }),
         }])
     })
-    .unwrap_err();
-    retained.retain(error.clone());
-    apply(decode(&value()).unwrap(), prefs(true), |_, _| Ok(vec![])).unwrap();
-    assert_eq!(retained.error(), Some(error));
+    .unwrap();
+    retained.complete(Ok(()));
+    assert_eq!(retained.error(), None);
     assert_eq!(
         safe_code("PRIVATE_MARKER\nsecret"),
         "NOTIFICATION_POLL_FAILED"
@@ -310,4 +309,70 @@ fn unconfirmed_system_language_never_changes_delivery_ledger_or_consumes_permiss
     .unwrap();
     assert_eq!(std::fs::read(&path).unwrap(), before);
     assert_eq!(adapter.0.load(Ordering::SeqCst), 1);
+}
+
+#[test]
+fn completed_notification_checks_clear_read_errors_and_advance_exact_sequence() {
+    let retained = NotificationPollState::default();
+    retained.complete(Err(invalid("read failed: fixture=true")));
+    assert_eq!(retained.check().0, 1);
+    assert!(retained.check().1.is_some());
+    retained.complete(Ok(()));
+    assert_eq!(retained.check(), (2, None));
+    retained.complete(Err(invalid("read failed again: fixture=true")));
+    assert_eq!(retained.check().0, 3);
+}
+
+#[test]
+fn notification_status_successful_read_does_not_clear_unrecovered_delivery_failure() {
+    struct Rejected;
+    impl NotificationAdapter for Rejected {
+        fn permission(&self) -> Result<Permission, BridgeError> { Ok(Permission::Granted) }
+        fn request_permission(&self) -> Result<(), BridgeError> { panic!("status must not prompt") }
+        fn submit(&self, _: &Notice) -> Result<SubmissionReceipt, SubmissionFailure> {
+            Err(SubmissionFailure { error: invalid("native rejection: fixture=true"), uncertain: false })
+        }
+    }
+    let dir = tempfile::tempdir().unwrap();
+    let service = NotificationService::new(dir.path().join("delivery.json"), Arc::new(Rejected));
+    let poll = NotificationPollState::default();
+    let mut active = value();
+    active["notifications"]["facts"][0]["active"] = json!(true);
+    active["notifications"]["facts"][0]["eligible"] = json!(true);
+    let result = apply(decode(&active).unwrap(), prefs(true), |enabled, events| service.reconcile(enabled, events));
+    poll.complete(result);
+    let failed = poll.delivery_status(&service).unwrap();
+    assert_eq!(failed["retryable_count"], 1);
+    assert_eq!(failed["check_sequence"], 1);
+    assert_eq!(failed["error"]["message"], "native rejection: fixture=true");
+    poll.retain(invalid("bridge read failed: fixture=true"));
+    assert_eq!(poll.delivery_status(&service).unwrap()["error"]["message"], "bridge read failed: fixture=true");
+    let result = apply(decode(&value()).unwrap(), prefs(true), |enabled, events| service.reconcile(enabled, events));
+    poll.complete(result);
+    let suppressed = poll.delivery_status(&service).unwrap();
+    assert_eq!(suppressed["check_sequence"], 3);
+    assert_eq!(suppressed["error"]["message"], "native rejection: fixture=true");
+    assert_eq!(suppressed["retryable_count"], 1);
+    service.allow_failed_retry().unwrap();
+    let pending = poll.delivery_status(&service).unwrap();
+    assert_eq!((pending["retryable_count"].as_u64(), pending["pending_count"].as_u64()), (Some(0), Some(1)));
+    let mut recovery = value();
+    recovery["notifications"]["facts"][0]["recovered"] = json!(true);
+    poll.complete(apply(decode(&recovery).unwrap(), prefs(false), |enabled, events| service.reconcile(enabled, events)));
+    let recovered = poll.delivery_status(&service).unwrap();
+    assert!(recovered["error"].is_null());
+    assert_eq!(recovered["check_sequence"], 4);
+    assert_eq!(recovered["pending_count"], 0);
+    assert_eq!(recovered.as_object().unwrap().len(), 5);
+}
+
+#[test]
+fn notification_status_ledger_read_failure_keeps_original_diagnostic() {
+    let dir = tempfile::tempdir().unwrap();
+    let path = dir.path().join("delivery.json");
+    crate::preferences::private_write(&path, b"{").unwrap();
+    let service = NotificationService::new(path, Arc::new(Adapter(AtomicUsize::new(0))));
+    let error = NotificationPollState::default().delivery_status(&service).unwrap_err();
+    assert_eq!(error.code, "NOTIFICATION_LEDGER_SCHEMA");
+    assert!(error.message.contains("line=1"));
 }

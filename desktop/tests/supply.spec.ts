@@ -5,8 +5,8 @@ import { test, expect, type Page } from '@playwright/test';
 async function fixture(page:Page, options:{delay?:number;age?:number;ready?:boolean;unbound?:boolean}={}) {
  const accounts=Object.fromEntries(['openai','claude'].map(p=>{const a=accountFixture(p) as any;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};return [p,a];}));
  await page.addInitScript((options)=>{
-  type Runtime={isTauri:boolean;__TAURI_INTERNALS__:unknown;__TAURI_EVENT_PLUGIN_INTERNALS__:unknown;calls:{command:string;platform?:string;paused?:boolean;instance:string;startedAt:number;completedAt?:number}[];active:number;maxActive:number;platformActive:Record<string,number>;platformMaxActive:Record<string,number>;delay:number;fail:string;failPlatform?:string;age:number;emit:(instance:string)=>void;paused:Record<string,boolean>};
-  const w=window as unknown as Runtime;w.isTauri=true;w.calls=[];w.active=0;w.maxActive=0;w.platformActive={openai:0,claude:0};w.platformMaxActive={openai:0,claude:0};w.delay=options.delay??0;w.fail='';w.age=options.age??0;w.paused={openai:false,claude:true};
+  type Runtime={isTauri:boolean;__TAURI_INTERNALS__:unknown;__TAURI_EVENT_PLUGIN_INTERNALS__:unknown;calls:{command:string;platform?:string;paused?:boolean;instance:string;startedAt:number;completedAt?:number}[];active:number;maxActive:number;platformActive:Record<string,number>;platformMaxActive:Record<string,number>;delay:number;fail:string;failStatus:number;failPlatform?:string;age:number;emit:(instance:string)=>void;paused:Record<string,boolean>};
+  const w=window as unknown as Runtime;w.isTauri=true;w.calls=[];w.active=0;w.maxActive=0;w.platformActive={openai:0,claude:0};w.platformMaxActive={openai:0,claude:0};w.delay=options.delay??0;w.fail='';w.failStatus=503;Math.random=()=>1;w.age=options.age??0;w.paused={openai:false,claude:true};
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>(),subscriptions=new Map<number,string>();
   const status=(instance=currentInstance)=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}});
   let currentInstance='b'.repeat(32),preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
@@ -16,6 +16,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
    if(command==='plugin:event|listen'){subscriptions.set(args!.handler!,args!.event!);return args!.handler;}
    if(command==='plugin:event|unlisten'){subscriptions.delete(args!.eventId!);return;}
    if(command==='runtime_snapshot')return {instance:currentInstance,result:{runtime:{...options.passiveRuntime,observed_at:new Date().toISOString(),platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:options.accounts[p],supply:null,selection_revision:1}]))}}};
+   if(command==='bridge_pending_requests')return {instance:currentInstance,requests:[]};
    if(command==='bridge_status')return status();
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance:currentInstance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1};
    if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
@@ -36,7 +37,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
     try{
      if(w.delay)await new Promise(resolve=>setTimeout(resolve,w.delay));
      if(command==='supply_set_paused')w.paused[platform]=args!.paused!;
-     if(fail&&(!w.failPlatform||w.failPlatform===platform))return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:fail}}};
+     if(fail&&(!w.failPlatform||w.failPlatform===platform))return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:fail,...(command==='supply_status'?{details:{check:'supply_status',observed_at:new Date().toISOString(),evidence:{failure_kind:'http_rejected',http_status:String(w.failStatus),method:'GET',phase:'http_error'}}}:{})}}};
      const paused=w.paused[platform];const reasons=paused?['manually_paused','offline']:options.ready?[]:['offline',...(platform==='openai'?['codex_source_unavailable','authorization_unavailable']:['not_configured'])];
      return {result:{supply:{hive:'https://hive.example',device_id:'device-1',platform,paused,ready:reasons.length===0,reasons,checked_at:new Date(Date.now()-age).toISOString()}}};
     }finally{entry.completedAt=Date.now();w.active--;w.platformActive[platform]--;}
@@ -76,19 +77,19 @@ test('an uncertain write retries GET automatically, preserves diagnostics and ne
  expect(await page.evaluate(()=> (window as unknown as {calls:{command:string}[]}).calls.filter(c=>c.command==='supply_set_paused').length)).toBe(1);
  await expect(page.getByRole('button',{name:'重新核对平台'})).toHaveCount(0);
 });
-test('independent platform polling waits ten seconds after completion and never overlaps the same platform',async({page})=>{
+test('independent platform polling waits ten seconds after success and backs off failed reads without overlap',async({page})=>{
  await fixture(page,{delay:700});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(2);await page.clock.runFor(700);
  await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
  const initial=await calls(page,'supply_status');expect(initial.map(c=>c.platform).sort()).toEqual(['claude','openai']);expect(initial.every(c=>c.completedAt!==undefined)).toBe(true);
  await page.clock.runFor(9999);expect(await calls(page,'supply_status')).toHaveLength(2);
- await page.evaluate(()=>{(window as any).fail='GET /api/bee/platforms/openai HTTP 502';});await page.clock.runFor(1);
+ await page.evaluate(()=>{const w=window as any;w.fail='GET /api/bee/platforms/openai HTTP 502';w.failStatus=502;});await page.clock.runFor(1);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(4);await page.clock.runFor(700);
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
- await page.clock.runFor(9999);expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1);
+ await page.clock.runFor(1999);expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(6);await page.clock.runFor(700);
  const reads=await calls(page,'supply_status');
- for(const platform of ['openai','claude']){const own=reads.filter(c=>c.platform===platform);expect(own).toHaveLength(3);for(let i=1;i<own.length;i++)expect(own[i].startedAt-own[i-1].completedAt!).toBe(10000);}
+ for(const platform of ['openai','claude']){const own=reads.filter(c=>c.platform===platform);expect(own).toHaveLength(3);expect(own[1].startedAt-own[0].completedAt!).toBe(10000);expect(own[2].startedAt-own[1].completedAt!).toBe(2000);}
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
 });
@@ -134,7 +135,7 @@ test('old in-flight platform reads cannot overwrite replacement failure or sched
  await diagnostics(page,'replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
  const reads=await calls(page,'supply_status');expect(reads.map(c=>[c.instance,c.platform])).toEqual([['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['c'.repeat(32),'openai'],['c'.repeat(32),'claude']]);
  expect(reads[4].startedAt).toBeGreaterThanOrEqual(Math.max(reads[2].completedAt!,reads[3].completedAt!));
- await page.clock.runFor(9999);expect(await calls(page,'supply_status')).toHaveLength(6);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(8);
+ await page.clock.runFor(1999);expect(await calls(page,'supply_status')).toHaveLength(6);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(8);
  expect((await calls(page,'supply_status')).slice(6).map(c=>c.instance)).toEqual(['c'.repeat(32),'c'.repeat(32)]);
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
 });

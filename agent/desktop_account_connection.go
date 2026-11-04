@@ -83,6 +83,7 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 	done := make(chan struct{})
 	r.controlCancel = cancel
 	r.controlDone = done
+	presenceDone := r.cancelPresenceLocked()
 	r.workers.Add(1)
 	r.mu.Unlock()
 	defer func() {
@@ -94,10 +95,14 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 		r.snapshot.Connection = "disconnected"
 		r.snapshot.ConnectionDetail = nil
 		r.snapshot.Revision++
+		r.startPresenceLocked()
 		r.mu.Unlock()
 		close(done)
 		r.workers.Done()
 	}()
+	if presenceDone != nil {
+		<-presenceDone
+	}
 	id, err := desktopOperationID()
 	if err != nil {
 		return err
@@ -146,7 +151,7 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 		})
 		return nil, workers.Wait
 	}}
-	err = connectObserved(live, state, cfg, io.Discard, func(observation DesktopConnectionObservation) {
+	err = r.connectDesktop(live, state, cfg, func(observation DesktopConnectionObservation) {
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		if r.closed || r.controlDone != done || r.snapshot.Local == "stopping" || live.Err() != nil {

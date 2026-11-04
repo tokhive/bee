@@ -18,7 +18,7 @@ import (
 // cleans the group and reaps it. Waiting directly on the official command could
 // reap its PID before a concurrent cancellation signals that group. No input is
 // interpolated into shell code; the executable and every argument remain argv.
-const desktopAuthorizationSupervisor = `"$@" 3>&- < /dev/null &
+const desktopAuthorizationSupervisor = `"$@" 3>&- <&4 4<&- &
 child=$!
 wait "$child"
 result=$?
@@ -49,7 +49,18 @@ func runDesktopAuthorization(ctx context.Context, command *exec.Cmd) error {
 	supervisor.Stdout = command.Stdout
 	supervisor.Stderr = command.Stderr
 	supervisor.Stdin = controlRead
-	supervisor.ExtraFiles = []*os.File{statusWrite}
+	input, ok := command.Stdin.(*os.File)
+	if command.Stdin != nil && !ok {
+		return fmt.Errorf("official input type rejected: actual=%T; required=*os.File", command.Stdin)
+	}
+	if input == nil {
+		input, err = os.Open(os.DevNull)
+		if err != nil {
+			return desktopAuthorizationProcessError("open default login input", err)
+		}
+		defer input.Close()
+	}
+	supervisor.ExtraFiles = []*os.File{statusWrite, input}
 	supervisor.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	supervisor.WaitDelay = time.Second
 	if err := supervisor.Start(); err != nil {

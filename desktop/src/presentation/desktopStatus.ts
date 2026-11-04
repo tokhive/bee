@@ -24,6 +24,7 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number):Desktop
  if(s.native.state==='starting')return result('loading');
  if(s.native.state==='failed'||s.native.state==='stopped')return result('failed',s.native.error?normalizeFailure(s.native.error,'bridge_startup'):null,{page:'diagnostics'});
  if(s.error)return result('unconfirmed',s.error,{page:'diagnostics'});
+ if(s.refresh.state==='waiting'&&s.refresh.lastConfirmedAt&&now-Date.parse(s.refresh.lastConfirmedAt)>30000)return result('unconfirmed',null,{page:'diagnostics'});
  const problem=s.deviceError??s.recoveryError??s.diagnosticFailure??startup?.failure??null;
  const rejected=problem&&(['device_replaced','invalid_device_credential','identity_mismatch'].includes(problem.code)||problem.check==='device_identity'&&problem.evidence.http_status==='401');
  if(rejected)return result('rejected',problem,{page:'overview',section:'device'});

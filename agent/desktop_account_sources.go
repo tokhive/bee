@@ -178,9 +178,16 @@ func (a *DesktopAccounts) readAccountSource(ctx context.Context, request Desktop
 		if err := validateDesktopAccountDirectory(&store.directory); err != nil {
 			return result, accountFailure(request.Platform, "invalid_directory", "source_directory", "resolved default must be a valid absolute directory")
 		}
-		credential, err := store.read(ctx)
+		raw, err := store.readRaw(ctx)
+		defer clear(raw)
 		if err != nil {
 			return result, accountSourceFailure(request.Platform, "read_"+request.Store, err)
+		}
+		credential, err := parseClaudeCredential(raw)
+		if err != nil {
+			failure := accountFailure(request.Platform, "invalid_credentials", "parse_credential", err.Error())
+			failure.Evidence["parsed"] = "false"
+			return result, failure
 		}
 		revision := sha256.Sum256([]byte(credential.secret.Token))
 		// Keep null for the default namespace; replacing it with its directory changes Keychain identity.

@@ -20,11 +20,12 @@ input.on('line', line => {
     const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
     appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');
     const reply=()=>{
-      const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),result:{platform:request.params.platform,alive:true}})+'\n';
-      process.stdout.write(frame);
-      if(config.fault==='duplicate')process.stdout.write(frame);
+      const result=request.method==='ping'?{alive:true}:config.nestedFailure??{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null},alive:true};
+      const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),...(config.businessFailure&&request.method!=='ping'?{error:{code:'http_rejected',message:'HTTP 503'}}:{result})})+'\n';
+      setTimeout(()=>{process.stdout.write(frame);
+      if(config.fault==='duplicate')process.stdout.write(frame);},config.delay??0);
     };
-    if(request.params.platform===config.slow||config.holdBoth&&request.params.platform) {
+    if(config.holdMethod===request.method||config.slow&&request.params.platform===config.slow||config.holdBoth&&request.params.platform) {
       const timer=setInterval(()=>{if(existsSync(`${control}.release`)){clearInterval(timer);reply();}},5);
       input.once('close',()=>clearInterval(timer));
     } else reply();
@@ -51,6 +52,9 @@ input.on('line', line => {
         reply({recovery:{operation_id:'a'.repeat(48),revision:1,phase,old_identity:{...identity,id:'device',name:'Saved Mac'},new_identity:phase==='completed'?identity:null,pairing:['pending','draining'].includes(phase)?{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2030-01-01T00:00:00Z'}:null,failure:null,...(config.recovery_extra?{credential:'SECRET'}:{})}});return;
       }
       case 'runtime_snapshot':reply({runtime});return;
+      case 'runtime_enable_presence':
+        if(Object.keys(request.params).sort().join(',')!=='binding_revision,network_revision'||request.params.binding_revision!==(config.binding_revision??1)||request.params.network_revision!==networkRevision)throw new Error('presence context mismatch');
+        reply(config.presence_bad?{enabled:false}:{enabled:true});return;
       case 'runtime_verify':writeFileSync(`${process.argv[4]}.verify`,'entered');setTimeout(()=>reply(config.bad_data?{error:{code:'STARTUP_DATA_INVALID',message:'protected account schema rejected'}}:{verified:true}),config.delay??0);return;
       case 'runtime_stop':
         if(!config.apply||request.params.reason!=='network_change'||request.params.expected_revision!==startupRuntimeRevision)throw new Error('invalid network stop');
@@ -58,8 +62,10 @@ input.on('line', line => {
       case 'runtime_restore':
         if(!config.apply)throw new Error('startup recheck repeated runtime restore');
         startupOperation={id:'c'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
-      case 'runtime_start': throw new Error('recovery must not call runtime_start');
-      case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;reply({configured:true});return;
+      case 'runtime_start':
+        if(!config.start||request.params.expected_revision!==startupRuntimeRevision)throw new Error('recovery must not call runtime_start');
+        startupOperation={id:'a'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
+      case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;if(config.apply)startupRuntimeRevision++;reply({configured:true});return;
       case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
       case 'account_detect':reply({account:{platform:request.params.platform,operation:null}});return;
       case 'account_defaults':reply({defaults:{platforms:[]}});return;
@@ -82,7 +88,7 @@ input.on('line', line => {
       exitSnapshot={...exitSnapshot,network_revision:bootstrapRevision,revision:exitSnapshot.revision+1};result={configured:true};
     } else if(request.method==='runtime_verify') {result={verified:true};
     } else if(request.method==='runtime_stop') {
-      if(!['app_exit','update'].includes(request.params.reason)) throw new Error('exit reason not fixed');
+      if(!['app_exit','update','startup_recovery'].includes(request.params.reason)) throw new Error('exit reason not fixed');
       const operation={id:'b'.repeat(48),kind:'stop',platform:null,state:'pending',revision:++exitSnapshot.revision,error:null};
       result={operation};
       exitSnapshot={...exitSnapshot,local:'stopped',connection:'disconnected',revision:exitSnapshot.revision+1,
@@ -106,6 +112,10 @@ input.on('line', line => {
     process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');return;
   }
   if(mode==='account-timeout'  && request.method!=='hello')return;
+  if(mode==='runtime'&&['device_context','runtime_enable_presence'].includes(request.method)) {
+    const result=request.method==='device_context'?{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:1}}:{enabled:true};
+    process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');return;
+  }
   if(mode==='runtime'&&['device_status','network_status'].includes(request.method)) {
     const result=request.method==='device_status'?{device:{state:'bound',hive:'https://hive.example',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.com'}}}:{network:{effective_revision:0,effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}};
     process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');return;
@@ -158,7 +168,8 @@ input.on('line', line => {
   const result = request.method === 'hello'
     ? { bee_version: 'fixture', os: process.platform === 'win32' ? 'windows' : process.platform, arch: process.arch === 'x64' ? 'amd64' : process.arch, capabilities: (mode.startsWith('owned-exit')||mode.startsWith('startup-'))?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','runtime_restore']:mode==='authorize'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network','authorize_start','authorize_status','authorize_cancel']:mode==='runtime'?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action','runtime_snapshot','runtime_start','runtime_stop','runtime_configure_network']:accountMode?['ping','shutdown','device_status','device_begin','supply_status','supply_set_paused','account_defaults','account_detect','account_snapshot','account_action']:supplyMode ? ['ping', 'shutdown', 'device_status', 'device_begin', 'supply_status', 'supply_set_paused'] : ['device','slow-device'].includes(mode) ? ['ping', 'shutdown', 'device_status', 'device_begin'] : ['ping', 'shutdown'] }
     : request.method === 'device_status' ? { error: { code: 'DEVICE_OPERATION_FAILED', message: 'GET identity HTTP 503' } } : { alive: true };
-  if(request.method==='hello'&&mode.startsWith('startup-'))result.capabilities.push('device_context','runtime_verify','device_recovery_prepare','device_recovery_confirm','device_recovery_status');
+  if(request.method==='hello'&&mode.startsWith('startup-')){result.capabilities.push('runtime_enable_presence');result.capabilities.push('device_context','runtime_verify','device_recovery_prepare','device_recovery_confirm','device_recovery_status');}
+  if(request.method==='hello'&&mode==='runtime')result.capabilities.push('runtime_restore','runtime_enable_presence','device_context');
   const reply = JSON.stringify({ protocol: mode === 'version' ? 2 : 1, id: request.id, instance: 'f'.repeat(32), result }) + '\n';
   if (mode === 'slow-device' && request.method === 'device_status') {
     setTimeout(() => process.stdout.write(reply), 800);

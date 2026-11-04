@@ -399,7 +399,7 @@ async fn recovery_errors_and_absent_writes_still_block_startup() {
 }
 
 #[tokio::test]
-async fn device_recovery_stays_stopped_until_explicit_recheck_and_completed_status_is_stable() {
+async fn completed_device_recovery_automatically_connects_without_restoring_contribution() {
     let (dir, bridge, app) = fixture(serde_json::json!({"rejected":true}));
     startup(app.handle().clone(), bridge.clone()).await;
     bridge.0.startup_verified.store(false, Ordering::SeqCst);
@@ -419,8 +419,7 @@ async fn device_recovery_stays_stopped_until_explicit_recheck_and_completed_stat
     recover_device(app.handle(), &bridge, None, false)
         .await
         .unwrap();
-    assert!(app.state::<StartupGate>().check().is_err());
-    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    assert!(app.state::<StartupGate>().check().is_ok());
     let revision = app.state::<StartupGate>().snapshot().revision;
     recover_device(app.handle(), &bridge, None, false)
         .await
@@ -431,6 +430,24 @@ async fn device_recovery_stays_stopped_until_explicit_recheck_and_completed_stat
     let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
     assert!(!calls.contains("runtime_restore"));
     assert!(!calls.contains("runtime_start"));
+    assert!(calls.contains("runtime_enable_presence"));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn binding_after_unbound_startup_enables_presence_automatically() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"unbound":true}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state,"ready");
+    let before = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!before.contains("runtime_enable_presence"));
+    std::fs::write(dir.path().join("context.json"),r#"{"binding_revision":2}"#).unwrap();
+    let reply = bridge.device_status().await.unwrap();
+    observe_device(app.handle(), &bridge, &reply.result).await;
+    assert_eq!(app.state::<StartupGate>().snapshot().binding_revision,Some(2));
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(calls.contains("runtime_enable_presence"));
+    assert!(!calls.contains("runtime_start"));
+    assert!(!calls.contains("runtime_restore"));
     bridge.stop().await.unwrap();
 }
 
@@ -475,4 +492,36 @@ async fn device_recovery_retains_update_data_and_owned_exit_protection() {
     let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
     assert!(!calls.contains("device_recovery_prepare"));
     bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn start_with_new_proxy_reenables_presence_after_dispatch_without_replaying_start() {
+    let (dir,bridge,app)=fixture(serde_json::json!({"apply":true,"start":true,"runtime_revision":5}));
+    assert_eq!(recheck(app.handle(),&bridge).await.state,"ready");
+    let store=app.state::<PreferencesStore>();
+    let scope=crate::network::trusted_scope(&bridge.device_status().await.unwrap().result).unwrap().unwrap();
+    let mut prefs=store.read().preferences;
+    prefs.proxies.push(crate::preferences::ProxyPreference {origin:scope.origin().into(),device_scope:Some(scope.device_scope().into()),connect_proxy:"http://127.0.0.1:18080".into()});
+    assert!(store.save(prefs.revision,prefs).error.is_none());
+    start_with_presence(&bridge,&store,&app.state::<NetworkController>(),&app.state::<StartupGate>(),crate::runtime_protocol::RuntimeStartRequest{expected_revision:5,resume_platforms:vec![]}).await.unwrap();
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert_eq!(calls.matches("runtime_start").count(),1);
+    assert!(calls.rfind("runtime_configure_network").unwrap()<calls.find("runtime_start").unwrap());
+    assert!(calls.rfind("runtime_enable_presence").unwrap()>calls.find("runtime_start").unwrap());
+    assert!(!calls.contains("runtime_restore"));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn presence_requires_exact_receipt_and_never_bypasses_exit_freeze(){
+    for frozen in [false,true]{
+        let (_dir,bridge,app)=fixture(serde_json::json!({"presence_bad":!frozen}));
+        wait_bridge(&bridge).await.unwrap();
+        bridge.0.frozen.store(frozen,Ordering::SeqCst);
+        let status=recheck(app.handle(),&bridge).await;
+        assert_eq!(status.state,"blocked");
+        assert_eq!(status.failure.unwrap().code,if frozen{"OWNED_EXIT_PENDING"}else{"RUNTIME_REPLY_INVALID"});
+        bridge.0.frozen.store(false,Ordering::SeqCst);
+        bridge.stop().await.unwrap();
+    }
 }

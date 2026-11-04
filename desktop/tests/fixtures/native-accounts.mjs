@@ -19,6 +19,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  const callbacks=new Map(),subscriptions=new Map();
  const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}});
  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
+ w.emitRequestSettled=request=>emit('bee://request-settled',{instance,...request});
  w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});
  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
@@ -26,7 +27,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  const network=()=>{const saved=preferences.proxies[0]?.connect_proxy??'',effective=w.effectiveProxy??'';return {saved_revision:preferences.revision,effective_revision:w.networkRevision??0,saved_proxy:saved,effective_proxy:effective,paths:{relay:effective?'local_proxy':'direct',official:`openai=${effective?'local_proxy':'direct'};claude=${effective?'local_proxy':'direct'}`,hive:'process_environment',official_login:'official_client'},pending_restart:saved!==effective,error:null};};
  const preferenceError=()=>({code:'PREFERENCES_WRITE_FAILED',message:'private file publish failed: kind=PermissionDenied os_code=13'});
  w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:id=>{callbacks.delete(id);},invoke:async(command,args={})=>{
-  if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();
+  if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();if(command==='bridge_pending_requests')return {instance,requests:w.pendingRequests??[]};
   if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
   if(command==='device_context')return {instance,result:{context:{hive:'https://hive.example',name:'Fixture',device_id:'dev-1',owner_id:'owner-1',binding_revision:w.bindingRevision??1}}};
   if(command==='startup_status'||command==='startup_recheck')return {state:w.deviceFail?'blocked':'ready',failure:w.deviceFail?{code:'device_replaced',message:'HTTP 401 device_replaced'}:null,instance,binding_revision:w.bindingRevision??1,network_revision:w.networkRevision??0,observed_at:new Date().toISOString(),revision:1};
@@ -44,6 +45,9 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    return structuredClone(w.updateSnapshot);
   }
   if(command==='native_locale_sync')return null;
+  if(['preferences_read','notification_permission','notification_delivery_status','autostart_status'].includes(command)){
+   const failure=w.settingsReadFailures?.[command];if(w.settingsReadDelay)await new Promise(resolve=>setTimeout(resolve,w.settingsReadDelay));if(failure)throw failure;
+  }
   if(command==='preferences_read')return structuredClone({preferences,error:null});
   if(command==='preferences_save'){
    if(w.preferencesFail)return structuredClone({preferences,error:preferenceError()});
@@ -51,8 +55,13 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   }
   if(command==='notification_permission')return w.notificationPermission??'prompt';
   if(command==='notification_enable')return w.notificationPermission??'granted';
-  if(command==='notification_delivery_status')return {error:w.notificationDeliveryError??null};
-  if(command==='notification_retry')return null;
+  if(command==='notification_delivery_status')return {error:w.notificationDeliveryError??null,retryable_count:w.notificationRetryableCount??0,pending_count:w.notificationPendingCount??0,uncertain_count:w.notificationUncertainCount??0,check_sequence:w.notificationCheckSequence??0};
+  if(command==='notification_retry'){
+   if(w.notificationRetryDelay)await new Promise(resolve=>setTimeout(resolve,w.notificationRetryDelay));
+   const count=w.notificationRetryableCount??0;w.notificationRetryableCount=0;w.notificationPendingCount=(w.notificationPendingCount??0)+count;
+   if(w.notificationRetryUnknown)throw {code:'RESPONSE_TIMEOUT',message:'retry receipt unavailable; authorization result unconfirmed: request_id=17'};
+   return {retryable_count:count};
+  }
   if(command==='autostart_status')return {desired:preferences.autostart_desired,registered:preferences.autostart_desired,error:null};
   if(command==='autostart_set'){preferences={...preferences,revision:preferences.revision+1,autostart_desired:args.enabled};return {desired:args.enabled,registered:args.enabled,error:null};}
   if(command==='network_snapshot')return network();

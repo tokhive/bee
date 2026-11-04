@@ -96,7 +96,7 @@ export async function installPreviewFixture(id){
    w.calls.push({command,args});
    if(command==='device_recovery_prepare')recovery={operation_id:'d'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:oldIdentity,new_identity:null,pairing:null,failure:null};
    if(command==='device_recovery_confirm'){
-    if(args.operation_id!==recovery?.operation_id||args.expected_revision!==recovery?.revision)return businessError('DEVICE_RECOVERY_PRECONDITION','confirmation revision differs from current transaction');
+    if(args.operationId!==recovery?.operation_id||args.expectedRevision!==recovery?.revision)return businessError('DEVICE_RECOVERY_PRECONDITION','confirmation revision differs from current transaction');
     recovery={...recovery,revision:recovery.revision+1,phase:args.decision==='adopt_owner'?'completed':'pending',pairing:args.decision==='adopt_owner'?null:{code:'ABCD-EFGH',verification_url:origin+'/devices/pair?code=ABCD-EFGH',expires_at:pairingExpiresAt}};
     if(recovery.phase==='completed')finishRecovery();
    }

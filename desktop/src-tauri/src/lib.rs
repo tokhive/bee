@@ -61,6 +61,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::bridge_request,
             commands::bridge_status,
+            commands::bridge_pending_requests,
  commands::startup_status,
  commands::startup_recheck,
  commands::device_context,
@@ -169,6 +170,36 @@ commands::device_recovery_status,
                     let state = statuses.borrow_and_update().clone();
                     if let Err(cause) = handle.emit_to("main", "bee://bridge-status", state) {
                         eprintln!("deliver Bee bridge status to main window: {cause}");
+                    }
+                }
+            });
+            let mut settled = bridge.subscribe_settled();
+            let settled_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    match settled.recv().await {
+                        Ok(event) => {
+                            if let Err(cause) = settled_handle.emit_to("main", "bee://request-settled", event) {
+                                eprintln!("deliver Bee request settlement to main window: {cause}");
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => eprintln!("Bee request settlement observer lagged; missed={count}; recover from bridge_pending_requests"),
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
+                    }
+                }
+            });
+            let mut diagnostics = bridge.subscribe_diagnostics();
+            let diagnostics_handle = app.handle().clone();
+            tauri::async_runtime::spawn(async move {
+                loop {
+                    match diagnostics.recv().await {
+                        Ok(event) => {
+                            if let Err(cause) = diagnostics_handle.state::<diagnostics_native::NativeDiagnostics>().logs.record(event) {
+                                eprintln!("persist Bee request diagnostic: {}: {}", cause.code, cause.message);
+                            }
+                        }
+                        Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => eprintln!("Bee safe diagnostic observer lagged; missed={count}"),
+                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
                     }
                 }
             });

@@ -41,6 +41,22 @@ type capabilitySource struct {
 	// failure is why the last observation came out unknown, empty when it
 	// did not; logged is the failure the operator was last told about.
 	failure, logged string
+	// Track the token whose plan disagrees with usage. Acknowledged requests
+	// are limited per revision and across revisions to avoid refresh loops.
+	stalePlan           string
+	planRefreshRevision string
+	planRefreshAt       time.Time
+}
+
+const planRefreshInterval = time.Hour
+
+func (s *capabilitySource) wantsPlanRefresh(revision string, now time.Time) bool {
+	return s != nil && s.stalePlan != "" && s.stalePlan == revision && s.planRefreshRevision != revision &&
+		(s.planRefreshAt.IsZero() || !now.Before(s.planRefreshAt.Add(planRefreshInterval)))
+}
+
+func (s *capabilitySource) askedPlanRefresh(revision string, now time.Time) {
+	s.planRefreshRevision, s.planRefreshAt = revision, now
 }
 
 // reusable avoids extra upstream queries on reconnect while the observation
@@ -324,7 +340,7 @@ func wallNow() time.Time { return time.Now().Round(0) }
 func (s *capabilitySource) observe(ctx context.Context, credential codexCredential, sequence int64) beewire.Capabilities {
 	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
-	s.failure = ""
+	s.failure, s.stalePlan = "", ""
 	fail := func(reason string) beewire.Capabilities {
 		s.failure = reason
 		return unknown
@@ -406,6 +422,9 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 	}
 	single := beewire.OpenAISingleWindow(credential.Plan)
 	if usage.Plan != "" && usage.Plan != credential.Plan || single != 0 && usage.Plan != credential.Plan {
+		if usage.Plan != "" {
+			s.stalePlan = credential.metadata().CredentialRevision
+		}
 		return fail(fmt.Sprintf("usage plan %q does not match authorization plan %q", usage.Plan, credential.Plan))
 	}
 	excluded, known := excludedQuotaModels(usage.Additional)

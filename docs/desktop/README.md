@@ -18,5 +18,6 @@
 | 超时保活与自动重试 | [重试规格](../superpowers/specs/2026-11-03-desktop-request-retry-design.md) |
 | 安装、更新与发布 | [发布说明](release.md)、[发布规格](../superpowers/specs/2026-10-26-desktop-release-update-design.md) |
 | 完成情况、当前计划和真实验收缺口 | [验收状态](acceptance.md) |
+| 已发现的问题与截图 | [问题备忘](issue-memo.md) |
 
 规格规定行为，计划记录尚待完成的工作，验证报告记录指定版本的实际结果。与当前验收相关的报告和原始证据保留其原始版本与结论，不作为 UI 开发入口，也不由文档清理改写为通过。

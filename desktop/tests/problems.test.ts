@@ -6,6 +6,13 @@ import {formatDate,formatNumber,translate} from '../src/i18n/index.ts';
 import {validNavigationTarget} from '../src/app/navigation.ts';
 const observed='2026-10-30T12:00:00Z';
 const failure=(code='http_rejected')=>normalizeFailure({code,message:'GET /api/bee/identity: HTTP 503; upstream maintenance',details:{check:'device_identity',observed_at:observed,evidence:{target_origin:'https://hive.test',path:'/api/bee/identity',http_status:'503',response_body:'upstream maintenance'}}},'device_status');
+test('account failure displays its original HTTP observation time without inventing the render time',()=>{
+ const account={code:'connection_closed',check:'identity',platform:'openai',message:'GET /api/bee/identity: unexpected EOF',evidence:{observed_at:observed,failure_kind:'connection_closed',elapsed_ms:'1174'}};
+ const value=normalizeFailure(account,'source_read');
+ assert.equal(value.observedAt,observed);
+ assert.ok(presentFailure(value,'zh').details.includes(formatDate(observed,'zh')));
+ assert.equal(normalizeFailure({...account,evidence:{failure_kind:'connection_closed'}},'source_read').observedAt,null);
+});
 test('Chinese 503 device feedback includes fact, target, impact and safe original in one notice',()=>{
  const result=presentFailure(failure(),'zh');
  assert.match(result.summary,/503/);assert.match(result.summary,/Hive/);assert.match(result.impact,/设备/);assert.match(result.details,/https:\/\/hive.test/);assert.match(result.details,/upstream maintenance/);assert.equal(result.action,null);
@@ -103,10 +110,18 @@ for(const value of nativeStartupFailures)for(const locale of ['zh','en'] as cons
 test('unknown bridge failures are not classified by a known code or English cause in their message',()=>{
  for(const value of nativeStartupFailures)for(const locale of ['zh','en'] as const){
   const problem=presentFailure(normalizeFailure({code:'FUTURE_BRIDGE_FAILURE',message:value.code+'; '+value.message},'bridge_startup'),locale);
-  assert.equal(problem.summary,locale==='zh'?'本次操作失败，原因尚未确认。':'This operation failed; its cause is unconfirmed.');
+  assert.equal(problem.summary,(locale==='zh'?'本次操作失败：':'This operation failed: ')+value.code+'; '+value.message);
   assert.equal(problem.impact,locale==='zh'?'本次操作未能完成；后续状态以重新核对的结果为准。':'This operation could not complete. Check again to confirm its state.');
   assert.equal(problem.action,null);assert.ok(problem.details.includes(value.code+'; '+value.message));
  }
+});
+test('unclassified native argument rejection exposes the actual safe cause in the summary',()=>{
+ const message='invalid args `operationId` for command `device_recovery_confirm`: missing required key operationId; token=private-value';
+ const problem=presentFailure(normalizeFailure(message,'device_recovery_confirm'),'zh');
+ assert.match(problem.summary,/本次操作失败：invalid args `operationId`/);
+ assert.match(problem.summary,/missing required key operationId/);
+ assert.doesNotMatch(problem.summary,/private-value/);
+ assert.equal(problem.action,null);
 });
 test('network apply blocker explains the explicit settings action before recheck without guessing from messages',()=>{
  for(const locale of ['zh','en'] as const){
@@ -158,4 +173,23 @@ test('unproven recovery and identity failures retain protection even if the mess
   assert.match(problem.impact,locale==='zh'?/保护仍保留.*重新启动.*普通更新检查不能解除保护/:/protection remains active.*Restart Bee.*normal update check cannot release/i);
   assert.ok(problem.details.includes(code));assert.ok(problem.details.includes('recovery proof missing'));
  }
+});
+
+
+test('Bee response timeout explains uncertainty locally and keeps the exact transport evidence',()=>{
+ const message='owned Bee supply_status reply deadline elapsed; request id=shell-2487; bytes were sent and result is unconfirmed; owned child status=exit status: 0';
+ const value=normalizeFailure({code:'RESPONSE_TIMEOUT',message},'notification_delivery');
+ const problem=presentFailure(value,'zh');
+ assert.equal(problem.summary,'等待 Bee 响应超时，本次结果尚未确认。');
+ assert.equal(problem.impact,'请先核对当前状态；未确认的操作不会自动重复提交。');
+ assert.ok(problem.details.includes(message));
+ assert.equal(problem.action,null);
+ const unknown=presentFailure({...value,code:'future_timeout'},'zh');
+ assert.ok(unknown.summary.includes(message));
+});
+
+test('retry evidence accepts fixed native and HTTP facts and rejects malformed additions',async()=>{
+ const {decodeBridgeError}=await import('../src/system/failures.ts');const base={code:'RESPONSE_TIMEOUT',message:'response deadline elapsed',details:{check:'bridge_request',observed_at:new Date().toISOString(),evidence:{request_id:'shell-77',method:'supply_status',platform:'openai',phase:'response',queue_ms:'120',execution_ms:'15000',fully_sent:'true',in_flight:'true',failure_kind:'timeout'}}};
+ assert.deepEqual(decodeBridgeError(base),base);
+ for(const [key,value]of Object.entries({request_id:'shell-00',method:'DELETE',platform:'any',phase:'finished',queue_ms:'-1',execution_ms:'1.5',fully_sent:'yes',in_flight:'unknown',retry_after_seconds:'2147483648',failure_kind:'connection_failed'}))assert.throws(()=>decodeBridgeError({...base,details:{...base.details,evidence:{...base.details.evidence,[key]:value}}}),/rejected/);
 });

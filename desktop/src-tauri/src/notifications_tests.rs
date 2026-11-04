@@ -464,3 +464,142 @@ fn notifications_accepted_but_commit_failed_remains_uncertain_and_suppressed() {
     f.service().reconcile(true, &[active()]).unwrap();
     assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
 }
+
+#[test]
+fn notifications_retry_receipt_counts_only_newly_authorized_failures() {
+    let f = Fixture::new(Permission::Granted);
+    let service = f.service();
+    assert_eq!(serde_json::to_value(service.allow_failed_retry().unwrap()).unwrap(), serde_json::json!(0));
+    assert!(!f.path().exists(), "zero retry must not create a ledger");
+    f.adapter.fail.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    let revision = f.ledger().retry_revision;
+    assert_eq!(serde_json::to_value(service.allow_failed_retry().unwrap()).unwrap(), serde_json::json!(1));
+    assert_eq!(f.ledger().retry_revision, revision + 1);
+    let pending = std::fs::read(f.path()).unwrap();
+    assert_eq!(serde_json::to_value(service.allow_failed_retry().unwrap()).unwrap(), serde_json::json!(0));
+    assert_eq!(std::fs::read(f.path()).unwrap(), pending, "pending retry cannot be reauthorized");
+    service.reconcile(true, &[active()]).unwrap();
+    assert_eq!(serde_json::to_value(service.allow_failed_retry().unwrap()).unwrap(), serde_json::json!(1));
+}
+
+#[test]
+fn notifications_retry_does_not_revise_accepted_or_uncertain_records() {
+    for uncertain in [false, true] {
+        let f = Fixture::new(Permission::Granted);
+        f.adapter.uncertain.store(uncertain, Ordering::SeqCst);
+        let service = f.service();
+        service.reconcile(true, &[active()]).unwrap();
+        let before = std::fs::read(f.path()).unwrap();
+        assert_eq!(serde_json::to_value(service.allow_failed_retry().unwrap()).unwrap(), serde_json::json!(0));
+        assert_eq!(std::fs::read(f.path()).unwrap(), before);
+        service.reconcile(true, &[active()]).unwrap();
+        assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
+    }
+}
+
+#[test]
+fn notifications_delivery_status_tracks_durable_retry_pending_and_uncertain() {
+    let f = Fixture::new(Permission::Granted);
+    let service = f.service();
+    let initial = service.delivery_status().unwrap();
+    assert_eq!((initial.retryable_count, initial.pending_count, initial.uncertain_count), (0, 0, 0));
+    assert!(initial.error.is_none());
+    f.adapter.fail.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    let failed = service.delivery_status().unwrap();
+    assert_eq!((failed.retryable_count, failed.pending_count, failed.uncertain_count), (1, 0, 0));
+    assert_eq!(failed.error.unwrap().message, "OS submission rejected: fixture=true");
+    service.allow_failed_retry().unwrap();
+    let pending = f.service().delivery_status().unwrap();
+    assert_eq!((pending.retryable_count, pending.pending_count, pending.uncertain_count), (0, 1, 0));
+    assert_eq!(pending.error.unwrap().code, "FAKE_SUBMIT");
+    service.reconcile(false, &[]).unwrap();
+    assert!(service.delivery_status().unwrap().error.is_some());
+    f.adapter.fail.store(false, Ordering::SeqCst);
+    f.adapter.uncertain.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    let uncertain = f.service().delivery_status().unwrap();
+    assert_eq!((uncertain.retryable_count, uncertain.pending_count, uncertain.uncertain_count), (0, 0, 1));
+    assert!(uncertain.error.is_some());
+    assert_eq!(service.allow_failed_retry().unwrap(), 0);
+    service.reconcile(false, &[NotificationEvent::Recovered { identity: notice().identity }]).unwrap();
+    let recovered = service.delivery_status().unwrap();
+    assert!(recovered.error.is_none());
+    assert_eq!(recovered.uncertain_count, 0);
+}
+
+#[test]
+fn notifications_acceptance_and_recovery_clear_only_the_relevant_delivery_error() {
+    let f = Fixture::new(Permission::Granted);
+    let service = f.service();
+    let mut other = notice();
+    other.identity = "b".repeat(64);
+    other.problem = NotificationProblem::Offline;
+    f.adapter.fail.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active(), NotificationEvent::Problem { notice: other.clone(), eligible: true }]).unwrap();
+    service.allow_failed_retry().unwrap();
+    f.adapter.fail.store(false, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    let remaining = service.delivery_status().unwrap();
+    assert_eq!(remaining.pending_count, 1);
+    assert_eq!(remaining.error.unwrap().message, "OS submission rejected: fixture=true");
+    service.reconcile(false, &[NotificationEvent::Recovered { identity: other.identity }]).unwrap();
+    assert!(service.delivery_status().unwrap().error.is_none());
+    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 3);
+}
+
+#[test]
+fn notifications_concurrent_retry_accepts_each_definite_failure_once() {
+    let f = Fixture::new(Permission::Granted);
+    let service = Arc::new(f.service());
+    f.adapter.fail.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    let workers: Vec<_> = (0..8).map(|_| {
+        let service = service.clone();
+        std::thread::spawn(move || service.allow_failed_retry().unwrap())
+    }).collect();
+    let accepted: usize = workers.into_iter().map(|worker| worker.join().unwrap()).sum();
+    assert_eq!(accepted, 1);
+    assert_eq!(service.delivery_status().unwrap().pending_count, 1);
+}
+
+#[cfg(unix)]
+#[test]
+fn notifications_retry_commit_failure_reports_uncertain_instead_of_previous_rejection() {
+    use std::os::unix::fs::PermissionsExt;
+    let f = Fixture::new(Permission::Granted);
+    let service = f.service();
+    f.adapter.fail.store(true, Ordering::SeqCst);
+    service.reconcile(true, &[active()]).unwrap();
+    service.allow_failed_retry().unwrap();
+    f.adapter.fail.store(false, Ordering::SeqCst);
+    let dir = f.dir.clone();
+    *f.adapter.on_submit.lock().unwrap() = Some(Box::new(move || {
+        std::fs::set_permissions(&dir, std::fs::Permissions::from_mode(0o500)).unwrap();
+    }));
+    let error = service.reconcile(true, &[active()]).unwrap_err();
+    std::fs::set_permissions(&f.dir, std::fs::Permissions::from_mode(0o700)).unwrap();
+    assert_eq!(error.code, "NOTIFICATION_LEDGER_IO");
+    let status = service.delivery_status().unwrap();
+    assert_eq!((status.retryable_count, status.pending_count, status.uncertain_count), (0, 0, 1));
+    assert_eq!(status.error.unwrap().code, "NOTIFICATION_SUBMISSION_UNCERTAIN");
+    assert_eq!(service.allow_failed_retry().unwrap(), 0);
+}
+
+#[test]
+fn notifications_status_is_read_only_and_zero_retry_works_at_revision_limit() {
+    let f = Fixture::new(Permission::Granted);
+    let service = f.service();
+    service.reconcile(true, &[active()]).unwrap();
+    let mut ledger = f.ledger();
+    ledger.retry_revision = MAX_RETRY_REVISION;
+    write_ledger(&f.path(), &ledger).unwrap();
+    let before = std::fs::read(f.path()).unwrap();
+    f.adapter.query_fail.store(true, Ordering::SeqCst);
+    assert!(service.delivery_status().unwrap().error.is_none());
+    assert_eq!(service.allow_failed_retry().unwrap(), 0);
+    assert_eq!(std::fs::read(f.path()).unwrap(), before);
+    assert_eq!(f.adapter.requests.load(Ordering::SeqCst), 0);
+    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
+}

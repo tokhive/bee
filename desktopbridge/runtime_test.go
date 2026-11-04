@@ -76,3 +76,37 @@ func TestDesktopRuntimeBridgePreservesConnectionDetail(t *testing.T) {
 		t.Fatalf("runtime lost explicit nullable detail: %s", frames[1].Result)
 	}
 }
+
+type presenceFixture struct {
+	runtimeFixture
+	calls   int
+	request bee.DesktopPresenceRequest
+}
+
+func (f *presenceFixture) EnablePresence(_ context.Context, v bee.DesktopPresenceRequest) error {
+	f.calls++
+	f.request = v
+	return nil
+}
+func TestDesktopPresenceBridgeStrictAdmission(t *testing.T) {
+	for _, params := range []string{`{}`, `{"binding_revision":1,"network_revision":null}`, `{"binding_revision":-1,"network_revision":0}`, `{"binding_revision":1,"network_revision":0,"extra":true}`, `{"binding_revision":1,"binding_revision":2,"network_revision":0}`, `{"binding_revision":1,"network_revision":9007199254740992}`, `{"binding_revision":1,"network_revision":2}`} {
+		f := &presenceFixture{}
+		var out bytes.Buffer
+		input := hello + supplyRequest("presence", "runtime_enable_presence", params)
+		if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f); err != nil {
+			t.Fatal(err)
+		}
+		frames := replies(t, out.String())
+		valid := params == `{"binding_revision":1,"network_revision":2}`
+		if valid {
+			if f.calls != 1 || f.request.BindingRevision != 1 || f.request.NetworkRevision != 2 || string(frames[1].Result) != `{"enabled":true}` {
+				t.Fatal(out.String())
+			}
+		} else if f.calls != 0 || frames[1].Error == nil || frames[1].Error.Code != "INVALID_REQUEST" {
+			t.Fatal(out.String())
+		}
+		if !bytes.Contains(frames[0].Result, []byte(`"runtime_enable_presence"`)) {
+			t.Fatal("missing presence capability")
+		}
+	}
+}

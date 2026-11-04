@@ -3,6 +3,24 @@ fn report() -> Value {
     serde_json::json!({"report":{"id":"a".repeat(48),"instance":"b".repeat(32),"run_id":null,"network_revision":0,"binding_revision":0,"started_at":"2026-10-27T00:00:00Z","finished_at":null,"state":"running","checks":[{"id":"device","platform":null,"status":"skipped","observed_at":"2026-10-27T00:00:00Z","code":"pending","evidence":{},"next_action":"settings"}]}})
 }
 #[test]
+fn diagnostics_preserve_go_public_server_codes() {
+    let source = include_str!("../../../agent/desktop_device.go");
+    let producer = source.split("func safeCode(").nth(1).unwrap().split("\nfunc ").next().unwrap();
+    let codes: Vec<_> = producer.split('"').skip(1).step_by(2).filter(|code| !code.is_empty()).collect();
+    assert!(codes.contains(&"device_connected"));
+    for code in codes {
+        let mut value = report();
+        value["report"]["checks"][0]["evidence"] = serde_json::json!({"server_code":code});
+        let decoded = validate_report(&value, &"b".repeat(32)).unwrap_or_else(|error| panic!("Go public server_code={code} rejected: {error:?}"));
+        assert_eq!(decoded.checks[0].evidence["server_code"], code);
+    }
+    for code in ["future_unapproved_code", "Authorization=SECRET_MARKER"] {
+        let mut value = report();
+        value["report"]["checks"][0]["evidence"] = serde_json::json!({"server_code":code});
+        assert!(validate_report(&value, &"b".repeat(32)).is_err());
+    }
+}
+#[test]
 fn diagnostics_protocol_strict_identity_schema_and_unknown_checks() {
     let v = report();
     assert!(validate_report(&v, &"b".repeat(32)).is_ok());

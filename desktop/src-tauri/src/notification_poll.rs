@@ -15,14 +15,38 @@ use tauri::Manager;
 
 #[derive(Default)]
 pub(crate) struct NotificationPollState {
-    error: Mutex<Option<BridgeError>>,
+    check: Mutex<(u64, Option<BridgeError>)>,
 }
 impl NotificationPollState {
+    #[cfg(test)]
+    fn check(&self) -> (u64, Option<BridgeError>) {
+        self.check.lock().unwrap_or_else(|p| p.into_inner()).clone()
+    }
+    #[cfg(test)]
     pub fn error(&self) -> Option<BridgeError> {
-        self.error.lock().unwrap_or_else(|p| p.into_inner()).clone()
+        self.check().1
     }
     fn retain(&self, error: BridgeError) {
-        *self.error.lock().unwrap_or_else(|p| p.into_inner()) = Some(error);
+        self.complete(Err(error));
+    }
+    fn complete(&self, result: Result<(), BridgeError>) {
+        let mut check = self.check.lock().unwrap_or_else(|p| p.into_inner());
+        check.0 = check.0.saturating_add(1).min(9_007_199_254_740_991);
+        check.1 = result.err();
+    }
+    pub fn delivery_status(&self, service: &NotificationService) -> Result<Value, BridgeError> {
+        // A check receipt is published only once reconciliation has finished.
+        // Hold this lock through the durable read so a newer completed check cannot
+        // be combined with an older ledger snapshot.
+        let check = self.check.lock().unwrap_or_else(|p| p.into_inner());
+        let delivery = service.delivery_status()?;
+        Ok(serde_json::json!({
+            "error": check.1.as_ref().or(delivery.error.as_ref()),
+            "retryable_count": delivery.retryable_count,
+            "pending_count": delivery.pending_count,
+            "uncertain_count": delivery.uncertain_count,
+            "check_sequence": check.0,
+        }))
     }
 }
 #[derive(Deserialize)]
@@ -170,10 +194,9 @@ fn apply(
     let enabled = preferences.error.is_none() && preferences.preferences.notifications_enabled;
     // Even a disabled or unreadable preference permits explicit recovery. Missing
     // facts never synthesize recovery and therefore cannot erase delivery history.
-    let outcomes = reconcile(enabled, &events(snapshot))?;
-    if let Some(error) = outcomes.into_iter().find_map(|outcome| outcome.error) {
-        return Err(error);
-    }
+    // Delivery failures remain in NotificationService under their stable identity.
+    // An empty/suppressed outcome is not evidence of successful delivery.
+    reconcile(enabled, &events(snapshot))?;
     if let Some(error) = preferences.error {
         return Err(error);
     }
@@ -296,7 +319,7 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
             apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
         }).await;
         match result {
-            Ok(Ok(()))=>{},
+            Ok(Ok(()))=>app.state::<NotificationPollState>().complete(Ok(())),
             Ok(Err(error))=>retain(&app,error),
             Err(error)=>retain(&app,BridgeError{ details: None,code:"NOTIFICATION_WORKER_FAILED".into(),message:format!("notification native worker did not complete: cancelled={} panicked={}; future polling remains enabled",error.is_cancelled(),error.is_panic())}),
         }

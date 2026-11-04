@@ -83,7 +83,7 @@ export function decodeDeviceContext(reply:unknown):DeviceContext {
 export function createDeviceClient(invoke: DeviceInvoke): DeviceClient {
   return {
     async recoveryPrepare(){return decodeDeviceRecoveryReply(await invoke('device_recovery_prepare'));},
-    async recoveryConfirm(operation_id,expected_revision,decision){return decodeDeviceRecoveryReply(await invoke('device_recovery_confirm',{operation_id,expected_revision,decision}));},
+    async recoveryConfirm(operation_id,expected_revision,decision){return decodeDeviceRecoveryReply(await invoke('device_recovery_confirm',{operationId:operation_id,expectedRevision:expected_revision,decision}));},
     async recoveryStatus(){return decodeDeviceRecoveryReply(await invoke('device_recovery_status'));},
     async recoveryOpen(){return decodeDeviceRecoveryReply(await invoke('device_open'));},
     async context() {

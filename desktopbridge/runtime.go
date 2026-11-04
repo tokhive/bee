@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 
 	bee "github.com/tokhive/bee/agent"
@@ -17,10 +18,14 @@ type Runtime interface {
 	ConfigureNetwork(context.Context, bee.DesktopNetworkConfig) error
 }
 
-var runtimeMethods = []string{"runtime_snapshot", "runtime_start", "runtime_stop", "runtime_configure_network", "runtime_restore"}
+type PresenceRuntime interface {
+	EnablePresence(context.Context, bee.DesktopPresenceRequest) error
+}
+
+var runtimeMethods = []string{"runtime_snapshot", "runtime_start", "runtime_stop", "runtime_configure_network", "runtime_restore", "runtime_enable_presence"}
 
 func decodeRuntimeParams(req request, raw json.RawMessage) (request, *protocolError) {
-	required := map[string][]string{"runtime_snapshot": {}, "runtime_restore": {}, "runtime_start": {"expected_revision", "resume_platforms"}, "runtime_stop": {"expected_revision", "reason"}, "runtime_configure_network": {"revision", "connect_proxy"}}[req.Method]
+	required := map[string][]string{"runtime_snapshot": {}, "runtime_restore": {}, "runtime_start": {"expected_revision", "resume_platforms"}, "runtime_stop": {"expected_revision", "reason"}, "runtime_configure_network": {"revision", "connect_proxy"}, "runtime_enable_presence": {"binding_revision", "network_revision"}}[req.Method]
 	d := json.NewDecoder(bytes.NewReader(raw))
 	_, _ = d.Token()
 	fields := map[string]json.RawMessage{}
@@ -50,6 +55,16 @@ func decodeRuntimeParams(req request, raw json.RawMessage) (request, *protocolEr
 		return v, nil
 	}
 	switch req.Method {
+	case "runtime_enable_presence":
+		binding, e := revision("binding_revision")
+		if e != nil {
+			return req, e
+		}
+		network, e := revision("network_revision")
+		if e != nil {
+			return req, e
+		}
+		req.Presence = bee.DesktopPresenceRequest{BindingRevision: binding, NetworkRevision: network}
 	case "runtime_start":
 		v, e := revision("expected_revision")
 		if e != nil {
@@ -72,7 +87,7 @@ func decodeRuntimeParams(req request, raw json.RawMessage) (request, *protocolEr
 			return req, e
 		}
 		req.Stop.ExpectedRevision = v
-		if json.Unmarshal(fields["reason"], &req.Stop.Reason) != nil || !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change"}, req.Stop.Reason) {
+		if json.Unmarshal(fields["reason"], &req.Stop.Reason) != nil || !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change", "startup_recovery"}, req.Stop.Reason) {
 			return req, rejected("INVALID_REQUEST", "stop reason outside fixed lifecycle reasons")
 		}
 	case "runtime_configure_network":
@@ -89,6 +104,15 @@ func decodeRuntimeParams(req request, raw json.RawMessage) (request, *protocolEr
 }
 func runtimeResult(ctx context.Context, service Runtime, req request) (any, error) {
 	switch req.Method {
+	case "runtime_enable_presence":
+		presence, ok := service.(PresenceRuntime)
+		if !ok {
+			return nil, fmt.Errorf("presence runtime unavailable: required=EnablePresence service")
+		}
+		err := presence.EnablePresence(ctx, req.Presence)
+		return struct {
+			Enabled bool `json:"enabled"`
+		}{err == nil}, err
 	case "runtime_snapshot":
 		v, e := service.Snapshot(ctx)
 		return struct {

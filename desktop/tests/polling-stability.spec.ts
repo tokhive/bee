@@ -14,7 +14,7 @@ async function hold(page:Page,command:string,platform?:string){
    if(cmd===command&&(!platform||args?.platform===platform)){
     w.held=true;await new Promise<void>(resolve=>w.release=resolve);
     w.__TAURI_INTERNALS__.invoke=original;
-    if(w.failHeldRead)throw new Error('GET fixture HTTP 503');
+    if(w.failHeldRead)throw {code:'http_rejected',message:'GET fixture HTTP 503',details:{check:command==='device_status'?'device_status':'account_read',observed_at:new Date().toISOString(),evidence:{http_status:'503'}}};
    }
    return original(cmd,args);
   };
@@ -89,15 +89,15 @@ test('account status polling never disables cancel login and the explicit cancel
 
 test('repeated runtime read failures retain feedback and continue read-only recovery',async({page})=>{
  await scene(page,'stopped');await page.evaluate(()=>{
-  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.failedRuntimeReads=0;w.failRuntimeReads=true;
-  w.__TAURI_INTERNALS__.invoke=async(cmd:string,args:any)=>{if(cmd==='runtime_snapshot'&&w.failRuntimeReads){w.failedRuntimeReads++;throw new Error('GET runtime fixture HTTP 503');}return original(cmd,args);};
+  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.failedRuntimeReads=0;w.failRuntimeReads=true;Math.random=()=>1;
+  w.__TAURI_INTERNALS__.invoke=async(cmd:string,args:any)=>{if(cmd==='runtime_snapshot'&&w.failRuntimeReads){w.failedRuntimeReads++;throw {code:'http_rejected',message:'GET runtime fixture HTTP 503',details:{check:'runtime_read',observed_at:new Date().toISOString(),evidence:{http_status:'503'}}};}return original(cmd,args);};
  });
  for(let attempt=0;attempt<3;attempt++){
-  await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).failedRuntimeReads)).toBe(attempt+1);
+  await page.clock.runFor([10000,2000,4000][attempt]);await expect.poll(()=>page.evaluate(()=>(window as any).failedRuntimeReads)).toBe(attempt+1);
   await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toBeVisible();
   await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
  }
- await page.evaluate(()=>(window as any).failRuntimeReads=false);await page.clock.runFor(10100);
+ await page.evaluate(()=>(window as any).failRuntimeReads=false);await page.clock.runFor(8000);
  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeEnabled();expect(await calls(page,'runtime_start')).toHaveLength(0);
 });
 
@@ -110,7 +110,7 @@ test('a waiting platform resume cannot apply to a replacement account',async({pa
  await page.evaluate(()=>(window as any).release());await expect(page.getByText('f'.repeat(16),{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:/^(暂停|恢复)接单$/})).toBeEnabled();expect(await calls(page,'supply_set_paused')).toHaveLength(0);
 });
 
-for(const outcome of ['fresh-revision','candidate-changed','read-failed'])test('a coordinated account confirmation revalidates the pending read: '+outcome,async({page})=>{
+for(const outcome of ['fresh-revision','candidate-changed','hive-changed','read-failed'])test('a coordinated account confirmation revalidates the pending read: '+outcome,async({page})=>{
  await page.clock.install();
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
@@ -119,7 +119,7 @@ for(const outcome of ['fresh-revision','candidate-changed','read-failed'])test('
  const confirm=page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true});
  await expect(confirm).toBeEnabled();await hold(page,'account_snapshot','openai');await page.clock.runFor(10100);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
- const revision=await page.evaluate(outcome=>{const w=window as any;w.accounts.openai.revision++;if(outcome==='candidate-changed')w.accounts.openai.candidate.reference='f'.repeat(48);if(outcome==='read-failed')w.failHeldRead=true;return w.accounts.openai.revision;},outcome);
+ const revision=await page.evaluate(outcome=>{const w=window as any;w.accounts.openai.revision++;if(outcome==='candidate-changed')w.accounts.openai.candidate.reference='f'.repeat(48);if(outcome==='hive-changed')w.accounts.openai.hive.pending_fingerprint='f'.repeat(64);if(outcome==='read-failed')w.failHeldRead=true;return w.accounts.openai.revision;},outcome);
  await confirm.evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
  expect(await calls(page,'account_action')).toHaveLength(0);
  await page.evaluate(()=>(window as any).release());
@@ -127,7 +127,7 @@ for(const outcome of ['fresh-revision','candidate-changed','read-failed'])test('
   await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);
   expect((await calls(page,'account_action'))[0].args.request.revision).toBe(revision);
  }else{
-  if(outcome==='candidate-changed'){await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();const notice=card.getByText('账号提交条件已经变化，本次未提交。',{exact:true});await expect(notice).toBeVisible();await page.clock.runFor(10100);await expect(notice).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);return;}
+  if(outcome==='candidate-changed'||outcome==='hive-changed'){await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();const notice=card.getByText('账号提交条件已经变化，本次未提交。',{exact:true});await expect(notice).toBeVisible();await page.clock.runFor(10100);await expect(notice).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(0);await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();await expect.poll(async()=>(await calls(page,'account_action')).length).toBe(1);return;}
   else await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();
   expect(await calls(page,'account_action')).toHaveLength(0);
  }
@@ -138,7 +138,7 @@ test('a coordinated account read recovers at the same revision and accepts the n
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
- await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.snapshotFail=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_snapshot'&&args.platform==='openai'&&w.snapshotFail)throw new Error('GET account_snapshot fixture HTTP 503');return invoke(command,args);};});await page.clock.runFor(10100);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.snapshotFail=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_snapshot'&&args.platform==='openai'&&w.snapshotFail)throw {code:'http_rejected',message:'GET account_snapshot fixture HTTP 503',details:{check:'account_read',observed_at:new Date().toISOString(),evidence:{http_status:'503'}}};return invoke(command,args);};});await page.clock.runFor(10100);
  await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();
  await page.evaluate(()=>(window as any).snapshotFail=false);await page.clock.runFor(10100);
  await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
@@ -174,7 +174,7 @@ test('central account readback below a successful receipt remains blocked with r
  const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_action'){w.accounts.openai.revision=result.result.account.revision-1;w.regressAccount=true;}if(command==='account_snapshot'&&args.platform==='openai'&&w.regressAccount)result.result.account.revision=w.accounts.openai.revision;return result;};});
  await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card.getByText('等待自动重试…',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
+ await expect(card.getByText('核对已暂停，需先处理当前问题。',{exact:true})).toBeVisible();expect(await calls(page,'account_action')).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
  const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');const problem=evidence.accounts.openai??evidence.accounts.claude;expect(problem.code).toBe('DESKTOP_STALE_RESULT');expect(problem.message).toMatch(/account revision.*actual=.*required>=/);
 });
@@ -210,4 +210,32 @@ for(const outcome of ['identity','runtime','features'])test('official login wait
  await page.evaluate(outcome=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;if(outcome==='identity')w.deviceFail=true;if(outcome==='features')w.accounts.claude.features.authorize={available:false,reason:'update_pending'};if(outcome==='runtime')w.forceRunning=true;w.release();},outcome);
  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
  else{await expect(page.getByText('账号提交条件已经变化，本次未提交。',{exact:true}).last()).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);}
+});
+
+
+test('retry A waits for the original request then recovers without changing Hive connection or replaying writes',async({page})=>{
+ await scene(page,'running');await page.clock.pauseAt(new Date((await page.evaluate(()=>Date.now()))+1000));
+ await page.evaluate(()=>{
+  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;Math.random=()=>1;w.retryAttempts=0;w.retryFailure=true;
+  w.retryRequest={id:'shell-700',method:'supply_status',platform:'openai'};
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='supply_status'&&args.platform==='openai'){
+    w.retryAttempts++;if(w.retryFailure){w.pendingRequests=[w.retryRequest];throw {code:'RESPONSE_TIMEOUT',message:'supply response deadline elapsed; original request remains in flight',details:{check:'bridge_request',observed_at:new Date().toISOString(),evidence:{request_id:'shell-700',method:'supply_status',platform:'openai',phase:'response',queue_ms:'0',execution_ms:'15000',fully_sent:'true',in_flight:'true'}}};}
+   }
+   return original(command,args);
+  };
+ });
+ await page.clock.runFor(10000);
+ const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toBeVisible();
+ await expect(page.getByText('Hive 已连接',{exact:true})).toBeVisible();
+ const runtimeReads=(await calls(page,'runtime_snapshot')).length;
+ await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBe(runtimeReads);
+ await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'概览',exact:true}).click();await expect(card).toBeVisible();
+ await page.evaluate(()=>{const w=window as any;w.retryFailure=false;w.pendingRequests=[];w.emitRequestSettled(w.retryRequest);});
+ await expect(page.getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await page.clock.runFor(1999);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);
+ await page.clock.runFor(1);await expect.poll(()=>page.evaluate(()=>(window as any).retryAttempts)).toBe(2);
+ await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toHaveCount(0);
+ for(const method of ['runtime_start','runtime_stop','account_action','supply_set_paused'])expect(await calls(page,method)).toHaveLength(0);
 });

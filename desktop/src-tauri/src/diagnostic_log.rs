@@ -23,7 +23,8 @@ const MAX_SEQUENCE: u64 = 9_007_199_254_740_991;
 const MAX_ENTRY_BYTES: usize = 16 * 1024;
 static STORE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: code.into(),
         message: message.into(),
     }
@@ -43,6 +44,11 @@ fn io_error(stage: &str, cause: std::io::Error) -> BridgeError {
 pub(crate) fn is_public_code(code: &str) -> bool {
     [
         "pending",
+        "request_timed_out",
+        "request_settled",
+        "request_http_started",
+        "request_http_finished",
+        "request_http_failed",
         "not_checked",
         "cancelled",
         "timeout",
@@ -124,6 +130,8 @@ fn integer(value: &str, max: u64) -> bool {
 fn safe_path(value: &str) -> bool {
     [
         "/api/bee/identity",
+        "/api/bee/pairings",
+        "/api/bee/pairings/redeem",
         "/api/bee/platforms/openai/account",
         "/api/bee/platforms/claude/account",
         "/api/bee/platforms/openai/capabilities",
@@ -196,7 +204,17 @@ pub(crate) fn sanitize_evidence(input: &BTreeMap<String, String>) -> BTreeMap<St
             "reasons_count" => integer(value, 64),
             "response_limit" => value.as_str() == "65536",
             "safety_seconds" => value.as_str() == "30",
-            "method" => value.as_str() == "GET",
+            "request_id"
+            | "method"
+            | "phase"
+            | "queue_ms"
+            | "execution_ms"
+            | "elapsed_ms"
+            | "failure_kind"
+            | "fully_sent"
+            | "in_flight"
+            | "platform"
+            | "retry_after_seconds" => crate::protocol::retry_evidence(key, value).unwrap_or(false),
             "path" => safe_path(value),
             "reason" => public_reason(value),
             "source_type" => enum_value(
@@ -279,6 +297,32 @@ pub(crate) fn sanitize_evidence(input: &BTreeMap<String, String>) -> BTreeMap<St
                     "device_changed",
                     "pairing_pending",
                     "unrecognized_code",
+                    "device_connected",
+                    "forbidden",
+                    "invalid_content_type",
+                    "invalid_json",
+                    "invalid_platform",
+                    "invalid_pause",
+                    "invalid_confirmation",
+                    "account_changed",
+                    "invalid_lease",
+                    "stale_connection",
+                    "invalid_maintenance",
+                    "tee_unavailable",
+                    "stale_maintenance",
+                    "invalid_authorization",
+                    "invalid_codex_authorization",
+                    "invalid_claude_authorization",
+                    "invalid_envelope",
+                    "codex_account_changed",
+                    "codex_authorization_rejected",
+                    "claude_confirmation_required",
+                    "claude_authorization_rejected",
+                    "invalid_capabilities",
+                    "stale_account",
+                    "capability_metadata_required",
+                    "stale_observation",
+                    "invalid_events",
                 ],
             ),
             _ => false,

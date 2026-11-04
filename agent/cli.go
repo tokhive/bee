@@ -45,6 +45,9 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 
 func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
+	if command == "desktop-login-terminal" {
+		return desktopLoginTerminal(ctx, args[1:], os.Stdin, out)
+	}
 	if command == "start" {
 		return start(ctx, args[1:], out)
 	}

@@ -244,6 +244,7 @@ pub(crate) async fn startup<R: tauri::Runtime>(app: tauri::AppHandle<R>, bridge:
                 "startup context changed before verification completed".into(),
             ));
         }
+        enable_presence(&bridge, &current).await?;
         Ok(current)
     }
     .await;
@@ -263,6 +264,57 @@ pub(crate) async fn recheck<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     bridge: &Bridge,
 ) -> StartupStatus {
+    recheck_binding(app, bridge, false).await
+}
+
+async fn enable_presence(bridge: &Bridge, checked: &CheckContext) -> Result<(), BridgeError> {
+    let local = bridge.device_context().await?;
+    let state = crate::protocol::device_context_state(&local.result)?;
+    if let Some(cause) = state.failure {
+        if cause.code == "DEVICE_CONTEXT_UNCONFIGURED" { return Ok(()); }
+        return Err(cause);
+    }
+    if local.result["context"]["device_id"].is_null() { return Ok(()); }
+    if checked.binding != Some(state.binding_revision) || local.instance != checked.instance {
+        return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "presence binding or management instance changed after verification".into()));
+    }
+    bridge.runtime_enable_presence(state.binding_revision, checked.network).await
+}
+
+// Serialize preparation/dispatch with recovery and network apply. Retain the
+// verified context rather than authorizing whatever binding happens to be latest.
+pub(crate) async fn start_with_presence(bridge: &Bridge, store: &PreferencesStore, controller: &NetworkController, gate: &StartupGate, mut request: crate::runtime_protocol::RuntimeStartRequest) -> Result<crate::sidecar::BridgeReply, BridgeError> {
+    let _serial = gate.serial.lock().await;
+    gate.check()?;
+    request.validate()?;
+    let before = context(bridge, store).await?;
+    let device = bridge.device_status().await?;
+    let scope = controller.bind_verified_device(store, &device.result)?.ok_or_else(||BridgeError::new("NETWORK_SCOPE_REQUIRED", "runtime start requires a freshly verified bound device; actual=no trusted device scope".into()))?;
+    if binding(bridge).await? != before.binding { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "start binding changed during device verification".into())); }
+    request.expected_revision = controller.prepare_start(store, &BridgeNetworkRuntime(bridge), &scope, request.expected_revision).await?;
+    let checked = context(bridge, store).await?;
+    if checked.instance != before.instance || checked.binding != before.binding { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "start binding or instance changed during network preparation".into())); }
+    let result = bridge.runtime_start(request).await;
+    // Dispatch first: enabling idle presence can advance runtime revision. This
+    // never retries Start, including when its delivery/outcome is uncertain.
+    enable_presence(bridge, &checked).await?;
+    result
+}
+
+// Pairing changes the saved binding revision. A new binding gets its own scoped
+// network preparation; an ordinary status read must never apply a saved draft.
+pub(crate) async fn observe_device<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &Bridge, result: &serde_json::Value) {
+    if result["device"]["state"] != "bound" { return; }
+    let gate = app.state::<StartupGate>();
+    let before = gate.snapshot();
+    if let Ok(current) = binding(bridge).await {
+        if current != before.binding_revision {
+            recheck_binding(app, bridge, true).await;
+        }
+    }
+}
+
+async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &Bridge, new_binding: bool) -> StartupStatus {
     let gate = app.state::<StartupGate>();
     let Ok(_serial) = gate.serial.try_lock() else {
         return gate.snapshot();
@@ -272,6 +324,17 @@ pub(crate) async fn recheck<R: tauri::Runtime>(
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
     let result = async {
+        if new_binding {
+            crate::update_install::verify_recheck(&app.state::<crate::updater::UpdateManager>(), bridge, store.read()).await?;
+            let before = binding(bridge).await?;
+            let device = bridge.device_status().await?;
+            let scope = controller.bind_verified_device(&store, &device.result)?.ok_or_else(||BridgeError::new("NETWORK_DEVICE_REQUIRED", "new binding requires verified bound device".into()))?;
+            if binding(bridge).await? != before { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "binding changed during new-device network preparation".into())); }
+            let runtime = bridge.runtime_snapshot().await?;
+            crate::protocol::result_error(&runtime.result)?;
+            let revision = runtime.result["runtime"]["revision"].as_u64().ok_or_else(||BridgeError::new("STARTUP_CONTEXT_INVALID", "new-device runtime revision missing".into()))?;
+            controller.prepare_start(&store, &BridgeNetworkRuntime(bridge), &scope, revision).await?;
+        }
         let checked = prerequisites(bridge, &store, &controller, false).await?;
         crate::update_install::verify_recheck(
             &app.state::<crate::updater::UpdateManager>(),
@@ -289,6 +352,7 @@ pub(crate) async fn recheck<R: tauri::Runtime>(
         // Release only the startup data hold after the final context comparison.
         // The independent owned-exit freeze and real bridge state still apply.
         bridge.0.startup_verified.store(true, Ordering::SeqCst);
+        enable_presence(bridge, &current).await?;
         Ok(current)
     }
     .await;
@@ -344,7 +408,7 @@ pub(crate) async fn apply_saved_network(
         }
     }
     let restore_intent = !recovering || bridge.0.startup_verified.load(Ordering::SeqCst);
-    Ok(controller
+    let applied = controller
         .apply_saved_with_restore(
             store,
             &BridgeNetworkRuntime(bridge),
@@ -352,7 +416,13 @@ pub(crate) async fn apply_saved_network(
             confirmed,
             restore_intent,
         )
-        .await)
+        .await;
+    if applied.error.is_none() && !applied.pending_restart && !recovering {
+        let current = context(bridge, store).await?;
+        enable_presence(bridge, &current).await?;
+        gate.finish(Ok(current));
+    }
+    Ok(applied)
 }
 #[cfg(test)]
 #[path = "experience_tests.rs"]
@@ -427,5 +497,9 @@ pub(crate) async fn recover_device<R: tauri::Runtime>(
     };
     gate.finish(Err(cause));
     emit(app, &gate);
+    if result.as_ref().is_ok_and(|reply| reply.result["recovery"]["phase"] == "completed") {
+        drop(_serial);
+        recheck_binding(app, bridge, true).await;
+    }
     result
 }

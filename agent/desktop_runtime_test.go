@@ -158,7 +158,7 @@ func desktopRuntimeDeviceFixture(t *testing.T, handler http.HandlerFunc) *Deskto
 		if r.Header.Get("Authorization") != "Bearer "+credential || r.Header.Get("User-Agent") == "" {
 			t.Error("runtime request lacks device authentication")
 		}
-		if r.URL.Path != "/api/bee/agent" && (r.Header.Get("Content-Type") != "application/json" || r.Header.Get("X-Hive-Request") != "1") {
+		if r.URL.Path != "/api/bee/agent" && r.URL.Path != "/api/bee/connect" && (r.Header.Get("Content-Type") != "application/json" || r.Header.Get("X-Hive-Request") != "1") {
 			t.Error("REST request lacks Bee headers")
 		}
 		handler(w, r)
@@ -180,7 +180,7 @@ func desktopRuntimeDeviceFixture(t *testing.T, handler http.HandlerFunc) *Deskto
 }
 
 func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
-	for _, scenario := range []string{"synchronization_failure_recovery", "readback_failure_recovery", "clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start", "restore_running", "restore_paused", "restore_manual_resume", "restore_user_stop", "restore_new_token", "crash_then_exit", "restore_stop_save_failure", "restore_reservation_save_failure"} {
+	for _, scenario := range []string{"presence_handoff", "synchronization_failure_recovery", "readback_failure_recovery", "clean_stop", "save_failure", "pause_during_start", "failed_selection", "manual_generation_change", "claude_source_unavailable", "switch_source", "stop_during_start", "restore_running", "restore_paused", "restore_manual_resume", "restore_user_stop", "restore_new_token", "crash_then_exit", "restore_stop_save_failure", "restore_reservation_save_failure"} {
 		t.Run(scenario, func(t *testing.T) {
 			saveFailure := scenario == "save_failure"
 			proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, q *http.Request) {
@@ -212,7 +212,8 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 			var identityRequests atomic.Int32
 			var blockRecoveryIdentity atomic.Bool
 			recoveryIdentityEntered := make(chan struct{})
-			var resumePuts, supplyPuts, connections atomic.Int32
+			var resumePuts, supplyPuts, connections, presences atomic.Int32
+			var occupied atomic.Bool
 			var recoveryFailure atomic.Bool
 			recoveryFailure.Store(true)
 			d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
@@ -230,6 +231,23 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					}
 				}
 				if desktopSupplyServeIdentity(w, q) {
+					return
+				}
+				if scenario == "presence_handoff" && (q.URL.Path == "/api/bee/agent" || q.URL.Path == "/api/bee/connect") {
+					if !occupied.CompareAndSwap(false, true) {
+						w.WriteHeader(409)
+						return
+					}
+					defer func() { time.Sleep(30 * time.Millisecond); occupied.Store(false) }()
+				}
+				if q.URL.Path == "/api/bee/connect" {
+					c, err := websocket.Accept(w, q, nil)
+					if err != nil {
+						return
+					}
+					defer c.CloseNow()
+					presences.Add(1)
+					<-c.CloseRead(q.Context()).Done()
 					return
 				}
 				if q.URL.Path == "/api/bee/agent" {
@@ -367,6 +385,10 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 			defer r.Close()
 			if e := r.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); e != nil {
 				t.Fatal(e)
+			}
+			if scenario == "presence_handoff" {
+				enableTestPresence(t, r)
+				waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "connected" })
 			}
 			s, _ := r.Snapshot(context.Background())
 			mu.Lock()
@@ -657,6 +679,14 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				t.Error("worker submitted after stop receipt")
 			}
 			mu.Unlock()
+			if scenario == "presence_handoff" {
+				idle := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+					return s.Local == "stopped" && s.Connection == "connected" && presences.Load() == 2
+				})
+				if idle.Operation.State != "succeeded" || connections.Load() != 1 {
+					t.Fatalf("contribution handoff failed: %+v", idle)
+				}
+			}
 			if saveFailure {
 				if err := os.Chmod(path, 0600); err != nil {
 					t.Fatal(err)

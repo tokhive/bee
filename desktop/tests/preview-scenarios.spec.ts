@@ -81,7 +81,7 @@ test('preview controls reject stale sessions and messages from other sources',as
 
 const cases:[string,string|RegExp][]=[
  ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
- ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
+ ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Hive 未连接'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
  ['account-reading','正在读取已有登录'],['account-empty','所选来源未找到登录'],['account-candidate','已有登录，尚未接入'],['account-selected','已用 3%'],['account-error','permission_denied'],['account-expired','历史数据，已过期'],['account-change','尚未核对'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
  ['check-background','可接单'],['check-expired','核对中…'],['check-waiting','等待自动重试…'],['check-retrying','重试中…'],['check-recovered','可接单'],['check-sequence','可接单'],
@@ -110,7 +110,7 @@ test('review selector covers approved groups and preserves scene when theme or s
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light&size=normal');
  await expect(page.locator('#scene optgroup')).toHaveCount(10);
  expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
- await expect(page.locator('#scene option')).toHaveCount(76);
+ await expect(page.locator('#scene option')).toHaveCount(77);
  for(const scene of ['runtime-no-accounts','runtime-accounts-unconfirmed','confirm-change'])await expect(page.locator('#scene option[value="'+scene+'"]')).toHaveCount(1);
  await page.locator('#scene').selectOption('confirm-change');
  const app=page.frameLocator('iframe');

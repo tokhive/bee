@@ -20,6 +20,11 @@ try{
  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
  if(scene.page==='diagnostics'){(await until(()=>button(t('运行诊断')))).click();if(scene.id==='diagnostics-export-unknown'){(await until(()=>button(t('导出脱敏报告')))).click();(await until(()=>button(t('确认导出')))).click();}}
  if(scene.action){
+  if(scene.page==='accounts'){
+   step='等待正式账号来源初始化';
+   await until(()=>window.__beePreviewActivity.accountReadsStarted>0&&window.__beePreviewActivity.accountReads===0);
+   await new Promise(resolve=>requestAnimationFrame(resolve));
+  }
   if(['detail','change','clear'].includes(scene.action)){
    step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('{platform} 详情',{platform:'OpenAI'}))+']'))).click();
    await until(()=>document.querySelector('.account-source'));

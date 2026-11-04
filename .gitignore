@@ -2,4 +2,6 @@
 /bin/
 /dist/
 /.superpowers/
+/.vite/
 /desktop-ci-evidence/
+.DS_Store

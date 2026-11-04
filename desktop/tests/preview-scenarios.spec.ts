@@ -9,6 +9,76 @@ const card=(page:Page,platform='OpenAI')=>page.getByRole('region',{name:platform
 const commands=(page:Page)=>page.evaluate(()=>(window as unknown as {calls:{command:string;args:Record<string,unknown>}[]}).calls);
 const writes=new Set(['account_action','authorize_start','supply_set_paused','runtime_start','runtime_stop']);
 
+test('preview keeps a completed operation through navigation, appearance and size changes until reset',async({page})=>{
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light');
+ const app=page.frameLocator('iframe');
+ const account=app.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await account.getByRole('button',{name:'暂停接单',exact:true}).click();
+ await expect(account.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();
+ await app.getByRole('button',{name:'设置',exact:true}).click();
+ await app.getByRole('tab',{name:'通用',exact:true}).click();
+ await page.getByLabel('外观',{exact:true}).selectOption('dark');
+ await expect(app.locator('#ns-theme')).toHaveValue('dark');
+ await page.getByLabel('窗口',{exact:true}).selectOption('narrow');
+ await expect(app.getByRole('heading',{name:'设置',exact:true})).toBeVisible();
+ await app.getByRole('button',{name:'概览',exact:true}).click();
+ await expect(account.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'重置场景',exact:true}).click();
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeVisible();
+});
+
+test('preview appearance failure retains structured evidence and allows recovery without resetting',async({page})=>{
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light');
+ await expect(page.locator('#control-status')).toHaveText('场景已就绪。');
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{
+  (el.contentWindow as any).settingsReadFailures={preferences_read:{code:'PREFERENCES_READ_FAILED',message:'private file read failed: kind=PermissionDenied os_code=13',details:{check:'preferences_read',observed_at:'2026-01-01T00:00:00Z',evidence:{actual:'permission_denied',required:'readable private preferences file'}}}};
+ });
+ await page.getByLabel('外观',{exact:true}).selectOption('dark');
+ const feedback=page.locator('#control-status');
+ for(const evidence of ['PREFERENCES_READ_FAILED','os_code=13','preferences_read','2026-01-01T00:00:00Z','actual=permission_denied','required=readable private preferences file'])await expect(feedback).toContainText(evidence);
+ await expect(page.getByLabel('外观',{exact:true})).toHaveValue('light');
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{
+  const w=el.contentWindow as any;delete w.settingsReadFailures;w.preferencesFail=true;
+ });
+ await page.getByLabel('外观',{exact:true}).selectOption('dark');
+ await expect(feedback).toContainText('PREFERENCES_WRITE_FAILED');
+ await expect(feedback).toContainText('os_code=13');
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{(el.contentWindow as any).preferencesFail=false;});
+ await page.getByLabel('外观',{exact:true}).selectOption('dark');
+ await expect(feedback).toHaveText('外观已切换，当前进度已保留。');
+});
+
+test('preview controls reject stale sessions and messages from other sources',async({page})=>{
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light');
+ await expect(page.locator('#control-status')).toHaveText('场景已就绪。');
+ const previous=await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).__beePreviewSession as string);
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{(window as any).previousApproval=(el.contentWindow as any).__beePreviewApprove;});
+ await page.getByRole('button',{name:'重置场景',exact:true}).click();
+ await expect(page.locator('#control-status')).toHaveText('场景已就绪。');
+ const oldApproval=await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{
+  const w=el.contentWindow as any;let error='';try{(window as any).previousApproval();}catch(cause){error=String(cause);}
+  return {error,paused:w.paused,bindingRevision:w.bindingRevision??1};
+ });
+ expect(oldApproval.error).toContain('PREVIEW_SESSION_STALE');
+ expect(oldApproval.paused).toEqual({openai:false,claude:false});
+ expect(oldApproval.bindingRevision).toBe(1);
+ const result=await page.locator('iframe').evaluate(async(el:HTMLIFrameElement,previous:string)=>{
+  const w=el.contentWindow as any;
+  let stale='';try{await w.__beePreviewControl({session:previous,action:'theme',value:'dark'});}catch(cause){stale=String(cause);}
+  const data={type:'bee-preview-control',session:w.__beePreviewSession,id:200,action:'theme',value:'dark'};
+  w.dispatchEvent(new MessageEvent('message',{origin:'https://untrusted.example',source:window,data}));
+  w.dispatchEvent(new MessageEvent('message',{origin:location.origin,source:w,data}));
+  await new Promise(resolve=>setTimeout(resolve,0));
+  return {stale,preferences:await w.__TAURI_INTERNALS__.invoke('preferences_read'),writes:w.calls.filter((call:any)=>call.command==='preferences_save').length};
+ },previous);
+ expect(result.stale).toContain('PREVIEW_SESSION_STALE');
+ expect(result.preferences.preferences.theme).toBe('light');
+ expect(result.preferences.preferences.revision).toBe(0);
+ expect(result.writes).toBe(0);
+ await page.locator('#theme').selectOption('dark');
+ await expect(page.locator('#control-status')).toHaveText('外观已切换，当前进度已保留。');
+});
+
 const cases:[string,string|RegExp][]=[
  ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
  ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],

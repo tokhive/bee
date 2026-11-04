@@ -516,7 +516,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 // by design — the agent is not party to the session — but that leaves an
 // operator with no way to tell a whitelist miss from a dial failure, so this
 // prints a date-time stamped line to stderr when BEE_DEBUG is set (or
-// TOKHIVE_LOG_LEVEL=debug). Hosts only; never stream contents.
+// HIVE_LOG_LEVEL=debug). Hosts only; never stream contents.
 func egressDebug(format string, args ...any) {
 	if !egressDebugEnabled() {
 		return

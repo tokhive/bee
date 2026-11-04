@@ -202,12 +202,16 @@ Bee reads the key file on every synchronization, seals the key for the TEE and r
 
 | Variable | Effect |
 | --- | --- |
-| `TOKHIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
-| `TOKHIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
-| `TOKHIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
+| `HIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
+| `HIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
+| `HIVE_TIMING_LOG` | Set to `1` to write asynchronous JSON timing logs to stderr. |
+| `HIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
 | `BEE_DEBUG` | Any value turns on debug logging. |
 | `BEE_METRICS_ADDR` | Serve Prometheus metrics on this address, for example `127.0.0.1:9464`. |
 | `HTTPS_PROXY` | Standard proxy setting. It takes precedence over `connect_proxy`. |
+
+When upgrading, rename the old `TOKHIVE_` logging and timing variables to
+`HIVE_`; old names are no longer read. Bee-specific `BEE_` variables are unchanged.
 
 ## Running as a service
 

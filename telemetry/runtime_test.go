@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +14,20 @@ import (
 )
 
 type blockedWriter struct{ entered, release chan struct{} }
+
+func TestTimingWriterRequiresExplicitEnable(t *testing.T) {
+	for _, value := range []string{"", "0", "true", "1"} {
+		t.Setenv("HIVE_TIMING_LOG", value)
+		writer := telemetry.TimingWriter()
+		if value == "1" {
+			if writer != os.Stderr {
+				t.Fatal("enabled timing logs must use stderr")
+			}
+		} else if writer != nil {
+			t.Fatalf("timing logs unexpectedly enabled for %q", value)
+		}
+	}
+}
 
 func (w blockedWriter) Write(p []byte) (int, error) {
 	select {

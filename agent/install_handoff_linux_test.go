@@ -47,7 +47,7 @@ func TestInstallHandoffNative(t *testing.T) {
 			t.Fatal(err)
 		}
 		cmd := exec.Command(copyPath, "run", "--config", path)
-		cmd.Env = append(os.Environ(), "TOKHIVE_LOG_FORMAT=logfmt")
+		cmd.Env = append(os.Environ(), "HIVE_LOG_FORMAT=logfmt")
 		if err := cmd.Start(); err != nil {
 			t.Fatal(err)
 		}

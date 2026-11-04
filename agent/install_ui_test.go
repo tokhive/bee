@@ -164,7 +164,7 @@ func TestInstallUIDisplayModes(t *testing.T) {
 	t.Setenv("BEE_LANG", "en")
 	t.Setenv("TERM", "xterm")
 	t.Setenv("NO_COLOR", "")
-	for _, name := range []string{"TOKHIVE_LOG_LEVEL", "TOKHIVE_LOG_MODULES", "BEE_DEBUG", "TOKHIVE_LOG_FORMAT"} {
+	for _, name := range []string{"HIVE_LOG_LEVEL", "HIVE_LOG_MODULES", "BEE_DEBUG", "HIVE_LOG_FORMAT"} {
 		t.Setenv(name, "")
 	}
 	terminal, err := os.OpenFile(os.DevNull, os.O_WRONLY, 0)

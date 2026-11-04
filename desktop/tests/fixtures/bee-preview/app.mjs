@@ -1,5 +1,6 @@
 import {getScene} from './scenarios.mjs';
 import {installPreviewFixture} from './fixture.mjs';
+import {installPreviewSession} from './session.mjs';
 const params=new URLSearchParams(location.search),scene=getScene(params.get('scene'));
 let step='安装模拟 IPC';
 async function until(find){
@@ -10,6 +11,7 @@ async function until(find){
 const button=(name,scope=document)=>[...scope.querySelectorAll('button')].find(element=>element.textContent.trim()===name&&!element.disabled);
 try{
  await installPreviewFixture(scene.id);
+ installPreviewSession(scene.id);
  step='加载正式 NativeApp';await import('/src/main.tsx');
  window.__beePreviewActivate();
  const {t}=await import('/src/i18n/index.ts');
@@ -28,6 +30,7 @@ try{
   if(scene.action==='start-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));
  }
  window.__beePreviewReady=true;
+ window.__beePreviewAnnounceReady();
 }catch(cause){
  window.__beePreviewError=`Bee 预览失败：scene=${scene.id}; step=${step}; ${cause instanceof Error?cause.stack:String(cause)}`;
  const error=document.createElement('pre');error.id='preview-error';error.dataset.previewError='true';error.textContent=window.__beePreviewError;document.body.append(error);

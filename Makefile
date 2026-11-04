@@ -14,7 +14,8 @@ test: tee-deps
 	go test -race -timeout=600s ./...
 
 app: export PATH := $(if $(APP_NODE_BIN),$(abspath $(APP_NODE_BIN)):)$(PATH)
-app: export CARGO_HOME := $(if $(CARGO_HOME),$(CARGO_HOME),$(if $(wildcard .cache/cargo-home/config.toml),$(CURDIR)/.cache/cargo-home,$(HOME)/.cargo))
+# Local offline snapshots may lag Cargo.lock; use the normal Cargo home by default.
+app: export CARGO_HOME := $(if $(CARGO_HOME),$(CARGO_HOME),$(HOME)/.cargo)
 app: export RUSTUP_TOOLCHAIN := $(if $(RUSTUP_TOOLCHAIN),$(RUSTUP_TOOLCHAIN),1.94)
 app:
 	@test "$$(uname -s)" = Darwin || { echo "make app requires macOS; actual=$$(uname -s); required=Darwin" >&2; exit 1; }

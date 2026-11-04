@@ -128,7 +128,10 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 }
 
 func connectObserved(ctx context.Context, state localState, egress *egressConfig, out io.Writer, observe func(DesktopConnectionObservation)) error {
-	owned := false
+	return connectObservedOwned(ctx, state, egress, out, false, observe)
+}
+
+func connectObservedOwned(ctx context.Context, state localState, egress *egressConfig, out io.Writer, owned bool, observe func(DesktopConnectionObservation)) error {
 	var lastFailure *DesktopConnectionFailure
 	emit := func(value, retry string, next *string) {
 		if observe != nil {

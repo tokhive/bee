@@ -26,6 +26,7 @@ struct Envelope {
     network_test: NetworkTest,
 }
 pub fn validate_test(v: &Value) -> Result<NetworkTest, BridgeError> {
+    crate::protocol::result_error(v)?;
     let invalid = || {
         BridgeError{ details: None,code:"NETWORK_REPLY_INVALID".into(),message:"network test rejected: required=three fixed read-only checks, valid timestamp and bounded safe fields".into()}
     };
@@ -55,6 +56,21 @@ pub fn validate_test(v: &Value) -> Result<NetworkTest, BridgeError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn network_failure_envelopes_preserve_the_bridge_error() {
+        let failure = serde_json::json!({"error":{
+            "code":"NETWORK_OPERATION_FAILED",
+            "message":"network observation cancelled: context canceled",
+            "details":{"check":"network_observation","observed_at":"2026-10-27T00:00:00Z","evidence":{"actual":"context canceled"}}
+        }});
+        for result in [validate_test(&failure).map(|_| ()), crate::network::decode_network_status(&failure).map(|_| ())] {
+            let error = result.unwrap_err();
+            assert_eq!(serde_json::to_value(error).unwrap(), failure["error"]);
+        }
+        let ambiguous = serde_json::json!({"error":failure["error"],"network":{}});
+        assert_eq!(validate_test(&ambiguous).unwrap_err().code, "INVALID_REPLY");
+        assert_eq!(crate::network::decode_network_status(&ambiguous).unwrap_err().code, "INVALID_REPLY");
+    }
     #[test]
     fn network_test_rejects_unknown_endpoint_and_missing_nullable() {
         let checks=["local_proxy","openai_read_only","claude_read_only"].map(|id|serde_json::json!({"id":id,"status":"failed","path":"direct","message":"GET failed","http_status":null}));

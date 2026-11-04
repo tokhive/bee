@@ -58,7 +58,7 @@ test('R01-account-reads-pending-shared-state-confirmed',async({page},info)=>{
  await expect.poll(async()=>(await calls(page,'account_snapshot')).map((c:any)=>c.args.platform).sort()).toEqual(['claude','openai']);
  const preconditions=await page.evaluate(()=>({sharedRuntime:(window as any).r01Runtime,device:(window as any).r01Device,accountReads:'both unresolved',accountFactsConfirmed:false}));
  expect(preconditions.device.state).toBe('bound');expect(preconditions.sharedRuntime.local).toBe('stopped');
- await expect(page.getByRole('region',{name:'贡献运行',exact:true})).toContainText('Bee 未运行');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+ await expect(page.getByRole('region',{name:'贡献运行',exact:true})).toContainText('贡献未启动');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
  await expect(page.getByText('接入数量待确认',{exact:true})).toBeVisible();await expect(page.locator('main')).not.toContainText('0 个已接入');
  for(const platform of ['OpenAI','Claude'])await expect(card(page,platform)).toContainText('所选来源的登录状态待确认。');
  await evidence(page,info,'R01-account-reads-pending',preconditions);
@@ -146,7 +146,7 @@ test('final-fix-runtime-consumer-keeps-only-unrecovered-platform-failures',async
  await expect(detail).toContainText('当前没有安排自动重连。');await expect(detail).not.toContainText('已安排重新连接');
  await evidence(page,info,'final-fix-runtime-one-platform-unrecovered',{source:facts.source,source_sha256:facts.source_sha256,remaining:'openai'},detail);
  await page.evaluate(value=>(window as any).finalFixDetail=value,facts.transitions.all_recovered);await page.clock.runFor(10001);
- await expect(detail).toHaveCount(0);await expect(runtime).toContainText('Bee 运行中');
+ await expect(detail).toHaveCount(0);await expect(runtime).toContainText('贡献已启动');
  await expect(card(page)).toContainText('已手动暂停');await expect(card(page,'Claude')).toContainText('尚未接入 Claude 账号');
  await expect(page.locator('main')).not.toContainText('openai authorization readback differs');await expect(page.locator('main')).not.toContainText('claude supply readback HTTP 503');
  await zeroWrites(page);await evidence(page,info,'final-fix-runtime-recovered-paused',{source:facts.source,source_sha256:facts.source_sha256,coreReconnectsScheduled:0,businessWrites:0},runtime);
@@ -156,7 +156,7 @@ test('D06-initial-pairing-completed-stopped',async({page},info)=>{
  await preview(page,'device-pending');await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeVisible();
  await expect(page.getByText('1 个已接入',{exact:true})).toBeVisible();
  await page.evaluate(()=>(window as any).__beePreviewApprove());await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
- await expect(page.getByText('owner@example.test',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'贡献运行',exact:true})).toContainText('Bee 未运行');
+ await expect(page.getByText('owner@example.test',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'贡献运行',exact:true})).toContainText('贡献未启动');
  await expect(page.getByText('0 个已接入',{exact:true})).toBeVisible();
  for(const platform of ['OpenAI','Claude'])await expect(card(page,platform)).toContainText('尚未接入');
  for(const oldFact of ['bbbbbbbbbbbbbbbb','Plus','3%','2%'])await expect(page.locator('main')).not.toContainText(oldFact);
@@ -176,7 +176,7 @@ test('W04-stale-confirmation-disabled-zero-write',async({page},info)=>{
  await install(page);await ready(page);await nav(page,'AI 账号').click();await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,a=structuredClone(w.accounts.openai);a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};a.revision++;w.accounts.openai=a;});
  await page.clock.runFor(10001);await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'换号',exact:true}).click();
- const before=await page.evaluate(()=>{const w=window as any,a=structuredClone(w.accounts.openai),oldRevision=a.revision;a.revision+=2;w.accounts.openai=a;return {oldRevision,newRevision:a.revision,candidate:a.candidate.reference};});await page.clock.runFor(10001);
+ const before=await page.evaluate(()=>{const w=window as any,a=structuredClone(w.accounts.openai),oldRevision=a.revision;a.revision+=2;a.candidate.reference='e'.repeat(48);w.accounts.openai=a;return {oldRevision,newRevision:a.revision,candidate:a.candidate.reference};});await page.clock.runFor(10001);
  const stale=page.getByRole('dialog').last();await expect(stale.getByRole('button',{name:'确认更换',exact:true})).toBeDisabled();await expect(stale).toContainText('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。');
  expect(await calls(page,'account_action')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);await evidence(page,info,'W04-stale-confirmation',{...before,submitted:false});
 });

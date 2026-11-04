@@ -227,6 +227,86 @@ pub(crate) fn failure_origin(value: &str) -> bool {
                 && (u.scheme() == "https" || u.scheme() == "http" && local)
         })
 }
+/// Shared strict contract for request/HTTP lifecycle evidence and log projection.
+pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
+    let integer = |maximum: u64| {
+        !value.is_empty()
+            && value.len() <= 16
+            && (value == "0" || !value.starts_with('0'))
+            && value.bytes().all(|b| b.is_ascii_digit())
+            && value.parse::<u64>().is_ok_and(|n| n <= maximum)
+    };
+    Some(match key {
+        "request_id" => value.strip_prefix("shell-").is_some_and(|suffix| {
+            !suffix.is_empty()
+                && !suffix.starts_with('0')
+                && suffix.bytes().all(|b| b.is_ascii_digit())
+                && suffix.parse::<u64>().is_ok()
+        }),
+        "method" => [
+            "GET",
+            "POST",
+            "PUT",
+            "hello",
+            "ping",
+            "shutdown",
+            "device_status",
+            "device_begin",
+            "device_context",
+            "device_recovery_prepare",
+            "device_recovery_confirm",
+            "device_recovery_status",
+            "account_defaults",
+            "account_detect",
+            "account_snapshot",
+            "account_action",
+            "supply_status",
+            "supply_set_paused",
+            "authorize_start",
+            "authorize_status",
+            "authorize_cancel",
+            "diagnostics_start",
+            "diagnostics_snapshot",
+            "diagnostics_cancel",
+            "runtime_snapshot",
+            "runtime_start",
+            "runtime_stop",
+            "runtime_restore",
+            "runtime_configure_network",
+            "runtime_enable_presence",
+            "runtime_verify",
+            "network_status",
+            "network_test",
+            "notification_snapshot",
+        ]
+        .contains(&value),
+        "platform" => ["none", "openai", "claude"].contains(&value),
+        "phase" => [
+            "queue",
+            "write",
+            "response",
+            "http_start",
+            "http_end",
+            "http_error",
+        ]
+        .contains(&value),
+        "queue_ms" | "execution_ms" | "elapsed_ms" => integer(9_007_199_254_740_991),
+        "failure_kind" => [
+            "timeout",
+            "dns_temporary",
+            "dns_failed",
+            "tls_failed",
+            "connection_refused",
+            "connection_closed",
+            "http_rejected",
+            "unknown_failure",
+        ]
+        .contains(&value),
+        "retry_after_seconds" => integer(2_147_483_647),
+        "fully_sent" | "in_flight" => ["true", "false"].contains(&value),
+        _ => return None,
+    })
+}
 impl FailureDetails {
     pub fn validate(&self) -> Result<(), String> {
         let observed = time::OffsetDateTime::parse(
@@ -260,7 +340,7 @@ impl FailureDetails {
                 "remote_code" => public_identifier(value, 128),
                 "source_type" => public_identifier(value, 80),
                 "response_body" | "actual" | "required" => true,
-                _ => false,
+                _ => retry_evidence(key, value).unwrap_or(false),
             };
             if !valid {
                 return Err(format!("failure evidence key/value rejected: key={key}; required=fixed safe public field"));
@@ -685,13 +765,33 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(local_candidates);
-    let recovery_candidates: Vec<_> = candidates.clone().into_iter()
+    let recovery_candidates: Vec<_> = candidates
+        .clone()
+        .into_iter()
         .filter(|v| v.iter().any(|m| m == "device_status"))
         .map(|mut v| {
-            v.extend(["device_recovery_prepare", "device_recovery_confirm", "device_recovery_status"].map(str::to_string));
+            v.extend(
+                [
+                    "device_recovery_prepare",
+                    "device_recovery_confirm",
+                    "device_recovery_status",
+                ]
+                .map(str::to_string),
+            );
             v
-        }).collect();
+        })
+        .collect();
     candidates.extend(recovery_candidates);
+    let presence_candidates: Vec<_> = candidates
+        .iter()
+        .filter_map(|group| {
+            let index = group.iter().position(|m| m == "runtime_restore")?;
+            let mut group = group.clone();
+            group.insert(index + 1, "runtime_enable_presence".into());
+            Some(group)
+        })
+        .collect();
+    candidates.extend(presence_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
             .iter()
@@ -853,12 +953,24 @@ pub(crate) fn validate_operation(
             "path",
             "transport_failed",
             "confirmed",
+            "observed_at",
+            "retry_after_seconds",
+            "method",
+            "phase",
+            "elapsed_ms",
         ];
-        if error
-            .evidence
-            .iter()
-            .any(|(k, v)| !allowed.contains(&k.as_str()) || v.len() > 32768)
-        {
+        if error.evidence.iter().any(|(k, v)| {
+            !allowed.contains(&k.as_str())
+                || v.len() > 32768
+                || k == "observed_at"
+                    && (!crate::runtime_protocol::timestamp(v)
+                        || !time::OffsetDateTime::parse(
+                            v,
+                            &time::format_description::well_known::Rfc3339,
+                        )
+                        .is_ok_and(|at| at <= time::OffsetDateTime::now_utc() + time::Duration::seconds(5)))
+                || retry_evidence(k, v).is_some_and(|valid| !valid)
+        }) {
             return Err(invalid(
                 "operation evidence contains unsupported fields or oversized value",
             ));

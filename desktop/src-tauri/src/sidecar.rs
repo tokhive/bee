@@ -21,7 +21,7 @@ use std::{
 use tokio::{
     io::{AsyncReadExt, AsyncWrite, AsyncWriteExt},
     process::{Child, ChildStdin, ChildStdout, Command},
-    sync::{mpsc, oneshot, watch, Mutex, Notify, OwnedSemaphorePermit, Semaphore},
+    sync::{broadcast, mpsc, oneshot, watch, Mutex, Notify, OwnedSemaphorePermit, Semaphore},
     time::{timeout, timeout_at, Instant},
 };
 
@@ -57,6 +57,39 @@ pub struct BridgeReply {
     pub id: String,
     pub instance: String,
     pub result: Value,
+}
+
+#[derive(Clone, Debug, Serialize, PartialEq)]
+pub struct PendingRequest {
+    pub id: String,
+    pub method: String,
+    pub platform: Option<SupplyPlatform>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct PendingRequests {
+    pub instance: Option<String>,
+    pub requests: Vec<PendingRequest>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub struct RequestSettled {
+    pub instance: String,
+    pub id: String,
+    pub method: String,
+    pub platform: Option<SupplyPlatform>,
+}
+struct RequestTracker {
+    pending: StdMutex<HashMap<String, PendingRequest>>,
+    settled: broadcast::Sender<RequestSettled>,
+    diagnostics: broadcast::Sender<Value>,
+}
+impl Default for RequestTracker {
+    fn default() -> Self {
+        Self {
+            pending: StdMutex::new(HashMap::new()),
+            settled: broadcast::channel(32).0,
+            diagnostics: broadcast::channel(64).0,
+        }
+    }
 }
 
 pub(crate) struct LaunchSpec {
@@ -153,10 +186,224 @@ struct Request {
     method: &'static str,
     params: Value,
     deadline: Instant,
+    queued_at: Instant,
+    started_at: Option<Instant>,
+    duration: Duration,
+    timed_out: bool,
     // Shared lock makes first-byte emission atomic with caller cancellation/deadline.
     phase: Arc<StdMutex<RequestPhase>>,
     _permit: OwnedSemaphorePermit,
-    reply: oneshot::Sender<Result<BridgeReply, BridgeError>>,
+    reply: Option<oneshot::Sender<Result<BridgeReply, BridgeError>>>,
+}
+
+impl Request {
+    fn respond(&mut self, result: Result<BridgeReply, BridgeError>) {
+        if let Some(reply) = self.reply.take() {
+            let _ = reply.send(result);
+        }
+    }
+    fn expires_at(&self) -> Instant {
+        if self.exit_request {
+            self.deadline
+        } else {
+            self.started_at
+                .map_or(self.deadline, |at| at + self.duration)
+        }
+    }
+    fn pending(&self, id: &str) -> PendingRequest {
+        PendingRequest {
+            id: id.into(),
+            method: self.method.into(),
+            platform: request_platform(self),
+        }
+    }
+}
+fn request_platform(request: &Request) -> Option<SupplyPlatform> {
+    match request.params["platform"].as_str() {
+        Some("openai") => Some(SupplyPlatform::Openai),
+        Some("claude") => Some(SupplyPlatform::Claude),
+        _ => None,
+    }
+}
+fn timeout_error(request: &Request, id: &str, fully_sent: bool, now: Instant) -> BridgeError {
+    let sent = request.started_at.is_some();
+    let phase = if !sent {
+        "queue"
+    } else if fully_sent {
+        "response"
+    } else {
+        "write"
+    };
+    let queue_ms = request
+        .started_at
+        .unwrap_or(now)
+        .duration_since(request.queued_at)
+        .as_millis();
+    let execution_ms = request
+        .started_at
+        .map_or(0, |at| now.duration_since(at).as_millis());
+    let platform = match request_platform(request) {
+        Some(SupplyPlatform::Openai) => "openai",
+        Some(SupplyPlatform::Claude) => "claude",
+        None => "none",
+    };
+    let evidence = [
+        ("request_id", id.to_string()),
+        ("method", request.method.to_string()),
+        ("platform", platform.to_string()),
+        ("phase", phase.to_string()),
+        ("queue_ms", queue_ms.to_string()),
+        ("execution_ms", execution_ms.to_string()),
+        ("fully_sent", fully_sent.to_string()),
+        ("in_flight", sent.to_string()),
+    ]
+    .into_iter()
+    .map(|(k, v)| (k.to_string(), v))
+    .collect();
+    BridgeError {
+        code: if sent { "RESPONSE_TIMEOUT" } else { "REQUEST_QUEUE_TIMEOUT" }.into(),
+        message: format!("owned Bee {} deadline elapsed; request id={id}; phase={phase}; queue_ms={queue_ms}; execution_ms={execution_ms}; fully_sent={fully_sent}; in_flight={sent}; bridge session preserved", request.method),
+        details: Some(protocol::FailureDetails { check: "bridge_request_deadline".into(),
+            observed_at: time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339).expect("UTC formatting"), evidence }),
+    }
+}
+
+// A vanished caller cannot skip the validation its wrapper would have run.
+// The decoder already validated the envelope and structured error contract.
+fn validate_late_result(
+    request: &Request,
+    result: &Value,
+    instance: &str,
+) -> Result<(), BridgeError> {
+    if !result.is_object() {
+        return Err(error(
+            "INVALID_REPLY",
+            format!(
+                "late {} result requires an object; actual type={}",
+                request.method,
+                if result.is_null() {
+                    "null"
+                } else {
+                    "non-object"
+                }
+            ),
+        ));
+    }
+    if result.get("error").is_some() {
+        // Context observations intentionally carry a revision beside the error.
+        // Its dedicated parser validates both the error kind and revision facts.
+        if request.method == "device_context" && result.get("binding_revision").is_some() {
+            return protocol::device_context_state(result).map(|_| ());
+        }
+        #[derive(serde::Deserialize)]
+        #[serde(deny_unknown_fields)]
+        struct Failure {
+            error: BridgeError,
+        }
+        let failure: Failure = serde_json::from_value(result.clone())
+            .map_err(|cause| protocol::invalid_json("late operation failure envelope", cause))?;
+        // These decoders deliberately return the validated domain failure as Err.
+        // Classify its closed wire variant before entering success-only decoding;
+        // never infer this distinction by comparing a decoder's error code/text.
+        match request.method {
+            "device_recovery_prepare"
+            | "device_recovery_confirm"
+            | "device_recovery_status"
+            | "network_status"
+            | "network_test"
+            | "device_context" => return Ok(()),
+            "diagnostics_start"
+            | "diagnostics_snapshot"
+            | "diagnostics_cancel"
+            | "notification_snapshot" => {
+                let (required, invalid) = if request.method == "notification_snapshot" {
+                    (
+                        "NOTIFICATIONS_OPERATION_FAILED",
+                        "NOTIFICATION_REPLY_INVALID",
+                    )
+                } else {
+                    ("DIAGNOSTICS_OPERATION_FAILED", "DIAGNOSTICS_REPLY_INVALID")
+                };
+                if failure.error.code != required || failure.error.message.len() > 1024 {
+                    return Err(error(invalid, format!("late {} failure variant rejected; fixed_code_match={}; actual code bytes={}; message bytes={}; required code={required}, message maximum=1024", request.method,
+                        failure.error.code == required, failure.error.code.len(), failure.error.message.len())));
+                }
+                return Ok(());
+            }
+            _ => {}
+        }
+    }
+    match request.method {
+        "account_detect" | "account_snapshot" | "account_action" => {
+            let platform = request_platform(request).ok_or_else(|| {
+                error(
+                    "ACCOUNT_REPLY_INVALID",
+                    "late account request has no valid platform",
+                )
+            })?;
+            protocol::validate_account_operation(result, platform)
+        }
+        "authorize_start" | "authorize_status" | "authorize_cancel" => {
+            crate::authorize_protocol::validate_authorize_reply(
+                result,
+                if request.method == "authorize_start" {
+                    request_platform(request)
+                } else {
+                    None
+                },
+                request.params["operation_id"].as_str(),
+            )
+        }
+        "runtime_snapshot"
+        | "runtime_start"
+        | "runtime_stop"
+        | "runtime_restore"
+        | "runtime_configure_network" => {
+            use crate::runtime_protocol::{validate_runtime_reply, RuntimeReplyKind};
+            validate_runtime_reply(
+                result,
+                match request.method {
+                    "runtime_snapshot" => RuntimeReplyKind::Snapshot,
+                    "runtime_configure_network" => RuntimeReplyKind::Configured,
+                    _ => RuntimeReplyKind::Operation,
+                },
+            )
+        }
+        "runtime_verify" | "runtime_enable_presence" => {
+            if result.get("error").is_some() {
+                return Ok(());
+            }
+            let required = if request.method == "runtime_verify" {
+                serde_json::json!({"verified":true})
+            } else {
+                serde_json::json!({"enabled":true})
+            };
+            if *result != required {
+                return Err(error(
+                    "INVALID_REPLY",
+                    format!(
+                        "late {} confirmation differs from required success object",
+                        request.method
+                    ),
+                ));
+            }
+            Ok(())
+        }
+        "device_context" => protocol::device_context_state(result).map(|_| ()),
+        "device_recovery_prepare" | "device_recovery_confirm" | "device_recovery_status" => {
+            protocol::device_recovery(result).map(|_| ())
+        }
+        "device_status" | "device_begin" if result.get("error").is_none() => {
+            protocol::validate_device_recovery(result)
+        }
+        "diagnostics_start" | "diagnostics_snapshot" | "diagnostics_cancel" => {
+            crate::diagnostics_protocol::validate_report(result, instance).map(|_| ())
+        }
+        "network_status" => crate::network::decode_network_status(result).map(|_| ()),
+        "network_test" => crate::network_protocol::validate_test(result).map(|_| ()),
+        "notification_snapshot" => crate::notification_poll::validate(result),
+        _ => Ok(()),
+    }
 }
 
 fn read_platform(request: &Request) -> Option<&str> {
@@ -186,7 +433,9 @@ fn unsent_rejection(request: &Request, frozen: &AtomicBool, now: Instant) -> Opt
             ),
         ));
     }
-    if request.reply.is_closed() || *request.phase.lock().unwrap() == RequestPhase::Canceled {
+    if request.reply.as_ref().is_none_or(|reply| reply.is_closed())
+        || *request.phase.lock().unwrap() == RequestPhase::Canceled
+    {
         return Some(error(
             "REQUEST_CANCELED",
             format!(
@@ -210,6 +459,7 @@ pub(crate) struct Inner {
     capacity: Arc<Semaphore>,
     wake: Arc<Notify>,
     timeout: Duration,
+    tracker: Arc<RequestTracker>,
     task: Mutex<StopTask>,
 }
 
@@ -363,6 +613,7 @@ impl Bridge {
                     capacity: Arc::new(Semaphore::new(16)),
                     wake: Arc::new(Notify::new()),
                     timeout: Duration::from_secs(5),
+                    tracker: Arc::new(RequestTracker::default()),
                     task: Mutex::new(StopTask::default()),
                 }))
             }
@@ -380,6 +631,7 @@ impl Bridge {
         let duration = spec.timeout;
         let frozen = Arc::new(AtomicBool::new(false));
         let wake = Arc::new(Notify::new());
+        let tracker = Arc::new(RequestTracker::default());
         let task = tauri::async_runtime::spawn(supervise(
             spec,
             status_tx.clone(),
@@ -387,6 +639,7 @@ impl Bridge {
             requests_rx,
             frozen.clone(),
             wake.clone(),
+            tracker.clone(),
         ));
         Self(Arc::new(Inner {
             frozen,
@@ -400,11 +653,33 @@ impl Bridge {
             capacity: Arc::new(Semaphore::new(16)),
             wake,
             timeout: duration,
+            tracker,
             task: Mutex::new(StopTask {
                 handle: Some(task),
                 result: None,
             }),
         }))
+    }
+
+    pub fn pending_requests(&self) -> PendingRequests {
+        let instance = self.status().metadata.map(|metadata| metadata.instance);
+        let mut requests: Vec<_> = self
+            .0
+            .tracker
+            .pending
+            .lock()
+            .unwrap()
+            .values()
+            .cloned()
+            .collect();
+        requests.sort_by(|a, b| a.id.cmp(&b.id));
+        PendingRequests { instance, requests }
+    }
+    pub(crate) fn subscribe_settled(&self) -> broadcast::Receiver<RequestSettled> {
+        self.0.tracker.settled.subscribe()
+    }
+    pub(crate) fn subscribe_diagnostics(&self) -> broadcast::Receiver<Value> {
+        self.0.tracker.diagnostics.subscribe()
     }
 
     pub fn status(&self) -> BridgeStatus {
@@ -615,6 +890,28 @@ impl Bridge {
             crate::runtime_protocol::RuntimeReplyKind::Snapshot,
         )?;
         Ok(reply)
+    }
+    // Native lifecycle only: no corresponding frontend command exists.
+    pub(crate) async fn runtime_enable_presence(
+        &self,
+        binding: u64,
+        network: u64,
+    ) -> Result<(), BridgeError> {
+        let reply = self
+            .request(
+                "runtime_enable_presence",
+                serde_json::json!({"binding_revision":binding,"network_revision":network}),
+                Duration::from_secs(15),
+            )
+            .await?;
+        crate::protocol::result_error(&reply.result)?;
+        if reply.result != serde_json::json!({"enabled":true}) {
+            return Err(error(
+                "RUNTIME_REPLY_INVALID",
+                "presence admission requires exactly enabled=true",
+            ));
+        }
+        Ok(())
     }
     pub async fn runtime_start(
         &self,
@@ -856,7 +1153,8 @@ impl Bridge {
                 )
             }));
         }
-        let deadline = Instant::now() + duration;
+        let queued_at = Instant::now();
+        let deadline = queued_at + duration.min(Duration::from_secs(15));
         let (reply, receive) = oneshot::channel();
         let phase = Arc::new(StdMutex::new(RequestPhase::Queued));
         let _guard = CancelUnsent(phase.clone(), self.0.wake.clone());
@@ -879,9 +1177,13 @@ impl Bridge {
                 method,
                 params,
                 deadline,
+                queued_at,
+                started_at: None,
+                duration,
+                timed_out: false,
                 phase: phase.clone(),
                 _permit: permit,
-                reply,
+                reply: Some(reply),
             })
             .map_err(|cause| {
                 error(
@@ -889,29 +1191,9 @@ impl Bridge {
                     format!("ping queue rejected request: {cause}; capacity=16"),
                 )
             })?;
-        let response = timeout_at(deadline, receive).await.map_err(|_| {
-            let mut phase = phase.lock().unwrap();
-            if *phase == RequestPhase::Sent {
-                let cause = error(
-                    "RESPONSE_TIMEOUT",
-                    format!("owned Bee {method} reply deadline elapsed; required=reply within {} ms including queue time; write result unconfirmed", duration.as_millis()),
-                );
-                self.0.status_tx.send_if_modified(|current| {
-                    if current.state != BridgePhase::Ready {
-                        return false;
-                    }
-                    *current = status(BridgePhase::Failed, None, Some(cause.clone()));
-                    true
-                });
-                cause
-            } else {
-                *phase = RequestPhase::Canceled;
-                error(
-                    "REQUEST_QUEUE_TIMEOUT",
-                    format!("{method} expired in the request queue before any bytes were sent; bridge session preserved"),
-                )
-            }
-        })?;
+        // The session owns both clocks and the sender. Dropping this future only
+        // cancels a request which has not emitted its first byte.
+        let response = receive.await;
         response.map_err(|cause| {
             self.status().error.unwrap_or_else(|| {
                 error(
@@ -1008,6 +1290,7 @@ async fn session(
     requests: &mut mpsc::Receiver<Request>,
     frozen: &AtomicBool,
     wake: &Notify,
+    tracker: &RequestTracker,
 ) -> Result<(), BridgeError> {
     let hello_params = serde_json::json!({});
     let handshake = exchange(
@@ -1051,31 +1334,40 @@ async fn session(
             }
             let now = Instant::now();
             let mut retained = VecDeque::new();
-            while let Some(request) = waiting.pop_front() {
+            while let Some(mut request) = waiting.pop_front() {
                 if let Some(cause) = unsent_rejection(&request, frozen, now) {
-                    let _ = request.reply.send(Err(cause));
+                    request.respond(Err(cause));
                 } else {
                     retained.push_back(request);
                 }
             }
             waiting = retained;
             let mut expired = Vec::new();
-            for (id, request) in &active {
+            for (id, request) in &mut active {
                 let phase = *request.phase.lock().unwrap();
                 if phase != RequestPhase::Sent {
                     if let Some(cause) = unsent_rejection(request, frozen, now) {
                         expired.push((id.clone(), cause));
                     }
-                } else if now >= request.deadline {
-                    return Err(error("RESPONSE_TIMEOUT",format!("owned Bee {} reply deadline elapsed; request id={id}; bytes were sent and result is unconfirmed",request.method)));
+                } else if !request.timed_out && now >= request.expires_at() {
+                    let fully_sent = !writing.as_ref().is_some_and(|frame| frame.id == *id);
+                    let cause = timeout_error(request, id, fully_sent, now);
+                    request.timed_out = true;
+                    if let Some(details) = &cause.details {
+                        let _ = tracker.diagnostics.send(serde_json::json!({"time":details.observed_at,
+                            "level":"warning", "module":"bridge", "platform":request_platform(request),
+                            "code":"request_timed_out", "evidence":details.evidence}));
+                    }
+                    tracker.pending.lock().unwrap().insert(id.clone(), request.pending(id));
+                    request.respond(Err(cause));
                 }
             }
             for (id, cause) in expired {
                 if writing.as_ref().is_some_and(|w| w.id == id) {
                     writing = None;
                 }
-                if let Some(request) = active.remove(&id) {
-                    let _ = request.reply.send(Err(cause));
+                if let Some(mut request) = active.remove(&id) {
+                    request.respond(Err(cause));
                 }
             }
             if writing.is_none() {
@@ -1122,7 +1414,8 @@ async fn session(
             let deadline = waiting
                 .iter()
                 .chain(active.values())
-                .map(|r| r.deadline)
+                .filter(|r| !r.timed_out)
+                .map(Request::expires_at)
                 .min();
             tokio::select! {
                 biased;
@@ -1144,7 +1437,12 @@ async fn session(
                     let request = active.get(&frame.id).unwrap();
                     write_step(stdin, frame, &request.phase, request.deadline, frozen, !request.exit_request).await
                 }, if writing.is_some() => {
-                    if result? { writing = None; }
+                    let complete = result?;
+                    let frame = writing.as_ref().unwrap();
+                    if frame.written > 0 {
+                        active.get_mut(&frame.id).unwrap().started_at.get_or_insert_with(Instant::now);
+                    }
+                    if complete { writing = None; }
                 },
                 result = replies.next() => {
                     let frame = result?;
@@ -1156,13 +1454,30 @@ async fn session(
                         return Err(error("UNEXPECTED_REPLY","owned Bee replied before its complete request frame was written"));
                     }
                     let id = frame.id.clone();
-                    let result = frame.success(&id, Some(&instance))?;
-                    if request.method == "ping" && result != serde_json::json!({"alive":true}) {
+                    // Instance integrity is mandatory even for valid business failures.
+                    if frame.instance != instance {
+                        return Err(error("INSTANCE_MISMATCH", format!("reply instance differs from owned child; actual bytes={}; required instance bytes={}; comparison=different", frame.instance.len(), instance.len())));
+                    }
+                    let result = frame.success(&id, Some(&instance));
+                    if request.method == "ping" && result.as_ref().is_ok_and(|v| *v != serde_json::json!({"alive":true})) {
                         return Err(error("INVALID_PING", "ping result differs from required alive=true object"));
                     }
+                    if request.timed_out || request.reply.as_ref().is_none_or(|reply| reply.is_closed()) {
+                        if let Ok(value) = &result { validate_late_result(request, value, &instance)?; }
+                    }
                     if let Some(cause) = statuses.borrow().error.clone() { return Err(cause); }
-                    let request = active.remove(&id).unwrap();
-                    let _ = request.reply.send(Ok(BridgeReply { protocol: 1, id, instance: instance.clone(), result }));
+                    let mut request = active.remove(&id).unwrap();
+                    request.respond(result.map(|result| BridgeReply { protocol: 1, id: id.clone(), instance: instance.clone(), result }));
+                    if request.timed_out {
+                        tracker.pending.lock().unwrap().remove(&id);
+                        let mut details = timeout_error(&request, &id, true, Instant::now()).details.expect("request evidence");
+                        details.evidence.insert("in_flight".into(), "false".into());
+                        let _ = tracker.diagnostics.send(serde_json::json!({"time":details.observed_at,
+                            "level":"info", "module":"bridge", "platform":request_platform(&request),
+                            "code":"request_settled", "evidence":details.evidence}));
+                        let _ = tracker.settled.send(RequestSettled { instance: instance.clone(), id,
+                            method: request.method.into(), platform: request_platform(&request) });
+                    }
                 },
                 request = requests.recv() => {
                     match request {
@@ -1179,14 +1494,15 @@ async fn session(
             "owned Bee session stopped; sent request result is unconfirmed",
         )
     });
-    for request in waiting.into_iter().chain(active.into_values()) {
+    tracker.pending.lock().unwrap().clear();
+    for mut request in waiting.into_iter().chain(active.into_values()) {
         let sent = *request.phase.lock().unwrap() == RequestPhase::Sent;
         let failure = if sent {
             cause.clone()
         } else {
             request_not_sent(request.method, &cause)
         };
-        let _ = request.reply.send(Err(failure));
+        request.respond(Err(failure));
     }
     result
 }
@@ -1218,6 +1534,7 @@ async fn supervise(
     mut requests: mpsc::Receiver<Request>,
     frozen: Arc<AtomicBool>,
     wake: Arc<Notify>,
+    tracker: Arc<RequestTracker>,
 ) -> Result<(), BridgeError> {
     let mut cleanup_failure = None;
     let run = async {
@@ -1275,8 +1592,10 @@ async fn supervise(
         })?;
         // Device credentials stay in Go and are never logged by this entry point.
         // Drain continuously and retain only its bounded diagnostic tail.
-        let mut diagnostics =
-            tokio::spawn(async move { crate::diagnostics::drain(&mut stderr).await });
+        let diagnostic_events = tracker.diagnostics.clone();
+        let mut diagnostics = tokio::spawn(async move {
+            crate::diagnostics::drain_with_events(&mut stderr, diagnostic_events).await
+        });
         let mut replies = Replies {
             stdout,
             decoder: FrameDecoder::default(),
@@ -1292,6 +1611,7 @@ async fn supervise(
             &mut requests,
             &frozen,
             &wake,
+            &tracker,
         )
         .await;
         if let Err(cause) = &result {
@@ -1359,15 +1679,13 @@ async fn supervise(
     };
     statuses.send_replace(terminal);
     requests.close();
-    while let Some(request) = requests.recv().await {
+    while let Some(mut request) = requests.recv().await {
         let cause = run
             .as_ref()
             .err()
             .cloned()
             .unwrap_or_else(|| error("BRIDGE_STOPPED", "owned Bee stopped"));
-        let _ = request
-            .reply
-            .send(Err(request_not_sent(request.method, &cause)));
+        request.respond(Err(request_not_sent(request.method, &cause)));
     }
     // A protocol failure is reported through status; stop reports cleanup/join
     // errors independently instead of treating a failed handshake as failed quit.

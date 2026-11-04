@@ -80,6 +80,7 @@ func authorizeFixture(t *testing.T, mode string) (*DesktopAuthorizer, *DesktopAc
 	t.Helper()
 	a := NewDesktopAccounts(nil)
 	owner := NewDesktopAuthorizer(context.Background(), a)
+	owner.interact = runDesktopAuthorization
 	t.Cleanup(func() { owner.Close(); a.Close() })
 	directory := t.TempDir()
 	sample := filepath.Join(t.TempDir(), "sample")
@@ -359,6 +360,71 @@ func TestDesktopAuthorizeClaudeVerifiedProfileAndLateCancellation(t *testing.T) 
 				}
 			} else if result.State != "succeeded" || !snapshot.Candidate.IdentityVerified || snapshot.Candidate.Fingerprint == nil {
 				t.Fatalf("Claude login unverified: %+v %+v", result, snapshot.Candidate)
+			}
+		})
+	}
+}
+
+func TestDesktopAuthorizeClaudeInvalidOldRecordCanBeReplaced(t *testing.T) {
+	for _, test := range []struct {
+		name, old, mode, want string
+		unreadable            bool
+	}{
+		{name: "malformed", old: `{`, mode: "success", want: "succeeded"},
+		{name: "missing_access", old: `{"claudeAiOauth":{"expiresAt":1000}}`, mode: "success", want: "succeeded"},
+		{name: "missing_expiry", old: `{"claudeAiOauth":{"accessToken":"synthetic-old"}}`, mode: "success", want: "succeeded"},
+		{name: "still_invalid", old: `{`, mode: "unchanged", want: "invalid_credentials"},
+		{name: "unreadable", mode: "success", want: "source_unavailable", unreadable: true},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			owner, accounts, request, started := authorizeFixture(t, test.mode)
+			accounts.goos = "linux"
+			request.Platform = "claude"
+			oldPath := filepath.Join(*request.Source.Directory, ".credentials.json")
+			if test.unreadable {
+				if err := os.Mkdir(oldPath, 0700); err != nil {
+					t.Fatal(err)
+				}
+			} else if err := os.WriteFile(oldPath, []byte(test.old), 0600); err != nil {
+				t.Fatal(err)
+			}
+			sample := filepath.Join(t.TempDir(), "claude-sample")
+			if err := os.WriteFile(sample, claudeSample(time.Now().Add(time.Hour)), 0600); err != nil {
+				t.Fatal(err)
+			}
+			original := owner.command
+			owner.command = func(program string, args ...string) *exec.Cmd {
+				command := original(program, args...)
+				for i, entry := range command.Env {
+					if strings.HasPrefix(entry, "BEE_AUTHORIZE_SOURCE=") {
+						command.Env[i] = "BEE_AUTHORIZE_SOURCE=" + sample
+					}
+				}
+				command.Env = append(command.Env, "BEE_AUTHORIZE_PLATFORM=claude")
+				return command
+			}
+			accounts.transport = claudeTransport(func(*http.Request) (*http.Response, error) {
+				return claudeProfileResponse(200, `{"account":{"uuid":"11111111-1111-1111-1111-111111111111","email":"fixture@example.test"},"organization":{"uuid":"22222222-2222-2222-2222-222222222222"}}`), nil
+			})
+			op, err := owner.Start(context.Background(), request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			result := waitAuthorize(t, owner, op.ID)
+			if test.want == "succeeded" {
+				if result.State != "succeeded" {
+					t.Fatalf("old record prevented login: state=%s error=%v", result.State, result.Error)
+				}
+				view, err := accounts.Snapshot(context.Background(), "claude", false)
+				if err != nil || !view.Candidate.IdentityVerified || view.Selection.State != "not_selected" {
+					t.Fatalf("login must verify without selecting: err=%v candidate=%+v", err, view.Candidate)
+				}
+			} else if result.State != "failed" || result.Error == nil || result.Error.Code != test.want {
+				t.Fatalf("actual state=%s error=%v; required=%s", result.State, result.Error, test.want)
+			}
+			_, launchErr := os.Stat(started)
+			if test.unreadable != os.IsNotExist(launchErr) {
+				t.Fatalf("official launch actual_error=%v; unreadable source=%t", launchErr, test.unreadable)
 			}
 		})
 	}

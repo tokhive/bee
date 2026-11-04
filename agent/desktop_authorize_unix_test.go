@@ -3,6 +3,7 @@
 package bee
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -128,5 +129,28 @@ func TestDesktopAuthorizeMustUseStartedNamespace(t *testing.T) {
 	}
 	if result.State != "succeeded" || snapshot.Candidate.Source == nil || snapshot.Candidate.Source.Directory == nil || *snapshot.Candidate.Source.Directory != want {
 		t.Fatalf("verification did not remain in the started namespace: state=%s source=%+v", result.State, snapshot.Candidate.Source)
+	}
+}
+
+func TestDesktopAuthorizeForwardsOfficialInput(t *testing.T) {
+	input, writer, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer input.Close()
+	if _, err = writer.WriteString("synthetic-authorization-code\n"); err != nil {
+		t.Fatal(err)
+	}
+	writer.Close()
+	command := exec.Command("/bin/sh", "-c", `IFS= read -r code; [ "$code" = synthetic-authorization-code ] && printf 'official input accepted'`)
+	var output bytes.Buffer
+	command.Stdin, command.Stdout = input, &output
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	if err := runDesktopAuthorization(ctx, command); err != nil {
+		t.Fatalf("official input unavailable: %v", err)
+	}
+	if output.String() != "official input accepted" {
+		t.Fatalf("actual=%q; required=official input accepted", output.String())
 	}
 }

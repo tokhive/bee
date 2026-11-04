@@ -228,6 +228,12 @@ func safeCode(code string) string {
 	switch code {
 	case "", "pending", "draining", "approved", "redeemed", "device_exists", "device_draining", "replacement_pending", "pairing_expired", "pairing_redeemed", "invalid_device_credential", "device_replaced", "rate_limited", "invalid_pairing", "invalid_pairing_token", "unavailable", "device_changed", "pairing_pending":
 		return code
+	case "device_connected", "forbidden", "invalid_content_type", "invalid_json", "invalid_platform", "invalid_pause",
+		"invalid_confirmation", "account_changed", "invalid_lease", "stale_connection", "invalid_maintenance", "tee_unavailable",
+		"stale_maintenance", "invalid_authorization", "invalid_codex_authorization", "invalid_claude_authorization",
+		"invalid_envelope", "codex_account_changed", "codex_authorization_rejected", "claude_confirmation_required",
+		"claude_authorization_rejected", "invalid_capabilities", "stale_account", "capability_metadata_required", "stale_observation", "invalid_events":
+		return code
 	default:
 		return "unrecognized_code"
 	}
@@ -244,11 +250,14 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 	case "/api/bee/pairings/redeem":
 		check = "pairing_redeem"
 	}
+	started := time.Now()
+	var retryAfter string
 	var status int
 	var responseBody []byte
 	defer func() {
+		desktopHTTPDiagnostic(ctx, strings.SplitN(path, "?", 2)[0], method, started, status, true, failure)
 		if failure != nil {
-			failure = desktopRequestFailure(state, path, check, failure, status, responseBody, secret)
+			failure = desktopHTTPFailure(state, path, check, method, started, failure, status, responseBody, retryAfter, secret)
 		}
 	}()
 	var body io.Reader
@@ -269,12 +278,16 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
 	}
+	desktopHTTPDiagnostic(ctx, req.URL.Path, method, started, 0, false, nil)
 	response, err := httpClient().Do(req)
 	if err != nil {
 		return fmt.Errorf("%s %s at %s: %w", method, path, state.Hive, err)
 	}
 	defer response.Body.Close()
 	status = response.StatusCode
+	if status == http.StatusTooManyRequests {
+		retryAfter = desktopRetryAfter(response.Header.Get("Retry-After"), time.Now())
+	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
 	if err != nil {
 		return fmt.Errorf("read %s %s HTTP %d: %w", method, path, response.StatusCode, err)

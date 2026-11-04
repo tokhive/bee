@@ -71,3 +71,12 @@ test('notification clicks accept only fixed native page routes',async()=>{
  for(const payload of ['accounts','settings','https://unsafe.example','overview','diagnostics'])runtime.runCallback(callback,{payload});
  assert.deepEqual(pages,['accounts','settings','overview','diagnostics']);off();
 });
+
+test('pending IPC and settlement use strict bounded native-only contracts',async()=>{
+ const {decodePendingRequests,decodeRequestSettled}=await import('../src/system/bridge.ts');
+ const instance='a'.repeat(32),request={id:'shell-1',method:'supply_status',platform:'openai'};
+ assert.deepEqual(decodePendingRequests({instance,requests:[request]}),{instance,requests:[request]});
+ assert.deepEqual(decodeRequestSettled({...request,instance}),{...request,instance});
+ for(const value of [{instance,requests:[request,request]},{instance:null,requests:[request]},{instance,requests:[{...request,id:'shell-01'}]},{instance,requests:[{...request,method:'unknown'}]},{instance,requests:Array.from({length:17},(_,i)=>({...request,id:'shell-'+(i+1)}))},{instance,requests:[{...request,platform:'none'}]},{instance,requests:[],extra:true}])assert.throws(()=>decodePendingRequests(value),/BRIDGE_PENDING_INVALID/);
+ globals.isTauri=true;const calls:string[]=[];mockIPC(command=>{calls.push(command);return {instance,requests:[request]};});assert.deepEqual(await createSystemBridge().pendingRequests!(),{instance,requests:[request]});assert.deepEqual(calls,['bridge_pending_requests']);
+});

@@ -6,10 +6,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 	"unicode"
 )
@@ -55,7 +58,7 @@ func desktopRequestFailure(state localState, path, check string, cause error, st
 	if u, err := url.Parse(path); err == nil {
 		evidence["path"] = u.Path
 	}
-	code := connectionFailureCode(cause, "connect")
+	code := desktopRequestFailureCode(cause)
 	var api *apiFailure
 	if errors.As(cause, &api) {
 		code = "http_rejected"
@@ -129,6 +132,22 @@ func (d *DesktopFailureDetails) Validate() error {
 			valid = connectionRemoteCode.MatchString(value)
 		case "source_type":
 			valid = desktopFailureCheck.MatchString(value)
+		case "retry_after_seconds":
+			n, err := strconv.ParseUint(value, 10, 31)
+			valid = err == nil && strconv.FormatUint(n, 10) == value
+		case "elapsed_ms":
+			n, err := strconv.ParseUint(value, 10, 53)
+			valid = err == nil && strconv.FormatUint(n, 10) == value
+		case "method":
+			valid = value == "GET" || value == "POST" || value == "PUT"
+		case "phase":
+			valid = value == "http_start" || value == "http_end" || value == "http_error"
+		case "failure_kind":
+			switch value {
+			case "timeout", "dns_temporary", "dns_failed", "tls_failed", "connection_refused", "connection_closed", "http_rejected", "unknown_failure":
+			default:
+				valid = false
+			}
 		case "response_body", "actual", "required":
 		default:
 			valid = false
@@ -206,4 +225,55 @@ func (d *DesktopFailureDetails) UnmarshalJSON(raw []byte) error {
 	}
 	*d = DesktopFailureDetails(value)
 	return nil
+}
+
+// HTTP reads use a closed set of typed transient failures. A permanent DNS
+// error or a message that merely mentions a timeout must not schedule retries.
+func desktopRequestFailureCode(cause error) string {
+	var dns *net.DNSError
+	if errors.As(cause, &dns) && (dns.IsTemporary || dns.IsTimeout) {
+		return "dns_temporary"
+	}
+	if errors.Is(cause, syscall.ECONNRESET) || errors.Is(cause, syscall.ECONNABORTED) || errors.Is(cause, syscall.EPIPE) {
+		return "connection_closed"
+	}
+	return connectionFailureCode(cause, "connect")
+}
+
+func desktopRetryAfter(value string, now time.Time) string {
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return ""
+	}
+	if n, err := strconv.ParseUint(value, 10, 31); err == nil && strconv.FormatUint(n, 10) == value {
+		return value
+	}
+	at, err := http.ParseTime(value)
+	if err != nil {
+		return ""
+	}
+	seconds := at.Sub(now).Seconds()
+	if seconds < 0 {
+		seconds = 0
+	}
+	if seconds > 2147483647 {
+		return ""
+	}
+	n := int64(seconds)
+	if float64(n) < seconds {
+		n++
+	}
+	return strconv.FormatInt(n, 10)
+}
+
+func desktopHTTPFailure(state localState, path, check, method string, started time.Time, cause error, status int, body []byte, retryAfter string, secrets ...string) error {
+	failure := desktopRequestFailure(state, path, check, cause, status, body, secrets...).(*DesktopFailure)
+	failure.Details.Evidence["method"] = method
+	failure.Details.Evidence["phase"] = "http_error"
+	failure.Details.Evidence["failure_kind"] = desktopRequestFailureCode(cause)
+	failure.Details.Evidence["elapsed_ms"] = strconv.FormatInt(time.Since(started).Milliseconds(), 10)
+	if status == http.StatusTooManyRequests && retryAfter != "" {
+		failure.Details.Evidence["retry_after_seconds"] = retryAfter
+	}
+	return failure
 }

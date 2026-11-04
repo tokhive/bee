@@ -102,7 +102,7 @@ func connectionFailureCode(err error, stage string) string {
 		return "timeout"
 	case stage == "synchronize":
 		return "synchronization_failed"
-	case err == nil || errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) || websocket.CloseStatus(err) != -1:
+	case err == nil || errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) || errors.Is(err, net.ErrClosed) || websocket.CloseStatus(err) != -1:
 		return "connection_closed"
 	default:
 		return "unknown_failure"

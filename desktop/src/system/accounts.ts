@@ -1,3 +1,4 @@
+import {retryEvidence,validFailureTime} from './failures.ts';
 import {throwBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {SupplyPlatform} from './supply';
@@ -17,6 +18,24 @@ export interface AccountDetectRequest extends AccountSource {platform:AccountPla
 export interface AccountActionRequest {platform:AccountPlatform;revision:number;candidate_ref:string;action:'select'|'confirm_change'|'remove'|'clear_selection';confirmed:boolean}
 export interface AccountClient {defaults():Promise<AccountDefaults>;snapshot(platform:AccountPlatform,refresh:boolean):Promise<AccountSnapshot>;detect(request:AccountDetectRequest):Promise<AccountSnapshot>;action(request:AccountActionRequest):Promise<AccountSnapshot>;invalidate(platform:AccountPlatform):void}
 export type AccountFactory=(instance:string)=>AccountClient;
+
+/** Observation revisions/timestamps may advance without changing the user's intent. */
+export function accountConfirmationKey(view:AccountSnapshot|undefined,now:number,cancelling=false):string {
+ const operation=view?.operation;
+ return JSON.stringify([
+  view?.platform,view?.selection.state,view?.selection.fingerprint,
+  view?.candidate.state,view?.candidate.reference,view?.candidate.fingerprint,
+  view?.candidate.source?.directory,view?.candidate.source?.store,
+  !!view?.candidate.expires_at&&Date.parse(view.candidate.expires_at)>now+30000,
+  view?.hive.state,view?.hive.fingerprint,view?.hive.pending_fingerprint,view?.hive.generation,
+  view?.authorization.state,view?.authorization.fingerprint,view?.authorization.error?.code,
+  view&&Object.entries(view.features).sort(([a],[b])=>a.localeCompare(b)).map(([name,feature])=>[name,feature.available,feature.reason]),
+  operation?.id,operation?.kind,
+  cancelling&&operation&&['pending','running'].includes(operation.state)?'cancellable':operation?.state,
+  operation?.error?.code,
+ ]);
+}
+
 type Validator=(value:unknown,at:string)=>void;
 const invalid=(evidence:string):never=>{throw new Error(`ACCOUNT_REPLY_INVALID: ${evidence}`);};
 const kind=(v:unknown)=>v===null?'null':Array.isArray(v)?'array':typeof v;
@@ -34,7 +53,7 @@ const directory:Validator=(v,at)=>{if(typeof v!=='string'||!v||new TextEncoder()
 const digest=nullable(pattern(/^[a-f0-9]{64}$/));
 const stores=(platform:AccountPlatform)=>platform==='openai'?['auto','file','keyring']:['file','keychain'];
 const plans=(platform:AccountPlatform)=>platform==='openai'?['free','go','plus','pro','prolite','promax','team','business','enterprise','edu']:['pro','max','team','enterprise'];
-const publicError=(platform:AccountPlatform)=>nullable(shape({code:pattern(/^[a-z][a-z0-9_]{0,79}$/),check:pattern(/^[a-z][a-z0-9_]{0,79}$/),platform:oneOf([platform,'unknown']),message:text,evidence:(v,at)=>{const o=object(v,at);const keys=['not_found','permission_denied','os_error','cause','parsed','profile_scope','inference_scope','expires_at','source_revision_match','http_status','path','transport_failed','confirmed'];for(const [k,val]of Object.entries(o)){if(!keys.includes(k))invalid(`${at} unknown evidence field`);text(val,`${at}.${k}`);}}}));
+const publicError=(platform:AccountPlatform)=>nullable(shape({code:pattern(/^[a-z][a-z0-9_]{0,79}$/),check:pattern(/^[a-z][a-z0-9_]{0,79}$/),platform:oneOf([platform,'unknown']),message:text,evidence:(v,at)=>{const o=object(v,at);const keys=['not_found','permission_denied','os_error','cause','parsed','profile_scope','inference_scope','expires_at','source_revision_match','http_status','path','transport_failed','confirmed','observed_at'];for(const [k,val]of Object.entries(o)){if(k==='observed_at'&&!validFailureTime(val))invalid(`${at}.${k} required=valid UTC observation no later than now+5s`);if(retryEvidence(k,String(val))===false)invalid(`${at}.${k} retry evidence outside fixed contract`);if(!keys.includes(k)&&retryEvidence(k,String(val))===undefined)invalid(`${at} unknown evidence field`);text(val,`${at}.${k}`);}}}));
 const available=shape({available:bool,reason:nullable(pattern(/^[a-z][a-z0-9_]{0,127}$/))});
 function result(reply:unknown,instance:string,key:string):unknown {
  const o=object(reply,'reply');if(o.instance!==instance)invalid('reply.instance mismatch; required=current management instance');

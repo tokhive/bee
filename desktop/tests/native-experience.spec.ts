@@ -84,13 +84,13 @@ for(const outcome of ['success','failure'])test(`late Hive open ${outcome} from 
 });
 
 test('notification delivery failures stay visible and retry requires an explicit action',async({page})=>{
- await setup(page);await page.evaluate(()=>{const w=window as any;w.notificationPermission='granted';w.notificationDeliveryError={code:'NOTIFICATION_NATIVE',message:'native notification rejected: os_code=13'};});
+ await setup(page);await page.evaluate(()=>{const w=window as any;w.notificationPermission='granted';w.notificationRetryableCount=1;w.notificationDeliveryError={code:'NOTIFICATION_NATIVE',message:'native notification rejected: os_code=13'};});
  await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
  expect(await calls(page,'notification_retry')).toEqual([]);expect(await calls(page,'notification_enable')).toEqual([]);
  await page.getByLabel('接收系统通知',{exact:true}).check();
  await page.getByRole('button',{name:'重试失败的通知',exact:true}).click();
  expect(await calls(page,'notification_retry')).toEqual([{command:'notification_retry',args:{}}]);
- await expect(page.getByRole('status')).toContainText('将在下次后台检查时重试明确失败的通知');
+ await expect(page.getByTestId('notification-retry-result')).toContainText('重试请求已接受');
  await nav(page,'概览').click();await nav(page,'设置').click();await tab(page,'通知与启动').click();
  expect((await calls(page,'notification_retry')).length).toBe(1);await expect(page.getByRole('alert')).toContainText('NOTIFICATION_NATIVE');
 });
@@ -453,7 +453,8 @@ test('T8 failed autostart reads cannot confirm an unknown write or replace its e
   await expect(settings).toContainText('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。');
   await expect(settings).not.toContainText('期望启动选项与系统登记不一致');
   await expect(settings).not.toContainText('系统启动登记与期望不一致。');
-  await expect(settings.getByRole('alert')).toHaveCount(outcome==='null-only'?1:2);await expect(settings).toContainText('autostart accepted; receipt lost: enabled=true');
+  await expect(settings.getByRole('alert')).toHaveCount(2);await expect(settings).toContainText('autostart accepted; receipt lost: enabled=true');
+  if(outcome==='null-only'){await expect(settings).toContainText('registered=null');await expect(page.getByTestId('system-check-result')).toContainText('部分检查未完成');}
   if(outcome==='null-error')await expect(settings).toContainText('autostart query failed: kind=PermissionDenied os_code=13');
   if(outcome==='bool-error')await expect(settings).toContainText('preferences read failed: kind=PermissionDenied os_code=13');
   if(outcome==='rejected')await expect(settings).toContainText('autostart query receipt lost: read_only=true');
@@ -509,4 +510,114 @@ for(const registered of [false,true])test(`T8 autostart set failure retains its 
  if(registered)await expect(settings).not.toContainText('期望启动选项与系统登记不一致');else await expect(settings).toContainText('期望启动选项与系统登记不一致');
  await expect(settings).not.toContainText('已核对系统启动登记。');await expect(settings).not.toContainText('启动登记请求结果尚未确认');
  expect((await calls(page,'autostart_set')).length).toBe(1);
+});
+
+
+test('system check exposes immediate busy feedback, blocks repeated clicks and confirms unchanged results locally',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.evaluate(()=>{const w=window as any;w.settingsReadDelay=800;});
+ const button=page.getByTestId('system-check-button'),box=await button.boundingBox();await button.focus();await page.keyboard.press('Enter');
+ await expect(button).toHaveAttribute('aria-busy','true');await expect(button).toHaveAccessibleName('正在检查…');
+ expect((await button.boundingBox())!.width).toBe(box!.width);await page.keyboard.press('Enter');
+ await page.clock.runFor(801);await expect(button).toHaveAttribute('aria-busy','false');await expect(button).toBeFocused();
+ await expect(page.getByTestId('system-check-result')).toHaveText('检查完成，状态未变化。');
+ expect(await calls(page,'notification_enable')).toEqual([]);expect(await calls(page,'autostart_set')).toEqual([]);
+ await nav(page,'概览').click();await nav(page,'设置').click();await expect(page.getByTestId('system-check-result')).toHaveText('检查完成，状态未变化。');
+});
+
+test('system check reports changed facts and every partial failure with concrete evidence, then recovers',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.evaluate(()=>{(window as any).notificationPermission='denied';});await page.getByTestId('system-check-button').click();
+ await expect(page.getByTestId('system-check-result')).toHaveText('检查完成，系统状态已更新。');
+ await page.evaluate(()=>{const w=window as any;w.settingsReadFailures={notification_permission:{code:'PERMISSION_QUERY_FAILED',message:'permission query rejected: os_code=13'},autostart_status:{code:'AUTOSTART_QUERY_FAILED',message:'registration query failed: os_code=7'}};});
+ await page.getByTestId('system-check-button').click();const result=page.getByTestId('system-check-result');
+ await expect(result).toContainText('部分检查未完成');await expect(result).toContainText('通知权限');await expect(result).toContainText('系统启动登记');
+ await page.getByTestId('native-settings').getByText('查看失败详情',{exact:true}).first().click();await expect(page.getByTestId('native-settings')).toContainText('os_code=13');
+ await page.evaluate(()=>{(window as any).settingsReadFailures={};});await page.getByTestId('system-check-button').click();await expect(result).not.toContainText('部分检查未完成');await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('long system waits remain explicit without claiming cancellation',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.evaluate(()=>{(window as any).settingsReadDelay=12000;});
+ await page.getByTestId('system-check-button').click();await page.clock.runFor(8001);await expect(page.getByTestId('system-check-result')).toHaveText('仍在等待系统响应…');
+ await expect(page.getByTestId('system-check-button')).toHaveAttribute('aria-busy','true');await page.clock.runFor(4000);await expect(page.getByTestId('system-check-result')).toHaveText('检查完成，状态未变化。');
+});
+
+async function retryReady(page:Page){
+ await setup(page);await page.evaluate(()=>{const w=window as any;w.notificationPermission='granted';w.notificationRetryableCount=1;w.notificationDeliveryError={code:'NOTIFICATION_SUBMIT_REJECTED',message:'native submit rejected: os_code=13'};});
+ await nav(page,'设置').click();await tab(page,'通知与启动').click();await page.getByLabel('接收系统通知',{exact:true}).check();
+}
+for(const outcome of ['accepted','failed','uncertain','read-failed','pending'])test(`notification retry follows ${outcome} without resending accepted or unknown items`,async({page})=>{
+ await retryReady(page);await page.evaluate(()=>{(window as any).notificationRetryDelay=500;});
+ const button=page.getByTestId('notification-retry-button');await button.click();await expect(button).toHaveAccessibleName('正在安排重试…');await expect(button).toHaveAttribute('aria-busy','true');
+ await page.clock.runFor(501);const result=page.getByTestId('notification-retry-result');await expect(result).toContainText('重试请求已接受');
+ await page.evaluate(outcome=>{const w=window as any;if(outcome==='read-failed'){w.settingsReadFailures={notification_delivery_status:{code:'RESPONSE_TIMEOUT',message:'delivery status unavailable: read_id=42'}};return;}if(outcome==='pending')return;w.notificationCheckSequence=1;w.notificationPendingCount=0;w.notificationRetryableCount=outcome==='failed'?1:0;w.notificationUncertainCount=outcome==='uncertain'?1:0;w.notificationDeliveryError=outcome==='failed'?{code:'NOTIFICATION_SUBMIT_REJECTED',message:'retry rejected: os_code=7'}:null;},outcome);
+ await page.clock.runFor(outcome==='pending'?16001:1100);
+ await expect(result).toContainText(outcome==='read-failed'?'通知状态读取失败':outcome==='pending'?'后台仍有待处理通知':outcome==='failed'?'明确失败':outcome==='uncertain'?'结果未知':'后台检查已完成');
+ await expect(page.getByTestId('notification-retry-button')).toHaveCount(outcome==='failed'?1:0);expect((await calls(page,'notification_retry')).length).toBe(1);
+ if(outcome==='read-failed'){await page.getByText('查看失败详情',{exact:true}).last().click();await expect(page.getByTestId('native-settings')).toContainText('read_id=42');await expect(page.getByRole('button',{name:'重新读取通知状态',exact:true})).toBeVisible();}
+});
+
+test('notification retry zero receipt is a no-op and status read failure never offers a delivery retry',async({page})=>{
+ await retryReady(page);await page.evaluate(()=>{(window as any).notificationRetryableCount=0;});await page.getByTestId('notification-retry-button').click();
+ await expect(page.getByTestId('notification-retry-result')).toContainText('没有可重试的通知');expect((await calls(page,'notification_retry')).length).toBe(1);
+ await page.evaluate(()=>{const w=window as any;w.settingsReadFailures={notification_delivery_status:{code:'RESPONSE_TIMEOUT',message:'read unavailable: status_id=9'}};});await page.getByTestId('system-check-button').click();
+ await expect(page.getByTestId('notification-retry-button')).toHaveCount(0);await expect(page.getByRole('button',{name:'重新读取通知状态',exact:true})).toBeVisible();
+});
+
+test('unknown retry request cannot be submitted again and a newer scope ignores late system reads',async({page})=>{
+ await retryReady(page);await page.evaluate(()=>{const w=window as any;w.notificationRetryUnknown=true;});await page.getByTestId('notification-retry-button').click();
+ await expect(page.getByTestId('notification-retry-result')).toContainText('重试请求结果尚未确认');await expect(page.getByTestId('notification-retry-button')).toHaveCount(0);expect((await calls(page,'notification_retry')).length).toBe(1);
+ await page.evaluate(()=>{const w=window as any;w.settingsReadDelay=1000;});await page.getByTestId('system-check-button').click();await page.evaluate(()=>{const w=window as any;w.notificationPermission='denied';w.settingsReadDelay=0;w.emit('d'.repeat(32));});await page.clock.runFor(1001);
+ await nav(page,'设置').click();await tab(page,'通知与启动').click();await expect(page.getByText('已拒绝',{exact:true})).toBeVisible();await expect(page.getByTestId('system-check-result')).toBeEmpty();
+});
+
+test('retry action keeps keyboard focus when it becomes a read-only status action',async({page})=>{
+ await retryReady(page);const button=page.getByTestId('notification-retry-button');await button.focus();await page.keyboard.press('Enter');
+ const read=page.getByRole('button',{name:'重新读取通知状态',exact:true});await expect(read).toBeFocused();await expect(read).toHaveAttribute('aria-disabled','true');
+ await page.evaluate(()=>{const w=window as any;w.notificationCheckSequence=1;w.notificationPendingCount=0;w.notificationDeliveryError=null;});await page.clock.runFor(1100);
+ await expect(read).toBeFocused();await expect(read).toHaveAttribute('aria-disabled','false');
+});
+
+test('hung follow-up status read stops waiting and a newer read wins over its late result',async({page})=>{
+ await retryReady(page);await page.getByTestId('notification-retry-button').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let first=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command==='notification_delivery_status'&&first){first=false;const value=await invoke(command,args);return new Promise(resolve=>{w.releaseDelivery=()=>resolve(value);});}return invoke(command,args);};});
+ await page.clock.runFor(16001);await expect(page.getByTestId('notification-retry-result')).toContainText('通知状态尚未确认');
+ await page.evaluate(()=>{const w=window as any;w.notificationCheckSequence=1;w.notificationPendingCount=0;w.notificationDeliveryError=null;});
+ await page.getByRole('button',{name:'重新读取通知状态',exact:true}).click();await expect(page.getByTestId('notification-retry-result')).toContainText('后台检查已完成');
+ await page.evaluate(()=>{(window as any).releaseDelivery();});await page.clock.runFor(1);await expect(page.getByRole('alert')).toHaveCount(0);await expect(page.getByTestId('notification-retry-button')).toHaveCount(0);
+});
+
+test('fulfilled OS read failures are partial failures rather than successful settled promises',async({page})=>{
+ await setup(page);await nav(page,'设置').click();await tab(page,'通知与启动').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const result=await invoke(command,args);return command==='autostart_status'?{...result,error:{code:'AUTOSTART_QUERY_FAILED',message:'registration read rejected: os_code=22'}}:command==='preferences_read'?{...result,error:{code:'PREFERENCES_READ_FAILED',message:'preferences read rejected: os_code=13'}}:result;};});
+ await page.getByTestId('system-check-button').click();await expect(page.getByTestId('system-check-result')).toContainText('系统启动登记、偏好读取');
+ await expect(page.getByTestId('system-check-result')).not.toContainText('检查完成，');
+});
+
+
+test('completed reads report an existing delivery issue without claiming partial query failure',async({page})=>{
+ await retryReady(page);await page.getByTestId('system-check-button').click();
+ await expect(page.getByTestId('system-check-result')).toHaveText('检查完成，通知仍有问题。');
+ await expect(page.getByRole('alert')).toContainText('NOTIFICATION_SUBMIT_REJECTED');
+});
+
+test('mixed delivery outcomes show all counts and block retry until the follow-up completes',async({page})=>{
+ await retryReady(page);await page.getByTestId('notification-retry-button').click();
+ await page.evaluate(()=>{const w=window as any;w.notificationUncertainCount=2;w.notificationRetryableCount=1;w.notificationPendingCount=3;});
+ await page.clock.runFor(1100);
+ await expect(page.getByTestId('notification-retry-button')).toHaveCount(0);
+ await page.evaluate(()=>{(window as any).notificationCheckSequence=1;});await page.clock.runFor(1100);
+ const result=page.getByTestId('notification-retry-result');await expect(result).toContainText('待处理 3 · 明确失败 1 · 结果未知 2');
+ await expect(page.getByTestId('notification-retry-button')).toBeVisible();
+});
+
+
+test('system reread superseding an in-flight retry follow-up is not reported as read failure',async({page})=>{
+ await retryReady(page);await page.getByTestId('notification-retry-button').click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let first=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const value=await invoke(command,args);if(command==='notification_delivery_status'&&first){first=false;return new Promise(resolve=>{w.releaseDelivery=()=>resolve(value);});}return value;};});
+ await page.clock.runFor(1100);
+ await page.evaluate(()=>{const w=window as any;w.notificationCheckSequence=1;w.notificationPendingCount=0;w.notificationDeliveryError=null;});
+ await page.getByTestId('system-check-button').click();await page.evaluate(()=>{(window as any).releaseDelivery();});await page.clock.runFor(1100);
+ await expect(page.getByTestId('notification-retry-result')).toHaveText('后台检查已完成，通知状态已更新。待处理 0 · 明确失败 0 · 结果未知 0');
+ await expect(page.getByRole('alert')).toHaveCount(0);expect((await calls(page,'notification_retry')).length).toBe(1);
 });

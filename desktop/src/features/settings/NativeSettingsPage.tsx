@@ -2,6 +2,7 @@ import {FailureNotice} from '../../components/ProblemNotice';
 import {settingsTabForSection,type NavigationRequest,type NavigationTarget} from '../../app/navigation';
 import {normalizeFailure,requestNotSent,type UiFailure} from '../../system/failures';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
+import {LoaderCircle} from 'lucide-react';
 import {Tabs} from 'radix-ui';
 import {version as appVersion} from '../../../package.json';
 import '../../styles/section-tabs.css';
@@ -9,7 +10,7 @@ import {ConfirmDialog} from '../../components/ConfirmDialog';
 import {t,formatDate,currentLocale} from '../../i18n/index';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import type {DesktopPreferences,PreferencesClient,PreferencesSnapshot} from '../../system/preferences';
-import type {AutostartSnapshot,NotificationPermission,createNotificationsClient} from '../../system/notifications';
+import type {AutostartSnapshot,NotificationPermission,NotificationDeliverySnapshot,createNotificationsClient} from '../../system/notifications';
 import type {NetworkClient,NetworkSnapshot,NetworkTestResult} from '../../system/network';
 import './native-settings.css';
 
@@ -22,6 +23,11 @@ export interface NativeSettingsDraft {
  applyState?:'pending'|'confirmed'|'unknown'|'failed';applyFailure?:UiFailure|null;
  notificationState?:'pending'|'confirmed'|'unknown';autostartState?:'pending'|'confirmed'|'unknown';autostartDesired?:boolean;autostartReadConfirmed?:boolean;
  runtime?:RuntimeSnapshot|null;runtimeReadError?:UiFailure|null;
+ delivery?:NotificationDeliverySnapshot;deliveryReadError?:UiFailure|null;
+ systemCheckResult?:string;systemCheckFailures?:string[];
+ retryResult?:string;retryError?:UiFailure|null;retryBlocked?:boolean;
+ retryWatch?:{sequence:number;deadline:number}|null;
+
 }
 export interface NativeSettingsPageProps {
  draft?:NativeSettingsDraft;onDraftChange?:(change:Partial<NativeSettingsDraft>)=>void;navigationRequest?:NavigationRequest;
@@ -71,18 +77,82 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
   catch(cause){if(current()&&request===control.networkRead)patchDraft({networkReadError:normalizeFailure(cause,'network_snapshot')});}
  }
  async function refreshRuntime(){if(!readRuntime)return;try{const value=await readRuntime();if(current())patchDraft({runtime:value.view,runtimeReadError:value.failure});}catch(cause){if(current())patchDraft({runtimeReadError:normalizeFailure(cause,'runtime_snapshot')});}}
+ async function readDelivery(){
+  const request=++control.deliveryRead;
+  try{
+   const value=await notificationsClient.deliveryStatus();if(!current()||request!==control.deliveryRead)return;
+   patchDraft({delivery:value,deliveryError:value.error?normalizeFailure(value.error,'notification_delivery'):null,deliveryReadError:null,retryBlocked:false,retryError:null});return value;
+  }catch(cause){if(current()&&request===control.deliveryRead){patchDraft({deliveryReadError:normalizeFailure(cause,'notification_delivery_status')});return null;}}
+ }
  async function readOs(){
-  const permissionRequest=++control.permissionRead,autostartRequest=++control.autostartRead,deliveryRequest=++control.deliveryRead;
-  const results=await Promise.allSettled([notificationsClient.permission(),notificationsClient.autostartStatus(),notificationsClient.deliveryStatus()]);if(!current())return;
+  const permissionRequest=++control.permissionRead,autostartRequest=++control.autostartRead;
+  const results=await Promise.allSettled([notificationsClient.permission(),notificationsClient.autostartStatus(),readDelivery()]);if(!current())return;
   if(permissionRequest===control.permissionRead){const r=results[0];patchDraft(r.status==='fulfilled'?{permission:r.value,permissionError:null,notificationState:'confirmed'}:{permission:null,permissionError:normalizeFailure(r.reason,'notification_permission')});}
   if(autostartRequest===control.autostartRead){
    const r=results[1];
-   // Status can carry a preference-read error even when the OS returned a boolean.
    if(r.status==='fulfilled'&&!r.value.error&&typeof r.value.registered==='boolean')patchDraft({autostart:r.value,autostartState:'confirmed',autostartReadConfirmed:true,autostartError:null,autostartReadError:null});
-   else patchDraft({autostartReadConfirmed:false,autostartReadError:r.status==='rejected'?normalizeFailure(r.reason,'autostart_status'):r.value.error?normalizeFailure(r.value.error,'autostart_status'):null});
+   else patchDraft({autostartReadConfirmed:false,autostartReadError:r.status==='rejected'?normalizeFailure(r.reason,'autostart_status'):normalizeFailure(r.value.error??{code:'AUTOSTART_QUERY_UNCONFIRMED',message:'autostart_status returned registered=null; required=confirmed boolean registration'},'autostart_status')});
   }
-  if(deliveryRequest===control.deliveryRead){const r=results[2];patchDraft({deliveryError:r.status==='fulfilled'?(r.value.error?normalizeFailure(r.value.error,'notification_delivery'):null):normalizeFailure(r.reason,'notification_delivery')});}
  }
+ function systemFacts(){
+  const value=draftRef.current;
+  // Background check sequence advances independently of permission, registration or preferences.
+  const delivery=value.delivery;
+  return JSON.stringify([value.permission,value.autostart,value.saved?.preferences??preferences.preferences,delivery&&[delivery.error,delivery.retryable_count,delivery.pending_count,delivery.uncertain_count]]);
+ }
+ async function checkSystem(){
+  const before=systemFacts();patchDraft({systemCheckResult:'正在检查系统状态…',systemCheckFailures:[]});
+  const waiting=setTimeout(()=>{if(current()&&control.operation==='os')patchDraft({systemCheckResult:'仍在等待系统响应…'});},8000);
+  try{
+   await Promise.allSettled([readOs(),readPreferences()]);if(!current())return;
+   const value=draftRef.current;
+   const failed=[value.permissionError?'通知权限':null,value.autostartReadError?'系统启动登记':null,value.deliveryReadError?'通知状态读取':null,value.preferenceReadError?'偏好读取':null].filter((name):name is string=>!!name);
+   patchDraft({systemCheckFailures:failed,systemCheckResult:failed.length?'部分检查未完成。':value.deliveryError?'检查完成，通知仍有问题。':before===systemFacts()?'检查完成，状态未变化。':'检查完成，系统状态已更新。'});
+  }finally{clearTimeout(waiting);}
+ }
+ function deliveryResult(value:NotificationDeliverySnapshot){
+  if(value.uncertain_count>0)return '通知投递结果未知；不会重复发送。';
+  if(value.retryable_count>0)return '后台检查已完成，仍有明确失败的通知。';
+  if(value.pending_count>0)return '后台仍有待处理通知；可稍后重新读取状态。';
+  if(value.error)return '后台检查已完成，通知仍有问题；请查看失败详情。';
+  return '后台检查已完成，通知状态已更新。';
+ }
+ async function retryNotifications(){
+  if(draftRef.current.retryBlocked||draftRef.current.deliveryReadError||!(draftRef.current.delivery?.retryable_count??0))return;
+  // Invalidate an earlier read before authorizing the next attempt.
+  control.deliveryRead++;patchDraft({retryBlocked:true,retryError:null,retryResult:'正在安排通知重试…',retryWatch:null});
+  const waiting=setTimeout(()=>{if(current()&&control.operation==='notification-retry')patchDraft({retryResult:'仍在等待重试回执；不会重复提交。'});},8000);
+  try{
+   const receipt=await notificationsClient.retry();if(!current())return;
+   const previous=draftRef.current.delivery!;
+   patchDraft({delivery:{...previous,retryable_count:0},retryResult:receipt.retryable_count===0?'没有可重试的通知。':'重试请求已接受，等待后台检查。',retryWatch:receipt.retryable_count===0?null:{sequence:previous.check_sequence,deadline:Date.now()+15000}});
+   if(receipt.retryable_count===0)await readDelivery();
+  }catch(cause){if(current())patchDraft({retryResult:'重试请求结果尚未确认；请先重新读取通知状态，不会重复提交。',retryError:normalizeFailure(cause,'notification_retry'),retryWatch:null});}
+  finally{clearTimeout(waiting);}
+ }
+ async function checkDelivery(){
+  const value=await readDelivery();if(!current())return;
+  patchDraft({retryWatch:null,retryResult:value?deliveryResult(value):'通知状态读取失败；请重新读取通知状态。'});
+ }
+ // Follow-up is read-only and bounded. Navigation pauses reads; the draft retains the receipt.
+ useEffect(()=>{
+  const watch=currentDraft.retryWatch;if(!watch)return;
+  let disposed=false,timer:ReturnType<typeof setTimeout>|undefined;
+  const poll=async()=>{
+   if(disposed||!current())return;
+   if(Date.now()>=watch.deadline){patchDraft({retryWatch:null,retryResult:draftRef.current.delivery?.pending_count?'后台仍有待处理通知；可稍后重新读取状态。':'通知状态尚未确认；请稍后重新读取状态。'});return;}
+   const value=await readDelivery();if(disposed||!current())return;
+   if(value===null){patchDraft({retryWatch:null,retryResult:'通知状态读取失败；请重新读取通知状态。'});return;}
+   // A newer system read supersedes this request; it is not a read failure.
+   if(value&&value.check_sequence>watch.sequence){patchDraft({retryWatch:null,retryResult:deliveryResult(value)});return;}
+   timer=setTimeout(()=>void poll(),1000);
+  };
+  timer=setTimeout(()=>void poll(),Math.min(1000,Math.max(0,watch.deadline-Date.now())));
+  // A hung read must not leave the follow-up waiting indefinitely.
+  const deadline=setTimeout(()=>{if(!disposed&&current()){control.deliveryRead++;patchDraft({retryWatch:null,retryResult:draftRef.current.delivery?.pending_count?'后台仍有待处理通知；可稍后重新读取状态。':'通知状态尚未确认；请稍后重新读取状态。'});}},Math.max(0,watch.deadline-Date.now()));
+  return()=>{disposed=true;clearTimeout(timer);clearTimeout(deadline);};
+ },[currentDraft.retryWatch,notificationsClient]);
+
  useEffect(()=>{if(control.operation)return;void refreshNetwork();void readOs();},[preferencesClient,notificationsClient,networkClient]);
  async function run(name:string,action:()=>Promise<unknown>){
   if(control.operation)return;control.operation=name;patchDraft({busy:name,error:null,notice:''});
@@ -127,6 +197,10 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
  const applyFailure=currentDraft.applyFailure,networkReadError=currentDraft.networkReadError;
  const saveBlocked=currentDraft.proxySave==='pending'||currentDraft.proxySave==='unknown'&&!currentDraft.saveReadConfirmed||currentDraft.applyState==='pending';
  const applyBlocked=!!busy||!!networkReadError||currentDraft.applyState==='unknown';
+ const canRetry=prefs.notifications_enabled&&permission==='granted'&&!currentDraft.deliveryReadError&&!currentDraft.retryBlocked&&!currentDraft.retryWatch&&(currentDraft.delivery?.retryable_count??0)>0;
+ const retryAction=canRetry||busy==='notification-retry';
+ const deliveryActionBusy=busy==='notification-retry'||busy==='delivery-read';
+ const deliveryActionDisabled=!!busy||!!currentDraft.retryWatch;
  const permissionHelp=os==='darwin'||os==='macos'?'在 macOS“系统设置 → 通知 → Bee”中允许通知。应用内提醒会继续显示。':os==='windows'?'在 Windows“设置 → 系统 → 通知 → Bee”中允许通知。应用内提醒会继续显示。':'请在当前桌面环境的通知设置中核对 Bee 权限；具体位置取决于桌面环境。应用内提醒会继续显示。';
 
  return <Tabs.Root className="native-settings section-tabs" data-testid="native-settings" value={currentDraft.tab??'network'} onValueChange={tab=>patchDraft({tab})}>
@@ -153,12 +227,18 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
 </aside></div></section></Tabs.Content>
   <Tabs.Content value="system"><section className="ns-section" aria-labelledby="ns-system-title" data-settings-section="notifications" tabIndex={-1}><header><h2 id="ns-system-title">{t('通知与启动')}</h2><p>{t('偏好与系统实际状态分别显示。')}</p></header>   <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error||currentDraft.notificationState==='unknown'} checked={prefs.notifications_enabled} onChange={event=>notifications(event.target.checked)}/><span>{t('接收系统通知')}</span></label><p>{t('授权、换号、离线和额度问题仍会保留在应用内。')}</p></div><div className="ns-os-status"><span>{t('系统权限')}</span><strong>{t(permission==='granted'?'已允许':permission==='denied'?'已拒绝':permission==='prompt'?'尚未允许':'尚未确认')}</strong></div></div>
    {permissionError&&<FailureNotice failure={permissionError} check="system_permissions"/>}
-   {deliveryError&&<div className="ns-delivery-error"><FailureNotice failure={deliveryError} check="notification_delivery"/>{prefs.notifications_enabled&&permission==='granted'&&<button disabled={!!busy} onClick={()=>void run('notification-retry',async()=>{await notificationsClient.retry();if(current())patchDraft({notice:'将在下次后台检查时重试明确失败的通知。'});})}>{t('重试失败的通知')}</button>}</div>}
+   <div className="ns-delivery-error">
+    {deliveryError&&<FailureNotice failure={deliveryError} check="notification_delivery"/>}
+    {currentDraft.deliveryReadError&&<><p>{t('通知状态读取失败；上次确认的投递结果仍保留。')}</p><FailureNotice failure={currentDraft.deliveryReadError} check="notification_delivery_status"/></>}
+    {currentDraft.retryError&&<FailureNotice failure={currentDraft.retryError} check="notification_retry"/>}
+    {(retryAction||currentDraft.deliveryReadError||currentDraft.retryResult)&&<button data-testid={retryAction?'notification-retry-button':'notification-read-button'} className="ns-feedback-button" aria-busy={deliveryActionBusy} aria-disabled={deliveryActionDisabled} onClick={()=>{if(!deliveryActionDisabled)void run(retryAction?'notification-retry':'delivery-read',retryAction?retryNotifications:checkDelivery);}}><span className="ns-button-size" aria-hidden="true">{t('重新读取通知状态')}</span><span className="ns-button-label">{deliveryActionBusy&&<LoaderCircle size={14} aria-hidden="true"/>}{t(busy==='notification-retry'?'正在安排重试…':busy==='delivery-read'?'正在读取通知状态…':retryAction?'重试失败的通知':'重新读取通知状态')}</span></button>}
+    <div data-testid="notification-retry-result" className="ns-action-result" role="status">{currentDraft.retryResult&&<p>{t(currentDraft.retryResult)}</p>}{currentDraft.retryResult&&currentDraft.delivery&&!currentDraft.retryBlocked&&<p>{t('待处理')} {currentDraft.delivery.pending_count} · {t('明确失败')} {currentDraft.delivery.retryable_count} · {t('结果未知')} {currentDraft.delivery.uncertain_count}</p>}</div>
+   </div>
    {permission==='denied'&&<p className="feature-note">{t(permissionHelp)}</p>}{currentDraft.notificationState==='unknown'&&<p className="feature-note">{t('通知授权请求结果尚未确认；请重新检查系统状态，不会重复请求授权。')}</p>}
    {prefs.notifications_enabled&&permission==='prompt'&&<button disabled={!!busy} onClick={()=>void run('permission',enableNotifications)}>{t('允许系统通知')}</button>}
    <div className="ns-row ns-system-row"><div><label className="ns-check"><input type="checkbox" disabled={!!busy||!!saved.error||currentDraft.autostartState==='unknown'} checked={currentDraft.autostartDesired??autostart?.desired??prefs.autostart_desired} onChange={event=>setStartup(event.target.checked)}/><span>{t('登录系统后启动 Bee')}</span></label><p>{t('登录系统后按既有运行意图恢复；不会自动授权、接入账号或解除手动暂停。')}</p></div><div className="ns-os-status"><span>{t(autostart&&(currentDraft.autostartState==='unknown'||currentDraft.autostartReadConfirmed===false)?'上次确认的系统登记':'系统登记')}</span><strong>{t(autostart?.registered===true?'已登记':autostart?.registered===false?'未登记':'尚未确认')}</strong></div></div>
    {currentDraft.autostartState==='unknown'&&<p>{t('启动登记请求结果尚未确认；只读取系统登记与偏好，不会重复登记。')}</p>}{autostart&&currentDraft.autostartState==='confirmed'&&currentDraft.autostartReadConfirmed===true&&typeof autostart.registered==='boolean'&&autostart.registered!==(currentDraft.autostartDesired??autostart.desired)&&<p className="feature-note">{t('期望启动选项与系统登记不一致；请核对实际登记及失败详情。')}</p>}{autostartError&&<FailureNotice failure={autostartError} check="autostart_set"/>}{autostartReadError&&<FailureNotice failure={autostartReadError} check="autostart_status"/>}
-   <div className="ns-secondary-actions"><button disabled={!!busy} onClick={()=>void run('os',async()=>{await Promise.allSettled([readOs(),readPreferences()]);})}>{t('重新检查系统状态')}</button></div>
+   <div className="ns-secondary-actions"><button data-testid="system-check-button" className="ns-feedback-button" aria-busy={busy==='os'} aria-disabled={!!busy} onClick={()=>{if(!busy)void run('os',checkSystem);}}><span className="ns-button-size" aria-hidden="true">{t('重新检查系统状态')}</span><span className="ns-button-label">{busy==='os'&&<LoaderCircle size={14} aria-hidden="true"/>}{t(busy==='os'?'正在检查…':'重新检查系统状态')}</span></button><div data-testid="system-check-result" className="ns-action-result" role="status">{currentDraft.systemCheckResult&&<p>{t(currentDraft.systemCheckResult)}{!!currentDraft.systemCheckFailures?.length&&<> {currentDraft.systemCheckFailures.map(name=>t(name)).join(currentLocale()==='en'?', ':'、')}</>}</p>}</div></div>
 <p className="ns-window-note">{t('关窗后继续后台运行，可从托盘、菜单或再次启动找回窗口。')}</p></section></Tabs.Content>
   <Tabs.Content value="about"><section className="ns-section ns-about" data-settings-section="about" tabIndex={-1} aria-label={t('关于 Bee')}><header><h2>{t('关于 Bee')}</h2><p>{t('当前应用、运行核心与 Hive 信息。')}</p></header>{updateControls}{updateControls&&version!==appVersion&&<p className="ns-core-version feature-note">{t('Bee 版本')}：{version||t('尚未读取')}</p>}<dl>{!updateControls&&<><div><dt>{t('桌面应用版本')}</dt><dd>{appVersion}</dd></div><div><dt>{t('Bee 版本')}</dt><dd>{version||t('尚未读取')}</dd></div></>}<div><dt>Hive</dt><dd>{hive??t(contextKnown?'尚未配置 Hive':'本机 Hive 信息尚未确认')}</dd></div></dl><p className="feature-note">{t(paired?'Hive 设备身份已核对。':hive?'显示上次保存的 Hive，远端身份尚未确认。':contextKnown?'请在概览连接本机设备；配对不会自动开始贡献。':'本机保存信息尚未确认；不能据此判定设备未绑定。')}</p></section></Tabs.Content>
  </Tabs.Root>;

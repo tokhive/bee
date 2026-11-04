@@ -128,8 +128,22 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 			}
 		}
 	}()
+	diagnosticContext, stopDiagnostics := context.WithCancel(ctx)
+	defer stopDiagnostics()
+	diagnosticOutput := &diagnosticWriter{writer: diagnostics}
+	diagnosticSink := requestDiagnosticSink(diagnosticContext, diagnosticOutput)
 	var ready atomic.Bool
 	execute := func(ctx context.Context, req request, problem *protocolError, releaseID bool) (response, bool, error) {
+		if diagnostics != nil {
+			ctx = bee.WithDesktopRequestDiagnostics(ctx, func(event bee.DesktopDiagnosticEvent) {
+				event.Evidence["request_id"] = req.ID
+				if req.Platform == "openai" || req.Platform == "claude" {
+					platform := req.Platform
+					event.Platform = &platform
+				}
+				diagnosticSink(event)
+			})
+		}
 		answer := reply{Protocol: protocolVersion, ID: req.ID, Instance: instance}
 		shutdown := false
 		if problem == nil {
@@ -153,7 +167,14 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 					capabilities = append(capabilities, "account_defaults", "account_detect", "account_snapshot", "account_action")
 				}
 				if runner != nil {
-					capabilities = append(capabilities, runtimeMethods...)
+					for _, method := range runtimeMethods {
+						if method == "runtime_enable_presence" {
+							if _, ok := runner.(PresenceRuntime); !ok {
+								continue
+							}
+						}
+						capabilities = append(capabilities, method)
+					}
 				}
 				if authorizer != nil {
 					capabilities = append(capabilities, authorizeMethods...)
@@ -518,7 +539,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 			runErr = errors.Join(runErr, ctx.Err())
 		}
 		if runErr != nil && !errors.Is(runErr, context.Canceled) {
-			if _, err := fmt.Fprintln(diagnostics, runErr); err != nil {
+			if err := diagnosticOutput.report(runErr); err != nil {
 				runErr = errors.Join(runErr, fmt.Errorf("write desktop diagnostics: %w", err))
 			}
 		}

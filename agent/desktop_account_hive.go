@@ -141,6 +141,18 @@ func (a *DesktopAccounts) refreshAccountHive(ctx context.Context, p *desktopAcco
 func hiveAccountError(platform, check string, err error) *DesktopAccountError {
 	failure := accountFailure(platform, "hive_unconfirmed", check, err.Error())
 	failure.Evidence["confirmed"] = "false"
+	var request *DesktopFailure
+	if errors.As(err, &request) {
+		failure.Code = request.Code
+		if request.Details != nil {
+			failure.Evidence["observed_at"] = request.Details.ObservedAt
+			for _, key := range []string{"http_status", "path", "retry_after_seconds", "method", "phase", "elapsed_ms", "failure_kind"} {
+				if value, ok := request.Details.Evidence[key]; ok {
+					failure.Evidence[key] = value
+				}
+			}
+		}
+	}
 	return failure
 }
 func setAccountHiveFailure(p *desktopAccountPlatform, platform, check string, err error) {

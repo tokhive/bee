@@ -62,38 +62,43 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const returnFromRecovery=()=>{if(recovery){requestNavigation(recovery.from);setRecovery(null);}};
  const navigatePage=(next:Page)=>{const target={page:next};if(validNavigationTarget(target)){setRecovery(null);requestNavigation(target);}};
  useEffect(()=>{const target={page};if(navigationRequest.target.page!==page&&validNavigationTarget(target)){setRecovery(null);setNavigationRequest(v=>({target,sequence:v.sequence+1}));}},[page,navigationRequest.target.page]);
- const [busy,setBusy]=useState(false),[error,setError]=useState<UiFailure|null>(null);const working=useRef(false),mounted=useRef(true);
+ const [busy,setBusy]=useState(false),[checking,setChecking]=useState(false),[error,setError]=useState<UiFailure|null>(null);const working=useRef(false),mounted=useRef(true);
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  const refresh=useCallback(()=>model?.refresh()??Promise.resolve(),[model]);
  const pause=useCallback(()=>model?.pause(),[model]);
- const run=async(action?:()=>Promise<DeviceView|unknown>,refreshAfter=true)=>{
-  if(working.current)return;working.current=true;setBusy(true);setError(null);
+ const run=async(action?:()=>Promise<DeviceView|unknown>,refreshAfter=true,check=false)=>{
+  if(working.current)return;working.current=true;const setPending=check?setChecking:setBusy;setPending(true);if(!check)setError(null);
   const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;
   try{
    const binding=(value:DeviceView|undefined)=>JSON.stringify([value?.state,value?.hive,value?.user_code,value?.identity?.id]);
    const intent=model?.getSnapshot().device;
-   if(action&&model?.getSnapshot().busy){
+   if(action&&!check&&model?.getSnapshot().busy){
     await refresh();if(!current())return;
     const next=model?.getSnapshot();
     if(next?.error||next?.deviceError||binding(intent)!==binding(next?.device))return;
    }
    await action?.();if(current()&&refreshAfter)await refresh();
+   if(check&&current()&&!model?.getSnapshot().error&&!identityFailure(model?.getSnapshot()??initial))setError(null);
   }catch(cause){if(current())setError(failure(cause));}
-  finally{working.current=false;if(mounted.current)setBusy(false);}
+  finally{working.current=false;if(mounted.current)setPending(false);}
  };
  const recover=async(decision:'begin_pairing'|'adopt_owner'|'renew_expired',transaction?:DeviceRecoveryView)=>{
-  if(working.current)return;working.current=true;setBusy(true);setError(null);
+  if(working.current)return false;working.current=true;setBusy(true);setError(null);
   const generation=model?.generation(),current=()=>mounted.current&&model?.generation()===generation;
   try{
-   if(model?.getSnapshot().busy)await refresh();if(!current())return;
-   const observed=model?.getSnapshot();
+   if(model?.getSnapshot().busy)await refresh();if(!current())return false;
+   let observed=model?.getSnapshot();
+   if(!transaction&&!observed?.recoveryError&&(!observed?.recovery||observed.recovery.phase==='completed')){
+    await model?.recheckStartup();if(!current())return false;observed=model?.getSnapshot();
+   }
    if(transaction){
     const next=observed?.recovery;
     if(!next||next.operation_id!==transaction.operation_id||next.revision!==transaction.revision||next.phase!==transaction.phase||observed?.recoveryError)throw {code:'DEVICE_RECOVERY_PRECONDITION',message:'recovery confirmation no longer matches current observation; actual='+String(next?.revision)+' expected='+transaction.revision+' phase='+String(next?.phase),details:{check:'device_recovery_confirm',observed_at:new Date().toISOString(),evidence:{actual:String(next?.revision),required:String(transaction.revision)}}};
    }else if(observed?.recovery&&observed.recovery.phase!=='completed'||observed?.recoveryError||!['device_replaced','invalid_device_credential'].includes(identityFailure(observed??initial)?.code??''))throw {code:'DEVICE_RECOVERY_PRECONDITION',message:'credential recovery requires current confirmed revoked credentials and no unresolved recovery observation'};
-   const prepared=transaction??await props.client.recoveryPrepare();if(!current())return;
+   const prepared=transaction??await props.client.recoveryPrepare();if(!current())return false;
    await props.client.recoveryConfirm(prepared.operation_id,prepared.revision,decision);if(current())await refresh();
-  }catch(cause){if(current()){setError(normalizeFailure(cause,'device_recovery_confirm'));await refresh();}}
+   return true;
+  }catch(cause){if(current()){setError(normalizeFailure(cause,'device_recovery_confirm'));await refresh();}return false;}
   finally{working.current=false;if(mounted.current)setBusy(false);}
  };
  const instance=native.metadata?.instance;
@@ -119,11 +124,11 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  return <AppShell desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={view?.identity?.name??snapshot.deviceContext?.name} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
   {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')} announceError={!native.error}>{native.error?<FailureNotice failure={native.error} check="bridge_startup" onNavigate={navigate}/>:t('正在读取 Bee…')}</StatusView>}
   {showSharedProblem&&page!=='overview'&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
-  {ready&&snapshot.startup?.state==='checking'&&<p role="status">{t('正在重新检查设备…')}</p>}
+  {ready&&page!=='overview'&&snapshot.startup?.state==='checking'&&<p role="status">{t('正在重新检查设备…')}</p>}
   {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}
   {error&&page!=='overview' &&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
   {nativeLanguageFeedback}
-  {ready&&page==='overview'&&<NativeOverviewPage presentation={presentation} onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} context={snapshot.deviceContext} recovery={snapshot.recovery} recoveryError={snapshot.recoveryError} refreshStatus={snapshot.refresh} recover={(decision,transaction)=>void recover(decision,transaction)} busy={busy||!view&&snapshot.busy} error={error??sharedProblem} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)} open={()=>void run(()=>snapshot.recovery?props.client.recoveryOpen():props.client.open())}/>}
+  {ready&&page==='overview'&&<NativeOverviewPage presentation={presentation} onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} context={snapshot.deviceContext} recovery={snapshot.recovery} recoveryError={snapshot.recoveryError} refreshStatus={snapshot.refresh} recover={recover} operationError={error} busy={busy} checking={checking} initialLoading={!view&&!snapshot.recovery&&!sharedProblem&&!snapshot.recoveryError&&!snapshot.refresh.lastConfirmedAt} error={error??sharedProblem} begin={(hive,name)=>void run(()=>props.client.begin(hive,name))} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false,true)} open={()=>void run(()=>snapshot.recovery?props.client.recoveryOpen():props.client.open())}/>}
   {ready&&page==='accounts'&&<NativeAccountsPage navigationRequest={navigationRequest} onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||(showSharedProblem?null:snapshot.deviceError)}/>}
   {page==='diagnostics'&&<><NativeDiagnosticsPage navigationRequest={navigationRequest} onReport={model?.acceptDiagnosticReport} client={diagnostics} onNavigate={navigate} instance={instance} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id}/><details className="native-diagnostic-evidence"><summary>{t('运行详情')}</summary><pre>{JSON.stringify({runtime:snapshot.error??runtime.error,runtimeOperation:runtime.view?.operation?.error,runtimeAuthorization:runtime.view?Object.fromEntries(Object.entries(runtime.view.platforms).map(([platform,value])=>[platform,value.account.authorization.error])):undefined,device:error||snapshot.deviceError,supply:sharedSupply?.state.errors,defaults:accounts.defaultsError,accounts:accounts.errors,sources:accounts.sourceReadFailed,accountEvidence:Object.fromEntries(Object.entries(accounts.views).map(([platform,s])=>[platform,{candidate:s.candidate.error,authorization:s.authorization.error,hive:s.hive.error,capabilities:s.capabilities.map(c=>({origin:c.origin,error:c.error})),operation:s.operation?.error,issues:s.issues}]))},null,2)}</pre></details></>}
   {page==='settings'&&<NativeSettingsPage navigationRequest={navigationRequest} draft={settingsDraft} onDraftChange={change=>setSettingsDraft(previous=>({...previous,...change}))} isCurrentScope={()=>{const current=model?.getSnapshot();return mounted.current&&current?.native.metadata?.instance===instance&&current?.bindingRevision===snapshot.bindingRevision;}} readRuntime={async()=>{await refresh();const current=model?.getSnapshot();return {view:current?.runtime??null,failure:current?.error??null};}} os={native.metadata?.os} contextKnown={!!snapshot.deviceContext||snapshot.deviceError?.code==='DEVICE_CONTEXT_UNCONFIGURED'||view?.state==='unbound'} onNavigate={navigate} updateControls={<NativeUpdateControls client={props.updateClient} currentVersion={native.metadata?.bee_version} platform={native.metadata ? `${({darwin:'macOS',windows:'Windows',linux:'Linux'} as Record<string,string>)[native.metadata.os]??native.metadata.os} · ${native.metadata.arch}` : undefined}/>} paired={view?.state==='bound'} preferences={preferences} preferencesClient={props.preferencesClient} notificationsClient={props.notificationsClient} networkClient={props.networkClient} hive={view?.hive??snapshot.deviceContext?.hive} version={native.metadata?.bee_version} onSaved={onSaved}/>}

@@ -126,11 +126,14 @@ func desktopSupplyCall(ctx context.Context, state localState, platform string, p
 	path := "/api/bee/platforms/" + platform + "?reason_detail=1"
 	var body io.Reader
 	check := "supply_read"
+	started := time.Now()
+	var retryAfter string
 	var status int
 	var responseBody []byte
 	defer func() {
+		desktopHTTPDiagnostic(ctx, strings.SplitN(path, "?", 2)[0], method, started, status, true, failure)
 		if failure != nil {
-			failure = desktopRequestFailure(state, path, check, failure, status, responseBody)
+			failure = desktopHTTPFailure(state, path, check, method, started, failure, status, responseBody, retryAfter)
 		}
 	}()
 	if paused != nil {
@@ -151,12 +154,16 @@ func desktopSupplyCall(ctx context.Context, state localState, platform string, p
 	req.Header.Set("Authorization", "Bearer "+state.Credential)
 	// No idempotency header and no application retry: a lost PUT response can
 	// mean a committed owner/platform change, not permission to repeat the write.
+	desktopHTTPDiagnostic(ctx, req.URL.Path, method, started, 0, false, nil)
 	response, err := httpClient().Do(req)
 	if err != nil {
 		return beewire.PlatformSupply{}, fmt.Errorf("%s %s transport failed: %w", method, path, err)
 	}
 	defer response.Body.Close()
 	status = response.StatusCode
+	if status == http.StatusTooManyRequests {
+		retryAfter = desktopRetryAfter(response.Header.Get("Retry-After"), time.Now())
+	}
 	data, err := io.ReadAll(io.LimitReader(response.Body, 65537))
 	if err != nil {
 		return beewire.PlatformSupply{}, fmt.Errorf("read %s %s HTTP %d: %w", method, path, response.StatusCode, err)

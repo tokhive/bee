@@ -2,12 +2,12 @@ export function accountFixture(platform) {
  const fact=state=>({state,fingerprint:null,observed_at:null,error:null});
  return {platform,operation:null,revision:1,candidate:{state:'not_checked',reference:null,source:null,fingerprint:null,plan:null,expires_at:null,identity_verified:false,observed_at:null,error:null},selection:fact('not_selected'),hive:{...fact('unbound'),pending_fingerprint:null,generation:null},authorization:fact('not_checked'),capabilities:['official','hive'].map(origin=>({origin,status:'unknown',observed_at:null,metadata_observed_at:null,valid_until:null,retry_at:null,plan:null,windows:[],models:[],error:null})),features:Object.fromEntries(['detect','check','select','confirm_change','remove','clear_selection','authorize','system_notifications'].map(k=>[k,{available:['detect','check'].includes(k),reason:['detect','check'].includes(k)?null:k==='remove'?'runtime_drain_and_detach_required':'runtime_ownership_and_source_barrier_required'}])),issues:[],checked_at:null};
 }
-export function installAccountFixture({accounts, runtimeEnabled=false,scenarios={}}){
+export function installAccountFixture({accounts, runtimeEnabled=false,scenarios={},initialPreferences={}}){
  const w=window;w.isTauri=true;w.calls=[];w.delay=0;w.fail='';w.paused={openai:false,claude:true};
  w.accountScenarios=scenarios;
- let callback=0,instance='b'.repeat(32);
+ let callback=0,bridgeSequence=0,instance='b'.repeat(32);
  let runtimeRevision=0,local='stopped',operation=null;
- let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
+ let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[],...initialPreferences};
  let diagnostic=null,diagnosticSequence=0;
  if(runtimeEnabled)for(const a of Object.values(accounts))for(const key of ['select','clear_selection','confirm_change','authorize'])a.features[key]={available:true,reason:null};
  for(const [platform,features]of Object.entries(scenarios.features??{}))Object.assign(accounts[platform].features,features);
@@ -34,7 +34,13 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   if(command==='device_status'&&w.deviceFail)return {result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET identity HTTP 503'}}};
   if(command==='device_status')return {result:{device:{state:'bound',hive:'https://hive.example',name:'Fixture',identity:{id:'dev-1',name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}}}};
   w.calls.push({command,args});
-  if(command.startsWith('update_')){
+  if(['device_begin','device_open','device_recovery_prepare','device_recovery_confirm'].includes(command))return {result:{error:{code:'DEVICE_SCENARIO_REQUIRED',message:`command=${command}; current_scene=shared account fixture; required=preview pairing or recovery scenario`}}};
+  if(command==='bridge_request'){
+   if(args.method!=='ping')throw new Error(`MOCK_BRIDGE_METHOD_REJECTED: method=${args.method}; required=ping`);
+   return {protocol:1,id:String(++bridgeSequence),instance,result:{alive:true}};
+  }
+  if(command==='login_return_received')return w.loginReturned===true;
+  if(['update_snapshot','update_check','update_download','update_install'].includes(command)){
    w.updateSnapshot??={operation_id:null,revision:0,state:'idle',current_version:'0.1.0',target_version:null,checked_at:null,downloaded_bytes:0,total_bytes:null,release_notes:null,error:null};
    if(command==='update_check')w.updateSnapshot={...w.updateSnapshot,operation_id:'fixture-update',revision:w.updateSnapshot.revision+1,state:'available',target_version:'0.2.0',checked_at:new Date().toISOString(),release_notes:'Fixture release notes'};
    if(command==='update_download')w.updateSnapshot={...w.updateSnapshot,revision:w.updateSnapshot.revision+1,state:'verified',downloaded_bytes:200,total_bytes:200};
@@ -72,7 +78,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   if(command==='network_apply_saved'){w.effectiveProxy=preferences.proxies[0]?.connect_proxy??'';w.networkRevision=(w.networkRevision??0)+1;runtimeRevision++;return network();}
   if(command==='network_test')return {protocol:1,id:'fixture-network',instance,result:{network_test:{observed_at:new Date().toISOString(),checks:['local_proxy','openai_read_only','claude_read_only'].map(id=>({id,status:'ok',message:'read-only endpoint reachable',path:args.proxy?'local_proxy':'direct',http_status:id==='local_proxy'?null:200}))}}};
   if(command==='hive_open'){w.openedHive='https://hive.example/';return;}
-  if(command.startsWith('diagnostics_')){
+  if(['diagnostics_start','diagnostics_snapshot','diagnostics_cancel','diagnostics_export'].includes(command)){
    if(command==='diagnostics_start'){
     const now=new Date().toISOString();diagnostic={id:(++diagnosticSequence).toString(16).padStart(48,'0'),instance,run_id:local==='running'?'a'.repeat(32):null,network_revision:w.networkRevision??0,binding_revision:w.bindingRevision??1,started_at:now,finished_at:null,state:'running',checks:[{id:'hive',platform:null,status:'pass',observed_at:now,code:'hive_identity_verified',evidence:{method:'GET',path:'/api/bee/identity',http_status:'200'},next_action:'diagnostics'},{id:'source',platform:'openai',status:'skipped',observed_at:now,code:'source_not_selected',evidence:{selected:'false'},next_action:'accounts'}]};
     const captured=structuredClone(diagnostic);if(w.diagnosticDelay)await new Promise(resolve=>setTimeout(resolve,w.diagnosticDelay));return {instance:captured.instance,result:{report:captured}};
@@ -83,13 +89,13 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    return {instance,result:{report:structuredClone(diagnostic)}};
   }
   if(command==='diagnostic_logs')return {entries:[{time:new Date().toISOString(),level:args.query.level??'info',module:args.query.module??'diagnostics',platform:args.query.platform,code:'hive_identity_verified',evidence:{method:'GET'}}],next_cursor:args.query.cursor?null:`v1:${'0'.repeat(32)}:2:1:${'a'.repeat(16)}`,truncated:false};
-  if(command.startsWith('runtime_')){
+  if(['runtime_snapshot','runtime_start','runtime_stop'].includes(command)){
    if(command==='runtime_start'){local='running';operation=op('start',null,++runtimeRevision);if(w.runtimeUnknown)throw new Error('RESPONSE_TIMEOUT: start result unconfirmed');return {instance,result:{operation}};}
    if(command==='runtime_stop'){local='stopped';operation=op('stop',null,++runtimeRevision);return {instance,result:{operation}};}
    if(w.accountScenarios.runtimeReadFailure)throw {code:'RESPONSE_TIMEOUT',message:'runtime snapshot response lost; shared runtime read unconfirmed',details:{check:'runtime_snapshot',observed_at:new Date().toISOString(),evidence:{actual:'no runtime response',required:'confirmed shared runtime snapshot'}}};
    finishLogins();w.runtimeReadCount=(w.runtimeReadCount??0)+1;return structuredClone({instance,result:{runtime:{run_id:local==='running'?'a'.repeat(32):null,revision:runtimeRevision,network_revision:w.networkRevision??0,observed_at:new Date().toISOString(),local,connection:local==='running'?'connected':'disconnected',connection_detail:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:(w.runtimeAccounts??accounts)[p],supply:supply(p),selection_revision:accounts[p].selection.state==='selected'?1:0}])),operation,stop_receipt:operation?.kind==='stop'?{workers_stopped:true,intent_saved:true,session_clean:true}:null}}});
   }
-  if(command.startsWith('authorize_')){
+  if(['authorize_start','authorize_status','authorize_cancel'].includes(command)){
    const p=args.request?.platform??Object.keys(accounts).find(p=>accounts[p].operation?.id===args.operationId),a=accounts[p];
    if(command==='authorize_start'){if(w.loginAdmissionDelay)await new Promise(r=>setTimeout(r,w.loginAdmissionDelay));a.operation=op('authorize',p,++a.revision,'running');}
    if(command==='authorize_cancel'&&w.accountScenarios.cancelUnknown)throw Object.assign(new Error('cancel response lost; owned operation still unconfirmed'),{code:'RESPONSE_TIMEOUT'});
@@ -97,8 +103,9 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    if(command==='authorize_status')finishLogins();
    return {instance,result:{operation:structuredClone(a.operation)}};
   }
-  if(command.startsWith('supply_')){const p=args.platform;if(command==='supply_set_paused'&&w.supplyFail===p)return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:'PUT HTTP 503 result unconfirmed'}}};if(command==='supply_set_paused')w.paused[p]=args.paused;return {result:{supply:supply(p)}};}
+  if(['supply_status','supply_set_paused'].includes(command)){const p=args.platform;if(command==='supply_set_paused'&&w.supplyFail===p)return {result:{error:{code:'SUPPLY_OPERATION_FAILED',message:'PUT HTTP 503 result unconfirmed'}}};if(command==='supply_set_paused')w.paused[p]=args.paused;return {result:{supply:supply(p)}};}
   if(command==='account_defaults')return {instance,result:{defaults:{platforms:['openai','claude'].map(p=>({platform:p,directory:p==='openai'?'/tmp/codex':'/tmp/claude',default_store:'file',stores:(p==='openai'?['auto','file','keyring']:['file','keychain']).map(store=>({store,supported:!w.accountScenarios.unsupportedStores?.[store],reason:w.accountScenarios.unsupportedStores?.[store]??null}))}))}}};
+  if(!['account_snapshot','account_detect','account_action'].includes(command))throw new Error(`MOCK_COMMAND_UNKNOWN: command=${command}; required=registered native command or supported event subscription`);
   const platform=args.request?.platform??args.platform,captured=instance;if(w.delay)await new Promise(r=>setTimeout(r,w.delay));
   if(command==='account_snapshot'&&w.accountScenarios.snapshotFailure===platform)throw {code:'RESPONSE_TIMEOUT',message:'account snapshot response lost; platform read unconfirmed',details:{check:'account_snapshot',observed_at:new Date().toISOString(),evidence:{actual:platform+' snapshot unavailable',required:'confirmed platform account snapshot'}}};
   if(w.fail===platform&&command==='account_detect'){const failed=structuredClone(accounts[platform]);failed.revision++;failed.candidate={...failed.candidate,state:'permission_denied',reference:null,source:null,fingerprint:null,error:{code:'permission_denied',check:'file_read',platform,message:'source_read permission_denied=true; check=file_read',evidence:{permission_denied:'true'}}};accounts[platform]=failed;return {instance:captured,result:{account:failed}};}

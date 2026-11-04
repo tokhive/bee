@@ -6,9 +6,11 @@ const hold=()=>new Promise(()=>{});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function installPreviewFixture(id){
  const scene=getScene(id),w=window;
+ const generation=crypto.randomUUID();w.__beePreviewFixture=generation;
+ const current=()=>w.__beePreviewFixture===generation;
  const long=new URLSearchParams(location.search).has('long');
  const origin=long?'https://'+['long-hive-address'.repeat(3),'pairing-verification'.repeat(2),'example'].join('.'):'https://hive.example';
- const phase=value=>{w.__beePreviewPhase=value;w.parent.postMessage({type:'bee-preview-phase',scene:scene.id,phase:value},location.origin);};
+ const phase=value=>{if(!current())return;w.__beePreviewPhase=value;w.parent.postMessage({type:'bee-preview-phase',session:w.__beePreviewSession,scene:scene.id,phase:value},location.origin);};
  const seeded=(platform,selected=true)=>{
   const a=accountFixture(platform),fingerprint=(platform==='openai'?'b':'c').repeat(64);
   a.candidate={...a.candidate,state:'available',reference:(platform==='openai'?'a':'d').repeat(48),source:{directory:null,store:'file'},fingerprint,plan:platform==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:stamp(0)};
@@ -35,7 +37,8 @@ export async function installPreviewFixture(id){
  if(id==='quota-multiple')accounts.claude.capabilities[0].windows.push({scope:'opus',seconds:604800,used_percent:47,reset_at:'2099-01-01T00:00:00Z'});
  if(id==='quota-over')accounts.openai.capabilities[0].windows[0].used_percent=120;
  if(id==='account-error')accounts.openai.candidate={...accountFixture('openai').candidate,state:'unavailable',error:{code:'source_unavailable',check:'file_read',platform:'openai',message:'无法读取 OpenAI 登录：file_read permission_denied=true；预览模拟权限拒绝。',evidence:{permission_denied:'true',path:'/preview/codex/auth.json'}}};
- installAccountFixture({accounts,runtimeEnabled:true});
+ const params=new URLSearchParams(location.search);
+ installAccountFixture({accounts,runtimeEnabled:true,initialPreferences:{language:params.get('locale')==='en'?'en':'zh',theme:['light','dark','system'].includes(params.get('theme'))?params.get('theme'):'light'}});
  w.paused={openai:id==='supply-paused',claude:false};
  let local=['runtime-no-accounts','runtime-accounts-unconfirmed','device-revoked-source-missing','startup-blocked','stopped','runtime-unknown','confirm-login','confirm-select','confirm-change','confirm-clear','account-candidate','account-empty','account-change'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
  if(id==='runtime-starting')local='starting';if(id==='runtime-stopping')local='stopping';
@@ -53,7 +56,7 @@ export async function installPreviewFixture(id){
  if(recovery||id==='device-recovery-confirm')local='stopped';
  const finishRecovery=()=>{for(const p of ['openai','claude']){const {features,revision:previousRevision}=accounts[p];accounts[p]={...accountFixture(p),features,revision:previousRevision+1};w.paused[p]=true;}w.bindingRevision=(w.bindingRevision??1)+1;local='stopped';revision++;runtimeOperation=null;};
  if(isRecovery&&recovery?.phase==='completed')finishRecovery();
- w.__beePreviewApprove=()=>{if(recovery){recovery={...recovery,revision:recovery.revision+1,phase:recovery.old_identity?'awaiting_owner_confirmation':'completed',new_identity:newIdentity};if(recovery.phase==='completed')finishRecovery();}else{deviceStage='bound';finishRecovery();}};
+ w.__beePreviewApprove=()=>{if(!current())throw new Error(`PREVIEW_SESSION_STALE: fixture=${generation}; required=current preview fixture before approval`);if(recovery){recovery={...recovery,revision:recovery.revision+1,phase:recovery.old_identity?'awaiting_owner_confirmation':'completed',new_identity:newIdentity};if(recovery.phase==='completed')finishRecovery();}else{deviceStage='bound';finishRecovery();}};
  if(id==='device-revoked-source-missing')accounts.openai.candidate={...accounts.openai.candidate,state:'source_missing',error:{code:'source_missing',check:'source_read',platform:'openai',message:'selected file missing: /isolated/qa/codex/auth.json',evidence:{not_found:'true',path:'/isolated/qa/codex/auth.json'}}};
  const original=w.__TAURI_INTERNALS__.invoke;
  const instance=(await original('bridge_status')).metadata.instance;
@@ -78,10 +81,10 @@ export async function installPreviewFixture(id){
   return {hive:origin,device_id:recovery?.phase==='completed'?newIdentity.id:'dev-1',platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
  };
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
-  if(command==='preferences_read'){const result=await original(command,args);result.preferences.language=new URLSearchParams(location.search).get('locale')==='en'?'en':'zh';result.preferences.theme=new URLSearchParams(location.search).get('theme')==='dark'?'dark':'light';return result;}
+  if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
   if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
   if((command==='startup_status'||command==='startup_recheck')&&['startup-blocked','device-revoked-source-missing'].includes(id)){w.calls.push({command,args});return {state:'blocked',failure:{code:'device_replaced',message:'GET identity HTTP 401 device_replaced'},instance,binding_revision:1,network_revision:0,observed_at:stamp(0),revision:1};}
-  if(command.startsWith('update_')&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
+  if(['update_snapshot','update_check','update_download','update_install'].includes(command)&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
   if(command==='notification_permission'&&id==='settings-system'){w.calls.push({command,args});return 'denied';}
   if(command==='autostart_status'&&id==='settings-system'){w.calls.push({command,args});return {desired:true,registered:null,error:{code:'AUTOSTART_QUERY_FAILED',message:'QA registration read denied'}};}
   if(command==='diagnostics_export'&&id==='diagnostics-export-unknown'){const result=await original(command,args);result.report=clone(previewReport);return result;}
@@ -92,7 +95,7 @@ export async function installPreviewFixture(id){
    const identity=recovery?.phase==='completed'?newIdentity:oldIdentity;
    return {result:{context:{hive:origin,name:'Bee Desktop',device_id:id.startsWith('device-')&&deviceStage!=='bound'?null:identity.id,owner_id:id.startsWith('device-')&&deviceStage!=='bound'?null:identity.owner_id,binding_revision:w.bindingRevision??1}}};
   }
-  if(command.startsWith('device_recovery_')){
+  if(['device_recovery_prepare','device_recovery_confirm','device_recovery_status'].includes(command)){
    w.calls.push({command,args});
    if(command==='device_recovery_prepare')recovery={operation_id:'d'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:oldIdentity,new_identity:null,pairing:null,failure:null};
    if(command==='device_recovery_confirm'){
@@ -140,7 +143,7 @@ export async function installPreviewFixture(id){
    if(id==='account-reading'&&p==='openai')return hold();
    return {instance,result:{account:clone(w.accounts[p])}};
   }
-  if(command.startsWith('supply_')){
+  if(['supply_status','supply_set_paused'].includes(command)){
    w.calls.push({command,args});const p=args.platform;
    if(command==='supply_set_paused')w.paused[p]=args.paused;
    if(command==='supply_status'){

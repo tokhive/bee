@@ -152,7 +152,12 @@ export function NativeApp(props:NativeProps){
   return()=>{localeGeneration.current++;};
  },[locale,preferences.preferences.revision,preferences.error,preferencesTrusted,props.systemBridge,localeRetry]);
  const retryNativeLanguage=async()=>{if(localeReading)return;setLocaleReading(true);try{const value=await props.preferencesClient.read();if(value.error)throw value.error;if(value.preferences.revision<preferencesRevision.current)throw {code:'NATIVE_LOCALE_STALE',message:`native language recovery read revision=${value.preferences.revision}; required=at least ${preferencesRevision.current}`};acceptPreferences(value);setLocaleRetry(v=>v+1);}catch(cause){setLocaleFailure(normalizeFailure(cause,'native_locale_sync'));}finally{setLocaleReading(false);}};
- useEffect(()=>{let active=true;const revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active)acceptPreferences(v);},cause=>{if(active)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:normalizeFailure(cause,'preferences_read')});});return()=>{active=false;};},[props.preferencesClient,acceptPreferences]);
+ useEffect(()=>{
+  let active=true,sequence=0;
+  const read=()=>{const request=++sequence,revision=preferencesRevision.current;void props.preferencesClient.read().then(v=>{if(active&&request===sequence)acceptPreferences(v);},cause=>{if(active&&request===sequence)setPreferences(v=>v.preferences.revision>revision?v:{...v,error:normalizeFailure(cause,'preferences_read')});});};
+  read();window.addEventListener('focus',read);
+  return()=>{active=false;window.removeEventListener('focus',read);};
+ },[props.preferencesClient,acceptPreferences]);
  useEffect(()=>{
   const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
   apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);

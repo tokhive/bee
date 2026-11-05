@@ -8,7 +8,7 @@ import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
+export interface CoordinatedAccounts {autoService?:boolean;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -132,7 +132,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    }
    if(local&&!cancel){
     const next=observation?.runtime??currentRuntime.current;
-    if(!next||!['stopped','failed'].includes(next.local)||next.local!==runtimeIntent?.local||next.run_id!==runtimeIntent?.run_id){rejectSubmission('authorize_runtime',JSON.stringify({local:next?.local??'missing',run_id:next?.run_id??null}),'same stopped local runtime; local='+runtimeIntent?.local+'; run_id='+(runtimeIntent?.run_id??'null'));return;}
+    if(!next||!(central.current?.autoService?['stopped','failed','running']:['stopped','failed']).includes(next.local)||next.local!==runtimeIntent?.local||next.run_id!==runtimeIntent?.run_id){rejectSubmission('authorize_runtime',JSON.stringify({local:next?.local??'missing',run_id:next?.run_id??null}),'same admitted local runtime; local='+runtimeIntent?.local+'; run_id='+(runtimeIntent?.run_id??'null'));return;}
    }
    if(!verified.current[platform]){rejectSubmission('account_verification','verified=false','current verified account observation');return;}
    if(expected!==identity(latest.current[platform])){rejectSubmission('account_submission_identity','account identity or candidate changed; revision='+revisions.current[platform],'same account identity and candidate as confirmed');return;}
@@ -199,7 +199,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   }
  },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,coordinated?.accountRefresh,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
  const sourceFor=(p:AccountPlatform)=>sources[p]??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
- return {submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,loginFlows,
+ return {autoService:!!coordinated?.autoService,submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,loginFlows,
   openLogin(platform:AccountPlatform,confirmation:string){setLoginFlows(v=>({...v,[platform]:{confirmation,rechecked:false,checking:false}}));},
   dismissLogin(platform:AccountPlatform){setLoginFlows(v=>({...v,[platform]:undefined}));},
   recheckLogin(platform:AccountPlatform,mode:'local'|'official'){

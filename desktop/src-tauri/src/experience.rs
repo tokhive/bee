@@ -283,22 +283,145 @@ async fn enable_presence(bridge: &Bridge, checked: &CheckContext) -> Result<(), 
 
 // Serialize preparation/dispatch with recovery and network apply. Retain the
 // verified context rather than authorizing whatever binding happens to be latest.
-pub(crate) async fn start_with_presence(bridge: &Bridge, store: &PreferencesStore, controller: &NetworkController, gate: &StartupGate, mut request: crate::runtime_protocol::RuntimeStartRequest) -> Result<crate::sidecar::BridgeReply, BridgeError> {
+pub(crate) async fn start_with_presence<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    store: &PreferencesStore,
+    controller: &NetworkController,
+    gate: &StartupGate,
+    mut request: crate::runtime_protocol::RuntimeStartRequest,
+) -> Result<crate::sidecar::BridgeReply, BridgeError> {
     let _serial = gate.serial.lock().await;
     gate.check()?;
     request.validate()?;
     let before = context(bridge, store).await?;
     let device = bridge.device_status().await?;
     let scope = controller.bind_verified_device(store, &device.result)?.ok_or_else(||BridgeError::new("NETWORK_SCOPE_REQUIRED", "runtime start requires a freshly verified bound device; actual=no trusted device scope".into()))?;
-    if binding(bridge).await? != before.binding { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "start binding changed during device verification".into())); }
-    request.expected_revision = controller.prepare_start(store, &BridgeNetworkRuntime(bridge), &scope, request.expected_revision).await?;
+    if binding(bridge).await? != before.binding {
+        return Err(BridgeError::new(
+            "STARTUP_CONTEXT_CHANGED",
+            "start binding changed during device verification".into(),
+        ));
+    }
+    request.expected_revision = controller
+        .prepare_start(
+            store,
+            &BridgeNetworkRuntime(bridge),
+            &scope,
+            request.expected_revision,
+        )
+        .await?;
     let checked = context(bridge, store).await?;
-    if checked.instance != before.instance || checked.binding != before.binding { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "start binding or instance changed during network preparation".into())); }
+    if checked.instance != before.instance || checked.binding != before.binding {
+        return Err(BridgeError::new(
+            "STARTUP_CONTEXT_CHANGED",
+            "start binding or instance changed during network preparation".into(),
+        ));
+    }
     let result = bridge.runtime_start(request).await;
-    // Dispatch first: enabling idle presence can advance runtime revision. This
-    // never retries Start, including when its delivery/outcome is uncertain.
-    enable_presence(bridge, &checked).await?;
+    // A sent timeout still owns the barrier. Return its evidence immediately;
+    // presence maintenance may only follow settlement of that exact request.
+    if let Err(cause) = &result {
+        if cause.code == "RESPONSE_TIMEOUT" {
+            if let Some(id) = cause
+                .details
+                .as_ref()
+                .filter(|details| details.check == "bridge_request_deadline"
+                    && details.evidence.get("method").is_some_and(|method| method == "runtime_start")
+                    && details.evidence.get("in_flight").is_some_and(|sent| sent == "true"))
+                .and_then(|details| details.evidence.get("request_id"))
+            {
+                tauri::async_runtime::spawn(resume_start_presence(
+                    app.clone(),
+                    bridge.clone(),
+                    checked,
+                    id.clone(),
+                    gate.snapshot().revision,
+                ));
+                return result;
+            }
+        }
+    }
+    // Dispatch first: presence can advance runtime revision. A maintenance
+    // failure has its own startup status and must never replace the Start result.
+    maintain_start_presence(app, bridge, store, gate, &checked).await;
     result
+}
+
+async fn maintain_start_presence<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    store: &PreferencesStore,
+    gate: &StartupGate,
+    checked: &CheckContext,
+) {
+    if bridge.0.frozen.load(Ordering::SeqCst) || bridge.status().state != BridgePhase::Ready {
+        return;
+    }
+    let result = async {
+        let current = context(bridge, store).await?;
+        if current != *checked {
+            return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", format!("presence recovery context changed after Start; instance_match={} binding_before={:?} binding_now={:?} network_before={} network_now={} preferences_before={} preferences_now={}; required=original verified context", current.instance == checked.instance, checked.binding, current.binding, checked.network, current.network, checked.preferences, current.preferences)));
+        }
+        enable_presence(bridge, checked).await
+    }.await;
+    if let Err(cause) = result {
+        gate.finish(Err(cause));
+        emit(app, gate);
+    }
+}
+
+async fn resume_start_presence<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
+    bridge: Bridge,
+    checked: CheckContext,
+    id: String,
+    gate_revision: u64,
+) {
+    // Subscribe before observing pending state so settlement cannot be lost.
+    let mut settled = bridge.subscribe_settled();
+    let mut statuses = bridge.subscribe();
+    loop {
+        let status = statuses.borrow_and_update().clone();
+        if status.state != BridgePhase::Ready
+            || status
+                .metadata
+                .as_ref()
+                .is_none_or(|metadata| metadata.instance != checked.instance)
+            || bridge.0.frozen.load(Ordering::SeqCst)
+        {
+            return;
+        }
+        if !bridge
+            .pending_requests()
+            .requests
+            .iter()
+            .any(|request| request.id == id && request.method == "runtime_start")
+        {
+            break;
+        }
+        tokio::select! {
+            event = settled.recv() => match event {
+                Ok(_) | Err(tokio::sync::broadcast::error::RecvError::Lagged(_)) => {},
+                Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
+            },
+            event = statuses.changed() => if event.is_err() { return; },
+        }
+    }
+    let gate = app.state::<StartupGate>();
+    let _serial = gate.serial.lock().await;
+    // A later recheck/recovery owns its own decision; discard this old work.
+    if gate.snapshot().revision != gate_revision || gate.check().is_err() {
+        return;
+    }
+    maintain_start_presence(
+        &app,
+        &bridge,
+        &app.state::<PreferencesStore>(),
+        &gate,
+        &checked,
+    )
+    .await;
 }
 
 // Pairing changes the saved binding revision. A new binding gets its own scoped

@@ -49,6 +49,20 @@ fn entries(store: &NativeDiagnostics) -> Vec<crate::diagnostic_log::SafeDiagnost
 }
 
 #[test]
+fn diagnostics_native_waiting_is_not_a_failed_or_running_contribution() {
+    let (_dir, store) = store();
+    let mut reply = runtime();
+    reply.result["runtime"] = serde_json::from_str::<serde_json::Value>(include_str!(
+        "../../../desktopbridge/testdata/runtime-contract.json"
+    )).unwrap()["snapshot"].clone();
+    reply.result["runtime"]["local"] = json!("waiting");
+    store.capture_runtime(&reply).unwrap();
+    let observed = entries(&store);
+    assert!(observed.iter().any(|entry| entry.code == "runtime_waiting" && entry.evidence["local"] == "waiting"));
+    assert!(!observed.iter().any(|entry| ["runtime_failed", "runtime_unknown", "owned_runtime_connected", "taking_new_work"].contains(&entry.code.as_str())));
+}
+
+#[test]
 fn diagnostics_native_runtime_logs_validated_safe_facts_without_repeating_identical_reads() {
     let (dir, store) = store();
     let mut reply = runtime();

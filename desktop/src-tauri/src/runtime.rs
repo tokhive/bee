@@ -91,8 +91,9 @@ impl Bridge {
                 let snapshot=&reply.result["runtime"];
                 let current=&snapshot["operation"];
                 let observed=snapshot["revision"].as_u64().unwrap();
+                let waiting=current["state"] == "succeeded" && snapshot["local"] == "waiting" && snapshot["run_id"].is_null();
                 let idle=current["state"] == "succeeded" && snapshot["local"] == "stopped" && snapshot["run_id"].is_null() && snapshot["connection"] == "disconnected";
-                if reply.instance != admitted.instance || current["id"] != operation["id"] || current["kind"] != "start" || observed < revision || !idle && run_id.as_ref().is_some_and(|run|run != &snapshot["run_id"]) {
+                if reply.instance != admitted.instance || current["id"] != operation["id"] || current["kind"] != "start" || observed < revision || !idle && !waiting && run_id.as_ref().is_some_and(|run|run != &snapshot["run_id"]) {
                     return Err(failure(format!("startup restore receipt binding failed: instance_matches={} operation_matches={} kind={} revision={observed} previous={revision}; required=same instance/run/start operation and monotonic revision",reply.instance == admitted.instance,current["id"] == operation["id"],current["kind"])));
                 }
                 revision=observed;
@@ -100,8 +101,8 @@ impl Bridge {
                 // concrete run while pending, then verify its successful terminal state.
                 match current["state"].as_str() {
                     Some("succeeded") => {
-                        if !(snapshot["local"] == "running" && snapshot["connection"] == "connected" && snapshot["run_id"].is_string() || idle) {
-                            return Err(failure(format!("startup restore succeeded with local={} connection={} run_present={}; required=connected running or idle stopped",snapshot["local"],snapshot["connection"],!snapshot["run_id"].is_null())));
+                        if !(snapshot["local"] == "running" && snapshot["connection"] == "connected" && snapshot["run_id"].is_string() || idle || waiting) {
+                            return Err(failure(format!("startup restore succeeded with local={} connection={} run_present={}; required=connected running, verified account waiting or idle stopped",snapshot["local"],snapshot["connection"],!snapshot["run_id"].is_null())));
                         }
                         return Ok(());
                     }

@@ -4,6 +4,16 @@ import {readFileSync} from 'node:fs';
 import {createRuntimeClient,decodeRuntimeSnapshot,decodeRuntimeOperation} from '../src/system/runtime.ts';
 const fixture=JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8'));
 const reply=(runtime:unknown)=>({instance:'current',result:{runtime}});
+test('runtime decodes zero-account waiting without presenting a platform as ready',()=>{
+ const waiting={...fixture.snapshot,local:'waiting',connection:'connected'};
+ const view=decodeRuntimeSnapshot(reply(waiting),'current');
+ assert.equal(view.local,'waiting');
+ assert.equal(view.run_id,null);
+ for(const platform of ['openai','claude'] as const){
+  assert.equal(view.platforms[platform].account.selection.state,'not_selected');
+  assert.equal(view.platforms[platform].supply,null);
+ }
+});
 test('runtime uses the shared Go/Rust contract and preserves absent supply',()=>{
  assert.deepEqual(decodeRuntimeSnapshot(reply(fixture.snapshot),'current'),fixture.snapshot);
  assert.deepEqual(decodeRuntimeOperation({instance:'current',result:{operation:fixture.operation}},'current'),fixture.operation);

@@ -95,7 +95,7 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 		r.mu.Lock()
 		state := r.snapshot.Local
 		r.mu.Unlock()
-		if state != "stopped" && state != "failed" {
+		if state != "stopped" && state != "failed" && state != "waiting" {
 			return DesktopOperation{}, fmt.Errorf("official login requires stopped contribution: local=%s; stop contribution before replacing official credentials", state)
 		}
 	}

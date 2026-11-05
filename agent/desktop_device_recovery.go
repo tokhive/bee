@@ -255,12 +255,13 @@ func (d *DesktopDevice) recoveryAdmission(s *desktopDeviceSession) (func(), erro
 		controlExited := r.controlDone != nil && channelClosed(r.controlDone)
 		runPending := r.runCancel != nil && r.runDone != nil && !runExited
 		controlPending := r.controlDone != nil && !controlExited
-		if r.closed || r.snapshot.Local != "stopped" || len(a.activeActions) > 0 || len(a.accountWorkers) > 0 || runPending || controlPending {
+		if r.closed || (r.snapshot.Local != "stopped" && r.snapshot.Local != "waiting") || len(a.activeActions) > 0 || len(a.accountWorkers) > 0 || runPending || controlPending {
 			defer r.mu.Unlock()
-			return nil, fmt.Errorf("device recovery admission rejected: runtime_closed=%t local=%s active_actions=%d account_workers=%d run_cancel_present=%t run_done_present=%t run_done_closed=%t run_worker_pending=%t control_done_present=%t control_done_closed=%t control_worker_pending=%t; required=live runtime, stopped and all workers exited", r.closed, r.snapshot.Local, len(a.activeActions), len(a.accountWorkers), r.runCancel != nil, r.runDone != nil, runExited, runPending, r.controlDone != nil, controlExited, controlPending)
+			return nil, fmt.Errorf("device recovery admission rejected: runtime_closed=%t local=%s active_actions=%d account_workers=%d run_cancel_present=%t run_done_present=%t run_done_closed=%t run_worker_pending=%t control_done_present=%t control_done_closed=%t control_worker_pending=%t; required=live runtime, stopped or waiting and all workers exited", r.closed, r.snapshot.Local, len(a.activeActions), len(a.accountWorkers), r.runCancel != nil, r.runDone != nil, runExited, runPending, r.controlDone != nil, controlExited, controlPending)
 		}
 		done := r.cancelPresenceLocked()
 		r.presence.enabled = false
+		r.snapshot.Local = "stopped"
 		r.snapshot.Connection = "disconnected"
 		r.snapshot.ConnectionDetail = nil
 		r.snapshot.Revision++

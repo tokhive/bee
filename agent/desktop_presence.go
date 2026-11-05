@@ -61,6 +61,14 @@ func (r *DesktopRuntime) EnablePresence(ctx context.Context, input DesktopPresen
 	if state.Identity == nil || state.Credential == "" {
 		return fmt.Errorf("presence requires a saved device binding: identity_present=%t credential_present=%t", state.Identity != nil, state.Credential != "")
 	}
+	waiting, err := r.canWaitForAccount(session, state)
+	if err != nil {
+		return err
+	}
+	if waiting && !r.userStopRequested && r.snapshot.Local == "stopped" {
+		r.snapshot.Local = "waiting"
+		r.snapshot.Revision++
+	}
 	if r.presence.enabled && r.presence.request == input {
 		return nil
 	}
@@ -89,7 +97,7 @@ func (r *DesktopRuntime) cancelPresenceLocked() chan struct{} {
 }
 
 func (r *DesktopRuntime) startPresenceLocked() {
-	if r.closed || !r.presence.enabled || r.presence.shutdown || r.presence.suspended || r.presence.done != nil || r.controlDone != nil || (r.snapshot.Local != "stopped" && r.snapshot.Local != "failed") {
+	if r.closed || !r.presence.enabled || r.presence.shutdown || r.presence.suspended || r.presence.done != nil || r.controlDone != nil || (r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" && r.snapshot.Local != "waiting") {
 		return
 	}
 	ctx, cancel := context.WithCancel(r.ctx)

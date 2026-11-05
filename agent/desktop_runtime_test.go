@@ -126,7 +126,7 @@ func TestDesktopRuntimeFirstConflictDoesNotTakeOverOrRetry(t *testing.T) {
 	}
 }
 
-func TestDesktopRuntimeStartRequiresSelectionAndFreshRevision(t *testing.T) {
+func TestDesktopRuntimeStartWaitsWithoutSelectionAndRequiresFreshRevision(t *testing.T) {
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, r *http.Request) {
 		if !desktopSupplyServeIdentity(w, r) {
 			t.Errorf("unexpected request %s", r.URL.Path)
@@ -145,9 +145,9 @@ func TestDesktopRuntimeStartRequiresSelectionAndFreshRevision(t *testing.T) {
 	if e != nil {
 		t.Fatal(e)
 	}
-	failed := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
-	if failed.Operation.Error == nil {
-		t.Fatal("missing selection not reported")
+	waiting := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "waiting" })
+	if waiting.Operation.State != "succeeded" || waiting.Operation.Error != nil || waiting.RunID != nil {
+		t.Fatal("empty-account waiting granted contribution or reported failure")
 	}
 }
 

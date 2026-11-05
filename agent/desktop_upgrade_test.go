@@ -136,7 +136,7 @@ func TestDesktopUpgradeLegacyNoticesMigrateThroughUpdateStopWithoutChangingPairi
 		t.Fatal(err)
 	}
 	restored := desktopUpgradeWaitOperation(t, next)
-	if restored.Local != "stopped" || restored.Operation.State != "succeeded" {
+	if restored.Local != "waiting" || restored.RunID != nil || restored.Operation.State != "succeeded" {
 		t.Fatalf("v1 migration invented runtime consent: local=%s operation=%s error=%v", restored.Local, restored.Operation.State, restored.Operation.Error)
 	}
 	desktopUpgradeAssertBytes(t, path, migratedBytes)
@@ -210,7 +210,7 @@ func TestDesktopUpgradeMigrationReplacementFailurePreservesProtectedOriginals(t 
 	if _, err := next.Restore(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if restored := desktopUpgradeWaitOperation(t, next); restored.Local != "stopped" || restored.Operation.State != "succeeded" {
+	if restored := desktopUpgradeWaitOperation(t, next); restored.Local != "waiting" || restored.RunID != nil || restored.Operation.State != "succeeded" {
 		t.Fatalf("readable legacy data could not be reopened safely: local=%s operation=%s error=%v", restored.Local, restored.Operation.State, restored.Operation.Error)
 	}
 	desktopUpgradeAssertBytes(t, path, legacy)

@@ -78,6 +78,7 @@ pub(crate) enum RuntimeStopReason {
 #[serde(rename_all = "snake_case")]
 enum LocalState {
     Stopped,
+    Waiting,
     Starting,
     Running,
     Stopping,
@@ -546,6 +547,13 @@ mod tests {
         ] {
             assert!(serde_json::from_value::<RuntimeStartRequest>(request).is_err());
         }
+    }
+    #[test]
+    fn runtime_accepts_zero_account_waiting_snapshot() {
+        let mut waiting = fixture()["snapshot"].clone();
+        waiting["local"] = json!("waiting");
+        waiting["connection"] = json!("connected");
+        validate_runtime_reply(&json!({"runtime": waiting}), RuntimeReplyKind::Snapshot).unwrap();
     }
     #[test]
     fn runtime_snapshot_rejects_unknown_missing_and_cross_platform_fields() {

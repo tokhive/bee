@@ -99,6 +99,14 @@ async fn startup_restore_allows_s1_saved_user_stop_to_complete_with_no_run() {
 }
 
 #[tokio::test]
+async fn startup_restore_accepts_confirmed_zero_account_waiting_without_a_run() {
+    let bridge = ready("owned-exit-restore-waiting").await;
+    let result = bridge.restore_when_ready().await;
+    bridge.stop().await.unwrap();
+    result.unwrap();
+}
+
+#[tokio::test]
 async fn owned_exit_requires_persisted_stop_and_reaps_before_receipt() {
     for mode in [
         "owned-exit",

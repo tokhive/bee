@@ -132,7 +132,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    }
    if(local&&!cancel){
     const next=observation?.runtime??currentRuntime.current;
-    if(!next||!(central.current?.autoService?['stopped','failed','running']:['stopped','failed']).includes(next.local)||next.local!==runtimeIntent?.local||next.run_id!==runtimeIntent?.run_id){rejectSubmission('authorize_runtime',JSON.stringify({local:next?.local??'missing',run_id:next?.run_id??null}),'same admitted local runtime; local='+runtimeIntent?.local+'; run_id='+(runtimeIntent?.run_id??'null'));return;}
+    if(!next||!(central.current?.autoService?['stopped','waiting','failed','running']:['stopped','waiting','failed']).includes(next.local)||next.local!==runtimeIntent?.local||next.run_id!==runtimeIntent?.run_id){rejectSubmission('authorize_runtime',JSON.stringify({local:next?.local??'missing',run_id:next?.run_id??null}),'same admitted local runtime; local='+runtimeIntent?.local+'; run_id='+(runtimeIntent?.run_id??'null'));return;}
    }
    if(!verified.current[platform]){rejectSubmission('account_verification','verified=false','current verified account observation');return;}
    if(expected!==identity(latest.current[platform])){rejectSubmission('account_submission_identity','account identity or candidate changed; revision='+revisions.current[platform],'same account identity and candidate as confirmed');return;}

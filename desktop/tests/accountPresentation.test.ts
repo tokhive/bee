@@ -5,6 +5,14 @@ import {accountPresentation} from '../src/features/accounts/accountPresentation.
 import * as presentation from '../src/features/accounts/accountPresentation.ts';
 import type {AccountSnapshot} from '../src/system/accounts';
 const now=Date.now();
+test('waiting permits first official login with verified runtime and source prerequisites',()=>{
+ const view=accountFixture('openai') as AccountSnapshot;
+ view.features.authorize={available:true,reason:null};
+ const input={view,platform:'openai' as const,now,dirty:false,busy:false,unknown:false,submissionBlocked:false,defaultsReady:true,runtime:{local:'waiting'},runtimeBlocked:false};
+ assert.equal(presentation.accountActionBlock('authorize',input),null);
+ assert.ok(presentation.accountActionBlock('authorize',{...input,runtimeBlocked:true}));
+ assert.ok(presentation.accountActionBlock('authorize',{...input,defaultsReady:false}));
+});
 function selected(){const s=accountFixture('openai') as AccountSnapshot;s.selection={...s.selection,state:'selected',fingerprint:'b'.repeat(64)};s.candidate={...s.candidate,fingerprint:'b'.repeat(64),plan:'plus',expires_at:new Date(now+3600000).toISOString()};return s;}
 test('selection identifies the account and mismatched candidate never lends its quota',()=>{const s=selected();s.candidate.fingerprint='c'.repeat(64);assert.deepEqual(accountPresentation(s,false,now),{identity:'bbbbbbbbbbbbbbbb',plan:null,expiresAt:null,observedAt:null,windows:[],quotaState:'unknown'});});
 test('unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent',()=>{const s=selected();assert.deepEqual(accountPresentation(s,false,now).windows,[]);s.capabilities[0]={...s.capabilities[0],status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:120,reset_at:null},{scope:'opus',seconds:604800,used_percent:null,reset_at:null}]};const p=accountPresentation(s,false,now);assert.equal(p.quotaState,'current');assert.deepEqual(p.windows,s.capabilities[0].windows);assert.equal(accountPresentation(s,true,now).quotaState,'unknown');s.capabilities[0].windows[0].reset_at=new Date(now-1).toISOString();assert.equal(accountPresentation(s,false,now).quotaState,'stale');});

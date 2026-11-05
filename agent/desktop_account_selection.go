@@ -114,7 +114,6 @@ func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, plat
 		}
 		// Closing cancels external work, not the final publication of its evidence.
 		locked, release, _ := a.acquire(context.Background(), platform)
-		defer release()
 		// Publish completion and release admission while the platform gate is
 		// still held, so a later worker cannot have its ownership erased.
 		a.lifecycleMu.Lock()
@@ -144,6 +143,13 @@ func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, plat
 			if selection != nil {
 				locked.snapshot.Selection = DesktopAccountFact{State: "selected", Fingerprint: accountString(selection.Fingerprint), ObservedAt: accountTime(a.now())}
 			}
+		}
+		release()
+		// Every completed action gives a previously committed selection another
+		// admission opportunity after concurrent platform actions have settled.
+		// Never call runtime admission while holding the public platform gate.
+		if a.runtime != nil {
+			a.runtime.maintainSelectedAccounts()
 		}
 	}()
 	return nil

@@ -6,6 +6,35 @@ async function setup(page:Page){await page.addInitScript(installAccountFixture,{
 async function reconcile(page:Page){const before=await page.evaluate(()=>(window as any).runtimeReadCount);await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);}
 async function openDetails(page:Page,p='OpenAI'){if(await page.getByRole('dialog').count()===0)await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();}
 const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
+test('zero-account waiting offers account connection and permits first login without a start command',async({page})=>{
+ await setup(page);
+ await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeVisible();
+ await page.evaluate(()=>{
+  const native=(window as any).__TAURI_INTERNALS__,invoke=native.invoke;
+  native.invoke=async(command:string,args:unknown)=>{
+   const reply=await invoke(command,args);
+   if(command==='runtime_snapshot'){
+    reply.result.runtime.local='waiting';reply.result.runtime.run_id=null;
+   }
+   return reply;
+  };
+ });
+ await reconcile(page);
+ const summary=page.getByRole('region',{name:'贡献运行',exact:true});
+ await expect(summary.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
+ await expect(summary).toContainText('接入账号后，Bee 将自动准备服务。');
+ await summary.getByRole('button',{name:'接入账号',exact:true}).click();
+ if(await page.getByRole('dialog').count())await page.keyboard.press('Escape');
+ await openDetails(page,'Claude');
+ const sheet=page.getByRole('dialog').first();
+ await sheet.getByRole('button',{name:'登录 Claude',exact:true}).click();
+ const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
+ await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect(login.getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
+ expect(await calls(page,'runtime_start')).toEqual([]);
+ expect(await calls(page,'account_action')).toEqual([]);
+ expect(await calls(page,'authorize_start')).toHaveLength(1);
+});
 test('coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh',async({page})=>{
  const now=new Date('2026-10-27T03:00:00Z');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await setup(page);
  await expect(page.getByRole('region',{name:'贡献运行'}).getByText('尚未接入 AI 账号',{exact:true})).toBeVisible();

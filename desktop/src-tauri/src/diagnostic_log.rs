@@ -69,6 +69,7 @@ pub(crate) fn is_public_code(code: &str) -> bool {
         "identity_mismatch",
         "device_binding_valid",
         "runtime_stopped",
+        "runtime_waiting",
         "runtime_unknown",
         "runtime_failed",
         "connection_disconnected",
@@ -234,7 +235,7 @@ pub(crate) fn sanitize_evidence(input: &BTreeMap<String, String>) -> BTreeMap<St
             "local" => enum_value(
                 value,
                 &[
-                    "stopped", "starting", "running", "stopping", "failed", "unknown",
+                    "stopped", "waiting", "starting", "running", "stopping", "failed", "unknown",
                 ],
             ),
             "connection" => enum_value(

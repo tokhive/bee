@@ -55,7 +55,7 @@ func TestDesktopPresenceWithoutAccountsAndLifecycleStops(t *testing.T) {
 			defer r.Close()
 			req := enableTestPresence(t, r)
 			s := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "connected" })
-			if s.Local != "stopped" || s.RunID != nil || s.Operation != nil || writes.Load() != 0 {
+			if s.Local != "waiting" || s.RunID != nil || s.Operation != nil || writes.Load() != 0 {
 				t.Fatalf("presence started contribution: %+v writes=%d", s, writes.Load())
 			}
 			if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: s.Revision, Reason: reason}); err != nil {
@@ -102,7 +102,7 @@ func TestDesktopPresenceFirstConflictAndRevisionFences(t *testing.T) {
 	}
 	req := enableTestPresence(t, r)
 	s := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "occupied" })
-	if s.Local != "stopped" || s.ConnectionDetail.Retry != "halted" {
+	if s.Local != "waiting" || s.ConnectionDetail.Retry != "halted" {
 		t.Fatalf("bad conflict state %+v", s)
 	}
 	if err := r.EnablePresence(context.Background(), req); err != nil {
@@ -353,7 +353,7 @@ func TestDesktopPresenceLostConnectionThenRevokedIdentityHalts(t *testing.T) {
 	waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "connected" })
 	close(drop)
 	s := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "rejected" })
-	if s.Local != "stopped" || s.ConnectionDetail.Retry != "halted" {
+	if s.Local != "waiting" || s.ConnectionDetail.Retry != "halted" {
 		t.Fatalf("revoked idle state: %+v", s)
 	}
 	if err := r.EnablePresence(context.Background(), req); err != nil {

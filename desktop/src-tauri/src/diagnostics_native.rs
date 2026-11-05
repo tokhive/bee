@@ -73,6 +73,7 @@ impl NativeDiagnostics {
             ("failed", _) => ("runtime_failed", "error"),
             (_, "occupied" | "rejected") => ("runtime_ownership_conflict", "warning"),
             ("stopped", _) => ("runtime_stopped", "info"),
+            ("waiting", _) => ("runtime_waiting", "info"),
             ("running", "connected") => ("owned_runtime_connected", "info"),
             (_, "disconnected") => ("connection_disconnected", "warning"),
             _ => ("runtime_unknown", "info"),

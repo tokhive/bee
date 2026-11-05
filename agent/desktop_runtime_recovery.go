@@ -11,6 +11,34 @@ import (
 )
 
 var errDesktopRuntimeIdle = errors.New("saved runtime intent is stopped")
+var errDesktopRuntimeWaiting = errors.New("no selected accounts; waiting for explicit account selection")
+
+// Waiting owns no contribution session and grants no account permission. Check
+// persisted evidence before taking this path, including when saved intent is
+// stopped: a missing selection cannot make an inherited operation/session safe.
+func (r *DesktopRuntime) canWaitForAccount(session *desktopDeviceSession, state localState) (bool, error) {
+	scope, err := r.accounts.selectionScope(session, state, nil)
+	if err != nil {
+		return false, err
+	}
+	if len(scope.Selections) != 0 {
+		return false, nil
+	}
+	if len(scope.PendingOperations) != 0 {
+		return false, fmt.Errorf("account waiting blocked by unresolved account operations: count=%d", len(scope.PendingOperations))
+	}
+	if scope.Session.Active || !scope.Session.Clean {
+		return false, fmt.Errorf("account waiting rejected: previous_session_active=%t clean=%t; explicit recovery required", scope.Session.Active, scope.Session.Clean)
+	}
+	guard, err := readDesktopAccountBytes(filepath.Join(filepath.Dir(session.path), "runtime-session"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return false, fmt.Errorf("account waiting recovery guard read: %w", err)
+	}
+	if err == nil && !bytes.Equal(guard, []byte("clean\n")) {
+		return false, fmt.Errorf("account waiting rejected: previous recovery guard is not clean; explicit recovery required")
+	}
+	return true, nil
+}
 
 // Restore is an internal lifecycle entry. It never synthesizes user consent;
 // run rechecks the saved intent and clean-session evidence before any writes.
@@ -112,6 +140,19 @@ func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, 
 		}
 		return fmt.Errorf("runtime start requires a saved device identity")
 	}
+	waiting, err := r.canWaitForAccount(session, state)
+	if err != nil {
+		// A failed account-state read must still revoke a previous clean guard:
+		// an intent save can fail during the following stop as well. Never
+		// overwrite an already unconfirmed guard while recording this failure.
+		if guardErr := r.reserveRecoveryGuard(session, run, true); guardErr != nil {
+			return errors.Join(err, guardErr)
+		}
+		return err
+	}
+	if waiting {
+		return errDesktopRuntimeWaiting
+	}
 	// Independent evidence survives a failure to read/write ai-accounts.json.
 	if err = r.reserveRecoveryGuard(session, run, restoring); err != nil {
 		return err
@@ -202,6 +243,11 @@ func (r *DesktopRuntime) VerifyStartup(ctx context.Context) error {
 		}
 		if len(scope.PendingOperations) > 0 {
 			return fmt.Errorf("startup verification blocked: unresolved account operations=%d; query existing operations before writes", len(scope.PendingOperations))
+		}
+		if len(scope.Selections) == 0 {
+			if _, err := r.canWaitForAccount(session, state); err != nil {
+				return err
+			}
 		}
 	}
 	path := filepath.Join(filepath.Dir(session.path), "runtime-session")

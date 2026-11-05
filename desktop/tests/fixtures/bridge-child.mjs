@@ -115,6 +115,7 @@ input.on('line', line => {
         id:(mode==='owned-exit-restore-wrong-operation'?'e':'d').repeat(48),
         state:mode.includes('restore-failure')?'failed':mode==='owned-exit-restore-idle'?'running':'succeeded',revision:exitSnapshot.revision+1,
         error:mode.includes('restore-failure')?{platform:'openai',code:'upgrade_data_invalid',check:'recovery_data',message:'fixture account schema rejected',evidence:{}}:null}};
+      if(mode==='owned-exit-restore-waiting')exitSnapshot={...exitSnapshot,run_id:null,local:'waiting',connection:'disconnected'};
     } else {
       if(mode==='owned-exit-restore-idle' && restores && ++restoreSnapshots>=2) {
         exitSnapshot={...exitSnapshot,run_id:null,local:'stopped',connection:'disconnected',revision:exitSnapshot.revision+1,

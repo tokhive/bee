@@ -1,0 +1,116 @@
+[WebServer] (node:78343) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 93 tests using 4 workers
+
+(node:78346) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:78345) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:78344) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:78347) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/93] [chromium] › tests/preview-accounts.spec.ts:85:1 › preview source conditions can recover through the formal source editor without launching login
+[2/93] [chromium] › tests/preview-accounts.spec.ts:27:1 › preview login creates a candidate and requires explicit connection before cross-page paused feedback
+[3/93] [chromium] › tests/preview-accounts.spec.ts:65:1 › preview account change keeps the old selection until confirmation and then remains paused
+[4/93] [chromium] › tests/preview-accounts.spec.ts:47:1 › preview failed login recovers in the same account flow and cancellation prevents a late result
+[5/93] [chromium] › tests/preview-accounts.spec.ts:104:1 › preview Claude login controls follow its current operation and preserve the inline confirmation
+[6/93] [chromium] › tests/preview-auto-accounts.spec.ts:30:1 › candidate connects, prepares automatically, resumes and pauses without a global start
+[7/93] [chromium] › tests/preview-auto-accounts.spec.ts:52:1 › permission and pause are two collapsed reasons; repair preserves pause and focus
+[8/93] [chromium] › tests/preview-auto-accounts.spec.ts:75:1 › same-account login pauses only the target; another identity waits for switch confirmation
+[9/93] [chromium] › tests/preview-auto-accounts.spec.ts:100:1 › failed login can retry; cancellation rejects late success and stays paused
+[10/93] [chromium] › tests/preview-auto-accounts.spec.ts:118:1 › disconnect, simulated restart and stale report preserve the pause choice
+[11/93] [chromium] › tests/preview-auto-accounts.spec.ts:138:1 › lost resume receipt is reconciled without replaying the write
+[12/93] [chromium] › tests/preview-auto-accounts.spec.ts:149:1 › lost connect receipt preserves one operation and confirms the paused result
+[13/93] [chromium] › tests/preview-auto-accounts.spec.ts:159:1 › dark English narrow layout exposes one status and has no horizontal overflow
+[14/93] [chromium] › tests/preview-auto-accounts.spec.ts:174:1 › service preparation failure exposes evidence and a retry preserving pause
+[15/93] [chromium] › tests/preview-device.spec.ts:20:1 › formal first pairing saves the entered Hive and name and becomes online without starting contribution
+[16/93] [chromium] › tests/preview-device.spec.ts:47:1 › revoked credential recovery requires consent and explicit owner adoption and keeps all pages usable
+[17/93] [chromium] › tests/preview-device.spec.ts:89:1 › a seeded unknown redemption is reconciled by the common approval control without device writes
+[18/93] [chromium] › tests/preview-network.spec.ts:27:1 › formal proxy save requires apply confirmation and then diagnostics uses the applied runtime context
+[19/93] [chromium] › tests/preview-network.spec.ts:44:1 › formal proxy failures preserve the draft and recover after the simulated condition is repaired
+[20/93] [chromium] › tests/preview-network.spec.ts:65:1 › an unknown proxy apply receipt is reconciled by reading without another apply
+[21/93] [chromium] › tests/preview-network.spec.ts:77:1 › formal diagnostics keep cancellation terminal and recover the same paused report through controls
+[22/93] [chromium] › tests/preview-runtime.spec.ts:20:1 › formal contribution and platform controls preserve pause and keep stopped device online across pages
+[23/93] [chromium] › tests/preview-runtime.spec.ts:49:1 › preview network controls use formal read backoff and recover without replaying contribution writes
+[24/93] [chromium] › tests/preview-runtime.spec.ts:77:1 › an unknown contribution receipt is reconciled through one write and a stable operation
+[25/93] [chromium] › tests/preview-scenarios.spec.ts:12:1 › preview keeps a completed operation through navigation, appearance and size changes until reset
+[26/93] [chromium] › tests/preview-scenarios.spec.ts:30:1 › preview appearance failure retains structured evidence and allows recovery without resetting
+[27/93] [chromium] › tests/preview-scenarios.spec.ts:51:1 › preview controls reject stale sessions and messages from other sources
+[28/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: device-unbound
+[29/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: device-pending
+[30/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: device-expired
+[31/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: device-bound
+[32/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: device-error
+[33/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: stopped
+[34/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: runtime-starting
+[35/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: running
+[36/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: runtime-stopping
+[37/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: runtime-offline
+[38/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: runtime-disconnected
+[39/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: runtime-unknown
+[40/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-reading
+[41/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-empty
+[42/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-candidate
+[43/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-selected
+[44/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-error
+[45/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-expired
+[46/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-change
+[47/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: supply-ready
+[48/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: supply-paused
+[49/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: supply-blocked
+[50/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: supply-partial
+[51/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-background
+[52/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-expired
+[53/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-waiting
+[54/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-retrying
+[55/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-recovered
+[56/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: check-sequence
+[57/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: quota-normal
+[58/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: quota-unknown
+[59/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: quota-expired
+[60/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: quota-multiple
+[61/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: quota-over
+[62/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: confirm-login
+[63/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: confirm-select
+[64/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: confirm-stop
+[65/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: confirm-change
+[66/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: confirm-clear
+[67/93] [chromium] › tests/preview-scenarios.spec.ts:91:33 › scene renders formal state without invalid data or unintended writes: account-detail
+[68/93] [chromium] › tests/preview-scenarios.spec.ts:109:1 › review selector covers approved groups and preserves scene when theme or size changes
+[69/93] [chromium] › tests/preview-scenarios.spec.ts:142:1 › automatic recovery traverses stale, failed, retrying and recovered states using read requests only
+[70/93] [chromium] › tests/preview-scenarios.spec.ts:160:1 › preview pairing remains pending after a poll and simulated website confirmation binds the device
+[71/93] [chromium] › tests/preview-scenarios.spec.ts:174:1 › confirmed account actions update only the fixture and preserve pause semantics
+[72/93] [chromium] › tests/preview-scenarios.spec.ts:190:56 › confirmed changed identity cannot inherit the prior account quota: confirm-change
+[73/93] [chromium] › tests/preview-scenarios.spec.ts:190:56 › confirmed changed identity cannot inherit the prior account quota: account-change
+[74/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: settings-general
+[75/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: settings-network
+[76/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: settings-system
+[77/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: settings-about
+[78/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: diagnostics-running
+[79/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: diagnostics-results
+[80/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: diagnostics-read-failed
+[81/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: diagnostics-export-unknown
+[82/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: update-downloading
+[83/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: update-verified
+[84/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: update-unknown
+[85/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: update-failed
+[86/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: bridge-starting
+[87/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: bridge-failed
+[88/93] [chromium] › tests/preview-scenarios.spec.ts:213:12 › additional formal page accepts current DTO without invalid reply: startup-blocked
+[89/93] [chromium] › tests/preview-scenarios.spec.ts:219:1 › English preview navigates the formal account and settings pages
+[90/93] [chromium] › tests/preview-settings.spec.ts:18:1 › formal settings save language and appearance and retain both across navigation
+[91/93] [chromium] › tests/preview-settings.spec.ts:38:1 › formal settings reject an old revision, retain a draft, and recover by rereading preferences
+[92/93] [chromium] › tests/preview-settings.spec.ts:60:1 › notification denied stays denied on enable and recovers after a simulated system change
+[93/93] [chromium] › tests/preview-settings.spec.ts:77:1 › autostart failure distinguishes desired and actual registration and recovers through explicit settings actions
+  93 passed (1.0m)

@@ -8,7 +8,7 @@ import logo from '../assets/app-icon-dark.svg';
 export function AppShell({
   page,
   onNavigate,
-  demo,
+  demo, autoService=false,
   deviceMode = false,
   deviceName, hive, connected = false,
   children,
@@ -18,6 +18,7 @@ export function AppShell({
   page: Page;
   onNavigate: (page: Page) => void;
   demo: boolean;
+  autoService?:boolean;
   deviceMode?: boolean;
   deviceName?: string; hive?: string; connected?: boolean;
   children: ReactNode;
@@ -81,13 +82,13 @@ export function AppShell({
           <div className="page-heading">
             <div>
               <h1 tabIndex={-1}>{t(current.label)}</h1>
-              {!(deviceMode && page === 'overview') && <p>{t(current.description)}</p>}
+              {!(deviceMode && page === 'overview') && <p>{t(autoService&&page==='accounts'?'接入本机账号，管理平台接单。':current.description)}</p>}
             </div>
             {debug}
           </div>
           {children}
         </main>
-        <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
+        <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : autoService ? '前端交互预览 · 模拟数据' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
         </footer>
       </div>
     </div>

@@ -452,3 +452,29 @@ nav button { border:1px solid transparent; }
 .account-source p,.account-detail-facts dd,.dialog-content p { font-size:13px; line-height:1.6; }
 .quota-exhausted { font-size:12px; color:var(--ink); }
 .native-account-row-actions .ui-button { max-width:100%; white-space:normal; }
+
+/* Account mock experience: one status, optional reasons and a compact action row. */
+.auto-service-accounts .native-account-row { grid-template-columns:minmax(0,1fr) auto; gap:18px 24px; }
+.auto-service-accounts .native-account-row>.native-account-identity { grid-column:1; grid-row:1; }
+.auto-service-accounts .native-account-row-actions { grid-column:2; grid-row:1; align-self:start; max-width:220px; }
+.auto-service-accounts .native-account-row>.native-account-quota { grid-row:2; grid-column:1 / -1; grid-template-columns:repeat(2,minmax(0,1fr)); padding-left:44px; }
+.auto-service-accounts .native-accounts-section h2 { font-size:14px; }
+.account-status-block .native-account-condition { font-size:13px; color:var(--ink); }
+.account-status-block .native-account-condition.is-ready { color:var(--good); }
+.account-status-block .native-account-condition.is-blocked { color:var(--accent-ink); }
+.account-conditions { margin-top:6px; color:var(--muted); font-size:12px; line-height:1.65; }
+.account-conditions>summary { cursor:pointer; min-height:32px; width:fit-content; padding-block:6px; }
+.account-conditions ul { padding-left:18px; margin:6px 0 8px; }
+.account-conditions li+li { margin-top:10px; }
+.account-conditions p { margin:0 0 4px; }
+.account-conditions .ui-button { min-height:32px; white-space:normal; text-align:left; }
+.account-condition-evidence { margin:6px 0; }
+.account-condition-evidence summary { cursor:pointer; }
+.account-condition-evidence pre { white-space:pre-wrap; overflow-wrap:anywhere; font:inherit; padding:10px; background:var(--panel); border-radius:5px; max-width:100%; }
+.account-status-block>.ui-button { margin-top:8px; }
+.auto-service-summary { margin-bottom:16px; color:var(--muted); }
+@media(max-width:740px){
+ .auto-service-accounts .native-account-row { grid-template-columns:minmax(0,1fr); }
+ .auto-service-accounts .native-account-row-actions { grid-column:1; grid-row:2; max-width:none; justify-content:flex-start; padding-left:44px; }
+ .auto-service-accounts .native-account-row>.native-account-quota { grid-row:3; }
+}

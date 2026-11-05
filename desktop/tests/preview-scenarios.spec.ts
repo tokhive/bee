@@ -108,9 +108,9 @@ for(const [scene,copy] of cases)test('scene renders formal state without invalid
 
 test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light&size=normal');
- await expect(page.locator('#scene optgroup')).toHaveCount(10);
- expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
- await expect(page.locator('#scene option')).toHaveCount(77);
+ await expect(page.locator('#scene optgroup')).toHaveCount(11);
+ expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['账户目标交互（mock）','设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
+ await expect(page.locator('#scene option')).toHaveCount(84);
  for(const scene of ['runtime-no-accounts','runtime-accounts-unconfirmed','confirm-change'])await expect(page.locator('#scene option[value="'+scene+'"]')).toHaveCount(1);
  await page.locator('#scene').selectOption('confirm-change');
  const app=page.frameLocator('iframe');
@@ -143,14 +143,14 @@ test('automatic recovery traverses stale, failed, retrying and recovered states 
  await openScene(page,'check-sequence');
  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible();
  test.setTimeout(45000);
- await expect(page.locator('.account-check-status')).toHaveText('等待自动重试…',{timeout:6000});
+ await expect(page.locator('.account-check-status>span')).toHaveText('等待自动重试…',{timeout:6000});
  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(card(page).getByRole('button',{name:'暂停接单'})).toBeDisabled();
  expect(await page.evaluate(()=>(window as any).__beePreviewPhase)).toBe('current');
  expect((await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='openai')).toHaveLength(1);
- await expect(page.locator('.account-check-status')).toHaveText('核对中…',{timeout:15000});
- await expect(page.locator('.account-check-status')).toHaveText('等待自动重试…');
- await expect(page.locator('.account-check-status')).toHaveText('重试中…',{timeout:15000});
+ await expect(page.locator('.account-check-status>span')).toHaveText('核对中…',{timeout:15000});
+ await expect(page.locator('.account-check-status>span')).toHaveText('等待自动重试…');
+ await expect(page.locator('.account-check-status>span')).toHaveText('重试中…',{timeout:15000});
  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible({timeout:8000});
  await expect(page.locator('.account-check-status')).toHaveCount(0);

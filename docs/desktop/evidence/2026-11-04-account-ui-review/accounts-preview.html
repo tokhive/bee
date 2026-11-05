@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bee 账户页 · 交互设计预览</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#eef0f3;color:#34363a;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}button,select{font:inherit}button,select,a{touch-action:manipulation}button,select{height:34px;border:1px solid #d4d7dd;border-radius:6px;background:white;color:#34363a;padding:0 11px}button{cursor:pointer}button:hover{background:#f6f7f8}button:disabled{opacity:.5;cursor:default}:focus-visible{outline:2px solid #906b32;outline-offset:3px}.studio{max-width:1200px;margin:24px auto;padding:0 24px}.studio-heading{display:flex;align-items:start;justify-content:space-between;gap:20px;margin-bottom:18px}.studio-heading h1{font-size:19px;line-height:1.4;margin:0 0 5px}.studio-heading p{margin:0;color:#626771;font-size:12px}.version{border:1px solid #d3d6dc;padding:3px 8px;border-radius:4px;font-size:11px;white-space:nowrap;color:#626771}.controls{display:flex;align-items:end;flex-wrap:wrap;gap:14px;margin:0 0 18px}.controls label{display:grid;gap:5px;color:#626771;font-size:11px}.controls select{min-width:100px}.controls label:first-child select{min-width:188px}.controls button{align-self:end}.spacer{flex:1}.stage{overflow:auto;padding:2px 2px 18px}.screen{display:block;margin:0 auto;border:1px solid #d5d8de;border-radius:10px;width:1122px;height:762px;background:white;box-shadow:0 2px 5px #1a26380a,0 14px 42px #1a263810}.screen.narrow{width:862px;height:602px}.footbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:0;color:#626771;font-size:12px}.footbar p{margin:0}.external{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.external button{font-size:12px}.notes{padding:14px 16px;border:1px solid #d5d8de;border-radius:7px;background:#f8f9fa;margin:15px 0}.notes h2{font-size:13px;margin:0 0 8px}.notes p{margin:5px 0;color:#626771}.notes[hidden],button[hidden]{display:none}.below{font-size:12px;color:#626771;margin:10px 0 24px}.below a{color:#5d6677;text-underline-offset:3px}#feedback{min-height:18px;font-size:12px;color:#7d5725;margin:8px 0}.dark-studio{background:#181a1e;color:#e5e4df}.dark-studio .studio-heading p,.dark-studio .below,.dark-studio .footbar,.dark-studio .controls label{color:#aaaeb6}.dark-studio button,.dark-studio select{background:#26292e;color:#e5e4df;border-color:#454850}.dark-studio .version{border-color:#454850;color:#aaaeb6}.dark-studio .notes{background:#24272c;border-color:#454850}.dark-studio .notes p{color:#b8bcc4}.dark-studio .screen{border-color:#454850}.dark-studio #feedback{color:#d5b57e}
+</style>
+</head><body>
+<div class="studio">
+<header class="studio-heading"><div><h1>Bee 账户页 · 设计讨论</h1><p>点击页面体验方案。独立交互示意，未接入正式 mock；所有操作只改变预览。</p></div><span class="version">自动运行 · 平台接单控制</span></header>
+<div class="controls">
+<label>查看状态<select id="scene"><option value="change">发现不同账号</option><option value="empty">尚未登录</option><option value="candidate">已有登录，待接入</option><option value="selected">已接入，保持暂停</option><option value="running">可接单</option><option value="paused">已暂停接单</option><option value="error">来源权限不足</option><option value="error-paused">权限不足，同时已暂停</option><option value="expired">授权过期，贡献仍运行</option><option value="reconnecting">断线，正在自动重连</option><option value="quota">额度已耗尽</option><option value="uncertain">换号结果待核对</option><option value="stale">报告过期，正在核对</option></select></label>
+<label>外观<select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+<label>应用窗口<select id="size"><option value="narrow">860 × 600</option><option value="normal">1120 × 760</option></select></label>
+<button id="reset">重置此状态</button><span class="spacer"></span><button id="annotations" aria-pressed="false">显示讨论标注</button>
+</div>
+<div class="stage"><iframe id="screen" class="screen narrow" title="Bee 账户页设计方案"></iframe></div>
+<div class="footbar"><p id="state" aria-live="polite">正在加载预览…</p><div class="external"><button id="login-ok" hidden>模拟登录完成</button><button id="login-fail" hidden>模拟登录失败</button><button id="recover" hidden>模拟读取恢复</button><button id="verify" hidden>模拟登录核验完成</button><button id="sync" hidden>模拟连接与同步完成</button><button id="reconnect" hidden>模拟网络恢复</button><button id="resolve" hidden>模拟原操作成功</button><button id="quota-ok" hidden>模拟额度恢复</button><button id="refresh" hidden>模拟报告更新</button></div></div>
+<p id="feedback" role="status"></p>
+<div class="notes" id="notes" hidden><h2>可直接按编号讨论</h2><p>① 页头：只保留一个标题；已接入数量和运行交接说明放在上方。</p><p>② 账号行：关键问题与操作靠近；只突出一条主状态；仅在有顺序依赖的任务中展示步骤，独立原因按需展开。</p><p>③ 操作区：任务中的当前步骤可直接点击，数字与文字都是点击区域；自动步骤显示进度，后续步骤不能跳过。常规主操作使用实心按钮。</p><p>④ 详情：先看身份、问题与动作，再看额度和来源。相同候选不重复展示。</p></div>
+<p class="below">可以直接说“把 OpenAI 的按钮挪到……”，或“在来源权限不足状态下……”。 <a href="annotated-current.png" target="_blank" rel="noopener">查看原界面标注</a></p>
+</div>
+<template id="app-template">
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}html{color-scheme:light;--paper:#fff;--canvas:#f7f8fa;--side:#f7f6f3;--panel:#f8f7f4;--ink:#2c2b28;--muted:#69665f;--line:#eae7e1;--accent:#ba8d49;--accent-ink:#805a20;--accent-soft:#faf6ed;--primary:#30312e;--on-primary:#fff;--good:#37674e;--danger:#a24231;--overlay:#202b3e40;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}html[data-theme=dark]{color-scheme:dark;--paper:#242421;--canvas:#181a1e;--side:#20201e;--panel:#2a2a26;--ink:#e5e4df;--muted:#ada99f;--line:#45433d;--accent-ink:#d2af75;--accent-soft:#373024;--primary:#e5e3dc;--on-primary:#272721;--good:#8fc5a6;--danger:#f2a38f;--overlay:#0008}button,input,select{font:inherit}button{cursor:pointer}button,a,input,select,summary{touch-action:manipulation}button:disabled{opacity:.55;cursor:not-allowed}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent-ink);outline-offset:3px}svg{width:16px;height:16px;flex:none;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}button{min-height:32px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:5px 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:none}button:hover:not(:disabled){background:var(--panel);border-color:var(--muted)}button.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}button.primary:hover:not(:disabled){opacity:.88;background:var(--primary)}button.quiet{border-color:transparent;background:transparent;color:var(--muted);padding-inline:4px}button.quiet:hover:not(:disabled){color:var(--ink);background:var(--panel);border-color:transparent}button.icon{padding:7px;width:32px;min-width:32px}.layout{height:100%;display:grid;grid-template-columns:178px minmax(0,1fr);grid-template-rows:52px minmax(0,1fr) 28px}aside{grid-row:1/4;background:var(--side);border-right:1px solid var(--line);padding:26px 12px 16px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;padding:0 10px;margin-bottom:27px;font-size:22px;font-weight:650;letter-spacing:-.8px}.brand img{width:30px;height:30px}nav{display:grid;gap:6px}nav button{justify-content:start;gap:11px;height:36px;border-color:transparent;background:transparent;color:var(--muted);padding-left:13px;font-size:13px}nav button.active{background:var(--paper);border-color:var(--line);color:var(--ink);box-shadow:0 1px 3px #00000008}nav button.active svg{color:var(--accent-ink)}.side-bottom{margin-top:auto;padding:14px 6px 0;color:var(--muted);font-size:11px}.side-bottom p{margin:0 0 7px}.side-device{display:flex;gap:9px;align-items:center;border-top:1px solid var(--line);padding-top:15px;margin-top:17px}.side-device svg{width:25px;height:25px;padding:4px;border:1px solid var(--line);background:var(--paper);border-radius:5px}.side-device small{display:block;color:var(--muted);font-size:10px}.window-bar{border-bottom:1px solid var(--line);display:flex;justify-content:end;align-items:center;padding:0 24px;gap:6px;font-size:11px;color:var(--muted)}main{padding:26px 29px 20px;overflow-y:auto;min-width:0;scrollbar-gutter:stable}footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:9px;color:var(--muted);background:var(--panel)}h1{font-size:24px;line-height:1.3;letter-spacing:-.5px;margin:0;font-weight:650}h2{font-size:16px;margin:0;line-height:1.5;font-weight:600}h3{font-size:13px;margin:0 0 12px}.page-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:6px}.count{color:var(--muted);font-size:12px}.page-subtitle{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:19px}.page-subtitle p{margin:0;color:var(--muted);font-size:12px}.page-subtitle button{font-size:11px;min-height:24px;padding-block:0}.run-note{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 14px;background:var(--panel);border-radius:6px;margin-bottom:18px;font-size:12px}.run-note span{min-width:0}.accounts{border:1px solid var(--line);border-radius:8px;overflow:hidden}.account{padding:19px 19px 17px;min-width:0}.account+.account{border-top:1px solid var(--line)}.account-head{display:flex;align-items:flex-start;gap:11px}.platform-icon{width:32px;height:32px;flex:none;border:1px solid var(--line);background:var(--panel);border-radius:7px;display:flex;align-items:center;justify-content:center}.platform-icon.claude{color:var(--accent-ink)}.platform-icon svg{width:20px;height:20px}.identity{flex:1;min-width:0}.platform-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.badge{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 5px}.identifier{font-size:11px;color:var(--muted);margin:4px 0 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.actions{display:flex;gap:7px;align-items:center;flex:none}.actions button{font-size:12px}.body-copy{margin:12px 0 0 43px}.status{margin:0;font-size:13px;display:flex;align-items:start;gap:6px;flex-wrap:wrap}.status svg{margin-top:2px;width:14px;height:14px}.status.good{color:var(--good)}.status.problem{color:var(--accent-ink)}.status.error{color:var(--danger)}.reason-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:3px 0;color:var(--muted);font-size:12px;line-height:1.7}.reason-list li+li:before{content:'；'}.muted{color:var(--muted)}.quota{margin:14px 0 0 43px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.quota-label{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);margin-bottom:5px;font-variant-numeric:tabular-nums}.quota-label strong{font-weight:400;color:var(--ink)}.bar{height:4px;background:var(--line);border-radius:8px;overflow:hidden}.fill{height:100%;background:var(--accent);border-radius:8px}.unknown-quota{margin:10px 0 0 43px;color:var(--muted);font-size:11px}.explanation{margin:9px 0 0 43px;color:var(--muted);font-size:12px}.condition-list{margin:9px 0;padding-left:18px}.condition-list li+li{margin-top:6px}dialog .condition-details{margin-left:0}.explanation summary{cursor:pointer;width:fit-content}.explanation p{margin:7px 0;line-height:1.65;max-width:64ch}.explanation code{display:block;background:var(--panel);padding:8px 10px;border-radius:5px;overflow-wrap:anywhere;color:var(--muted);font-size:11px}.action-help{margin:8px 0 0 43px;font-size:12px;color:var(--muted)}.action-help button{font-size:12px}.privacy{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin:15px 0 0}.privacy svg{width:13px;height:13px}.login-panel{margin:13px 0 0 43px;border-left:2px solid var(--accent);padding:3px 0 2px 13px}.login-panel p{margin:0 0 8px;color:var(--muted);font-size:12px}.login-panel strong{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px}.login-panel button{font-size:12px}.note-marker{display:none;align-items:center;justify-content:center;width:18px;height:18px;background:#805a20;color:white;border-radius:50%;font:11px/1 sans-serif;margin-left:6px;vertical-align:middle}.annotated .note-marker{display:inline-flex}dialog{color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:24px;box-shadow:0 12px 45px #0002;max-height:100%;max-width:100%;overflow:auto;overscroll-behavior:contain}dialog::backdrop{background:var(--overlay)}dialog.sheet{position:fixed;inset:0 0 0 auto;margin:0;width:430px;height:100%;max-height:100%;border-radius:0;border-width:0 0 0 1px}dialog.confirm{width:400px;border-radius:10px}dialog header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}dialog h2{font-size:17px}dialog p{font-size:13px;line-height:1.65;margin:12px 0;color:var(--muted)}.dialog-subtitle{margin-top:-8px}.facts{margin:17px 0;display:grid;gap:12px}.facts>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px;font-size:12px}.facts dt{color:var(--muted)}.facts dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.sheet-section{border-top:1px solid var(--line);padding-top:20px;margin-top:20px}.sheet-section .quota{display:block;margin:0}.sheet-section .quota>div+div{margin-top:16px}.sheet-section .quota p{font-size:11px;margin:6px 0}.sheet-actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.source summary{font-size:13px;cursor:pointer;line-height:1.8}.source label{display:grid;gap:6px;font-size:12px;margin:14px 0}.source input,.source select{width:100%;min-height:34px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;color:var(--ink);background:var(--paper);font-size:12px}.source input::placeholder{color:var(--muted)}.source small{display:block;color:var(--muted);font-size:11px;line-height:1.65}.dialog-actions{display:flex;justify-content:end;gap:8px;margin-top:22px}.callout{background:var(--panel);padding:11px 13px;border-radius:6px;font-size:12px;line-height:1.7}.callout.warning{background:var(--accent-soft)}#toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--on-primary);padding:8px 14px;border-radius:7px;box-shadow:0 4px 18px #0002;font-size:12px;max-width:80%;pointer-events:none;z-index:20}#toast:empty{display:none}@media(max-width:950px){main{padding:25px 29px 18px}.account{padding:18px 16px}.actions{gap:5px}.actions button{padding-inline:10px}.actions .icon{padding-inline:6px}.platform-line{gap:6px}.identity .identifier{font-size:11px}.quota{gap:18px}.body-copy{margin-top:11px}.page-subtitle{gap:10px}}@media(max-width:720px){.layout{grid-template-columns:140px minmax(0,1fr)}main{padding:20px 16px}.account-head{flex-wrap:wrap}.actions{margin-left:43px}.body-copy,.quota,.explanation,.action-help,.unknown-quota{margin-left:0}.run-note{flex-wrap:wrap}}@media(prefers-reduced-motion:reduce){button{transition:none}}
+
+.workflow{margin:17px 0 13px 43px;padding:0;list-style:none;display:flex;gap:0;isolation:isolate}
+.workflow li{position:relative;flex:1;min-width:0;font-size:11px;color:var(--muted);padding-right:8px;line-height:1.5}
+.workflow li:not(:last-child):after{content:"";position:absolute;top:20px;left:35px;right:0;height:1px;background:var(--line);z-index:-1}
+.step-face{display:block;padding:8px 4px;border:1px solid transparent;border-radius:6px;max-width:100%;width:max-content}
+button.step-button{display:block;min-width:44px;min-height:76px;text-align:left;white-space:normal;background:var(--accent-soft);border-color:var(--accent-ink);color:var(--ink)}
+button.step-button:hover{background:var(--panel);border-color:var(--accent-ink);box-shadow:0 0 0 1px var(--accent-ink)}
+.step-hint{display:block;margin-top:4px;font-size:11px;font-weight:400;line-height:1.5;color:var(--muted);overflow-wrap:anywhere}
+.step-button .step-hint{color:var(--accent-ink)}
+.step-dot{display:flex;align-items:center;justify-content:center;width:23px;height:23px;background:var(--paper);border:1px solid var(--line);border-radius:50%;margin-bottom:6px;font-variant-numeric:tabular-nums}
+.step-dot svg{width:13px;height:13px}.workflow .done .step-dot{border-color:var(--good);color:var(--good)}
+.workflow [aria-current="step"]{font-weight:600;color:var(--ink)}.workflow [aria-current="step"] .step-dot{background:var(--accent-soft);border:2px solid var(--accent-ink);color:var(--accent-ink)}
+.workflow .step-label{display:block;overflow-wrap:anywhere}.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.runtime-facts{margin:12px 0 0;display:grid;gap:6px}.runtime-facts>div{display:flex;gap:12px;justify-content:space-between}.runtime-facts dt{color:var(--muted)}.runtime-facts dd{margin:0;color:var(--ink)}
+.sheet .workflow{margin-left:0}.sheet .workflow li{font-size:11px}.sheet .workflow{margin-block:19px}
+.sheet .workflow[data-steps="6"]{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));row-gap:10px}.sheet .workflow[data-steps="6"] li:nth-child(3):after{display:none}
+@media(max-width:720px){.workflow{margin-left:0}.workflow li{font-size:11px}.workflow{gap:2px}}
+</style></head><body>
+<div class="layout"><aside><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM6YzJwYT0iaHR0cDovL2MycGEub3JnL21hbmlmZXN0Ij48bWV0YWRhdGE+PGMycGE6bWFuaWZlc3Q+QUFBV2dtcDFiV0lBQUFBZWFuVnRaR015Y0dFQUVRQVFnQUFBcWdBNG0zRURZekp3WVFBQUFCWmNhblZ0WWdBQUFFZHFkVzFrWXpKdFlRQVJBQkNBQUFDcUFEaWJjUU4xY200Nll6SndZVG94WkRka01ESTRaaTAwTUdSbExUUTFOakl0WWpWaU55MWpPREJqT1dRMVpqWTJOalVBQUFBRGwycDFiV0lBQUFBcGFuVnRaR015WVhNQUVRQVFnQUFBcWdBNG0zRURZekp3WVM1aGMzTmxjblJwYjI1ekFBQUFBTHhxZFcxaUFBQUFSR3AxYldSalltOXlBQkVBRUlBQUFLb0FPSnR4RTJNeWNHRXVhVzVuY21Wa2FXVnVkQzUyTXdBQUFBQVlZekp6YUxBOFZzWkJtV2ZZSE9NOXhXNnFXT0FBQUFCd1kySnZjcU5wWkdNNlptOXliV0YwYldsdFlXZGxMM04yWnl0NGJXeHFhVzV6ZEdGdVkyVkpSSGdzZUcxd09tbHBaRHBoTURrMU1ESTFNeTA1TldabUxUUm1PRFV0T1dOall5MDJZelk1TmpJME9UVTVNR1JzY21Wc1lYUnBiMjV6YUdsd2FIQmhjbVZ1ZEU5bUFBQUI0bXAxYldJQUFBQkJhblZ0WkdOaWIzSUFFUUFRZ0FBQXFnQTRtM0VUWXpKd1lTNWhZM1JwYjI1ekxuWXlBQUFBQUJoak1uTm9uSzIyUGREaVgyZlBRY0pKU0Rlbld3QUFBWmxqWW05eW9tZGhZM1JwYjI1emdxSm1ZV04wYVc5dWEyTXljR0V1YjNCbGJtVmthbkJoY21GdFpYUmxjbk9oYTJsdVozSmxaR2xsYm5SemdhSmpkWEpzZUMxelpXeG1JMnAxYldKbVBXTXljR0V1WVhOelpYSjBhVzl1Y3k5ak1uQmhMbWx1WjNKbFpHbGxiblF1ZGpOa2FHRnphRmdnNHNrQXMzV25iUnNDLzNaVFh0QkltclJzd051NUV1ZFN5Nyt3SjJMNWRZcWtabUZqZEdsdmJuZ2RZMjl0TG1GdWRHaHliM0JwWXk1amJHRjFaR1V1Y0hKdmRtbGtaV1JxY0dGeVlXMWxkR1Z5YzZGNEgyTnZiUzVoYm5Sb2NtOXdhV011YjNKcFoybHVMV052Ym1acFpHVnVZMlZuZFc1cmJtOTNibXRrWlhOamNtbHdkR2x2Ym5obVEyeGhkV1JsSUhCeWIzWnBaR1ZrSUhSb2FYTWdabWxzWlNCaGRDQjBhR1VnY21WeGRXVnpkQ0J2WmlCaElIVnpaWElnWVc1a0lHMWhlU0JvWVhabElHTnlaV0YwWldRZ2IzSWdiVzlrYVdacFpXUWdkR2hsSUdacGJHVWdZMjl1ZEdWdWRITXViWE52Wm5SM1lYSmxRV2RsYm5TaFpHNWhiV1ZtUTJ4aGRXUmxjbUZzYkVGamRHbHZibk5KYm1Oc2RXUmxaUFVBQUFESWFuVnRZZ0FBQUVCcWRXMWtZMkp2Y2dBUkFCQ0FBQUNxQURpYmNSTmpNbkJoTG1oaGMyZ3VaR0YwWVFBQUFBQVlZekp6YUdlRFpNSWV1VFgwMGNRODJwZjNTZDhBQUFDQVkySnZjcVZqWVd4blpuTm9ZVEkxTm1Od1lXUk5BQUFBQUFBQUFBQUFBQUFBQUdSb1lYTm9XQ0QvakFqb2tpcmJyZXpHeUZ5bm5KQTNrdkgrMWh2RS9kK2M2VDRpZ3F0SzFXUnVZVzFsYm1wMWJXSm1JRzFoYm1sbVpYTjBhbVY0WTJ4MWMybHZibk9Cb21WemRHRnlkQmlXWm14bGJtZDBhQmtlQkFBQUFqNXFkVzFpQUFBQUoycDFiV1JqTW1Oc0FCRUFFSUFBQUtvQU9KdHhBMk15Y0dFdVkyeGhhVzB1ZGpJQUFBQUNEMk5pYjNLbFkyRnNaMlp6YUdFeU5UWnBjMmxuYm1GMGRYSmxlRTF6Wld4bUkycDFiV0ptUFM5ak1uQmhMM1Z5Ympwak1uQmhPakZrTjJRd01qaG1MVFF3WkdVdE5EVTJNaTFpTldJM0xXTTRNR001WkRWbU5qWTJOUzlqTW5CaExuTnBaMjVoZEhWeVpXcHBibk4wWVc1alpVbEVlQ3g0YlhBNmFXbGtPak14TnpGaU9EQXpMVFJrTkRFdE5HUXpPUzA1TkRsa0xUTTJZakE1TmpNNU1HRmhZM0pqY21WaGRHVmtYMkZ6YzJWeWRHbHZibk9Eb21OMWNteDRMWE5sYkdZamFuVnRZbVk5WXpKd1lTNWhjM05sY25ScGIyNXpMMk15Y0dFdWFXNW5jbVZrYVdWdWRDNTJNMlJvWVhOb1dDRGl5UUN6ZGFkdEd3TC9kbE5lMEVpYXRHekEyN2tTNTFMTHY3QW5ZdmwxaXFKamRYSnNlQ3B6Wld4bUkycDFiV0ptUFdNeWNHRXVZWE56WlhKMGFXOXVjeTlqTW5CaExtRmpkR2x2Ym5NdWRqSmthR0Z6YUZnZ1VXRDBlRldNdFE5c28rekZPT0hYL0lSOU91R2pCUWhMOUdZUGhhOHFlSldpWTNWeWJIZ3BjMlZzWmlOcWRXMWlaajFqTW5CaExtRnpjMlZ5ZEdsdmJuTXZZekp3WVM1b1lYTm9MbVJoZEdGa2FHRnphRmdnMmkvQ0ltUkpLcTJSV2NRVXIxVGhhQnAyWDdBdmltT1c5MFVWQUs0VUhVaDBZMnhoYVcxZloyVnVaWEpoZEc5eVgybHVabStqWkc1aGJXVnZRVzUwYUhKdmNHbGpJRVpwYkdWelozWmxjbk5wYjI1bE1TNHdMakJyYzNCbFkxWmxjbk5wYjI1bE1pNDBMakFBQUJBNGFuVnRZZ0FBQUNocWRXMWtZekpqY3dBUkFCQ0FBQUNxQURpYmNRTmpNbkJoTG5OcFoyNWhkSFZ5WlFBQUFCQUlZMkp2Y3RLRVdRSVNvZ0VtR0NGWkFnb3dnZ0lHTUlJQmphQURBZ0VDQWhSQTVhQUs3c0k1MEw2NGcvb0dRZ1U5WjFVVEFEQUtCZ2dxaGtqT1BRUURBekJKTVJjd0ZRWURWUVFLRXc1QmJuUm9jbTl3YVdNc0lGQkNRekV1TUN3R0ExVUVBeE1sUVc1MGFISnZjR2xqSUVOdmJuUmxiblFnUTNKbFpHVnVkR2xoYkhNZ1VtOXZkQ0JEUVRBZUZ3MHlOakE0TURjeE9EUXpOVFphRncweU9EQTRNRFl4T1RRek5UWmFNRVF4RnpBVkJnTlZCQW9URGtGdWRHaHliM0JwWXl3Z1VFSkRNU2t3SndZRFZRUURFeUJCYm5Sb2NtOXdhV01nUTJ4aGRXUmxJRU52Ym5SbGJuUWdVMmxuYm1sdVp6QlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJKaDZDbXZMVUJnRkZOVTB2VUtsT1Z0RTZkamQxN0w1U3V3WDBMZW1GaXNCTTNka2QvM2N5anhGQTNRbzVTNDZmWDAvaWhZMFZaN21mYjlLRjcwM3Q1T2pXREJXTUE0R0ExVWREd0VCL3dRRUF3SUhnREFWQmdOVkhTVUVEakFNQmdvckJnRUVBWVBvWGdJQk1Bd0dBMVVkRXdFQi93UUNNQUF3SHdZRFZSMGpCQmd3Rm9BVXpsSGlCSUZPWkZzaitPUEV6NW8rbk1IWFhNSXdDZ1lJS29aSXpqMEVBd01EWndBd1pBSXdNWE1kRko0QmV0TExWWTdPUnVFOW5vcWJiQVpPWm4vYUFyWHlUd0ZBWmZLclB6eEYydlBvSk5mMStVQ2RnMVhHQWpCd1gxemQ5V0dxWWtxbUw1U0ZxdzFReVNqcjF6SmZwSk05KzFyZER3U1BMTU9QT2pLdWlYam9VL3BVVWVHOVJ3bWhZM0JoWkZrTm5nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBUFpZUUxUK0pWeTZOUkcwZ1lKZmJPM0RqMUJpUUh2STA3QVU1b1VkekNiRENleWpza3dYc1FNUE16ekdUYUFmTkdlTDUrYVl0aEJQdVozdzBGUFBoR25rN0JjPTwvYzJwYTptYW5pZmVzdD48L21ldGFkYXRhPjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMjIuNSIgZmlsbD0iIzE0MTUxNyI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIwIDIwKSBzY2FsZSgwLjYpIj48cGF0aCBkPSJNNTAsNiBMODguMSwyOCBMODguMSw3MiBMNTAsOTQgTDExLjksNzIgTDExLjksMjggWiBNMTEuOSwzNi41IGg3Ni4yIHY5IGgtNzYuMiBaIE0xMS45LDU0LjUgaDc2LjIgdjkgaC03Ni4yIFoiIGZpbGw9IiNDOEYwMzEiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PC9wYXRoPjwvZz48L3N2Zz4=" alt="" width="30" height="30"><span>Bee</span></div><nav aria-label="主导航"><button data-nav="overview"><span data-icon="home"></span>概览</button><button class="active" aria-current="page"><span data-icon="users"></span>AI 账号</button><button data-nav="diagnostics"><span data-icon="pulse"></span>诊断</button><button data-nav="settings"><span data-icon="settings"></span>设置</button></nav><div class="side-bottom"><p>● hive.example</p><p id="side-status"></p><div class="side-device"><span data-icon="monitor"></span><span>Bee Desktop<small>设备与平台控制</small></span></div></div></aside><div class="window-bar"><span data-icon="monitor"></span>本机设备</div><main id="main"></main><footer><span>Bee</span><span>Bee 自动运行，按平台管理接单</span></footer></div>
+<dialog class="sheet" id="detail" aria-labelledby="detail-title"></dialog><dialog class="confirm" id="confirm" aria-labelledby="confirm-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
+<script>
+// THROWAWAY UI DISCUSSION PROTOTYPE. No network calls, credentials, or persistence.
+const $=s=>document.querySelector(s);const main=$('#main'),detail=$('#detail'),confirmDialog=$('#confirm');
+const paths={home:'M3 10l9-7 9 7v10H3z M9 20v-7h6v7',users:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M16 3a4 4 0 010 8 M22 21v-2a4 4 0 00-3-3.87 M13 7a4 4 0 11-8 0 4 4 0 018 0',pulse:'M2 12h4l3-8 5 16 3-8h5',settings:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',monitor:'M3 3h18v13H3z M8 21h8 M12 16v5',arrow:'M5 12h14 M13 6l6 6-6 6',check:'M5 12l4 4L19 6',pause:'M8 5v14 M16 5v14',alert:'M12 3L2 21h20z M12 9v5 M12 17v.1',shield:'M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6',spark:'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',sun:'M12 2v20 M2 12h20 M5 5l14 14 M5 19L19 5',close:'M6 6l12 12 M18 6L6 18'};
+function icon(name){return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.alert}"/></svg>`;}
+document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
+const marker=n=>`<span class="note-marker" aria-hidden="true">${n}</span>`;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let state,detailPlatform=null,returnFocus=null,confirmFocus=null,toastTimer;
+const expandedReasons=new Set();
+const account=name=>({name,selected:false,candidate:false,paused:true,changed:false,error:false,stale:false,expired:false,login:false,loginFailed:false,checking:false,syncing:false,uncertain:false,reconciling:false,quotaBlocked:false,journey:null,needsStart:false,needsStop:false,stopCompleted:false,authorizationComplete:false,reviewed:false,changeConfirmed:false,id:name==='OpenAI'?'bbbbbbbbbbbbbbbb':'cccccccccccccccc',candidateId:name==='OpenAI'?'bbbbbbbbbbbbbbbb':'cccccccccccccccc',source:'',store:'file'});
+function reset(scene){
+ expandedReasons.clear();
+ state={scene,running:true,connection:'connected',accounts:[account('OpenAI'),account('Claude')]};
+ const a=state.accounts[0];
+ if(scene==='candidate')a.candidate=true;
+ if(!['empty','candidate'].includes(scene)){a.selected=true;a.candidate=true;}
+ if(['running','paused','error','error-paused','expired','reconnecting','quota','uncertain','stale'].includes(scene)){state.running=true;state.connection='connected';}
+ a.paused=!['running','error','expired','reconnecting','quota'].includes(scene);
+ if(['empty','candidate','selected'].includes(scene)){a.journey='onboarding';a.needsStart=false;}
+ if(scene==='change'){a.changed=true;a.candidateId='ffffffffffffffff';a.journey='change';a.needsStart=false;}
+ if(scene==='error'||scene==='error-paused'){a.error=true;a.journey='source';}
+ if(scene==='expired'){a.expired=true;a.journey='authorization';a.needsStop=false;a.needsStart=false;}
+ if(scene==='reconnecting')state.connection='reconnecting';
+ if(scene==='quota')a.quotaBlocked=true;
+ if(scene==='uncertain'){a.uncertain=true;a.changed=true;a.candidateId='ffffffffffffffff';}
+ if(scene==='stale')a.stale=true;
+ detail.close();confirmDialog.close();detailPlatform=null;clearTimeout(toastTimer);$('#toast').textContent='';render();
+}
+function synchronized(a){return a.selected&&state.running&&state.connection==='connected'&&!a.syncing&&!a.checking&&!a.error&&!a.expired&&!a.changed&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed;}
+function canStart(){return state.accounts.some(a=>a.selected&&!a.changed&&!a.error&&!a.expired&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed&&!a.checking);}
+function report(){
+ parent.postMessage({type:'bee-design-state',running:state.running,canStart:canStart(),selected:state.accounts.filter(a=>a.selected).length,login:state.accounts.some(a=>a.login),error:state.accounts.some(a=>a.error),checking:state.accounts.some(a=>a.checking),syncing:state.running&&state.connection==='connecting'||state.accounts.some(a=>a.syncing),reconnecting:state.connection==='reconnecting',resolving:state.accounts.some(a=>a.uncertain&&a.reconciling),quotaBlocked:state.accounts.some(a=>a.quotaBlocked),stale:state.accounts.some(a=>a.stale),names:state.accounts.map(a=>a.name+'：'+status(a).text).join('；')},'*');
+}
+function status(a){
+ if(a.uncertain)return{text:a.reconciling?'正在核对原操作结果…':'操作结果待核对',kind:'problem'};
+ if(a.login)return{text:'等待官方登录',kind:'problem'};
+ if(a.loginFailed)return{text:'未找到官方客户端',kind:'error'};
+ if(a.stale)return{text:'状态待更新',kind:'problem'};
+ if(a.error)return{text:a.selected?'不能接单':'登录读取失败',kind:'error'};
+ if(a.expired)return{text:'授权已过期',kind:'error'};
+ if(a.checking)return{text:'正在核验登录…',kind:'problem'};
+ if(a.changed)return{text:'发现不同账号',kind:'problem'};
+ if(!a.selected)return{text:a.candidate?'已有登录，尚未接入':'所选位置未找到登录',kind:''};
+ if(!state.running)return{text:'贡献尚未启动',kind:''};
+ if(state.connection==='reconnecting')return{text:'正在重连…',kind:'problem'};
+ if(state.connection==='connecting')return{text:'正在连接 Hive…',kind:'problem'};
+ if(a.syncing)return{text:'正在同步账号…',kind:'problem'};
+ if(a.quotaBlocked)return{text:'额度已耗尽',kind:'problem'};
+ if(a.paused)return{text:'已暂停接单',kind:''};
+ return{text:'可接单',kind:'good'};
+}
+// Display paths describe only the current task. Independent account/runtime facts stay independent.
+function workflowState(a){
+ if(!a.journey||a.uncertain||a.stale||state.connection==='reconnecting')return null;
+ const steps=[],add=(key,label,done)=>steps.push({key,label,done});
+ if(a.journey==='onboarding'){
+  add('login','本机登录',a.candidate&&!a.error&&!a.checking);
+  add('select','确认接入',a.selected);
+ }
+ if(a.journey==='source'){
+  add('repair','修复读取',!a.error);
+  add('verify','核验登录',!a.error&&!a.checking);
+ }
+ if(a.journey==='authorization'){
+
+  add('login','重新登录',a.authorizationComplete);
+  add('verify','核验账号',a.authorizationComplete&&!a.checking&&!a.changed);
+ }
+ if(a.journey==='change'){
+  add('review','核对账号',a.reviewed);
+  add('change','确认换号',a.changeConfirmed);
+ }
+ if(a.journey==='onboarding'){
+
+  add('sync','连接同步',synchronized(a));
+ }else if(a.journey==='change')add('sync','同步核验',a.changeConfirmed&&synchronized(a));
+ if(a.paused||['onboarding','change'].includes(a.journey))add('resume','恢复接单',synchronized(a)&&!a.paused);
+ const current=steps.findIndex(x=>!x.done);
+ if(current<0||steps.length<2)return null;
+ const label={onboarding:'首次接入',source:'读取恢复',authorization:'授权恢复',change:'账号更换'}[a.journey];
+ const key=steps[current].key;
+ let [action,hint]={repair:['source','打开读取设置'],login:['login','打开官方登录'],select:['select','核对并接入'],review:['details','查看新旧账号'],change:['change','核对并确认'],start:['overview','前往概览'],stop:['overview','前往概览'],resume:['pause','允许接收新任务'],verify:[null,'自动核验中'],sync:[null,'自动同步中']}[key];
+ if(key==='login'&&(a.login||a.checking)){action=null;hint=a.login?'等待登录完成':'自动核验中';}
+
+ if(key==='resume'&&!synchronized(a)){action=null;hint='等待核验完成';}
+ return {steps,current,label,action,hint};
+}
+function workflow(a){
+ const path=workflowState(a);if(!path)return '';
+ const {steps,current,label,action,hint}=path,index=state.accounts.indexOf(a);
+ return `<ol class="workflow" data-steps="${steps.length}" aria-label="${a.name} ${label}流程">${steps.map((step,i)=>{
+  const active=i===current,clickable=active&&action;
+  const face=`<span class="step-dot" aria-hidden="true">${i<current?icon('check'):i+1}</span><span class="step-label">${step.label}</span>${active?`<span class="step-hint">${hint}</span>`:''}<span class="sr-only">${i<current?'，已完成':active?'，当前步骤':'，尚未完成'}</span>`;
+  return `<li data-step="${step.key}" class="${i<current?'done':''}" ${active?'aria-current="step"':''}>${clickable?`<button class="step-face step-button" data-action="${action}" data-i="${index}">${face}</button>`:`<span class="step-face">${face}</span>`}</li>`;
+ }).join('')}</ol>`;
+}
+function reasons(a){
+ const r=[],primary=status(a).text;
+ if(a.error)r.push(`无法读取 ${a.name==='OpenAI'?'Codex':'Claude Code'} 登录文件：系统拒绝访问`);
+ if(a.expired)r.push(`${a.name==='OpenAI'?'Codex':'Claude Code'} 当前登录授权已过期，需要重新登录`);
+ if(a.stale)r.push('上次报告已过期，不能据此判断当前接单状态');
+ if(a.uncertain)r.push('换号请求已发出，但成功结果尚未确认；只能核对原操作，不能重复换号');
+ if(a.quotaBlocked)r.push('5 小时额度窗口已用尽，当前未提供重置时间');
+ if(a.selected&&a.paused&&primary!=='已暂停接单')r.push(a.stale||a.uncertain?'上次记录：已暂停接单':'已暂停接单');
+ if(!state.running&&a.selected&&primary!=='贡献尚未启动')r.push('贡献尚未启动');
+ return [...new Set(r)];
+}
+function reasonDetails(a,location='row'){
+ const r=reasons(a),key=location+'-'+a.name;
+ if(!r.length&&!a.loginFailed&&!a.changed)return '';
+ if(a.changed&&!a.error&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed){
+  return `<details class="explanation condition-details" data-reasons="${key}" ${expandedReasons.has(key)?'open':''}><summary>换号说明</summary><p>本机当前登录的账号与 Bee 已接入的账号不同。原账号选择仍保留，确认后才会更换。</p><dl class="runtime-facts" aria-label="当前运行状态"><div><dt>本机贡献</dt><dd>${state.running?'运行中':'尚未启动'}</dd></div><div><dt>平台接单</dt><dd>${a.paused?'已暂停':'未手动暂停'}</dd></div></dl></details>`;
+ }
+ let help='';
+ if(a.error)help+=`<p>请检查登录文件所在目录及系统访问权限。当前账号选择仍保留；读取失败不代表已经登出。</p>${workflowState(a)?.action==='source'?'':`<button class="quiet" data-action="source" data-i="${state.accounts.indexOf(a)}">打开读取设置</button>`}<code>检查：file_read<br>结果：permission_denied=true</code>`;
+ if(a.expired)help+='<p>登录将暂停此平台接单。完成后核验身份；发现不同账号时，需要另行确认换号。</p><code>检查：authorization_expiry<br>结果：expired=true</code>';
+ if(a.stale)help+='<p>正在自动核对。确认当前状态前暂不能恢复接单，不会重复提交账号操作。</p>';
+ if(a.uncertain)help+='<code>操作：confirm_change<br>结果：reconciling，尚未确认成功</code>';
+ if(a.loginFailed)help+='<p>安装对应官方客户端后可重新登录。</p>';
+ return `<details class="explanation condition-details" data-reasons="${key}" ${expandedReasons.has(key)?'open':''}><summary>${r.length?'查看原因（'+r.length+'）':'查看处理方法'}</summary>${r.length?`<ul class="condition-list">${r.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${help}</details>`;
+}
+// Remember user disclosure choices when an action updates the same account.
+document.addEventListener('toggle',event=>{const el=event.target;if(!el.matches?.('details[data-reasons]'))return;const key=el.dataset.reasons;if(el.open)expandedReasons.add(key);else expandedReasons.delete(key);},true);
+function btn(label,action,i,primary=false,disabled=false,extra=''){return `<button ${primary?'class="primary"':''} data-action="${action}" data-i="${i}" ${disabled?'disabled':''} ${extra}>${esc(label)}</button>`;}
+function quota(a,expanded=false){
+ if(!a.selected)return '';
+ if(a.error||a.changed||a.expired||a.checking||a.syncing||a.uncertain||state.connection!=='connected')return '<p class="unknown-quota">额度尚未核对</p>';
+ if(a.stale)return '<p class="unknown-quota">上次额度：5 小时已用 3%，7 日已用 2%。当前待核对。</p>';
+ return `<div class="quota">${[['5 小时',a.quotaBlocked?100:3],['7 日',2]].map(([name,p])=>`<div><div class="quota-label"><span>${name}</span><strong>已用 ${p}%</strong></div><div class="bar" role="progressbar" aria-label="${name}已用额度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><div class="fill" style="width:${p}%"></div></div>${expanded?'<p class="muted">重置时间：未知</p>':''}</div>`).join('')}</div>`;
+}
+function pauseButton(a,i,primary=false){
+ if(!a.selected||!state.running||a.uncertain)return '';
+ if(a.paused&&!synchronized(a))return '';
+ if(workflowState(a)?.action==='pause')return '';
+ return btn(a.paused?'恢复接单':'暂停接单','pause',i,primary&&a.paused);
+}
+function actions(a,i){
+ const guided=workflowState(a)?.action;
+ const button=(label,action,primary=false,disabled=false)=>guided===action?'':btn(label,action,i,primary,disabled);
+ let content='';
+ if(a.uncertain)content=btn(a.reconciling?'正在核对…':'核对结果','reconcile',i,true,a.reconciling);
+ else if(a.login)content=btn('取消登录','cancel-login',i);
+ else if(a.loginFailed)content=button('重新登录','login',true);
+ else if(a.error)content=pauseButton(a,i);
+ else if(a.expired)content=button('重新登录','login',true)+pauseButton(a,i);
+ else if(a.checking)content=pauseButton(a,i);
+ else if(a.changed)content=(guided==='change'?'':button(a.reviewed?'继续换号':'核对换号','details',true))+pauseButton(a,i);
+ else if(!a.selected)content=button(a.candidate?'接入账号':`登录 ${a.name}`,a.candidate?'select':'login',true,a.stale);
+ else if(!state.running)content=button('前往概览','overview',true,a.stale);
+ else if(a.quotaBlocked)content=btn('查看额度','details',i)+pauseButton(a,i);
+ else content=pauseButton(a,i,true);
+ content+=`<button class="quiet icon" data-action="details" data-i="${i}" aria-label="${a.name} 详情" title="${a.name} 详情">${icon('arrow')}</button>${marker(3)}`;
+ return content;
+}
+function render(focusAction){
+ state.accounts.forEach(a=>{if(a.journey&&!a.paused&&synchronized(a))a.journey=null;});
+ const count=state.accounts.filter(a=>a.selected).length;
+ main.innerHTML=`<div class="page-head"><h1>AI 账号${marker(1)}</h1><span class="count">${count} 个已接入</span></div><div class="page-subtitle"><p>接入本机账号，管理平台接单。</p><button class="quiet" data-action="hive">Hive 控制台 ${icon('arrow')}</button></div><div class="accounts">${state.accounts.map((a,i)=>{const s=status(a);return `<section class="account" data-platform="${a.name}" aria-label="${a.name} 账号"><div class="account-head"><span class="platform-icon ${i===1?'claude':''}">${icon(i?'sun':'spark')}</span><div class="identity"><div class="platform-line"><h2>${a.name}${marker(2)}</h2><span class="badge">${a.selected?(a.changed||a.error||a.expired?'套餐待确认':i?'Pro':'Plus'):'未接入'}</span></div><p class="identifier">${a.selected?'账号 '+a.id:a.candidate?'已发现账号 '+a.candidateId:'通过官方客户端登录'}</p></div><div class="actions">${actions(a,i)}</div></div><div class="body-copy"><p class="status ${s.kind}" aria-live="polite">${icon(s.kind==='good'?'check':s.kind==='error'||s.kind==='problem'?'alert':!a.selected?'users':state.running&&a.paused?'pause':'monitor')}<span>${s.text}</span></p></div>${workflow(a)}${reasonDetails(a)}${quota(a)}${a.selected&&!state.running&&!a.error&&!a.changed&&!a.expired&&!a.uncertain&&!workflowState(a)?'<p class="action-help">在概览开始贡献。</p>':''}${a.login?`<div class="login-panel" role="status"><strong>请在官方页面完成登录</strong><p>${i?'按官方页面和系统终端提示操作；若出现授权码，请粘贴到终端。':'在 Codex 打开的官方页面完成登录，Bee 将自动核验。'}</p></div>`:''}</section>`;}).join('')}</div><p class="privacy">${icon('shield')}授权信息保留在本机</p>`;
+ $('#side-status').textContent=!count?'尚未接入 AI 账号':state.accounts.some(a=>a.stale||a.uncertain)?'状态待确认':!state.running?'贡献尚未启动':state.accounts.some(a=>synchronized(a)&&!a.paused&&!a.quotaBlocked)?'可接单':state.connection==='reconnecting'?'正在重连':'接单条件尚未满足';
+ if(focusAction)main.querySelector(focusAction)?.focus({preventScroll:true});
+ report();
+}
+function toast(text){clearTimeout(toastTimer);$('#toast').textContent=text;toastTimer=setTimeout(()=>$('#toast').textContent='',2600);}
+function describeNavigation(destination){parent.postMessage({type:'bee-design-navigation',destination},'*');}
+function closeDetail(){
+ const i=detailPlatform;detail.close();detailPlatform=null;
+ const row=main.querySelector(`[data-platform="${state.accounts[i??0].name}"]`);
+ const fallback=returnFocus?.classList.contains('step-button')?(row?.querySelector('.step-button')||row?.querySelector('button[aria-label]')):row?.querySelector('button[aria-label]');
+ (returnFocus?.isConnected?returnFocus:fallback)?.focus({preventScroll:true});
+}
+function showDetail(i,source=false){
+ const a=state.accounts[i];
+ if(!detail.open||detailPlatform!==i){
+  if(!detail.open)returnFocus=document.activeElement;
+  if(a.changed&&!a.uncertain){a.reviewed=true;render();}
+  detailPlatform=i;drawDetail();if(!detail.open)detail.showModal();
+ }
+ if(source){detail.querySelector('.source').open=true;detail.querySelector('input')?.focus();}
+}
+function drawDetail(){
+ const i=detailPlatform,a=state.accounts[i],s=status(a),guided=workflowState(a)?.action;
+ const button=(label,action,primary=false,disabled=false)=>guided===action?'':btn(label,action,i,primary,disabled);
+ detail.innerHTML=`<header><h2 id="detail-title">${a.name} 账号详情</h2>${marker(4)}<button class="quiet icon" data-action="close-detail" aria-label="关闭详情">${icon('close')}</button></header><p class="dialog-subtitle">查看账号、额度与登录来源。</p><dl class="facts"><div><dt>${a.selected?'当前账号':'候选账号'}</dt><dd>${a.selected?a.id:a.candidate?a.candidateId:'尚未发现登录'}</dd></div>${a.selected?`<div><dt>订阅套餐</dt><dd>${a.changed||a.error||a.expired?'待确认':i?'Pro':'Plus'}</dd></div><div><dt>授权到期</dt><dd>${a.expired?'已过期':'未知'}</dd></div>`:''}${a.changed?`<div><dt>要换成</dt><dd>${a.candidateId}</dd></div>`:''}</dl><div class="callout ${a.changed||a.error||a.expired?'warning':''}" role="status">${s.text}</div>${workflow(a)}${reasonDetails(a,'detail')}<div class="sheet-actions">${a.uncertain?btn(a.reconciling?'正在核对…':'核对结果','reconcile',i,true,a.reconciling):a.changed?button('确认换号','change',true):!a.selected&&a.candidate?button('接入账号','select',true,a.checking):''}${!a.uncertain?button(a.selected?'重新登录':`登录 ${a.name}`,'login',a.expired,a.login||a.stale||a.checking):''}${pauseButton(a,i)}</div>${a.selected?`<section class="sheet-section"><h3>额度与重置</h3>${quota(a,true)}</section>`:''}<details open class="source sheet-section"><summary>凭证读取方式</summary><p>只在登录保存在其他位置时修改。留空使用官方默认位置。</p><label>自定义目录<input name="directory" autocomplete="off" spellcheck="false" placeholder="使用官方默认位置" value="${esc(a.source)}" ${a.login||a.uncertain?'disabled':''}></label><label>存储方式<select name="store" ${a.login||a.uncertain?'disabled':''}>${(i?['file','keychain']:['auto','file','keyring']).map(v=>`<option value="${v}" ${a.store===v?'selected':''}>${v==='file'?'文件':v==='auto'?'自动':'钥匙串'}</option>`).join('')}</select></label><small id="source-note">修改读取位置不会自动替换已接入账号。</small></details>`;
+}
+function showConfirm(kind,i){confirmFocus=document.activeElement;const a=state.accounts[i];let title,body,label;if(kind==='select'){title='接入 '+a.name+' 账号';body=`<dl class="facts"><div><dt>目标账号</dt><dd>${a.candidateId}</dd></div><div><dt>平台</dt><dd>${a.name}</dd></div></dl><p>贡献会使用此账号的订阅额度。</p><p>接入后，该平台保持暂停。暂停影响同一 Hive 用户下的该平台。</p><div class="callout">Bee 会自动准备服务；准备完成后，由你恢复接单。</div>`;label='确认接入';}else if(kind==='change'){title='确认更换 '+a.name+' 账号';body=`<dl class="facts"><div><dt>当前账号</dt><dd>${a.id}</dd></div><div><dt>要换成</dt><dd>${a.candidateId}</dd></div></dl><p>贡献将使用新账号的订阅额度。</p><p>更换后保持暂停；暂停影响同一 Hive 用户下的该平台。由你明确恢复接单。</p>`;label='确认更换';}else{title='登录 '+a.name;body=`<p>将调用已安装的 ${i?'Claude Code':'Codex'} 官方客户端，可能改变该客户端当前登录账号。</p><p>${i?'请在官方页面和系统终端中完成登录。':'请在打开的官方页面中完成登录。'}</p><div class="callout">将暂停此平台接单，已接请求可能继续收尾。登录后保持暂停；不同账号需确认换号。</div>`;label='开始官方登录';}confirmDialog.innerHTML=`<h2 id="confirm-title">${title}</h2>${body}<div class="dialog-actions"><button data-action="cancel-confirm">取消</button>${btn(label,'confirm-'+kind,i,true)}</div>`;confirmDialog.showModal();}
+function closeConfirm(){confirmDialog.close();if(confirmFocus?.isConnected)confirmFocus.focus({preventScroll:true});}
+function refresh(focusAction){render(focusAction);if(detail.open){drawDetail();if(focusAction)detail.querySelector('[data-action="pause"]')?.focus({preventScroll:true});}}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b||b.disabled)return;
+ if(b.dataset.nav){describeNavigation(b.dataset.nav);return;}
+ const action=b.dataset.action;if(!action)return;
+ const i=Number(b.dataset.i||0),a=state.accounts[i];
+ if(action==='details'||action==='source'){showDetail(i,action==='source');return;}
+ if(action==='close-detail'){closeDetail();return;}
+ if(action==='cancel-confirm'){closeConfirm();return;}
+ if(action==='overview'||action==='hive'){describeNavigation(action);return;}
+ if(['select','change','login'].includes(action)){
+  if(a.uncertain||a.checking)return;
+  showConfirm(action,i);return;
+ }
+ if(action==='reconcile'){if(a.uncertain&&!a.reconciling){a.reconciling=true;refresh();}return;}
+ if(action==='pause'){
+  if(a.uncertain||a.paused&&!synchronized(a))return;
+  a.paused=!a.paused;
+  refresh(`[data-platform="${a.name}"] [data-action="pause"]`);
+  toast(a.paused?`${a.name} 已暂停接单`:`${a.name} 已解除暂停`);return;
+ }
+ if(action==='cancel-login'){a.login=false;refresh(`[data-platform="${a.name}"] [data-action="login"]`);toast('本次登录已取消');return;}
+ if(action==='confirm-select'||action==='confirm-change'){
+  if(a.uncertain||a.checking)return;
+  a.selected=true;a.id=a.candidateId;a.changed=false;a.paused=true;
+  a.syncing=true;if(action==='confirm-change')a.changeConfirmed=true;
+  closeConfirm();refresh();
+  const scope=detail.open?detail:main.querySelector(`[data-platform="${a.name}"]`);
+  (scope?.querySelector('.step-button')||scope?.querySelector('button[aria-label]'))?.focus({preventScroll:true});
+  toast(action==='confirm-select'?`${a.name} 账号已接入`:`${a.name} 账号已更换`);return;
+ }
+ if(action==='confirm-login'){
+  if(a.uncertain)return;
+  if(!a.journey)a.journey=a.selected?'authorization':'onboarding';
+  a.needsStart=false;a.paused=true;a.login=true;a.loginFailed=false;
+  closeConfirm();if(detail.open)closeDetail();render();
+  main.querySelector(`[data-platform="${a.name}"] [data-action="cancel-login"]`)?.focus({preventScroll:true});
+ }
+});
+detail.addEventListener('cancel',e=>{e.preventDefault();closeDetail();});
+confirmDialog.addEventListener('cancel',e=>{e.preventDefault();closeConfirm();});
+detail.addEventListener('change',e=>{
+ if(detailPlatform===null)return;const a=state.accounts[detailPlatform];
+ if(e.target.name==='directory')a.source=e.target.value;
+ if(e.target.name==='store')a.store=e.target.value;
+ $('#source-note').textContent='读取位置已更新。核验后再确认是否使用此账号。';
+});
+window.addEventListener('message',e=>{
+ if(e.source!==parent||e.data?.type!=='bee-design-control')return;
+ const {action,value}=e.data;
+ if(action==='reset'){reset(value);return;}
+ if(action==='theme')document.documentElement.dataset.theme=value;
+ if(action==='annotations')document.documentElement.classList.toggle('annotated',value);
+ if(action==='start'&&!state.running&&canStart()){
+  state.running=true;state.connection='connecting';
+  state.accounts.forEach(a=>{if(a.selected&&!a.changed&&!a.error&&!a.expired)a.syncing=true;});
+ }
+ if(action==='stop'){
+  state.running=false;state.connection='disconnected';
+  state.accounts.forEach(a=>{a.syncing=false;if(a.journey)a.needsStart=false;if(a.needsStop)a.stopCompleted=true;});
+ }
+ if(action==='login-ok'||action==='login-fail')state.accounts.forEach(a=>{
+  if(!a.login)return;a.login=false;
+  if(action==='login-ok'){a.expired=false;a.candidate=true;a.loginFailed=false;a.checking=true;a.authorizationComplete=true;}
+  else a.loginFailed=true;
+ });
+ if(action==='recover')state.accounts.forEach(a=>{if(a.error){a.error=false;a.checking=true;}});
+ if(action==='verify')state.accounts.forEach(a=>{if(a.checking){a.checking=false;if(a.selected&&a.candidateId!==a.id){a.changed=true;a.journey='change';a.needsStart=!state.running;}}});
+ if(action==='sync'&&state.running){state.connection='connected';state.accounts.forEach(a=>a.syncing=false);}
+ if(action==='reconnect'&&state.connection==='reconnecting'){state.connection='connected';state.accounts.forEach(a=>{if(a.selected)a.syncing=true;});}
+ if(action==='resolve')state.accounts.forEach(a=>{if(a.uncertain&&a.reconciling){a.uncertain=false;a.reconciling=false;a.changed=false;a.id=a.candidateId;a.paused=true;a.journey='change';a.reviewed=true;a.changeConfirmed=true;a.syncing=state.running;}});
+ if(action==='quota-ok')state.accounts.forEach(a=>a.quotaBlocked=false);
+ if(action==='refresh')state.accounts.forEach(a=>a.stale=false);
+ if(!['theme','annotations'].includes(action))refresh();
+});
+reset('change');parent.postMessage({type:'bee-design-ready'},'*');
+</script></body></html>
+</template>
+<script>
+const frame=document.getElementById('screen'),byId=id=>document.getElementById(id);let running=false,showNotes=false;
+const params=new URLSearchParams(location.search);for(const key of ['scene','theme','size']){if([...byId(key).options].some(o=>o.value===params.get(key)))byId(key).value=params.get(key);}
+const send=(action,value)=>frame.contentWindow.postMessage({type:'bee-design-control',action,value},'*');
+function remember(){const url=new URL(location.href);for(const key of ['scene','theme','size'])url.searchParams.set(key,byId(key).value);try{history.replaceState(null,'',url);}catch{}}
+function size(){frame.classList.toggle('narrow',byId('size').value==='narrow');remember();}
+function theme(){document.body.classList.toggle('dark-studio',byId('theme').value==='dark');send('theme',byId('theme').value);remember();}
+function reset(){send('reset',byId('scene').value);byId('feedback').textContent='';remember();}
+byId('scene').addEventListener('change',reset);byId('reset').onclick=reset;byId('size').onchange=size;byId('theme').onchange=theme;
+byId('annotations').onclick=()=>{showNotes=!showNotes;send('annotations',showNotes);byId('annotations').setAttribute('aria-pressed',String(showNotes));byId('annotations').textContent=showNotes?'隐藏讨论标注':'显示讨论标注';byId('notes').hidden=!showNotes;};
+for(const id of ['login-ok','login-fail','recover','verify','sync','reconnect','resolve','quota-ok','refresh'])byId(id).onclick=()=>{send(id);byId('feedback').textContent='已切换模拟条件；此结果只用于讨论界面。';};
+window.addEventListener('message',e=>{if(e.source!==frame.contentWindow)return;const d=e.data;if(d?.type==='bee-design-ready'){reset();theme();send('annotations',showNotes);}if(d?.type==='bee-design-state'){running=d.running;byId('state').textContent=d.names;byId('login-ok').hidden=byId('login-fail').hidden=!d.login;byId('recover').hidden=!d.error;byId('verify').hidden=!d.checking;byId('sync').hidden=!d.syncing;byId('reconnect').hidden=!d.reconnecting;byId('resolve').hidden=!d.resolving;byId('quota-ok').hidden=!d.quotaBlocked;byId('refresh').hidden=!d.stale;}if(d?.type==='bee-design-navigation'){byId('feedback').textContent=d.destination==='overview'?'Bee 运行时自动准备服务；在账户页按平台恢复接单。':d.destination==='hive'?'正式应用会打开 Hive 控制台。本预览不连接外部服务。':'本轮先讨论账户页，其他页面暂不展开。';byId('feedback').scrollIntoView({block:'nearest',behavior:'instant'});}});
+size();frame.srcdoc=document.getElementById('app-template').innerHTML;
+</script>
+</body></html>

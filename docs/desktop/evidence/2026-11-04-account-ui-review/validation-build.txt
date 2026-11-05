@@ -1,0 +1,22 @@
+
+> bee-desktop@0.1.0 build
+> tsc --noEmit && vite build
+
+vite v8.2.4 building client environment for production...
+transforming...
+✓ 2042 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                           0.44 kB │ gzip:   0.28 kB
+dist/assets/app-icon-dark-BCJApSyC.svg    8.13 kB │ gzip:   2.28 kB
+dist/assets/p0-Dfkx2H8f.css               1.16 kB │ gzip:   0.62 kB
+dist/assets/index-DDk3YFrQ.css           56.28 kB │ gzip:  10.57 kB
+dist/assets/P0Page-BWaC_BIn.js            3.63 kB │ gzip:   1.70 kB
+dist/assets/index-T9qwmYrV.js           721.18 kB │ gzip: 216.68 kB
+
+[plugin builtin:vite-reporter]
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rolldownOptions.output.codeSplitting to improve chunking: https://rolldown.rs/reference/OutputOptions.codeSplitting
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 331ms

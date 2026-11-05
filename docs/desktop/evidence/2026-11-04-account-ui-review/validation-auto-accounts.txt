@@ -1,0 +1,32 @@
+[WebServer] (node:81102) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+
+Running 9 tests using 4 workers
+
+(node:81120) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:81122) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:81119) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+(node:81121) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+
+[1/9] [chromium] › tests/preview-auto-accounts.spec.ts:31:1 › candidate connects, prepares automatically, resumes and pauses without a global start
+[2/9] [chromium] › tests/preview-auto-accounts.spec.ts:101:1 › failed login can retry; cancellation rejects late success and stays paused
+[3/9] [chromium] › tests/preview-auto-accounts.spec.ts:76:1 › same-account login pauses only the target; another identity waits for switch confirmation
+[4/9] [chromium] › tests/preview-auto-accounts.spec.ts:53:1 › permission and pause are two collapsed reasons; repair preserves pause and focus
+[5/9] [chromium] › tests/preview-auto-accounts.spec.ts:119:1 › disconnect, simulated restart and stale report preserve the pause choice
+[6/9] [chromium] › tests/preview-auto-accounts.spec.ts:139:1 › lost resume receipt is reconciled without replaying the write
+[7/9] [chromium] › tests/preview-auto-accounts.spec.ts:150:1 › lost connect receipt preserves one operation and confirms the paused result
+[8/9] [chromium] › tests/preview-auto-accounts.spec.ts:160:1 › dark English narrow layout exposes one status and has no horizontal overflow
+[9/9] [chromium] › tests/preview-auto-accounts.spec.ts:175:1 › service preparation failure exposes evidence and a retry preserving pause
+  9 passed (7.4s)

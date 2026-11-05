@@ -12,6 +12,12 @@ import {accountActionBlock,sameAccountFailure,type AccountAction} from './accoun
 import type {UiFailure} from '../../system/failures';
 
 const actions={select:{label:'接入',confirm:'确认接入',description:'将目标账号接入当前设备，并核验 Hive 注册；此 Hive 账号的平台接单将保持暂停，不会开始贡献。'},confirm_change:{label:'换号',confirm:'确认更换',description:'将此平台切换到目标账号，核对 Hive 注册与已有请求收尾；完成后仍保持暂停，不会开始贡献。'},clear_selection:{label:'取消接入',confirm:'确认取消接入',description:'仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。'},authorize:{label:'重新登录',confirm:'开始官方登录',description:'将调用已安装的 {client} 官方客户端，可能改变该客户端当前登录。完成后仅成为候选，不会自动接入、开始贡献或恢复接单。'}};
+const autoDescriptions={
+ select:'将目标账号接入当前设备。请求会使用此账号的订阅额度；Bee 自动准备服务，该平台保持暂停。暂停影响同一 Hive 用户下的该平台。',
+ confirm_change:'将此平台切换到目标账号，之后请求使用新账号的订阅额度。完成后保持暂停；暂停影响同一 Hive 用户下的该平台，其他平台不变。',
+ clear_selection:actions.clear_selection.description,
+ authorize:'将使用 {client} 官方客户端重新登录，并暂停此平台接单；已接请求可能继续收尾。登录后保持暂停，不同账号需确认换号。',
+};
 export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure}){
  const op=accounts.views[platform]?.operation;
  const error=accounts.errors[platform],submissionChanged=error?.code==='ACCOUNT_CONTEXT_CHANGED';
@@ -33,7 +39,7 @@ export function NativeAccountActions({accounts,platform,runtime,placement='row',
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotSent(accounts.errors[platform]!);
- const context={view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
+ const context={autoService:accounts.autoService,view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);
  const candidate=!dirty&&view?.candidate.state==='available'&&!!view.candidate.reference;
  const offered:AccountAction[]=placement==='row'?(selected?[]:[candidate?'select':'authorize']):[
@@ -54,7 +60,7 @@ export function NativeAccountActions({accounts,platform,runtime,placement='row',
    {platform!=='claude'&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<Button variant="outline" disabled={busy} onClick={()=>accounts.cancelAuthorize(platform)}>{t('取消官方登录')}</Button>}
   </div>
   {unique.length>0&&!(platform==='claude'&&op?.kind==='authorize'&&['pending','running','reconciling'].includes(op.state))&&<div className="account-action-help">{unique.map(b=><div key={b.message}><p>{t(b.message)}</p>{b.reason&&<details><summary>{t('查看操作限制')}</summary><code>{b.reason}</code></details>}{b.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(b.target!)}>{t(targetLabel(b.target))}</Button>}</div>)}</div>}
-  {confirm&&<Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content"><Dialog.Title>{actionLabel(confirm.action)}</Dialog.Title><Dialog.Description>{t(actions[confirm.action].description,{client})}</Dialog.Description>
+  {confirm&&<Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content"><Dialog.Title>{actionLabel(confirm.action)}</Dialog.Title><Dialog.Description>{t(accounts.autoService?autoDescriptions[confirm.action]:actions[confirm.action].description,{client})}</Dialog.Description>
    {['select','confirm_change'].includes(confirm.action)&&<dl className="account-detail-facts">{confirm.action==='confirm_change'&&<div><dt>{t('当前账号')}</dt><dd>{confirm.current?.slice(0,16)??t('未知')}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirm.target?.slice(0,16)??t('账号标识待官方核验')}</dd></div><div><dt>{t('平台')}</dt><dd>{label}</dd></div></dl>}
    {changed?<p role="alert">{t('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。')}</p>:block(confirm.action)&&<p role="alert">{t(block(confirm.action)!.message)}</p>}
    <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={!!block(confirm.action)||changed} onClick={()=>{if(confirm.stamp!==stamp()||accountActionBlock(confirm.action,{...context,now:Date.now()})){setConfirm({...confirm});return;}const action=confirm.action;setConfirm(null);if(action==='authorize')accounts.authorize(platform);else accounts.action(platform,action);}}>{t(actions[confirm.action].confirm)}</Button></div>

@@ -1877,7 +1877,7 @@ async fn late_nested_failure_validation_preserves_closed_method_contracts() {
         };
         let failure = serde_json::json!({"error":{"code":code,"message":"fixture failure"}});
         assert!(
-            validate_late_result(&request, &failure, &"f".repeat(32)).is_ok(),
+            validate_method_result(&request, &failure, &"f".repeat(32)).is_ok(),
             "valid failure rejected for {method}"
         );
         for invalid in [
@@ -1888,7 +1888,7 @@ async fn late_nested_failure_validation_preserves_closed_method_contracts() {
             serde_json::json!({"error":{"code":code,"message":""}}),
         ] {
             assert!(
-                validate_late_result(&request, &invalid, &"f".repeat(32)).is_err(),
+                validate_method_result(&request, &invalid, &"f".repeat(32)).is_err(),
                 "invalid nested {method} failure accepted"
             );
         }
@@ -1898,7 +1898,7 @@ async fn late_nested_failure_validation_preserves_closed_method_contracts() {
                 serde_json::json!({"error":{"code":code,"message":"x".repeat(1025)}}),
             ] {
                 assert!(
-                    validate_late_result(&request, &invalid, &"f".repeat(32)).is_err(),
+                    validate_method_result(&request, &invalid, &"f".repeat(32)).is_err(),
                     "method-specific failure restriction bypassed for {method}"
                 );
             }
@@ -1910,7 +1910,7 @@ async fn late_nested_failure_validation_preserves_closed_method_contracts() {
         ("DEVICE_CONTEXT_INVALID", 9_007_199_254_740_992u64),
         ("OTHER_VALID_CODE", 7),
     ] {
-        assert!(validate_late_result(&request,&serde_json::json!({"error":{"code":code,"message":"fixture failure"},"binding_revision":revision}),&"f".repeat(32)).is_err());
+        assert!(validate_method_result(&request,&serde_json::json!({"error":{"code":code,"message":"fixture failure"},"binding_revision":revision}),&"f".repeat(32)).is_err());
     }
 }
 
@@ -1958,5 +1958,119 @@ async fn late_nested_invalid_failure_variants_still_fail_owned_session() {
             Err(tokio::sync::broadcast::error::TryRecvError::Empty)
         ));
         bridge.stop().await.unwrap();
+    }
+}
+
+
+#[tokio::test]
+async fn audit_on_time_invalid_account_reply_fails_session() {
+    let (_dir, bridge, _control) =
+        controlled_bridge(serde_json::json!({"invalidAccount":true}), "parallel-reads").await;
+    let cause = bridge
+        .account_snapshot(SupplyPlatform::Openai, false)
+        .await
+        .unwrap_err();
+    assert_eq!(cause.code, "ACCOUNT_REPLY_INVALID");
+    let phase = wait(&bridge, BridgePhase::Failed).await.state;
+    let ping_ok = bridge.ping().await.is_ok();
+    println!(
+        "audit invalid reply code={}; phase={:?}; subsequent_ping_ok={}",
+        cause.code, phase, ping_ok
+    );
+    bridge.stop().await.unwrap();
+    assert_eq!(
+        phase,
+        BridgePhase::Failed,
+        "an invalid on-time method result must fail closed just like the same late result"
+    );
+    assert!(!ping_ok, "an invalid session must reject further commands");
+}
+
+#[tokio::test]
+async fn on_time_business_failures_preserve_evidence_and_keep_session_ready() {
+    let (_dir, bridge, control) = controlled_bridge(serde_json::json!({}), "parallel-reads").await;
+    for (method, code, binding_revision) in [
+        ("device_recovery_prepare", "DEVICE_RECOVERY_FAILED", None),
+        ("device_recovery_confirm", "http_rejected", None),
+        ("device_recovery_status", "timeout", None),
+        ("network_status", "NETWORK_OPERATION_FAILED", None),
+        ("network_test", "NETWORK_OPERATION_FAILED", None),
+        ("diagnostics_start", "DIAGNOSTICS_OPERATION_FAILED", None),
+        ("diagnostics_snapshot", "DIAGNOSTICS_OPERATION_FAILED", None),
+        ("diagnostics_cancel", "DIAGNOSTICS_OPERATION_FAILED", None),
+        (
+            "notification_snapshot",
+            "NOTIFICATIONS_OPERATION_FAILED",
+            None,
+        ),
+        ("device_context", "DEVICE_CONTEXT_FAILED", None),
+        ("device_context", "DEVICE_CONTEXT_INVALID", Some(7)),
+        ("runtime_start", "RUNTIME_OPERATION_FAILED", None),
+        ("account_action", "ACCOUNT_OPERATION_FAILED", None),
+        ("supply_status", "SUPPLY_OPERATION_FAILED", None),
+    ] {
+        let mut failure = serde_json::json!({"error":{"code":code,"message":"fixture HTTP 503","details":{"check":"read_check","observed_at":"2026-10-30T12:00:00Z","evidence":{"http_status":"503"}}}});
+        if let Some(revision) = binding_revision {
+            failure["binding_revision"] = serde_json::json!(revision);
+        }
+        std::fs::write(
+            &control,
+            serde_json::to_vec(&serde_json::json!({"nestedFailure":failure})).unwrap(),
+        )
+        .unwrap();
+        let reply = bridge
+            .request(
+                method,
+                serde_json::json!({"platform":"openai"}),
+                Duration::from_secs(2),
+            )
+            .await
+            .unwrap();
+        assert_eq!(
+            reply.result, failure,
+            "business failure evidence changed for {method}"
+        );
+        assert_eq!(bridge.status().state, BridgePhase::Ready);
+        bridge.ping().await.unwrap();
+    }
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn on_time_invalid_nested_failures_revoke_owned_session() {
+    for (method, failure, expected_code) in [
+        (
+            "network_test",
+            serde_json::json!({"error":{"code":"NETWORK_OPERATION_FAILED","message":"fixture failure"},"extra":true}),
+            "INVALID_REPLY",
+        ),
+        (
+            "diagnostics_snapshot",
+            serde_json::json!({"error":{"code":"OTHER_VALID_CODE","message":"fixture failure"}}),
+            "DIAGNOSTICS_REPLY_INVALID",
+        ),
+        (
+            "notification_snapshot",
+            serde_json::json!({"error":{"code":"NOTIFICATIONS_OPERATION_FAILED","message":"x".repeat(1025)}}),
+            "NOTIFICATION_REPLY_INVALID",
+        ),
+    ] {
+        let (_dir, bridge, _control) = controlled_bridge(
+            serde_json::json!({"nestedFailure":failure}),
+            "parallel-reads",
+        )
+        .await;
+        let result = bridge
+            .request(method, serde_json::json!({}), Duration::from_secs(2))
+            .await;
+        let status = wait(&bridge, BridgePhase::Failed).await;
+        assert!(
+            bridge.ping().await.is_err(),
+            "invalid {method} session accepted another command"
+        );
+        bridge.stop().await.unwrap();
+        assert_eq!(result.unwrap_err().code, expected_code);
+        assert_eq!(status.state, BridgePhase::Failed);
+        assert!(bridge.pending_requests().requests.is_empty());
     }
 }

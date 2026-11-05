@@ -127,6 +127,11 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	defer r.accounts.lifecycleMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.beginStartLocked(ctx, input, restoring)
+}
+
+// Caller holds the account lifecycle and runtime admission locks together.
+func (r *DesktopRuntime) beginStartLocked(ctx context.Context, input DesktopStartRequest, restoring bool) (DesktopOperation, error) {
 	if err := r.device.recoveryWriteBarrier(); err != nil {
 		return DesktopOperation{}, err
 	}
@@ -173,6 +178,9 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 	// Reserve the session before returning admission, before any cancellable
 	// network verification. Stop cannot observe the old clean recovery marker.
 	reservationErr := r.reserveRuntimeSession(ctx, run, restoring)
+	if errors.Is(reservationErr, errDesktopRuntimeWaiting) && len(input.ResumePlatforms) != 0 {
+		reservationErr = fmt.Errorf("runtime resume requested with no selected accounts: platforms=%d; required=explicit account selection", len(input.ResumePlatforms))
+	}
 	go func() {
 		defer r.workers.Done()
 		defer close(done)
@@ -188,8 +196,11 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 		if r.snapshot.RunID == nil || *r.snapshot.RunID != run || r.snapshot.Local == "stopping" {
 			return
 		}
-		if errors.Is(err, errDesktopRuntimeIdle) {
+		if errors.Is(err, errDesktopRuntimeIdle) || errors.Is(err, errDesktopRuntimeWaiting) {
 			r.snapshot.Local = "stopped"
+			if errors.Is(err, errDesktopRuntimeWaiting) {
+				r.snapshot.Local = "waiting"
+			}
 			r.snapshot.RunID = nil
 			r.snapshot.Revision++
 			r.snapshot.Operation.State = "succeeded"
@@ -522,7 +533,7 @@ func (r *DesktopRuntime) ConfigureNetwork(ctx context.Context, network DesktopNe
 		defer r.mu.Unlock()
 		return fmt.Errorf("network change blocked: closed=%t active_account_actions=%d account_connection=%t", r.closed, len(r.accounts.activeActions), r.controlDone != nil)
 	}
-	if r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" {
+	if r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" && r.snapshot.Local != "waiting" {
 		defer r.mu.Unlock()
 		return fmt.Errorf("network change requires stopped runtime: local=%s", r.snapshot.Local)
 	}

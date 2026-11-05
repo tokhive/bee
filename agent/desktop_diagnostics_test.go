@@ -74,6 +74,22 @@ func diagnosticReadyHandler(w http.ResponseWriter, q *http.Request) {
 	}
 }
 
+func TestDesktopDiagnosticsWaitingIsKnownWithoutContribution(t *testing.T) {
+	service, _, _, runtime := diagnosticFixture(t, diagnosticReadyHandler, false)
+	if _, err := runtime.Restore(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	waitRuntime(t, runtime, func(s DesktopRuntimeSnapshot) bool { return s.Local == "waiting" })
+	first, err := service.Start(context.Background(), strings.Repeat("1", 32))
+	if err != nil {
+		t.Fatal(err)
+	}
+	check := diagnosticCheck(t, waitDiagnostics(t, service, first.ID), "runtime", "")
+	if check.Code != "runtime_waiting" || check.Status != "skipped" || check.Evidence["local"] != "waiting" {
+		t.Fatalf("waiting was reported as an unknown or stopped contribution: %+v", check)
+	}
+}
+
 func TestDesktopDiagnosticsStartCapturesRuntimeContextBeforeDeviceChecks(t *testing.T) {
 	service, device, _, runtime := diagnosticFixture(t, diagnosticReadyHandler, false)
 	original, err := os.ReadFile(device.path)

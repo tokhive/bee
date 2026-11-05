@@ -13,6 +13,14 @@ export const diagnosticReport=()=>({id,instance,run_id:run,network_revision:2,bi
 const reply=(report=diagnosticReport())=>({instance,result:{report}});
 const log=()=>({time:'2026-10-26T03:30:01Z',level:'info',module:'diagnostics',platform:null,code:'hive_identity_verified',evidence:{method:'GET'}});
 const exported=()=>({product:'Bee',app_version:'0.1.0',bee_version:'dev',os:'darwin',arch:'arm64',report:diagnosticReport(),logs:[log()],truncated:false,truncated_sections:[]});
+test('diagnostics accepts explicit waiting while preserving the absence of contribution',()=>{
+ const entry={...log(),module:'runtime',code:'runtime_waiting',evidence:{local:'waiting',connection:'connected'}};
+ assert.deepEqual(decodeLogPage({entries:[entry],next_cursor:null,truncated:false}).entries,[entry]);
+ const report=diagnosticReport() as import('../src/system/diagnostics.ts').DiagnosticReport;
+ report.run_id=null;
+ report.checks=[{id:'runtime',platform:null,status:'skipped',observed_at:entry.time,code:entry.code,evidence:entry.evidence,next_action:'overview'}];
+ assert.deepEqual(decodeDiagnosticReport({instance,result:{report}},instance),report);
+});
 
 test('diagnostic DTOs accept the Rust nullable fields and fixed event shape',()=>{
  assert.deepEqual(decodeDiagnosticReport(reply(),instance),diagnosticReport());

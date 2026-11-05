@@ -394,10 +394,12 @@ func (d *DesktopDiagnostics) run(ctx context.Context, id string) {
 			status, code = "pass", "owned_runtime_connected"
 		} else if runtime.Connection == "occupied" {
 			status, code = "fail", "runtime_ownership_conflict"
-		} else if !slices.Contains([]string{"stopped", "starting", "stopping", "running", "failed"}, runtime.Local) {
+		} else if runtime.Local == "waiting" {
+			status, code = "skipped", "runtime_waiting"
+		} else if !slices.Contains([]string{"stopped", "waiting", "starting", "stopping", "running", "failed"}, runtime.Local) {
 			status, code = "fail", "runtime_unknown"
 		}
-		d.set(id, "runtime", "", status, code, "overview", map[string]string{"local": diagnosticEnum(runtime.Local, []string{"stopped", "starting", "running", "stopping", "failed"}), "connection": diagnosticEnum(runtime.Connection, []string{"connected", "disconnected", "connecting", "reconnecting", "occupied", "rejected"})})
+		d.set(id, "runtime", "", status, code, "overview", map[string]string{"local": diagnosticEnum(runtime.Local, []string{"stopped", "waiting", "starting", "running", "stopping", "failed"}), "connection": diagnosticEnum(runtime.Connection, []string{"connected", "disconnected", "connecting", "reconnecting", "occupied", "rejected"})})
 	}
 	network, _ := d.accounts.OfficialNetwork()
 	upstream := "direct"

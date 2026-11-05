@@ -64,7 +64,11 @@ func TestDesktopRuntimeRecoveryDoesNotStartWithoutCleanIntent(t *testing.T) {
 				return s.Operation != nil && (s.Operation.State == "failed" || s.Operation.State == "succeeded")
 			})
 			idle := scenario == "first" || scenario == "stopped"
-			if idle && (got.Local != "stopped" || got.Operation.State != "succeeded") {
+			idleLocal := "stopped"
+			if scenario == "first" {
+				idleLocal = "waiting"
+			}
+			if idle && (got.Local != idleLocal || got.Operation.State != "succeeded") {
 				t.Fatalf("first/stopped intent incorrectly failed: %+v", got)
 			}
 			if !idle && got.Operation.State != "failed" {

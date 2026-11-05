@@ -11,7 +11,7 @@ export interface ConnectionFailure {code:'dns_failed'|'tls_failed'|'connection_r
 export interface ConnectionDetail {failure:ConnectionFailure|null;retry:'idle'|'attempting'|'scheduled'|'halted';next_retry_at:string|null}
 export interface RuntimeSnapshot {
  run_id:string|null;revision:number;network_revision:number;observed_at:string;
- local:'stopped'|'starting'|'running'|'stopping'|'failed';
+ local:'stopped'|'waiting'|'starting'|'running'|'stopping'|'failed';
  connection:'disconnected'|'connecting'|'connected'|'reconnecting'|'rejected'|'occupied';
  connection_detail:ConnectionDetail|null;
  platforms:Record<AccountPlatform,{account:AccountSnapshot;supply:SupplyView|null;selection_revision:number}>;
@@ -82,7 +82,7 @@ export function decodeRuntimeSnapshot(reply:unknown,instance:string):RuntimeSnap
  const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','connection_detail','platforms','operation','stop_receipt'],'runtime');
  if(s.run_id!==null&&(typeof s.run_id!=='string'||!/^[a-f0-9]{32}$/.test(s.run_id)))invalid('run_id requires null or 32 lowercase hex');
  integer(s.revision,'revision');integer(s.network_revision,'network_revision');timestamp(s.observed_at,'observed_at');
- oneOf(s.local,['stopped','starting','running','stopping','failed'],'local');oneOf(s.connection,['disconnected','connecting','connected','reconnecting','rejected','occupied'],'connection');
+ oneOf(s.local,['stopped','waiting','starting','running','stopping','failed'],'local');oneOf(s.connection,['disconnected','connecting','connected','reconnecting','rejected','occupied'],'connection');
  connectionDetail(s.connection_detail);
  const platforms=object(s.platforms,['openai','claude'],'platforms');
  for(const platform of ['openai','claude'] as const){

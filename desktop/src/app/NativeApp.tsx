@@ -29,6 +29,8 @@ import type {Page} from '../client/types';
 import {t,useLanguage} from '../i18n/index';
 
 interface NativeProps {
+ /** Target account experience, enabled only by the development mock entry. */
+ autoService?:boolean;
  client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;systemBridge:SystemBridge;
  updateClient:UpdateClient;preferencesClient:PreferencesClient;notificationsClient:ReturnType<typeof createNotificationsClient>;networkClient:NetworkClient;
  diagnosticsFactory:(instance:string|undefined,networkRevision:number,runId?:string|null,bindingRevision?:number)=>DiagnosticsClient;
@@ -50,7 +52,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const [settingsDraft,setSettingsDraft]=useState<NativeSettingsDraft>({control:{operation:null,networkRead:0,permissionRead:0,autostartRead:0,deliveryRead:0}});
  const [sourceDirectories,setSourceDirectories]=useState<Partial<Record<'openai'|'claude',string>>>({});
  const setSourceDirectory=useCallback((platform:'openai'|'claude',value:string)=>setSourceDirectories(v=>({...v,[platform]:value})),[]);
- const presentation=deriveDesktopStatus(snapshot,Date.now());
+ const presentation=deriveDesktopStatus(snapshot,Date.now(),props.autoService);
  const requestNavigation=(target:NavigationTarget)=>{setPage(target.page);setNavigationRequest(v=>({target,sequence:v.sequence+1}));};
  const navigate=(target:NavigationTarget)=>{
   if(!validNavigationTarget(target))return;
@@ -113,7 +115,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
  const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
  const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
@@ -121,7 +123,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const sharedProblem=snapshot.error??identityFailure(snapshot)??null;
  const showSharedProblem=ready&&!!sharedProblem;
  useEffect(()=>{diagnostics.setContext(snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0);},[diagnostics,snapshot.runtime?.network_revision,snapshot.runtime?.run_id,snapshot.bindingRevision]);
- return <AppShell desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={view?.identity?.name??snapshot.deviceContext?.name} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
+ return <AppShell autoService={props.autoService} desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={view?.identity?.name??snapshot.deviceContext?.name} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
   {!ready&&<StatusView kind={native.state==='starting'?'loading':'error'} title={t('原生管理进程')} announceError={!native.error}>{native.error?<FailureNotice failure={native.error} check="bridge_startup" onNavigate={navigate}/>:t('正在读取 Bee…')}</StatusView>}
   {showSharedProblem&&page!=='overview'&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
   {ready&&page!=='overview'&&snapshot.startup?.state==='checking'&&<p role="status">{t('正在重新检查设备…')}</p>}

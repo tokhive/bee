@@ -96,7 +96,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  const publicAccountFailure=(p,code,check,message,evidence={})=>({platform:p,code,check,message,evidence});
  const commandFailure=(kind,code,check,actual,required)=>({instance,result:{error:{code:kind==='authorize'?'AUTHORIZE_OPERATION_FAILED':'ACCOUNT_OPERATION_FAILED',message:`${code}: check=${check}; actual=${actual}; required=${required}`}}});
  const freshID=()=>crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','').slice(0,16);
- const finishAuthorization=(job,value,failure)=>{
+ const finishAuthorization=(job,value,failure,identity)=>{
   const p=job.platform;
   if(accounts[p].operation?.id!==job.operation.id||!['pending','running'].includes(job.operation.state))throw new Error(`PREVIEW_LOGIN_STALE: platform=${p}; operation=${job.operation.id}; current=${accounts[p].operation?.id??'none'}; state=${job.operation.state}; required=current active login`);
   const currentSource=sourceRecord(p,job.source);
@@ -106,7 +106,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   }
   if(value==='succeeded'){
    const record=sourceRecord(p,job.source);
-   accountSources.set(sourceKey(p,job.source),{...record,value:'available',revision:record.revision+1,fingerprint:(crypto.randomUUID()+crypto.randomUUID()).replaceAll('-',''),expires_at:'2099-01-01T00:00:00Z',official:scenarios.previewSources?emptyOfficial(p):null});
+   accountSources.set(sourceKey(p,job.source),{...record,value:'available',revision:record.revision+1,fingerprint:identity==='same'?(accounts[p].selection.fingerprint??record.fingerprint):(crypto.randomUUID()+crypto.randomUUID()).replaceAll('-',''),expires_at:'2099-01-01T00:00:00Z',official:scenarios.previewSources?emptyOfficial(p):null});
    detectAccount({platform:p,...job.source,mode:'official'});
   }else{
    accounts[p].candidate={...accounts[p].candidate,state:'not_checked',reference:null,source:null,fingerprint:null,identity_verified:false,error:null};delete detectedSources[p];
@@ -116,11 +116,18 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   a.operation=structuredClone(job.operation);
   return structuredClone(job.operation);
  };
+ if(scenarios.autoService)accountControls['account-refresh']=request=>{
+  const p=request.platform,a=accounts[p];
+  if(request.value!=='same-account'||!a||a.selection.state!=='selected'||!a.candidate.source||a.operation&&['pending','running','reconciling'].includes(a.operation.state))throw new Error(`PREVIEW_REFRESH_BLOCKED: platform=${p}; selected=${a?.selection.state}; source=${!!a?.candidate.source}; required=selected readable account without active operation`);
+  detectAccount({platform:p,...a.candidate.source,mode:'official'});
+  return {message:'已模拟同账号后台刷新，接单选择保持不变。'};
+ };
  accountControls['login-result']=request=>{
   const {platform,operationId,value}=request,job=loginJobs.get(operationId);
-  if(!['succeeded','failed'].includes(value))throw new Error(`PREVIEW_LOGIN_RESULT_INVALID: value=${value}; required=succeeded or failed`);
+  if(!['succeeded','succeeded-same','failed'].includes(value))throw new Error(`PREVIEW_LOGIN_RESULT_INVALID: value=${value}; required=succeeded, succeeded-same or failed`);
   if(!job||job.platform!==platform)throw new Error(`PREVIEW_LOGIN_STALE: platform=${platform}; operation=${operationId}; required=current owned login for the selected platform`);
-  const result=finishAuthorization(job,value);
+  const result=finishAuthorization(job,value==='succeeded-same'?'succeeded':value,undefined,value==='succeeded-same'?'same':'different');
+  if(scenarios.autoService&&result.state==='succeeded'&&accounts[platform].selection.state==='selected')return {message:value==='succeeded-same'?'原账号登录已核验，接单保持暂停。':'新身份已核验，等待确认换号。'};
   return {message:`${platform==='openai'?'OpenAI':'Claude'} 登录${result.state==='succeeded'?'已完成核验，仅生成候选，尚未接入':'失败；可在正式账号页核对具体原因后继续'}。`};
  };
  const authorizeCommand=async(command,args)=>{
@@ -130,10 +137,11 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    if(a.operation&&['pending','running','reconciling'].includes(a.operation.state))return commandFailure('authorize','operation_pending','platform_operation',a.operation.state,'no active platform operation');
    if(request.expected_revision!==a.revision)return commandFailure('authorize','stale_revision','expected_revision',request.expected_revision,a.revision);
    const currentLocal=w.__beeMockRuntimeLocal?.()??local;
-   if(!['stopped','failed'].includes(currentLocal))return commandFailure('authorize','runtime_dependency','runtime_state',currentLocal,'stopped or failed contribution');
+   if(!(scenarios.autoService?['stopped','failed','running']:['stopped','failed']).includes(currentLocal))return commandFailure('authorize','runtime_dependency','runtime_state',currentLocal,scenarios.autoService?'stopped, failed or running service':'stopped or failed contribution');
    if(p==='claude'&&request.source.store!=='keychain')return commandFailure('authorize','authorization_namespace_mismatch','official_namespace',request.source.store,'keychain on darwin');
    if(w.accountScenarios.unsupportedStores?.[request.source.store])return commandFailure('authorize','unsupported_store','official_namespace',request.source.store,'supported store');
    for(const [id,job]of loginJobs)if(job.platform===p)loginJobs.delete(id);
+   if(scenarios.autoService)w.paused[p]=true;
    const operation={id:freshID(),kind:'authorize',platform:p,state:'running',revision:++a.revision,error:null};
    loginJobs.set(operation.id,{platform:p,source:structuredClone(request.source),sourceRevision:sourceRecord(p,request.source).revision,operation});
    a.operation=structuredClone(operation);a.candidate={...a.candidate,state:'not_checked',reference:null,source:null,fingerprint:null,identity_verified:false,error:null};delete detectedSources[p];

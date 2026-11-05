@@ -8,6 +8,8 @@ const hold=()=>new Promise(()=>{});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function installPreviewFixture(id){
  const scene=getScene(id),w=window;
+ const autoService=id.startsWith('accounts-auto-');
+ if(autoService)id=({'candidate':'account-candidate',empty:'account-empty',running:'running',paused:'supply-paused',error:'account-error',change:'account-change',stale:'running'})[id.slice('accounts-auto-'.length)];
  const generation=crypto.randomUUID();w.__beePreviewFixture=generation;
  w.__beePreviewSession=new URLSearchParams(location.search).get('session')??generation;
  const current=()=>w.__beePreviewFixture===generation;
@@ -36,22 +38,25 @@ export async function installPreviewFixture(id){
  if(id==='account-expired')accounts.openai.candidate.expires_at=stamp(-60000);
  if(id==='quota-unknown')accounts.openai.capabilities[0]={...accountFixture('openai').capabilities[0]};
  if(id==='quota-expired')accounts.openai.capabilities[0].valid_until=stamp(-60000);
- if(id==='quota-multiple')accounts.claude=seeded('claude');
+ if(id==='quota-multiple'||autoService&&id==='running')accounts.claude=seeded('claude');
  if(id==='quota-multiple')accounts.claude.capabilities[0].windows.push({scope:'opus',seconds:604800,used_percent:47,reset_at:'2099-01-01T00:00:00Z'});
  if(id==='quota-over')accounts.openai.capabilities[0].windows[0].used_percent=120;
  if(id==='account-error')accounts.openai.candidate={...accountFixture('openai').candidate,state:'unavailable',error:{code:'source_unavailable',check:'file_read',platform:'openai',message:'无法读取 OpenAI 登录：file_read permission_denied=true；预览模拟权限拒绝。',evidence:{permission_denied:'true',path:'/preview/codex/auth.json'}}};
  if(id==='device-revoked-source-missing')accounts.openai.candidate={...accounts.openai.candidate,state:'source_missing',error:{code:'source_missing',check:'source_read',platform:'openai',message:'selected file missing: /isolated/qa/codex/auth.json',evidence:{not_found:'true',path:'/isolated/qa/codex/auth.json'}}};
  const params=new URLSearchParams(location.search);
- installAccountFixture({accounts,runtimeEnabled:true,scenarios:{previewSources:true},initialPreferences:{language:params.get('locale')==='en'?'en':'zh',theme:['light','dark','system'].includes(params.get('theme'))?params.get('theme'):'light',autostart_desired:id==='settings-system'}});
+ installAccountFixture({accounts,runtimeEnabled:true,scenarios:{previewSources:true,autoService},initialPreferences:{language:params.get('locale')==='en'?'en':'zh',theme:['light','dark','system'].includes(params.get('theme'))?params.get('theme'):'light',autostart_desired:id==='settings-system'}});
  if(id==='settings-system'){
   w.notificationPermission='denied';
   w.autostartQueryError={code:'AUTOSTART_QUERY_FAILED',message:'autostart query failed: kind=PermissionDenied os_code=13; registration unconfirmed'};
  }
- w.paused={openai:id==='supply-paused',claude:false};
+ w.paused={openai:id==='supply-paused'||autoService&&id==='account-error',claude:false};
  let local=['runtime-no-accounts','runtime-accounts-unconfirmed','device-revoked-source-missing','startup-blocked','stopped','runtime-unknown','confirm-login','confirm-select','confirm-change','confirm-clear','account-candidate','account-empty','account-change'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
  if(id==='runtime-starting')local='starting';if(id==='runtime-stopping')local='stopping';
  if(local==='stopped'&&w.accounts.openai.selection.state==='selected')w.paused.openai=true;
  if(id==='diagnostics-export-unknown'){w.previewDownloads=[];HTMLAnchorElement.prototype.click=function(){w.previewDownloads.push(this.download);};}
+ if(autoService)local='running';
+ const preparingAccounts=new Map();
+ let preparingUntil=0,staleSupply=scene.id==='accounts-auto-stale',supplyUnknownNext=false,prepareFailure=false;
  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
  if(id.startsWith('recovery-')||id==='device-recovery-confirm')local='stopped';
  let bound=!(id.startsWith('device-')&&id!=='device-bound'||id.startsWith('recovery-')&&id!=='recovery-completed'||id==='startup-blocked');
@@ -84,6 +89,26 @@ export async function installPreviewFixture(id){
   unknownNext=request.value==='unknown-next';
   return {message:unknownNext?'下一次贡献启停将提交后丢失回执；正式页面只读核对原操作。':'贡献启停回执已恢复正常。'};
  };
+ if(autoService){
+  w.__beeMockControls['account-service']=request=>{
+   if(!['ready','failed','restart','stale','fresh'].includes(request.value))throw new Error(`PREVIEW_SERVICE_INVALID: value=${request.value}; required=ready,failed,restart,stale,fresh`);
+   if(request.value==='stale'||request.value==='fresh')staleSupply=request.value==='stale';
+   else if(request.value==='restart'){local='starting';preparingUntil=Date.now()+600;activeRun=crypto.randomUUID().replaceAll('-','');}
+   else {prepareFailure=request.value==='failed';local=prepareFailure?'failed':'running';preparingUntil=0;}
+   if(request.value==='failed')runtimeOperation={id:crypto.randomUUID().replaceAll('-','')+'0'.repeat(16),kind:'start',platform:null,state:'failed',revision:revision+1,error:{platform:'openai',code:'preparation_failed',check:'service_prepare',message:'service_prepare: local worker unavailable; simulated_failure=true; required=ready worker',evidence:{confirmed:'false'}}};
+   if(['ready','restart'].includes(request.value))runtimeOperation=null;
+   revision++;
+   return {message:'模拟服务条件已更新，平台接单选择保持不变。'};
+  };
+  w.__beeMockControls['supply-write-result']=request=>{
+   if(!['confirmed','unknown-next'].includes(request.value))throw new Error(`PREVIEW_SUPPLY_RESULT_INVALID: value=${request.value}; required=confirmed,unknown-next`);
+   supplyUnknownNext=request.value==='unknown-next';return {message:'接单操作回执条件已更新。'};
+  };
+  w.__beeMockControls['account-operation-result']=request=>{
+   if(!['confirmed','unknown-next'].includes(request.value))throw new Error(`PREVIEW_ACCOUNT_RESULT_INVALID: value=${request.value}; required=confirmed,unknown-next`);
+   w.actionUnknown=request.value==='unknown-next';return {message:'账号操作回执条件已更新。'};
+  };
+ }
  const lostReceipt=command=>{
   if(!unknownNext)return;
   unknownNext=false;
@@ -112,14 +137,20 @@ export async function installPreviewFixture(id){
   if(id==='supply-blocked')reasons.push('authorization_unavailable','quota_unknown','plan_not_configured');
   if(id==='supply-partial'&&platform==='claude')reasons.push('model_unavailable');
   if(id==='account-expired'&&platform==='openai')reasons.push('authorization_unavailable');
-  if(id==='account-error'&&platform==='openai')reasons.push('codex_source_unavailable');
+  if(!autoService&&id==='account-error'&&platform==='openai')reasons.push('codex_source_unavailable');
+  if(autoService&&w.accounts[platform].selection.state==='selected'){
+   const a=w.accounts[platform];
+   if(preparingAccounts.has(platform))reasons.push('authorization_unavailable');
+   if(a.candidate.error)reasons.push(`${platform==='openai'?'codex':'claude'}_source_unavailable`);
+   if(a.operation?.kind==='authorize'&&['pending','running','reconciling'].includes(a.operation.state))reasons.push('authorization_unavailable');
+  }
   if(platform==='openai'){
    if(id==='quota-over')reasons.push('quota_exhausted');
-   if(['quota-unknown','quota-expired','account-change','confirm-change'].includes(id))reasons.push('quota_unknown');
+   if((!autoService&&['account-change','confirm-change'].includes(id))||['quota-unknown','quota-expired'].includes(id))reasons.push('quota_unknown');
    const account=w.accounts.openai;
    if(account.selection.state==='selected'&&account.candidate.fingerprint&&account.candidate.fingerprint!==account.selection.fingerprint)reasons.push('codex_confirmation_required');
   }
-  return {hive:origin,device_id:deviceSession.binding().device_id,platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
+  return {hive:origin,device_id:deviceSession.binding().device_id,platform,paused:w.paused[platform],ready:reasons.length===0,reasons,checked_at:stamp(staleSupply?-60000:id==='check-expired'?-29900:id==='check-sequence'&&reads[platform]===1?-28500:0)};
  };
  const recoveryWriteCodes={account_action:'ACCOUNT_OPERATION_FAILED',authorize_start:'AUTHORIZE_OPERATION_FAILED',runtime_start:'RUNTIME_OPERATION_FAILED',supply_set_paused:'SUPPLY_OPERATION_FAILED',network_apply_saved:'DEVICE_RECOVERY_RECHECK_REQUIRED'};
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
@@ -149,7 +180,7 @@ export async function installPreviewFixture(id){
    if(pending)return businessError('RUNTIME_OPERATION_FAILED',`runtime start blocked: unresolved account operation platform=${pending[0]}; state=${pending[1].operation.state}`,instance);
    const changed=Object.entries(w.accounts).find(([,a])=>a.selection.state==='selected'&&a.candidate.fingerprint&&a.candidate.fingerprint!==a.selection.fingerprint);
    if(changed)return businessError('RUNTIME_OPERATION_FAILED',`runtime account confirmation required: platform=${changed[0]}; candidate differs from persisted selection`,instance);
-   local='running';activeRun=crypto.randomUUID().replaceAll('-','');revision++;stopReceipt=null;
+   local='running';prepareFailure=false;activeRun=crypto.randomUUID().replaceAll('-','');revision++;stopReceipt=null;
    for(const p of resume)w.paused[p]=false;
    runtimeOperation={id:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','').slice(0,16),kind:'start',platform:null,state:'succeeded',revision,error:null};
    if(id==='runtime-unknown'){unknown=true;throw new Error('RESPONSE_TIMEOUT: runtime_start preview response lost; submitted=true; result=unconfirmed');}
@@ -167,10 +198,24 @@ export async function installPreviewFixture(id){
    return {instance,result:{operation:clone(runtimeOperation)}};
   }
   if(command==='runtime_snapshot'){
+   for(const [platform,preparation] of preparingAccounts)if(Date.now()>=preparation.deadline){
+    preparingAccounts.delete(platform);const account=w.accounts[platform];
+    if(account.revision===preparation.revision&&account.authorization.state==='preparing'&&account.selection.fingerprint===preparation.fingerprint){account.authorization.state='official_identity_verified';account.revision++;}
+   }
+   if(autoService&&preparingUntil&&Date.now()>=preparingUntil){local=prepareFailure?'failed':'running';preparingUntil=0;revision++;}
    w.calls.push({command,args});
    if(id==='runtime-accounts-unconfirmed')return businessError('RUNTIME_OPERATION_FAILED','runtime snapshot unavailable; account facts not confirmed',instance);
    if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
    return {instance,result:{runtime:{run_id:runId(),revision,network_revision:w.networkRevision??0,observed_at:stamp(0),local,connection,connection_detail:connectionDetail(),platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:local==='running'&&connection==='connected'&&!id.startsWith('check-')&&!(id==='supply-partial'&&p==='claude')?supply(p):null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+  }
+  if(autoService&&command==='account_action'){
+   const previous=w.accounts[args.request.platform]?.operation?.id;
+   try{return await original(command,args);}
+   finally{
+    w.actionUnknown=false;
+    const operation=w.accounts[args.request.platform]?.operation;
+    if(operation?.id!==previous&&operation?.state==='succeeded'&&['select','confirm_change'].includes(operation.kind)){const p=args.request.platform,account=w.accounts[p];account.authorization.state='preparing';account.revision++;preparingAccounts.set(p,{deadline:Date.now()+600,revision:account.revision,fingerprint:account.selection.fingerprint});revision++;}
+   }
   }
   if(command==='account_detect'||command==='account_snapshot'){
    const p=args.request?.platform??args.platform;
@@ -187,21 +232,22 @@ export async function installPreviewFixture(id){
     if(!args.paused&&account.operation&&['pending','running','reconciling'].includes(account.operation.state))return businessError('SUPPLY_OPERATION_FAILED',`resume blocked: platform=${p}; account_operation=${account.operation.state}; required=no pending account operation`);
     if(!args.paused&&account.candidate.fingerprint&&account.candidate.fingerprint!==account.selection.fingerprint)return businessError('SUPPLY_OPERATION_FAILED',`resume blocked: account confirmation required; platform=${p}; candidate differs from persisted selection`);
     w.paused[p]=args.paused;
+    if(supplyUnknownNext){supplyUnknownNext=false;throw Object.assign(new Error(`RESPONSE_TIMEOUT: supply_set_paused response lost; platform=${p}; submitted=true; result=unconfirmed`),{code:'RESPONSE_TIMEOUT'});}
    }
    if(command==='supply_status'){
     reads[p]++;
     if(networkUnavailable)return businessError('SUPPLY_OPERATION_FAILED',`GET supply_status HTTP 503; platform=${p}; attempt=${reads[p]}; preview upstream unavailable`,undefined,{check:'supply_status',observed_at:stamp(0),evidence:{failure_kind:'http_rejected',http_status:'503',method:'GET',platform:p}});
-    if(id==='supply-partial'&&p==='claude')return businessError('SUPPLY_OPERATION_FAILED','GET supply_status HTTP 503; platform=claude; preview upstream unavailable');
+    if(id==='supply-partial'&&p==='claude')return businessError('SUPPLY_OPERATION_FAILED','GET supply_status HTTP 503; platform=claude; preview upstream unavailable',undefined,{check:'supply_status',observed_at:stamp(0),evidence:{failure_kind:'http_rejected',http_status:'503',method:'GET',platform:'claude'}});
     if(p==='openai'){
      if(id==='check-expired'&&reads[p]>1){phase('expired');return hold();}
      if(['check-waiting','check-retrying'].includes(id)){
       if(id==='check-retrying'&&reads[p]>1){phase('retrying');return hold();}
-      phase('waiting');return businessError('SUPPLY_OPERATION_FAILED',`GET supply_status HTTP 503; platform=${p}; attempt=${reads[p]}; preview upstream unavailable`);
+      phase('waiting');return businessError('SUPPLY_OPERATION_FAILED',`GET supply_status HTTP 503; platform=${p}; attempt=${reads[p]}; preview upstream unavailable`,undefined,{check:'supply_status',observed_at:stamp(0),evidence:{failure_kind:'http_rejected',http_status:'503',method:'GET',platform:p}});
      }
      if(id==='check-background'){phase('background');await wait(1600);}
      if(id==='check-sequence'){
       if(reads[p]===1)phase('current');
-      if(reads[p]===2){phase('expired');await wait(1000);phase('waiting');return businessError('SUPPLY_OPERATION_FAILED','GET supply_status HTTP 503; platform=openai; attempt=2; preview upstream unavailable');}
+      if(reads[p]===2){phase('expired');await wait(1000);phase('waiting');return businessError('SUPPLY_OPERATION_FAILED','GET supply_status HTTP 503; platform=openai; attempt=2; preview upstream unavailable',undefined,{check:'supply_status',observed_at:stamp(0),evidence:{failure_kind:'http_rejected',http_status:'503',method:'GET',platform:p}});}
       if(reads[p]===3){phase('retrying');await wait(3000);phase('recovered');}
      }
      if(id==='check-recovered')phase('recovered');

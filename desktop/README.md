@@ -30,6 +30,16 @@ npm --prefix desktop run dev:ui
 
 `dev:demo` 和 `build:demo` 保留历史五页演示及其回归测试用途，包含已移出当前产品范围的收益页面。当前 UI 开发使用 `dev:ui`。普通 `dev` 供 Tauri 和测试启动 Vite，在浏览器直接打开根路径不会自动获得正式 mock。
 
+### 账户目标交互（mock）
+
+场景选择器中的“账户目标交互（mock）”用于验证已确认的新交互：服务自动准备，平台分别暂停／恢复；首次接入、主动重新登录和确认换号后保持暂停。每个账号突出一条状态，原因默认折叠，同因去重、独立条件保留。
+
+从[候选接入](http://127.0.0.1:1420/tests/fixtures/bee-preview/index.html?scene=accounts-auto-candidate&theme=light&size=narrow)连续操作，或使用 `accounts-auto-empty`、`accounts-auto-running`、`accounts-auto-paused`、`accounts-auto-error`、`accounts-auto-change`、`accounts-auto-stale` 检查对应起点。错误场景包含“读取权限不足＋手动暂停”；展开原因后可进入读取设置，修复权限后仍需明确恢复接单。
+
+“模拟外部条件”支持当前登录成功（原账号／不同账号）、失败，以及同账号后台刷新、服务准备失败、同会话模拟重启、报告过期／恢复、写入回执丢失。登录取消和准备重试使用页面按钮。先操作页面产生登录事务，再设置对应登录结果；回执丢失控制需在下一次写入前设置。
+
+目标行为仅在开发模式下、`/tests/fixtures/bee-preview/app.html` 路径且场景以 `accounts-auto-` 开头时启用。其余场景及原生运行仍按现有规则操作；未将模拟自动运行接入真实 Go／Rust／Tauri 后台。模拟重启只验证当前会话中的暂停选择，不证明真实磁盘持久化。详见[规格](../docs/desktop/auto-service-design.md)与[验收记录](../docs/desktop/evidence/2026-11-04-account-ui-review/auto-service-validation.md)。
+
 ## 一键构建 macOS App
 
 在当前源码 checkout 的仓库根目录执行：
@@ -48,7 +58,7 @@ open "desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app"
 
 `make build` 继续只编译 CLI；本命令不使用演示模式，也不执行登录、接入或贡献操作。当前设计、分层接口和验收缺口见[文档总入口](../docs/desktop/README.md)。
 
-## 当前行为与文档
+## 当前原生行为与文档
 
 已绑定设备在启动核验后可连接 Hive；“设备在线”“贡献运行”“平台可接单”分别表示不同事实。开始贡献、接入／换号、解除暂停由用户明确操作。普通查询超时保留管理进程和原请求，原请求结束后按资源退避核对，写操作不自动重放。
 

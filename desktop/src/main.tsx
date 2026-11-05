@@ -42,7 +42,7 @@ async function mount() {
     return;
   }
   if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
-    root.render(<React.StrictMode><NativeApp updateClient={createUpdateClient(invoke)} preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
+    root.render(<React.StrictMode><NativeApp autoService={import.meta.env.DEV && location.pathname === '/tests/fixtures/bee-preview/app.html' && (params.get('scene')?.startsWith('accounts-auto-') ?? false)} updateClient={createUpdateClient(invoke)} preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

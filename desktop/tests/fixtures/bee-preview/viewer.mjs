@@ -7,8 +7,12 @@ const events={
  'notification-permission':['通知系统权限',[['prompt','待询问'],['granted','已允许'],['denied','已拒绝']]],
  'autostart-registration':['自启注册条件',[['available','可正常注册'],['fail','注册失败']]],
  'account-source':['账号来源条件',[['available','来源可读取'],['missing','来源不存在'],['denied','读取被拒绝']]],
- 'login-result':['当前登录结果',[['succeeded','登录成功'],['failed','登录失败']]],
+ 'login-result':['当前登录结果',[['succeeded','登录成功（新身份）'],['succeeded-same','登录成功（原账号）'],['failed','登录失败']]],
  'runtime-connection':['设备网络连接',[['online','网络恢复'],['offline','网络断开'],['connecting','正在连接'],['rejected','凭据被拒绝'],['occupied','连接被占用']]],
+ 'account-refresh':['账号后台刷新',[['same-account','同账号凭据刷新']]],
+ 'account-service':['账户服务条件',[['ready','服务准备完成'],['failed','服务准备失败'],['restart','模拟服务重启'],['stale','报告过期'],['fresh','报告恢复']]],
+ 'supply-write-result':['接单操作回执',[['confirmed','正常返回'],['unknown-next','下次回执丢失']]],
+ 'account-operation-result':['账号操作回执',[['confirmed','正常返回'],['unknown-next','下次回执丢失']]],
  'runtime-write-result':['贡献操作回执',[['confirmed','正常返回结果'],['unknown-next','下一次提交后丢失回执']]],
  'network-fault':['代理操作条件',[['none','恢复正常'],['save','保存失败'],['apply','应用失败'],['unknown','应用后丢失回执']]],
  'diagnostics-result':['当前诊断结果',[['completed','诊断完成'],['read-failed','读取失败'],['available','恢复读取']]],
@@ -26,7 +30,7 @@ document.querySelector('#event-platform').addEventListener('change',sourceOption
 function eventFields(){
  const definition=events[eventKind.value];eventValue.replaceChildren();
  if(definition)for(const [value,label]of definition[1]){const option=new Option(label,value);eventValue.append(option);}
- for(const node of document.querySelectorAll('[data-event-platform]'))node.hidden=!['account-source','login-result'].includes(eventKind.value);
+ for(const node of document.querySelectorAll('[data-event-platform]'))node.hidden=!['account-source','login-result','account-refresh'].includes(eventKind.value);
  for(const node of document.querySelectorAll('[data-event-source]'))node.hidden=eventKind.value!=='account-source';
  sourceOptions();
 }

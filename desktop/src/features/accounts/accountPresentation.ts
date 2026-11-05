@@ -18,7 +18,7 @@ export function accountPresentation(snapshot:AccountSnapshot|undefined,dirty:boo
 }
 
 export type AccountAction='select'|'confirm_change'|'clear_selection'|'authorize';
-export interface AccountActionContext {view:AccountSnapshot|undefined;platform:AccountPlatform;now:number;dirty:boolean;busy:boolean;unknown:boolean;submissionBlocked:boolean;sharedReadFailure?:UiFailure|null;defaultsReady:boolean;runtime:{local:string}|undefined;runtimeBlocked:boolean}
+export interface AccountActionContext {autoService?:boolean;view:AccountSnapshot|undefined;platform:AccountPlatform;now:number;dirty:boolean;busy:boolean;unknown:boolean;submissionBlocked:boolean;sharedReadFailure?:UiFailure|null;defaultsReady:boolean;runtime:{local:string}|undefined;runtimeBlocked:boolean}
 export interface AccountActionBlock {message:string;target:NavigationTarget|null;reason?:string|null}
 /** One predicate owns both the disabled button and its adjacent explanation. */
 export function accountActionBlock(action:AccountAction,c:AccountActionContext):AccountActionBlock|null {
@@ -42,7 +42,7 @@ export function accountActionBlock(action:AccountAction,c:AccountActionContext):
  if(action==='authorize'){
   if(!c.defaultsReady)return blocked('凭证读取方式尚未确认，暂不能启动官方登录。',source);
   if(c.runtimeBlocked||!c.runtime)return blocked('贡献运行状态待确认，暂不能启动官方登录。',{page:'overview',section:'runtime'});
-  if(!['stopped','failed'].includes(c.runtime.local))return blocked('官方登录前请先停止贡献；前往概览停止后再返回。',{page:'overview',section:'runtime'});
+  if(!(c.autoService?['stopped','failed','running']:['stopped','failed']).includes(c.runtime.local))return blocked('官方登录前请先停止贡献；前往概览停止后再返回。',{page:'overview',section:'runtime'});
   return null;
  }
  const selected=view.selection.state==='selected';

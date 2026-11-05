@@ -268,9 +268,9 @@ fn timeout_error(request: &Request, id: &str, fully_sent: bool, now: Instant) ->
     }
 }
 
-// A vanished caller cannot skip the validation its wrapper would have run.
+// Validate before delivery or settlement, even when the caller has vanished.
 // The decoder already validated the envelope and structured error contract.
-fn validate_late_result(
+fn validate_method_result(
     request: &Request,
     result: &Value,
     instance: &str,
@@ -279,7 +279,7 @@ fn validate_late_result(
         return Err(error(
             "INVALID_REPLY",
             format!(
-                "late {} result requires an object; actual type={}",
+                "{} result requires an object; actual type={}",
                 request.method,
                 if result.is_null() {
                     "null"
@@ -301,7 +301,7 @@ fn validate_late_result(
             error: BridgeError,
         }
         let failure: Failure = serde_json::from_value(result.clone())
-            .map_err(|cause| protocol::invalid_json("late operation failure envelope", cause))?;
+            .map_err(|cause| protocol::invalid_json("operation failure envelope", cause))?;
         // These decoders deliberately return the validated domain failure as Err.
         // Classify its closed wire variant before entering success-only decoding;
         // never infer this distinction by comparing a decoder's error code/text.
@@ -325,7 +325,7 @@ fn validate_late_result(
                     ("DIAGNOSTICS_OPERATION_FAILED", "DIAGNOSTICS_REPLY_INVALID")
                 };
                 if failure.error.code != required || failure.error.message.len() > 1024 {
-                    return Err(error(invalid, format!("late {} failure variant rejected; fixed_code_match={}; actual code bytes={}; message bytes={}; required code={required}, message maximum=1024", request.method,
+                    return Err(error(invalid, format!("{} failure variant rejected; fixed_code_match={}; actual code bytes={}; message bytes={}; required code={required}, message maximum=1024", request.method,
                         failure.error.code == required, failure.error.code.len(), failure.error.message.len())));
                 }
                 return Ok(());
@@ -338,7 +338,7 @@ fn validate_late_result(
             let platform = request_platform(request).ok_or_else(|| {
                 error(
                     "ACCOUNT_REPLY_INVALID",
-                    "late account request has no valid platform",
+                    "account request has no valid platform; required=openai|claude",
                 )
             })?;
             protocol::validate_account_operation(result, platform)
@@ -379,11 +379,12 @@ fn validate_late_result(
                 serde_json::json!({"enabled":true})
             };
             if *result != required {
+                let field = if request.method == "runtime_verify" { "verified" } else { "enabled" };
                 return Err(error(
-                    "INVALID_REPLY",
+                    if request.method == "runtime_verify" { "STARTUP_DATA_INVALID" } else { "RUNTIME_REPLY_INVALID" },
                     format!(
-                        "late {} confirmation differs from required success object",
-                        request.method
+                        "{} confirmation differs from required success object; actual {field}={:?}; result fields={}; required={required}",
+                        request.method, result[field].as_bool(), result.as_object().map_or(0, |object| object.len())
                     ),
                 ));
             }
@@ -1462,9 +1463,7 @@ async fn session(
                     if request.method == "ping" && result.as_ref().is_ok_and(|v| *v != serde_json::json!({"alive":true})) {
                         return Err(error("INVALID_PING", "ping result differs from required alive=true object"));
                     }
-                    if request.timed_out || request.reply.as_ref().is_none_or(|reply| reply.is_closed()) {
-                        if let Ok(value) = &result { validate_late_result(request, value, &instance)?; }
-                    }
+                    if let Ok(value) = &result { validate_method_result(request, value, &instance)?; }
                     if let Some(cause) = statuses.borrow().error.clone() { return Err(cause); }
                     let mut request = active.remove(&id).unwrap();
                     request.respond(result.map(|result| BridgeReply { protocol: 1, id: id.clone(), instance: instance.clone(), result }));

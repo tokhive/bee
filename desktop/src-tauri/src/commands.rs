@@ -416,14 +416,15 @@ pub async fn runtime_snapshot(
     Ok(reply)
 }
 #[tauri::command]
-pub async fn runtime_start(
+pub async fn runtime_start<R: tauri::Runtime>(
+    app: tauri::AppHandle<R>,
     bridge: tauri::State<'_, Bridge>,
     request: crate::runtime_protocol::RuntimeStartRequest,
     gate: tauri::State<'_, crate::experience::StartupGate>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
 ) -> Result<BridgeReply, BridgeError> {
-    crate::experience::start_with_presence(&bridge, &store, &controller, &gate, request).await
+    crate::experience::start_with_presence(&app, &bridge, &store, &controller, &gate, request).await
 }
 #[tauri::command]
 pub async fn runtime_stop(

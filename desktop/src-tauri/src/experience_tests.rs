@@ -503,7 +503,7 @@ async fn start_with_new_proxy_reenables_presence_after_dispatch_without_replayin
     let mut prefs=store.read().preferences;
     prefs.proxies.push(crate::preferences::ProxyPreference {origin:scope.origin().into(),device_scope:Some(scope.device_scope().into()),connect_proxy:"http://127.0.0.1:18080".into()});
     assert!(store.save(prefs.revision,prefs).error.is_none());
-    start_with_presence(&bridge,&store,&app.state::<NetworkController>(),&app.state::<StartupGate>(),crate::runtime_protocol::RuntimeStartRequest{expected_revision:5,resume_platforms:vec![]}).await.unwrap();
+    start_with_presence(app.handle(),&bridge,&store,&app.state::<NetworkController>(),&app.state::<StartupGate>(),crate::runtime_protocol::RuntimeStartRequest{expected_revision:5,resume_platforms:vec![]}).await.unwrap();
     let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
     assert_eq!(calls.matches("runtime_start").count(),1);
     assert!(calls.rfind("runtime_configure_network").unwrap()<calls.find("runtime_start").unwrap());
@@ -523,5 +523,225 @@ async fn presence_requires_exact_receipt_and_never_bypasses_exit_freeze(){
         assert_eq!(status.failure.unwrap().code,if frozen{"OWNED_EXIT_PENDING"}else{"RUNTIME_REPLY_INVALID"});
         bridge.0.frozen.store(false,Ordering::SeqCst);
         bridge.stop().await.unwrap();
+    }
+}
+
+
+#[tokio::test]
+async fn audit_start_timeout_keeps_original_request_evidence() {
+    let (dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"start":true,"runtime_revision":5}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let store = app.state::<PreferencesStore>();
+    let scope = crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+        .unwrap()
+        .unwrap();
+    let mut prefs = store.read().preferences;
+    prefs.proxies.push(crate::preferences::ProxyPreference {
+        origin: scope.origin().into(),
+        device_scope: Some(scope.device_scope().into()),
+        connect_proxy: "http://127.0.0.1:18080".into(),
+    });
+    assert!(store.save(prefs.revision, prefs).error.is_none());
+    std::fs::write(
+        dir.path().join("context.json"),
+        r#"{"apply":true,"start":true,"runtime_revision":5,"audit_hold_start":true}"#,
+    )
+    .unwrap();
+    let cause = start_with_presence(
+        app.handle(),
+        &bridge,
+        &app.state::<PreferencesStore>(),
+        &app.state::<NetworkController>(),
+        &app.state::<StartupGate>(),
+        crate::runtime_protocol::RuntimeStartRequest {
+            expected_revision: 5,
+            resume_platforms: vec![],
+        },
+    )
+    .await
+    .unwrap_err();
+    let pending = bridge.pending_requests();
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    if cause.code != "RESPONSE_TIMEOUT" {
+        bridge.stop().await.unwrap();
+    }
+    assert_eq!(calls.matches("runtime_start").count(), 1);
+    assert_eq!(pending.requests.len(), 1);
+    assert_eq!(pending.requests[0].method, "runtime_start");
+    assert_eq!(
+        cause.code, "RESPONSE_TIMEOUT",
+        "a Start already dispatched must retain its original uncertain-delivery outcome"
+    );
+    let evidence = cause.details.unwrap().evidence;
+    assert_eq!(evidence["method"], "runtime_start");
+    assert_eq!(evidence["request_id"], pending.requests[0].id);
+    assert_eq!(evidence["in_flight"], "true");
+    assert_eq!(
+        calls.matches("runtime_enable_presence").count(),
+        1,
+        "presence must wait for the original Start"
+    );
+    std::fs::write(dir.path().join("context.json.start-release"), "release").unwrap();
+    tokio::time::timeout(std::time::Duration::from_secs(3), async {
+        loop {
+            let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+            if calls.matches("runtime_enable_presence").count() == 2 {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+        }
+    })
+    .await
+    .expect("settled Start never restored device presence");
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert_eq!(calls.matches("runtime_start").count(), 1);
+    assert!(bridge.pending_requests().requests.is_empty());
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn presence_failure_does_not_replace_start_success_or_business_failure() {
+    for outcome in ["accepted", "rejected", "remote_timeout"] {
+        let (dir, bridge, app) =
+            fixture(serde_json::json!({"apply":true,"start":true,"runtime_revision":5}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        std::fs::write(dir.path().join("context.json"),serde_json::to_vec(&serde_json::json!({"apply":true,"start":true,"runtime_revision":5,"presence_error":true,"start_error":outcome=="rejected","start_transport_error":outcome=="remote_timeout"})).unwrap()).unwrap();
+        let result = start_with_presence(
+            app.handle(),
+            &bridge,
+            &app.state::<PreferencesStore>(),
+            &app.state::<NetworkController>(),
+            &app.state::<StartupGate>(),
+            crate::runtime_protocol::RuntimeStartRequest {
+                expected_revision: 5,
+                resume_platforms: vec![],
+            },
+        )
+        .await;
+        let status = app.state::<StartupGate>().snapshot();
+        bridge.ping().await.unwrap();
+        bridge.stop().await.unwrap();
+        if outcome == "remote_timeout" {
+            let cause = result.unwrap_err();
+            assert_eq!(cause.code, "RESPONSE_TIMEOUT");
+            assert_eq!(cause.message, "start rejected: remote timeout");
+            assert!(cause.details.is_none());
+        } else {
+            let reply = result.expect("secondary presence failure replaced the Start receipt");
+            if outcome == "rejected" {
+                assert_eq!(reply.result["error"]["message"], "start rejected: no selected account");
+            } else {
+                assert_eq!(reply.result["operation"]["id"], "a".repeat(48));
+            }
+        }
+        assert_eq!(status.state, "blocked");
+        assert_eq!(
+            status.failure.unwrap().message,
+            "presence admission blocked: suspended=true"
+        );
+    }
+}
+
+#[tokio::test]
+async fn late_start_presence_requires_original_context_and_live_admission() {
+    for change in [
+        "rejected",
+        "binding",
+        "network",
+        "preferences",
+        "rechecked",
+        "exit",
+        "stopped",
+    ] {
+        let (dir, bridge, app) =
+            fixture(serde_json::json!({"apply":true,"start":true,"runtime_revision":5}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let checked = context(&bridge, &app.state::<PreferencesStore>())
+            .await
+            .unwrap();
+        let gate = app.state::<StartupGate>();
+        let gate_revision = gate.snapshot().revision;
+        let mut config = serde_json::json!({"apply":true,"start":true,"runtime_revision":5,"audit_hold_start":true,"start_error":change=="rejected"});
+        let marker = dir.path().join("context.json");
+        std::fs::write(&marker, serde_json::to_vec(&config).unwrap()).unwrap();
+        let cause = bridge
+            .request(
+                "runtime_start",
+                serde_json::json!({"expected_revision":5,"resume_platforms":[]}),
+                std::time::Duration::from_millis(100),
+            )
+            .await
+            .unwrap_err();
+        assert_eq!(cause.code, "RESPONSE_TIMEOUT");
+        let id = cause.details.unwrap().evidence["request_id"].clone();
+        match change {
+            "binding" => config["binding_revision"] = serde_json::json!(2),
+            "network" => config["network_revision"] = serde_json::json!(2),
+            "preferences" => {
+                let store = app.state::<PreferencesStore>();
+                let mut prefs = store.read().preferences;
+                prefs.autostart_desired = !prefs.autostart_desired;
+                assert!(store.save(prefs.revision, prefs).error.is_none());
+            }
+            "rechecked" => gate.finish(Ok(checked.clone())),
+            "exit" => bridge.0.frozen.store(true, Ordering::SeqCst),
+            _ => {}
+        }
+        std::fs::write(&marker, serde_json::to_vec(&config).unwrap()).unwrap();
+        if change == "rejected" {
+            // Also cover settlement just before the continuation subscribes.
+            let mut settled = bridge.subscribe_settled();
+            std::fs::write(dir.path().join("context.json.start-release"), "release").unwrap();
+            tokio::time::timeout(std::time::Duration::from_secs(2), settled.recv())
+                .await
+                .unwrap()
+                .unwrap();
+        }
+        let continuation = tokio::spawn(resume_start_presence(
+            app.handle().clone(),
+            bridge.clone(),
+            checked,
+            id,
+            gate_revision,
+        ));
+        if change == "stopped" {
+            tokio::task::yield_now().await;
+            bridge.stop().await.unwrap();
+        } else {
+            std::fs::write(dir.path().join("context.json.start-release"), "release").unwrap();
+        }
+        tokio::time::timeout(std::time::Duration::from_secs(3), continuation)
+            .await
+            .expect("presence continuation did not finish after settlement or exit")
+            .unwrap();
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert_eq!(
+            calls.matches("runtime_start").count(),
+            1,
+            "Start replayed for {change}"
+        );
+        assert_eq!(
+            calls.matches("runtime_enable_presence").count(),
+            if change == "rejected" { 2 } else { 1 },
+            "stale presence dispatched for {change}"
+        );
+        let status = gate.snapshot();
+        if ["binding", "network", "preferences"].contains(&change) {
+            assert_eq!(status.state, "blocked");
+            assert_eq!(status.failure.unwrap().code, "STARTUP_CONTEXT_CHANGED");
+        } else {
+            assert_eq!(
+                status.state, "ready",
+                "old continuation replaced newer readiness for {change}"
+            );
+        }
+        if change != "stopped" {
+            bridge.0.frozen.store(false, Ordering::SeqCst);
+            bridge.ping().await.unwrap();
+            assert!(bridge.pending_requests().requests.is_empty());
+            bridge.stop().await.unwrap();
+        }
     }
 }

@@ -54,7 +54,7 @@ input.on('line', line => {
       case 'runtime_snapshot':reply({runtime});return;
       case 'runtime_enable_presence':
         if(Object.keys(request.params).sort().join(',')!=='binding_revision,network_revision'||request.params.binding_revision!==(config.binding_revision??1)||request.params.network_revision!==networkRevision)throw new Error('presence context mismatch');
-        reply(config.presence_bad?{enabled:false}:{enabled:true});return;
+        reply(config.presence_error?{error:{code:'RUNTIME_OPERATION_FAILED',message:'presence admission blocked: suspended=true'}}:config.presence_bad?{enabled:false}:{enabled:true});return;
       case 'runtime_verify':writeFileSync(`${process.argv[4]}.verify`,'entered');setTimeout(()=>reply(config.bad_data?{error:{code:'STARTUP_DATA_INVALID',message:'protected account schema rejected'}}:{verified:true}),config.delay??0);return;
       case 'runtime_stop':
         if(!config.apply||request.params.reason!=='network_change'||request.params.expected_revision!==startupRuntimeRevision)throw new Error('invalid network stop');
@@ -64,7 +64,20 @@ input.on('line', line => {
         startupOperation={id:'c'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
       case 'runtime_start':
         if(!config.start||request.params.expected_revision!==startupRuntimeRevision)throw new Error('recovery must not call runtime_start');
-        startupOperation={id:'a'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
+        {
+          const complete=()=>{
+            startupOperation={id:'a'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};
+            if(config.start_transport_error){
+              process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),error:{code:'RESPONSE_TIMEOUT',message:'start rejected: remote timeout'}})+'\n');return;
+            }
+            reply(config.start_error?{error:{code:'RUNTIME_OPERATION_FAILED',message:'start rejected: no selected account'}}:{operation:startupOperation});
+          };
+          if(config.audit_hold_start){
+            const timer=setInterval(()=>{if(existsSync(`${process.argv[4]}.start-release`)){clearInterval(timer);complete();}},5);
+            input.once('close',()=>clearInterval(timer));
+          }else complete();
+          return;
+        }
       case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;if(config.apply)startupRuntimeRevision++;reply({configured:true});return;
       case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
       case 'account_detect':reply({account:{platform:request.params.platform,operation:null}});return;

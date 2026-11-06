@@ -1,9 +1,9 @@
 /**
- * Contract for review and mocks only. The native progress/open commands and a
+ * Contract for review and mocks only. The native progress/open/restart commands and a
  * production client do not exist yet. Do not advertise these as capabilities.
  * See docs/desktop/codex-login-contract.md for lifecycle and failure semantics.
  */
-import type {AccountError, AccountOperation} from './accounts';
+import type {AccountError, AccountOperation, AccountSource} from './accounts';
 
 export type CodexLoginOperation = AccountOperation & {
   kind: 'authorize';
@@ -35,6 +35,8 @@ export interface CodexLoginProgress {
     retry: boolean;
     /** Submit existing account_snapshot(openai, true); never kills/restarts login. */
     recheck: boolean;
+    /** Admit the proposed stop/prove/handoff/start workflow, never a direct start. */
+    restart: boolean;
   };
   /** Cleanup/maintenance blocker, distinct from the original operation error. */
   blocker: AccountError | null;
@@ -60,3 +62,63 @@ export interface CodexLoginExtension {
 /** Proposed bridge result shapes. The existing bridge instance envelope applies. */
 export interface CodexLoginProgressResult {progress: CodexLoginProgress}
 export interface CodexLoginOpenResult {open: CodexLoginOpenReceipt}
+
+/** A separate, proposed async workflow; this is not an AccountOperation kind. */
+export interface CodexLoginRestartRequest {
+  /** Caller-generated 48 lowercase hex; persist before first submission/replay. */
+  request_id: string;
+  platform: 'openai';
+  previous_operation_id: string;
+  source: AccountSource;
+  expected_revision: number;
+}
+
+/** Immutable acceptance receipt. A duplicate request returns this same receipt. */
+export interface CodexLoginRestartReceipt {
+  id: string;
+  platform: 'openai';
+  previous_operation_id: string;
+  accepted: true;
+}
+
+export type CodexLoginRestartStage =
+  | 'identify_previous'
+  | 'stop_previous'
+  | 'confirm_stopped'
+  | 'prepare_new'
+  | 'start_new';
+
+export interface CodexLoginRestartProgress {
+  /** Equals request_id within the verified Hive/user/device/platform scope. */
+  id: string;
+  platform: 'openai';
+  previous_operation_id: string;
+  sequence: number;
+  /** succeeded means one new login was accepted, not that authorization passed. */
+  state: 'pending' | 'running' | 'succeeded' | 'failed' | 'cancelled' | 'unknown';
+  stage: CodexLoginRestartStage | 'finished';
+  /** Missing evidence remains null; an unknown old result remains unknown. */
+  previous_operation: CodexLoginOperation | null;
+  /** Proof about the original owned tree only, independent of its login result. */
+  previous_stop: 'unknown' | 'confirmed';
+  /** A distinct new ID; persisted before spawn and never regenerated on replay. */
+  new_operation: CodexLoginOperation | null;
+  cancel_requested: boolean;
+  actions: {
+    /** Before durable child-start commitment; cancellation still drains the old tree. */
+    cancel: boolean;
+    /** A new explicit composite attempt is safe; never permission to bypass stopping. */
+    restart: boolean;
+  };
+  failure: {stage: CodexLoginRestartStage; error: AccountError} | null;
+}
+
+/** Proposed commands only. Existing AuthorizeClient and account_snapshot are unchanged. */
+export interface CodexLoginRestartClient {
+  restart(request: CodexLoginRestartRequest): Promise<CodexLoginRestartReceipt>;
+  restartStatus(restartId: string): Promise<CodexLoginRestartProgress>;
+  restartCancel(restartId: string): Promise<CodexLoginRestartProgress>;
+}
+
+export interface CodexLoginRestartResult {restart: CodexLoginRestartReceipt}
+export interface CodexLoginRestartProgressResult {restart: CodexLoginRestartProgress}

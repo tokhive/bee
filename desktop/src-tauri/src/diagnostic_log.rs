@@ -111,10 +111,28 @@ pub(crate) fn is_public_code(code: &str) -> bool {
         "bridge_started",
         "bridge_stopped",
         "bridge_failed",
+        "owned_exit_started",
+        "owned_exit_completed",
+        "owned_exit_unconfirmed",
         "export_prepared",
         "export_completed",
         "export_cancelled",
         "export_failed",
+    ]
+    .contains(&code)
+}
+pub(crate) fn is_exit_error_code(code: &str) -> bool {
+    [
+        "OWNED_EXIT_UNCONFIRMED",
+        "OWNED_EXIT_PENDING",
+        "REQUEST_TIMEOUT",
+        "RUNTIME_OPERATION_FAILED",
+        "CHILD_REAP_FAILED",
+        "BRIDGE_STOPPED",
+        "BRIDGE_FAILED",
+        "SESSION_NOT_READY",
+        "RESPONSE_INVALID",
+        "unknown_failure",
     ]
     .contains(&code)
 }
@@ -195,7 +213,12 @@ pub(crate) fn sanitize_evidence(input: &BTreeMap<String, String>) -> BTreeMap<St
             | "platform_match"
             | "not_found"
             | "permission_denied"
+            | "stop_confirmed"
+            | "child_reaped"
             | "parsed" => enum_value(value, &["true", "false"]),
+            "exit_reason" => value.as_str() == "app_exit",
+            "exit_stage" => enum_value(value, &["stop_receipt", "child_reap", "completed"]),
+            "exit_error_code" => is_exit_error_code(value),
             "network_revision" | "checked_revision" | "current_revision" => {
                 integer(value, MAX_SEQUENCE)
             }

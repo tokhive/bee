@@ -97,7 +97,11 @@ func TestDesktopUpgradeRejectsUnreadableAccountsBeforeIdleRestore(t *testing.T) 
 
 func TestDesktopUpgradeLegacyNoticesMigrateThroughUpdateStopWithoutChangingPairing(t *testing.T) {
 	var requests atomic.Int32
+	var verifyWaiting atomic.Bool
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		if verifyWaiting.Load() && r.Method == "GET" && desktopSupplyServeIdentity(w, r) {
+			return
+		}
 		requests.Add(1)
 		w.WriteHeader(http.StatusServiceUnavailable)
 	})
@@ -114,7 +118,7 @@ func TestDesktopUpgradeLegacyNoticesMigrateThroughUpdateStopWithoutChangingPairi
 		t.Fatalf("update stop did not validate v1 migration: operation=%s receipt=%+v error=%v", stopped.Operation.State, stopped.StopReceipt, stopped.Operation.Error)
 	}
 	migrated, err := readDesktopAccountState(path)
-	if err != nil || migrated.Version != 2 || !migrated.Entries[key].Notified || migrated.Entries[key].FirstSeen.Format(time.RFC3339) != "2026-10-26T00:00:00Z" {
+	if err != nil || migrated.Version != 3 || !migrated.Entries[key].Notified || migrated.Entries[key].FirstSeen.Format(time.RFC3339) != "2026-10-26T00:00:00Z" {
 		t.Fatalf("update migration lost prior notice: version=%d revision=%d error=%v", migrated.Version, migrated.Revision, err)
 	}
 	desktopUpgradeAssertBytes(t, path+".v1.bak", legacy)
@@ -132,6 +136,7 @@ func TestDesktopUpgradeLegacyNoticesMigrateThroughUpdateStopWithoutChangingPairi
 	a.Close()
 	closeDesktopTestDevice(t, d)
 	_, next := desktopUpgradeServices(t, newDesktopTestDevice(t, d.path))
+	verifyWaiting.Store(true)
 	if _, err := next.Restore(context.Background()); err != nil {
 		t.Fatal(err)
 	}
@@ -143,7 +148,7 @@ func TestDesktopUpgradeLegacyNoticesMigrateThroughUpdateStopWithoutChangingPairi
 	desktopUpgradeAssertBytes(t, path+".v1.bak", legacy)
 	desktopUpgradeAssertBytes(t, d.path, pairedBytes)
 	if requests.Load() != 0 {
-		t.Fatalf("notice-only upgrade issued remote requests: actual=%d required=0", requests.Load())
+		t.Fatalf("notice-only upgrade issued requests beyond verified waiting identity: actual=%d required=0", requests.Load())
 	}
 }
 
@@ -151,7 +156,11 @@ func TestDesktopUpgradeMigrationReplacementFailurePreservesProtectedOriginals(t 
 	if runtime.GOOS == "windows" || os.Geteuid() == 0 {
 		t.Skip("replacement failure fixture requires an unprivileged Unix filesystem; Windows ACL failure remains native acceptance")
 	}
+	var verifyWaiting atomic.Bool
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, r *http.Request) {
+		if verifyWaiting.Load() && r.Method == "GET" && desktopSupplyServeIdentity(w, r) {
+			return
+		}
 		t.Errorf("failed migration issued request: method=%s path=%s", r.Method, r.URL.Path)
 		w.WriteHeader(http.StatusServiceUnavailable)
 	})
@@ -207,6 +216,7 @@ func TestDesktopUpgradeMigrationReplacementFailurePreservesProtectedOriginals(t 
 	a.Close()
 	closeDesktopTestDevice(t, d)
 	_, next := desktopUpgradeServices(t, newDesktopTestDevice(t, d.path))
+	verifyWaiting.Store(true)
 	if _, err := next.Restore(context.Background()); err != nil {
 		t.Fatal(err)
 	}

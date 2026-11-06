@@ -260,7 +260,7 @@ test('a historical completed recovery yields preparation guidance to current acc
  await page.goto('/');const device=page.getByRole('region',{name:'设备配对'});
  await expect(page.getByRole('region',{name:'准备贡献'})).toBeVisible();await expect(page.getByRole('button',{name:'前往准备账号',exact:true}).first()).toBeVisible();
  await page.evaluate(()=>{const w=window as any,r=w.runtimeOverride;r.local='running';r.run_id='a'.repeat(32);r.connection='connected';r.revision++;r.platforms.openai.account.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='account_snapshot'?{instance:'b'.repeat(32),result:{account:r.platforms[args.platform].account}}:invoke(command,args);});
- await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toBeEnabled();
+ await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await expect(page.getByRole('region',{name:'服务状态',exact:true}).locator('.native-runtime-health')).toContainText('贡献已启动');await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
  await expect(page.getByRole('region',{name:'准备贡献'})).toHaveCount(0);await expect(device.getByRole('button',{name:'前往准备账号',exact:true})).toHaveCount(0);
  await expect(device.getByText('重新绑定已完成，贡献保持停止。',{exact:true})).toHaveCount(0);await expect(device.getByText('请重新准备账号；旧账号选择与运行意图不会迁移。',{exact:true})).toHaveCount(0);
  expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);

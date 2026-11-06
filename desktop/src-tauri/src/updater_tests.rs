@@ -458,11 +458,22 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
         }
     });
     use tauri_plugin_updater::UpdaterExt;
+    let bridge = crate::sidecar::Bridge::start(crate::sidecar::tests::fixture("owned-exit"));
+    let mut statuses = bridge.subscribe();
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        while statuses.borrow_and_update().state == crate::sidecar::BridgePhase::Starting {
+            statuses.changed().await.unwrap();
+        }
+    }).await.expect("running update fixture did not finish startup within 30000ms");
+    bridge.restore_when_ready().await.unwrap();
+    let running_before = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(running_before.result["runtime"]["local"], "running");
     let mut context = tauri::test::mock_context(tauri::test::noop_assets());
     context.config_mut().plugins.0.insert("updater".into(),json!({"pubkey":public.trim(),"requireSignedVersion":true,"dangerousInsecureTransportProtocol":true,"endpoints":[format!("http://{address}/manifest.json")]}));
     let manager = UpdateManager::new("0.1.0",UpdateStore::new(directory.path().join("state.json"))).unwrap();
     let app = tauri::test::mock_builder()
         .manage(manager.clone())
+        .manage(bridge.clone())
         .invoke_handler(tauri::generate_handler![update_snapshot,update_download])
         .plugin(tauri_plugin_updater::Builder::new().build())
         .build(context)
@@ -527,6 +538,10 @@ async fn updater_real_ephemeral_signature_download_accepts_original_rejects_tamp
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
     }).await.expect("signed native IPC download did not reach verified within 5s");
+    let running_after = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(running_after.result, running_before.result, "checking/downloading changed the running service or its platform choices");
+    assert!(!bridge.0.frozen.load(std::sync::atomic::Ordering::SeqCst));
+    bridge.stop().await.unwrap();
     server.join().unwrap();
 
 }

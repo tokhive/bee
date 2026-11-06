@@ -1,6 +1,6 @@
 # Bee 桌面私有管理协议
 
-`bee desktop` 是桌面壳与本次创建的 Bee 子进程之间的机器入口，不能附加参数。启动、`hello`、`ping` 不读取设备配置、不连接 Hive；显式设备命令使用独立的受保护配置并访问 Hive 现有设备 API。管理入口本身不读取 CLI 配置、不自动启动贡献、不开放监听端口；贡献由固定运行命令控制。其他 CLI 命令仍走原入口。此协议可用不代表 Bee 已具备接单条件。
+`bee desktop` 是桌面壳与本次创建的 Bee 子进程之间的机器入口，不能附加参数。启动、`hello`、`ping` 不读取设备配置、不连接 Hive；显式设备命令使用独立的受保护配置并访问 Hive 现有设备 API。管理入口本身不读取 CLI 配置、不自动启动贡献、不开放监听端口；运行由固定命令及原生自动维护管理，前端不调度生命周期。其他 CLI 命令仍走原入口。此协议可用不代表 Bee 已具备接单条件。
 
 ## 帧与关联
 
@@ -43,7 +43,7 @@
 | --- | --- | --- |
 | `account_defaults` | `{}` | `{"defaults":DesktopAccountDefaults}`；不打开官方凭证或连接 Hive |
 | `account_detect` | `platform,directory,store,mode` | `{"account":DesktopAccountSnapshot}`；平台 openai/claude；directory 必须显式 null 或非空绝对路径（≤4096 UTF-8 字节，无控制字符）；OpenAI store 为 auto/file/keyring，Claude 为 file/keychain；mode 为 local/official |
-| `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 只刷新 Hive |
+| `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 核对 Hive，并在许可时只读核对原登录维护 |
 | `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝；select／clear_selection／confirm_change 已接通；已注册账号 remove 仍不可用 |
 
 Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
@@ -97,8 +97,8 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
 | `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
-| `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled）、revision、error；id是本机动作引用，不是Hive confirmation_id |
-| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt。桥envelope的instance仍为管理进程实例 |
+| `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled；authorize 另允许 unknown）、revision、error；id是本机动作引用，不是Hive confirmation_id |
+| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/waiting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt、legacy_stop（必填可空）。桥envelope的instance仍为管理进程实例 |
 | platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
 | `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
 | `runtime_stop` | expected_revision、reason（user_stop/app_exit/update/network_change）；reason由固定Rust入口生成；网页只可明确停止 |
@@ -110,7 +110,7 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 
 新数值修订使用非负JS安全整数，时间为UTC RFC3339，状态枚举封闭；旧instance/run_id/revision不能覆盖新结果。未知值和结果未确认时保持不可恢复。
 
-账号文件v2保留提醒entries，新增scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent及session；不保存token。旧v1在首次写入升级前原样保存到受保护`.v1.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
+账号文件v3保留提醒entries和scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent、session及一次转换记录legacy_stop；不保存token。严格兼容旧v1/v2，首次写入升级前分别原样保存到受保护`.v1.bak`或`.v2.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
 
 ## 验证命令
 
@@ -183,10 +183,16 @@ go run ./cmd/bee help
 
 ### S1 接入操作（已实现）
 
-`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change／authorize，state 为 pending／running／reconciling／succeeded／failed／cancelled。
+`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change／authorize，state 为 pending／running／reconciling／succeeded／failed／cancelled；仅 authorize 的原中断结果另允许 unknown。
 
 `clear_selection` 只清除尚未注册且未运行的本地选择，使用当前快照 revision 与 confirmed=true；candidate_ref 可以是空字符串，不要求官方凭证仍有效。select／confirm_change 继续要求当前候选引用。完整移除仍不可用。若暂停已证实、Hive 身份/代次未变而官方来源发生变化，原接入操作以失败结束并保持暂停，允许用户重新检测确认；无法确认暂停或 Hive 归属时保留未决操作，刷新只查询、不重发 PUT。
 
+
+### 原生自动服务增量（2026-11-05）
+
+`DesktopAccountSnapshot.login_maintenance` 和 `DesktopRuntimeSnapshot.legacy_stop` 均为必需 nullable 字段；运行 local 增加 waiting。维护包含原 authorize operation、phase、source、started_at、can_recheck、error；原操作 unknown 仅表示原登录终态无法证明，维护 restored 不改变它。跨进程原维护只通过账号快照核对，不将旧 ID 冒充当前实例的 status/cancel job。
+
+旧停止转换 can_recheck 允许继续用户已批准的原迁移，已 submitted 只 GET；未提交步骤重验后可首次提交。登录维护 can_recheck 只读核验原过程，不重放暂停／登录。完整枚举、恢复保护与前端变更边界见[原生自动服务接口](native-auto-service.md#前端接口变更)。Go／Rust／TS 及模拟响应同步严格拒绝缺失／未知字段。
 
 ### S1-T3 真实运行与同步屏障
 
@@ -215,7 +221,7 @@ Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，�
 
 ### S1-T6 恢复与退出
 
-Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重启崩溃进程。Go 在返回开始操作前保存本次活动会话，自动恢复仅接受已保存运行意图与正常结束记录；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
+Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重启崩溃进程。Go 在返回开始操作前保存本次活动会话，自动恢复核验已选账号及正常结束证据；无账号为 waiting，旧停止意图按一次性迁移处理；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
 
 `runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。上次非 clean 标记必须通过明确开始处理。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
 

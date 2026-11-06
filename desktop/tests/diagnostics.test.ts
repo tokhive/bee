@@ -28,6 +28,13 @@ test('diagnostic DTOs accept the Rust nullable fields and fixed event shape',()=
  assert.deepEqual(decodeLogPage(page),page);
  assert.deepEqual(decodeDiagnosticExport(exported(),instance),exported());
 });
+test('owned exit evidence survives log decoding without accepting free-form failure details',()=>{
+ for(const code of ['owned_exit_started','owned_exit_completed','owned_exit_unconfirmed']){
+  const entry={...log(),module:'lifecycle',code,evidence:{exit_reason:'app_exit',exit_stage:'stop_receipt',stop_confirmed:'false',child_reaped:'false',exit_error_code:'OWNED_EXIT_UNCONFIRMED'}};
+  assert.deepEqual(decodeLogPage({entries:[entry],next_cursor:null,truncated:false}).entries,[entry]);
+  for(const [key,value]of [['exit_reason','logout'],['exit_stage','destroy_everything'],['stop_confirmed','yes'],['child_reaped','yes'],['exit_error_code','SECRET_PAYLOAD']])assert.throws(()=>decodeLogPage({entries:[{...entry,evidence:{...entry.evidence,[key]:value}}],next_cursor:null,truncated:false}),e=>e instanceof Error&&!e.message.includes('SECRET_PAYLOAD'));
+ }
+});
 test('diagnostic report rejects unknown checks, false passes, unsafe evidence and malformed identity without echo',()=>{
  const mutations=[(r:any)=>r.instance='d'.repeat(32),(r:any)=>r.run_id='MARKER',(r:any)=>r.network_revision=2**53,(r:any)=>r.checks[0].id='MARKER',(r:any)=>r.checks[0].code='unknown',(r:any)=>r.checks[0].status='MARKER',(r:any)=>r.checks[0].evidence.token='MARKER',(r:any)=>r.checks[0].evidence.path='/Users/MARKER',(r:any)=>r.checks[0].next_action='MARKER',(r:any)=>r.checks.push(structuredClone(r.checks[0])),(r:any)=>r.started_at='2026-02-30T03:30:00Z',(r:any)=>delete r.finished_at,(r:any)=>r.checks[0].observed_at='2099-01-01T00:00:00Z'];
  for(const mutate of mutations){const r=diagnosticReport();mutate(r);assert.throws(()=>decodeDiagnosticReport(reply(r),instance),e=>e instanceof Error&&!e.message.includes('MARKER'));}

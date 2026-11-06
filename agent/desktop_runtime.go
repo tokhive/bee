@@ -89,6 +89,9 @@ func (r *DesktopRuntime) Snapshot(ctx context.Context) (DesktopRuntimeSnapshot, 
 		if err != nil {
 			return s, err
 		}
+		if _, err := r.accounts.loadLoginMaintenance(ctx, p, platform); err != nil {
+			p.snapshot.Authorization = DesktopAccountFact{State: "unconfirmed", Error: accountFailure(platform, "login_journal_unconfirmed", "login_maintenance_journal", err.Error())}
+		}
 		v := s.Platforms[platform]
 		v.Account = accountSnapshotCopy(p.snapshot)
 		if p.selected != nil {
@@ -137,6 +140,9 @@ func (r *DesktopRuntime) beginStartLocked(ctx context.Context, input DesktopStar
 	}
 	if r.closed {
 		return DesktopOperation{}, fmt.Errorf("runtime owner closed; start rejected")
+	}
+	if r.presence.shutdown {
+		return DesktopOperation{}, fmt.Errorf("runtime start rejected: shutdown=true; current App owner is exiting")
 	}
 	if !restoring && input.ExpectedRevision != r.snapshot.Revision {
 		return DesktopOperation{}, fmt.Errorf("runtime revision changed: actual=%d expected=%d", r.snapshot.Revision, input.ExpectedRevision)
@@ -191,6 +197,12 @@ func (r *DesktopRuntime) beginStartLocked(ctx context.Context, input DesktopStar
 		if err == nil {
 			err = r.run(live, run, input.ResumePlatforms, pauseRevisions, restoring)
 		}
+		var waiting *desktopRuntimeWaitingReservation
+		if errors.As(err, &waiting) {
+			if verified := r.verifyWaitingDevice(live, waiting.bindingRevision); verified != nil {
+				err = verified
+			}
+		}
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		if r.snapshot.RunID == nil || *r.snapshot.RunID != run || r.snapshot.Local == "stopping" {
@@ -233,20 +245,43 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 	defer release()
 	state, err := r.accounts.verifiedSelectionDevice(ctx, session)
 	if err != nil {
+		if saved, readErr := session.read(); readErr == nil && saved.Identity != nil {
+			if scope, scopeErr := r.accounts.selectionScope(session, saved, nil); scopeErr == nil && desktopLegacyStopPending(scope) {
+				r.publishLegacyStop(scope, "blocked", err, true)
+			}
+		}
 		return err
 	}
 	scope, err := r.accounts.selectionScope(session, state, nil)
 	if err != nil {
 		return err
 	}
+	if desktopLegacyStopPending(scope) {
+		if len(resume) != 0 {
+			err := fmt.Errorf("legacy stop migration requires pause confirmation before explicit platform resume: requested=%d; recheck with empty resume list", len(resume))
+			r.publishLegacyStop(scope, "blocked", err, true)
+			return err
+		}
+		if scope, err = r.migrateLegacyStop(ctx, session, state, scope); err != nil {
+			return err
+		}
+		if err = r.reserveMigratedRuntimeSession(ctx, session, state, run); err != nil {
+			return err
+		}
+		scope, err = r.accounts.selectionScope(session, state, nil)
+		if err != nil {
+			return err
+		}
+	} else if scope.LegacyStop.State == "completed" {
+		r.publishLegacyStop(scope, "completed", nil, false)
+	}
 	if restoring {
 		if !scope.Session.Active || scope.Session.RunID != run || !scope.RuntimeIntent.Running {
 			return fmt.Errorf("saved runtime recovery evidence changed during device verification")
 		}
-		resume, err = recoveryResumePlatforms(ctx, state, scope)
-		if err != nil {
-			return err
-		}
+		// Hive owns the current platform choice. A saved resume list is not
+		// permission to overwrite a later pause during ordinary recovery.
+		resume = []string{}
 	}
 	if len(scope.Selections) == 0 {
 		return fmt.Errorf("runtime start requires a persisted account selection: selections=0")
@@ -270,7 +305,9 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 		if len(s.PendingOperations) > 0 {
 			return fmt.Errorf("runtime start raced an unresolved selection")
 		}
-		s.RuntimeIntent = desktopRuntimeIntent{Running: true, ResumePlatforms: append([]string{}, resume...)}
+		if !restoring {
+			s.RuntimeIntent = desktopRuntimeIntent{Running: true, ResumePlatforms: append([]string{}, resume...)}
+		}
 		if s.Session.RunID != run || !s.Session.Active {
 			return fmt.Errorf("runtime session reservation changed before intent save")
 		}
@@ -289,12 +326,16 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 			return err
 		}
 		slot.config = nil
+		slot.loginRecoveryRun = ""
 		slot.workerConnection = nil
 		slot.gate.unlock()
 	}
 	r.mu.Lock()
 	r.targets = map[string]bool{}
 	r.mu.Unlock()
+	if err := r.recoverSavedLoginMaintenance(ctx, session, state); err != nil {
+		return err
+	}
 	var prepared sync.WaitGroup
 	for platform, selection := range scope.Selections {
 		prepared.Go(func() {
@@ -320,7 +361,7 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 	network := r.network
 	r.mu.Unlock()
 	if len(targets) == 0 {
-		return fmt.Errorf("runtime start has no verified paused platforms; inspect platform errors")
+		return fmt.Errorf("runtime start has no verified forwarding platforms: targets=0; inspect platform preparation errors")
 	}
 	cfg := &egressConfig{Targets: targets, ConnectProxy: network.ConnectProxy, desktop: r}
 	return r.connectDesktop(ctx, state, cfg, func(observation DesktopConnectionObservation) { r.connectionObserved(run, observation) })
@@ -431,6 +472,20 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSession, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker) (DesktopStopReceipt, error) {
 	receipt := DesktopStopReceipt{}
 	var saveErr error
+	// Cancellation must precede any device-session wait: an in-flight operation
+	// can hold that session while its network request waits for cancellation.
+	for _, worker := range accountWorkers {
+		worker.cancel()
+	}
+	if controlCancel != nil {
+		controlCancel()
+	}
+	if cancel != nil {
+		cancel()
+	}
+	// Login completion may recheck device/source state. Join it before taking the
+	// device session, and never certify a clean runtime while it remains owned.
+	loginErr := r.accounts.cancelAndWaitAuthorizations()
 	session, release, err := r.device.acquireSession(context.Background())
 	var state localState
 	if err == nil {
@@ -457,17 +512,7 @@ func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSe
 	} else {
 		saveErr = err
 	}
-	// A failed intent save must never leave workers running. Cancel every
-	// admitted account operation, including work before a tunnel exists.
-	for _, worker := range accountWorkers {
-		worker.cancel()
-	}
-	if controlCancel != nil {
-		controlCancel()
-	}
-	if cancel != nil {
-		cancel()
-	}
+	// A failed intent save still joins every cancelled worker before the receipt.
 	for _, worker := range accountWorkers {
 		<-worker.done
 	}
@@ -477,10 +522,10 @@ func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSe
 	if done != nil {
 		<-done
 	}
-	receipt.WorkersStopped = true
-	if receipt.IntentSaved && unpaired {
+	receipt.WorkersStopped = loginErr == nil
+	if receipt.IntentSaved && unpaired && loginErr == nil {
 		receipt.SessionClean = true
-	} else if receipt.IntentSaved && cleanable {
+	} else if receipt.IntentSaved && cleanable && loginErr == nil {
 		_, err = r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
 			if s.Session.Active && (owned == nil || s.Session.RunID != owned.run) {
 				return fmt.Errorf("stop session ownership changed before cleanup")
@@ -490,7 +535,7 @@ func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSe
 			return nil
 		})
 		receipt.SessionClean = err == nil
-	} else if receipt.IntentSaved {
+	} else if receipt.IntentSaved && loginErr == nil {
 		err = fmt.Errorf("stop cannot certify a prior unclean session: current_owner_proof=false; explicit start required")
 	}
 	if receipt.SessionClean {
@@ -499,11 +544,11 @@ func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSe
 			err = errors.Join(err, guardErr)
 		}
 	}
-	return receipt, errors.Join(saveErr, err)
+	return receipt, errors.Join(saveErr, err, loginErr)
 }
 
-// Caller holds accounts.lifecycleMu. Official-login processes have a separate
-// lifecycle and are not stopped by the contribution stop action.
+// Caller holds accounts.lifecycleMu. Official-login processes are joined
+// separately before acquiring the device session in stop.
 func (r *DesktopRuntime) accountWorkersLocked() []*desktopAccountWorker {
 	result := make([]*desktopAccountWorker, 0, len(r.accounts.accountWorkers))
 	for _, worker := range r.accounts.accountWorkers {

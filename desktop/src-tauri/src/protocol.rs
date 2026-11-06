@@ -873,6 +873,7 @@ pub fn validate_account_operation(
     if account.get("platform") != Some(&serde_json::json!(platform)) {
         return Err(invalid("account result platform differs from request"));
     }
+    validate_login_maintenance(account, platform)?;
     let raw = account
         .get("operation")
         .ok_or_else(|| invalid("account.operation missing; required=explicit null or operation"))?;
@@ -915,66 +916,171 @@ pub(crate) fn validate_operation(
         "succeeded",
         "failed",
         "cancelled",
+        "unknown",
     ]
     .contains(&op.state.as_str())
     {
         return Err(invalid("operation state outside known lifecycle"));
     }
+    if op.state == "unknown" && op.kind != "authorize" {
+        return Err(invalid("unknown operation result requires interrupted authorization"));
+    }
     if op.revision > 9007199254740991 {
         return Err(invalid("operation revision exceeds JS safe integer"));
     }
     if let Some(error) = op.error {
-        let identifier = |v: &str| {
-            !v.is_empty()
-                && v.len() <= 80
-                && v.bytes()
-                    .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
-        };
-        if !identifier(&error.code)
-            || !identifier(&error.check)
-            || !["openai", "claude", "unknown"].contains(&error.platform.as_str())
-            || error.message.len() > 32768
-        {
-            return Err(invalid(
-                "operation error fields rejected; required=public identifiers and bounded message",
-            ));
-        }
-        let allowed = [
-            "not_found",
-            "permission_denied",
-            "os_error",
-            "cause",
-            "parsed",
-            "profile_scope",
-            "inference_scope",
-            "expires_at",
-            "source_revision_match",
-            "http_status",
-            "path",
-            "transport_failed",
-            "confirmed",
-            "observed_at",
-            "retry_after_seconds",
-            "method",
-            "phase",
-            "elapsed_ms",
-        ];
-        if error.evidence.iter().any(|(k, v)| {
-            !allowed.contains(&k.as_str())
-                || v.len() > 32768
-                || k == "observed_at"
-                    && (!crate::runtime_protocol::timestamp(v)
-                        || !time::OffsetDateTime::parse(
-                            v,
-                            &time::format_description::well_known::Rfc3339,
-                        )
-                        .is_ok_and(|at| at <= time::OffsetDateTime::now_utc() + time::Duration::seconds(5)))
-                || retry_evidence(k, v).is_some_and(|valid| !valid)
-        }) {
-            return Err(invalid(
-                "operation evidence contains unsupported fields or oversized value",
-            ));
-        }
+        validate_account_operation_error(&error, platform)?;
+    }
+    Ok(())
+}
+
+fn validate_account_operation_error(
+    error: &AccountOperationError,
+    platform: Option<SupplyPlatform>,
+) -> Result<(), BridgeError> {
+    let invalid = |message: &str| BridgeError::new("ACCOUNT_REPLY_INVALID", message.into());
+
+    let identifier = |v: &str| {
+        !v.is_empty()
+            && v.len() <= 80
+            && v.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+    };
+    if !identifier(&error.code)
+        || !identifier(&error.check)
+        || !["openai", "claude", "unknown"].contains(&error.platform.as_str())
+        || error.message.len() > 32768
+    {
+        return Err(invalid(
+            "operation error fields rejected; required=public identifiers and bounded message",
+        ));
+    }
+    let allowed = [
+        "not_found",
+        "permission_denied",
+        "os_error",
+        "cause",
+        "parsed",
+        "profile_scope",
+        "inference_scope",
+        "expires_at",
+        "source_revision_match",
+        "http_status",
+        "path",
+        "transport_failed",
+        "confirmed",
+        "observed_at",
+        "retry_after_seconds",
+        "method",
+        "phase",
+        "elapsed_ms",
+    ];
+    if error.evidence.iter().any(|(k, v)| {
+        !allowed.contains(&k.as_str())
+            || v.len() > 32768
+            || k == "observed_at"
+                && (!crate::runtime_protocol::timestamp(v)
+                    || !time::OffsetDateTime::parse(
+                        v,
+                        &time::format_description::well_known::Rfc3339,
+                    )
+                    .is_ok_and(|at| {
+                        at <= time::OffsetDateTime::now_utc() + time::Duration::seconds(5)
+                    }))
+            || retry_evidence(k, v).is_some_and(|valid| !valid)
+    }) {
+        return Err(invalid(
+            "operation evidence contains unsupported fields or oversized value",
+        ));
+    }
+    if platform.is_some_and(|p| {
+        error.platform != "unknown"
+            && serde_json::to_value(p)
+                .ok()
+                .as_ref()
+                .and_then(Value::as_str)
+                != Some(error.platform.as_str())
+    }) {
+        return Err(invalid(
+            "operation error platform differs from account request",
+        ));
+    }
+    Ok(())
+}
+
+pub(crate) fn validate_account_error(
+    raw: &Value,
+    platform: Option<SupplyPlatform>,
+) -> Result<(), BridgeError> {
+    if raw.is_null() {
+        return Ok(());
+    }
+    let error: AccountOperationError =
+        serde_json::from_value(raw.clone()).map_err(|e| invalid_json("account error", e))?;
+    validate_account_operation_error(&error, platform)
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LoginMaintenance {
+    operation: Value,
+    phase: String,
+    source: crate::authorize_protocol::AuthorizeSource,
+    started_at: String,
+    can_recheck: bool,
+    #[serde(deserialize_with = "present_operation_error")]
+    error: Option<AccountOperationError>,
+}
+fn validate_login_maintenance(
+    account: &Value,
+    platform: SupplyPlatform,
+) -> Result<(), BridgeError> {
+    let invalid = |message: &str| BridgeError::new("ACCOUNT_REPLY_INVALID", message.into());
+    let raw = account.get("login_maintenance").ok_or_else(|| {
+        invalid("account.login_maintenance missing; required=explicit null or maintenance evidence")
+    })?;
+    if raw.is_null() {
+        return Ok(());
+    }
+    let value: LoginMaintenance = serde_json::from_value(raw.clone())
+        .map_err(|e| invalid_json("account.login_maintenance", e))?;
+    validate_operation(&value.operation, Some(platform), &["authorize"])?;
+    if ![
+        "pause_pending",
+        "paused",
+        "isolated",
+        "authorizing",
+        "reconciling",
+        "restored",
+        "confirmation_required",
+        "blocked",
+    ]
+    .contains(&value.phase.as_str())
+    {
+        return Err(invalid("login maintenance phase outside known lifecycle"));
+    }
+    AccountDetectRequest {
+        platform,
+        directory: value.source.directory,
+        store: value.source.store,
+        mode: "local".into(),
+    }
+    .validate()?;
+    if !crate::runtime_protocol::timestamp(&value.started_at)
+        || !time::OffsetDateTime::parse(
+            &value.started_at,
+            &time::format_description::well_known::Rfc3339,
+        )
+        .is_ok_and(|at| at <= time::OffsetDateTime::now_utc() + time::Duration::seconds(5))
+    {
+        return Err(invalid(
+            "login maintenance started_at rejected; required=UTC observation no later than now+5s",
+        ));
+    }
+    // can_recheck is intentionally separate from the login operation result.
+    let _ = value.can_recheck;
+    if let Some(error) = &value.error {
+        validate_account_operation_error(error, Some(platform))?;
     }
     Ok(())
 }

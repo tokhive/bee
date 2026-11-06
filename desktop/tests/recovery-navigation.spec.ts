@@ -73,7 +73,7 @@ test('Claude inline source recovery keeps its platform, drafts and return focus 
  for(const [platform,draft] of [['OpenAI','/tmp/openai-draft'],['Claude','/tmp/claude-draft']]){
   await page.getByRole('button',{name:platform+' 详情',exact:true}).click();await page.getByRole('dialog').getByLabel('自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
  }
- const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'检查凭证来源',exact:true}).first().click();
+ const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.locator('.account-conditions>summary').click();await row.getByRole('button',{name:'打开读取设置',exact:true}).first().click();
  const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/openai-draft');

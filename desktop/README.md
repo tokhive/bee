@@ -38,7 +38,7 @@ npm --prefix desktop run dev:ui
 
 “模拟外部条件”支持当前登录成功（原账号／不同账号）、失败，以及同账号后台刷新、服务准备失败、同会话模拟重启、报告过期／恢复、写入回执丢失。登录取消和准备重试使用页面按钮。先操作页面产生登录事务，再设置对应登录结果；回执丢失控制需在下一次写入前设置。
 
-目标行为仅在开发模式下、`/tests/fixtures/bee-preview/app.html` 路径且场景以 `accounts-auto-` 开头时启用。其余场景及原生运行仍按现有规则操作；未将模拟自动运行接入真实 Go／Rust／Tauri 后台。模拟重启只验证当前会话中的暂停选择，不证明真实磁盘持久化。详见[规格](../docs/desktop/auto-service-design.md)与[验收记录](../docs/desktop/evidence/2026-11-04-account-ui-review/auto-service-validation.md)。
+`accounts-auto-*` 是前端模拟场景；正常原生入口接入 Go 自动维护、平台登录隔离与持久恢复，行为和接口见[原生自动服务](../docs/desktop/native-auto-service.md)。模拟重启只验证当前会话中的暂停选择，不证明真实磁盘持久化。详见[规格](../docs/desktop/auto-service-design.md)与[验收记录](../docs/desktop/evidence/2026-11-04-account-ui-review/auto-service-validation.md)。
 
 ## 一键构建 macOS App
 
@@ -60,7 +60,7 @@ open "desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app"
 
 ## 当前原生行为与文档
 
-已绑定设备在启动核验后可连接 Hive；“设备在线”“贡献运行”“平台可接单”分别表示不同事实。开始贡献、接入／换号、解除暂停由用户明确操作。普通查询超时保留管理进程和原请求，原请求结束后按资源退避核对，写操作不自动重放。
+已绑定设备在启动核验后可连接 Hive；“设备在线”“贡献运行”“平台可接单”分别表示不同事实。明确接入后原生服务自动维护；接入／主动登录／换号和解除暂停由用户操作，首次接入、主动登录及换号后保持暂停。普通查询超时保留管理进程和原请求，原请求结束后按资源退避核对，写操作不自动重放。
 
 macOS 原生“编辑”菜单随应用语言切换，提供撤销、重做、剪切、复制、粘贴和全选，以及对应的系统快捷键。修改原生菜单后需重建并重启 App；在真实窗口的输入框内验证，浏览器预览不能覆盖 macOS 菜单对快捷键的处理。
 

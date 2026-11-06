@@ -47,6 +47,42 @@ fn diagnostic_log_persists_only_known_fields_and_values() {
     assert!(!serde_json::to_string(&page).unwrap().contains("MARKER"));
     fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn owned_exit_diagnostics_keep_closed_evidence_without_private_error_details() {
+    let (dir, store) = store();
+    let input = json!({
+        "time": "2026-10-27T03:30:00Z",
+        "level": "error",
+        "module": "lifecycle",
+        "platform": null,
+        "code": "owned_exit_unconfirmed",
+        "evidence": {
+            "exit_reason": "app_exit",
+            "exit_stage": "stop_receipt",
+            "stop_confirmed": "false",
+            "child_reaped": "true",
+            "exit_error_code": "RUNTIME_OPERATION_FAILED"
+        }
+    });
+    let safe = store.record(input.clone()).unwrap();
+    assert_eq!(safe.evidence.len(), 5);
+    for field in [
+        "exit_reason",
+        "exit_stage",
+        "stop_confirmed",
+        "child_reaped",
+        "exit_error_code",
+    ] {
+        let mut hostile = input.clone();
+        hostile["evidence"][field] = json!("token=MARKER /Users/MARKER/private");
+        let sanitized = store.record(hostile).unwrap();
+        assert!(!sanitized.evidence.contains_key(field));
+    }
+    let raw = fs::read(dir.join("diagnostic-0.jsonl")).unwrap();
+    assert!(!String::from_utf8_lossy(&raw).contains("MARKER"));
+    fs::remove_dir_all(dir).unwrap();
+}
 #[test]
 fn diagnostic_log_rejects_untrusted_enum_time_and_query_without_echo() {
     let (dir, store) = store();

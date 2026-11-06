@@ -1128,6 +1128,7 @@ impl Bridge {
                 | "device_recovery_status"
                 | "runtime_verify"
                 | "runtime_snapshot"
+                | "runtime_restore"
                 | "network_status"
                 | "runtime_configure_network"
         ) || (method == "runtime_stop"

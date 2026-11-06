@@ -36,6 +36,8 @@ type desktopSynchronizationReceipt struct {
 }
 
 type desktopRuntimeSlot struct {
+	maintenanceID    string
+	loginRecoveryRun string
 	pauseRevision    atomic.Uint64
 	confirmed        *desktopSynchronizationReceipt
 	gate             desktopRuntimeGate
@@ -115,6 +117,9 @@ func (r *DesktopRuntime) preparePlatform(ctx context.Context, session *desktopDe
 		return err
 	}
 	defer slot.gate.unlock()
+	if slot.maintenanceID != "" {
+		return fmt.Errorf("platform preparation isolated by original login maintenance: platform=%s operation_id=%s; recheck original maintenance", platform, slot.maintenanceID)
+	}
 	slot.config = nil
 	slot.selection = selection
 	slot.resume = resume && slot.pauseRevision.Load() == pauseRevision
@@ -143,26 +148,9 @@ func (r *DesktopRuntime) preparePlatform(ctx context.Context, session *desktopDe
 	if _, err := r.accounts.selectionSource(ctx, platform, desktopPendingOperation{Source: selection.Source, ToFingerprint: selection.Fingerprint, CredentialRevision: selection.CredentialRevision}); err != nil {
 		return err
 	}
-	supply, err := desktopSupplyCall(ctx, state, platform, nil)
+	_, err = desktopSupplyCall(ctx, state, platform, nil)
 	if err != nil {
 		return err
-	}
-	if !supply.Paused {
-		paused := true
-		written, e := desktopSupplyCall(ctx, state, platform, &paused)
-		if e != nil {
-			return fmt.Errorf("runtime preparatory pause unconfirmed; query before any further action: %w", e)
-		}
-		if !written.Paused {
-			return fmt.Errorf("runtime preparatory pause PUT returned paused=false")
-		}
-		supply, err = desktopSupplyCall(ctx, state, platform, nil)
-		if err != nil {
-			return err
-		}
-		if !supply.Paused {
-			return fmt.Errorf("runtime preparatory pause GET returned paused=false")
-		}
 	}
 	slot.selection = selection
 	cfg, err := r.configForSelection(platform, selection)
@@ -220,7 +208,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 	if expected != nil && expected != connection {
 		return
 	}
-	if connection == nil || !connection.active || connection.ctx.Err() != nil || slot.config == nil {
+	if connection == nil || !connection.active || connection.ctx.Err() != nil || slot.config == nil || slot.maintenanceID != "" {
 		return
 	}
 	if slot.workerConnection == connection && slot.done != nil {
@@ -465,6 +453,11 @@ func (r *DesktopRuntime) selectionBarrier(ctx context.Context, platform string) 
 	return owned, func(selection *desktopAccountSelection, committed bool) {
 		defer slot.gate.unlock()
 		slot.config = nil
+		if !committed || !owned {
+			r.mu.Lock()
+			r.targets[runtimePlatformTarget(platform)] = false
+			r.mu.Unlock()
+		}
 		if committed && selection != nil && owned {
 			cfg, err := r.configForSelection(platform, *selection)
 			if err != nil {
@@ -475,6 +468,7 @@ func (r *DesktopRuntime) selectionBarrier(ctx context.Context, platform string) 
 			slot.selection = *selection
 			slot.resume = false
 			slot.resumeAttempted = true
+			slot.maintenanceID = ""
 			r.mu.Lock()
 			r.targets[runtimePlatformTarget(platform)] = true
 			r.mu.Unlock()
@@ -522,6 +516,9 @@ func (r *DesktopRuntime) supplyBarrier(ctx context.Context, platform string, pau
 }
 
 func (r *DesktopRuntime) validateManualResume(ctx context.Context, platform string, slot *desktopRuntimeSlot) error {
+	if slot.maintenanceID != "" {
+		return fmt.Errorf("resume blocked by original login maintenance: operation_id=%s; recheck or confirm the target account first", slot.maintenanceID)
+	}
 	r.mu.Lock()
 	running := r.snapshot.Local == "running" && r.snapshot.Connection == "connected"
 	runID := r.snapshot.RunID

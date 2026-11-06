@@ -29,10 +29,10 @@ try{
    step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('{platform} 详情',{platform:'OpenAI'}))+']'))).click();
    await until(()=>document.querySelector('.account-source'));
   }
-  const names={'start-unknown':'开始贡献',login:'登录 OpenAI',select:'接入',stop:'停止贡献',change:'换号',clear:'取消接入'};
+  const names={'prepare-unknown':'重试准备',login:'登录 OpenAI',select:'接入',change:'换号',clear:'取消接入'};
   if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(t(names[scene.action])))).click();}
-  if(scene.action!=='detail'&&scene.action!=='start-unknown')await until(()=>document.querySelector('.dialog-content'));
-  if(scene.action==='start-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));
+  if(scene.action!=='detail'&&scene.action!=='prepare-unknown')await until(()=>document.querySelector('.dialog-content'));
+  if(scene.action==='prepare-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));
  }
  window.__beePreviewReady=true;
  window.__beePreviewAnnounceReady();

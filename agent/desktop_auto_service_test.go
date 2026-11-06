@@ -2,15 +2,18 @@ package bee
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/tokhive/bee/beewire"
 )
 
 func TestDesktopAutoServiceRestoreEmptyAccountsWaitsWithoutContribution(t *testing.T) {
@@ -73,6 +76,82 @@ func TestDesktopAutoServiceRestoreEmptyAccountsWaitsWithoutContribution(t *testi
 	}
 }
 
+func TestDesktopAutoServiceWaitingIdentityVerificationPreservesChangedBindingAndStop(t *testing.T) {
+	for _, scenario := range []string{"binding_changed", "stop"} {
+		t.Run(scenario, func(t *testing.T) {
+			entered, release := make(chan struct{}), make(chan struct{})
+			var releaseOnce sync.Once
+			releaseHTTP := func() { releaseOnce.Do(func() { close(release) }) }
+			var requests atomic.Int32
+			d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+				if q.Method != "GET" || q.URL.Path != "/api/bee/identity" {
+					t.Errorf("waiting sent unexpected request: %s %s", q.Method, q.URL.Path)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				if requests.Add(1) == 1 {
+					close(entered)
+				}
+				select {
+				case <-release:
+				case <-q.Context().Done():
+					return
+				}
+				desktopSupplyServeIdentity(w, q)
+			})
+			originalBinding, err := os.ReadFile(d.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			// Restore the external test mutation before the fixture verifies that
+			// runtime itself has not rewritten device configuration.
+			t.Cleanup(func() { os.WriteFile(d.path, originalBinding, 0600) })
+			t.Cleanup(releaseHTTP)
+			a := NewDesktopAccounts(d)
+			t.Cleanup(a.Close)
+			r := NewDesktopRuntime(context.Background(), d, a)
+			t.Cleanup(r.Close)
+			if _, err := r.Restore(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			select {
+			case <-entered:
+			case <-time.After(5 * time.Second):
+				t.Fatal("waiting settled without verifying the current device identity")
+			}
+			if scenario == "stop" {
+				starting, _ := r.Snapshot(context.Background())
+				if _, err := r.Stop(context.Background(), DesktopStopRequest{ExpectedRevision: starting.Revision, Reason: "app_exit"}); err != nil {
+					t.Fatal(err)
+				}
+				stopped := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "stopped" && s.StopReceipt != nil })
+				if stopped.Operation.State != "succeeded" || stopped.Operation.Kind != "stop" || !stopped.StopReceipt.WorkersStopped || !stopped.StopReceipt.SessionClean {
+					t.Fatalf("late waiting verification replaced explicit stop: %+v", stopped)
+				}
+				return
+			}
+			raw, err := os.ReadFile(d.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var changed map[string]any
+			if err := json.Unmarshal(raw, &changed); err != nil {
+				t.Fatal(err)
+			}
+			changed["name"] = "Changed Mac"
+			raw, _ = json.Marshal(changed)
+			if err := os.WriteFile(d.path, raw, 0600); err != nil {
+				t.Fatal(err)
+			}
+			releaseHTTP()
+			failed := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "failed" })
+			if failed.Operation == nil || failed.Operation.Error == nil || !strings.Contains(failed.Operation.Error.Message, "binding") {
+				t.Fatalf("late identity read hid changed binding: %+v", failed)
+			}
+		})
+	}
+}
+
 func TestDesktopAutoServiceStartupRejectsDirtyEmptyAccountSession(t *testing.T) {
 	var requests atomic.Int32
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
@@ -123,6 +202,13 @@ func TestDesktopAutoServiceStartupRejectsDirtyEmptyAccountSession(t *testing.T) 
 
 func TestDesktopAutoServiceWaitingAllowsFirstOfficialLogin(t *testing.T) {
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+		if desktopSupplyServeIdentity(w, q) {
+			return
+		}
+		if q.Method == "GET" && q.URL.Path == "/api/bee/platforms/openai/account" {
+			json.NewEncoder(w).Encode(beewire.PlatformAccount{Platform: "openai", Status: "not_configured"})
+			return
+		}
 		t.Errorf("first login unexpectedly used Hive: %s %s", q.Method, q.URL.Path)
 		w.WriteHeader(http.StatusInternalServerError)
 	})
@@ -156,7 +242,10 @@ func TestDesktopAutoServiceStartEmptyAccountsPreservesSavedIntent(t *testing.T) 
 	for _, running := range []bool{false, true} {
 		t.Run(map[bool]string{false: "stopped", true: "running"}[running], func(t *testing.T) {
 			d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
-				t.Errorf("empty-account start unexpectedly used Hive: %s %s", q.Method, q.URL.Path)
+				if q.Method == "GET" && desktopSupplyServeIdentity(w, q) {
+					return
+				}
+				t.Errorf("empty-account start unexpectedly used Hive beyond identity verification: %s %s", q.Method, q.URL.Path)
 				w.WriteHeader(http.StatusInternalServerError)
 			})
 			a := NewDesktopAccounts(d)

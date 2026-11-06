@@ -88,7 +88,7 @@ export function AppShell({
           </div>
           {children}
         </main>
-        <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : autoService ? '前端交互预览 · 模拟数据' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
+        <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : autoService ? '自动维护账号 · 按平台管理接单' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
         </footer>
       </div>
     </div>

@@ -12,6 +12,7 @@ import (
 // mu protects only local configuration access; no network work runs under it.
 type desktopDeviceSession struct {
 	mu              sync.Mutex
+	loginJournalMu  sync.Mutex
 	path            string
 	unlock          func()
 	pairing         chan struct{}

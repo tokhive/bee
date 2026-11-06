@@ -21,11 +21,13 @@
     "local": "stopped",
     "connection": "disconnected",
     "connection_detail": null,
+    "legacy_stop": null,
     "platforms": {
       "openai": {
         "account": {
           "platform": "openai",
           "operation": null,
+          "login_maintenance": null,
           "revision": 0,
           "candidate": {
             "state": "not_checked",
@@ -128,6 +130,7 @@
         "account": {
           "platform": "claude",
           "operation": null,
+          "login_maintenance": null,
           "revision": 0,
           "candidate": {
             "state": "not_checked",

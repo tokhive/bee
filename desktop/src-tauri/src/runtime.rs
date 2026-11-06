@@ -51,6 +51,7 @@ fn checked(reply: BridgeReply, kind: RuntimeReplyKind) -> Result<BridgeReply, Br
 impl Bridge {
     // Called once at App startup, after handshake. A failed child is never restarted.
     pub(crate) async fn restore_when_ready(&self) -> Result<(), BridgeError> {
+        self.check_restore_admission()?;
         if self.0.restored.swap(true, Ordering::SeqCst) {
             return Ok(());
         }
@@ -72,8 +73,10 @@ impl Bridge {
                 }
             }
         }
+        self.check_restore_admission()?;
         let admitted = checked(
-            self.exit_request("runtime_restore", json!({})).await?,
+            self.request("runtime_restore", json!({}), Duration::from_secs(5))
+                .await?,
             RuntimeReplyKind::Operation,
         )?;
         let operation = &admitted.result["operation"];
@@ -114,6 +117,16 @@ impl Bridge {
                 }
             }
         }).await.map_err(|_|failure("startup restore completion deadline elapsed: limit=90000ms; update recovery remains unconfirmed"))??;
+        Ok(())
+    }
+
+    pub(crate) fn check_restore_admission(&self) -> Result<(), BridgeError> {
+        if self.0.frozen.load(Ordering::SeqCst) {
+            return Err(BridgeError::new(
+                "OWNED_EXIT_PENDING",
+                "startup restore rejected: owned exit has frozen new operations".into(),
+            ));
+        }
         Ok(())
     }
 

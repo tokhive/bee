@@ -14,8 +14,8 @@ pub enum NativeLocale {
 impl NativeLocale {
     fn labels(self) -> (&'static str, &'static str) {
         match self {
-            Self::Zh => ("打开 Bee", "退出 Bee"),
-            Self::En => ("Open Bee", "Quit Bee"),
+            Self::Zh => ("打开 Bee", "退出 Bee（可能中断任务）"),
+            Self::En => ("Open Bee", "Quit Bee (may interrupt tasks)"),
         }
     }
 }
@@ -309,7 +309,7 @@ pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
     let locale = app.state::<Arc<NativeLanguage>>().current();
     let (open_text, quit_text) = locale
         .map(NativeLocale::labels)
-        .unwrap_or(("打开 Bee / Open Bee", "退出 Bee / Quit Bee"));
+        .unwrap_or(("打开 Bee / Open Bee", "退出 Bee（可能中断任务）/ Quit Bee (may interrupt tasks)"));
     let open = MenuItem::with_id(app, "bee-open", open_text, true, Some("CmdOrCtrl+O"))?;
     let quit = MenuItem::with_id(app, "bee-quit", quit_text, true, Some("CmdOrCtrl+Q"))?;
     let app_menu = Submenu::with_items(app, "Bee", true, &[&open, &quit])?;
@@ -374,13 +374,95 @@ pub fn install_menu_and_tray(app: &mut tauri::App) -> tauri::Result<bool> {
 
 pub async fn shutdown_owned(
     bridge: &crate::sidecar::Bridge,
+    logs: Option<&crate::diagnostic_log::DiagnosticLogStore>,
     release_instance: impl FnOnce(),
 ) -> Result<(), crate::protocol::BridgeError> {
+    let started = record_exit(
+        logs,
+        "owned_exit_started",
+        "stop_receipt",
+        false,
+        false,
+        None,
+    );
     let saved = bridge
         .prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
         .await;
     // Even when persistence fails, hold singleton ownership until child reaping.
-    bridge.stop().await?;
-    release_instance();
-    saved.map(|_| ())
+    let cleanup = bridge.stop().await;
+    let stage = if cleanup.is_err() {
+        "child_reap"
+    } else if saved.is_err() {
+        "stop_receipt"
+    } else {
+        "completed"
+    };
+    let recorded = record_exit(
+        logs,
+        if saved.is_ok() && cleanup.is_ok() {
+            "owned_exit_completed"
+        } else {
+            "owned_exit_unconfirmed"
+        },
+        stage,
+        saved.is_ok(),
+        cleanup.is_ok(),
+        cleanup.as_ref().err().or_else(|| saved.as_ref().err()),
+    );
+    // The next instance can write this same log directory. Finish our final
+    // diagnostic replacement before releasing its single-writer ownership.
+    if cleanup.is_ok() {
+        release_instance();
+    }
+    let mut failures = Vec::new();
+    for (stage, result) in [
+        ("stop_receipt", saved.map(|_| ())),
+        ("child_reap", cleanup),
+        ("diagnostic_start", started),
+        ("diagnostic_result", recorded),
+    ] {
+        if let Err(cause) = result {
+            failures.push(format!("{stage}: {}: {}", cause.code, cause.message));
+        }
+    }
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(BridgeError::new(
+            "OWNED_EXIT_UNCONFIRMED",
+            failures.join("; "),
+        ))
+    }
+}
+
+fn record_exit(
+    logs: Option<&crate::diagnostic_log::DiagnosticLogStore>,
+    code: &str,
+    stage: &str,
+    stop_confirmed: bool,
+    child_reaped: bool,
+    cause: Option<&BridgeError>,
+) -> Result<(), BridgeError> {
+    let Some(logs) = logs else {
+        return Ok(());
+    };
+    let observed = time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .map_err(|cause| {
+            BridgeError::new(
+                "OWNED_EXIT_DIAGNOSTICS_UNCONFIRMED",
+                format!("format owned exit observation timestamp: {cause}"),
+            )
+        })?;
+    let mut evidence = serde_json::json!({"exit_reason":"app_exit","exit_stage":stage,"stop_confirmed":stop_confirmed.to_string(),"child_reaped":child_reaped.to_string()});
+    if let Some(cause) = cause {
+        evidence["exit_error_code"] =
+            serde_json::json!(if crate::diagnostic_log::is_exit_error_code(&cause.code) {
+                cause.code.as_str()
+            } else {
+                "unknown_failure"
+            });
+    }
+    logs.record(serde_json::json!({"time":observed,"level":if code == "owned_exit_unconfirmed" { "error" } else { "info" },"module":"lifecycle","platform":null,"code":code,"evidence":evidence}))?;
+    Ok(())
 }

@@ -88,6 +88,7 @@ test('login result appears in formal snapshots as a candidate and new platform l
 
 test('candidate actions require confirmation, revision, live source and matching candidate; connect and change stay paused',async t=>{
  const {accounts,authorize,runtime}=await preview(t);
+ t.mock.timers.enable({apis:['Date'],now:Date.now()});
  let current=await accounts.snapshot('openai',false);
  const login=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:current.revision});
  event({action:'login-result',platform:'openai',operationId:login.id,value:'succeeded'});
@@ -105,7 +106,11 @@ test('candidate actions require confirmation, revision, live source and matching
  current=await accounts.action({...request,revision:current.revision,candidate_ref:current.candidate.reference!});
  assert.equal(current.selection.state,'selected');
  assert.equal((window as unknown as {paused:{openai:boolean}}).paused.openai,true);
- assert.equal((await runtime.snapshot()).local,'stopped');
+ assert.equal((await runtime.snapshot()).local,'running');
+ t.mock.timers.tick(601);
+ await runtime.snapshot();
+ current=await accounts.snapshot('openai',false);
+ assert.equal(current.authorization.state,'official_identity_verified');
  const selected=current.selection.fingerprint;
  const next=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:current.revision});
  assert.notEqual(next.id,login.id);
@@ -149,11 +154,21 @@ test('authorization rejects conflicts and isolates cancellation, replaced operat
  assert.throws(()=>applyPreviewEvent({session,action:'login-result',platform:'openai',operationId:second.id,value:'succeeded'}),/PREVIEW_SESSION_STALE/);
 });
 
-test('actual authorization namespace and stopped-runtime checks reject before changing accounts',async t=>{
- const {accounts,authorize}=await preview(t,'running');
+test('running-service login pauses its platform without restarting service; namespace and duplicate guards preserve accounts',async t=>{
+ const {accounts,authorize,runtime}=await preview(t,'running');
  const initial=await accounts.snapshot('openai',false);
- await assert.rejects(authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:initial.revision}));
- assert.deepEqual(await accounts.snapshot('openai',false),initial);
+ const before=await runtime.snapshot(),otherPaused=(window as any).paused.claude;
+ const login=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:initial.revision});
+ assert.equal(login.state,'running');
+ const admitted=await accounts.snapshot('openai',false);
+ assert.deepEqual(admitted.selection,initial.selection);
+ assert.equal((window as any).paused.openai,true);
+ assert.equal((window as any).paused.claude,otherPaused);
+ const running=await runtime.snapshot();
+ assert.equal(running.local,'running');assert.equal(running.run_id,before.run_id);
+ await assert.rejects(authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:admitted.revision}),/operation_pending/);
+ assert.deepEqual(await accounts.snapshot('openai',false),admitted);
+ assert.equal((window as any).calls.filter((c:any)=>['runtime_start','runtime_stop'].includes(c.command)).length,0);
  await installPreviewFixture('account-empty');
  const claude=await accounts.snapshot('claude',false);
  await assert.rejects(authorize.start({platform:'claude',source:{directory:null,store:'file'},expected_revision:claude.revision}));

@@ -29,6 +29,8 @@ export function accountActionBlock(action:AccountAction,c:AccountActionContext):
  if(action!=='authorize'&&c.sharedReadFailure)return blocked('共享状态读取未确认，暂不能提交账号操作；请先核对当前读取问题。',c.sharedReadFailure.check==='account_defaults'?source:{page:'overview',section:'runtime'});
  if(action!=='authorize'&&c.submissionBlocked)return blocked('接入前需先恢复设备身份；本机来源仍可读取。',{page:'overview',section:'device'});
  if(c.busy)return blocked('正在提交账号操作，请等待本次结果。');
+ const maintenance=view.login_maintenance;
+ if(maintenance&&maintenance.phase!=='restored'&&!(action==='confirm_change'&&maintenance.phase==='confirmation_required'))return blocked('此平台的登录维护尚未完成，请先核对维护结果。',{page:'accounts',section:'account',platform});
  const pending=!!view.operation&&['pending','running','reconciling'].includes(view.operation.state);
  const continuation=action==='confirm_change'&&view.operation?.state==='reconciling'&&view.operation.error?.code==='confirmation_not_submitted';
  if(pending&&!continuation)return blocked(view.operation?.kind==='authorize'?'官方登录仍在进行；关闭详情不会取消登录。':'已有账号操作待核对；只查询原操作，不会重复提交。');
@@ -54,6 +56,17 @@ export function accountActionBlock(action:AccountAction,c:AccountActionContext):
  if(action==='select'&&selected)return blocked('此平台已有接入账号，请在详情确认换号。',{page:'accounts',section:'account',platform});
  return null;
 }
+
+export const loginMaintenanceCopy:Record<NonNullable<AccountSnapshot['login_maintenance']>['phase'],string>={
+ pause_pending:'正在确认此平台暂停接单…',
+ paused:'此平台已暂停，正在准备登录维护…',
+ isolated:'此平台已隔离，正在准备官方登录…',
+ authorizing:'正在等待此平台的官方登录完成…',
+ reconciling:'此平台的登录维护结果待确认；只核对原过程。',
+ restored:'此平台的账号维护已恢复。',
+ confirmation_required:'发现不同账号，请在详情确认换号；原账号选择仍保留。',
+ blocked:'此平台的登录维护受阻，请查看具体原因。',
+};
 
 export function accountPhase(view:AccountSnapshot|undefined,dirty:boolean,reading:boolean,now:number):string {
  if(dirty)return reading?'正在读取已有登录…':'来源已更改，等待自动读取。';

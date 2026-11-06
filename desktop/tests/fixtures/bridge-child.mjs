@@ -20,7 +20,7 @@ input.on('line', line => {
     const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
     appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');
     const reply=()=>{
-      const result=request.method==='ping'?{alive:true}:config.nestedFailure??{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null},alive:true};
+      const result=request.method==='ping'?{alive:true}:config.nestedFailure??{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null,login_maintenance:null},alive:true};
       const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),...(config.businessFailure&&request.method!=='ping'?{error:{code:'http_rejected',message:'HTTP 503'}}:{result})})+'\n';
       setTimeout(()=>{process.stdout.write(frame);
       if(config.fault==='duplicate')process.stdout.write(frame);},config.delay??0);
@@ -80,7 +80,7 @@ input.on('line', line => {
         }
       case 'runtime_configure_network':bootstrapRevision=request.params.revision;bootstrapProxy=request.params.connect_proxy;if(config.apply)startupRuntimeRevision++;reply({configured:true});return;
       case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
-      case 'account_detect':reply({account:{platform:request.params.platform,operation:null}});return;
+      case 'account_detect':reply({account:{platform:request.params.platform,operation:null,login_maintenance:null}});return;
       case 'account_defaults':reply({defaults:{platforms:[]}});return;
       case 'shutdown':input.close();process.stdin.destroy();return;
       default:reply({alive:true});return;
@@ -157,7 +157,7 @@ input.on('line', line => {
     const keys=Object.keys(request.params).sort().join(',');
     const required={account_defaults:'',account_detect:'directory,mode,platform,store',account_snapshot:'platform,refresh',account_action:'action,candidate_ref,confirmed,platform,revision'};
     if(keys!==required[request.method]){process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),error:{code:'FIXTURE_PARAMS_REJECTED',message:'account params differ from fixed contract'}})+'\n');return;}
-    const result=request.method==='account_defaults'?{defaults:{platforms:[]}}:request.method==='account_action'?{error:{code:'ACCOUNT_OPERATION_FAILED',message:'runtime ownership proof absent'}}:{account:{platform:request.params.platform,operation:null}};
+    const result=request.method==='account_defaults'?{defaults:{platforms:[]}}:request.method==='account_action'?{error:{code:'ACCOUNT_OPERATION_FAILED',message:'runtime ownership proof absent'}}:{account:{platform:request.params.platform,operation:null,login_maintenance:null}};
     const reply=JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n';
     if(mode==='slow-account')setTimeout(()=>process.stdout.write(reply),800);else process.stdout.write(reply);return;
   }

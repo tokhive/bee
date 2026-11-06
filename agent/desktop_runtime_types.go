@@ -39,6 +39,14 @@ type DesktopRuntimeSnapshot struct {
 	Platforms        map[string]DesktopRuntimePlatform `json:"platforms"`
 	Operation        *DesktopOperation                 `json:"operation"`
 	StopReceipt      *DesktopStopReceipt               `json:"stop_receipt"`
+	LegacyStop       *DesktopLegacyStopStatus          `json:"legacy_stop"`
+}
+
+type DesktopLegacyStopStatus struct {
+	Phase      string               `json:"phase"`
+	Platforms  []string             `json:"platforms"`
+	Error      *DesktopAccountError `json:"error"`
+	CanRecheck bool                 `json:"can_recheck"`
 }
 
 type DesktopStartRequest struct {
@@ -66,7 +74,7 @@ type DesktopAuthorizeRequest struct {
 // The sidecar is bundled with the desktop; omission is a contract error rather
 // than an implicit assertion that there was no observed failure.
 func (s *DesktopRuntimeSnapshot) UnmarshalJSON(raw []byte) error {
-	if _, err := connectionObject(raw, "run_id", "revision", "network_revision", "observed_at", "local", "connection", "connection_detail", "platforms", "operation", "stop_receipt"); err != nil {
+	if _, err := connectionObject(raw, "run_id", "revision", "network_revision", "observed_at", "local", "connection", "connection_detail", "platforms", "operation", "stop_receipt", "legacy_stop"); err != nil {
 		return fmt.Errorf("runtime snapshot fields: %w", err)
 	}
 	type plain DesktopRuntimeSnapshot

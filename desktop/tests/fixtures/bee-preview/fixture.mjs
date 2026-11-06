@@ -8,8 +8,8 @@ const hold=()=>new Promise(()=>{});
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function installPreviewFixture(id){
  const scene=getScene(id),w=window;
- const autoService=id.startsWith('accounts-auto-');
- if(autoService)id=({'candidate':'account-candidate',empty:'account-empty',running:'running',paused:'supply-paused',error:'account-error',change:'account-change',stale:'running'})[id.slice('accounts-auto-'.length)];
+ const accountAutoScene=id.startsWith('accounts-auto-'),autoService=true;
+ if(accountAutoScene)id=({'candidate':'account-candidate',empty:'account-empty',running:'running',paused:'supply-paused',error:'account-error',change:'account-change',stale:'running'})[id.slice('accounts-auto-'.length)];
  const generation=crypto.randomUUID();w.__beePreviewFixture=generation;
  w.__beePreviewSession=new URLSearchParams(location.search).get('session')??generation;
  const current=()=>w.__beePreviewFixture===generation;
@@ -38,7 +38,7 @@ export async function installPreviewFixture(id){
  if(id==='account-expired')accounts.openai.candidate.expires_at=stamp(-60000);
  if(id==='quota-unknown')accounts.openai.capabilities[0]={...accountFixture('openai').capabilities[0]};
  if(id==='quota-expired')accounts.openai.capabilities[0].valid_until=stamp(-60000);
- if(id==='quota-multiple'||autoService&&id==='running')accounts.claude=seeded('claude');
+ if(id==='quota-multiple'||accountAutoScene&&id==='running')accounts.claude=seeded('claude');
  if(id==='quota-multiple')accounts.claude.capabilities[0].windows.push({scope:'opus',seconds:604800,used_percent:47,reset_at:'2099-01-01T00:00:00Z'});
  if(id==='quota-over')accounts.openai.capabilities[0].windows[0].used_percent=120;
  if(id==='account-error')accounts.openai.candidate={...accountFixture('openai').candidate,state:'unavailable',error:{code:'source_unavailable',check:'file_read',platform:'openai',message:'无法读取 OpenAI 登录：file_read permission_denied=true；预览模拟权限拒绝。',evidence:{permission_denied:'true',path:'/preview/codex/auth.json'}}};
@@ -49,12 +49,13 @@ export async function installPreviewFixture(id){
   w.notificationPermission='denied';
   w.autostartQueryError={code:'AUTOSTART_QUERY_FAILED',message:'autostart query failed: kind=PermissionDenied os_code=13; registration unconfirmed'};
  }
- w.paused={openai:id==='supply-paused'||autoService&&id==='account-error',claude:false};
- let local=['runtime-no-accounts','runtime-accounts-unconfirmed','device-revoked-source-missing','startup-blocked','stopped','runtime-unknown','confirm-login','confirm-select','confirm-change','confirm-clear','account-candidate','account-empty','account-change'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
+ w.paused={openai:id==='supply-paused'||accountAutoScene&&id==='account-error',claude:false};
+ let local=['runtime-no-accounts','runtime-accounts-unconfirmed','device-revoked-source-missing','startup-blocked','stopped','runtime-unknown','confirm-login','confirm-select','confirm-clear','account-candidate','account-empty'].includes(id)||id.startsWith('device-')&&id!=='device-bound'?'stopped':'running';
+ if(empty||['account-candidate','confirm-select'].includes(id))local='waiting';
  if(id==='runtime-starting')local='starting';if(id==='runtime-stopping')local='stopping';
  if(local==='stopped'&&w.accounts.openai.selection.state==='selected')w.paused.openai=true;
  if(id==='diagnostics-export-unknown'){w.previewDownloads=[];HTMLAnchorElement.prototype.click=function(){w.previewDownloads.push(this.download);};}
- if(autoService)local='running';
+ if(accountAutoScene)local=Object.values(accounts).some(a=>a.selection.state==='selected')?'running':'waiting';
  const preparingAccounts=new Map();
  let preparingUntil=0,staleSupply=scene.id==='accounts-auto-stale',supplyUnknownNext=false,prepareFailure=false;
  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
@@ -206,7 +207,7 @@ export async function installPreviewFixture(id){
    w.calls.push({command,args});
    if(id==='runtime-accounts-unconfirmed')return businessError('RUNTIME_OPERATION_FAILED','runtime snapshot unavailable; account facts not confirmed',instance);
    if(unknown)return businessError('RUNTIME_OPERATION_FAILED','runtime_snapshot HTTP 503; preview reconciliation unavailable; prior_start=submitted',instance);
-   return {instance,result:{runtime:{run_id:runId(),revision,network_revision:w.networkRevision??0,observed_at:stamp(0),local,connection,connection_detail:connectionDetail(),platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:local==='running'&&connection==='connected'&&!id.startsWith('check-')&&!(id==='supply-partial'&&p==='claude')?supply(p):null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
+   return {instance,result:{runtime:{run_id:runId(),revision,network_revision:w.networkRevision??0,observed_at:stamp(0),local,connection,connection_detail:connectionDetail(),legacy_stop:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:local==='running'&&connection==='connected'&&!id.startsWith('check-')&&!(id==='supply-partial'&&p==='claude')?supply(p):null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(autoService&&command==='account_action'){
    const previous=w.accounts[args.request.platform]?.operation?.id;
@@ -214,7 +215,7 @@ export async function installPreviewFixture(id){
    finally{
     w.actionUnknown=false;
     const operation=w.accounts[args.request.platform]?.operation;
-    if(operation?.id!==previous&&operation?.state==='succeeded'&&['select','confirm_change'].includes(operation.kind)){const p=args.request.platform,account=w.accounts[p];account.authorization.state='preparing';account.revision++;preparingAccounts.set(p,{deadline:Date.now()+600,revision:account.revision,fingerprint:account.selection.fingerprint});revision++;}
+    if(operation?.id!==previous&&operation?.state==='succeeded'&&['select','confirm_change'].includes(operation.kind)){const p=args.request.platform,account=w.accounts[p];if(local==='waiting')local='running';account.authorization.state='preparing';account.revision++;preparingAccounts.set(p,{deadline:Date.now()+600,revision:account.revision,fingerprint:account.selection.fingerprint});revision++;}
    }
   }
   if(command==='account_detect'||command==='account_snapshot'){

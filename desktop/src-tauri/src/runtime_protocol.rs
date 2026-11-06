@@ -6,7 +6,8 @@ use serde_json::Value;
 
 const SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 fn invalid(message: impl Into<String>) -> BridgeError {
-    BridgeError { details: None,
+    BridgeError {
+        details: None,
         code: "RUNTIME_REPLY_INVALID".into(),
         message: message.into(),
     }
@@ -272,11 +273,53 @@ struct RuntimeSnapshot {
     connection: ConnectionState,
     #[serde(deserialize_with = "present")]
     connection_detail: Option<ConnectionDetail>,
+    #[serde(deserialize_with = "present")]
+    legacy_stop: Option<LegacyStopStatus>,
     platforms: RuntimePlatforms,
     #[serde(deserialize_with = "present")]
     operation: Option<Value>,
     #[serde(deserialize_with = "present")]
     stop_receipt: Option<StopReceipt>,
+}
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LegacyStopStatus {
+    phase: String,
+    platforms: Vec<SupplyPlatform>,
+    #[serde(deserialize_with = "present")]
+    error: Option<Value>,
+    can_recheck: bool,
+}
+impl LegacyStopStatus {
+    fn validate(&self) -> Result<(), BridgeError> {
+        if !["processing", "reconciling", "blocked", "completed"].contains(&self.phase.as_str())
+            || self.platforms.len() > 2
+            || self
+                .platforms
+                .iter()
+                .enumerate()
+                .any(|(i, p)| self.platforms[..i].contains(p))
+        {
+            return Err(invalid(
+                "legacy stop phase/platforms rejected; required=known phase and unique platforms",
+            ));
+        }
+        if let Some(error) = &self.error {
+            let platform = match error.get("platform").and_then(Value::as_str) {
+                Some("openai") => Some(SupplyPlatform::Openai),
+                Some("claude") => Some(SupplyPlatform::Claude),
+                _ => None,
+            };
+            crate::protocol::validate_account_error(error, platform)?;
+            if platform.is_some_and(|p| !self.platforms.contains(&p)) {
+                return Err(invalid(
+                    "legacy stop error platform differs from conversion scope",
+                ));
+            }
+        }
+        let _ = self.can_recheck;
+        Ok(())
+    }
 }
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -486,6 +529,9 @@ pub fn validate_runtime_reply(result: &Value, kind: RuntimeReplyKind) -> Result<
             if let Some(detail) = &s.connection_detail {
                 detail.validate()?;
             }
+            if let Some(legacy) = &s.legacy_stop {
+                legacy.validate()?;
+            }
             for (platform, p) in [
                 (SupplyPlatform::Openai, &s.platforms.openai),
                 (SupplyPlatform::Claude, &s.platforms.claude),
@@ -515,6 +561,33 @@ mod tests {
             "../../../desktopbridge/testdata/runtime-contract.json"
         ))
         .unwrap()
+    }
+    #[test]
+    fn legacy_stop_requires_explicit_progress_and_bounded_recovery_fields() {
+        let mut valid = fixture()["snapshot"].clone();
+        valid["legacy_stop"] =
+            json!({"phase":"reconciling","platforms":["openai"],"error":null,"can_recheck":true});
+        validate_runtime_reply(&json!({"runtime":valid}), RuntimeReplyKind::Snapshot).unwrap();
+        for (path, value) in [
+            ("/legacy_stop/phase", json!("unknown")),
+            ("/legacy_stop/platforms", json!(["openai", "openai"])),
+            ("/legacy_stop/platforms", json!(["unknown"])),
+            ("/legacy_stop/can_recheck", Value::Null),
+            (
+                "/legacy_stop/error",
+                json!({"code":"blocked","check":"upgrade","platform":"unknown","message":"blocked","evidence":{"token":"SECRET_PAYLOAD"}}),
+            ),
+        ] {
+            let mut bad = valid.clone();
+            *bad.pointer_mut(path).unwrap() = value;
+            let error = validate_runtime_reply(&json!({"runtime":bad}), RuntimeReplyKind::Snapshot)
+                .unwrap_err();
+            assert!(!error.message.contains("SECRET_PAYLOAD"));
+        }
+        valid.as_object_mut().unwrap().remove("legacy_stop");
+        assert!(
+            validate_runtime_reply(&json!({"runtime":valid}), RuntimeReplyKind::Snapshot).is_err()
+        );
     }
     #[test]
     fn runtime_shared_contract_and_requests() {

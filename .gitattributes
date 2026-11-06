@@ -1,0 +1,2 @@
+# Frozen preview bundles preserve generated template literals byte for byte.
+desktop/tests/fixtures/bee-preview/history/**/assets/*.js -whitespace

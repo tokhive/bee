@@ -12,6 +12,8 @@ mod navigation;
 mod network;
 mod network_native;
 mod network_protocol;
+#[cfg(test)]
+mod native_integration_tests;
 mod notification_poll;
 mod notifications;
 mod preferences;
@@ -233,7 +235,7 @@ commands::device_recovery_status,
             tauri::RunEvent::Exit => {
                 if let Some(bridge) = app.try_state::<sidecar::Bridge>() {
                     if let Err(cause) =
-                        tauri::async_runtime::block_on(lifecycle::shutdown_owned(&bridge, || {
+                        tauri::async_runtime::block_on(lifecycle::shutdown_owned(&bridge, app.try_state::<diagnostics_native::NativeDiagnostics>().as_deref().map(|diagnostics| &diagnostics.logs), || {
                             tauri_plugin_single_instance::destroy(app)
                         }))
                     {

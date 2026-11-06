@@ -1,5 +1,5 @@
 import type {AccountError,AccountSnapshot} from '../../src/system/accounts';
-import type {CodexLoginOperation,CodexLoginProgress,CodexLoginProgressResult,CodexLoginOpenResult} from '../../src/system/codexLogin.contract';
+import type {CodexLoginOperation,CodexLoginProgress,CodexLoginProgressResult,CodexLoginOpenResult,CodexLoginRestartRequest,CodexLoginRestartReceipt,CodexLoginRestartProgress,CodexLoginRestartProgressResult} from '../../src/system/codexLogin.contract';
 
 // Simulated contract examples only. No native commands, launcher, login process,
 // credentials or account files are accessed. These are alternative snapshots,
@@ -15,55 +15,55 @@ const maintenanceBlocker={platform:'openai',code:'login_maintenance_unconfirmed'
 export const codexLoginExamples={
  starting:{instance,result:{progress:{
   operation,sequence:1,phase:'starting',stop_reason:null,
-  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  waitingWithoutLink:{instance,result:{progress:{
   operation:{...operation,state:'running',revision:2},sequence:2,phase:'waiting_authorization',stop_reason:null,
-  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  // Only the availability flag is exposed; the validated link stays native.
  waitingWithLink:{instance,result:{progress:{
   operation:{...operation,state:'running',revision:2},sequence:3,phase:'waiting_authorization',stop_reason:null,
-  recheck_in_flight:false,actions:{open:true,cancel:true,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:true,cancel:true,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  // Cancellation has been accepted, but process cleanup is still in progress.
  cancelling:{instance,result:{progress:{
   operation:{...operation,state:'running',revision:2},sequence:4,phase:'cleaning_up',stop_reason:'cancelled',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  cleanupBlocked:{instance,result:{progress:{
   operation:{...operation,state:'failed',revision:3,error:processFailed},sequence:5,phase:'cleaning_up',stop_reason:'failed',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false},blocker:cleanupBlocker,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false,restart:false},blocker:cleanupBlocker,
  }}},
  failed:{instance,result:{progress:{
   operation:{...operation,state:'failed',revision:3,error:processFailed},sequence:6,phase:'finished',stop_reason:'failed',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false,restart:true},blocker:null,
  }}},
  // The deadline is known, but the result is not terminal before process cleanup.
  timedOutCleaning:{instance,result:{progress:{
   operation:{...operation,state:'running',revision:2},sequence:4,phase:'cleaning_up',stop_reason:'timed_out',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false,restart:true},blocker:null,
  }}},
  timedOut:{instance,result:{progress:{
   operation:{...operation,state:'failed',revision:3,error:timeout},sequence:5,phase:'finished',stop_reason:'timed_out',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false,restart:true},blocker:null,
  }}},
  verifying:{instance,result:{progress:{
   operation:{...operation,state:'running',revision:2},sequence:4,phase:'verifying',stop_reason:null,
-  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:true,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  succeeded:{instance,result:{progress:{
   operation:{...operation,state:'succeeded',revision:3},sequence:5,phase:'finished',stop_reason:null,
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:false,restart:false},blocker:null,
  }}},
  // Process completion does not clear a separate account-maintenance barrier.
  retryBlocked:{instance,result:{progress:{
   operation:{...operation,state:'failed',revision:3,error:processFailed},sequence:6,phase:'finished',stop_reason:'failed',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:true},blocker:maintenanceBlocker,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:true,restart:true},blocker:maintenanceBlocker,
  }}},
  cancelled:{instance,result:{progress:{
   operation:{...operation,state:'cancelled',revision:3,error:cancelled},sequence:5,phase:'finished',stop_reason:'cancelled',
-  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false},blocker:null,
+  recheck_in_flight:false,actions:{open:false,cancel:false,retry:true,recheck:false,restart:true},blocker:null,
  }}},
 } satisfies Record<string,{instance:typeof instance;result:CodexLoginProgressResult}>;
 
@@ -125,11 +125,11 @@ const recoveryBlockedAccount={
 } satisfies AccountSnapshot;
 const recoveryBlockedProgress={
  operation:recoveryTimeoutOperation,sequence:5,phase:'cleaning_up',stop_reason:'timed_out',
- recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:true},blocker:recoveryGuardBlocker,
+ recheck_in_flight:false,actions:{open:false,cancel:false,retry:false,recheck:true,restart:true},blocker:recoveryGuardBlocker,
 } satisfies CodexLoginProgress;
 const recoveryRecheckingProgress={
  ...recoveryBlockedProgress,sequence:6,recheck_in_flight:true,
- actions:{open:false,cancel:false,retry:false,recheck:false},blocker:null,
+ actions:{open:false,cancel:false,retry:false,recheck:false,restart:false},blocker:null,
 } satisfies CodexLoginProgress;
 const recoveryRecheckingAccount={
  ...recoveryBlockedAccount,revision:12,
@@ -137,7 +137,7 @@ const recoveryRecheckingAccount={
 } satisfies AccountSnapshot;
 const recoveryReadyProgress={
  ...recoveryBlockedProgress,sequence:7,phase:'finished',
- actions:{open:false,cancel:false,retry:true,recheck:false},blocker:null,
+ actions:{open:false,cancel:false,retry:true,recheck:false,restart:true},blocker:null,
 } satisfies CodexLoginProgress;
 const recoveryReadyAccount={
  ...recoveryBlockedAccount,revision:13,
@@ -173,7 +173,7 @@ export const codexLoginRecoveryExamples={
  cachedCleanupFailure:{
   progressReply:{instance,result:{progress:{
    ...recoveryBlockedProgress,
-   actions:{open:false,cancel:false,retry:false,recheck:false},blocker:recoveryCachedBlocker,
+   actions:{open:false,cancel:false,retry:false,recheck:false,restart:false},blocker:recoveryCachedBlocker,
   }}},
   accountReply:{instance,result:{account:{
    ...recoveryBlockedAccount,
@@ -206,3 +206,122 @@ export const codexLoginRecoveryExamples={
   accountReply:{instance,result:{account:recoveryStillBlockedAccount}},
  },
 } satisfies Record<string,CodexLoginRecoveryExample>;
+
+// Proposed restart contract examples only; authorize_restart and every restart_*
+// error/check below are definitions, not implemented commands or observed runs.
+// Scope is the same synthetic instance/source throughout. Each entry is an
+// alternative snapshot of one accepted request, not a sequence to execute.
+const restartRequest={request_id:'d'.repeat(48),platform:'openai',previous_operation_id:operation.id,source:recoverySource,expected_revision:13} satisfies CodexLoginRestartRequest;
+const restartReceipt={id:restartRequest.request_id,platform:'openai',previous_operation_id:operation.id,accepted:true} satisfies CodexLoginRestartReceipt;
+const restartRequestDescription={command:'authorize_restart',args:{request:restartRequest}} as const;
+// This receipt is immutable even when the workflow later fails or is cancelled.
+const restartReceiptReply={instance,result:{restart:restartReceipt}} satisfies {instance:typeof instance;result:{restart:CodexLoginRestartReceipt}};
+const restartNewOperation={...operation,id:'e'.repeat(48),state:'pending',revision:14} satisfies CodexLoginOperation;
+const restartPreviousUnknown={...recoveryTimeoutOperation,state:'unknown',error:{platform:'openai',code:'authorization_result_unknown',check:'original_login_process',message:'Simulated previous login result is unknown: no confirmed authorization result was recorded; process stop verification does not establish that result',evidence:{confirmed:'false'}}} satisfies CodexLoginOperation;
+const restartUnknownChild={...restartNewOperation,state:'unknown',error:{platform:'openai',code:'authorization_result_unknown',check:'original_login_process',message:'Simulated child result is unknown: the child ID was persisted but no authoritative launch result was recorded; required=observe the same child without a new spawn',evidence:{cause:'simulated persisted child ID with unconfirmed launch result',confirmed:'false'}}} satisfies CodexLoginOperation;
+const restartStoppingProgress={
+ id:restartRequest.request_id,platform:'openai',previous_operation_id:operation.id,sequence:1,state:'running',stage:'stop_previous',
+ previous_operation:{...operation,state:'running',revision:2},previous_stop:'unknown',new_operation:null,
+ cancel_requested:false,actions:{cancel:true,restart:false},failure:null,
+} satisfies CodexLoginRestartProgress;
+const restartChildProgress={
+ operation:restartNewOperation,sequence:1,phase:'starting',stop_reason:null,recheck_in_flight:false,
+ actions:{open:false,cancel:true,retry:false,recheck:false,restart:false},blocker:null,
+} satisfies CodexLoginProgress;
+
+type CodexLoginRestartExample={
+ request:{command:'authorize_restart';args:{request:CodexLoginRestartRequest}};
+ receiptReply:{instance:typeof instance;result:{restart:CodexLoginRestartReceipt}};
+ progressReply:{instance:typeof instance;result:CodexLoginRestartProgressResult};
+ loginProgressReply?:{instance:typeof instance;result:CodexLoginProgressResult};
+};
+
+export const codexLoginRestartExamples={
+ stoppingPrevious:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:restartStoppingProgress}},
+ },
+ // Requesting termination or sending a signal is not proof of process exit.
+ confirmingStopped:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:2,stage:'confirm_stopped',
+  }}},
+ },
+ // No new child is committed yet, so cancellation can still prevent its start.
+ startingAfterStop:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:3,stage:'start_new',
+   previous_operation:recoveryTimeoutOperation,previous_stop:'confirmed',
+  }}},
+ },
+ // Workflow success only records acceptance of a distinct pending login child.
+ newLoginStarted:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:4,state:'succeeded',stage:'finished',
+   previous_operation:recoveryTimeoutOperation,previous_stop:'confirmed',new_operation:restartNewOperation,
+   actions:{cancel:false,restart:false},
+  }}},
+  loginProgressReply:{instance,result:{progress:restartChildProgress}},
+ },
+ stopBlocked:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:3,state:'failed',stage:'confirm_stopped',
+   previous_operation:recoveryTimeoutOperation,actions:{cancel:false,restart:false},
+   failure:{stage:'confirm_stopped',error:{platform:'openai',code:'restart_stop_unconfirmed',check:'restart_process_observation',message:'Simulated original process-group observation failed: OS permission denied; liveness is unknown; required=positive stop proof before creating a child',evidence:{os_error:'simulated permission denied during original group observation',permission_denied:'true',confirmed:'false'}}},
+  }}},
+ },
+ // Missing journal evidence is an identification failure, not a failed kill.
+ unidentifiedPrevious:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:1,state:'failed',stage:'identify_previous',previous_operation:null,
+   actions:{cancel:false,restart:false},
+   failure:{stage:'identify_previous',error:{platform:'openai',code:'restart_previous_unidentified',check:'restart_identify_previous',message:'Simulated previous operation identification failed: saved original journal is missing; process ownership and stop state are unknown; required=original operation evidence',evidence:{cause:'simulated saved original journal missing',confirmed:'false'}}},
+  }}},
+ },
+ unknownHistoryStopped:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:4,state:'succeeded',stage:'finished',
+   previous_operation:restartPreviousUnknown,previous_stop:'confirmed',new_operation:restartNewOperation,
+   actions:{cancel:false,restart:false},
+  }}},
+  loginProgressReply:{instance,result:{progress:restartChildProgress}},
+ },
+ // A future explicit restart needs a NEW request_id. Replaying this request
+ // returns its original receipt/progress and must never create another child.
+ startRejectedSafeRetry:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:4,state:'failed',stage:'start_new',
+   previous_operation:recoveryTimeoutOperation,previous_stop:'confirmed',
+   actions:{cancel:false,restart:true},
+   failure:{stage:'start_new',error:{platform:'openai',code:'client_missing',check:'official_executable',message:'Simulated Codex executable resolution failed: program not found and no child record or spawn was created; install or restore the supported official CLI before a fresh restart',evidence:{not_found:'true',cause:'simulated official executable absent before child commitment'}}},
+  }}},
+ },
+ // The child ID was persisted before launch. Unknown launch outcome permits
+ // observation of that same ID only; neither replay nor cancel starts a child.
+ launchOutcomeUnknown:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:4,state:'unknown',stage:'start_new',
+   previous_operation:recoveryTimeoutOperation,previous_stop:'confirmed',new_operation:restartUnknownChild,
+   actions:{cancel:false,restart:false},
+   failure:{stage:'start_new',error:{platform:'openai',code:'restart_start_unconfirmed',check:'restart_start_new',message:'Simulated new login launch result is unknown: child ID is durably recorded but spawn acceptance is unconfirmed; required=observe the original recorded child without replaying launch',evidence:{cause:'simulated launch receipt unavailable after child ID persistence',confirmed:'false'}}},
+  }}},
+ },
+ // Cancellation prevents a new child after the original stop is proven. It
+ // makes no promise to revert credentials the official client already saved.
+ cancelledBeforeNew:{
+  request:restartRequestDescription,receiptReply:restartReceiptReply,
+  progressReply:{instance,result:{restart:{
+   ...restartStoppingProgress,sequence:4,state:'cancelled',stage:'finished',
+   previous_operation:recoveryTimeoutOperation,previous_stop:'confirmed',cancel_requested:true,
+   actions:{cancel:false,restart:true},
+  }}},
+ },
+} satisfies Record<string,CodexLoginRestartExample>;

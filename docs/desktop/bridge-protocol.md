@@ -94,6 +94,8 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 
 公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置；S1-T4 已接通官方登录；S1-T6 接通仅供 Rust 启动生命周期调用的 runtime_restore。
 
+Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-login-contract.md)仅供评审，尚未实现 `authorize_progress`／`authorize_open`，也未注册 capability。现有 `authorize_start/status/cancel` 请求及 `{operation}` 返回保持不变；不要把类型定义或模拟数据当作真实桥能力。
+
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
 | `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |

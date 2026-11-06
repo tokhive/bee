@@ -13,6 +13,7 @@
 | 账户页目标交互：历史前端 mock 阶段 | [to-spec 规格](auto-service-design.md)、[验收记录](evidence/2026-11-04-account-ui-review/auto-service-validation.md)（该阶段只证明前端＋有状态 mock；当前原生进展见上一项） |
 | 暂停／恢复与接单原因 | [供给说明](supply-control.md) |
 | TS／Rust／Go 接口 | [私有桥协议](bridge-protocol.md) |
+| Codex 登录进度与安全打开（仅契约／静态模拟） | [扩展契约、字段与样本](codex-login-contract.md)，尚未原生接通 |
 | 概览与账号布局 | [UI 规格](../superpowers/specs/2026-10-27-desktop-overview-accounts-ui-design.md) |
 | 诊断与设置 | [功能规格](../superpowers/specs/2026-10-26-desktop-diagnostics-experience-design.md)、[UI 规格](../superpowers/specs/2026-10-28-desktop-s2-ui-design.md) |
 | 状态与操作引导 | [交互规格](../superpowers/specs/2026-10-29-desktop-interaction-clarity-design.md)、[按钮反馈](../superpowers/specs/2026-11-03-button-feedback-design.md) |

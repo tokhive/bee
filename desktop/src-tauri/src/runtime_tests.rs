@@ -56,6 +56,44 @@ async fn exit_freezes_queued_actions_and_survives_cancelled_caller() {
 }
 
 #[tokio::test]
+async fn owned_exit_rejects_late_startup_restore_before_request_admission() {
+    let bridge = ready("owned-exit-slow").await;
+    let b = bridge.clone();
+    let reading = tokio::spawn(async move { b.device_status().await });
+    sleep(Duration::from_millis(30)).await;
+    let b = bridge.clone();
+    let exiting = tokio::spawn(async move { b.prepare_owned_exit(OwnedExitReason::AppExit).await });
+    while !bridge.0.frozen.load(Ordering::SeqCst) {
+        tokio::task::yield_now().await;
+    }
+    let result = bridge.restore_when_ready().await;
+    reading.await.unwrap().unwrap();
+    let _ = exiting.await.unwrap();
+    assert_eq!(result.unwrap_err().code, "OWNED_EXIT_PENDING");
+}
+
+#[tokio::test]
+async fn owned_exit_rejects_queued_startup_restore_before_first_byte() {
+    let bridge = ready("owned-exit-slow").await;
+    let b = bridge.clone();
+    let reading = tokio::spawn(async move { b.device_status().await });
+    sleep(Duration::from_millis(30)).await;
+    let b = bridge.clone();
+    let restoring = tokio::spawn(async move { b.restore_when_ready().await });
+    sleep(Duration::from_millis(30)).await;
+    assert!(!restoring.is_finished());
+    let b = bridge.clone();
+    let exiting = tokio::spawn(async move { b.prepare_owned_exit(OwnedExitReason::AppExit).await });
+    while !bridge.0.frozen.load(Ordering::SeqCst) {
+        tokio::task::yield_now().await;
+    }
+    let result = restoring.await.unwrap();
+    reading.await.unwrap().unwrap();
+    let _ = exiting.await.unwrap();
+    assert_eq!(result.unwrap_err().code, "OWNED_EXIT_PENDING");
+}
+
+#[tokio::test]
 async fn startup_restore_is_once_per_child_and_exit_failure_still_reaps() {
     let bridge = ready("owned-exit").await;
     bridge.restore_when_ready().await.unwrap();
@@ -66,13 +104,142 @@ async fn startup_restore_is_once_per_child_and_exit_failure_still_reaps() {
         .unwrap();
     let bridge = ready("owned-exit-save-failure").await;
     let released = std::cell::Cell::new(false);
-    assert!(crate::lifecycle::shutdown_owned(&bridge, || {
+    assert!(crate::lifecycle::shutdown_owned(&bridge, None, || {
         released.set(true);
         assert_ne!(bridge.status().state, BridgePhase::Ready);
     })
     .await
     .is_err());
     assert!(released.get());
+}
+
+#[tokio::test]
+async fn owned_exit_failure_is_available_in_diagnostics_after_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().into());
+    let bridge = ready("owned-exit-save-failure").await;
+    let released = std::cell::Cell::new(false);
+    let result =
+        crate::lifecycle::shutdown_owned(&bridge, Some(&logs), || released.set(true)).await;
+    assert!(result.is_err());
+    assert!(released.get());
+    drop(logs);
+    let reopened = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().into());
+    let page = reopened
+        .page(crate::diagnostic_log::LogQuery {
+            cursor: None,
+            limit: 20,
+            module: Some("lifecycle".into()),
+            platform: None,
+            level: None,
+        })
+        .unwrap();
+    let event = page
+        .entries
+        .iter()
+        .find(|event| event.code == "owned_exit_unconfirmed")
+        .expect("exit failure must survive the App and management child");
+    assert_eq!(
+        event.evidence.get("exit_stage").map(String::as_str),
+        Some("stop_receipt")
+    );
+    assert_eq!(
+        event.evidence.get("stop_confirmed").map(String::as_str),
+        Some("false")
+    );
+    assert_eq!(
+        event.evidence.get("child_reaped").map(String::as_str),
+        Some("true")
+    );
+}
+
+#[tokio::test]
+async fn owned_exit_success_persists_confirmed_receipt_after_restart() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().into());
+    let bridge = ready("owned-exit").await;
+    let released = std::cell::Cell::new(false);
+    crate::lifecycle::shutdown_owned(&bridge, Some(&logs), || {
+        let next_instance = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().into());
+        let page = next_instance
+            .page(crate::diagnostic_log::LogQuery {
+                cursor: None,
+                limit: 20,
+                module: Some("lifecycle".into()),
+                platform: None,
+                level: None,
+            })
+            .unwrap();
+        assert!(
+            page.entries.iter().any(|event| event.code == "owned_exit_completed"),
+            "singleton release preceded durable exit result; a new App could race the log writer"
+        );
+        released.set(true);
+    })
+        .await
+        .unwrap();
+    assert!(released.get());
+    drop(logs);
+    let reopened = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().into());
+    let page = reopened
+        .page(crate::diagnostic_log::LogQuery {
+            cursor: None,
+            limit: 20,
+            module: Some("lifecycle".into()),
+            platform: None,
+            level: None,
+        })
+        .unwrap();
+    assert_eq!(page.entries.len(), 2);
+    let event = page
+        .entries
+        .iter()
+        .find(|event| event.code == "owned_exit_completed")
+        .expect("a successful exit must preserve its confirmed receipt");
+    assert_eq!(
+        event.evidence.get("exit_stage").map(String::as_str),
+        Some("completed")
+    );
+    assert_eq!(
+        event.evidence.get("stop_confirmed").map(String::as_str),
+        Some("true")
+    );
+    assert_eq!(
+        event.evidence.get("child_reaped").map(String::as_str),
+        Some("true")
+    );
+    assert!(!event.evidence.contains_key("exit_error_code"));
+}
+
+#[tokio::test]
+async fn owned_exit_log_failure_still_reaps_and_reports_both_log_stages() {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path().join("blocked-log-root");
+    std::fs::write(&root, b"not a directory").unwrap();
+    let logs = crate::diagnostic_log::DiagnosticLogStore::new(root);
+    let bridge = ready("owned-exit").await;
+    let released = std::cell::Cell::new(false);
+    let error = crate::lifecycle::shutdown_owned(&bridge, Some(&logs), || released.set(true))
+        .await
+        .unwrap_err();
+    assert_eq!(error.code, "OWNED_EXIT_UNCONFIRMED");
+    assert!(
+        error
+            .message
+            .contains("diagnostic_start: DIAGNOSTIC_LOG_IO"),
+        "{}",
+        error.message
+    );
+    assert!(
+        error
+            .message
+            .contains("diagnostic_result: DIAGNOSTIC_LOG_IO"),
+        "{}",
+        error.message
+    );
+    assert!(released.get());
+    assert_ne!(bridge.status().state, BridgePhase::Ready);
+    assert!(bridge.ping().await.is_err());
 }
 
 #[tokio::test]

@@ -1,0 +1,1 @@
+export{a as t}from"./i18n-BHAI1HEl.js";

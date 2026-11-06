@@ -105,6 +105,171 @@ async fn update_install_every_exit_receipt_failure_blocks_installer_and_retains_
     }
 }
 
+async fn install_bridge(mode: &str) -> crate::sidecar::Bridge {
+    use crate::sidecar::{Bridge, BridgePhase};
+    let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
+    let mut statuses = bridge.subscribe();
+    tokio::time::timeout(std::time::Duration::from_secs(30), async {
+        while statuses.borrow_and_update().state == BridgePhase::Starting {
+            statuses.changed().await.unwrap();
+        }
+    })
+    .await
+    .expect("install fixture did not finish preparation within 30000ms");
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    bridge
+}
+
+#[tokio::test]
+async fn update_install_admission_freezes_ordinary_actions_before_returning() {
+    use crate::runtime_protocol::{RuntimeNetworkConfig, RuntimeStartRequest};
+    let (_dir, manager, request) = ready();
+    let bridge = install_bridge("owned-exit").await;
+    let mut rejected = request.clone();
+    rejected.confirmed = false;
+    assert!(prepare_owned_install(&manager, &rejected, &bridge).is_err());
+    assert!(
+        bridge.ping().await.is_ok(),
+        "rejected install froze the current App"
+    );
+    let ticket = prepare_owned_install(&manager, &request, &bridge).unwrap();
+    let admitted = manager.snapshot().unwrap();
+    assert_eq!(admitted.state, UpdateState::Stopping);
+    assert!(prepare_owned_install(&manager, &request, &bridge).is_err());
+    assert_eq!(manager.snapshot().unwrap(), admitted);
+    assert_eq!(bridge.ping().await.unwrap_err().code, "OWNED_EXIT_PENDING");
+    assert_eq!(
+        bridge
+            .runtime_start(RuntimeStartRequest {
+                expected_revision: 0,
+                resume_platforms: vec![]
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "OWNED_EXIT_PENDING"
+    );
+    assert_eq!(
+        bridge
+            .runtime_configure_network(RuntimeNetworkConfig {
+                revision: 1,
+                connect_proxy: String::new()
+            })
+            .await
+            .unwrap_err()
+            .code,
+        "OWNED_EXIT_PENDING"
+    );
+    assert_eq!(
+        bridge.restore_when_ready().await.unwrap_err().code,
+        "OWNED_EXIT_PENDING"
+    );
+    let called = std::cell::Cell::new(false);
+    coordinate_install(
+        &manager,
+        ticket,
+        || bridge.prepare_owned_exit(crate::runtime::OwnedExitReason::Update),
+        || {
+            called.set(true);
+            Ok(())
+        },
+    )
+    .await
+    .unwrap();
+    assert!(called.get());
+    let installing = manager.snapshot().unwrap();
+    assert_eq!(installing.state, UpdateState::Installing);
+    assert!(prepare_owned_install(&manager, &request, &bridge).is_err());
+    assert_eq!(manager.snapshot().unwrap(), installing);
+}
+
+#[tokio::test]
+async fn update_install_late_startup_cannot_stop_again_or_overwrite_install_admission() {
+    use crate::preferences::PreferencesStore;
+    let (dir, manager, request) = ready();
+    let bridge = install_bridge("owned-exit").await;
+    let before = bridge.runtime_snapshot().await.unwrap();
+    let ticket = prepare_owned_install(&manager, &request, &bridge).unwrap();
+    let admitted = manager.snapshot().unwrap();
+    let failure = verify_startup(
+        &manager,
+        &bridge,
+        PreferencesStore::new(dir.path().join("preferences.json")).read(),
+        "stable",
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(failure.code, "OWNED_EXIT_PENDING");
+    assert_eq!(
+        manager.snapshot().unwrap(),
+        admitted,
+        "late startup replaced the admitted install result"
+    );
+    let after = bridge
+        .exit_request("runtime_snapshot", serde_json::json!({}))
+        .await
+        .unwrap();
+    assert_eq!(
+        after.result["runtime"]["revision"], before.result["runtime"]["revision"],
+        "late startup replayed a stop owned by the install coordinator"
+    );
+    coordinate_install(
+        &manager,
+        ticket,
+        || bridge.prepare_owned_exit(crate::runtime::OwnedExitReason::Update),
+        || Ok(()),
+    )
+    .await
+    .unwrap();
+}
+
+#[tokio::test]
+async fn update_install_inflight_startup_failure_cannot_replay_its_owned_stop() {
+    use crate::preferences::PreferencesStore;
+    let (dir, manager, request) = ready();
+    let bridge = install_bridge("owned-exit-slow").await;
+    let before = bridge.runtime_snapshot().await.unwrap();
+    let reading_bridge = bridge.clone();
+    let reading = tokio::spawn(async move { reading_bridge.device_status().await });
+    tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+    assert!(!reading.is_finished());
+    let startup_bridge = bridge.clone();
+    let startup_manager = manager.clone();
+    let preferences = PreferencesStore::new(dir.path().join("preferences.json")).read();
+    let startup = tokio::spawn(async move {
+        verify_startup(&startup_manager, &startup_bridge, preferences, "stable").await
+    });
+    tokio::time::timeout(std::time::Duration::from_secs(1), async {
+        while !bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst) {
+            tokio::task::yield_now().await;
+        }
+    })
+    .await
+    .expect("startup restore was not admitted within 1s");
+    let ticket = prepare_owned_install(&manager, &request, &bridge).unwrap();
+    let admitted = manager.snapshot().unwrap();
+    let failure = startup.await.unwrap().unwrap_err();
+    assert_eq!(failure.code, "OWNED_EXIT_PENDING");
+    reading.await.unwrap().unwrap();
+    assert_eq!(manager.snapshot().unwrap(), admitted);
+    let after = bridge
+        .exit_request("runtime_snapshot", serde_json::json!({}))
+        .await
+        .unwrap();
+    assert_eq!(
+        after.result["runtime"]["revision"],
+        before.result["runtime"]["revision"]
+    );
+    coordinate_install(
+        &manager,
+        ticket,
+        || bridge.prepare_owned_exit(crate::runtime::OwnedExitReason::Update),
+        || Ok(()),
+    )
+    .await
+    .unwrap();
+}
+
 #[tokio::test]
 async fn update_install_persists_before_exit_and_does_not_release_app_singleton() {
     let (_d, manager, request) = ready();

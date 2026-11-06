@@ -8,7 +8,7 @@ import {accountConfirmationKey,type AccountPlatform} from '../../system/accounts
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {Button} from '../../components/ui';
 import {t,currentLocale,formatDate} from '../../i18n/index';
-import {accountActionBlock,sameAccountFailure,type AccountAction} from './accountPresentation';
+import {accountActionBlock,loginMaintenanceCopy,sameAccountFailure,type AccountAction} from './accountPresentation';
 import type {UiFailure} from '../../system/failures';
 
 const actions={select:{label:'接入',confirm:'确认接入',description:'将目标账号接入当前设备，并核验 Hive 注册；此 Hive 账号的平台接单将保持暂停，不会开始贡献。'},confirm_change:{label:'换号',confirm:'确认更换',description:'将此平台切换到目标账号，核对 Hive 注册与已有请求收尾；完成后仍保持暂停，不会开始贡献。'},clear_selection:{label:'取消接入',confirm:'确认取消接入',description:'仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。'},authorize:{label:'重新登录',confirm:'开始官方登录',description:'将调用已安装的 {client} 官方客户端，可能改变该客户端当前登录。完成后仅成为候选，不会自动接入、开始贡献或恢复接单。'}};
@@ -18,19 +18,23 @@ const autoDescriptions={
  clear_selection:actions.clear_selection.description,
  authorize:'将使用 {client} 官方客户端重新登录，并暂停此平台接单；已接请求可能继续收尾。登录后保持暂停，不同账号需确认换号。',
 };
-export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure}){
- const op=accounts.views[platform]?.operation;
+export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure,conditionErrors=false}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure;conditionErrors?:boolean}){
+ const maintenance=accounts.views[platform]?.login_maintenance;
+ const op=accounts.views[platform]?.operation??maintenance?.operation;
  const error=accounts.errors[platform],submissionChanged=error?.code==='ACCOUNT_CONTEXT_CHANGED';
  const cancellation=accounts.cancelUnconfirmed[platform];
- const showError=error&&!sameAccountFailure(error,accounts.sharedFailure)&&!sameAccountFailure(error,sourceFailure);
+ const conditionFailures=conditionErrors?[error,accounts.sourceReadFailed[platform],accounts.views[platform]?.operation?.error]:[];
+ const inCondition=(failure:Parameters<typeof sameAccountFailure>[0])=>conditionFailures.some(existing=>sameAccountFailure(failure,existing));
+ const showError=error&&!inCondition(error)&&!sameAccountFailure(error,accounts.sharedFailure)&&!sameAccountFailure(error,sourceFailure);
  const refresh=accounts.accountRefresh?.[platform];
  const unconfirmed=accounts.uncertain[platform]||op?.state==='reconciling';
  const progress=refresh?.state==='waiting'?'前次核对尚未结束，结束后重试。':refresh?.state==='reading'?'重试中…':refresh?.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh?.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。';
- const terminal=op?.state==='succeeded'?op.kind==='authorize'?'登录已核验，尚未接入':op.kind==='clear_selection'?'已取消未注册的本地选择；Hive 注册账号未被移除。':op.kind==='confirm_change'?'换号已完成，该平台保持暂停。':'接入已完成，该平台保持暂停。':op?.state==='cancelled'?'官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。':'账号操作失败';
+ const terminal=op?.state==='succeeded'?op.kind==='authorize'?accounts.views[platform]?.selection.state==='selected'?'登录已核验，账号选择未改变。':'登录已核验，尚未接入':op.kind==='clear_selection'?'已取消未注册的本地选择；Hive 注册账号未被移除。':op.kind==='confirm_change'?'换号已完成，该平台保持暂停。':'接入已完成，该平台保持暂停。':op?.state==='unknown'?'原登录进程已中断，原登录结果未确认；账号维护状态单独核对。':op?.state==='cancelled'?'官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。':'账号操作失败';
  return <div className="account-operation-status">
   {unconfirmed&&!submissionChanged&&<p role="status">{t('账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。')}</p>}
   {(unconfirmed||error&&!requestNotSent(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>}
-  {op?.error&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
+  {op?.error&&!inCondition(op.error)&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
+  {maintenance&&<><p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>{maintenance.error&&!inCondition(maintenance.error)&&<FailureNotice failure={maintenance.error} check="login_maintenance" onNavigate={onNavigate}/>} {maintenance.can_recheck&&<Button variant="outline" disabled={!!accounts.busy[platform]||!!accounts.writeBusy[platform]} onClick={()=>accounts.refresh(platform)}>{t('核对维护结果')}</Button>}</>}
   {showError&&<FailureNotice failure={error} check="account_operation" onNavigate={onNavigate}/>}
   {cancellation&&cancellation.operationId===op?.id&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<><p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>{!sameAccountFailure(cancellation.failure,error)&&<FailureNotice failure={cancellation.failure} check="authorize_cancel" onNavigate={onNavigate}/>}</>}
  </div>;

@@ -70,6 +70,18 @@ pub fn prepare_install(
     })
 }
 
+pub(crate) fn prepare_owned_install(
+    manager: &UpdateManager,
+    request: &UpdateInstallRequest,
+    bridge: &crate::sidecar::Bridge,
+) -> Result<InstallTicket, BridgeError> {
+    let ticket = prepare_install(manager, request)?;
+    // Freeze on the command's admission path. The detached coordinator may not
+    // be polled before another WebView or startup action reaches the bridge.
+    bridge.freeze_for_exit();
+    Ok(ticket)
+}
+
 pub async fn coordinate_install<F, Fut, I>(
     manager: &UpdateManager,
     ticket: InstallTicket,
@@ -181,6 +193,7 @@ pub(crate) async fn verify_startup(
     preferences: crate::preferences::PreferencesSnapshot,
     current_channel: &str,
 ) -> Result<(), BridgeError> {
+    bridge.check_restore_admission()?;
     let pending = manager.lock()?.persistent.pending_update.clone();
     let mut restore_attempted = false;
     let result = async {
@@ -197,6 +210,7 @@ pub(crate) async fn verify_startup(
         // operations and saved running/paused intent. Admission alone is insufficient.
         restore_attempted = true;
         bridge.restore_when_ready().await?;
+        bridge.check_restore_admission()?;
         if let Some(pending) = &pending {
             let version = manager.snapshot()?.current_version;
             if version == pending.to_version {
@@ -222,6 +236,11 @@ pub(crate) async fn verify_startup(
         Ok(())
     }.await;
     if let Err(mut cause) = result {
+        // An admitted App exit or update owns the stop now. A late startup
+        // result must neither replay its stop nor replace the install state.
+        if bridge.check_restore_admission().is_err() {
+            return Err(cause);
+        }
         if restore_attempted {
             match bridge.stop_failed_restore().await {
                 Ok(()) => {
@@ -302,7 +321,7 @@ pub fn update_install(
         )
     };
     crate::updater::check_native_space(&app, (bytes.len() as u64).saturating_mul(3))?;
-    let ticket = prepare_install(&manager, &request)?;
+    let ticket = prepare_owned_install(&manager, &request, &bridge)?;
     let snapshot = manager.snapshot()?;
     let manager = manager.inner().clone();
     let bridge = bridge.inner().clone();

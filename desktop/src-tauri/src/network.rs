@@ -22,9 +22,19 @@ fn failure(code: &str, message: impl Into<String>) -> BridgeError {
 /// Preserve a producer's concrete check; only otherwise identify this apply stage.
 fn at_apply_stage(mut error: BridgeError, check: &str) -> BridgeError {
     if error.details.is_none() {
-        if let Ok(observed_at) = time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339) {
-            let details = crate::protocol::FailureDetails { check: check.into(), observed_at, evidence: std::collections::BTreeMap::new() };
-            if let Ok(enriched) = BridgeError::with_details(&error.code, error.message.clone(), details) { error = enriched; }
+        if let Ok(observed_at) =
+            time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339)
+        {
+            let details = crate::protocol::FailureDetails {
+                check: check.into(),
+                observed_at,
+                evidence: std::collections::BTreeMap::new(),
+            };
+            if let Ok(enriched) =
+                BridgeError::with_details(&error.code, error.message.clone(), details)
+            {
+                error = enriched;
+            }
         }
     }
     error
@@ -208,10 +218,12 @@ impl RuntimeObservation {
             || self.revision > SAFE_INTEGER
             || self.network_revision > SAFE_INTEGER
             || self.network_revision != self.network.effective_revision
-            || !["stopped", "starting", "running", "stopping", "failed"]
-                .contains(&self.local.as_str())
+            || ![
+                "stopped", "waiting", "starting", "running", "stopping", "failed",
+            ]
+            .contains(&self.local.as_str())
         {
-            return Err(failure("NETWORK_RUNTIME_UNCONFIRMED",format!("runtime observation failed instance/revision/local checks: instance_chars={} revision={} runtime_network_revision={} effective_revision={} local_known={}",self.instance.len(),self.revision,self.network_revision,self.network.effective_revision,["stopped","starting","running","stopping","failed"].contains(&self.local.as_str()))));
+            return Err(failure("NETWORK_RUNTIME_UNCONFIRMED",format!("runtime observation failed instance/revision/local checks: instance_chars={} revision={} runtime_network_revision={} effective_revision={} local_known={}",self.instance.len(),self.revision,self.network_revision,self.network.effective_revision,["stopped","waiting","starting","running","stopping","failed"].contains(&self.local.as_str()))));
         }
         Ok(())
     }
@@ -340,13 +352,13 @@ impl NetworkController {
         };
         if configured.instance != current.instance
             || configured.local != "stopped"
-            || configured.revision < current.revision
+            || configured.revision <= current.revision
             || configured.network_revision != revision
             || configured.network.effective_proxy != proxy
         {
             return render(&state, &saved.preferences, Some(scope), Some(failure(
                 "NETWORK_BOOTSTRAP_UNCONFIRMED",
-                format!("startup network readback failed: instance_match={} local_stopped={} actual_runtime_revision={} minimum_runtime_revision={} actual_network_revision={} required_network_revision={revision} proxy_match={}; S1 restore must remain blocked", configured.instance == current.instance, configured.local == "stopped", configured.revision, current.revision, configured.network_revision, configured.network.effective_proxy == proxy),
+                format!("startup network readback failed: instance_match={} local_stopped={} actual_runtime_revision={} previous_runtime_revision={} actual_network_revision={} required_network_revision={revision} proxy_match={}; required=advanced runtime revision; S1 restore must remain blocked", configured.instance == current.instance, configured.local == "stopped", configured.revision, current.revision, configured.network_revision, configured.network.effective_proxy == proxy),
             )));
         }
         capture(&mut state, configured, Some(scope));
@@ -462,7 +474,14 @@ impl NetworkController {
             Ok(view)
         }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(at_apply_stage(error, "network_observe"))),
+            Err(error) => {
+                return render(
+                    &state,
+                    &saved.preferences,
+                    Some(scope),
+                    Some(at_apply_stage(error, "network_observe")),
+                )
+            }
         };
         capture(&mut state, current.clone(), Some(scope));
         let proxy = saved
@@ -483,19 +502,27 @@ impl NetworkController {
                 Ok(view)
             }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &saved.preferences, Some(scope), Some(at_apply_stage(error, "network_stop"))),
+            Err(error) => {
+                return render(
+                    &state,
+                    &saved.preferences,
+                    Some(scope),
+                    Some(at_apply_stage(error, "network_stop")),
+                )
+            }
         };
         if stopped.instance != current.instance {
             return render(&state,&saved.preferences,Some(scope),Some(failure("NETWORK_INSTANCE_CHANGED","owned management instance changed during network stop; configuration and restore were not dispatched")));
         }
         let receipt = stopped.stop_receipt.as_ref();
         if stopped.local != "stopped"
-            || stopped.revision < current.revision
+            || stopped.revision <= current.revision
             || stopped.network_revision != current.network_revision
             || receipt.is_none_or(|r| !r.workers_stopped || !r.intent_saved || !r.session_clean)
         {
-            return render(&state,&saved.preferences,Some(scope),Some(failure("NETWORK_STOP_UNCONFIRMED",format!("owned runtime stop is unconfirmed: local_stopped={} actual_runtime_revision={} minimum_runtime_revision={} network_revision_match={} receipt_present={} workers_stopped={} intent_saved={} session_clean={}; all stop proofs are required",stopped.local=="stopped",stopped.revision,current.revision,stopped.network_revision==current.network_revision,receipt.is_some(),receipt.is_some_and(|r|r.workers_stopped),receipt.is_some_and(|r|r.intent_saved),receipt.is_some_and(|r|r.session_clean)))));
+            return render(&state,&saved.preferences,Some(scope),Some(failure("NETWORK_STOP_UNCONFIRMED",format!("owned runtime stop is unconfirmed: local_stopped={} actual_runtime_revision={} previous_runtime_revision={} network_revision_match={} receipt_present={} workers_stopped={} intent_saved={} session_clean={}; advanced runtime revision and all stop proofs are required",stopped.local=="stopped",stopped.revision,current.revision,stopped.network_revision==current.network_revision,receipt.is_some(),receipt.is_some_and(|r|r.workers_stopped),receipt.is_some_and(|r|r.intent_saved),receipt.is_some_and(|r|r.session_clean)))));
         }
+        let stopped_revision = stopped.revision;
         capture(&mut state, stopped, Some(scope));
         let fresh = store.read();
         if let Some(error) = fresh.error {
@@ -509,7 +536,7 @@ impl NetworkController {
         {
             return render(&state,&fresh.preferences,Some(scope),Some(failure("NETWORK_SAVED_CHANGED",format!("saved preferences changed while stopping: initial_revision={} current_revision={}; review the new saved proxy before applying",saved.preferences.revision,fresh.preferences.revision))));
         }
-        if let Err(error) = runtime
+        if let Err(mut error) = runtime
             .configure_network(RuntimeNetworkConfig {
                 revision,
                 connect_proxy: proxy.clone(),
@@ -518,27 +545,61 @@ impl NetworkController {
         {
             if let Ok(view) = runtime.observe().await {
                 if view.validate().is_ok() && view.instance == current.instance {
-                    capture(&mut state, view, Some(scope));
+                    if view.revision >= stopped_revision {
+                        capture(&mut state, view, Some(scope));
+                    } else {
+                        error.message = format!("{}; network configuration readback revision moved backwards: actual_runtime_revision={} minimum_runtime_revision={stopped_revision}; last confirmed effective state retained", error.message, view.revision);
+                    }
                 }
             }
-            return render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_configure")));
+            return render(
+                &state,
+                &fresh.preferences,
+                Some(scope),
+                Some(at_apply_stage(error, "network_configure")),
+            );
         }
         let configured = match runtime.observe().await.and_then(|view| {
             view.validate()?;
             Ok(view)
         }) {
             Ok(view) => view,
-            Err(error) => return render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_configure_readback"))),
+            Err(error) => {
+                return render(
+                    &state,
+                    &fresh.preferences,
+                    Some(scope),
+                    Some(at_apply_stage(error, "network_configure_readback")),
+                )
+            }
         };
         if configured.instance != current.instance
             || configured.local != "stopped"
+            || configured.revision <= stopped_revision
             || configured.network_revision != revision
             || configured.network.effective_proxy != proxy
         {
-            return render(&state,&fresh.preferences,Some(scope),Some(failure("NETWORK_APPLY_UNCONFIRMED",format!("network configuration readback failed: instance_match={} local_stopped={} actual_revision={} required_revision={revision} proxy_match={}; restore was not dispatched",configured.instance==current.instance,configured.local=="stopped",configured.network_revision,configured.network.effective_proxy==proxy))));
+            return render(&state,&fresh.preferences,Some(scope),Some(failure("NETWORK_APPLY_UNCONFIRMED",format!("network configuration readback failed: instance_match={} local_stopped={} actual_runtime_revision={} previous_runtime_revision={stopped_revision} actual_network_revision={} required_network_revision={revision} proxy_match={}; required=advanced runtime revision; restore was not dispatched",configured.instance==current.instance,configured.local=="stopped",configured.revision,configured.network_revision,configured.network.effective_proxy==proxy))));
         }
+        let configured_revision = configured.revision;
         capture(&mut state, configured, Some(scope));
         state.applied_scope = Some(scope.device_scope.clone());
+        let latest = store.read();
+        if let Some(error) = latest.error {
+            return render(&state, &latest.preferences, Some(scope), Some(error));
+        }
+        if latest.preferences.revision != saved.preferences.revision
+            || latest
+                .preferences
+                .proxy_for(&scope.origin, Some(&scope.device_scope))
+                != proxy
+        {
+            return render(&state, &latest.preferences, Some(scope), Some(failure(
+                "NETWORK_SAVED_CHANGED",
+                format!("saved preferences changed during configuration: confirmed_revision={} current_revision={}; owned runtime remains stopped; review saved and effective settings before applying again", saved.preferences.revision, latest.preferences.revision),
+            )));
+        }
+        let fresh = latest;
         if !restore_intent {
             return render(&state, &fresh.preferences, Some(scope), None);
         }
@@ -548,15 +609,21 @@ impl NetworkController {
         }) {
             Ok(restored) => {
                 if restored.instance != current.instance
+                    || restored.revision <= configured_revision
                     || restored.network_revision != revision
                     || restored.network.effective_proxy != proxy
                 {
-                    return render(&state,&fresh.preferences,Some(scope),Some(failure("NETWORK_RESTORE_UNCONFIRMED",format!("saved-intent restore changed network identity: instance_match={} actual_revision={} required_revision={revision} proxy_match={}",restored.instance==current.instance,restored.network_revision,restored.network.effective_proxy==proxy))));
+                    return render(&state,&fresh.preferences,Some(scope),Some(failure("NETWORK_RESTORE_UNCONFIRMED",format!("saved-intent restore readback failed: instance_match={} actual_runtime_revision={} previous_runtime_revision={configured_revision} actual_network_revision={} required_network_revision={revision} proxy_match={}; required=advanced runtime revision and unchanged network identity",restored.instance==current.instance,restored.revision,restored.network_revision,restored.network.effective_proxy==proxy))));
                 }
                 capture(&mut state, restored, Some(scope));
                 render(&state, &fresh.preferences, Some(scope), None)
             }
-            Err(error) => render(&state, &fresh.preferences, Some(scope), Some(at_apply_stage(error, "network_restore"))),
+            Err(error) => render(
+                &state,
+                &fresh.preferences,
+                Some(scope),
+                Some(at_apply_stage(error, "network_restore")),
+            ),
         }
     }
 }

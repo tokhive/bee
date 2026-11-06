@@ -142,18 +142,41 @@ func decodeDesktopAccountState(raw []byte) (desktopAccountState, error) {
 			return state, fmt.Errorf("account v1 schema rejected at byte=%d; required=version,revision,entries", d.InputOffset())
 		}
 		state = desktopAccountState{Version: 1, Revision: legacy.Revision, Entries: legacy.Entries, Scopes: map[string]desktopAccountScope{}}
+	case 2:
+		var legacy struct {
+			Version  int                              `json:"version"`
+			Revision int64                            `json:"revision"`
+			Entries  map[string]desktopAccountNotice  `json:"entries"`
+			Scopes   map[string]desktopAccountScopeV2 `json:"scopes"`
+		}
+		if err := requireDesktopStateFields(raw, reflect.TypeOf(legacy), "state"); err != nil {
+			return state, err
+		}
+		if err := d.Decode(&legacy); err != nil {
+			return state, fmt.Errorf("account v2 schema rejected at byte=%d; required=known state fields and types", d.InputOffset())
+		}
+		state = desktopAccountState{Version: 2, Revision: legacy.Revision, Entries: legacy.Entries, Scopes: map[string]desktopAccountScope{}}
+		if legacy.Scopes == nil {
+			return state, errors.New("account v2 scopes rejected: null=true; required=non-null map")
+		}
+		for key, scope := range legacy.Scopes {
+			state.Scopes[key] = scope.upgrade()
+		}
+		if err := validateDesktopAccountScopes(state.Scopes); err != nil {
+			return state, err
+		}
 	case desktopAccountStateVersion:
 		if err := requireDesktopStateFields(raw, reflect.TypeOf(state), "state"); err != nil {
 			return state, err
 		}
 		if err := d.Decode(&state); err != nil {
-			return state, fmt.Errorf("account v2 schema rejected at byte=%d; required=known state fields and types", d.InputOffset())
+			return state, fmt.Errorf("account v3 schema rejected at byte=%d; required=known state fields and types", d.InputOffset())
 		}
 		if err := validateDesktopAccountScopes(state.Scopes); err != nil {
 			return state, err
 		}
 	default:
-		return state, fmt.Errorf("account state version rejected: actual=%d; supported=1,2; original preserved", header.Version)
+		return state, fmt.Errorf("account state version rejected: actual=%d; supported=1,2,3; original preserved", header.Version)
 	}
 	if !desktopSafeRevision(state.Revision) || state.Entries == nil || len(state.Entries) > 256 {
 		return state, fmt.Errorf("account state header rejected: revision=%d entries=%d; required=safe revision,non-null <=256 entries", state.Revision, len(state.Entries))
@@ -209,6 +232,11 @@ func saveDesktopAccountState(path string, state desktopAccountState, expected in
 			return err
 		}
 	}
+	if current.Version == 2 {
+		if err := backupDesktopAccountVersion(path, 2); err != nil {
+			return err
+		}
+	}
 	if err := writePrivateFile(path, append(raw, '\n'), ".ai-accounts-*"); err != nil {
 		return fmt.Errorf("replace account state: %w", err)
 	}
@@ -223,24 +251,29 @@ func saveDesktopAccountState(path string, state desktopAccountState, expected in
 }
 
 func backupDesktopAccountV1(path string) error {
+	return backupDesktopAccountVersion(path, 1)
+}
+
+func backupDesktopAccountVersion(path string, version int) error {
 	original, err := readDesktopAccountBytes(path)
 	if err != nil {
 		return fmt.Errorf("read original before account migration: %w", err)
 	}
-	backup, err := readDesktopAccountBytes(path + ".v1.bak")
+	backupPath := fmt.Sprintf("%s.v%d.bak", path, version)
+	backup, err := readDesktopAccountBytes(backupPath)
 	if err == nil {
 		if !bytes.Equal(backup, original) {
-			return errors.New("account migration backup differs from current v1 original; existing files preserved")
+			return fmt.Errorf("account migration backup differs from current v%d original; existing files preserved", version)
 		}
 		return nil
 	}
 	if !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("account migration backup protection failed: %w", err)
 	}
-	if err := writePrivateFile(path+".v1.bak", original, ".ai-accounts-backup-*"); err != nil {
+	if err := writePrivateFile(backupPath, original, ".ai-accounts-backup-*"); err != nil {
 		return fmt.Errorf("save account migration backup before replacement: %w", err)
 	}
-	backup, err = readDesktopAccountBytes(path + ".v1.bak")
+	backup, err = readDesktopAccountBytes(backupPath)
 	if err != nil {
 		return fmt.Errorf("read back account migration backup: %w", err)
 	}

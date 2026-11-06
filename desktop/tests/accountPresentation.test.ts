@@ -14,6 +14,19 @@ test('waiting permits first official login with verified runtime and source prer
  assert.ok(presentation.accountActionBlock('authorize',{...input,defaultsReady:false}));
 });
 function selected(){const s=accountFixture('openai') as AccountSnapshot;s.selection={...s.selection,state:'selected',fingerprint:'b'.repeat(64)};s.candidate={...s.candidate,fingerprint:'b'.repeat(64),plan:'plus',expires_at:new Date(now+3600000).toISOString()};return s;}
+test('unfinished login maintenance blocks new actions and permits only explicit identity confirmation when required',()=>{
+ const view=selected();view.features.authorize={available:true,reason:null};view.features.confirm_change={available:true,reason:null};
+ view.candidate={...view.candidate,state:'available',reference:'a'.repeat(48),fingerprint:'d'.repeat(64)};
+ view.login_maintenance={operation:{id:'c'.repeat(48),kind:'authorize',platform:'openai',state:'failed',revision:2,error:null},phase:'blocked',source:{directory:null,store:'file'},started_at:'2026-11-01T01:02:03Z',can_recheck:true,error:null};
+ const context={autoService:true,view,platform:'openai' as const,now,dirty:false,busy:false,unknown:false,submissionBlocked:false,defaultsReady:true,runtime:{local:'running'},runtimeBlocked:false};
+ assert.match(presentation.accountActionBlock('authorize',context)!.message,/维护/);
+ assert.ok(presentation.accountActionBlock('confirm_change',context));
+ view.login_maintenance.phase='confirmation_required';
+ assert.equal(presentation.accountActionBlock('confirm_change',context),null);
+ assert.ok(presentation.accountActionBlock('authorize',context));
+ view.login_maintenance.phase='restored';
+ assert.equal(presentation.accountActionBlock('authorize',context),null);
+});
 test('selection identifies the account and mismatched candidate never lends its quota',()=>{const s=selected();s.candidate.fingerprint='c'.repeat(64);assert.deepEqual(accountPresentation(s,false,now),{identity:'bbbbbbbbbbbbbbbb',plan:null,expiresAt:null,observedAt:null,windows:[],quotaState:'unknown'});});
 test('unknown stays unknown; fresh windows preserve null, scopes and raw 120 percent',()=>{const s=selected();assert.deepEqual(accountPresentation(s,false,now).windows,[]);s.capabilities[0]={...s.capabilities[0],status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:120,reset_at:null},{scope:'opus',seconds:604800,used_percent:null,reset_at:null}]};const p=accountPresentation(s,false,now);assert.equal(p.quotaState,'current');assert.deepEqual(p.windows,s.capabilities[0].windows);assert.equal(accountPresentation(s,true,now).quotaState,'unknown');s.capabilities[0].windows[0].reset_at=new Date(now-1).toISOString();assert.equal(accountPresentation(s,false,now).quotaState,'stale');});
 test('fresh matching Hive wins over stale official and expiry invalidates official',()=>{const s=selected();for(const c of s.capabilities)Object.assign(c,{status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:c.origin==='official'?20:40,reset_at:null}]});s.hive.fingerprint=s.selection.fingerprint;assert.equal(accountPresentation(s,false,now).windows[0].used_percent,20);s.capabilities[0].valid_until=new Date(now-1).toISOString();assert.equal(accountPresentation(s,false,now).windows[0].used_percent,40);s.candidate.expires_at=new Date(now-1).toISOString();assert.equal(accountPresentation(s,false,now).quotaState,'stale');s.hive.fingerprint=null;assert.equal(accountPresentation(s,false,now).quotaState,'stale');});

@@ -32,7 +32,12 @@ type desktopAutoMaintenanceFixture struct {
 	uploads          map[string]int
 	peer             *relay.Session
 	connections      atomic.Int32
+	supplyWrites     atomic.Int32
 	resumeWrites     atomic.Int32
+	network          DesktopNetworkConfig
+	lease            string
+	registeredLease  map[string]string
+	registeredSource map[string]string
 	pauseWrites      atomic.Int32
 	dispatchOnUpload bool
 	dispatchResults  chan error
@@ -41,7 +46,7 @@ type desktopAutoMaintenanceFixture struct {
 
 func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixture {
 	t.Helper()
-	f := &desktopAutoMaintenanceFixture{t: t, paused: map[string]bool{}, account: map[string]beewire.PlatformAccount{}, uploads: map[string]int{}, dispatchResults: make(chan error, 4)}
+	f := &desktopAutoMaintenanceFixture{t: t, paused: map[string]bool{}, account: map[string]beewire.PlatformAccount{}, uploads: map[string]int{}, registeredLease: map[string]string{}, registeredSource: map[string]string{}, dispatchResults: make(chan error, 8)}
 	for _, platform := range []string{"openai", "claude"} {
 		f.paused[platform] = true
 		f.account[platform] = beewire.PlatformAccount{Platform: platform, Status: "not_configured"}
@@ -67,9 +72,6 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 		t.Fatal(err)
 	}
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
-		if desktopSupplyServeIdentity(w, q) {
-			return
-		}
 		if q.Method == "PUT" && (q.URL.Path == "/api/bee/platforms/openai" || q.URL.Path == "/api/bee/platforms/claude") {
 			f.pauseWrites.Add(1)
 		}
@@ -77,6 +79,9 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 		beforeRequest := f.beforeRequest
 		f.mu.Unlock()
 		if beforeRequest != nil && beforeRequest(w, q) {
+			return
+		}
+		if desktopSupplyServeIdentity(w, q) {
 			return
 		}
 		if q.URL.Path == "/api/bee/connect" {
@@ -89,8 +94,8 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 			return
 		}
 		if q.URL.Path == "/api/bee/agent" {
-			f.connections.Add(1)
-			w.Header().Set("X-Bee-Lease", "auto-maintenance-lease")
+			lease := fmt.Sprintf("auto-maintenance-lease-%d", f.connections.Add(1))
+			w.Header().Set("X-Bee-Lease", lease)
 			conn, err := websocket.Accept(w, q, nil)
 			if err != nil {
 				return
@@ -99,6 +104,7 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 			defer peer.Close()
 			f.mu.Lock()
 			f.peer = peer
+			f.lease = lease
 			f.mu.Unlock()
 			<-peer.Context.Done()
 			return
@@ -110,6 +116,7 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 			switch q.URL.Path {
 			case base:
 				if q.Method == "PUT" {
+					f.supplyWrites.Add(1)
 					var input struct {
 						Paused bool `json:"paused"`
 					}
@@ -133,6 +140,27 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 			case base + "/account":
 				json.NewEncoder(w).Encode(f.account[platform])
 				return
+			case base + "/account/confirm":
+				var input struct {
+					Fingerprint    string `json:"account_fingerprint"`
+					ConfirmationID string `json:"confirmation_id"`
+				}
+				if err := json.NewDecoder(q.Body).Decode(&input); err != nil {
+					t.Error(err)
+				}
+				account := f.account[platform]
+				if q.Method != "POST" || input.Fingerprint != account.PendingFingerprint || input.ConfirmationID != account.ConfirmationID || !f.paused[platform] {
+					t.Errorf("account confirmation rejected: method=%s fingerprint_match=%t reference_match=%t paused=%t", q.Method, input.Fingerprint == account.PendingFingerprint, input.ConfirmationID == account.ConfirmationID, f.paused[platform])
+					w.WriteHeader(http.StatusConflict)
+					return
+				}
+				account.AccountFingerprint = account.PendingFingerprint
+				account.PendingFingerprint, account.ConfirmationID, account.CredentialRevision = "", "", ""
+				account.Generation++
+				account.Status = "source_unavailable"
+				f.account[platform] = account
+				json.NewEncoder(w).Encode(account)
+				return
 			case base + "/capabilities":
 				if q.Method == "GET" {
 					json.NewEncoder(w).Encode(beewire.Capabilities{Status: "unknown"})
@@ -154,13 +182,25 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 				t.Errorf("maintenance metadata invalid for platform=%s", platform)
 			}
 			fingerprint, revision := authorization.AccountFingerprint, authorization.CredentialRevision
-			if input.Lease != "auto-maintenance-lease" {
+			if input.Lease != f.lease {
 				t.Errorf("maintenance lease=%q", input.Lease)
 			}
-			f.account[platform] = beewire.PlatformAccount{Platform: platform, Status: "ready", Generation: 1, AccountFingerprint: fingerprint, CredentialRevision: revision}
+			if previous := f.account[platform]; previous.AccountFingerprint != "" && previous.AccountFingerprint != fingerprint {
+				previous.Status = "confirmation_required"
+				previous.PendingFingerprint = fingerprint
+				previous.ConfirmationID = "controlled-login-confirmation"
+				f.account[platform] = previous
+				json.NewEncoder(w).Encode(beewire.MaintenanceResponse{Account: previous})
+				return
+			}
+			generation := f.account[platform].Generation
+			if generation == 0 {
+				generation = 1
+			}
+			f.account[platform] = beewire.PlatformAccount{Platform: platform, Status: "ready", Generation: generation, AccountFingerprint: fingerprint, CredentialRevision: revision}
 			var task *beewire.MaintenanceTask
-			if f.uploads[platform] == 0 {
-				task = &beewire.MaintenanceTask{ID: "auto-" + platform, Kind: "reencrypt_authorization", DeviceID: "device-1", Platform: platform, AccountFingerprint: fingerprint, AccountGeneration: 1, CredentialRevision: revision, KeyVersion: 1, Key: inbox.Public()}
+			if f.registeredLease[platform] != input.Lease || f.registeredSource[platform] != revision {
+				task = &beewire.MaintenanceTask{ID: "auto-" + platform, Kind: "reencrypt_authorization", DeviceID: "device-1", Platform: platform, AccountFingerprint: fingerprint, AccountGeneration: generation, CredentialRevision: revision, KeyVersion: 1, Key: inbox.Public()}
 			}
 			json.NewEncoder(w).Encode(beewire.MaintenanceResponse{Account: f.account[platform], Task: task})
 		case "/api/bee/credential-key":
@@ -176,15 +216,17 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 				return
 			}
 			secret, _, err := inbox.Open(input.Envelope)
-			if err != nil || secret.Token == "" || input.Lease != "auto-maintenance-lease" {
+			if err != nil || secret.Token == "" || input.Lease != f.lease {
 				t.Errorf("authorization envelope=%v lease=%q", err, input.Lease)
 			}
 			platform := strings.TrimPrefix(input.TaskID, "auto-")
 			f.uploads[platform]++
+			f.registeredLease[platform] = input.Lease
+			f.registeredSource[platform] = f.account[platform].CredentialRevision
 			if f.dispatchOnUpload {
 				f.dispatchResults <- probeDesktopAutoRelay(f.peer, platform)
 			}
-			json.NewEncoder(w).Encode(map[string]int{"account_generation": 1})
+			json.NewEncoder(w).Encode(map[string]int64{"account_generation": f.account[platform].Generation})
 		default:
 			t.Errorf("unexpected auto-maintenance request: %s %s", q.Method, q.URL.Path)
 			w.WriteHeader(http.StatusNotFound)
@@ -200,7 +242,8 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 	f.runtime = NewDesktopRuntime(context.Background(), d, f.accounts)
 	t.Cleanup(f.accounts.Close)
 	t.Cleanup(f.runtime.Close)
-	if err := f.runtime.ConfigureNetwork(context.Background(), DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}); err != nil {
+	f.network = DesktopNetworkConfig{Revision: 1, ConnectProxy: proxy.URL}
+	if err := f.runtime.ConfigureNetwork(context.Background(), f.network); err != nil {
 		t.Fatal(err)
 	}
 	enableTestPresence(t, f.runtime)

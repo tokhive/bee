@@ -2,7 +2,9 @@
 
 日期：2026-11-05。按 `mattpocock-skills:to-spec` 综合讨论整理。
 
-状态：用户已批准并授权实施；前端与有状态 mock 阶段已完成。目标行为仅在开发预览的 `accounts-auto-*` 场景启用，不接真实业务，不改变当前原生后台运行规则。5 项任务作为本地执行记录维护，未发布外部 issue。结果见[验收记录](evidence/2026-11-04-account-ui-review/auto-service-validation.md)。
+本文件保留前端 mock 阶段范围；后续获批准的原生实现见[原生自动服务](native-auto-service.md)，原阶段验收结果不变。
+
+状态（该阶段）：用户已批准并授权实施；前端与有状态 mock 阶段已完成。目标行为仅在开发预览的 `accounts-auto-*` 场景启用，不接真实业务，不改变当前原生后台运行规则。5 项任务作为本地执行记录维护，未发布外部 issue。结果见[验收记录](evidence/2026-11-04-account-ui-review/auto-service-validation.md)。
 
 ## Problem Statement
 

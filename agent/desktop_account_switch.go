@@ -54,6 +54,7 @@ func (a *DesktopAccounts) beginAccountChange(p *desktopAccountPlatform, request 
 }
 
 func (a *DesktopAccounts) performAccountChange(ctx context.Context, platform string, op desktopPendingOperation, reconcile, allowConfirm bool) (selected *desktopAccountSelection, pending *desktopPendingOperation, result error) {
+	var completedMaintenance *DesktopLoginMaintenance
 	if reconcile {
 		pending = &op
 	}
@@ -79,7 +80,15 @@ func (a *DesktopAccounts) performAccountChange(ctx context.Context, platform str
 	if err != nil {
 		return nil, pending, err
 	}
-	defer release()
+	defer func() {
+		release()
+		if completedMaintenance != nil {
+			p, unlock, _ := a.acquire(context.Background(), platform)
+			p.snapshot.LoginMaintenance = completedMaintenance
+			p.snapshot.Revision++
+			unlock()
+		}
+	}()
 	state, err := a.verifiedSelectionDevice(ctx, session)
 	if err != nil {
 		return nil, pending, err
@@ -278,6 +287,13 @@ func (a *DesktopAccounts) performAccountChange(ctx context.Context, platform str
 	if _, result = a.selectionSource(ctx, platform, desktopPendingOperation{Source: synchronized.Source, ToFingerprint: synchronized.Fingerprint, CredentialRevision: synchronized.CredentialRevision}); result != nil {
 		return
 	}
+	// The confirmed account operation is the durable link between the old login
+	// selection and its explicitly approved successor. Retain it until the login
+	// journal has also committed; a journal failure must remain read-only repairable.
+	completedMaintenance, result = a.completeLoginAccountChange(session, state, platform, synchronized)
+	if result != nil {
+		return
+	}
 	_, result = a.selectionScope(session, state, func(s *desktopAccountScope) error {
 		if s.PendingOperations[platform].ID != op.ID || s.Selections[platform].Revision != selected.Revision {
 			return fmt.Errorf("account change synchronization commit no longer owns selection")
@@ -347,6 +363,9 @@ func (a *DesktopAccounts) reportAccountChangeCandidate(ctx context.Context, stat
 	return desktopCall(ctx, state, "/api/bee/maintenance", http.MethodPost, state.Credential, request, &result)
 }
 func (a *DesktopAccounts) synchronizeAccountChange(ctx context.Context, state localState, lease, platform string, selection desktopAccountSelection) (desktopAccountSelection, error) {
+	if err := a.runtime.prepareAccountChangeForwarding(platform); err != nil {
+		return selection, err
+	}
 	cfg, err := a.runtime.configForSelection(platform, selection)
 	if err != nil {
 		return selection, err

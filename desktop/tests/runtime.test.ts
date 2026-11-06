@@ -52,6 +52,13 @@ test('runtime requires an explicit nullable connection detail',()=>{
  const explicit={...fixture.snapshot,connection_detail:null};
  assert.deepEqual(decodeRuntimeSnapshot(reply(explicit),'current'),explicit);
 });
+test('legacy stop conversion exposes progress and requires strict platform-bound recovery evidence',()=>{
+ const view:any={...fixture.snapshot,legacy_stop:{phase:'reconciling',platforms:['openai'],error:null,can_recheck:true}};
+ assert.deepEqual(decodeRuntimeSnapshot(reply(view),'current').legacy_stop,view.legacy_stop);
+ for(const mutate of [(v:any)=>delete v.legacy_stop,(v:any)=>v.legacy_stop.phase='unknown',(v:any)=>v.legacy_stop.platforms=['openai','openai'],(v:any)=>v.legacy_stop.platforms=['unknown'],(v:any)=>v.legacy_stop.can_recheck=null,(v:any)=>v.legacy_stop.error={code:'blocked',check:'upgrade',platform:'unknown',message:'blocked',evidence:{token:'SECRET_PAYLOAD'}},(v:any)=>v.legacy_stop.token='SECRET_PAYLOAD']){
+  const bad=structuredClone(view);mutate(bad);assert.throws(()=>decodeRuntimeSnapshot(reply(bad),'current'),e=>e instanceof Error&&!e.message.includes('SECRET_PAYLOAD'));
+ }
+});
 
 const failure={code:'dns_failed',stage:'connect',occurred_at:'2026-10-26T00:00:00Z',message:'lookup hive.test: no such host',evidence:{target_origin:'https://hive.test',path:'/api/bee/agent'}};
 const detail={failure,retry:'scheduled',next_retry_at:'2099-01-01T00:00:00Z'};

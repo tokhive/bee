@@ -20,7 +20,26 @@ func runDesktopAuthorization(ctx context.Context, command *exec.Cmd) error {
 	if err := ctx.Err(); err != nil {
 		return err
 	}
-	job, err := windows.CreateJobObject(nil, nil)
+	var name *uint16
+	var security *windows.SecurityAttributes
+	if lease := desktopLoginLeaseFromContext(ctx); lease != nil {
+		if previous, err := openDesktopOriginalLoginJob(lease.name); err == nil {
+			windows.CloseHandle(previous)
+			return fmt.Errorf("owned login job already exists for original operation; no process is started")
+		} else if !errors.Is(err, windows.ERROR_FILE_NOT_FOUND) {
+			return fmt.Errorf("check original login job before launch: %w", err)
+		}
+		var err error
+		name, err = windows.UTF16PtrFromString(lease.name)
+		if err != nil {
+			return err
+		}
+		security, err = privateWindowsSecurity()
+		if err != nil {
+			return err
+		}
+	}
+	job, err := windows.CreateJobObject(security, name)
 	if err != nil {
 		return fmt.Errorf("create owned login job: %w", err)
 	}
@@ -45,7 +64,10 @@ func runDesktopAuthorization(ctx context.Context, command *exec.Cmd) error {
 				waitErr = nil
 			}
 		}
-		return errors.Join(cause, killErr, waitErr)
+		if killErr != nil || waitErr != nil {
+			return errors.Join(cause, &desktopAuthorizationCleanupError{errors.Join(killErr, waitErr)})
+		}
+		return cause
 	}
 	process, err := windows.OpenProcess(windows.PROCESS_SET_QUOTA|windows.PROCESS_TERMINATE|windows.SYNCHRONIZE, false, uint32(command.Process.Pid))
 	if err != nil {
@@ -84,7 +106,10 @@ func runDesktopAuthorization(ctx context.Context, command *exec.Cmd) error {
 		observed = errors.Join(observed, <-exited)
 	}
 	waited := desktopAuthorizationExit(command.Wait())
-	return errors.Join(observed, terminateErr, waited)
+	if terminateErr != nil {
+		return errors.Join(observed, &desktopAuthorizationCleanupError{fmt.Errorf("terminate owned login job: %w", terminateErr)}, waited)
+	}
+	return errors.Join(observed, waited)
 
 }
 func resumeDesktopAuthorizationThread(pid uint32) error {
@@ -113,4 +138,8 @@ func resumeDesktopAuthorizationThread(pid uint32) error {
 		return nil
 	}
 	return fmt.Errorf("owned suspended login thread not found: %w", err)
+}
+
+func desktopLoginSupervisor(context.Context, []string) error {
+	return fmt.Errorf("login guardian unavailable: OS=windows; required=owned Windows Job execution")
 }

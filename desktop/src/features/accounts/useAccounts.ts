@@ -6,7 +6,7 @@ import {accountConfirmationKey} from '../../system/accounts';
 import type {AuthorizeClient} from '../../system/authorize';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
-export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state);
+export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state)||!!s?.login_maintenance&&s.login_maintenance.phase!=='restored';
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
 export interface CoordinatedAccounts {autoService?:boolean;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
@@ -151,7 +151,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  },[client]);
  const read=useCallback(async(platform:AccountPlatform,refresh:boolean,operationId?:string)=>{
   if(!client)return;
-  await run(platform,async()=>{if(refreshCentral)return;if(operationId&&authorizer)await authorizer.status(operationId);return client.snapshot(platform,refresh);},false,false,true);
+  await run(platform,async()=>{if(refreshCentral&&!(refresh&&latest.current[platform]?.login_maintenance?.can_recheck))return;if(operationId&&authorizer&&!latest.current[platform]?.login_maintenance)await authorizer.status(operationId);return client.snapshot(platform,refresh);},false,false,true);
  },[client,run,authorizer,refreshCentral]);
  useEffect(()=>{
   if(!enabled||!client||external)return;let current=true;let timer:ReturnType<typeof setTimeout>|undefined;

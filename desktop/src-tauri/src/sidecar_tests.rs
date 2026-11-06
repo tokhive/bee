@@ -959,7 +959,7 @@ async fn owned_process_is_reaped_before_singleton_release() {
     let bridge = Bridge::start(fixture("owned-exit"));
     wait(&bridge, BridgePhase::Ready).await;
     let state_at_release = std::cell::RefCell::new(BridgePhase::Starting);
-    crate::lifecycle::shutdown_owned(&bridge, || {
+    crate::lifecycle::shutdown_owned(&bridge, None, || {
         *state_at_release.borrow_mut() = bridge.status().state;
     })
     .await

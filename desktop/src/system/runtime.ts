@@ -9,7 +9,9 @@ export interface RuntimeOperation {id:string;kind:'start'|'stop';platform:null;s
 export interface StopReceipt {workers_stopped:boolean;intent_saved:boolean;session_clean:boolean}
 export interface ConnectionFailure {code:'dns_failed'|'tls_failed'|'connection_refused'|'timeout'|'http_rejected'|'connection_closed'|'synchronization_failed'|'ownership_unconfirmed'|'unknown_failure';stage:'connect'|'heartbeat'|'synchronize';occurred_at:string;message:string;evidence:Record<string,string>}
 export interface ConnectionDetail {failure:ConnectionFailure|null;retry:'idle'|'attempting'|'scheduled'|'halted';next_retry_at:string|null}
+export interface LegacyStopStatus {phase:'processing'|'reconciling'|'blocked'|'completed';platforms:AccountPlatform[];error:AccountError|null;can_recheck:boolean}
 export interface RuntimeSnapshot {
+ legacy_stop:LegacyStopStatus|null;
  run_id:string|null;revision:number;network_revision:number;observed_at:string;
  local:'stopped'|'waiting'|'starting'|'running'|'stopping'|'failed';
  connection:'disconnected'|'connecting'|'connected'|'reconnecting'|'rejected'|'occupied';
@@ -79,11 +81,20 @@ function result(reply:unknown,instance:string,key:string):unknown{
 }
 export function decodeRuntimeOperation(reply:unknown,instance:string):RuntimeOperation{return operation(result(reply,instance,'operation'));}
 export function decodeRuntimeSnapshot(reply:unknown,instance:string):RuntimeSnapshot{
- const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','connection_detail','platforms','operation','stop_receipt'],'runtime');
+ const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','connection_detail','legacy_stop','platforms','operation','stop_receipt'],'runtime');
  if(s.run_id!==null&&(typeof s.run_id!=='string'||!/^[a-f0-9]{32}$/.test(s.run_id)))invalid('run_id requires null or 32 lowercase hex');
  integer(s.revision,'revision');integer(s.network_revision,'network_revision');timestamp(s.observed_at,'observed_at');
  oneOf(s.local,['stopped','waiting','starting','running','stopping','failed'],'local');oneOf(s.connection,['disconnected','connecting','connected','reconnecting','rejected','occupied'],'connection');
  connectionDetail(s.connection_detail);
+ if(s.legacy_stop!==null){
+  const legacy=object(s.legacy_stop,['phase','platforms','error','can_recheck'],'legacy_stop');
+  oneOf(legacy.phase,['processing','reconciling','blocked','completed'],'legacy_stop.phase');
+  if(!Array.isArray(legacy.platforms)||legacy.platforms.length>2||new Set(legacy.platforms).size!==legacy.platforms.length||legacy.platforms.some(p=>!['openai','claude'].includes(p)))invalid('legacy_stop.platforms requires unique known platforms');
+  if(typeof legacy.can_recheck!=='boolean')invalid('legacy_stop.can_recheck requires boolean');
+  const errorPlatform=(legacy.error as {platform?:unknown}|null)?.platform;
+  decodeAccountError(legacy.error,errorPlatform==='claude'?'claude':'openai');
+  if(errorPlatform&&errorPlatform!=='unknown'&&!legacy.platforms.includes(errorPlatform))invalid('legacy_stop.error platform differs from conversion scope');
+ }
  const platforms=object(s.platforms,['openai','claude'],'platforms');
  for(const platform of ['openai','claude'] as const){
   const p=object(platforms[platform],['account','supply','selection_revision'],`platforms.${platform}`);integer(p.selection_revision,'selection_revision');decodeAccountReply({instance,result:{account:p.account}},platform,instance);

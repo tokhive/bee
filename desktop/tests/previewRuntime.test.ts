@@ -18,10 +18,10 @@ async function preview(t:TestContext,scene='running'){
  return {runtime:createRuntimeClient(invoke,instance),supply:createSupplyClient(invoke,{hive:'https://hive.example',deviceId:'dev-1'})};
 }
 
-test('bound device without accounts stays online while contribution remains stopped',async t=>{
+test('bound device without accounts stays online while automatic service waits for selection',async t=>{
  const {runtime,supply}=await preview(t,'runtime-no-accounts');
  const state=await runtime.snapshot();
- assert.equal(state.local,'stopped');
+ assert.equal(state.local,'waiting');
  assert.equal(state.run_id,null);
  assert.equal(state.connection,'connected');
  const platform=await supply.status('openai');
@@ -112,15 +112,24 @@ test('unknown start receipt is reconciled through the original operation without
  assert.equal((window as any).calls.filter((c:any)=>c.command==='runtime_start').length,1);
 });
 
-test('unconfirmed account changes and disconnected resume fail before changing contribution or pause',async t=>{
+test('a second start, changed identity resume and disconnected resume preserve the running service and pause',async t=>{
  const {runtime,supply}=await preview(t,'account-change');
+ await supply.setPaused('openai',true);
  const before=await runtime.snapshot();
- await assert.rejects(()=>runtime.start({expected_revision:before.revision,resume_platforms:[]}),/confirmation/);
- await assert.rejects(()=>supply.setPaused('openai',false),/resume blocked/);
+ assert.equal(before.local,'running');
+ await assert.rejects(()=>runtime.start({expected_revision:before.revision,resume_platforms:[]}),/local=running/);
+ await assert.rejects(()=>supply.setPaused('openai',false),/account confirmation required/);
  const after=await runtime.snapshot();
  assert.equal(after.local,before.local);
  assert.equal(after.revision,before.revision);
+ assert.equal(after.run_id,before.run_id);
  assert.equal((await supply.status('openai')).paused,true);
+ applyPreviewEvent({session:(window as any).__beePreviewSession,action:'runtime-connection',value:'offline'});
+ const disconnected=await runtime.snapshot();
+ await assert.rejects(()=>supply.setPaused('openai',false),/required=running connected selected/);
+ const unchanged=await runtime.snapshot();
+ for(const key of ['local','connection','revision','run_id','operation'] as const)assert.deepEqual(unchanged[key],disconnected[key]);
+ assert.equal((window as any).paused.openai,true);
 });
 
 

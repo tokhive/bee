@@ -143,7 +143,10 @@ func (r *DesktopRuntime) withAccountConnection(ctx context.Context, session *des
 	}()
 	var once sync.Once
 	outcome := make(chan error, 1)
-	cfg := &egressConfig{Targets: []string{}, desktopAction: func(connectionCtx context.Context, _ localState, lease string, _ io.Writer) (<-chan error, func()) {
+	r.mu.Lock()
+	proxy := r.network.ConnectProxy
+	r.mu.Unlock()
+	cfg := &egressConfig{Targets: []string{}, ConnectProxy: proxy, desktop: r, desktopAction: func(connectionCtx context.Context, _ localState, lease string, _ io.Writer) (<-chan error, func()) {
 		var workers sync.WaitGroup
 		once.Do(func() {
 			workers.Add(1)

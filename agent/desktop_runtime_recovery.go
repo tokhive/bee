@@ -13,6 +13,47 @@ import (
 var errDesktopRuntimeIdle = errors.New("saved runtime intent is stopped")
 var errDesktopRuntimeWaiting = errors.New("no selected accounts; waiting for explicit account selection")
 
+type desktopRuntimeWaitingReservation struct{ bindingRevision int64 }
+
+func (*desktopRuntimeWaitingReservation) Error() string { return errDesktopRuntimeWaiting.Error() }
+func (*desktopRuntimeWaitingReservation) Unwrap() error { return errDesktopRuntimeWaiting }
+
+// Reservation stays local under admission locks. The worker verifies this exact
+// binding outside those locks before it may publish a successful waiting state.
+func (r *DesktopRuntime) verifyWaitingDevice(ctx context.Context, expectedRevision int64) error {
+	session, release, err := r.device.acquireSession(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
+	_, revision, err := session.readBinding()
+	if err != nil {
+		return err
+	}
+	if revision != expectedRevision {
+		return fmt.Errorf("waiting device binding changed before verification: actual=%d expected=%d", revision, expectedRevision)
+	}
+	state, err := r.accounts.verifiedSelectionDevice(ctx, session)
+	if err != nil {
+		return fmt.Errorf("waiting device identity verification: %w", err)
+	}
+	waiting, err := r.canWaitForAccount(session, state)
+	if err != nil {
+		return err
+	}
+	if !waiting {
+		return fmt.Errorf("waiting account evidence changed: eligible=false; original waiting admission cannot start contribution")
+	}
+	_, revision, err = session.readBinding()
+	if err != nil {
+		return err
+	}
+	if revision != expectedRevision {
+		return fmt.Errorf("waiting device binding changed during verification: actual=%d expected=%d", revision, expectedRevision)
+	}
+	return ctx.Err()
+}
+
 // Waiting owns no contribution session and grants no account permission. Check
 // persisted evidence before taking this path, including when saved intent is
 // stopped: a missing selection cannot make an inherited operation/session safe.
@@ -22,6 +63,9 @@ func (r *DesktopRuntime) canWaitForAccount(session *desktopDeviceSession, state 
 		return false, err
 	}
 	if len(scope.Selections) != 0 {
+		return false, nil
+	}
+	if desktopLegacyStopPending(scope) {
 		return false, nil
 	}
 	if len(scope.PendingOperations) != 0 {
@@ -66,23 +110,6 @@ func (r *DesktopRuntime) recoveryScope(ctx context.Context, session *desktopDevi
 	return scope, nil
 }
 
-func recoveryResumePlatforms(ctx context.Context, state localState, scope desktopAccountScope) ([]string, error) {
-	result := []string{}
-	for _, platform := range scope.RuntimeIntent.ResumePlatforms {
-		if _, ok := scope.Selections[platform]; !ok {
-			return nil, fmt.Errorf("saved resume platform has no selection: platform=%s", platform)
-		}
-		supply, err := desktopSupplyCall(ctx, state, platform, nil)
-		if err != nil {
-			return nil, fmt.Errorf("recovery pause readback failed: platform=%s: %w", platform, err)
-		}
-		if !supply.Paused {
-			result = append(result, platform)
-		}
-	}
-	return result, nil
-}
-
 // Before manual supply writes, remove automatic-resume permission. Re-add it
 // only after a successful unpause and readback on the current owned run.
 func (r *DesktopRuntime) savePlatformResumeIntent(ctx context.Context, platform string, resume bool) error {
@@ -117,6 +144,7 @@ func (r *DesktopRuntime) savePlatformResumeIntent(ctx context.Context, platform 
 
 // Caller holds r.mu and lifecycleMu. Only local storage is touched here.
 func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, restoring bool) error {
+	r.snapshot.LegacyStop = nil
 	if restoring && r.userStopRequested {
 		return errDesktopRuntimeIdle
 	}
@@ -125,7 +153,7 @@ func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, 
 		return err
 	}
 	defer release()
-	state, err := session.read()
+	state, bindingRevision, err := session.readBinding()
 	if err != nil {
 		return err
 	}
@@ -151,7 +179,24 @@ func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, 
 		return err
 	}
 	if waiting {
-		return errDesktopRuntimeWaiting
+		return &desktopRuntimeWaitingReservation{bindingRevision: bindingRevision}
+	}
+	scope, err := r.accounts.selectionScope(session, state, nil)
+	if err != nil {
+		if guardErr := r.reserveRecoveryGuard(session, run, true); guardErr != nil {
+			return errors.Join(err, guardErr)
+		}
+		return err
+	}
+	if desktopLegacyStopPending(scope) {
+		// Migration is durable but has not admitted contribution work. A crash
+		// here must remain queryable without claiming/cleaning a runtime marker.
+		if err := r.legacyStopPrerequisites(session, state, scope); err != nil {
+			r.snapshot.LegacyStop = &DesktopLegacyStopStatus{Phase: "blocked", Platforms: desktopLegacyStopPlatforms(scope), Error: accountFailure("unknown", "legacy_stop_blocked", "legacy_stop_prerequisites", err.Error())}
+			return err
+		}
+		r.snapshot.LegacyStop = &DesktopLegacyStopStatus{Phase: "processing", Platforms: desktopLegacyStopPlatforms(scope)}
+		return nil
 	}
 	// Independent evidence survives a failure to read/write ai-accounts.json.
 	if err = r.reserveRecoveryGuard(session, run, restoring); err != nil {
@@ -173,6 +218,44 @@ func (r *DesktopRuntime) reserveRuntimeSession(ctx context.Context, run string, 
 		}
 		if restoring && (s.Session.Active || !s.Session.Clean || !s.RuntimeIntent.Running) {
 			return fmt.Errorf("runtime recovery evidence changed before reservation")
+		}
+		s.Session = desktopSessionMarker{RunID: run, Active: true}
+		return nil
+	})
+	if err == nil {
+		r.ownedSession = &desktopRetiredAccountSession{run: run, scope: desktopScopeKey(state.Hive, state.Identity.OwnerID, state.Identity.ID)}
+	}
+	return err
+}
+
+func (r *DesktopRuntime) verifyCleanLegacyStopGuard(session *desktopDeviceSession) error {
+	guard, err := readDesktopAccountBytes(filepath.Join(filepath.Dir(session.path), "runtime-session"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("legacy stop recovery guard read failed: %w", err)
+	}
+	if err == nil && !bytes.Equal(guard, []byte("clean\n")) {
+		return fmt.Errorf("legacy stop migration blocked: previous recovery guard is not clean; explicit runtime recovery required")
+	}
+	return nil
+}
+
+// Migration calls this only after all owner/platform pauses are confirmed and
+// completion is durable. It cannot adopt an inherited dirty runtime session.
+func (r *DesktopRuntime) reserveMigratedRuntimeSession(ctx context.Context, session *desktopDeviceSession, state localState, run string) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if ctx.Err() != nil || r.snapshot.Local != "starting" {
+		return fmt.Errorf("legacy stop runtime admission cancelled: local=%s context_cancelled=%t", r.snapshot.Local, ctx.Err() != nil)
+	}
+	if err := r.verifyCleanLegacyStopGuard(session); err != nil {
+		return err
+	}
+	if err := r.reserveRecoveryGuard(session, run, true); err != nil {
+		return err
+	}
+	_, err := r.accounts.selectionScope(session, state, func(s *desktopAccountScope) error {
+		if s.LegacyStop.State != "completed" || !s.RuntimeIntent.Running || s.Session.Active || !s.Session.Clean || len(s.PendingOperations) > 0 {
+			return fmt.Errorf("legacy stop runtime admission evidence changed: state=%s running=%t active=%t clean=%t pending=%d", s.LegacyStop.State, s.RuntimeIntent.Running, s.Session.Active, s.Session.Clean, len(s.PendingOperations))
 		}
 		s.Session = desktopSessionMarker{RunID: run, Active: true}
 		return nil

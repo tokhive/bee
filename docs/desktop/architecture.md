@@ -19,7 +19,7 @@
 
 Rust 从 App 包内固定位置启动本次拥有的 Go Bee，通过 stdin/stdout JSONL 通信；stderr 独立消费。hello/ping 只证明管理会话可用。Go 设备在线连接和贡献连接按已核验归属串行交接；设备在线不等于已接入账号、开始贡献或可接单。
 
-首次贡献由用户明确开始。正常退出后的恢复须核验保存意图、设备、来源、网络与运行归属；主动停止保持停止，异常或未决状态不冒充可恢复。关窗后台与明确退出分开；退出只回收本 App 创建的子进程，不按进程名查杀外部 Bee。详见[运行设计](../superpowers/specs/2026-10-26-desktop-account-runtime-design.md)和[设备在线设计](../superpowers/specs/2026-11-03-desktop-device-connection-design.md)。
+用户明确接入后由 Go 自动维护，前端不调度真实生命周期；无账号时等待接入，接入及主动登录后平台保持暂停。正常退出后的恢复须核验设备、来源、网络与运行归属，保留 Hive 当前平台选择；旧停止记录按已批准规则先暂停且只转换一次，异常或未决状态不冒充可恢复。关窗后台与明确退出分开；退出只回收本 App 创建的子进程，不按进程名查杀外部 Bee。当前行为见[原生自动服务](native-auto-service.md)；历史运行阶段见[运行设计](../superpowers/specs/2026-10-26-desktop-account-runtime-design.md)和[设备在线设计](../superpowers/specs/2026-11-03-desktop-device-connection-design.md)。
 
 ## 数据与权限
 

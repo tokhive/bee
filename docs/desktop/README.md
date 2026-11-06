@@ -9,7 +9,8 @@
 | 分层、接口职责与权限 | [架构](architecture.md) |
 | 设备绑定与恢复 | [使用说明](device-pairing.md) |
 | 账号接入、官方登录与贡献 | [使用及数据说明](ai-accounts.md)、[运行规格](../superpowers/specs/2026-10-26-desktop-account-runtime-design.md) |
-| 账户页目标交互：前端 mock 阶段 | [to-spec 规格](auto-service-design.md)、[验收记录](evidence/2026-11-04-account-ui-review/auto-service-validation.md)（已实现前端＋有状态 mock，真实业务接入延后） |
+| 原生自动服务与恢复 | [当前行为与接口](native-auto-service.md)、[逐票实施记录](../../.scratch/bee-native-interface/README.md) |
+| 账户页目标交互：历史前端 mock 阶段 | [to-spec 规格](auto-service-design.md)、[验收记录](evidence/2026-11-04-account-ui-review/auto-service-validation.md)（该阶段只证明前端＋有状态 mock；当前原生进展见上一项） |
 | 暂停／恢复与接单原因 | [供给说明](supply-control.md) |
 | TS／Rust／Go 接口 | [私有桥协议](bridge-protocol.md) |
 | 概览与账号布局 | [UI 规格](../superpowers/specs/2026-10-27-desktop-overview-accounts-ui-design.md) |

@@ -150,13 +150,13 @@ test('device failure keeps the last identity during retry and a successful read 
  await page.evaluate(()=>{const w=window as any;w.failRefresh=true;w.releaseRefresh();});
  const failure=page.locator('.native-device-summary .problem-notice');await expect(failure).toContainText('GET device_status fixture HTTP 503');
  await expect(page.locator('.device-facts small').first()).toHaveText('上次确认的设备，当前待核对。');
- await expect(page.locator('.device-facts strong').nth(1)).toHaveText('owner@example.test');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeDisabled();
+ await expect(page.locator('.device-facts strong').nth(1)).toHaveText('owner@example.test');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeDisabled();
  await hold(page,'device_status');await focusAndScroll(page);const before=await position(page),copy=await failure.innerText();
  const button=page.locator('.device-section-heading button');await button.evaluate((el:HTMLButtonElement)=>el.click());
  await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
  expect(await failure.innerText()).toBe(copy);expect(await position(page)).toEqual(before);await expect(page.locator('.device-loading')).toHaveCount(0);
  await page.evaluate(()=>{const w=window as any;w.failRefresh=false;w.releaseRefresh();});
- await expect(button).toBeEnabled();await expect(failure).toHaveCount(0);await expect(page.locator('.device-facts small').first()).toHaveText('设备已绑定。');await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toBeEnabled();await noWrites(page);
+ await expect(button).toBeEnabled();await expect(failure).toHaveCount(0);await expect(page.locator('.device-facts small').first()).toHaveText('设备已绑定。');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeEnabled();await noWrites(page);
 });
 
 test('initial device loading has a static three-column skeleton which never returns during refresh',async({page})=>{
@@ -187,15 +187,15 @@ for(const command of ['account_snapshot','supply_status'])test(`${command} failu
  await scene(page,'running');const card=page.locator('[data-account-platform=openai]');await expect(card.locator('.native-account-row-actions button')).toBeEnabled();
  await hold(page,command,'openai');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
  await page.evaluate(()=>{const w=window as any;w.failRefresh=true;w.releaseRefresh();});
- await expect(card.locator('.problem-notice')).toContainText(`GET ${command} fixture HTTP 503`);
+ await card.locator('.account-conditions>summary').click();await card.locator('.account-condition-evidence>summary').click();await expect(card.locator('.account-condition-evidence pre')).toContainText(`GET ${command} fixture HTTP 503`);
  await expect(card.locator('.native-account-fingerprint')).toContainText('bbbbbbbbbbbbbbbb');await expect(card.locator('.quota-value').first()).toContainText('3');
  await expect(card.locator('.native-account-row-actions button')).toBeDisabled();
- const failure=await card.locator('.problem-notice').innerText();
+ const failure=await card.locator('.account-condition-evidence').innerText();
  await hold(page,command,'openai');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
- expect(await card.locator('.problem-notice').innerText()).toBe(failure);await expect(card.locator('.native-account-fingerprint')).toContainText('bbbbbbbbbbbbbbbb');await expect(card.locator('.native-account-row-actions button')).toBeDisabled();
- if(command==='account_snapshot'){await expect(card.locator('.account-read-history')).toContainText('上次确认');await expect(card.locator('.account-read-history time')).toHaveCount(1);}
+ expect(await card.locator('.account-condition-evidence').innerText()).toBe(failure);await expect(card.locator('.native-account-fingerprint')).toContainText('bbbbbbbbbbbbbbbb');await expect(card.locator('.native-account-row-actions button')).toBeDisabled();
+ if(command==='account_snapshot'){await expect(card.locator('.native-account-condition')).toContainText('状态待更新');await expect(card.locator('.quota-history')).toContainText(['上次确认的额度；当前待核对。','上次额度观测']);await expect(card.locator('.quota-history time')).toHaveCount(1);}
  await page.evaluate(()=>{const w=window as any;w.failRefresh=false;w.releaseRefresh();});
- await expect(card.locator('.problem-notice')).toHaveCount(0);await expect(card.locator('.native-account-row-actions button')).toBeEnabled();await noWrites(page);
+ await expect(card.locator('.account-condition-evidence')).toHaveCount(0);await expect(card.locator('.native-account-row-actions button')).toBeEnabled();await noWrites(page);
 });
 
 test('expiry during a slow refresh still blocks supply writes and marks quota history',async({page})=>{

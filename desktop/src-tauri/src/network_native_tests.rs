@@ -216,6 +216,29 @@ async fn network_native_restore_uses_saved_intent_and_accepts_s1_stopped_success
 }
 
 #[tokio::test]
+async fn network_native_restore_accepts_zero_account_waiting() {
+    let bridge = FakeBridge::new(
+        snapshot("start", "succeeded", "waiting", 9),
+        operation("start", "pending", 8),
+    );
+    let observed = restore_bridge(&bridge, Duration::from_secs(1))
+        .await
+        .unwrap();
+    assert_eq!(observed.local, "waiting");
+    observed.validate().unwrap();
+    assert_eq!(
+        bridge
+            .events
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|e| *e == "restore")
+            .count(),
+        1
+    );
+}
+
+#[tokio::test]
 async fn network_native_operation_failure_keeps_safe_s1_evidence() {
     let mut value = snapshot("start", "failed", "failed", 9);
     value.result["runtime"]["operation"]["error"] = json!({"code":"recovery_rejected","check":"clean_session","platform":"unknown","message":"previous session was not clean","evidence":{"confirmed":"false"}});

@@ -3,11 +3,45 @@ use serde_json::json;
 
 #[test]
 fn experience_notification_capability_requires_complete_ordered_group() {
- let mut methods=vec!["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot"];
- let check=|caps:&Vec<&str>|hello(json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":caps}),"fixture","darwin","arm64");
- assert!(check(&methods).is_ok());
- methods.swap(22,23);assert_eq!(check(&methods).unwrap_err().code,"CAPABILITY_MISMATCH");
- methods=vec!["ping","shutdown","notification_snapshot"];assert!(check(&methods).is_err());
+    let mut methods = vec![
+        "ping",
+        "shutdown",
+        "device_status",
+        "device_begin",
+        "supply_status",
+        "supply_set_paused",
+        "account_defaults",
+        "account_detect",
+        "account_snapshot",
+        "account_action",
+        "runtime_snapshot",
+        "runtime_start",
+        "runtime_stop",
+        "runtime_configure_network",
+        "runtime_restore",
+        "authorize_start",
+        "authorize_status",
+        "authorize_cancel",
+        "diagnostics_start",
+        "diagnostics_snapshot",
+        "diagnostics_cancel",
+        "network_status",
+        "network_test",
+        "notification_snapshot",
+    ];
+    let check = |caps: &Vec<&str>| {
+        hello(
+            json!({"bee_version":"fixture","os":"darwin","arch":"arm64","capabilities":caps}),
+            "fixture",
+            "darwin",
+            "arm64",
+        )
+    };
+    assert!(check(&methods).is_ok());
+    methods.swap(22, 23);
+    assert_eq!(check(&methods).unwrap_err().code, "CAPABILITY_MISMATCH");
+    methods = vec!["ping", "shutdown", "notification_snapshot"];
+    assert!(check(&methods).is_err());
 }
 
 fn frame(id: &str, instance: &str, result: Value) -> Vec<u8> {
@@ -345,7 +379,8 @@ fn account_typed_requests_reject_missing_null_and_unknown_fields() {
 #[test]
 fn account_operation_requires_current_platform_and_known_state() {
     let operation = json!({"id":"a".repeat(48),"kind":"select","platform":"openai","state":"pending","revision":3,"error":null});
-    let valid = json!({"account":{"platform":"openai","operation":operation}});
+    let valid =
+        json!({"account":{"platform":"openai","operation":operation,"login_maintenance":null}});
     assert!(super::validate_account_operation(&valid, super::SupplyPlatform::Openai).is_ok());
     for (field, value) in [
         ("state", json!("finished_maybe")),
@@ -366,15 +401,62 @@ fn account_operation_requires_current_platform_and_known_state() {
     )
     .is_err());
     assert!(super::validate_account_operation(
-        &json!({"account":{"platform":"openai","operation":null}}),
+        &json!({"account":{"platform":"openai","operation":null,"login_maintenance":null}}),
         super::SupplyPlatform::Openai
     )
     .is_ok());
 }
 
 #[test]
+fn login_maintenance_requires_bound_authorize_evidence_even_without_current_operation() {
+    let valid = json!({"account":{"platform":"openai","operation":null,"login_maintenance":{"operation":{"id":"a".repeat(48),"kind":"authorize","platform":"openai","state":"cancelled","revision":3,"error":null},"phase":"restored","source":{"directory":null,"store":"file"},"started_at":"2026-11-01T01:02:03Z","can_recheck":false,"error":null}}});
+    assert!(super::validate_account_operation(&valid, super::SupplyPlatform::Openai).is_ok());
+    let mutations = [
+        (
+            "/account/login_maintenance/operation/platform",
+            json!("claude"),
+        ),
+        ("/account/login_maintenance/operation/kind", json!("select")),
+        ("/account/login_maintenance/phase", json!("unknown")),
+        (
+            "/account/login_maintenance/source/directory",
+            json!("relative"),
+        ),
+        ("/account/login_maintenance/source/store", json!("keychain")),
+        (
+            "/account/login_maintenance/started_at",
+            json!("2026-02-30T00:00:00Z"),
+        ),
+        ("/account/login_maintenance/can_recheck", Value::Null),
+        (
+            "/account/login_maintenance/error",
+            json!({"code":"blocked","check":"restore","platform":"claude","message":"blocked","evidence":{}}),
+        ),
+    ];
+    for (path, value) in mutations {
+        let mut bad = valid.clone();
+        *bad.pointer_mut(path).unwrap() = value;
+        assert!(
+            super::validate_account_operation(&bad, super::SupplyPlatform::Openai).is_err(),
+            "{path}"
+        );
+    }
+    let mut missing = valid.clone();
+    missing["account"]
+        .as_object_mut()
+        .unwrap()
+        .remove("login_maintenance");
+    assert!(super::validate_account_operation(&missing, super::SupplyPlatform::Openai).is_err());
+    let mut secret = valid;
+    secret["account"]["login_maintenance"]["token"] = json!("SECRET");
+    let error =
+        super::validate_account_operation(&secret, super::SupplyPlatform::Openai).unwrap_err();
+    assert!(!error.message.contains("SECRET"));
+}
+
+#[test]
 fn account_operation_failure_accepts_only_valid_http_observation_time() {
-    let mut result = json!({"account":{"platform":"openai","operation":{"id":"a".repeat(48),"kind":"select","platform":"openai","state":"failed","revision":3,"error":{"code":"connection_closed","check":"identity","platform":"openai","message":"unexpected EOF","evidence":{"observed_at":"2026-11-03T10:30:20.123456789Z"}}}}});
+    let mut result = json!({"account":{"platform":"openai","login_maintenance":null,"operation":{"id":"a".repeat(48),"kind":"select","platform":"openai","state":"failed","revision":3,"error":{"code":"connection_closed","check":"identity","platform":"openai","message":"unexpected EOF","evidence":{"observed_at":"2026-11-03T10:30:20.123456789Z"}}}}});
     assert!(super::validate_account_operation(&result, super::SupplyPlatform::Openai).is_ok());
     for value in ["2026-02-30T00:00:00Z", "2099-01-01T00:00:00Z", "not-a-time"] {
         result["account"]["operation"]["error"]["evidence"]["observed_at"] = json!(value);
@@ -445,4 +527,13 @@ fn initial_device_state_never_claims_an_unverified_identity() {
     ] {
         assert!(validate_device_recovery(&json!({"device":device})).is_err());
     }
+}
+
+#[test]
+fn unknown_operation_result_is_reserved_for_interrupted_authorization() {
+    let original=json!({"id":"c".repeat(48),"kind":"authorize","platform":"openai","state":"unknown","revision":2,"error":null});
+    assert!(validate_operation(&original,Some(SupplyPlatform::Openai), &["authorize"]).is_ok());
+    let mut other=original;
+    other["kind"]=json!("select");
+    assert!(validate_operation(&other,Some(SupplyPlatform::Openai), &["select"]).is_err());
 }

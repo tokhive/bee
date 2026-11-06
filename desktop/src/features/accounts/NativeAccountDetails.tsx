@@ -50,7 +50,7 @@ export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigat
    {accounts.autoService&&<Button variant="outline" disabled={blocked||!!accounts.busy[platform]} onClick={()=>accounts.detect(platform,'local')}>{t('重新读取')}</Button>}
    {!defaults&&<p>{t('凭证读取方式尚未确认，暂不能启动官方登录。')}</p>}
   </details>
-  {!accounts.autoService&&!(platform==='claude'&&(accounts.loginFlows.claude||snapshot?.operation?.kind==='authorize'))&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} sourceFailure={accounts.sourceReadFailed[platform]}/>}
+  {(accounts.autoService?!!(snapshot?.login_maintenance||snapshot?.operation):!(platform==='claude'&&(accounts.loginFlows.claude||snapshot?.operation?.kind==='authorize')))&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} sourceFailure={accounts.sourceReadFailed[platform]} conditionErrors={accounts.autoService}/>}
   <div className="account-detail-actions"><NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="detail" onInlineLogin={()=>{inlineLogin.current=true;setOpen(false);}} onNavigate={target=>{if(target.page!=='accounts')setOpen(false);navigate?.(target);}}/></div>
  </DetailSheet>;
 }

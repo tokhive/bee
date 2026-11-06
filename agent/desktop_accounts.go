@@ -24,6 +24,7 @@ type DesktopAccounts struct {
 	accountWorkers   map[string]*desktopAccountWorker
 	lifecycleMu      sync.Mutex
 	runtime          *DesktopRuntime
+	authorizer       *DesktopAuthorizer
 	activeActions    map[string]bool
 	storageMu        sync.Mutex
 	ctx              context.Context
@@ -141,17 +142,18 @@ type DesktopAccountIssue struct {
 	Notify      bool    `json:"notify"`
 }
 type DesktopAccountSnapshot struct {
-	Operation     *DesktopOperation            `json:"operation"`
-	Platform      string                       `json:"platform"`
-	Revision      int64                        `json:"revision"`
-	Candidate     DesktopAccountCandidate      `json:"candidate"`
-	Selection     DesktopAccountFact           `json:"selection"`
-	Hive          DesktopAccountHiveFact       `json:"hive"`
-	Authorization DesktopAccountFact           `json:"authorization"`
-	Capabilities  []DesktopAccountCapabilities `json:"capabilities"`
-	Features      DesktopAccountFeatures       `json:"features"`
-	Issues        []DesktopAccountIssue        `json:"issues"`
-	CheckedAt     *string                      `json:"checked_at"`
+	LoginMaintenance *DesktopLoginMaintenance     `json:"login_maintenance"`
+	Operation        *DesktopOperation            `json:"operation"`
+	Platform         string                       `json:"platform"`
+	Revision         int64                        `json:"revision"`
+	Candidate        DesktopAccountCandidate      `json:"candidate"`
+	Selection        DesktopAccountFact           `json:"selection"`
+	Hive             DesktopAccountHiveFact       `json:"hive"`
+	Authorization    DesktopAccountFact           `json:"authorization"`
+	Capabilities     []DesktopAccountCapabilities `json:"capabilities"`
+	Features         DesktopAccountFeatures       `json:"features"`
+	Issues           []DesktopAccountIssue        `json:"issues"`
+	CheckedAt        *string                      `json:"checked_at"`
 }
 type DesktopAccountStore struct {
 	Store     string  `json:"store"`
@@ -248,6 +250,10 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 		return DesktopAccountSnapshot{}, err
 	}
 	defer release()
+	if _, err := a.loadLoginMaintenance(ctx, p, platform); err != nil {
+		p.snapshot.Authorization = DesktopAccountFact{State: "unconfirmed", Error: accountFailure(platform, "login_journal_unconfirmed", "login_maintenance_journal", err.Error())}
+		return accountSnapshotCopy(p.snapshot), nil
+	}
 	a.expireCandidate(p, platform)
 	if refresh && !p.working {
 		a.refreshAccountHive(ctx, p, platform)
@@ -255,6 +261,9 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	var admissionErr error
 	if refresh && !p.working && p.pending != nil && (p.pending.Kind == "select" || p.pending.Kind == "confirm_change") {
 		admissionErr = a.launchAccountOperation(p, platform, *p.pending, true, false, false)
+	}
+	if refresh && !p.working && p.snapshot.LoginMaintenance != nil && p.snapshot.LoginMaintenance.CanRecheck {
+		admissionErr = a.launchLoginMaintenanceRecheck(p, platform)
 	}
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
@@ -291,6 +300,9 @@ func (a *DesktopAccounts) Detect(ctx context.Context, request DesktopAccountDete
 		return DesktopAccountSnapshot{}, err
 	}
 	defer release()
+	if _, err := a.loadLoginMaintenance(ctx, p, request.Platform); err != nil {
+		return accountSnapshotCopy(p.snapshot), err
+	}
 	if p.working {
 		return accountSnapshotCopy(p.snapshot), accountFailure(request.Platform, "operation_pending", "platform_operation", "candidate detection blocked while the platform worker is active")
 	}
@@ -350,6 +362,9 @@ func (a *DesktopAccounts) Action(ctx context.Context, request DesktopAccountActi
 		return DesktopAccountSnapshot{}, err
 	}
 	defer release()
+	if _, err := a.loadLoginMaintenance(ctx, p, request.Platform); err != nil {
+		return accountSnapshotCopy(p.snapshot), err
+	}
 	fail := func(code, check, message string) (DesktopAccountSnapshot, error) {
 		return accountSnapshotCopy(p.snapshot), accountFailure(request.Platform, code, check, message)
 	}
@@ -361,6 +376,9 @@ func (a *DesktopAccounts) Action(ctx context.Context, request DesktopAccountActi
 	a.expireCandidate(p, request.Platform)
 	if !request.Confirmed {
 		return fail("confirmation_required", "confirmed", "explicit confirmed=true required")
+	}
+	if p.snapshot.LoginMaintenance != nil && p.snapshot.LoginMaintenance.CanRecheck && (p.snapshot.LoginMaintenance.Phase != "confirmation_required" || request.Action != "confirm_change") {
+		return fail("login_maintenance_pending", "login_maintenance_admission", fmt.Sprintf("account action blocked by original login maintenance: phase=%s action=%s; recheck the original process or explicitly confirm its new identity", p.snapshot.LoginMaintenance.Phase, request.Action))
 	}
 	if request.Revision < 0 || request.Revision > 9007199254740991 || request.Revision != p.snapshot.Revision {
 		return fail("stale_revision", "revision", "revision must match the current platform snapshot")

@@ -18,11 +18,22 @@ import (
 )
 
 type desktopAuthorization struct {
-	operation DesktopOperation
-	request   DesktopAuthorizeRequest
-	cancel    context.CancelFunc
-	ctx       context.Context
+	operation         DesktopOperation
+	request           DesktopAuthorizeRequest
+	cancel            context.CancelFunc
+	ctx               context.Context
+	done              chan struct{}
+	maintenance       *desktopLoginRecord
+	cleanupErr        error
+	processCleanupErr error
 }
+
+// A process cleanup failure is distinct from a nonzero official login result.
+// Only the supervisor that joined the owned tree can provide this evidence.
+type desktopAuthorizationCleanupError struct{ cause error }
+
+func (e *desktopAuthorizationCleanupError) Error() string { return e.cause.Error() }
+func (e *desktopAuthorizationCleanupError) Unwrap() error { return e.cause }
 
 // DesktopAuthorizer supervises only the official commands it starts. It never
 // receives login passwords, callback URLs or authorization material from the UI.
@@ -43,8 +54,13 @@ type DesktopAuthorizer struct {
 func NewDesktopAuthorizer(parent context.Context, a *DesktopAccounts) *DesktopAuthorizer {
 	ctx, cancel := context.WithCancel(parent)
 	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command, interact: runDesktopInteractiveAuthorization}
-	for _, p := range a.platforms {
+	a.lifecycleMu.Lock()
+	a.authorizer = owner
+	a.lifecycleMu.Unlock()
+	for platform := range a.platforms {
+		p, release, _ := a.acquire(context.Background(), platform)
 		p.snapshot.Features.Authorize = DesktopAccountAvailability{Available: true}
+		release()
 	}
 	return owner
 }
@@ -54,6 +70,36 @@ func (o *DesktopAuthorizer) Close() {
 	o.cancel()
 	o.mu.Unlock()
 	o.workers.Wait()
+}
+
+// CancelAndWait cancels the current owned jobs and joins their complete source
+// reconciliation. Shutdown admission is closed by the runtime before this call.
+func (o *DesktopAuthorizer) CancelAndWait() error {
+	o.mu.Lock()
+	jobs := make([]*desktopAuthorization, 0, len(o.jobs))
+	for _, job := range o.jobs {
+		job.cancel()
+		jobs = append(jobs, job)
+	}
+	o.mu.Unlock()
+	var result error
+	for _, job := range jobs {
+		<-job.done
+		o.mu.Lock()
+		result = errors.Join(result, job.cleanupErr)
+		o.mu.Unlock()
+	}
+	return result
+}
+
+func (a *DesktopAccounts) cancelAndWaitAuthorizations() error {
+	a.lifecycleMu.Lock()
+	o := a.authorizer
+	a.lifecycleMu.Unlock()
+	if o == nil {
+		return nil
+	}
+	return o.CancelAndWait()
 }
 func copyDesktopOperation(op DesktopOperation) DesktopOperation {
 	raw, _ := json.Marshal(op)
@@ -73,6 +119,9 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 		return DesktopOperation{}, err
 	}
 	defer release()
+	if _, err := o.accounts.loadLoginMaintenance(ctx, p, request.Platform); err != nil {
+		return DesktopOperation{}, err
+	}
 	o.accounts.lifecycleMu.Lock()
 	defer o.accounts.lifecycleMu.Unlock()
 	o.mu.Lock()
@@ -94,10 +143,14 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	if r := o.accounts.runtime; r != nil {
 		r.mu.Lock()
 		state := r.snapshot.Local
+		blocked := r.closed || r.presence.shutdown || r.presence.suspended
 		r.mu.Unlock()
-		if state != "stopped" && state != "failed" && state != "waiting" {
-			return DesktopOperation{}, fmt.Errorf("official login requires stopped contribution: local=%s; stop contribution before replacing official credentials", state)
+		if blocked || (state != "stopped" && state != "failed" && state != "waiting" && state != "running") || (state == "running" && (r.device == nil || r.slots[request.Platform] == nil)) {
+			return DesktopOperation{}, fmt.Errorf("official login admission blocked: local=%s shutdown=%t owned_platform=%t; required=stable owned runtime", state, blocked, r.slots[request.Platform] != nil)
 		}
+	}
+	if p.snapshot.LoginMaintenance != nil && p.snapshot.LoginMaintenance.CanRecheck {
+		return DesktopOperation{}, fmt.Errorf("official login blocked by unresolved maintenance: phase=%s; recheck the original process before another login", p.snapshot.LoginMaintenance.Phase)
 	}
 	if _, _, err := desktopAuthorizationArgs(request, o.accounts.goos); err != nil {
 		return DesktopOperation{}, err
@@ -116,7 +169,7 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	p.snapshot.Revision++
 	op := DesktopOperation{ID: id, Kind: "authorize", Platform: accountString(request.Platform), State: "pending", Revision: p.snapshot.Revision}
 	p.snapshot.Operation = &op
-	job := &desktopAuthorization{operation: op, request: request, ctx: live, cancel: cancel}
+	job := &desktopAuthorization{operation: op, request: request, ctx: live, cancel: cancel, done: make(chan struct{})}
 	// Keep at most the latest owned operation per platform; old IDs never attach
 	// to another process or a later authorization attempt.
 	for key, old := range o.jobs {
@@ -126,7 +179,14 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	}
 	o.jobs[id] = job
 	o.workers.Add(1)
-	go func() { defer o.workers.Done(); defer cancel(); err := o.authorize(job); o.finish(job, err) }()
+	go func() {
+		defer o.workers.Done()
+		defer close(job.done)
+		defer cancel()
+		err := o.authorize(job)
+		o.reconcileAuthorization(job, err)
+		o.finish(job, err)
+	}()
 	return copyDesktopOperation(op), nil
 }
 func (o *DesktopAuthorizer) Status(ctx context.Context, id string) (DesktopOperation, error) {
@@ -221,6 +281,19 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	// unchanged malformed record therefore cannot be accepted as success.
 	if failure != nil && failure.Code != "source_missing" && failure.Code != "invalid_credentials" {
 		return failure
+	}
+	check = "login_maintenance_prepare"
+	if o.accounts.device != nil {
+		lease, err := o.accounts.loginProcessLease(ctx, job.operation.ID, true)
+		if err != nil {
+			return err
+		}
+		defer lease.close()
+		ctx = context.WithValue(ctx, desktopLoginProcessContextKey{}, lease)
+		job.ctx = ctx
+	}
+	if err := o.beginLoginMaintenance(job, detect); err != nil {
+		return err
 	}
 	p, release, err := o.accounts.acquire(ctx, request.Platform)
 	if err != nil {
@@ -326,6 +399,14 @@ func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
 	delete(o.accounts.activeActions, job.request.Platform)
 	p.snapshot.Revision++
 	job.operation.Revision = p.snapshot.Revision
+	if job.maintenance != nil {
+		job.operation = copyDesktopOperation(job.maintenance.Public.Operation)
+		job.operation.Revision = p.snapshot.Revision
+		job.maintenance.Public.Operation = copyDesktopOperation(job.operation)
+		p.snapshot.LoginMaintenance = copyDesktopLoginMaintenance(job.maintenance.Public)
+		p.snapshot.Operation = operationPointer(copyDesktopOperation(job.operation))
+		return
+	}
 	job.operation.State = "succeeded"
 	if job.ctx.Err() != nil && !errors.Is(err, job.ctx.Err()) {
 		code := "authorization_cancelled"
@@ -348,9 +429,11 @@ func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
 		}
 		// A cancellation cannot confirm a late result. Official changes may already
 		// exist, so require an explicit new detection without selecting anything.
-		p.snapshot.Candidate = DesktopAccountCandidate{State: "not_checked"}
-		p.source = nil
-		p.credentialRevision = ""
+		if job.maintenance == nil {
+			p.snapshot.Candidate = DesktopAccountCandidate{State: "not_checked"}
+			p.source = nil
+			p.credentialRevision = ""
+		}
 	}
 	p.snapshot.Operation = operationPointer(copyDesktopOperation(job.operation))
 }

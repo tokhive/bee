@@ -39,12 +39,15 @@ struct FakeState {
     fail_stop: bool,
     fail_observe_at: usize,
     observations: usize,
+    second_observation: Option<RuntimeObservation>,
     failure_details: Option<crate::protocol::FailureDetails>,
     fail_configure: bool,
     fail_restore: bool,
     stop_receipt: StopReceipt,
     change_instance: bool,
-    stale_stop_revision: bool,
+    stop_revision: Option<u64>,
+    configure_readback_revision: Option<u64>,
+    restore_revision: Option<u64>,
     mismatched_config_readback: bool,
     block_stop: bool,
     block_configure: bool,
@@ -93,6 +96,7 @@ impl FakeRuntime {
                 fail_stop: false,
                 fail_observe_at: 0,
                 observations: 0,
+                second_observation: None,
                 failure_details: None,
                 fail_configure: false,
                 fail_restore: false,
@@ -102,7 +106,9 @@ impl FakeRuntime {
                     session_clean: true,
                 },
                 change_instance: false,
-                stale_stop_revision: false,
+                stop_revision: None,
+                configure_readback_revision: None,
+                restore_revision: None,
                 mismatched_config_readback: false,
                 block_stop: false,
                 block_configure: false,
@@ -129,6 +135,11 @@ impl NetworkRuntime for FakeRuntime {
             error.details = s.failure_details.clone();
             return Err(error);
         }
+        if s.observations == 2 {
+            if let Some(view) = &s.second_observation {
+                return Ok(view.clone());
+            }
+        }
         Ok(s.observed.clone())
     }
     async fn stop_for_network(
@@ -146,13 +157,16 @@ impl NetworkRuntime for FakeRuntime {
         }
         let mut s = self.state.lock().unwrap();
         if s.fail_stop {
-            let mut error = failure("STOP_FAILED", "fixture stop did not confirm worker termination");
+            let mut error = failure(
+                "STOP_FAILED",
+                "fixture stop did not confirm worker termination",
+            );
             error.details = s.failure_details.clone();
             return Err(error);
         }
         s.observed.revision += 1;
-        if s.stale_stop_revision {
-            s.observed.revision = 0;
+        if let Some(revision) = s.stop_revision {
+            s.observed.revision = revision;
         }
         s.observed.local = "stopped".into();
         s.observed.stop_receipt = Some(s.stop_receipt.clone());
@@ -173,12 +187,18 @@ impl NetworkRuntime for FakeRuntime {
         }
         let mut s = self.state.lock().unwrap();
         if s.fail_configure {
-            let mut error = failure("CONFIGURE_FAILED", "fixture config rejected before application");
+            let mut error = failure(
+                "CONFIGURE_FAILED",
+                "fixture config rejected before application",
+            );
             error.details = s.failure_details.clone();
             return Err(error);
         }
         s.observed.network_revision = config.revision;
         s.observed.revision += 1;
+        if let Some(revision) = s.configure_readback_revision {
+            s.observed.revision = revision;
+        }
         s.observed.network.effective_revision = config.revision;
         if s.mismatched_config_readback {
             s.observed.network_revision += 1;
@@ -208,6 +228,7 @@ impl NetworkRuntime for FakeRuntime {
             return Err(error);
         }
         s.observed.local = "running".into();
+        s.observed.revision = s.restore_revision.unwrap_or(s.observed.revision + 1);
         Ok(s.observed.clone())
     }
 }
@@ -478,7 +499,7 @@ async fn network_stale_stop_and_mismatched_configuration_readback_block_restore(
         let runtime = FakeRuntime::new("");
         {
             let mut state = runtime.state.lock().unwrap();
-            state.stale_stop_revision = phase == "stop_revision";
+            state.stop_revision = (phase == "stop_revision").then_some(0);
             state.mismatched_config_readback = phase == "configure_readback";
         }
         let snapshot = NetworkController::default()
@@ -497,6 +518,146 @@ async fn network_stale_stop_and_mismatched_configuration_readback_block_restore(
         }
         fs::remove_dir_all(dir).unwrap();
     }
+}
+
+#[tokio::test]
+async fn network_apply_rejects_configuration_without_runtime_revision_advance() {
+    // The owned Stop completes at revision 6. Applying the new proxy must
+    // advance beyond that receipt before saved-intent Restore can be sent.
+    for revision in [0, 6] {
+        let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+        let runtime = FakeRuntime::new("");
+        runtime.state.lock().unwrap().configure_readback_revision = Some(revision);
+        let snapshot = NetworkController::default()
+            .apply_saved(&store, &runtime, &scope, true)
+            .await;
+        let error = snapshot
+            .error
+            .expect("unadvanced configuration was accepted");
+        assert_eq!(error.code, "NETWORK_APPLY_UNCONFIRMED");
+        assert!(error
+            .message
+            .contains(&format!("actual_runtime_revision={revision}")));
+        assert!(error.message.contains("previous_runtime_revision=6"));
+        assert!(!runtime.events().contains(&"restore".into()));
+        assert_eq!(snapshot.effective_proxy, "");
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn network_apply_rejects_stop_without_runtime_revision_advance() {
+    let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+    let runtime = FakeRuntime::new("");
+    runtime.state.lock().unwrap().stop_revision = Some(5);
+    let snapshot = NetworkController::default()
+        .apply_saved(&store, &runtime, &scope, true)
+        .await;
+    let error = snapshot
+        .error
+        .expect("unadvanced Stop receipt was accepted");
+    assert_eq!(error.code, "NETWORK_STOP_UNCONFIRMED");
+    assert!(error.message.contains("actual_runtime_revision=5"));
+    assert!(error.message.contains("previous_runtime_revision=5"));
+    assert!(runtime
+        .events()
+        .iter()
+        .all(|event| !event.starts_with("configure") && event != "restore"));
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
+async fn network_apply_rejects_restore_without_runtime_revision_advance() {
+    // Configuration is confirmed at revision 7. Restore owns a fresh Start
+    // operation even when saved intent later completes stopped or waiting.
+    for revision in [0, 7] {
+        let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+        let runtime = FakeRuntime::new("");
+        runtime.state.lock().unwrap().restore_revision = Some(revision);
+        let snapshot = NetworkController::default()
+            .apply_saved(&store, &runtime, &scope, true)
+            .await;
+        let error = snapshot.error.expect("unadvanced Restore was accepted");
+        assert_eq!(error.code, "NETWORK_RESTORE_UNCONFIRMED");
+        assert!(error
+            .message
+            .contains(&format!("actual_runtime_revision={revision}")));
+        assert!(error.message.contains("previous_runtime_revision=7"));
+        assert_eq!(
+            runtime
+                .events()
+                .iter()
+                .filter(|event| *event == "restore")
+                .count(),
+            1
+        );
+        assert_eq!(snapshot.effective_proxy, "http://127.0.0.1:7890");
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn network_failed_configuration_does_not_replace_newer_confirmed_effective_values() {
+    for revision in [0, 7] {
+        let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+        let runtime = FakeRuntime::new("");
+        {
+            let mut state = runtime.state.lock().unwrap();
+            state.fail_configure = true;
+            let mut readback = state.observed.clone();
+            readback.local = "stopped".into();
+            readback.revision = revision;
+            readback.network_revision = 1;
+            readback.network.effective_revision = 1;
+            readback.network.effective_proxy = "http://127.0.0.1:7890".into();
+            readback.network.paths.relay = "local_proxy".into();
+            readback.network.paths.official = "openai=local_proxy;claude=local_proxy".into();
+            state.second_observation = Some(readback);
+        }
+        let snapshot = NetworkController::default()
+            .apply_saved(&store, &runtime, &scope, true)
+            .await;
+        let error = snapshot.error.unwrap();
+        assert_eq!(error.code, "CONFIGURE_FAILED");
+        assert!(error.message.starts_with("fixture config rejected"));
+        if revision == 0 {
+            assert!(error.message.contains("actual_runtime_revision=0"));
+            assert!(error.message.contains("minimum_runtime_revision=6"));
+        }
+        assert_eq!(
+            snapshot.effective_proxy,
+            if revision == 0 {
+                ""
+            } else {
+                "http://127.0.0.1:7890"
+            }
+        );
+        assert!(!runtime.events().contains(&"restore".into()));
+        fs::remove_dir_all(dir).unwrap();
+    }
+}
+
+#[tokio::test]
+async fn network_bootstrap_rejects_configuration_without_runtime_revision_advance() {
+    let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+    let runtime = FakeRuntime::new("");
+    {
+        let mut state = runtime.state.lock().unwrap();
+        state.observed.local = "stopped".into();
+        state.observed.revision = 0;
+        state.configure_readback_revision = Some(0);
+    }
+    let snapshot = NetworkController::default()
+        .bootstrap_saved(&store, &runtime, &scope)
+        .await;
+    let error = snapshot
+        .error
+        .expect("unadvanced bootstrap configuration was accepted");
+    assert_eq!(error.code, "NETWORK_BOOTSTRAP_UNCONFIRMED");
+    assert!(error.message.contains("actual_runtime_revision=0"));
+    assert!(error.message.contains("previous_runtime_revision=0"));
+    assert_eq!(snapshot.effective_proxy, "");
+    fs::remove_dir_all(dir).unwrap();
 }
 
 #[tokio::test]
@@ -627,6 +788,35 @@ async fn network_prepare_start_avoids_unnecessary_config_and_rejects_untrusted_p
 }
 
 #[tokio::test]
+async fn network_apply_does_not_restore_when_saved_preferences_change_during_configuration() {
+    let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+    let store = Arc::new(store);
+    let runtime = Arc::new(FakeRuntime::new(""));
+    runtime.state.lock().unwrap().block_configure = true;
+    let controller = Arc::new(NetworkController::default());
+    let task = {
+        let store = store.clone();
+        let runtime = runtime.clone();
+        let controller = controller.clone();
+        tokio::spawn(async move {
+            controller
+                .apply_saved(&store, &*runtime, &scope, true)
+                .await
+        })
+    };
+    runtime.configure_started.notified().await;
+    let mut prefs = store.read().preferences;
+    prefs.proxies[0].connect_proxy = "http://127.0.0.1:7892".into();
+    assert!(store.save(1, prefs).error.is_none());
+    runtime.configure_release.notify_one();
+    let snapshot = task.await.unwrap();
+    assert_eq!(snapshot.error.unwrap().code, "NETWORK_SAVED_CHANGED");
+    assert!(!runtime.events().iter().any(|event| event == "restore"));
+    assert_eq!(runtime.state.lock().unwrap().observed.local, "stopped");
+    fs::remove_dir_all(dir).unwrap();
+}
+
+#[tokio::test]
 async fn network_prepare_start_blocks_start_when_saved_preferences_change_during_configuration() {
     let (dir, store, scope) = preferences("http://127.0.0.1:7890");
     let store = Arc::new(store);
@@ -657,48 +847,77 @@ async fn network_prepare_start_blocks_start_when_saved_preferences_change_during
     fs::remove_dir_all(dir).unwrap();
 }
 
-
 async fn assert_apply_failure_stage(phase: &str, code: &str) {
-        for existing_details in [false, true] {
-            let (dir, store, scope) = preferences("http://127.0.0.1:7890");
-            let runtime = FakeRuntime::new("");
-            let original = crate::protocol::FailureDetails { check: "runtime_owned_exit".into(), observed_at: "2026-10-30T12:00:00Z".into(), evidence: std::collections::BTreeMap::from([("actual".into(), "owned child still draining".into())]) };
-            {
-                let mut state = runtime.state.lock().unwrap();
-                state.fail_stop = phase == "stop";
-                state.fail_configure = phase == "configure";
-                state.fail_restore = phase == "restore";
-                state.fail_observe_at = if phase == "observe" {1} else if phase == "configure_readback" {2} else {0};
-                if existing_details { state.failure_details = Some(original.clone()); }
+    for existing_details in [false, true] {
+        let (dir, store, scope) = preferences("http://127.0.0.1:7890");
+        let runtime = FakeRuntime::new("");
+        let original = crate::protocol::FailureDetails {
+            check: "runtime_owned_exit".into(),
+            observed_at: "2026-10-30T12:00:00Z".into(),
+            evidence: std::collections::BTreeMap::from([(
+                "actual".into(),
+                "owned child still draining".into(),
+            )]),
+        };
+        {
+            let mut state = runtime.state.lock().unwrap();
+            state.fail_stop = phase == "stop";
+            state.fail_configure = phase == "configure";
+            state.fail_restore = phase == "restore";
+            state.fail_observe_at = if phase == "observe" {
+                1
+            } else if phase == "configure_readback" {
+                2
+            } else {
+                0
+            };
+            if existing_details {
+                state.failure_details = Some(original.clone());
             }
-            let manager = NetworkController::default();
-            let result = manager.apply_saved(&store, &runtime, &scope, true).await;
-            let error = result.error.unwrap();
-            assert_eq!(error.code, code);
-            assert!(error.message.starts_with("fixture "));
-            let details = error.details.expect("an apply failure must preserve its actual stage");
-            if existing_details { assert_eq!(details, original); }
-            else {
-                assert_eq!(details.check, format!("network_{phase}"));
-                assert!(crate::runtime_protocol::timestamp(&details.observed_at));
-                assert!(details.evidence.is_empty());
-            }
-            if ["observe", "stop", "configure", "configure_readback"].contains(&phase) { assert!(!runtime.events().contains(&"restore".into())); }
-            let _ = std::fs::remove_dir_all(dir);
         }
+        let manager = NetworkController::default();
+        let result = manager.apply_saved(&store, &runtime, &scope, true).await;
+        let error = result.error.unwrap();
+        assert_eq!(error.code, code);
+        assert!(error.message.starts_with("fixture "));
+        let details = error
+            .details
+            .expect("an apply failure must preserve its actual stage");
+        if existing_details {
+            assert_eq!(details, original);
+        } else {
+            assert_eq!(details.check, format!("network_{phase}"));
+            assert!(crate::runtime_protocol::timestamp(&details.observed_at));
+            assert!(details.evidence.is_empty());
+        }
+        if ["observe", "stop", "configure", "configure_readback"].contains(&phase) {
+            assert!(!runtime.events().contains(&"restore".into()));
+        }
+        let _ = std::fs::remove_dir_all(dir);
+    }
 }
 
 #[tokio::test]
-async fn network_apply_failure_observe_retains_actual_stage() { assert_apply_failure_stage("observe", "OBSERVE_FAILED").await; }
+async fn network_apply_failure_observe_retains_actual_stage() {
+    assert_apply_failure_stage("observe", "OBSERVE_FAILED").await;
+}
 
 #[tokio::test]
-async fn network_apply_failure_stop_retains_actual_stage() { assert_apply_failure_stage("stop", "STOP_FAILED").await; }
+async fn network_apply_failure_stop_retains_actual_stage() {
+    assert_apply_failure_stage("stop", "STOP_FAILED").await;
+}
 
 #[tokio::test]
-async fn network_apply_failure_configure_retains_actual_stage() { assert_apply_failure_stage("configure", "CONFIGURE_FAILED").await; }
+async fn network_apply_failure_configure_retains_actual_stage() {
+    assert_apply_failure_stage("configure", "CONFIGURE_FAILED").await;
+}
 
 #[tokio::test]
-async fn network_apply_failure_configure_readback_retains_actual_stage() { assert_apply_failure_stage("configure_readback", "OBSERVE_FAILED").await; }
+async fn network_apply_failure_configure_readback_retains_actual_stage() {
+    assert_apply_failure_stage("configure_readback", "OBSERVE_FAILED").await;
+}
 
 #[tokio::test]
-async fn network_apply_failure_restore_retains_actual_stage() { assert_apply_failure_stage("restore", "RESTORE_FAILED").await; }
+async fn network_apply_failure_restore_retains_actual_stage() {
+    assert_apply_failure_stage("restore", "RESTORE_FAILED").await;
+}

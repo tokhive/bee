@@ -288,6 +288,7 @@ test('every unresolved initial or recovery transaction blocks cross-domain write
 
 test('completed first pairing and recovery release the cross-domain barrier for explicit user actions',async t=>{
  await preview(t);
+ t.mock.timers.enable({apis:['Date'],now:Date.now()});
  for(const scene of ['device-pending','device-recovery-confirm']){
   await installPreviewFixture(scene);const w=window as any,instance=(await invoke<any>('bridge_status')).metadata.instance;
   const device=createDeviceClient(invoke),account=createAccountClient(invoke,instance),authorize=createAuthorizeClient(invoke,instance),runtime=createRuntimeClient(invoke,instance),network=createNetworkClient(invoke);
@@ -296,7 +297,10 @@ test('completed first pairing and recovery release the cross-domain barrier for 
   if(scene==='device-pending')await device.status();else{const owner=await device.recoveryStatus();await device.recoveryConfirm(owner.operation_id,owner.revision,'adopt_owner');}
   const candidate=await account.detect({platform:'openai',directory:null,store:'file',mode:'official'});
   const selected=await account.action({platform:'openai',revision:candidate.revision,candidate_ref:candidate.candidate.reference!,action:'select',confirmed:true});assert.equal(selected.selection.state,'selected');
-  const login=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:selected.revision});assert.equal(login.state,'running');
+  t.mock.timers.tick(601);
+  const prepared=await runtime.snapshot();assert.equal(prepared.local,'stopped');
+  const current=await account.snapshot('openai',false);assert.equal(current.authorization.state,'official_identity_verified');
+  const login=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:current.revision});assert.equal(login.state,'running');
   assert.equal((await authorize.cancel(login.id)).state,'cancelled');assert.equal((await authorize.status(login.id)).state,'cancelled');
   assert.equal((await network.applySaved(true)).error,null);
   const initial=await runtime.snapshot();await runtime.start({expected_revision:initial.revision,resume_platforms:[]});

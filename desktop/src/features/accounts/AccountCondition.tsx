@@ -12,7 +12,7 @@ import {supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {sameAccountFailure,supplyProblem} from './accountPresentation';
 
 /** One current conclusion; independent conditions remain available in the disclosure. */
-export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now()}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number}){
+export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
  const [expanded,setExpanded]=useState(false);
  const account=accounts.views[platform],selected=account?.selection.state==='selected';
  const op=account?.operation,dirty=accounts.dirty[platform];
@@ -27,8 +27,9 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
   const error=normalizeFailure(value,'account_condition');
   if(!errors.some(previous=>sameAccountFailure(previous,error)))errors.push(error);
  }
+ const visibleErrors=errors.filter(error=>!sameAccountFailure(error,inlineFailure));
  const sourceError=errors.some(e=>e.evidence.permission_denied==='true'||['source_missing','source_unavailable','permission_denied'].includes(e.code));
- const reasons=current?[...new Set(view?.reasons??[])].filter(r=>r!=='manually_paused'&&r!=='not_configured'&&!(r==='offline'&&runtime.view?.local==='failed')&&!(sourceError&&r===`${platform==='openai'?'codex':'claude'}_source_unavailable`)):[];
+ const reasons=selected&&current?[...new Set(view?.reasons??[])].filter(r=>r!=='manually_paused'&&!(r==='offline'&&runtime.view?.local==='failed')&&!(sourceError&&r===`${platform==='openai'?'codex':'claude'}_source_unavailable`)):[];
  const changed=!dirty&&selected&&account?.candidate.fingerprint&&account.candidate.fingerprint!==account.selection.fingerprint;
  const expired=!dirty&&account?.candidate.expires_at&&Date.parse(account.candidate.expires_at)<=now+30000;
  const pending=accountPending(account);
@@ -42,7 +43,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  else if(account?.authorization.state==='preparing')title='正在准备账号…';
  else if(runtime.view?.local==='starting')title='正在准备服务…';
  else if(runtime.view?.local==='failed')title='服务准备失败';
- else if(dirty)title='正在读取已有登录…';
+ else if(dirty||!selected&&accounts.busy[platform]&&account?.candidate.state==='not_checked')title='正在读取已有登录…';
  else if(stale)title='状态待更新';
  else if(changed)title='发现不同账号';
  else if(!selected&&errors.length&&errors.every(e=>e.code==='source_missing'))title='尚未登录';
@@ -51,14 +52,14 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  else if(ready)title='可接单';
  else title=view?.paused?'已暂停接单':'不能接单';
  const showPaused=selected&&view?.paused&&title!=='已暂停接单';
- const count=errors.length+reasons.length+(showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(expired?1:0)+(stale&&!errors.length?1:0);
+ const count=visibleErrors.length+reasons.length+(showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(expired?1:0)+(stale&&!errors.length?1:0);
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>}<span>{t(title)}</span></p>
   {count>0&&<details className="account-conditions" open={expanded} onToggle={event=>setExpanded(event.currentTarget.open)}>
    <summary>{t('查看原因（{count}）',{count})}</summary>
    <ul>
-    {errors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <li key={index}><p>{p.summary}</p>{p.impact&&p.impact!==p.summary&&<p className="muted">{p.impact}</p>}<details className="account-condition-evidence"><summary>{t('查看失败详情')}</summary><pre>{p.details}</pre></details>{p.action&&p.action.section!=='source'&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</li>;})}
+    {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <li key={index}><p>{p.summary}</p>{p.impact&&p.impact!==p.summary&&<p className="muted">{p.impact}</p>}<details className="account-condition-evidence"><summary>{t('查看失败详情')}</summary><pre>{p.details}</pre></details>{p.action&&p.action.section!=='source'&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</li>;})}
     {reasons.map(reason=>{const p=supplyProblem(reason,platform);return <li key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p><p className="muted">{t(p.impact)}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t(p.target.section==='source'?'打开读取设置':p.target.section==='connection'?'查看连接':'查看账号详情')}</Button>}</li>;})}
     {changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))&&<li>{t('发现不同账号，请在详情确认换号；原账号选择仍保留。')}</li>}
     {expired&&<li>{t('所选来源的授权已过期，请重新登录。')}</li>}

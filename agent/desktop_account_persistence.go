@@ -13,7 +13,7 @@ import (
 	"unicode"
 )
 
-const desktopAccountStateVersion = 2
+const desktopAccountStateVersion = 3
 const desktopMaxRevision int64 = 9007199254740991
 
 type desktopAccountScope struct {
@@ -24,6 +24,20 @@ type desktopAccountScope struct {
 	PendingOperations map[string]desktopPendingOperation `json:"pending_operations"`
 	RuntimeIntent     desktopRuntimeIntent               `json:"runtime_intent"`
 	Session           desktopSessionMarker               `json:"session"`
+	LegacyStop        desktopLegacyStopMigration         `json:"legacy_stop"`
+}
+
+// v2 did not distinguish an explicit stop from a scope never started. Keep the
+// original intent and selected identities while converting either case once.
+type desktopLegacyStopMigration struct {
+	State          string                               `json:"state"`
+	OriginalIntent *desktopRuntimeIntent                `json:"original_intent"`
+	Platforms      map[string]desktopLegacyStopPlatform `json:"platforms"`
+}
+
+type desktopLegacyStopPlatform struct {
+	Selection desktopAccountSelection `json:"selection"`
+	Stage     string                  `json:"stage"`
 }
 
 type desktopAccountSelection struct {
@@ -67,7 +81,8 @@ func desktopScopeKey(hive, owner, device string) string {
 func newDesktopAccountScope(state localState) desktopAccountScope {
 	return desktopAccountScope{Hive: state.Hive, OwnerID: state.Identity.OwnerID, DeviceID: state.Identity.ID,
 		Selections: map[string]desktopAccountSelection{}, PendingOperations: map[string]desktopPendingOperation{},
-		RuntimeIntent: desktopRuntimeIntent{ResumePlatforms: []string{}}, Session: desktopSessionMarker{Clean: true}}
+		RuntimeIntent: desktopRuntimeIntent{ResumePlatforms: []string{}}, Session: desktopSessionMarker{Clean: true},
+		LegacyStop: desktopLegacyStopMigration{State: "not_required", Platforms: map[string]desktopLegacyStopPlatform{}}}
 }
 
 func validateDesktopAccountScopes(scopes map[string]desktopAccountScope) error {
@@ -131,6 +146,12 @@ func validateDesktopAccountScopes(scopes map[string]desktopAccountScope) error {
 		}
 		if (scope.Session.Active || scope.Session.RunID != "") && !desktopHexID(scope.Session.RunID, 16) {
 			return fmt.Errorf("runtime session identifier rejected: bytes=%d; required=32 lowercase hex characters", len(scope.Session.RunID))
+		}
+		if err := validateDesktopLegacyStop(scope.LegacyStop); err != nil {
+			return err
+		}
+		if desktopLegacyStopPending(scope) && scope.RuntimeIntent.Running {
+			return fmt.Errorf("unfinished legacy stop migration has running intent: state=%s running=true; required=stopped until pause conversion completes", scope.LegacyStop.State)
 		}
 	}
 	return nil

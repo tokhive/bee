@@ -2,7 +2,7 @@
 
 2026-11-05。用户已批准 11 项拆分，并选择本地 Markdown，要求独立工作由子代理并行、主代理汇总。已进入实施；逐票记录实现和验收证据，保持未验证项目可见。
 
-来源是本会话的接口核查与已批准拆分，辅以当前 `260318b` 的源码、领域术语及前端 mock 验收材料。前端 mock 已完成的 5 项本地记录不在此重复创建；Go／Rust 的自动服务行为正在按以下依赖实施。接口报告基准为 `8041b94`，截至本轮核对，两个版本之间没有原生层变更。
+来源是本会话的接口核查与已批准拆分，辅以拆票时 `260318b` 的源码、领域术语及前端 mock 验收材料。前端 mock 已完成的 5 项本地记录不在此重复创建；Go／Rust 的自动服务行为已按以下依赖实施，外部前置和系统验收缺口按票保留。接口报告基准为 `8041b94`；拆票时核对的这两个基准版本之间没有原生层变更。
 
 参考材料：[领域术语](../../GLOSSARY.md)、[当前前端 mock 规格](../../docs/desktop/auto-service-design.md)、[mock 验收记录](../../docs/desktop/evidence/2026-11-04-account-ui-review/auto-service-validation.md)、[接口核查历史基线](../../../../docs/reviews/2026-11-05-bee-interface-coverage.md)。历史基线的方案状态只代表核查时点，当前阶段以 mock 规格及本次票据范围为准。
 
@@ -10,27 +10,26 @@
 
 | 编号 | 交付 | 直接阻塞 | 状态 |
 | --- | --- | --- | --- |
-| [01](issues/01-empty-account-waiting.md) | 无账号时自动进入等待接入 | 无 | implemented；最终链路待 11 汇总 |
-| [02](issues/02-account-auto-maintenance.md) | 接入后自动维护，平台保持暂停接单 | 01 | implemented；入口整合待 11 |
-| [03](issues/03-preserve-supply-choice.md) | 重启、重连、后台刷新保留接单选择 | 02 | ready-for-agent |
-| [04](issues/04-platform-login-maintenance.md) | 主动登录只维护目标平台 | 02 | ready-for-agent |
-| [05](issues/05-interrupted-login-recovery.md) | 登录中断后恢复原维护流程 | 03、04 | ready-for-agent |
-| [06](issues/06-close-and-owned-exit.md) | 关窗后台，明确退出可靠停止 | 02 | ready-for-agent |
-| [07](issues/07-network-apply-restart.md) | 应用网络配置后受控恢复服务 | 03、06 | ready-for-agent |
-| [08](issues/08-update-owned-install.md) | 更新安装复用可靠退出流程 | 06 | ready-for-agent |
-| [09](issues/09-legacy-stop-intent.md) | 升级时保留旧版停止意图 | 03 | ready-for-agent；规则已确认 |
+| [01](issues/01-empty-account-waiting.md) | 无账号时自动进入等待接入 | 无 | implemented；正式系统验收待完成 |
+| [02](issues/02-account-auto-maintenance.md) | 接入后自动维护，平台保持暂停接单 | 01 | implemented；正式系统验收待完成 |
+| [03](issues/03-preserve-supply-choice.md) | 重启、重连、后台刷新保留接单选择 | 02 | implemented |
+| [04](issues/04-platform-login-maintenance.md) | 主动登录只维护目标平台 | 02 | implemented；真实官方登录待验收 |
+| [05](issues/05-interrupted-login-recovery.md) | 登录中断后恢复原维护流程 | 03、04 | implemented；Windows 原生路径待验收 |
+| [06](issues/06-close-and-owned-exit.md) | 关窗后台，明确退出可靠停止 | 02 | implemented；三系统窗口／托盘待验收 |
+| [07](issues/07-network-apply-restart.md) | 应用网络配置后受控恢复服务 | 03、06 | implemented |
+| [08](issues/08-update-owned-install.md) | 更新安装复用可靠退出流程 | 06 | implemented；签名候选包待验收 |
+| [09](issues/09-legacy-stop-intent.md) | 升级时保留旧版停止意图 | 03 | implemented；规则已确认 |
 | [10](issues/10-unknown-pairing-recovery.md) | 设备创建结果未知时的恢复闭环 | 无票据依赖；上游／人工恢复方式待明确 | needs-info |
-| [11](issues/11-native-auto-service-integration.md) | 接通真实入口并验收自动服务主流程 | 03、05、07、08、09 | ready-for-agent |
+| [11](issues/11-native-auto-service-integration.md) | 接通真实入口并验收自动服务主流程 | 03、05、07、08、09 | implemented；受控原生集成通过，正式系统验收未完成 |
 
 `ready-for-agent` 表示票据定义充分，实际实现仍需其全部阻塞任务完成。`implemented` 表示本票代码和受控自动验证完成，可供后续票据使用；`done` 还须完成逐项验收，未执行的系统/真实环境路径不勾选。实施记录见 [验证记录](implementation-validation.md)。
 
-## 可并行的执行前沿
+## 本轮并行实施结果
 
-- 01、02 的受控实现已通过，可以并行推进 03、04、06。10 的事实核查与方案澄清可独立推进，但不能将其直接当作实现票执行。
-- 01 完成后是 02；02 完成后，03、04、06 可按职责隔离并行。
-- 03 与 04 完成后可开始 05；03 与 06 完成后可开始 07；06 完成后可独立开始 08。
-- 09 的保守一次转换规则已由用户确认，等待 03；10 仍需明确可验证的恢复方式。
-- 11 等待其全部依赖完成。10 独立验收，不阻塞自动服务主流程集成，也不被主流程通过覆盖。
+- 01／02 已提交后，03／09、04／05、06／08 分工并行，07 与 11 在依赖实现通过后整合。10 的事实核查独立完成，仍缺外部恢复契约。
+- 原依赖关系保持不变；共享运行／账号源码按文件归属整合，并对跨平台 journal、启动与手动恢复、退出竞争补充真实阻塞回归。
+- 09 的保守一次转换规则已实现并验证；10 仍需明确可验证的恢复方式。
+- 11 已接入正常入口，Rust→Go→受控 Hive 集成通过；正式 App／WebView、真实官方登录、生产 Hive 和三系统验收仍未完成。10 独立验收，不被主流程通过覆盖。
 
 任务可并行不代表共享生命周期源码适合同时写入；实际实施时应由主代理安排文件所有权或隔离检出并整合，避免相互覆盖。
 

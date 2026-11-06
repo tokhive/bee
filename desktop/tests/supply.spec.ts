@@ -1,7 +1,7 @@
 import {readFileSync} from 'node:fs';
 import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
 const passiveRuntime={...JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,local:'running',connection:'connected',operation:null,stop_receipt:null};
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Locator } from '@playwright/test';
 async function fixture(page:Page, options:{delay?:number;age?:number;ready?:boolean;unbound?:boolean}={}) {
  const accounts=Object.fromEntries(['openai','claude'].map(p=>{const a=accountFixture(p) as any;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};return [p,a];}));
  await page.addInitScript((options)=>{
@@ -50,14 +50,16 @@ async function diagnostics(page:Page,message:string){await page.getByRole('butto
 interface SupplyCall {command:string;platform?:string;instance:string;startedAt:number;completedAt?:number}
 const calls=(page:Page,command:string):Promise<SupplyCall[]>=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
 const card=(page:Page,platform:string)=>page.getByRole('region',{name:`${platform} 账号`,exact:true});
+async function expandReasons(row:Locator){const summary=row.locator('.account-conditions:not([open])>summary');if(await summary.count())await summary.click();}
+async function expectPaused(page:Page,platform:string){const row=card(page,platform);await expandReasons(row);await expect(row.getByText('已暂停接单',{exact:true})).toBeVisible();await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();}
 test('two verified shared account rows show real reasons and explicit pause/resume semantics at 860x600',async({page})=>{
  await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');
  const openai=card(page,'OpenAI'),claude=card(page,'Claude');
- await expect(openai.getByText('不能接单')).toBeVisible();await expect(openai.getByText('Hive 未看到此平台的 Bee 连接')).toBeVisible();
- await expect(openai.getByText('无法读取 Codex 官方登录')).toBeVisible();await expect(claude.getByText('已手动暂停')).toBeVisible();
+ await expect(openai.getByText('不能接单',{exact:true})).toBeVisible();await expandReasons(openai);await expect(openai.getByText('Hive 未看到此平台的 Bee 连接',{exact:true})).toBeVisible();
+ await expect(openai.getByText('无法读取 Codex 官方登录',{exact:true})).toBeVisible();await expectPaused(page,'Claude');
  await expect(page.getByRole('button',{name:'全部暂停',exact:true})).toHaveCount(0);
- await claude.getByRole('button',{name:'恢复接单'}).click();await expect(claude.getByText('不能接单')).toBeVisible();await expect(claude.getByText('此 Hive 未提供更具体的接单原因')).toBeVisible();
- await openai.getByRole('button',{name:'暂停接单',exact:true}).click();await expect(openai.getByText('已手动暂停')).toBeVisible();
+ await claude.getByRole('button',{name:'恢复接单'}).click();await expect(claude.getByText('不能接单',{exact:true})).toBeVisible();await expandReasons(claude);await expect(claude.getByText('此 Hive 未提供更具体的接单原因',{exact:true})).toBeVisible();
+ await openai.getByRole('button',{name:'暂停接单',exact:true}).click();await expectPaused(page,'OpenAI');
  expect(await page.evaluate(()=> (window as unknown as {maxActive:number}).maxActive)).toBe(1);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await expect(page.getByText('演示数据',{exact:true})).toHaveCount(0);
@@ -73,14 +75,14 @@ test('an uncertain write retries GET automatically, preserves diagnostics and ne
  await page.clock.runFor(9999);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
  await page.evaluate(()=>{const w=window as unknown as {fail:string;delay:number};w.fail='';w.delay=500;});await page.clock.runFor(1);
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('重试中…',{exact:true})).toBeVisible();await diagnostics(page,'PUT /api/bee/platforms/openai HTTP 503');
- await page.clock.runFor(2200);await expect(openai.getByText('已手动暂停')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
+ await page.clock.runFor(2200);await expectPaused(page,'OpenAI');await expect(page.getByRole('alert')).toHaveCount(0);
  expect(await page.evaluate(()=> (window as unknown as {calls:{command:string}[]}).calls.filter(c=>c.command==='supply_set_paused').length)).toBe(1);
  await expect(page.getByRole('button',{name:'重新核对平台'})).toHaveCount(0);
 });
 test('independent platform polling waits ten seconds after success and backs off failed reads without overlap',async({page})=>{
  await fixture(page,{delay:700});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(2);await page.clock.runFor(700);
- await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await expectPaused(page,'Claude');
  const initial=await calls(page,'supply_status');expect(initial.map(c=>c.platform).sort()).toEqual(['claude','openai']);expect(initial.every(c=>c.completedAt!==undefined)).toBe(true);
  await page.clock.runFor(9999);expect(await calls(page,'supply_status')).toHaveLength(2);
  await page.evaluate(()=>{const w=window as any;w.fail='GET /api/bee/platforms/openai HTTP 502';w.failStatus=502;});await page.clock.runFor(1);
@@ -106,16 +108,16 @@ test('fresh background reads stay quiet and hide previous success only when thir
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
 });
 test('navigation keeps one application poller and old results cannot repopulate a new manager instance',async({page})=>{
- await fixture(page);await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await fixture(page);await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expectPaused(page,'Claude');
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.clock.runFor(10001);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(1500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);await page.clock.runFor(3500);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count+2);
  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('c'.repeat(32));});
- await page.getByRole('button',{name:'概览',exact:true}).click();await diagnostics(page,'new instance GET HTTP 503');await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
+ await page.getByRole('button',{name:'概览',exact:true}).click();await diagnostics(page,'new instance GET HTTP 503');await expect(card(page,'Claude').getByText('已暂停接单',{exact:true})).toHaveCount(0);
 });
 test('English platform controls and reason copy are complete at minimum width',async({page})=>{
- await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await fixture(page);await page.setViewportSize({width:860,height:600});await page.goto('/');await expectPaused(page,'Claude');
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');await page.getByRole('button',{name:'Overview',exact:true}).click();
- await expect(page.getByRole('region',{name:'OpenAI account',exact:true}).getByText('Hive does not see this platform’s Bee connection')).toBeVisible();await expect(page.getByRole('region',{name:'Claude account',exact:true}).getByRole('button',{name:'Resume tasks',exact:true})).toBeEnabled();
+ await expandReasons(page.getByRole('region',{name:'OpenAI account',exact:true}));await expect(page.getByRole('region',{name:'OpenAI account',exact:true}).getByText('Hive does not see this platform’s Bee connection')).toBeVisible();await expect(page.getByRole('region',{name:'Claude account',exact:true}).getByRole('button',{name:'Resume tasks',exact:true})).toBeEnabled();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
  await page.getByRole('region',{name:'Platform accounts',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'../.cache/device-pairing/supply-en-860.png'});
@@ -125,14 +127,14 @@ test('unverified devices never issue supply IPC',async({page})=>{
 });
 
 test('old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round',async({page})=>{
- await fixture(page,{ready:true});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await fixture(page,{ready:true});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expectPaused(page,'Claude');
  await page.evaluate(()=>{(window as any).delay=1000;});await page.clock.runFor(10000);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(4);
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
  await page.evaluate(()=>{const w=window as any;w.delay=0;w.fail='replacement GET HTTP 503';w.emit('c'.repeat(32));});await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);
  expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1000);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(6);
- await diagnostics(page,'replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByText('已手动暂停')).toHaveCount(0);
+ await diagnostics(page,'replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByText('已暂停接单',{exact:true})).toHaveCount(0);
  const reads=await calls(page,'supply_status');expect(reads.map(c=>[c.instance,c.platform])).toEqual([['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['c'.repeat(32),'openai'],['c'.repeat(32),'claude']]);
  expect(reads[4].startedAt).toBeGreaterThanOrEqual(Math.max(reads[2].completedAt!,reads[3].completedAt!));
  await page.clock.runFor(1999);expect(await calls(page,'supply_status')).toHaveLength(6);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(8);
@@ -148,7 +150,7 @@ test('a delayed expiry timer cannot authorize a write from a stale rendered butt
 });
 
 test('manager replacement invalidates device data while preserving this run’s language and navigation',async({page})=>{
- await fixture(page);await page.goto('/');await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await fixture(page);await page.goto('/');await expectPaused(page,'Claude');
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
  await page.evaluate(()=>(window as unknown as {emit:(id:string)=>void}).emit('c'.repeat(32)));
  await expect(page.getByRole('heading',{name:'Settings',exact:true})).toBeVisible();await page.getByRole('tab',{name:'General',exact:true}).click();await expect(page.getByLabel('Language',{exact:true})).toHaveValue('en');
@@ -156,14 +158,14 @@ test('manager replacement invalidates device data while preserving this run’s 
 
 test('one platform read failure preserves the other platform fresh report',async({page})=>{
  await fixture(page,{ready:true});await page.clock.install();await page.goto('/');
- await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();
+ await expectPaused(page,'Claude');
  await page.evaluate(()=>{const w=window as unknown as {fail:string;failPlatform:string};w.fail='GET openai HTTP 503';w.failPlatform='openai';});
  await page.clock.runFor(11000);
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();await diagnostics(page,'GET openai HTTP 503');
- await expect(card(page,'Claude').getByText('已手动暂停')).toBeVisible();await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
+ await expectPaused(page,'Claude');await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
 });
 
 for(const [reason,summary]of [['account_not_registered','Hive 账号注册尚未完成'],['market_not_open','Hive 尚未开放 OpenAI 模型交易'],['supply_not_enabled','Hive 尚未启用此平台供给'],['supply_device_restricted','Hive 供给绑定限制了当前设备'],['account_not_admitted','当前账号不在 Hive 供给准入集合中']])test(`detailed supply ${reason} preserves pause and offers its real handling object`,async({page})=>{
  const a=accountFixture('openai') as any;a.selection={...a.selection,state:'selected',fingerprint:'b'.repeat(64)};
- await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{reasons:{openai:[reason,'quota_exhausted']}},accounts:{openai:a,claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('button',{name:'开始贡献',exact:true}).click();await expect(card(page,'OpenAI').getByText(summary,{exact:true})).toBeVisible();await expect(card(page,'OpenAI').getByText('账号订阅额度已耗尽',{exact:true})).toBeVisible();await card(page,'OpenAI').getByRole('button',{name:'暂停接单',exact:true}).click();await expect(card(page,'OpenAI').getByText('已手动暂停',{exact:true})).toBeVisible();await expect(card(page,'OpenAI').getByText(summary,{exact:true})).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{reasons:{openai:[reason,'quota_exhausted']}},accounts:{openai:a,claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('button',{name:'重试准备',exact:true}).click();await expandReasons(card(page,'OpenAI'));await expect(card(page,'OpenAI').getByText(summary,{exact:true})).toBeVisible();await expect(card(page,'OpenAI').getByText('账号订阅额度已耗尽',{exact:true})).toBeVisible();await card(page,'OpenAI').getByRole('button',{name:'暂停接单',exact:true}).click();await expectPaused(page,'OpenAI');await expect(card(page,'OpenAI').getByText(summary,{exact:true})).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);
 });

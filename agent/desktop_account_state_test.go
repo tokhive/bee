@@ -26,8 +26,8 @@ func TestDesktopAccountStateMigrationPreservesPrivateBackup(t *testing.T) {
 		t.Fatal(err)
 	}
 	s, err = readDesktopAccountState(path)
-	if err != nil || s.Version != 2 || s.Revision != 8 || !s.Entries[strings.Repeat("a", 64)].Notified {
-		t.Fatalf("migration did not retain notices in v2: version=%d revision=%d err=%v", s.Version, s.Revision, err)
+	if err != nil || s.Version != 3 || s.Revision != 8 || !s.Entries[strings.Repeat("a", 64)].Notified {
+		t.Fatalf("migration did not retain notices in v3: version=%d revision=%d err=%v", s.Version, s.Revision, err)
 	}
 	backup, err := os.ReadFile(path + ".v1.bak")
 	if err != nil || !bytes.Equal(backup, raw) {

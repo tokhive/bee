@@ -24,6 +24,8 @@ export interface CodexLoginProgress {
   phase: CodexLoginPhase;
   /** A stop was triggered; this alone never confirms process cleanup/result. */
   stop_reason: 'cancelled' | 'timed_out' | 'failed' | null;
+  /** Proposed observation of the accepted maintenance worker, not request loading. */
+  recheck_in_flight: boolean;
   actions: {
     /** A validated link belongs to this live operation; opening starts no login. */
     open: boolean;
@@ -31,6 +33,8 @@ export interface CodexLoginProgress {
     cancel: boolean;
     /** Cleanup and admission barriers permit a fresh start with a new revision. */
     retry: boolean;
+    /** Submit existing account_snapshot(openai, true); never kills/restarts login. */
+    recheck: boolean;
   };
   /** Cleanup/maintenance blocker, distinct from the original operation error. */
   blocker: AccountError | null;

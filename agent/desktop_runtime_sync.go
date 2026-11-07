@@ -228,12 +228,20 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 		defer connection.workers.Done()
 		defer close(done)
 		first := true
+		prepared := false
 		for ctx.Err() == nil {
 			var err error
-			if platform == "openai" {
-				err = slot.config.synchronize(ctx, connection.state, connection.lease, connection.out, first)
-			} else {
-				err = slot.config.Claude.synchronize(ctx, connection.state, connection.lease, connection.out, first)
+			if !prepared {
+				err = r.prepareConnectionSupply(ctx, connection.state, platform, slot)
+				prepared = err == nil
+			}
+			// Do not upload until Hive confirms the durable barrier.
+			if prepared {
+				if platform == "openai" {
+					err = slot.config.synchronize(ctx, connection.state, connection.lease, connection.out, first)
+				} else {
+					err = slot.config.Claude.synchronize(ctx, connection.state, connection.lease, connection.out, first)
+				}
 			}
 			if ctx.Err() != nil {
 				return
@@ -253,7 +261,9 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 			} else {
 				r.synchronizationObserved(connection, connection.run, platform, "", nil)
 			}
-			first = false
+			if prepared {
+				first = false
+			}
 			if pause(ctx, 2*time.Second) != nil {
 				return
 			}
@@ -366,6 +376,11 @@ func (r *DesktopRuntime) observeSynchronizedPlatform(ctx context.Context, state 
 		return err
 	}
 	defer slot.control.unlock()
+	if slot.selection.PreparationID != "" {
+		if err := ensureDesktopPreparation(ctx, state, platform, desktopSupplyPreparation{ID: slot.selection.PreparationID, Action: "complete", AccountFingerprint: account.AccountFingerprint, Lease: connection.lease, AccountGeneration: account.Generation, CredentialRevision: account.CredentialRevision}, "completed"); err != nil {
+			return err
+		}
+	}
 	if slot.resume && !slot.resumeAttempted {
 		// Exactly one PUT for this explicit start, including when its response is lost.
 		slot.resumeAttempted = true
@@ -425,14 +440,17 @@ func (r *DesktopRuntime) platformFailure(platform, check string, err error) {
 	r.mu.Unlock()
 }
 
-func (r *DesktopRuntime) selectionBarrier(ctx context.Context, platform string) (bool, func(*desktopAccountSelection, bool), error) {
+func (r *DesktopRuntime) selectionBarrier(ctx context.Context, platform string, preserveForwarding bool) (bool, func(*desktopAccountSelection, bool), error) {
 	slot := r.slots[platform]
 	if err := slot.gate.lock(ctx); err != nil {
 		return false, nil, err
 	}
 	r.mu.Lock()
 	owned := r.snapshot.Local == "running"
-	r.targets[runtimePlatformTarget(platform)] = false
+	keepForwarding := owned && preserveForwarding
+	if !keepForwarding {
+		r.targets[runtimePlatformTarget(platform)] = false
+	}
 	v := r.snapshot.Platforms[platform]
 	v.Supply = nil
 	r.snapshot.Platforms[platform] = v
@@ -453,7 +471,7 @@ func (r *DesktopRuntime) selectionBarrier(ctx context.Context, platform string) 
 	return owned, func(selection *desktopAccountSelection, committed bool) {
 		defer slot.gate.unlock()
 		slot.config = nil
-		if !committed || !owned {
+		if (!committed || !owned) && !keepForwarding {
 			r.mu.Lock()
 			r.targets[runtimePlatformTarget(platform)] = false
 			r.mu.Unlock()

@@ -417,7 +417,7 @@ func TestDesktopLoginRecoveryCleanNewRunRestoresOrIsolatesOnlyInterruptedPlatfor
 				var pauseOnce sync.Once
 				f.mu.Lock()
 				f.beforeRequest = func(w http.ResponseWriter, q *http.Request) bool {
-					if q.Method == "PUT" && q.URL.Path == "/api/bee/platforms/openai" {
+					if q.Method == "PUT" && q.URL.Path == "/api/bee/platforms/openai" && q.URL.Query().Get("preparation_id") == "" {
 						pauseOnce.Do(func() { close(pauseEntered) })
 						<-pauseRelease
 					}
@@ -504,7 +504,9 @@ func TestDesktopLoginRecoveryCleanNewRunRestoresOrIsolatesOnlyInterruptedPlatfor
 						}
 					}
 				}
-				if q.Method == "PUT" || strings.HasSuffix(q.URL.Path, "/account/confirm") {
+				// A new owned connection establishes its own preparation barrier;
+				// recovery must still never replay the login's manual pause/change.
+				if q.Method == "PUT" && q.URL.Query().Get("preparation_id") == "" || strings.HasSuffix(q.URL.Path, "/account/confirm") {
 					unexpectedWrites.Add(1)
 				}
 				return false

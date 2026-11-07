@@ -1,8 +1,10 @@
 package bee
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -43,7 +45,7 @@ func waitSelection(t *testing.T, a *DesktopAccounts, platform string) DesktopAcc
 	return DesktopAccountSnapshot{}
 }
 
-func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
+func TestDesktopAccountSelectionDurablePreparationAndRecovery(t *testing.T) {
 	for _, scenario := range []string{"success", "lost_put", "source_changed", "owner_changed", "storage_corrupt", "pause_false", "save_failed"} {
 		t.Run(scenario, func(t *testing.T) {
 			dir := t.TempDir()
@@ -56,6 +58,7 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 			var mu sync.Mutex
 			var calls []string
 			paused := false
+			preparations := map[string]string{}
 			var statePath string
 			d := desktopSupplyFixture(t, func(w http.ResponseWriter, r *http.Request) {
 				mu.Lock()
@@ -83,6 +86,16 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 					return
 				}
 				if r.Method == "PUT" {
+					data, _ := io.ReadAll(r.Body)
+					r.Body = io.NopCloser(bytes.NewReader(data))
+					var command struct {
+						Preparation desktopSupplyPreparation `json:"preparation"`
+					}
+					json.Unmarshal(data, &command)
+					if command.Preparation.Action == "cancel" {
+						encodeDesktopPreparationFixture(w, r, beewire.PlatformSupply{Platform: "openai", Paused: paused, Reasons: []string{"not_configured"}}, preparations)
+						return
+					}
 					disk, e := readDesktopAccountState(statePath)
 					if e != nil || len(disk.Scopes) != 1 {
 						t.Errorf("pause before persisted intent: %v", e)
@@ -92,7 +105,18 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 							t.Error("pause without durable operation")
 						}
 					}
-					paused = true
+					if r.URL.Query().Get("preparation_id") == "" {
+						paused = true
+					}
+					var prep struct {
+						Preparation desktopSupplyPreparation `json:"preparation"`
+					}
+					data, _ = io.ReadAll(r.Body)
+					json.Unmarshal(data, &prep)
+					r.Body = io.NopCloser(bytes.NewReader(data))
+					if prep.Preparation.ID != "" && scenario != "pause_false" {
+						preparations[prep.Preparation.ID] = "active"
+					}
 					if scenario == "pause_false" {
 						json.NewEncoder(w).Encode(beewire.PlatformSupply{Platform: "openai", Paused: false, Reasons: []string{"offline", "not_configured"}})
 						return
@@ -119,7 +143,7 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 				if paused {
 					reasons = append(reasons, "manually_paused")
 				}
-				json.NewEncoder(w).Encode(beewire.PlatformSupply{Platform: "openai", Paused: paused, Reasons: reasons})
+				encodeDesktopPreparationFixture(w, r, beewire.PlatformSupply{Platform: "openai", Paused: paused, Reasons: reasons}, preparations)
 			})
 			statePath = filepath.Join(filepath.Dir(d.path), "ai-accounts.json")
 			t.Cleanup(func() { os.Chmod(statePath, 0600) })
@@ -157,7 +181,7 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 					t.Fatalf("unrequested side effect: %s", call)
 				}
 			}
-			if scenario == "success" || scenario == "lost_put" {
+			if scenario == "success" || scenario == "lost_put" || scenario == "source_changed" {
 				if op.State != "succeeded" || done.Selection.State != "selected" || puts != 1 {
 					t.Fatalf("result=%+v selection=%+v calls=%v", op, done.Selection, seen)
 				}
@@ -190,20 +214,6 @@ func TestDesktopAccountSelectionDurablePauseAndRecovery(t *testing.T) {
 					t.Fatalf("clear failed: %+v", cleared.Operation)
 				}
 			} else {
-				if scenario == "source_changed" {
-					if op.State != "failed" {
-						t.Fatalf("verified pause with changed source must release failed selection, got %s", op.State)
-					}
-					disk, e := readDesktopAccountState(statePath)
-					if e != nil {
-						t.Fatal(e)
-					}
-					for _, scope := range disk.Scopes {
-						if len(scope.PendingOperations) != 0 {
-							t.Fatal("changed source left permanent unresolved pause")
-						}
-					}
-				}
 				if op.State == "succeeded" || done.Selection.State != "not_selected" || op.Error == nil {
 					t.Fatalf("unsafe result=%+v", done)
 				}
@@ -297,8 +307,32 @@ func TestDesktopAccountSelectionUnknownPauseSurvivesRestartWithoutReplay(t *test
 	if e != nil {
 		t.Fatal(e)
 	}
-	_, e = a.Action(context.Background(), DesktopAccountActionRequest{Platform: "openai", Revision: s.Revision, CandidateRef: *s.Candidate.Reference, Action: "select", Confirmed: true})
+	// Seed a v3 operation that sent the old, non-idempotent paused PUT before
+	// upgrade. A new selection now uses a separate preparation barrier.
+	session, release, e := d.acquireSession(context.Background())
 	if e != nil {
+		t.Fatal(e)
+	}
+	state, e := session.read()
+	if e != nil {
+		t.Fatal(e)
+	}
+	read, failed := a.readAccountSource(context.Background(), DesktopAccountDetectRequest{Platform: "openai", Directory: s.Candidate.Source.Directory, Store: "file", Mode: "local"})
+	if failed != nil {
+		t.Fatal(failed)
+	}
+	_, e = a.selectionScope(session, state, func(scope *desktopAccountScope) error {
+		scope.PendingOperations["openai"] = desktopPendingOperation{ID: strings.Repeat("a", 48), Kind: "select", Stage: "reconciling", Source: *s.Candidate.Source, ToFingerprint: *s.Candidate.Fingerprint, CredentialRevision: read.revision, StartedAt: time.Now().UTC()}
+		return nil
+	})
+	read.clear()
+	release()
+	if e != nil {
+		t.Fatal(e)
+	}
+	yes := true
+	desktopSupplyCall(context.Background(), state, "openai", &yes)
+	if _, e = a.Snapshot(context.Background(), "openai", true); e != nil {
 		t.Fatal(e)
 	}
 	if done := waitSelection(t, a, "openai"); selectionOperation(t, done).State != "reconciling" {
@@ -328,6 +362,7 @@ func TestDesktopAccountSelectionClaudeAndLocalClear(t *testing.T) {
 	var mu sync.Mutex
 	registered := false
 	puts := 0
+	preparations := map[string]string{}
 	d := desktopSupplyFixture(t, func(w http.ResponseWriter, r *http.Request) {
 		mu.Lock()
 		defer mu.Unlock()
@@ -346,7 +381,7 @@ func TestDesktopAccountSelectionClaudeAndLocalClear(t *testing.T) {
 			if r.Method == "PUT" {
 				puts++
 			}
-			json.NewEncoder(w).Encode(beewire.PlatformSupply{Platform: "claude", Paused: true, Reasons: []string{"manually_paused", "not_configured"}})
+			encodeDesktopPreparationFixture(w, r, beewire.PlatformSupply{Platform: "claude", Paused: true, Reasons: []string{"manually_paused", "not_configured"}}, preparations)
 		default:
 			t.Errorf("unexpected request: %s", r.URL.Path)
 			w.WriteHeader(500)
@@ -403,7 +438,7 @@ func TestDesktopAccountSelectionClaudeAndLocalClear(t *testing.T) {
 	}
 	mu.Lock()
 	defer mu.Unlock()
-	if puts != 1 {
+	if puts != 2 {
 		t.Fatalf("clear issued supply writes: puts=%d", puts)
 	}
 }

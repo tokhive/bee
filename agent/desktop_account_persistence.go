@@ -41,6 +41,7 @@ type desktopLegacyStopPlatform struct {
 }
 
 type desktopAccountSelection struct {
+	PreparationID      string               `json:"preparation_id,omitempty"`
 	Source             DesktopAccountSource `json:"source"`
 	Fingerprint        string               `json:"fingerprint"`
 	Generation         int64                `json:"generation"`
@@ -49,6 +50,7 @@ type desktopAccountSelection struct {
 }
 
 type desktopPendingOperation struct {
+	PreparationID      string               `json:"preparation_id,omitempty"`
 	ID                 string               `json:"id"`
 	Kind               string               `json:"kind"`
 	Stage              string               `json:"stage"`
@@ -104,6 +106,9 @@ func validateDesktopAccountScopes(scopes map[string]desktopAccountScope) error {
 			return fmt.Errorf("account scope maps rejected: selections=%d operations=%d; required=non-null maps with <=2 platforms", len(scope.Selections), len(scope.PendingOperations))
 		}
 		for platform, selection := range scope.Selections {
+			if selection.PreparationID != "" && !desktopHexID(selection.PreparationID, 24) {
+				return fmt.Errorf("selection preparation ID rejected: platform=%s; required=48 lowercase hex characters", platform)
+			}
 			if err := validateDesktopStoredSource(platform, selection.Source); err != nil {
 				return err
 			}
@@ -115,6 +120,9 @@ func validateDesktopAccountScopes(scopes map[string]desktopAccountScope) error {
 			}
 		}
 		for platform, op := range scope.PendingOperations {
+			if op.PreparationID != "" && (!desktopHexID(op.PreparationID, 24) || op.Kind != "select") {
+				return fmt.Errorf("pending preparation ID or operation kind rejected: platform=%s id_bytes=%d select_operation=%t; required=48 lowercase hex characters on a selection operation", platform, len(op.PreparationID), op.Kind == "select")
+			}
 			if err := validateDesktopStoredSource(platform, op.Source); err != nil {
 				return err
 			}
@@ -208,6 +216,9 @@ func requireDesktopStateFields(raw json.RawMessage, kind reflect.Type, at string
 			name := strings.Split(field.Tag.Get("json"), ",")[0]
 			value, ok := fields[name]
 			if !ok {
+				if strings.Contains(field.Tag.Get("json"), ",omitempty") {
+					continue
+				}
 				return fmt.Errorf("account state field absent: field=%s.%s", at, name)
 			}
 			if err := requireDesktopStateFields(value, field.Type, at+"."+name); err != nil {

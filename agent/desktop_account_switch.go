@@ -71,7 +71,7 @@ func (a *DesktopAccounts) performAccountChange(ctx context.Context, platform str
 		}
 		op.ToFingerprint = fingerprint
 	}
-	owned, finish, err := a.runtime.selectionBarrier(ctx, platform)
+	owned, finish, err := a.runtime.selectionBarrier(ctx, platform, false)
 	if err != nil {
 		return nil, pending, err
 	}

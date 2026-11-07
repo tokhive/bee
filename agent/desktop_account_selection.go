@@ -41,6 +41,9 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 		return DesktopAccountSnapshot{}, accountFailure(r.Platform, "reference_failed", "operation_id", err.Error())
 	}
 	op := desktopPendingOperation{ID: hex.EncodeToString(id[:]), Kind: "select", Stage: "intent", CredentialRevision: p.credentialRevision, StartedAt: a.now().UTC()}
+	if r.Action != "clear_selection" {
+		op.PreparationID = op.ID
+	}
 	if p.source != nil {
 		op.Source = *p.source
 	}
@@ -276,7 +279,7 @@ func (a *DesktopAccounts) performSelection(ctx context.Context, platform string,
 	finish := func(*desktopAccountSelection, bool) {}
 	if a.runtime != nil {
 		var err error
-		owned, finish, err = a.runtime.selectionBarrier(ctx, platform)
+		owned, finish, err = a.runtime.selectionBarrier(ctx, platform, op.PreparationID != "" && !clearSelection)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -327,6 +330,19 @@ func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform st
 		if account.AccountFingerprint != "" || account.Generation != 0 || account.PendingFingerprint != "" {
 			return nil, pending, fmt.Errorf("clear local selection blocked: registered=%t generation=%d pending=%t; registered account removal is unavailable", account.AccountFingerprint != "", account.Generation, account.PendingFingerprint != "")
 		}
+		if id := scope.Selections[platform].PreparationID; id != "" {
+			status, err := desktopPreparationCall(ctx, state, platform, id, nil)
+			if err != nil {
+				return nil, pending, err
+			}
+			if status == "active" {
+				if err := ensureDesktopPreparation(ctx, state, platform, desktopSupplyPreparation{ID: id, Action: "cancel", AccountFingerprint: scope.Selections[platform].Fingerprint}, "cancelled"); err != nil {
+					return nil, pending, err
+				}
+			} else if status != "completed" && status != "cancelled" {
+				return nil, pending, fmt.Errorf("local clear preparation unconfirmed: state=%s; original selection retained", status)
+			}
+		}
 		_, err = a.selectionScope(session, state, func(s *desktopAccountScope) error {
 			if len(s.PendingOperations) > 0 {
 				return fmt.Errorf("clear selection blocked by unresolved operation")
@@ -366,6 +382,24 @@ func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform st
 	}
 	if !reconcile {
 		op.FromFingerprint, op.FromGeneration = account.AccountFingerprint, account.Generation
+		if previous := scope.Selections[platform]; op.PreparationID != "" && previous.PreparationID != "" {
+			status, err := desktopPreparationCall(ctx, state, platform, previous.PreparationID, nil)
+			if err != nil {
+				return nil, pending, err
+			}
+			if status == "active" {
+				if previous.Fingerprint == op.ToFingerprint {
+					op.PreparationID = previous.PreparationID
+				} else {
+					// Replacing a local choice that has never registered an account
+					// is equivalent to clear then select. Hive checks that condition
+					// transactionally; registered accounts still require confirmation.
+					if err := ensureDesktopPreparation(ctx, state, platform, desktopSupplyPreparation{ID: previous.PreparationID, Action: "cancel", AccountFingerprint: previous.Fingerprint}, "cancelled"); err != nil {
+						return nil, pending, err
+					}
+				}
+			}
+		}
 		_, err = a.selectionScope(session, state, func(s *desktopAccountScope) error {
 			if _, exists := s.PendingOperations[platform]; exists {
 				return fmt.Errorf("selection intent collision; existing operation retained")
@@ -383,29 +417,37 @@ func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform st
 		if err != nil {
 			return nil, pending, err
 		}
-		yes := true
-		written, writeErr := desktopSupplyCall(ctx, state, platform, &yes)
-		if writeErr == nil && !written.Paused {
-			return nil, &op, fmt.Errorf("pause PUT returned paused=false; required=true; result unconfirmed and must be queried without replay")
-		}
-		if writeErr != nil {
-			// A committed write may have lost its response. Only a fresh GET can prove
-			// pause; the write is never submitted again by this operation.
-			supply, getErr := desktopSupplyCall(ctx, state, platform, nil)
-			if getErr != nil {
-				return nil, &op, fmt.Errorf("pause result unresolved: %w; query failed: %w", writeErr, getErr)
+		if op.PreparationID == "" {
+			yes := true
+			written, writeErr := desktopSupplyCall(ctx, state, platform, &yes)
+			if writeErr == nil && !written.Paused {
+				return nil, &op, fmt.Errorf("pause PUT returned paused=false; required=true; result unconfirmed and must be queried without replay")
 			}
-			if !supply.Paused {
-				return nil, &op, fmt.Errorf("pause result unresolved: %w; GET paused=false", writeErr)
+			if writeErr != nil {
+				// A committed write may have lost its response. Only a fresh GET can prove
+				// pause; the write is never submitted again by this operation.
+				supply, getErr := desktopSupplyCall(ctx, state, platform, nil)
+				if getErr != nil {
+					return nil, &op, fmt.Errorf("pause result unresolved: %w; query failed: %w", writeErr, getErr)
+				}
+				if !supply.Paused {
+					return nil, &op, fmt.Errorf("pause result unresolved: %w; GET paused=false", writeErr)
+				}
 			}
 		}
 	}
-	supply, err := desktopSupplyCall(ctx, state, platform, nil)
-	if err != nil {
-		return nil, &op, err
-	}
-	if !supply.Paused {
-		return nil, &op, fmt.Errorf("selection pause readback failed: paused=false; original PUT must not be replayed")
+	if op.PreparationID != "" {
+		if err := ensureDesktopPreparation(ctx, state, platform, desktopSupplyPreparation{ID: op.PreparationID, Action: "begin", AccountFingerprint: op.ToFingerprint}, "active"); err != nil {
+			return nil, &op, err
+		}
+	} else {
+		supply, err := desktopSupplyCall(ctx, state, platform, nil)
+		if err != nil {
+			return nil, &op, err
+		}
+		if !supply.Paused {
+			return nil, &op, fmt.Errorf("selection pause readback failed: paused=false; original PUT must not be replayed")
+		}
 	}
 	latest, err := a.verifiedSelectionDevice(ctx, session)
 	if err != nil {
@@ -421,7 +463,14 @@ func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform st
 	if after.AccountFingerprint != op.FromFingerprint || after.Generation != op.FromGeneration || after.PendingFingerprint != "" {
 		return nil, &op, fmt.Errorf("Hive account changed before selection commit: generation=%d expected=%d pending=%t", after.Generation, op.FromGeneration, after.PendingFingerprint != "")
 	}
-	if _, sourceErr := a.selectionSource(ctx, platform, op); sourceErr != nil {
+	// New selections are held at Hive until runtime revalidates the actual
+	// source and complete synchronization receipt. Legacy pause operations keep
+	// their original final-source check and recovery semantics.
+	var sourceErr error
+	if op.PreparationID == "" {
+		_, sourceErr = a.selectionSource(ctx, platform, op)
+	}
+	if sourceErr != nil {
 		// The only external side effect was pause and its result is now proven.
 		// End this failed selection without changing the previous selected source.
 		_, saveErr := a.selectionScope(session, state, func(s *desktopAccountScope) error {
@@ -442,7 +491,7 @@ func (a *DesktopAccounts) performSelectionOwned(ctx context.Context, platform st
 			return fmt.Errorf("selection commit operation ID no longer matches durable intent")
 		}
 		revision := s.Selections[platform].Revision + 1
-		selected = desktopAccountSelection{Source: op.Source, Fingerprint: op.ToFingerprint, Generation: after.Generation, CredentialRevision: op.CredentialRevision, Revision: revision}
+		selected = desktopAccountSelection{PreparationID: op.PreparationID, Source: op.Source, Fingerprint: op.ToFingerprint, Generation: after.Generation, CredentialRevision: op.CredentialRevision, Revision: revision}
 		s.Selections[platform] = selected
 		delete(s.PendingOperations, platform)
 		return nil

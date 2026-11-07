@@ -1,6 +1,7 @@
 package bee
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -23,30 +24,35 @@ import (
 )
 
 type desktopAutoMaintenanceFixture struct {
-	t                *testing.T
-	accounts         *DesktopAccounts
-	runtime          *DesktopRuntime
-	mu               sync.Mutex
-	paused           map[string]bool
-	account          map[string]beewire.PlatformAccount
-	uploads          map[string]int
-	peer             *relay.Session
-	connections      atomic.Int32
-	supplyWrites     atomic.Int32
-	resumeWrites     atomic.Int32
-	network          DesktopNetworkConfig
-	lease            string
-	registeredLease  map[string]string
-	registeredSource map[string]string
-	pauseWrites      atomic.Int32
-	dispatchOnUpload bool
-	dispatchResults  chan error
-	beforeRequest    func(http.ResponseWriter, *http.Request) bool
+	t                 *testing.T
+	accounts          *DesktopAccounts
+	runtime           *DesktopRuntime
+	mu                sync.Mutex
+	paused            map[string]bool
+	account           map[string]beewire.PlatformAccount
+	uploads           map[string]int
+	peer              *relay.Session
+	connections       atomic.Int32
+	supplyWrites      atomic.Int32
+	resumeWrites      atomic.Int32
+	network           DesktopNetworkConfig
+	lease             string
+	registeredLease   map[string]string
+	registeredSource  map[string]string
+	pauseWrites       atomic.Int32
+	dispatchOnUpload  bool
+	dispatchResults   chan error
+	beforeRequest     func(http.ResponseWriter, *http.Request) bool
+	preparations      map[string]string
+	preparationBegins atomic.Int32
+	activePreparation map[string]string
 }
 
 func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixture {
 	t.Helper()
 	f := &desktopAutoMaintenanceFixture{t: t, paused: map[string]bool{}, account: map[string]beewire.PlatformAccount{}, uploads: map[string]int{}, registeredLease: map[string]string{}, registeredSource: map[string]string{}, dispatchResults: make(chan error, 8)}
+	f.preparations = map[string]string{}
+	f.activePreparation = map[string]string{}
 	for _, platform := range []string{"openai", "claude"} {
 		f.paused[platform] = true
 		f.account[platform] = beewire.PlatformAccount{Platform: platform, Status: "not_configured"}
@@ -72,8 +78,21 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 		t.Fatal(err)
 	}
 	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+		var preparation *desktopSupplyPreparation
 		if q.Method == "PUT" && (q.URL.Path == "/api/bee/platforms/openai" || q.URL.Path == "/api/bee/platforms/claude") {
-			f.pauseWrites.Add(1)
+			data, _ := io.ReadAll(q.Body)
+			q.Body = io.NopCloser(bytes.NewReader(data))
+			var input struct {
+				Preparation *desktopSupplyPreparation `json:"preparation"`
+			}
+			json.Unmarshal(data, &input)
+			preparation = input.Preparation
+			if preparation != nil && preparation.Action == "begin" {
+				f.preparationBegins.Add(1)
+			}
+			if preparation == nil {
+				f.pauseWrites.Add(1)
+			}
 		}
 		f.mu.Lock()
 		beforeRequest := f.beforeRequest
@@ -115,7 +134,39 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 			base := "/api/bee/platforms/" + platform
 			switch q.URL.Path {
 			case base:
-				if q.Method == "PUT" {
+				id := q.URL.Query().Get("preparation_id")
+				if preparation != nil {
+					id = preparation.ID
+					if preparation.Action == "begin" && f.preparations[f.activePreparation[platform]] == "active" && f.activePreparation[platform] != id {
+						w.WriteHeader(409)
+						return
+					}
+					if preparation.Action == "begin" && f.preparations[id] == "" {
+						f.preparations[id] = "active"
+						f.activePreparation[platform] = id
+					}
+					if preparation.Action == "complete" {
+						if preparation.Lease != f.lease || f.registeredLease[platform] != f.lease || f.registeredSource[platform] != preparation.CredentialRevision {
+							w.WriteHeader(http.StatusConflict)
+							return
+						}
+						f.preparations[id] = "completed"
+						if f.activePreparation[platform] == id {
+							delete(f.activePreparation, platform)
+						}
+					}
+					if preparation.Action == "cancel" {
+						if f.account[platform].Generation != 0 {
+							w.WriteHeader(409)
+							return
+						}
+						f.preparations[id] = "cancelled"
+						if f.activePreparation[platform] == id {
+							delete(f.activePreparation, platform)
+						}
+					}
+				}
+				if q.Method == "PUT" && preparation == nil {
 					f.supplyWrites.Add(1)
 					var input struct {
 						Paused bool `json:"paused"`
@@ -135,7 +186,20 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 				if f.uploads[platform] == 0 {
 					reasons = append(reasons, "not_configured")
 				}
-				json.NewEncoder(w).Encode(beewire.PlatformSupply{Platform: platform, Paused: f.paused[platform], Ready: len(reasons) == 0, Reasons: reasons})
+				supply := beewire.PlatformSupply{Platform: platform, Paused: f.paused[platform], Ready: len(reasons) == 0, Reasons: reasons}
+				if id != "" {
+					state := f.preparations[id]
+					if state == "" {
+						state = "absent"
+					}
+					if state == "active" {
+						supply.Ready = false
+						supply.Reasons = append(supply.Reasons, beewire.ReasonAuthorizationUnavailable)
+					}
+					json.NewEncoder(w).Encode(map[string]any{"preparation": map[string]string{"id": id, "state": state}, "supply": supply})
+				} else {
+					json.NewEncoder(w).Encode(supply)
+				}
 				return
 			case base + "/account":
 				json.NewEncoder(w).Encode(f.account[platform])
@@ -158,6 +222,10 @@ func newDesktopAutoMaintenanceFixture(t *testing.T) *desktopAutoMaintenanceFixtu
 				account.PendingFingerprint, account.ConfirmationID, account.CredentialRevision = "", "", ""
 				account.Generation++
 				account.Status = "source_unavailable"
+				if id := f.activePreparation[platform]; id != "" {
+					f.preparations[id] = "cancelled"
+					delete(f.activePreparation, platform)
+				}
 				f.account[platform] = account
 				json.NewEncoder(w).Encode(account)
 				return
@@ -349,13 +417,13 @@ func TestDesktopAutoMaintenanceKeepsSuccessfulSelectionWhenConcurrentPlatformFai
 		t.Fatalf("runtime crossed active account barrier: snapshot=%+v error=%v", before, err)
 	}
 	close(proceed)
-	if failed := waitSelection(t, f.accounts, "claude"); failed.Operation.State != "failed" {
+	if failed := waitSelection(t, f.accounts, "claude"); failed.Operation.State != "succeeded" {
 		t.Fatalf("Claude result=%+v", failed.Operation)
 	}
 	after := waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool {
 		return s.Local == "running" && s.Platforms["openai"].Supply != nil
 	})
-	if !after.Platforms["openai"].Supply.Paused || after.Platforms["claude"].SelectionRevision != 0 || f.resumeWrites.Load() != 0 || f.connections.Load() != 1 {
+	if !after.Platforms["openai"].Supply.Paused || after.Platforms["claude"].Supply != nil || f.resumeWrites.Load() != 0 || f.connections.Load() != 1 {
 		t.Fatalf("successful selection was lost or unsafe platform enabled: %+v", after)
 	}
 }
@@ -425,15 +493,25 @@ func TestDesktopAutoMaintenanceDoesNotUpgradeStoppedIntent(t *testing.T) {
 func TestDesktopAutoMaintenanceWaitsForUnknownSelectionWithoutReplayingOrReplacingItsFailure(t *testing.T) {
 	f := newDesktopAutoMaintenanceFixture(t)
 	var recovered atomic.Bool
+	var submitted atomic.Bool
 	f.mu.Lock()
 	f.beforeRequest = func(w http.ResponseWriter, q *http.Request) bool {
 		if q.URL.Path != "/api/bee/platforms/openai" {
 			return false
 		}
 		if q.Method == "PUT" {
-			io.Copy(io.Discard, q.Body)
+			data, _ := io.ReadAll(q.Body)
+			q.Body = io.NopCloser(bytes.NewReader(data))
+			var input struct {
+				Preparation desktopSupplyPreparation `json:"preparation"`
+			}
+			json.Unmarshal(data, &input)
+			if input.Preparation.Action != "begin" {
+				return false
+			}
+			submitted.Store(true)
 			f.mu.Lock()
-			f.paused["openai"] = true
+			f.preparations[input.Preparation.ID] = "active"
 			f.mu.Unlock()
 			conn, _, err := w.(http.Hijacker).Hijack()
 			if err != nil {
@@ -443,7 +521,7 @@ func TestDesktopAutoMaintenanceWaitsForUnknownSelectionWithoutReplayingOrReplaci
 			}
 			return true
 		}
-		if q.Method == "GET" && !recovered.Load() {
+		if q.Method == "GET" && submitted.Load() && !recovered.Load() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			io.WriteString(w, `{"code":"pause_read_unavailable","message":"controlled pause readback outage"}`)
 			return true
@@ -464,7 +542,7 @@ func TestDesktopAutoMaintenanceWaitsForUnknownSelectionWithoutReplayingOrReplaci
 	}
 	waitSelection(t, f.accounts, "openai")
 	blocked, err := f.runtime.Snapshot(context.Background())
-	if err != nil || blocked.Local != "waiting" || f.connections.Load() != 0 || f.pauseWrites.Load() != 1 || blocked.Platforms["openai"].Account.Authorization.Error != nil {
+	if err != nil || blocked.Local != "waiting" || f.connections.Load() != 0 || f.preparationBegins.Load() != 1 || f.pauseWrites.Load() != 0 || blocked.Platforms["openai"].Account.Authorization.Error != nil {
 		t.Fatalf("unknown selection was replayed or automatic admission replaced its failure: snapshot=%+v error=%v writes=%d", blocked, err, f.pauseWrites.Load())
 	}
 	recovered.Store(true)
@@ -478,7 +556,7 @@ func TestDesktopAutoMaintenanceWaitsForUnknownSelectionWithoutReplayingOrReplaci
 	after := waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool {
 		return s.Local == "running" && s.Platforms["openai"].Supply != nil
 	})
-	if !after.Platforms["openai"].Supply.Paused || f.pauseWrites.Load() != 1 || f.resumeWrites.Load() != 0 {
+	if !after.Platforms["openai"].Supply.Paused || f.preparationBegins.Load() != 1 || f.pauseWrites.Load() != 0 || f.resumeWrites.Load() != 0 {
 		t.Fatalf("reconciliation repeated pause or resumed: snapshot=%+v writes=%d", after, f.pauseWrites.Load())
 	}
 }
@@ -511,7 +589,7 @@ func TestDesktopAutoMaintenancePreparationFailureCanBeExplicitlyRetriedWithoutRe
 	after := waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool {
 		return s.Local == "running" && s.Platforms["openai"].Supply != nil
 	})
-	if after.Platforms["openai"].Account.Operation.ID != selected.Operation.ID || after.Platforms["openai"].Account.Selection.State != "selected" || !after.Platforms["openai"].Supply.Paused || f.pauseWrites.Load() != 1 || f.resumeWrites.Load() != 0 {
+	if after.Platforms["openai"].Account.Operation.ID != selected.Operation.ID || after.Platforms["openai"].Account.Selection.State != "selected" || !after.Platforms["openai"].Supply.Paused || f.pauseWrites.Load() != 0 || f.resumeWrites.Load() != 0 {
 		t.Fatalf("explicit retry reselected or changed pause: snapshot=%+v writes=%d", after, f.pauseWrites.Load())
 	}
 }

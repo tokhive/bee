@@ -33,7 +33,7 @@ func desktopSupplyFixture(t *testing.T, handler http.HandlerFunc, mutate ...func
 			t.Error("request omitted existing authenticated Hive headers")
 		}
 		if r.URL.Path == "/api/bee/platforms/openai" || r.URL.Path == "/api/bee/platforms/claude" {
-			if r.URL.RawQuery != "reason_detail=1" {
+			if r.URL.RawQuery != "reason_detail=1" && !desktopHexID(r.URL.Query().Get("preparation_id"), 24) {
 				t.Errorf("desktop supply must opt in to details: method=%s query=%q", r.Method, r.URL.RawQuery)
 			}
 		} else if r.URL.RawQuery != "" {

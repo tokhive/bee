@@ -202,6 +202,7 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 			inbox, _ := tee.GenerateInboxKey()
 			pub := inbox.Public()
 			var mu sync.Mutex
+			preparations := map[string]string{}
 			paused := true
 			uploads, maintenance := 0, 0
 			account := beewire.PlatformAccount{Platform: "openai", Status: "not_configured"}
@@ -275,6 +276,14 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				defer mu.Unlock()
 				switch q.URL.Path {
 				case "/api/bee/platforms/openai":
+					if q.URL.Query().Get("preparation_id") != "" {
+						reasons := []string{}
+						if paused {
+							reasons = append(reasons, "manually_paused")
+						}
+						encodeDesktopPreparationFixture(w, q, beewire.PlatformSupply{Platform: "openai", Paused: paused, Ready: !paused, Reasons: reasons}, preparations)
+						return
+					}
 					if scenario == "readback_failure_recovery" && uploads > 0 && q.Method == "GET" && recoveryFailure.CompareAndSwap(true, false) {
 						w.WriteHeader(503)
 						w.Write([]byte(`{"code":"supply_temporarily_unavailable","message":"synthetic readback outage"}`))
@@ -574,8 +583,8 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 				switched := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
 					return s.Platforms["openai"].SelectionRevision > old.Revision && s.Platforms["openai"].Supply != nil
 				})
-				if !switched.Platforms["openai"].Supply.Paused {
-					t.Fatal("source switch automatically resumed")
+				if switched.Platforms["openai"].Supply.Paused {
+					t.Fatal("same-account source selection changed the existing accepting choice")
 				}
 				os.Remove(filepath.Join(*old.Source.Directory, "auth.json"))
 				if _, err := d.SetPaused(context.Background(), "openai", false); err != nil {
@@ -587,7 +596,7 @@ func TestDesktopRuntimeRunsRealSynchronizationRelayAndStop(t *testing.T) {
 					t.Fatal(err)
 				}
 				if scenario == "failed_selection" {
-					owned, finish, err := r.selectionBarrier(context.Background(), "openai")
+					owned, finish, err := r.selectionBarrier(context.Background(), "openai", false)
 					if err != nil || !owned {
 						t.Fatalf("selection barrier: owned=%t err=%v", owned, err)
 					}

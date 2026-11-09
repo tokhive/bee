@@ -112,3 +112,7 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 ## 2026-11-09 18:40：新版已认可并纳入主预览
 
 已同步两个账号设计文档与场景索引。主预览只调整页面标题与预览标识，交互沿用用户认可的 flow-comparison.html；复用上一轮浏览器验证结果。旧主预览归档复用 `docs/preview/history/20261106-104743-approved-quota/index.html`，本轮冻结版为 [打开](history/20261109-184032-approved-continuous-flows/index.html?scene=intake-candidate-allowed)。冻结目录同时保存旧版 draft，支持独立对比。旧版和对比页未改写；此前待评审／未合入描述为当时记录，以本节为准。正式前后端代码未修改。
+
+## 状态详情收敛（2026-11-09）
+
+按用户确认同步主预览和新版对比页，旧 draft 保留。移除重复正文的通用详情，暂停／独立连接条件直接展示；错误证据、原操作核对记录与可信细分准备进度按需展开，账号详情及额度区保留。修改前复用 184032 主预览与 182012 对比页完整快照。本轮冻结于 [历史版本](history/20261109-184518-concise-state-details/index.html?scene=intake-retry-paused)，包含两份新版与旧 draft。仅调整静态呈现，不改变业务操作。

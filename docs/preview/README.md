@@ -98,3 +98,13 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 ### 2026-11-09 用户确认与文档同步
 
 用户已认可首次登录连续四步与成功完成态，规则已同步至 [设计记录](../desktop/accounts-preview-design.md) 和 [场景索引](../desktop/account-scenarios.md)。认可范围仅限此流程，整份草稿及其他场景不因此认可。本轮只更新文档与确认记录，不修改 HTML 或正式代码；主预览暂未合入本次专项。用户先测试当前场景，再决定其他流程是否调整；测试入口及候选调整点见场景索引“其余待测试、再决定是否调整的流程”。
+
+## 独立新版对比：连续步骤与完成反馈（2026-11-09 18:20，待评审）
+
+[新版](flow-comparison.html?scene=intake-candidate-allowed&theme=light&size=narrow) · [旧版](draft.html?scene=intake-candidate-allowed&theme=light&size=narrow) · [冻结对比版](history/20261109-182012-continuous-flows-comparison/flow-comparison.html?scene=intake-candidate-allowed)
+
+用户授权制作独立新版对比。旧 draft.html 保留原样，包括开始本轮前已有的未提交工具栏调整；index.html 和正式代码不改。一级场景使用原完整分组名（例如“接入 / 接入账号”），二级保持原选项名；新增完成态留在对应分组。新版工具栏提供“打开旧版同场景”，比较普通结果时按账号来源和暂停／额度条件选择旧场景。
+
+新版将固定步骤位置、状态与按钮留白扩展到已登录账号接入、重新登录、授权恢复、读取修复及换号。接入两步、换号三步；重登与读取修复保留核验，实际经过准备时保留准备节点至完成。完成态四类文案区分接入、重登／授权恢复、读取修复和换号；点击“完成”只收起反馈，不更改账号、暂停或额度。登录超时重试说明先安全结束旧登录再启动新登录。取消／未知状态沿用既定边界，不虚构完成。普通接单开关、自动重连等不增加祝贺页。
+
+修改前快照为 20261109-181751-before-flow-comparison；交付快照为 20261109-182012-continuous-flows-comparison。后者同时冻结新版与旧版完整 HTML，可独立打开及对比。本版仍为静态模拟；不代表已认可为设计基线或真实接口验收，不修改两个设计文档中的已确认结论。

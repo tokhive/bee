@@ -36,3 +36,5 @@
 | 2026-11-09 18:20:12 | 独立连续流程新版：接入、重登、读取修复、换号的连续步骤与完成确认；冻结新旧两份完整 HTML | 已认可：2026-11-09 用户确认新版并要求落盘；后续已纳入主预览，仅静态模拟 | [新版](20261109-182012-continuous-flows-comparison/flow-comparison.html?scene=intake-candidate-allowed) · [旧版](20261109-182012-continuous-flows-comparison/draft.html?scene=intake-candidate-allowed) |
 
 | 2026-11-09 18:40:32 | 将已认可连续流程新版纳入唯一主预览，同步设计记录与场景清单；冻结目录包含旧版对比文件 | 已认可界面与交互；真实登录与接口能力未据此验收 | [主预览冻结版](20261109-184032-approved-continuous-flows/index.html?scene=intake-candidate-allowed) |
+
+| 2026-11-09 18:45:18 | 状态详情按新增信息展示：正文直接说明暂停条件，去掉重复折叠；保留有效错误证据、核对记录与细分进度。冻结主预览、对比页及旧版 | 已按确认建议修改；静态模拟，不代表真实接口验收 | [打开](20261109-184518-concise-state-details/index.html?scene=intake-retry-paused) |

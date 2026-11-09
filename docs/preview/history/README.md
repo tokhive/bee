@@ -31,3 +31,6 @@
 - 2026-11-06：用户查看额度等待 HTML 后明确回复“同意，将这个场景落盘”。据此仅纳入额度等待，未纳入 draft 中重新登录／换号的其他改动。更新前复用三场景基线完整快照；局部合入后保存新的主预览快照。
 
 | 2026-11-09 18:02:32 | 首次登录增加停留的成功完成态、四步全绿及“完成”按钮；区分允许接单／保持暂停／额度等待，新增 3 个入口。修改前复用 20261109-175305 完整快照；完整单文件无外部依赖 | 已认可：仅首次登录连续流程与完成确认；2026-11-09 已同步设计文档。其他流程未整体认可，主预览暂未合入，不代表真实接单验收 | [打开](20261109-180232-first-login-completion/draft.html?scene=first-success) |
+
+| 20261109-181751-before-flow-comparison | 独立新版制作前完整 draft，保留既有工具栏改动 | 修改前对比留版；首次流程已认可，其他范围未整体认可 | [旧版](20261109-181751-before-flow-comparison/draft.html?scene=intake-candidate-allowed) |
+| 2026-11-09 18:20:12 | 独立连续流程新版：接入、重登、读取修复、换号的连续步骤与完成确认；冻结新旧两份完整 HTML | 待评审；原 draft 和主预览均未改写，仅静态模拟 | [新版](20261109-182012-continuous-flows-comparison/flow-comparison.html?scene=intake-candidate-allowed) · [旧版](20261109-182012-continuous-flows-comparison/draft.html?scene=intake-candidate-allowed) |

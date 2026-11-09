@@ -88,6 +88,14 @@ var resellerRequestID = regexp.MustCompile(`^[A-Za-z0-9._:-]{1,128}$`)
 // MaxResellerCharges bounds one report.
 const MaxResellerCharges = 100
 
+// ResellerChargesStored is what Hive already holds of a reseller's charges
+// for the Bee's account: the newest charge's time, or nil when it holds none.
+// A Bee that starts, or lost track, resumes reading the reseller's billing
+// records from there instead of a fixed number of pages back.
+type ResellerChargesStored struct {
+	ChargedThrough *time.Time `json:"charged_through"`
+}
+
 func (c ResellerCharges) Valid() bool {
 	if !validFingerprint(c.KeyFingerprint) || len(c.Charges) == 0 || len(c.Charges) > MaxResellerCharges {
 		return false

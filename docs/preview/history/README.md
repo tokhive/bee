@@ -33,4 +33,6 @@
 | 2026-11-09 18:02:32 | 首次登录增加停留的成功完成态、四步全绿及“完成”按钮；区分允许接单／保持暂停／额度等待，新增 3 个入口。修改前复用 20261109-175305 完整快照；完整单文件无外部依赖 | 已认可：仅首次登录连续流程与完成确认；2026-11-09 已同步设计文档。其他流程未整体认可，主预览暂未合入，不代表真实接单验收 | [打开](20261109-180232-first-login-completion/draft.html?scene=first-success) |
 
 | 20261109-181751-before-flow-comparison | 独立新版制作前完整 draft，保留既有工具栏改动 | 修改前对比留版；首次流程已认可，其他范围未整体认可 | [旧版](20261109-181751-before-flow-comparison/draft.html?scene=intake-candidate-allowed) |
-| 2026-11-09 18:20:12 | 独立连续流程新版：接入、重登、读取修复、换号的连续步骤与完成确认；冻结新旧两份完整 HTML | 待评审；原 draft 和主预览均未改写，仅静态模拟 | [新版](20261109-182012-continuous-flows-comparison/flow-comparison.html?scene=intake-candidate-allowed) · [旧版](20261109-182012-continuous-flows-comparison/draft.html?scene=intake-candidate-allowed) |
+| 2026-11-09 18:20:12 | 独立连续流程新版：接入、重登、读取修复、换号的连续步骤与完成确认；冻结新旧两份完整 HTML | 已认可：2026-11-09 用户确认新版并要求落盘；后续已纳入主预览，仅静态模拟 | [新版](20261109-182012-continuous-flows-comparison/flow-comparison.html?scene=intake-candidate-allowed) · [旧版](20261109-182012-continuous-flows-comparison/draft.html?scene=intake-candidate-allowed) |
+
+| 2026-11-09 18:40:32 | 将已认可连续流程新版纳入唯一主预览，同步设计记录与场景清单；冻结目录包含旧版对比文件 | 已认可界面与交互；真实登录与接口能力未据此验收 | [主预览冻结版](20261109-184032-approved-continuous-flows/index.html?scene=intake-candidate-allowed) |

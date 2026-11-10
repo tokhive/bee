@@ -187,3 +187,96 @@ async fn native_auto_service_through_real_go_transport_and_controlled_hive() {
     }
     println!("controlled native evidence: {evidence}");
 }
+
+#[tokio::test]
+#[ignore = "build go test -c ./agent and set BEE_NATIVE_BRIDGE_TEST_BINARY"]
+async fn native_login_progress_open_cancel_through_real_go_transport() {
+    let program = PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
+    let audit = tempfile::tempdir().unwrap();
+    let audit_path = audit.path().join("audit.json");
+    let bytes = std::fs::read(&program).unwrap();
+    let bridge = Bridge::start(LaunchSpec {
+        program,
+        bundle: None,
+        args: vec![
+            "-test.run=^TestDesktopNativeBridgeProcess$".into(),
+            format!("-bee-native-fixture-audit={}", audit_path.display()),
+            "-bee-native-login-fixture".into(),
+        ],
+        source: BuildSource {
+            revision: "controlled-go-fixture".into(),
+            tee_revision: "controlled-go-fixture".into(),
+            target: "controlled-go-fixture".into(),
+            goos: if cfg!(target_os = "macos") {
+                "darwin"
+            } else {
+                std::env::consts::OS
+            }
+            .into(),
+            goarch: match std::env::consts::ARCH {
+                "aarch64" => "arm64",
+                "x86_64" => "amd64",
+                arch => arch,
+            }
+            .into(),
+            go: "controlled-go-fixture".into(),
+            bee_version: "native-fixture".into(),
+            binary_sha256: format!("{:x}", Sha256::digest(bytes)),
+        },
+        timeout: Duration::from_secs(15),
+    });
+    timeout(Duration::from_secs(20), async {
+        while bridge.status().state == BridgePhase::Starting {
+            sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(
+        bridge.status().state,
+        BridgePhase::Ready,
+        "{:?}",
+        bridge.status().error
+    );
+
+    let metadata = bridge.status().metadata.unwrap();
+    assert!(metadata.capabilities.iter().any(|m| m == "authorize_progress"));
+    assert!(metadata.capabilities.iter().any(|m| m == "authorize_open"));
+    let snapshot = bridge.account_snapshot(SupplyPlatform::Openai, false).await.unwrap();
+    let account = &snapshot.result["account"];
+    let operation = bridge.authorize_start(crate::authorize_protocol::AuthorizeRequest {
+        platform: SupplyPlatform::Openai,
+        source: serde_json::from_value(account["candidate"]["source"].clone()).unwrap(),
+        expected_revision: account["revision"].as_u64().unwrap(),
+    }).await.unwrap();
+    let id = operation.result["operation"]["id"].as_str().unwrap().to_string();
+    let waiting = timeout(Duration::from_secs(10), async {
+        loop {
+            let reply = bridge.authorize_progress(id.clone()).await.unwrap();
+            if reply.result["progress"]["actions"]["open"] == true { break reply.result["progress"].clone(); }
+            sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    assert_eq!(waiting["phase"], "waiting_authorization");
+    for _ in 0..2 {
+        let receipt = bridge.authorize_open(id.clone()).await.unwrap();
+        assert_eq!(receipt.result["open"]["opened"], true);
+        assert_eq!(receipt.result["open"]["progress"]["operation"]["id"], id);
+        let public = receipt.result.to_string();
+        assert!(!public.contains("PRIVATE_LOGIN_STATE") && !public.contains("oauth/authorize"));
+    }
+    bridge.authorize_cancel(id.clone()).await.unwrap();
+    let stopped = timeout(Duration::from_secs(10), async {
+        loop {
+            let reply = bridge.authorize_progress(id.clone()).await.unwrap();
+            assert_eq!(reply.result["progress"]["actions"]["open"], false);
+            if reply.result["progress"]["phase"] == "finished" { break reply.result["progress"].clone(); }
+            sleep(Duration::from_millis(10)).await;
+        }
+    }).await.unwrap();
+    assert_eq!(stopped["operation"]["state"], "cancelled");
+    assert!(stopped["sequence"].as_u64().unwrap() > waiting["sequence"].as_u64().unwrap());
+    let refused = bridge.authorize_open(id).await.unwrap();
+    assert_eq!(refused.result["open"]["opened"], false);
+    bridge.stop().await.unwrap();
+}

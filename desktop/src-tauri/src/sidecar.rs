@@ -40,6 +40,7 @@ pub struct Metadata {
     pub os: String,
     pub arch: String,
     pub instance: String,
+    pub capabilities: Vec<String>,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -343,6 +344,9 @@ fn validate_method_result(
             })?;
             protocol::validate_account_operation(result, platform)
         }
+        "authorize_progress" | "authorize_open" => {
+            crate::authorize_protocol::validate_login_reply(result, request.params["operation_id"].as_str().unwrap_or(""), request.method == "authorize_open")
+        }
         "authorize_start" | "authorize_status" | "authorize_cancel" => {
             crate::authorize_protocol::validate_authorize_reply(
                 result,
@@ -408,6 +412,7 @@ fn validate_method_result(
 }
 
 fn read_platform(request: &Request) -> Option<&str> {
+    if request.method == "authorize_progress" { return Some("openai"); }
     if !matches!(
         request.method,
         "account_detect" | "account_snapshot" | "supply_status"
@@ -770,6 +775,18 @@ impl Bridge {
     pub async fn authorize_cancel(&self, operation_id: String) -> Result<BridgeReply, BridgeError> {
         self.authorize_operation("authorize_cancel", operation_id)
             .await
+    }
+    pub async fn authorize_progress(&self, operation_id: String) -> Result<BridgeReply, BridgeError> {
+        self.authorize_extension("authorize_progress", operation_id).await
+    }
+    pub async fn authorize_open(&self, operation_id: String) -> Result<BridgeReply, BridgeError> {
+        self.authorize_extension("authorize_open", operation_id).await
+    }
+    async fn authorize_extension(&self, method: &'static str, operation_id: String) -> Result<BridgeReply, BridgeError> {
+        crate::authorize_protocol::validate_operation_id(&operation_id)?;
+        let reply = self.request(method, serde_json::json!({"operation_id":operation_id}), Duration::from_secs(15)).await?;
+        crate::authorize_protocol::validate_login_reply(&reply.result, &operation_id, method == "authorize_open")?;
+        Ok(reply)
     }
     async fn authorize_operation(
         &self,
@@ -1322,6 +1339,7 @@ async fn session(
             os: hello.os,
             arch: hello.arch,
             instance: instance.clone(),
+            capabilities: hello.capabilities,
         }),
         None,
     ));

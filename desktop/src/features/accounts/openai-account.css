@@ -1,0 +1,34 @@
+.auto-service-accounts .native-account-row.openai-account{display:block;padding:22px 19px;color:#2c2b28;--oa-muted:#69665f;--oa-line:#eae7e1;--oa-accent:#805a20;--oa-soft:#faf6ed;--oa-good:#37674e;--oa-danger:#a24231}
+[data-theme=dark] .auto-service-accounts .openai-account{color:#e5e4df;--oa-muted:#ada99f;--oa-line:#45433d;--oa-accent:#d2af75;--oa-soft:#373024;--oa-good:#8fc5a6;--oa-danger:#f2a38f}
+.openai-account .oa-head{display:flex;align-items:flex-start;gap:11px}
+.openai-account .oa-icon{width:32px;height:32px;display:grid;place-items:center;flex:none;border:1px solid var(--oa-line);border-radius:7px}
+.openai-account .oa-icon svg{width:20px;height:20px}
+.openai-account .oa-identity{flex:1;min-width:0}
+.openai-account .oa-platform{display:flex;align-items:center;gap:8px;min-height:24px}
+.openai-account h3{font-size:16px;line-height:24px;font-weight:600;margin:0}
+.openai-account .oa-platform .badge{font-size:10px}
+.openai-account .oa-identity p{font-size:11px;color:var(--oa-muted);margin:4px 0 0;overflow-wrap:anywhere}
+.openai-account .oa-head>.ui-button{padding-inline:4px;color:var(--oa-muted)}
+.openai-account .oa-body{margin:12px 0 0 43px}
+.openai-account .oa-title{margin:0;font-size:13px;font-weight:400;line-height:22px}
+.openai-account .oa-note{margin:8px 0 0;color:var(--oa-muted);font-size:12px;line-height:20px;overflow-wrap:anywhere}
+.openai-account .oa-good{color:var(--oa-good)}
+.openai-account .oa-error{color:var(--oa-danger)}
+.openai-account .oa-steps{margin:18px 0 16px 43px;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:10px;min-height:20px}
+.openai-account .oa-steps li{display:flex;align-items:center;gap:6px;font-size:12px;line-height:20px;color:var(--oa-muted)}
+.openai-account .oa-steps li:not(:last-child):after{content:'';height:1px;width:18px;background:var(--oa-line);margin-left:4px}
+.openai-account .oa-step-dot{display:grid;place-items:center;width:20px;height:20px;flex:none;border-radius:50%;border:1px solid var(--oa-line);font-size:10px}
+.openai-account .done .oa-step-dot{color:var(--oa-good);border-color:var(--oa-good)}
+.openai-account .current .oa-step-dot{color:var(--oa-accent);border-color:var(--oa-accent);background:var(--oa-soft)}
+.openai-account .failed .oa-step-dot{color:var(--oa-danger);border-color:var(--oa-danger)}
+.openai-account .oa-with-steps{margin-top:0;min-height:72px}
+.openai-account .oa-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0 43px;min-height:34px}
+.openai-account:has(.oa-steps) .oa-actions{margin-top:8px}
+.openai-account .oa-actions button{min-height:32px;padding:5px 12px;border-radius:6px;font-size:12px}
+.openai-account .oa-help{font-size:12px;color:var(--oa-muted);max-width:420px;margin:6px 0 0}
+.openai-account .oa-evidence,.openai-account .oa-quota{margin:14px 0 0 43px;font-size:12px}
+.openai-account .oa-evidence summary,.openai-account .oa-quota summary{color:var(--oa-muted);cursor:pointer}
+.openai-account .oa-quota>.native-account-quota{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;max-width:none;width:auto}
+.openai-account .oa-quota details{margin-top:12px}
+@media(max-width:950px){.auto-service-accounts .native-account-row.openai-account{padding:18px 16px}}
+@media(max-width:600px){.openai-account .oa-steps{row-gap:10px}.openai-account .oa-quota>.native-account-quota{grid-template-columns:1fr}.openai-account .oa-actions>div{min-width:0}}

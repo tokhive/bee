@@ -460,6 +460,20 @@ pub async fn authorize_cancel(
 ) -> Result<BridgeReply, BridgeError> {
     bridge.authorize_cancel(operation_id).await
 }
+#[tauri::command]
+pub async fn authorize_progress(
+    bridge: tauri::State<'_, Bridge>,
+    operation_id: String,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.authorize_progress(operation_id).await
+}
+#[tauri::command]
+pub async fn authorize_open(
+    bridge: tauri::State<'_, Bridge>,
+    operation_id: String,
+) -> Result<BridgeReply, BridgeError> {
+    bridge.authorize_open(operation_id).await
+}
 
 #[tauri::command]
 pub fn autostart_status(

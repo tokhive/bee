@@ -2,7 +2,7 @@ import {normalizeFailure,decodeBridgeError,validFailureTime,requestMethods,retry
 export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
   state: 'starting' | 'ready' | 'failed' | 'stopped';
-  metadata?: { bee_version: string; os: string; arch: string; instance: string };
+  metadata?: { bee_version: string; os: string; arch: string; instance: string; capabilities?: string[] };
   error?: BridgeError;
 }
 export interface BridgeReply { protocol: 1; id: string; instance: string; result: { alive: true } }

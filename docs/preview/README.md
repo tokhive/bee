@@ -116,3 +116,17 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 ## 状态详情收敛（2026-11-09）
 
 按用户确认同步主预览和新版对比页，旧 draft 保留。移除重复正文的通用详情，暂停／独立连接条件直接展示；错误证据、原操作核对记录与可信细分准备进度按需展开，账号详情及额度区保留。修改前复用 184032 主预览与 182012 对比页完整快照。本轮冻结于 [历史版本](history/20261109-184518-concise-state-details/index.html?scene=intake-retry-paused)，包含两份新版与旧 draft。仅调整静态呈现，不改变业务操作。
+
+## Claude macOS 待评审草稿（2026-11-10）
+
+[完整首次登录](draft.html?scene=claude-onboarding) · [等待终端登录](draft.html?scene=claude-first-login-wait) · [打开终端失败](draft.html?scene=claude-first-login-failed) · [找不到窗口](draft.html?scene=claude-terminal-lost) · [冻结版](history/20261110-115235-claude-terminal-review/draft.html?scene=claude-first-login-wait)
+
+本轮在 draft.html 保留原有 OpenAI 草稿及未提交的两级工具栏调整，新增 216 个 Claude 直接入口，共 430 个入口。Claude 共用流程取自最新主预览的连续步骤与完成反馈，按接入、接单、授权问题、变更与恢复分组；删除不适用的 Codex 取链／补开页面，只为 macOS Terminal 登录提供差异呈现。主预览 index.html 未修改，Claude HTML 待用户评审；不扩展 OpenAI 正式实现任务。
+
+已确认文本差异：Bee 自动打开 Terminal，用户按终端／浏览器提示完成；等待页仅有取消登录，不虚构返回终端能力；找不到窗口提示从 Dock 切换。打开终端被明确拒绝时允许安全重试，回执不明沿共用原操作核对。首次未核验身份时不展示虚构账号 A。配置目录、存储方式、保存／取消、读取核验、重登确认、错误信息都沿用共用结构，选项按实际平台支持填写；当前以 macOS 钥匙串为默认，文件读取与官方登录存储不一致时不模拟静默切换。
+
+全部为静态模拟：不打开真实终端、浏览器授权，不读取凭证，不调用业务接口。点击产品操作后由场景预设模拟官方结果；直接选中阶段保持停留。套餐和额度均为合成示例，不能据此承诺真实字段或数值。其他操作的长期未知／归属恢复边界继承主预览，未用伪成功填补真实接口缺口；非 macOS 登录未验收。
+
+验证：216 个 Claude 直接入口渲染、无意外定时推进及无 Codex 打开页面按钮；浏览器演练首次登录→核验→确认接入→准备→完成、打开失败重试、取消到终态、同号重登仍暂停、配置目录保存及重登告知、主题／尺寸保留输入、切场景取消旧任务。深色紧凑与浅色宽屏目视检查；完整冻结版独立打开。此记录不宣称真实业务通过。
+
+修改前完整保存 20261110-114307-before-claude-draft（含已有未提交草稿和当时主预览）；交付冻结为 20261110-115235-claude-terminal-review。两者均为完整内联 HTML。原 OpenAI 工作草稿仍保留，Claude 单独模板复用最新主预览以避免覆盖其他会话修改。

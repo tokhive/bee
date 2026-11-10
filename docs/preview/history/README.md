@@ -38,3 +38,12 @@
 | 2026-11-09 18:40:32 | 将已认可连续流程新版纳入唯一主预览，同步设计记录与场景清单；冻结目录包含旧版对比文件 | 已认可界面与交互；真实登录与接口能力未据此验收 | [主预览冻结版](20261109-184032-approved-continuous-flows/index.html?scene=intake-candidate-allowed) |
 
 | 2026-11-09 18:45:18 | 状态详情按新增信息展示：正文直接说明暂停条件，去掉重复折叠；保留有效错误证据、核对记录与细分进度。冻结主预览、对比页及旧版 | 已按确认建议修改；静态模拟，不代表真实接口验收 | [打开](20261109-184518-concise-state-details/index.html?scene=intake-retry-paused) |
+
+## 20261110-115235 Claude 终端登录与共用流程（待评审）
+
+- 时间：2026-11-10，Asia/Shanghai。
+- 来源：已确认 Claude 差异文本、最新已认可 OpenAI 主预览；仅更新工作草稿，不更新主入口。
+- 修改前：[完整草稿](20261110-114307-before-claude-draft/draft.html) · [当时主预览](20261110-114307-before-claude-draft/index.html)。包含原有未提交工具栏调整，按修改前工作状态归档，非新增认可记录。
+- 交付：[Claude 等待登录](20261110-115235-claude-terminal-review/draft.html?scene=claude-first-login-wait) · [终端打开失败](20261110-115235-claude-terminal-review/draft.html?scene=claude-first-login-failed) · [完整流程](20261110-115235-claude-terminal-review/draft.html?scene=claude-onboarding)。评审状态：待评审。
+- 新增 216 个 Claude 入口，沿用共用账号流程；macOS 终端等待、启动失败与窗口定位引导差异化。历史文件独立内联，可在预览根目录使用现有本地 HTTP 服务打开。
+- 验证与真实业务边界见上级 README 的 Claude 专项；固定延时仅模拟外部结果。

@@ -503,6 +503,511 @@ for(const d of [detail,confirmDialog])d.addEventListener('cancel',e=>{if(!oaPane
 legacyReset('running');parent.postMessage({type:'bee-design-ready'},'*');
 </script></body></html>
 </template>
+<template id="claude-template">
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>
+*{box-sizing:border-box}html,body{height:100%;margin:0}html{color-scheme:light;--paper:#fff;--canvas:#f7f8fa;--side:#f7f6f3;--panel:#f8f7f4;--ink:#2c2b28;--muted:#69665f;--line:#eae7e1;--accent:#ba8d49;--accent-ink:#805a20;--accent-soft:#faf6ed;--primary:#30312e;--on-primary:#fff;--good:#37674e;--danger:#a24231;--overlay:#202b3e40;font:13px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--paper);-webkit-font-smoothing:antialiased}html[data-theme=dark]{color-scheme:dark;--paper:#242421;--canvas:#181a1e;--side:#20201e;--panel:#2a2a26;--ink:#e5e4df;--muted:#ada99f;--line:#45433d;--accent-ink:#d2af75;--accent-soft:#373024;--primary:#e5e3dc;--on-primary:#272721;--good:#8fc5a6;--danger:#f2a38f;--overlay:#0008}button,input,select{font:inherit}button{cursor:pointer}button,a,input,select,summary{touch-action:manipulation}button:disabled{opacity:.55;cursor:not-allowed}button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--accent-ink);outline-offset:3px}svg{width:16px;height:16px;flex:none;stroke:currentColor;stroke-width:1.6;fill:none;stroke-linecap:round;stroke-linejoin:round}button{min-height:32px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:5px 12px;display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;transition:none}button:hover:not(:disabled){background:var(--panel);border-color:var(--muted)}button.primary{background:var(--primary);color:var(--on-primary);border-color:var(--primary)}button.primary:hover:not(:disabled){opacity:.88;background:var(--primary)}button.quiet{border-color:transparent;background:transparent;color:var(--muted);padding-inline:4px}button.quiet:hover:not(:disabled){color:var(--ink);background:var(--panel);border-color:transparent}button.icon{padding:7px;width:32px;min-width:32px}.layout{height:100%;display:grid;grid-template-columns:178px minmax(0,1fr);grid-template-rows:52px minmax(0,1fr) 28px}aside{grid-row:1/4;background:var(--side);border-right:1px solid var(--line);padding:26px 12px 16px;display:flex;flex-direction:column}.brand{display:flex;align-items:center;gap:10px;padding:0 10px;margin-bottom:27px;font-size:22px;font-weight:650;letter-spacing:-.8px}.brand img{width:30px;height:30px}nav{display:grid;gap:6px}nav button{justify-content:start;gap:11px;height:36px;border-color:transparent;background:transparent;color:var(--muted);padding-left:13px;font-size:13px}nav button.active{background:var(--paper);border-color:var(--line);color:var(--ink);box-shadow:0 1px 3px #00000008}nav button.active svg{color:var(--accent-ink)}.side-bottom{margin-top:auto;padding:14px 6px 0;color:var(--muted);font-size:11px}.side-bottom p{margin:0 0 7px}.side-device{display:flex;gap:9px;align-items:center;border-top:1px solid var(--line);padding-top:15px;margin-top:17px}.side-device svg{width:25px;height:25px;padding:4px;border:1px solid var(--line);background:var(--paper);border-radius:5px}.side-device small{display:block;color:var(--muted);font-size:10px}.window-bar{border-bottom:1px solid var(--line);display:flex;justify-content:end;align-items:center;padding:0 24px;gap:6px;font-size:11px;color:var(--muted)}main{padding:26px 29px 20px;overflow-y:auto;min-width:0;scrollbar-gutter:stable}footer{border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;padding:0 22px;font-size:9px;color:var(--muted);background:var(--panel)}h1{font-size:24px;line-height:1.3;letter-spacing:-.5px;margin:0;font-weight:650}h2{font-size:16px;margin:0;line-height:1.5;font-weight:600}h3{font-size:13px;margin:0 0 12px}.page-head{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:6px}.count{color:var(--muted);font-size:12px}.page-subtitle{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:19px}.page-subtitle p{margin:0;color:var(--muted);font-size:12px}.page-subtitle button{font-size:11px;min-height:24px;padding-block:0}.run-note{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:11px 14px;background:var(--panel);border-radius:6px;margin-bottom:18px;font-size:12px}.run-note span{min-width:0}.accounts{border:1px solid var(--line);border-radius:8px;overflow:hidden}.account{padding:19px 19px 17px;min-width:0}.account+.account{border-top:1px solid var(--line)}.account-head{display:flex;align-items:flex-start;gap:11px}.platform-icon{width:32px;height:32px;flex:none;border:1px solid var(--line);background:var(--panel);border-radius:7px;display:flex;align-items:center;justify-content:center}.platform-icon.claude{color:var(--accent-ink)}.platform-icon svg{width:20px;height:20px}.identity{flex:1;min-width:0}.platform-line{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.badge{font-size:10px;color:var(--muted);border:1px solid var(--line);border-radius:3px;padding:0 5px}.identifier{font-size:11px;color:var(--muted);margin:4px 0 0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.actions{display:flex;gap:7px;align-items:center;flex:none}.actions button{font-size:12px}.body-copy{margin:12px 0 0 43px}.status{margin:0;font-size:13px;display:flex;align-items:start;gap:6px;flex-wrap:wrap}.status svg{margin-top:2px;width:14px;height:14px}.status.good{color:var(--good)}.status.problem{color:var(--accent-ink)}.status.error{color:var(--danger)}.reason-list{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:3px 0;color:var(--muted);font-size:12px;line-height:1.7}.reason-list li+li:before{content:'；'}.muted{color:var(--muted)}.quota{margin:14px 0 0 43px;display:grid;grid-template-columns:1fr 1fr;gap:16px}.quota-label{display:flex;justify-content:space-between;gap:8px;font-size:11px;color:var(--muted);margin-bottom:5px;font-variant-numeric:tabular-nums}.quota-label strong{font-weight:400;color:var(--ink)}.bar{height:4px;background:var(--line);border-radius:8px;overflow:hidden}.fill{height:100%;background:var(--accent);border-radius:8px}.unknown-quota{margin:10px 0 0 43px;color:var(--muted);font-size:11px}.explanation{margin:9px 0 0 43px;color:var(--muted);font-size:12px}.condition-list{margin:9px 0;padding-left:18px}.condition-list li+li{margin-top:6px}dialog .condition-details{margin-left:0}.explanation summary{cursor:pointer;width:fit-content}.explanation p{margin:7px 0;line-height:1.65;max-width:64ch}.explanation code{display:block;background:var(--panel);padding:8px 10px;border-radius:5px;overflow-wrap:anywhere;color:var(--muted);font-size:11px}.action-help{margin:8px 0 0 43px;font-size:12px;color:var(--muted)}.action-help button{font-size:12px}.privacy{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin:15px 0 0}.privacy svg{width:13px;height:13px}.login-panel{margin:13px 0 0 43px;border-left:2px solid var(--accent);padding:3px 0 2px 13px}.login-panel p{margin:0 0 8px;color:var(--muted);font-size:12px}.login-panel strong{display:block;font-size:13px;font-weight:500;color:var(--ink);margin-bottom:6px}.login-panel button{font-size:12px}.note-marker{display:none;align-items:center;justify-content:center;width:18px;height:18px;background:#805a20;color:white;border-radius:50%;font:11px/1 sans-serif;margin-left:6px;vertical-align:middle}.annotated .note-marker{display:inline-flex}dialog{color:var(--ink);background:var(--paper);border:1px solid var(--line);padding:24px;box-shadow:0 12px 45px #0002;max-height:100%;max-width:100%;overflow:auto;overscroll-behavior:contain}dialog::backdrop{background:var(--overlay)}dialog.sheet{position:fixed;inset:0 0 0 auto;margin:0;width:430px;height:100%;max-height:100%;border-radius:0;border-width:0 0 0 1px}dialog.confirm{width:400px;border-radius:10px}dialog header{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:18px}dialog h2{font-size:17px}dialog p{font-size:13px;line-height:1.65;margin:12px 0;color:var(--muted)}.dialog-subtitle{margin-top:-8px}.facts{margin:17px 0;display:grid;gap:12px}.facts>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px;font-size:12px}.facts dt{color:var(--muted)}.facts dd{margin:0;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}.sheet-section{border-top:1px solid var(--line);padding-top:20px;margin-top:20px}.sheet-section .quota{display:block;margin:0}.sheet-section .quota>div+div{margin-top:16px}.sheet-section .quota p{font-size:11px;margin:6px 0}.sheet-actions{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0}.source summary{font-size:13px;cursor:pointer;line-height:1.8}.source label{display:grid;gap:6px;font-size:12px;margin:14px 0}.source input,.source select{width:100%;min-height:34px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;color:var(--ink);background:var(--paper);font-size:12px}.source input::placeholder{color:var(--muted)}.source small{display:block;color:var(--muted);font-size:11px;line-height:1.65}.dialog-actions{display:flex;justify-content:end;gap:8px;margin-top:22px}.callout{background:var(--panel);padding:11px 13px;border-radius:6px;font-size:12px;line-height:1.7}.callout.warning{background:var(--accent-soft)}#toast{position:fixed;bottom:44px;left:50%;transform:translateX(-50%);background:var(--primary);color:var(--on-primary);padding:8px 14px;border-radius:7px;box-shadow:0 4px 18px #0002;font-size:12px;max-width:80%;pointer-events:none;z-index:20}#toast:empty{display:none}@media(max-width:950px){main{padding:25px 29px 18px}.account{padding:18px 16px}.actions{gap:5px}.actions button{padding-inline:10px}.actions .icon{padding-inline:6px}.platform-line{gap:6px}.identity .identifier{font-size:11px}.quota{gap:18px}.body-copy{margin-top:11px}.page-subtitle{gap:10px}}@media(max-width:720px){.layout{grid-template-columns:140px minmax(0,1fr)}main{padding:20px 16px}.account-head{flex-wrap:wrap}.actions{margin-left:43px}.body-copy,.quota,.explanation,.action-help,.unknown-quota{margin-left:0}.run-note{flex-wrap:wrap}}@media(prefers-reduced-motion:reduce){button{transition:none}}
+
+.quota-reset{margin:14px 0 0 43px;color:var(--muted);font-size:12px}.quota-actions{display:flex;justify-content:space-between;gap:12px;margin:22px 0 0 43px}.sheet .quota-reset{margin-left:0}
+.task-flow{margin:18px 0 16px 43px;display:flex;align-items:center;flex-wrap:wrap;gap:14px 18px}
+.workflow{margin:0;padding:0;list-style:none;display:flex;flex-wrap:wrap;row-gap:10px;min-width:0;max-width:100%}
+.workflow li{display:flex;align-items:center;gap:6px;font-size:12px;line-height:20px;color:var(--muted);white-space:nowrap}
+.workflow li:not(:last-child):after{content:"";width:12px;height:1px;background:var(--line);margin:0 10px 0 4px}
+.step-dot{display:inline-flex;align-items:center;justify-content:center;flex:none;width:20px;height:20px;border:1px solid var(--line);border-radius:50%;font-size:10px;font-weight:500;font-variant-numeric:tabular-nums}
+.step-dot svg{width:12px;height:12px}.workflow .done .step-dot{color:var(--good);border-color:transparent}
+.workflow [aria-current="step"]{color:var(--ink);font-weight:600}.workflow [aria-current="step"] .step-dot{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+button.workflow-action{margin-left:auto;min-height:34px;padding:6px 12px;font-size:12px;flex:none}
+.workflow-hint{margin-left:auto;font-size:11px;color:var(--muted)}
+.sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+.runtime-facts{margin:12px 0 0;display:grid;gap:6px}.runtime-facts>div{display:flex;gap:12px;justify-content:space-between}.runtime-facts dt{color:var(--muted)}.runtime-facts dd{margin:0;color:var(--ink)}
+.sheet .task-flow{margin:20px 0}.sheet .workflow li:not(:last-child):after{width:8px;margin-right:6px;margin-left:0}
+@media(max-width:720px){.task-flow{margin-left:0}}
+@media(pointer:coarse){button.workflow-action{min-height:44px}}
+
+.skip{position:fixed;top:-60px;left:12px;z-index:50;padding:8px;background:var(--paper);color:var(--ink)}.skip:focus{top:8px}
+.status.progress{color:var(--muted)}
+.status.progress svg{animation:progress 1.4s ease-in-out infinite}
+@keyframes progress{50%{opacity:.35}}
+.task-flow{margin-top:18px;margin-bottom:6px;gap:16px}
+.workflow li:not(:last-child):after{width:18px;margin-right:12px}
+.workflow-action{margin-top:2px}
+.account{padding-top:22px;padding-bottom:22px}
+button:disabled{cursor:default}
+@media(prefers-reduced-motion:reduce){.status.progress svg{animation:none}}
+
+/* Claude uses the confirmed numbered steps; OpenAI retains its existing presentation. */
+[data-platform="Claude"] .workflow .done .step-dot{border-color:var(--good);color:var(--good);background:transparent}
+[data-platform="Claude"] .workflow .failed .step-dot{border-color:var(--danger);color:var(--danger);background:transparent}
+[data-platform="Claude"] .workflow .failed{color:var(--danger)}
+[data-platform="Claude"] .workflow .current .step-dot{border-color:var(--accent-ink);color:var(--accent-ink);background:var(--accent-soft)}
+.oa-note{font-size:12px;line-height:1.7;margin:8px 0 0;max-width:64ch}.oa-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}.oa-actions:empty{display:none}
+#oa-save-status{color:var(--danger)}
+/* First-login review only: stable step position and feedback slots. */
+.oa-first-flow .task-flow{margin-top:18px;margin-bottom:16px;min-height:20px}
+.oa-first-flow .body-copy{margin-top:0;min-height:72px}
+.oa-first-flow .oa-actions{min-height:34px;margin-top:8px}
+.oa-first-flow .oa-actions:empty{display:flex}
+
+</style></head><body>
+<a class="skip" href="#main">跳到账号内容</a><div class="layout"><aside><div class="brand"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIiB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM6YzJwYT0iaHR0cDovL2MycGEub3JnL21hbmlmZXN0Ij48bWV0YWRhdGE+PGMycGE6bWFuaWZlc3Q+QUFBV2dtcDFiV0lBQUFBZWFuVnRaR015Y0dFQUVRQVFnQUFBcWdBNG0zRURZekp3WVFBQUFCWmNhblZ0WWdBQUFFZHFkVzFrWXpKdFlRQVJBQkNBQUFDcUFEaWJjUU4xY200Nll6SndZVG94WkRka01ESTRaaTAwTUdSbExUUTFOakl0WWpWaU55MWpPREJqT1dRMVpqWTJOalVBQUFBRGwycDFiV0lBQUFBcGFuVnRaR015WVhNQUVRQVFnQUFBcWdBNG0zRURZekp3WVM1aGMzTmxjblJwYjI1ekFBQUFBTHhxZFcxaUFBQUFSR3AxYldSalltOXlBQkVBRUlBQUFLb0FPSnR4RTJNeWNHRXVhVzVuY21Wa2FXVnVkQzUyTXdBQUFBQVlZekp6YUxBOFZzWkJtV2ZZSE9NOXhXNnFXT0FBQUFCd1kySnZjcU5wWkdNNlptOXliV0YwYldsdFlXZGxMM04yWnl0NGJXeHFhVzV6ZEdGdVkyVkpSSGdzZUcxd09tbHBaRHBoTURrMU1ESTFNeTA1TldabUxUUm1PRFV0T1dOall5MDJZelk1TmpJME9UVTVNR1JzY21Wc1lYUnBiMjV6YUdsd2FIQmhjbVZ1ZEU5bUFBQUI0bXAxYldJQUFBQkJhblZ0WkdOaWIzSUFFUUFRZ0FBQXFnQTRtM0VUWXpKd1lTNWhZM1JwYjI1ekxuWXlBQUFBQUJoak1uTm9uSzIyUGREaVgyZlBRY0pKU0Rlbld3QUFBWmxqWW05eW9tZGhZM1JwYjI1emdxSm1ZV04wYVc5dWEyTXljR0V1YjNCbGJtVmthbkJoY21GdFpYUmxjbk9oYTJsdVozSmxaR2xsYm5SemdhSmpkWEpzZUMxelpXeG1JMnAxYldKbVBXTXljR0V1WVhOelpYSjBhVzl1Y3k5ak1uQmhMbWx1WjNKbFpHbGxiblF1ZGpOa2FHRnphRmdnNHNrQXMzV25iUnNDLzNaVFh0QkltclJzd051NUV1ZFN5Nyt3SjJMNWRZcWtabUZqZEdsdmJuZ2RZMjl0TG1GdWRHaHliM0JwWXk1amJHRjFaR1V1Y0hKdmRtbGtaV1JxY0dGeVlXMWxkR1Z5YzZGNEgyTnZiUzVoYm5Sb2NtOXdhV011YjNKcFoybHVMV052Ym1acFpHVnVZMlZuZFc1cmJtOTNibXRrWlhOamNtbHdkR2x2Ym5obVEyeGhkV1JsSUhCeWIzWnBaR1ZrSUhSb2FYTWdabWxzWlNCaGRDQjBhR1VnY21WeGRXVnpkQ0J2WmlCaElIVnpaWElnWVc1a0lHMWhlU0JvWVhabElHTnlaV0YwWldRZ2IzSWdiVzlrYVdacFpXUWdkR2hsSUdacGJHVWdZMjl1ZEdWdWRITXViWE52Wm5SM1lYSmxRV2RsYm5TaFpHNWhiV1ZtUTJ4aGRXUmxjbUZzYkVGamRHbHZibk5KYm1Oc2RXUmxaUFVBQUFESWFuVnRZZ0FBQUVCcWRXMWtZMkp2Y2dBUkFCQ0FBQUNxQURpYmNSTmpNbkJoTG1oaGMyZ3VaR0YwWVFBQUFBQVlZekp6YUdlRFpNSWV1VFgwMGNRODJwZjNTZDhBQUFDQVkySnZjcVZqWVd4blpuTm9ZVEkxTm1Od1lXUk5BQUFBQUFBQUFBQUFBQUFBQUdSb1lYTm9XQ0QvakFqb2tpcmJyZXpHeUZ5bm5KQTNrdkgrMWh2RS9kK2M2VDRpZ3F0SzFXUnVZVzFsYm1wMWJXSm1JRzFoYm1sbVpYTjBhbVY0WTJ4MWMybHZibk9Cb21WemRHRnlkQmlXWm14bGJtZDBhQmtlQkFBQUFqNXFkVzFpQUFBQUoycDFiV1JqTW1Oc0FCRUFFSUFBQUtvQU9KdHhBMk15Y0dFdVkyeGhhVzB1ZGpJQUFBQUNEMk5pYjNLbFkyRnNaMlp6YUdFeU5UWnBjMmxuYm1GMGRYSmxlRTF6Wld4bUkycDFiV0ptUFM5ak1uQmhMM1Z5Ympwak1uQmhPakZrTjJRd01qaG1MVFF3WkdVdE5EVTJNaTFpTldJM0xXTTRNR001WkRWbU5qWTJOUzlqTW5CaExuTnBaMjVoZEhWeVpXcHBibk4wWVc1alpVbEVlQ3g0YlhBNmFXbGtPak14TnpGaU9EQXpMVFJrTkRFdE5HUXpPUzA1TkRsa0xUTTJZakE1TmpNNU1HRmhZM0pqY21WaGRHVmtYMkZ6YzJWeWRHbHZibk9Eb21OMWNteDRMWE5sYkdZamFuVnRZbVk5WXpKd1lTNWhjM05sY25ScGIyNXpMMk15Y0dFdWFXNW5jbVZrYVdWdWRDNTJNMlJvWVhOb1dDRGl5UUN6ZGFkdEd3TC9kbE5lMEVpYXRHekEyN2tTNTFMTHY3QW5ZdmwxaXFKamRYSnNlQ3B6Wld4bUkycDFiV0ptUFdNeWNHRXVZWE56WlhKMGFXOXVjeTlqTW5CaExtRmpkR2x2Ym5NdWRqSmthR0Z6YUZnZ1VXRDBlRldNdFE5c28rekZPT0hYL0lSOU91R2pCUWhMOUdZUGhhOHFlSldpWTNWeWJIZ3BjMlZzWmlOcWRXMWlaajFqTW5CaExtRnpjMlZ5ZEdsdmJuTXZZekp3WVM1b1lYTm9MbVJoZEdGa2FHRnphRmdnMmkvQ0ltUkpLcTJSV2NRVXIxVGhhQnAyWDdBdmltT1c5MFVWQUs0VUhVaDBZMnhoYVcxZloyVnVaWEpoZEc5eVgybHVabStqWkc1aGJXVnZRVzUwYUhKdmNHbGpJRVpwYkdWelozWmxjbk5wYjI1bE1TNHdMakJyYzNCbFkxWmxjbk5wYjI1bE1pNDBMakFBQUJBNGFuVnRZZ0FBQUNocWRXMWtZekpqY3dBUkFCQ0FBQUNxQURpYmNRTmpNbkJoTG5OcFoyNWhkSFZ5WlFBQUFCQUlZMkp2Y3RLRVdRSVNvZ0VtR0NGWkFnb3dnZ0lHTUlJQmphQURBZ0VDQWhSQTVhQUs3c0k1MEw2NGcvb0dRZ1U5WjFVVEFEQUtCZ2dxaGtqT1BRUURBekJKTVJjd0ZRWURWUVFLRXc1QmJuUm9jbTl3YVdNc0lGQkNRekV1TUN3R0ExVUVBeE1sUVc1MGFISnZjR2xqSUVOdmJuUmxiblFnUTNKbFpHVnVkR2xoYkhNZ1VtOXZkQ0JEUVRBZUZ3MHlOakE0TURjeE9EUXpOVFphRncweU9EQTRNRFl4T1RRek5UWmFNRVF4RnpBVkJnTlZCQW9URGtGdWRHaHliM0JwWXl3Z1VFSkRNU2t3SndZRFZRUURFeUJCYm5Sb2NtOXdhV01nUTJ4aGRXUmxJRU52Ym5SbGJuUWdVMmxuYm1sdVp6QlpNQk1HQnlxR1NNNDlBZ0VHQ0NxR1NNNDlBd0VIQTBJQUJKaDZDbXZMVUJnRkZOVTB2VUtsT1Z0RTZkamQxN0w1U3V3WDBMZW1GaXNCTTNka2QvM2N5anhGQTNRbzVTNDZmWDAvaWhZMFZaN21mYjlLRjcwM3Q1T2pXREJXTUE0R0ExVWREd0VCL3dRRUF3SUhnREFWQmdOVkhTVUVEakFNQmdvckJnRUVBWVBvWGdJQk1Bd0dBMVVkRXdFQi93UUNNQUF3SHdZRFZSMGpCQmd3Rm9BVXpsSGlCSUZPWkZzaitPUEV6NW8rbk1IWFhNSXdDZ1lJS29aSXpqMEVBd01EWndBd1pBSXdNWE1kRko0QmV0TExWWTdPUnVFOW5vcWJiQVpPWm4vYUFyWHlUd0ZBWmZLclB6eEYydlBvSk5mMStVQ2RnMVhHQWpCd1gxemQ5V0dxWWtxbUw1U0ZxdzFReVNqcjF6SmZwSk05KzFyZER3U1BMTU9QT2pLdWlYam9VL3BVVWVHOVJ3bWhZM0JoWkZrTm5nQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBUFpZUUxUK0pWeTZOUkcwZ1lKZmJPM0RqMUJpUUh2STA3QVU1b1VkekNiRENleWpza3dYc1FNUE16ekdUYUFmTkdlTDUrYVl0aEJQdVozdzBGUFBoR25rN0JjPTwvYzJwYTptYW5pZmVzdD48L21ldGFkYXRhPjxyZWN0IHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIiByeD0iMjIuNSIgZmlsbD0iIzE0MTUxNyI+PC9yZWN0PjxnIHRyYW5zZm9ybT0idHJhbnNsYXRlKDIwIDIwKSBzY2FsZSgwLjYpIj48cGF0aCBkPSJNNTAsNiBMODguMSwyOCBMODguMSw3MiBMNTAsOTQgTDExLjksNzIgTDExLjksMjggWiBNMTEuOSwzNi41IGg3Ni4yIHY5IGgtNzYuMiBaIE0xMS45LDU0LjUgaDc2LjIgdjkgaC03Ni4yIFoiIGZpbGw9IiNDOEYwMzEiIGZpbGwtcnVsZT0iZXZlbm9kZCI+PC9wYXRoPjwvZz48L3N2Zz4=" alt="" width="30" height="30"><span>Bee</span></div><nav aria-label="主导航"><button disabled title="本次仅预览 AI 账号页"><span data-icon="home"></span>概览</button><button class="active" aria-current="page"><span data-icon="users"></span>AI 账号</button><button disabled title="本次仅预览 AI 账号页"><span data-icon="pulse"></span>诊断</button><button disabled title="本次仅预览 AI 账号页"><span data-icon="settings"></span>设置</button></nav><div class="side-bottom"><p>● hive.example</p><p id="side-status"></p><div class="side-device"><span data-icon="monitor"></span><span>Bee Desktop<small>设备与平台控制</small></span></div></div></aside><div class="window-bar"><span data-icon="monitor"></span>本机设备</div><main id="main"></main><footer><span>Bee</span><span>Bee 自动运行，按平台管理接单</span></footer></div>
+<dialog class="sheet" id="detail" aria-labelledby="detail-title"></dialog><dialog class="confirm" id="confirm" aria-labelledby="confirm-title"></dialog><div id="toast" role="status" aria-live="polite"></div>
+<script>
+// THROWAWAY UI DISCUSSION PROTOTYPE. No network calls, credentials, or persistence.
+const $=s=>document.querySelector(s);const main=$('#main'),detail=$('#detail'),confirmDialog=$('#confirm');
+const paths={home:'M3 10l9-7 9 7v10H3z M9 20v-7h6v7',users:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M16 3a4 4 0 010 8 M22 21v-2a4 4 0 00-3-3.87 M13 7a4 4 0 11-8 0 4 4 0 018 0',pulse:'M2 12h4l3-8 5 16 3-8h5',settings:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',monitor:'M3 3h18v13H3z M8 21h8 M12 16v5',arrow:'M5 12h14 M13 6l6 6-6 6',check:'M5 12l4 4L19 6',pause:'M8 5v14 M16 5v14',alert:'M12 3L2 21h20z M12 9v5 M12 17v.1',shield:'M12 3l8 3v6c0 5-8 9-8 9s-8-4-8-9V6z M8 12l3 3 5-6',spark:'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',sun:'M12 2v20 M2 12h20 M5 5l14 14 M5 19L19 5',close:'M6 6l12 12 M18 6L6 18'};
+function icon(name){return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${paths[name]||paths.alert}"/></svg>`;}
+document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
+const marker=()=>'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let state,detailPlatform=null,returnFocus=null,confirmFocus=null,toastTimer;
+const pendingTimers=new Set();
+function after(a,delay,run){const version=a.taskVersion;const timer=setTimeout(()=>{pendingTimers.delete(timer);if(state.accounts.includes(a)&&a.taskVersion===version)run();},delay);pendingTimers.add(timer);}
+function cancelPending(){pendingTimers.forEach(clearTimeout);pendingTimers.clear();}
+
+const expandedReasons=new Set();
+const account=name=>({name,selected:false,candidate:false,paused:true,changed:false,error:false,stale:false,expired:false,login:false,loginFailed:false,checking:false,syncing:false,uncertain:false,reconciling:false,quotaBlocked:false,journey:null,needsStart:false,needsStop:false,stopCompleted:false,authorizationComplete:false,reviewed:false,changeConfirmed:false,id:name==='Claude'?'bbbbbbbbbbbbbbbb':'cccccccccccccccc',candidateId:name==='Claude'?'bbbbbbbbbbbbbbbb':'cccccccccccccccc',source:'',store:'file'});
+
+// Quota review: receiving preference stays independent of quota availability.
+let quotaReview=null;
+function quotaReviewKey(){return `quota-${quotaReview.phase}-${quotaReview.paused?'paused':'allowed'}${detail.open?'-detail':''}`;}
+function quotaReviewStatus(){return quotaReview.paused?'已暂停':quotaReview.phase==='available'?'可接单':quotaReview.phase==='checking'?'正在核验额度…':'额度已耗尽';}
+function quotaReviewData(){
+ const q=quotaReview,checking=q.phase==='checking',available=q.phase==='available';
+ return `<div class="quota">${[['5 小时',available?0:100],['7 日',20]].map(([label,used])=>`<div><div class="quota-label"><span>${label}${checking?'（上次记录）':''}</span><strong>已用 ${used}%</strong></div><div class="bar" role="progressbar" aria-label="${label}已用额度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${used}"><div class="fill" style="width:${used}%"></div></div></div>`).join('')}</div><p class="quota-reset">${checking?'额度窗口已重置，正在核验可用额度。':q.phase==='unknown'?'恢复时间暂不可用':available?'5 小时窗口已重置':'预计恢复：今天 20:30'}</p>`;
+}
+function quotaReviewToggle(){return `<button class="primary" data-quota-action="toggle">${quotaReview.paused?'恢复接单':'暂停接单'}</button>`;}
+function quotaReviewDraw(){
+ const status=quotaReviewStatus();
+ main.innerHTML=`<div class="page-head"><h1>AI 账号</h1><span class="count">1 个已接入</span></div><div class="page-subtitle"><p>接入本机账号，管理平台接单。</p></div><div class="accounts"><section class="account" aria-label="Claude 账号"><div class="account-head"><span class="platform-icon">${icon('spark')}</span><div class="identity"><div class="platform-line"><h2>Claude</h2><span class="badge">Plus</span></div><p class="identifier">已接入账号 A</p></div><button class="quiet icon" data-quota-action="details" aria-label="Claude 详情">${icon('arrow')}</button></div><div class="body-copy"><p class="status ${status==='可接单'?'good':''}" role="status">${icon(quotaReview.paused?'pause':status==='可接单'?'check':'pulse')}<span>${status}</span></p></div>${quotaReviewData()}<div class="quota-actions">${quotaReviewToggle()}<button data-quota-action="details">查看额度</button></div></section></div><p class="privacy">${icon('shield')}授权信息保留在本机</p>`;
+ $('#side-status').textContent=status;
+ if(detail.open)quotaReviewDrawDetail();
+ parent.postMessage({type:'bee-quota-position',scene:quotaReviewKey()},'*');
+}
+function quotaReviewDrawDetail(){
+ detail.innerHTML=`<header><h2 id="detail-title">Claude 账号详情</h2><button class="quiet icon" data-quota-action="close" aria-label="关闭详情">${icon('close')}</button></header><dl class="facts"><div><dt>已接入账号</dt><dd>A</dd></div><div><dt>订阅套餐</dt><dd>Pro</dd></div></dl><p class="status" role="status">${quotaReviewStatus()}</p><div class="sheet-actions">${quotaReviewToggle()}</div><section class="sheet-section"><h3>额度与重置</h3>${quotaReviewData()}<p class="muted">7 日窗口重置时间暂不可用。</p></section>`;
+}
+function quotaReviewReset(scene){
+ cancelPending();clearTimeout(toastTimer);$('#toast').textContent='';
+ detail.close();confirmDialog.close();detailPlatform=null;expandedReasons.clear();
+ const [,phase,preference,panel]=scene.split('-');
+ quotaReview={phase,paused:preference==='paused'};
+ quotaReviewDraw();
+ if(panel==='detail'){quotaReviewDrawDetail();detail.showModal();quotaReviewDraw();}
+}
+function quotaReviewClose(){detail.close();quotaReviewDraw();main.querySelector('[data-quota-action="details"]')?.focus();}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-quota-action]');if(!b||!quotaReview)return;
+ if(b.dataset.quotaAction==='details'){quotaReviewDrawDetail();detail.showModal();quotaReviewDraw();detail.querySelector('[data-quota-action="close"]').focus();}
+ if(b.dataset.quotaAction==='close')quotaReviewClose();
+ if(b.dataset.quotaAction==='toggle'){
+  const inDetail=detail.open;quotaReview.paused=!quotaReview.paused;quotaReviewDraw();
+  (inDetail?detail:main).querySelector('[data-quota-action="toggle"]').focus();
+  toast(quotaReview.paused?'已暂停接单':quotaReview.phase==='available'?'已恢复接单':quotaReview.phase==='checking'?'已允许接单，等待额度核验':'已允许接单，等待额度恢复');
+ }
+});
+detail.addEventListener('cancel',e=>{if(!quotaReview)return;e.preventDefault();e.stopImmediatePropagation();quotaReviewClose();});
+
+function reset(scene){
+ if(scene.startsWith("quota-")){quotaReviewReset(scene);return;}
+ quotaReview=null;
+ cancelPending();
+ expandedReasons.clear();
+ state={scene,running:true,connection:'connected',accounts:[account('Claude'),account('OpenAI')]};
+ const a=state.accounts[0];
+ if(scene==='candidate')a.candidate=true;
+ if(!['empty','candidate'].includes(scene)){a.selected=true;a.candidate=true;}
+ if(['running','paused','error','error-paused','expired','reconnecting','quota','uncertain','stale'].includes(scene)){state.running=true;state.connection='connected';}
+ a.paused=!['running','relogin-different','error','expired','reconnecting','quota'].includes(scene);
+ if(scene==='relogin-different')a.loginResultId='ffffffffffffffff';
+ if(['empty','candidate','selected'].includes(scene)){a.journey='onboarding';a.needsStart=false;}
+ if(scene==='change'){a.changed=true;a.candidateId='ffffffffffffffff';a.journey='change';a.needsStart=false;}
+ if(scene==='error'||scene==='error-paused'){a.error=true;a.journey='source';}
+ if(scene==='expired'){a.paused=true;a.expired=true;a.journey='authorization';a.needsStop=false;a.needsStart=false;}
+ if(scene==='reconnecting')state.connection='reconnecting';
+ if(scene==='quota')a.quotaBlocked=true;
+ if(scene==='uncertain'){a.uncertain=true;a.changed=true;a.candidateId='ffffffffffffffff';}
+ if(scene==='stale')a.stale=true;
+ detail.close();confirmDialog.close();detailPlatform=null;clearTimeout(toastTimer);$('#toast').textContent='';render();
+}
+function synchronized(a){return a.selected&&state.running&&state.connection==='connected'&&!a.syncing&&!a.checking&&!a.error&&!a.expired&&!a.changed&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed;}
+function canStart(){return state.accounts.some(a=>a.selected&&!a.changed&&!a.error&&!a.expired&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed&&!a.checking);}
+function report(){
+ parent.postMessage({type:'bee-design-state',running:state.running,canStart:canStart(),selected:state.accounts.filter(a=>a.selected).length,login:state.accounts.some(a=>a.login),error:state.accounts.some(a=>a.error),checking:state.accounts.some(a=>a.checking),syncing:state.running&&state.connection==='connecting'||state.accounts.some(a=>a.syncing),reconnecting:state.connection==='reconnecting',resolving:state.accounts.some(a=>a.uncertain&&a.reconciling),quotaBlocked:state.accounts.some(a=>a.quotaBlocked),stale:state.accounts.some(a=>a.stale),names:state.accounts.map(a=>a.name+'：'+status(a).text).join('；')},'*');
+}
+function status(a){
+ if(a.uncertain)return{text:a.reconciling?'正在核对原操作结果…':'操作结果待核对',kind:'problem'};
+ if(a.login)return{text:'等待官方登录…',kind:'progress'};
+ if(a.loginFailed)return{text:'未找到官方客户端',kind:'error'};
+ if(a.stale)return{text:'状态待更新',kind:'problem'};
+ if(a.error)return{text:a.selected?'不能接单':'登录读取失败',kind:'error'};
+ if(a.checking)return{text:'正在核验账号…',kind:'progress'};
+ if(a.expired)return{text:'授权已过期',kind:'error'};
+ if(a.changed)return{text:'发现不同账号',kind:'problem'};
+ if(!a.selected)return{text:a.candidate?'已有登录，尚未接入':'所选位置未找到登录',kind:''};
+ if(!state.running)return{text:'贡献尚未启动',kind:''};
+ if(state.connection==='reconnecting')return{text:'正在重连…',kind:'problem'};
+ if(state.connection==='connecting')return{text:'正在连接 Hive…',kind:'problem'};
+ if(a.syncing)return{text:'正在准备账号…',kind:'progress'};
+ if(a.quotaBlocked)return{text:'额度已耗尽',kind:'problem'};
+ if(a.paused)return{text:'已暂停',kind:''};
+ return{text:'可接单',kind:'good'};
+}
+// Display paths describe only the current task. Independent account/runtime facts stay independent.
+function workflowState(a){
+ if(!a.journey||a.uncertain||a.stale||state.connection==='reconnecting')return null;
+ const steps=[],add=(key,label,done)=>steps.push({key,label,done});
+ if(a.journey==='onboarding'){
+  add('login','登录',a.candidate&&!a.error&&!a.checking);
+  add('select','确认接入',a.selected);
+ }
+ if(a.journey==='source'){
+  add('repair','修复读取',!a.error);
+  add('verify','核验登录',!a.error&&!a.checking);
+ }
+ if(a.journey==='authorization'||a.journey==='relogin'){
+
+  add('login','重新登录',a.authorizationComplete);
+  add('verify','自动核验',a.authorizationComplete&&!a.checking&&!a.changed);
+ }
+ if(a.journey==='change'){
+  add('review','核对账号',a.reviewed);
+  add('change','确认换号',a.changeConfirmed);
+ }
+ if(a.journey==='onboarding'){
+
+  add('sync','自动准备',synchronized(a));
+ }else if(a.journey==='change')add('sync','同步核验',a.changeConfirmed&&synchronized(a));
+ if(a.paused||['onboarding','change'].includes(a.journey))add('resume','恢复接单',synchronized(a)&&!a.paused);
+ const current=steps.findIndex(x=>!x.done);
+ if(current<0||steps.length<2)return null;
+ const label={onboarding:'首次接入',source:'读取恢复',authorization:'授权恢复',relogin:'重新登录',change:'账号更换'}[a.journey];
+ const key=steps[current].key;
+ let [action,hint]={repair:['source','打开读取设置'],login:['login','打开官方登录'],select:['select','核对并接入'],review:['details','查看新旧账号'],change:['change','核对并确认'],start:['overview','前往概览'],stop:['overview','前往概览'],resume:['pause','允许接收新任务'],verify:[null,'自动核验中'],sync:[null,'自动同步中']}[key];
+ if(key==='login'&&(a.login||a.checking)){action=null;hint=a.login?'等待登录完成':'自动核验中';}
+
+ if(key==='resume'&&!synchronized(a)){action=null;hint='等待核验完成';}
+ return {steps,current,label,action,hint};
+}
+function workflow(a){
+ const path=workflowState(a);if(!path)return '';
+ const {steps,current,label,action,hint}=path,index=state.accounts.indexOf(a);
+ const actionLabel={source:'打开读取设置',login:a.selected?'重新登录':`登录 ${a.name}`,select:'接入账号',details:'查看新旧账号',change:'确认换号',pause:'恢复接单',overview:'前往概览'}[action];
+ const progress=`<ol class="workflow" aria-label="${a.name} ${label}流程">${steps.map((step,i)=>`<li data-step="${step.key}" class="${i<current?'done':''}" ${i===current?'aria-current="step"':''}><span class="step-dot" aria-hidden="true">${i<current?icon('check'):i+1}</span><span class="step-label">${step.label}</span><span class="sr-only">${i<current?'，已完成':i===current?'，当前步骤':'，尚未完成'}</span></li>`).join('')}</ol>`;
+ return `<div class="task-flow">${progress}${action?`<button class="primary workflow-action" data-action="${action}" data-i="${index}" aria-label="${a.name}：${actionLabel}">${actionLabel}</button>`:''}</div>`;
+}
+function reasons(a){
+ const r=[],primary=status(a).text;
+ if(a.error)r.push(`无法读取 ${a.name==='Claude'?'Claude Code':'OpenAI Code'} 登录文件：系统拒绝访问`);
+ if(a.expired)r.push('登录校验返回 authorization_expired；需通过官方客户端重新授权。');
+ if(a.stale)r.push('上次报告已过期，不能据此判断当前接单状态');
+ if(a.uncertain)r.push('换号请求已发出，但成功结果尚未确认；只能核对原操作，不能重复换号');
+ if(a.quotaBlocked)r.push('5 小时额度窗口已用尽，当前未提供重置时间');
+ if(a.selected&&a.paused&&primary!=='已暂停')r.push(a.stale||a.uncertain?'上次记录：已暂停接单':'已暂停接单');
+ if(!state.running&&a.selected&&primary!=='贡献尚未启动')r.push('贡献尚未启动');
+ return [...new Set(r)];
+}
+function reasonDetails(a,location='row'){
+ const r=reasons(a),key=location+'-'+a.name;
+ if(!r.length&&!a.loginFailed&&!a.changed)return '';
+ if(a.changed&&!a.error&&!a.stale&&!a.uncertain&&!a.login&&!a.loginFailed){
+  return `<details class="explanation condition-details" data-reasons="${key}" ${expandedReasons.has(key)?'open':''}><summary>换号说明</summary><p>本机当前登录的账号与 Bee 已接入的账号不同。原账号选择仍保留，确认后才会更换。</p><dl class="runtime-facts" aria-label="当前运行状态"><div><dt>本机服务</dt><dd>${state.running?'运行中':'尚未启动'}</dd></div><div><dt>平台接单</dt><dd>${a.paused?'已暂停':'未手动暂停'}</dd></div></dl></details>`;
+ }
+ let help='';
+ if(a.error)help+=`<p>请检查登录文件所在目录及系统访问权限。当前账号选择仍保留；读取失败不代表已经登出。</p>${workflowState(a)?.action==='source'?'':`<button class="quiet" data-action="source" data-i="${state.accounts.indexOf(a)}">打开读取设置</button>`}<code>检查：file_read<br>结果：permission_denied=true</code>`;
+ if(a.expired)help+='<p>登录将暂停此平台接单。完成后核验身份；发现不同账号时，需要另行确认换号。</p><code>检查：authorization_expiry<br>结果：expired=true</code>';
+ if(a.stale)help+='<p>正在自动核对。确认当前状态前暂不能恢复接单，不会重复提交账号操作。</p>';
+ if(a.uncertain)help+='<code>操作：confirm_change<br>结果：reconciling，尚未确认成功</code>';
+ if(a.loginFailed)help+='<p>安装对应官方客户端后可重新登录。</p>';
+ return `<details class="explanation condition-details" data-reasons="${key}" ${expandedReasons.has(key)?'open':''}><summary>${r.length?'查看原因（'+r.length+'）':'查看处理方法'}</summary>${r.length?`<ul class="condition-list">${r.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:''}${help}</details>`;
+}
+// Remember user disclosure choices when an action updates the same account.
+document.addEventListener('toggle',event=>{const el=event.target;if(!el.matches?.('details[data-reasons]'))return;const key=el.dataset.reasons;if(el.open)expandedReasons.add(key);else expandedReasons.delete(key);},true);
+function btn(label,action,i,primary=false,disabled=false,extra=''){return `<button ${primary?'class="primary"':''} data-action="${action}" data-i="${i}" ${disabled?'disabled':''} ${extra}>${esc(label)}</button>`;}
+function quota(a,expanded=false){
+ if(!a.selected)return '';
+ if(a.error||a.changed||a.expired||a.checking||a.syncing||a.uncertain||state.connection!=='connected')return '<p class="unknown-quota">额度尚未核对</p>';
+ if(a.stale)return '<p class="unknown-quota">上次额度：5 小时已用 3%，7 日已用 2%。当前待核对。</p>';
+ return `<div class="quota">${[['5 小时',a.quotaBlocked?100:3],['7 日',2]].map(([name,p])=>`<div><div class="quota-label"><span>${name}</span><strong>已用 ${p}%</strong></div><div class="bar" role="progressbar" aria-label="${name}已用额度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p}"><div class="fill" style="width:${p}%"></div></div>${expanded?'<p class="muted">重置时间：未知</p>':''}</div>`).join('')}</div>`;
+}
+function pauseButton(a,i,primary=false){
+ if(!a.selected||!state.running||a.uncertain)return '';
+ if(a.paused&&!synchronized(a))return '';
+ if(workflowState(a)?.action==='pause')return '';
+ return btn(a.paused?'恢复接单':'暂停接单','pause',i,primary&&a.paused);
+}
+function actions(a,i){
+ const guided=workflowState(a)?.action;
+ const button=(label,action,primary=false,disabled=false)=>guided===action?'':btn(label,action,i,primary,disabled);
+ let content='';
+ if(a.uncertain)content=btn(a.reconciling?'正在核对…':'核对结果','reconcile',i,true,a.reconciling);
+ else if(a.login)content=btn('取消登录','cancel-login',i);
+ else if(a.loginFailed)content=button('重新登录','login',true);
+ else if(a.error)content=pauseButton(a,i);
+ else if(a.expired)content=button('重新登录','login',true)+pauseButton(a,i);
+ else if(a.checking)content=pauseButton(a,i);
+ else if(a.changed)content=(guided==='change'?'':button(a.reviewed?'继续换号':'核对换号','details',true))+pauseButton(a,i);
+ else if(!a.selected)content=button(a.candidate?'接入账号':`登录 ${a.name}`,a.candidate?'select':'login',true,a.stale);
+ else if(!state.running)content=button('前往概览','overview',true,a.stale);
+ else if(a.quotaBlocked)content=btn('查看额度','details',i)+pauseButton(a,i);
+ else content=pauseButton(a,i,true);
+ content+=`<button class="quiet icon" data-action="details" data-i="${i}" aria-label="${a.name} 详情" title="${a.name} 详情">${icon('arrow')}</button>${marker(3)}`;
+ return content;
+}
+function render(focusAction){
+ state.accounts.forEach(a=>{if(a.journey&&!a.paused&&synchronized(a))a.journey=null;});
+ const count=state.accounts.filter(a=>a.selected).length;
+ main.innerHTML=`<div class="page-head"><h1>AI 账号${marker(1)}</h1><span class="count">${count} 个已接入</span></div><div class="page-subtitle"><p>接入本机账号，管理平台接单。</p></div><div class="accounts">${state.accounts.map((a,i)=>{const s=status(a);return `<section class="account" data-platform="${a.name}" aria-label="${a.name} 账号"><div class="account-head"><span class="platform-icon ${i===1?'claude':''}">${icon(i?'sun':'spark')}</span><div class="identity"><div class="platform-line"><h2>${a.name}${marker(2)}</h2><span class="badge">${a.selected?(a.changed||a.error||a.expired?'套餐待确认':i?'Pro':'Plus'):'未接入'}</span></div><p class="identifier">${a.selected?'账号 '+a.id:a.candidate?'已发现账号 '+a.candidateId:'通过官方客户端登录'}</p></div><div class="actions">${actions(a,i)}</div></div><div class="body-copy"><p class="status ${s.kind}" aria-live="polite">${icon(s.kind==='progress'?'pulse':s.kind==='good'?'check':s.kind==='error'||s.kind==='problem'?'alert':!a.selected?'users':state.running&&a.paused?'pause':'monitor')}<span>${s.text}</span></p></div>${workflow(a)}${reasonDetails(a)}${quota(a)}${a.selected&&!state.running&&!a.error&&!a.changed&&!a.expired&&!a.uncertain&&!workflowState(a)?'<p class="action-help">在概览开始贡献。</p>':''}</section>`;}).join('')}</div><p class="privacy">${icon('shield')}授权信息保留在本机</p>`;
+ $('#side-status').textContent=!count?'尚未接入 AI 账号':state.accounts.some(a=>a.stale||a.uncertain)?'状态待确认':!state.running?'贡献尚未启动':state.accounts.some(a=>synchronized(a)&&!a.paused&&!a.quotaBlocked)?'可接单':state.connection==='reconnecting'?'正在重连':'接单条件尚未满足';
+ if(focusAction)main.querySelector(focusAction)?.focus({preventScroll:true});
+ report();
+}
+function toast(text){clearTimeout(toastTimer);$('#toast').textContent=text;toastTimer=setTimeout(()=>$('#toast').textContent='',2600);}
+function describeNavigation(destination){parent.postMessage({type:'bee-design-navigation',destination},'*');}
+function closeDetail(){
+ const i=detailPlatform;detail.close();detailPlatform=null;
+ const row=main.querySelector(`[data-platform="${state.accounts[i??0].name}"]`);
+ const fallback=returnFocus?.classList.contains('workflow-action')?(row?.querySelector('.workflow-action')||row?.querySelector('button[aria-label]')):row?.querySelector('button[aria-label]');
+ (returnFocus?.isConnected?returnFocus:fallback)?.focus({preventScroll:true});
+}
+function showDetail(i,source=false){
+ const a=state.accounts[i];
+ if(!detail.open||detailPlatform!==i){
+  if(!detail.open)returnFocus=document.activeElement;
+  if(a.changed&&!a.uncertain){a.reviewed=true;render();}
+  detailPlatform=i;drawDetail();if(!detail.open)detail.showModal();
+ }
+ if(source){detail.querySelector('.source').open=true;detail.querySelector('input')?.focus();}
+}
+function drawDetail(){
+ const i=detailPlatform,a=state.accounts[i],s=status(a),guided=workflowState(a)?.action;
+ const button=(label,action,primary=false,disabled=false)=>guided===action?'':btn(label,action,i,primary,disabled);
+ detail.innerHTML=`<header><h2 id="detail-title">${a.name} 账号详情</h2>${marker(4)}<button class="quiet icon" data-action="close-detail" aria-label="关闭详情">${icon('close')}</button></header><p class="dialog-subtitle">查看账号、额度与登录来源。</p><dl class="facts"><div><dt>${a.selected?'当前账号':'候选账号'}</dt><dd>${a.selected?a.id:a.candidate?a.candidateId:'尚未发现登录'}</dd></div>${a.selected?`<div><dt>订阅套餐</dt><dd>${a.changed||a.error||a.expired?'待确认':i?'Pro':'Plus'}</dd></div><div><dt>授权到期</dt><dd>${a.expired?'已过期':'未知'}</dd></div>`:''}${a.changed?`<div><dt>要换成</dt><dd>${a.candidateId}</dd></div>`:''}</dl><div class="callout ${a.changed||a.error||a.expired?'warning':''}" role="status">${s.text}</div>${workflow(a)}${reasonDetails(a,'detail')}<div class="sheet-actions">${a.uncertain?btn(a.reconciling?'正在核对…':'核对结果','reconcile',i,true,a.reconciling):a.changed?button('确认换号','change',true):!a.selected&&a.candidate?button('接入账号','select',true,a.checking):''}${!a.uncertain?button(a.selected?'重新登录':`登录 ${a.name}`,'login',a.expired,a.login||a.stale||a.checking||a.syncing):''}${pauseButton(a,i)}</div>${a.selected?`<section class="sheet-section"><h3>额度与重置</h3>${quota(a,true)}</section>`:''}<details class="source sheet-section"><summary>凭证读取方式</summary><p>只在登录保存在其他位置时修改。留空使用官方默认位置。</p><label>自定义目录<input name="directory" autocomplete="off" spellcheck="false" placeholder="使用官方默认位置" value="${esc(a.source)}" ${a.login||a.uncertain?'disabled':''}></label><label>存储方式<select name="store" ${a.login||a.uncertain?'disabled':''}>${(i?['file','keychain']:['auto','file','keyring']).map(v=>`<option value="${v}" ${a.store===v?'selected':''}>${v==='file'?'文件':v==='auto'?'自动':'钥匙串'}</option>`).join('')}</select></label><small id="source-note">修改读取位置不会自动替换已接入账号。</small></details>`;
+}
+function showConfirm(kind,i){confirmFocus=document.activeElement;const a=state.accounts[i];let title,body,label;if(kind==='select'){title='接入 '+a.name+' 账号';body=`<dl class="facts"><div><dt>目标账号</dt><dd>${a.candidateId}</dd></div><div><dt>平台</dt><dd>${a.name}</dd></div></dl><p>接单会使用此账号的订阅额度。</p><p>接入后，该平台保持暂停。暂停影响同一 Hive 用户下的该平台。</p><div class="callout">Bee 会自动准备服务；准备完成后，由你恢复接单。</div>`;label='确认接入';}else if(kind==='change'){title='确认更换 '+a.name+' 账号';body=`<dl class="facts"><div><dt>当前账号</dt><dd>${a.id}</dd></div><div><dt>要换成</dt><dd>${a.candidateId}</dd></div></dl><p>接单将使用新账号的订阅额度。</p><p>更换后保持暂停；暂停影响同一 Hive 用户下的该平台。由你明确恢复接单。</p>`;label='确认更换';}else{title='登录 '+a.name;body=`<p>将调用已安装的 ${i?'OpenAI Code':'Claude Code'} 官方客户端，可能改变该客户端当前登录账号。</p><p>${i?'请在官方页面和系统终端中完成登录。':'请在打开的官方页面中完成登录。'}</p><div class="callout">将暂停此平台接单，已接请求可能继续收尾。登录后保持暂停；不同账号需确认换号。</div>`;label='开始官方登录';}confirmDialog.innerHTML=`<h2 id="confirm-title">${title}</h2>${body}<div class="dialog-actions"><button data-action="cancel-confirm">取消</button>${btn(label,'confirm-'+kind,i,true)}</div>`;confirmDialog.showModal();}
+function closeConfirm(){confirmDialog.close();if(confirmFocus?.isConnected)confirmFocus.focus({preventScroll:true});}
+function refresh(focusAction){
+ const active=document.activeElement;
+ const platform=active.closest?.('[data-platform]')?.dataset.platform;
+ const inDetail=detail.open&&detail.contains(active);
+ const action=active.dataset?.action;
+ render(focusAction);
+ if(platform&&!detail.open){
+  const row=main.querySelector(`[data-platform="${platform}"]`);
+  const target=(focusAction&&main.querySelector(focusAction))||row?.querySelector('.workflow-action')||row?.querySelector('[data-action="cancel-login"]')||row?.querySelector('.status');
+  if(target){if(target.matches('.status'))target.tabIndex=-1;target.focus({preventScroll:true});}
+ }
+ if(detail.open){
+  drawDetail();
+  if(inDetail){
+   const target=detail.querySelector(`[data-action="${action}"]:not(:disabled)`)||detail.querySelector('.workflow-action')||detail.querySelector('[data-action="close-detail"]');
+   target?.focus({preventScroll:true});
+  }
+ }
+}
+document.addEventListener('click',e=>{
+ const b=e.target.closest('button');if(!b||b.disabled)return;
+ if(b.dataset.nav){describeNavigation(b.dataset.nav);return;}
+ const action=b.dataset.action;if(!action)return;
+ const i=Number(b.dataset.i||0),a=state.accounts[i];
+ if(action==='details'||action==='source'){showDetail(i,action==='source');return;}
+ if(action==='close-detail'){closeDetail();return;}
+ if(action==='cancel-confirm'){closeConfirm();return;}
+ if(action==='overview'||action==='hive'){describeNavigation(action);return;}
+ if(['select','change','login'].includes(action)){
+  if(a.uncertain||a.checking||a.syncing)return;
+  showConfirm(action,i);return;
+ }
+ if(action==='reconcile'){if(a.uncertain&&!a.reconciling){a.reconciling=true;refresh();}return;}
+ if(action==='pause'){
+  if(a.uncertain||a.paused&&!synchronized(a))return;
+  a.paused=!a.paused;
+  refresh(`[data-platform="${a.name}"] [data-action="pause"]`);
+  toast(a.paused?`${a.name} 已暂停接单`:`${a.name} 已恢复接单`);return;
+ }
+ if(action==='cancel-login'){a.taskVersion=(a.taskVersion||0)+1;a.login=false;refresh(`[data-platform="${a.name}"] [data-action="login"]`);toast('本次登录已取消');return;}
+ if(action==='confirm-select'||action==='confirm-change'){
+  if(a.uncertain||a.checking||a.syncing)return;
+  a.selected=true;a.id=a.candidateId;a.changed=false;a.paused=true;
+  a.syncing=true;a.taskVersion=(a.taskVersion||0)+1;after(a,1800,()=>{a.syncing=false;refresh();});if(action==='confirm-change')a.changeConfirmed=true;
+  closeConfirm();refresh();
+  const scope=detail.open?detail:main.querySelector(`[data-platform="${a.name}"]`);
+  (scope?.querySelector('.workflow-action')||scope?.querySelector('button[aria-label]'))?.focus({preventScroll:true});
+  toast(action==='confirm-select'?`${a.name} 账号已接入`:`${a.name} 账号已更换`);return;
+ }
+ if(action==='confirm-login'){
+  if(a.uncertain)return;
+  a.journey=a.selected?(a.expired?'authorization':'relogin'):'onboarding';
+  a.authorizationComplete=false;
+  a.needsStart=false;a.paused=true;a.login=true;a.loginFailed=false;
+  a.taskVersion=(a.taskVersion||0)+1;
+  after(a,2200,()=>{
+   a.login=false;a.checking=true;a.authorizationComplete=true;refresh();
+   after(a,1800,()=>{
+    // A successful identity read is required before comparing accounts.
+    a.candidateId=a.loginResultId||a.candidateId;
+    a.candidate=true;a.checking=false;a.expired=false;a.authorizationComplete=true;
+    a.changed=a.selected&&a.candidateId!==a.id;
+    if(a.changed){a.journey='change';a.reviewed=false;a.changeConfirmed=false;}
+    refresh();
+   });
+  });
+  closeConfirm();if(detail.open)closeDetail();render();
+  main.querySelector(`[data-platform="${a.name}"] [data-action="cancel-login"]`)?.focus({preventScroll:true});
+ }
+});
+detail.addEventListener('cancel',e=>{e.preventDefault();closeDetail();});
+confirmDialog.addEventListener('cancel',e=>{e.preventDefault();closeConfirm();});
+detail.addEventListener('change',e=>{
+ if(detailPlatform===null)return;const a=state.accounts[detailPlatform];
+ if(e.target.name==='directory')a.source=e.target.value;
+ if(e.target.name==='store')a.store=e.target.value;
+ $('#source-note').textContent='读取位置已更新。核验后再确认是否使用此账号。';
+});
+window.addEventListener('message',e=>{
+ if(e.source!==parent||e.data?.type!=='bee-design-control')return;
+ const {action,value}=e.data;
+ if(action==='reset')reset(value);
+ if(action==='theme')document.documentElement.dataset.theme=value;
+});
+// Claude review model. All effects below are local timers; no account or network API is called.
+let oa=null,oaCatalog={},oaTimers=new Set(),oaEpoch=0,oaPanel=null,oaReturn=null,oaPanelReturn=null,oaDisclosures=new Set();
+const legacyReset=reset,legacyRender=render;
+const normalPhases=new Set(['normal','pause-done','resume-done','quota']);
+const noSteps=new Set(['login-cancelling','login-cancelled','login-cancel-failed','login-cancel-unknown','login-cancel-blocked','restart-cancelling','restart-cancelled','restart-cancel-failed','restart-cancel-unknown','intake-unknown','intake-long','intake-query','change-unknown','change-query','change-still-unknown','change-failed']);
+const failurePhases=new Set(['history-error','intake-failed','login-missing','login-failed','login-link-failed','login-open-failed','login-expired-link','verify-failed','restart-failed','restart-blocked','prepare-failed','read-failed','pause-failed','resume-failed','pause-retry-failed','service-blocked','stale-failed','login-cancel-failed','login-cancel-blocked','restart-cancel-failed','change-failed']);
+const titles={empty:'尚未登录 Claude',candidate:'尚未接入 Bee','history-error':'暂时无法确认原有接单选择','intake-busy':'正在接入账号…','intake-failed':'接入未成功','intake-unknown':'暂时无法确认接入结果','intake-long':'暂时无法确认接入结果','intake-query':'正在核对接入结果…','login-start':'正在启动登录…','login-missing':'未找到 Claude Code','login-failed':'无法启动登录','login-link':'正在获取登录链接…','login-no-link':'暂未获取到登录链接','login-link-failed':'无法读取登录链接','login-wait':'等待完成 Claude 登录','login-opening':'正在打开登录页面…','login-opened':'等待完成 Claude 登录','login-open-failed':'无法打开登录页面','login-expired-link':'登录已超时','login-verify':'正在核验账号…','verify-failed':'无法核验账号','login-cancelling':'正在取消登录…','login-cancelled':'已取消登录','login-cancel-failed':'未能结束本次登录','login-cancel-unknown':'暂时无法确认取消结果','login-cancel-blocked':'未能结束本次登录','restart-old':'正在重新启动登录…','restart-failed':'无法重新启动登录','restart-blocked':'无法重新启动登录','restart-unknown':'暂时无法确认重新登录进度','restart-query':'正在查询原登录进度…','restart-cancelling':'正在取消重新登录…','restart-cancelled':'已取消重新登录','restart-cancel-failed':'未能完成取消','restart-cancel-unknown':'暂时无法确认取消结果',preparing:'正在准备接单…','prepare-retry':'正在准备接单…','prepare-failed':'授权同步失败：连接已中断','read-failed':'无法读取登录文件：系统拒绝访问','read-checking':'正在读取登录凭证…','read-verify':'正在核验账号…','settings-saving':'无法读取登录文件：系统拒绝访问','settings-failed':'无法读取登录文件：系统拒绝访问',expired:'授权已过期','pause-busy':'正在暂停接单…','pause-done':'已暂停','pause-failed':'暂停接单未成功','pause-unknown':'暂时无法确认接单状态','pause-long':'暂时无法确认接单状态','pause-retry':'正在暂停接单…','pause-retry-failed':'暂停接单未成功','resume-busy':'正在恢复接单…','resume-done':'可接单','resume-failed':'恢复接单失败','resume-unknown':'暂时无法确认接单状态','resume-long':'暂时无法确认接单状态','repair-query':'暂时无法确认接单状态','service-blocked':'接单操作被服务拒绝',change:'发现不同账号','change-review':'发现不同账号','change-busy':'正在更换账号…','change-unknown':'换号结果待核对','change-query':'正在核对换号结果…','change-still-unknown':'仍无法确定换号结果','change-failed':'换号未成功',reconnecting:'正在重连…',stale:'正在更新账号状态…','stale-failed':'暂时无法确认账号状态'};
+function oaCompletion(){return !!oa.journey&&oa.completionPending&&normalPhases.has(oa.phase);}
+function oaCompletionTitle(){return oa.journey==='change'?'账号更换成功':oa.journey==='repair'?'账号读取已修复':oa.journey==='relogin'?(oa.authorizationRepair?'账号授权已恢复':'重新登录成功'):'账号接入成功！';}
+function oaTitle(){if(oaCompletion())return oaCompletionTitle();if(oa.phase==='restart-old')return '正在结束上次登录…';if(oa.journey==='first'&&oa.phase==='candidate')return '已识别账号 '+(oa.id||'A')+'，请确认是否接入';if(normalPhases.has(oa.phase)){if(oa.paused)return '已暂停';if(oa.phase==='quota')return oa.quota==='available'?'可接单':oa.quota==='checking'?'正在核验额度…':'额度已耗尽';return '可接单';}return titles[oa.phase]||oa.phase;}
+function oaBaseNote(){if(oaCompletion()){const subject=oa.journey==='change'?'已更换为账号 '+(oa.id||'B'):oa.journey==='repair'?'已读取并核验账号':oa.journey==='relogin'?(oa.authorizationRepair?'账号授权已恢复':'已完成重新登录'):'账号已接入';return subject+(oa.paused?'，接单保持暂停。':oa.phase==='quota'&&oa.quota!=='available'?'，等待额度恢复后接单。':'，可以接单了。');}const notes={empty:'通过已安装的 Claude Code 官方客户端登录。',candidate:'接单会使用此账号的订阅额度。','history-error':'读取历史选择时连接中断。尚不能判断是否首次接入，请稍后重试查询。','intake-busy':'接入完成后将自动准备。','intake-failed':'接入请求被服务明确拒绝；本次操作已结束，不会再生效。','intake-unknown':'Bee 正在核对本次接入进度，不会重复提交。','intake-long':'尚未取得原操作的确定结果；Bee 继续核对，不会再次接入。','intake-query':'只查询本次原操作，不会重新接入。','login-start':'Bee 正在启动 Claude Code，请稍候。','login-missing':'请安装 Claude Code 官方客户端，再返回重试。','login-failed':'系统拒绝运行 Claude Code，请检查运行权限后重试。','login-link':'如果浏览器已打开登录页，可以直接完成登录。','login-no-link':'如果浏览器没有打开登录页，可重新发起登录。','login-link-failed':'读取本次 Claude Code 输出时管道已关闭，未取得有效链接。','login-wait':'请在浏览器中完成登录，Bee 随后自动核验账号。','login-opened':'已请求浏览器打开登录页面；尚未确认授权完成。','login-open-failed':'系统未能打开浏览器，请重试。','login-expired-link':'本次登录已超时，旧链接已失效。','login-verify':'官方登录已完成，正在读取并核验本次身份。','verify-failed':'核验时连接中断，请重试。','login-cancelling':'正在结束本次登录，请稍候。','login-cancelled':'已确认本次流程结束；已发生的官方授权不会因此撤销。','login-cancel-failed':'结束受管进程时系统返回忙；已允许安全再次处理旧流程。','login-cancel-unknown':'Bee 正在继续核对本次登录是否已结束。','login-cancel-blocked':'无法证明原进程归属，当前不能安全结束或启动另一登录。','restart-old':'正在结束上次登录，确认结束后将启动新登录；接单选择保持不变。','restart-failed':'未能结束上一次登录：受管进程仍占用资源。已允许安全重试。','restart-blocked':'原操作记录缺失，无法证明上次登录流程归属；未获得安全再次核实许可。','restart-unknown':'Bee 正在核对本次操作，请勿重复发起。','restart-query':'只查询本次原操作，不会重复启动登录。','restart-cancelling':'正在结束本次复合重登操作，尚未提交新登录。','restart-cancelled':'已确认取消；账号、来源与影响范围未变，接单仍暂停。','restart-cancel-failed':'结束旧流程时资源仍被占用，未完成取消。','restart-cancel-unknown':'Bee 正在核对原复合操作是否结束。',preparing:'准备期间临时停止派单；这不改变你的接单选择。','prepare-retry':'正在重试本次准备，保留你的最新接单选择。','prepare-failed':'账号已接入。请在连接恢复后重试，无需重新确认接入。','read-failed':'请检查登录文件所在目录及系统访问权限；原账号选择仍保留。','read-checking':'设置已保存；尚未确认读取或修复成功。','read-verify':'凭证读取已完成，正在核验身份。',expired:'需要通过官方客户端重新授权。','pause-busy':'确认暂停后不再接收新任务，已有任务可继续完成。','pause-done':'不再接收新任务；已有任务可继续完成。','pause-failed':'请求已明确失败，账号仍可能接收新任务。','pause-unknown':'正在确认刚才的暂停操作，无需重复点击；尚不能承诺停止接单。','pause-long':'Bee 正在自动核对刚才的暂停操作，尚不能承诺停止接单。','pause-retry':'连接暂时中断，Bee 正在有限重试；确认暂停前仍可能接收新任务。','pause-retry-failed':'有限重试已用尽，且已确认原请求不会再生效。账号仍可能接收新任务。','resume-busy':'正在解除暂停；完成后仍需满足额度等接单条件。','resume-failed':'原恢复操作已明确失败，账号仍保持暂停。','resume-unknown':'正在确认刚才的恢复操作，无需重复点击。','resume-long':'Bee 正在自动核对刚才的恢复操作。','repair-query':'读取问题已修复，但尚未确认原恢复操作结果；不会自动重放请求。','service-blocked':'当前设备没有操作该平台接单的权限。请联系设备管理员修复权限。',change:'确认换号前，Bee 保留已接入账号 A。','change-review':'已接入账号 A；发现新账号 B。确认后才会更换。','change-busy':'已明确确认 A → B；正在等待本次更换结果。','change-unknown':'暂时无法确认是否已更换，请核对后再继续。','change-query':'只查询已提交的 A → B 操作，不重复更换。','change-still-unknown':'原操作尚无确定结果，不能将 A 或 B 当作当前账号。','change-failed':'已确认原操作结束且未更换。原账号 A 已保留，接单保持暂停。',reconnecting:'连接恢复且其他条件满足后，按你的接单选择继续。',stale:'上次获取的账号状态已超过有效时间，需要重新核实。','stale-failed':'查询账号状态时连接中断，当前接单状态尚未确认。'};return oa.feedback||notes[oa.phase]||'';}
+function oaNote(){let note=oaBaseNote();if(oa.phase==='intake-busy'&&oa.paused)note='接入完成后将自动准备，接单保持暂停。';else if(oa.paused&&!normalPhases.has(oa.phase)&&!note.includes('暂停'))note+=(note?' ':'')+'接单保持暂停。';if(oa.independent)note+=(note?' ':'')+'与 Hive 的连接也已中断，仍需等待重连。';return note;}
+function oaButton(label,action,disabled=false,primary=true){return `<button type="${action==='save'?'submit':'button'}" data-oa="${action}" ${primary?'class="primary"':''} ${disabled?'disabled':''}>${label}</button>`;}
+function oaActions(){const p=oa.phase;
+ if(oaCompletion())return oaButton('完成','finish-onboarding');
+ if(normalPhases.has(p)||p==='reconnecting')return oaButton(oa.paused?'恢复接单':'暂停接单','toggle');
+ if(p==='empty')return oaButton('登录 Claude','login');
+ if(p==='candidate')return oaButton('接入账号','intake');
+ if(p==='history-error')return oaButton('重试','history-query');
+ if(p==='intake-failed')return oaButton('重试接入','intake-retry');
+ if(['intake-unknown','intake-long','change-unknown','change-still-unknown'].includes(p))return oaButton('核对结果','query');
+ if(['intake-query','change-query'].includes(p))return oaButton('正在核对…','query',true);
+ if(['restart-unknown','restart-query'].includes(p))return oaButton(p==='restart-query'?'正在刷新…':'刷新登录进度','query',p==='restart-query');
+ if(['read-failed','settings-saving','settings-failed'].includes(p))return oaButton('修改凭证读取设置','settings');
+ if(p==='expired')return oaButton('重新登录','relogin');
+ if(['change','change-review','change-failed'].includes(p))return oaButton('核对账号变更','compare');
+ if(p==='prepare-failed')return oaButton('重试','prepare-retry');
+ if(p==='verify-failed')return oaButton('重新核验','verify');
+ if(p==='login-missing')return oaButton('查看安装说明','install')+oaButton('重试','start',false,false);
+ if(p==='login-failed')return oaButton('重试','start');
+ if(['login-expired-link','restart-failed','login-cancel-failed','restart-cancel-failed'].includes(p))return oaButton('重新登录','restart');
+ if(['login-cancelled','restart-cancelled'].includes(p))return oaButton('重新登录',p==='restart-cancelled'?'start':'login');
+ if(['login-start','login-link','restart-old'].includes(p))return oaButton('取消登录','cancel',false,false);
+ if(['login-no-link','login-link-failed'].includes(p))return oaButton('重新登录','restart')+oaButton('取消登录','cancel',false,false);
+ if(['login-wait','login-opened','login-open-failed','login-opening'].includes(p))return oaButton(p==='login-opening'?'正在打开…':p==='login-open-failed'?'重新打开登录页面':'打开登录页面','open',p==='login-opening')+oaButton('取消登录','cancel',false,false);
+ if(['pause-busy','pause-retry'].includes(p))return oaButton('暂停中…','toggle',true);
+ if(p==='resume-busy')return oaButton('恢复中…','toggle',true);
+ if(['resume-unknown','resume-long','repair-query'].includes(p))return oaButton('恢复接单','toggle',true);
+ if(['pause-failed','pause-retry-failed'].includes(p))return oaButton('暂停接单','toggle');
+ if(p==='resume-failed')return oaButton('恢复接单','toggle');
+ if(['preparing','prepare-retry'].includes(p))return oa.paused?'<span class="muted">接单选择：已暂停；准备就绪后可恢复。</span>':oaButton('暂停接单','preference',false,false);
+ return '';
+}
+function oaSteps(){const p=oa.phase;if(!oa.journey||noSteps.has(p)||((normalPhases.has(p))&&!oa.paused&&!oaCompletion()))return '';
+ let labels=[],current=0;
+ if(oa.journey==='first'){labels=['登录','核验账号','确认接入','准备接单'];current=normalPhases.has(p)?4:['preparing','prepare-retry','prepare-failed'].includes(p)?3:['candidate','intake-busy','intake-failed','history-error'].includes(p)?2:['login-verify','verify-failed'].includes(p)?1:0;}
+ if(oa.journey==='relogin'){labels=['重新登录','核验账号'];if(oa.preparationIncluded||oa.resumePrepare||['preparing','prepare-retry','prepare-failed'].includes(p))labels.push('准备接单');current=normalPhases.has(p)?labels.length:['preparing','prepare-retry','prepare-failed'].includes(p)?2:['login-verify','verify-failed'].includes(p)?1:0;}
+ if(oa.journey==='intake'){labels=['确认接入','准备接单'];current=normalPhases.has(p)?2:['preparing','prepare-retry','prepare-failed'].includes(p)?1:0;}
+ if(oa.journey==='repair'){labels=['修复读取','核验账号'];if(oa.preparationIncluded||oa.resumePrepare||['preparing','prepare-retry','prepare-failed'].includes(p))labels.push('准备接单');current=normalPhases.has(p)?labels.length:['preparing','prepare-retry','prepare-failed'].includes(p)?2:['read-verify','login-verify','verify-failed'].includes(p)?1:0;}
+ if(oa.journey==='change'){labels=['核对账号','确认换号','准备接单'];current=normalPhases.has(p)?3:['preparing','prepare-retry','prepare-failed'].includes(p)?2:['change-review','change-busy'].includes(p)?1:0;}
+ if(!labels.length)return '';
+ return `<div class="task-flow"><ol class="workflow" aria-label="Claude 当前流程">${labels.map((label,i)=>{const status=i<current?'done':i===current?(failurePhases.has(p)?'failed':'current'):'pending';return `<li class="${status}" ${status==='current'?'aria-current="step"':''}><span class="step-dot" aria-hidden="true">${i+1}</span><span>${label}</span><span class="sr-only">，${{done:'已完成',failed:'失败',current:p==='restart-unknown'||p==='restart-query'?'进度未知，正在核对':'当前阶段',pending:'未开始'}[status]}</span></li>`;}).join('')}</ol></div>`;
+}
+function oaDetailsBlock(key,title,content){return `<details class="explanation" data-oa-disclosure="${key}" ${oaDisclosures.has(key)?'open':''}><summary>${title}</summary>${content}</details>`;}
+function oaEvidence(){const p=oa.phase;let evidence='';
+ if(p==='read-failed'||p==='settings-failed')evidence='读取检查：Claude Code 登录文件；系统返回 EACCES（拒绝访问）。读取目录：'+(oa.source||'Claude Code 默认目录')+'。';
+ else if(p==='prepare-failed')evidence='准备检查：授权同步；连接中断，尚未取得同步完成回执。账号接入已确认。';
+ else if(p==='verify-failed')evidence='身份核验：连接中断；未取得可信身份结果，不能推断换号。';
+ else if(p==='restart-blocked'||p==='login-cancel-blocked')evidence='归属检查：原操作记录不可用；无法证明受管进程身份。未启动新登录。';
+ else if(p==='login-failed')evidence='启动 Claude Code：系统返回 EACCES（执行被拒绝）。未创建登录进程。';
+ else if(p.includes('unknown')||p.includes('long')||p.includes('query'))evidence='原操作：'+(p.startsWith('intake')?'接入 A':p.startsWith('change')?'A → B':p.startsWith('restart')?'重新登录':p.startsWith('pause')?'暂停接单':'恢复／登录核对')+'；最近查询未取得确定回执。不以当前快照替代原操作终态。';
+ return evidence?`<p>${esc(evidence)}</p>`:'';
+}
+function oaSupplement(){const p=oa.phase;if(oaCompletion())return '';if(normalPhases.has(p))return oaQuota();if(['preparing','prepare-retry'].includes(p))return oa.evidence?oaDetailsBlock('progress','查看准备进度','<dl class="runtime-facts"><div><dt>账号身份核验</dt><dd>已完成</dd></div><div><dt>授权同步</dt><dd>进行中</dd></div><div><dt>准备结果核对</dt><dd>等待中</dd></div></dl>'):'';const evidence=oaEvidence();return evidence?oaDetailsBlock('errors',failurePhases.has(p)?'查看错误详情':'查看核对记录',evidence):'';}
+function oaQuota(){const q=oa.quota||'available',used=q==='available'?3:100;return `<div class="quota"><div><div class="quota-label"><span>5 小时${q==='checking'?'（上次记录）':''}</span><strong>已用 ${used}%</strong></div><div class="bar" role="progressbar" aria-label="5 小时已用额度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${used}"><div class="fill" style="width:${used}%"></div></div></div><div><div class="quota-label"><span>7 日</span><strong>已用 20%</strong></div><div class="bar" role="progressbar" aria-label="7 日已用额度" aria-valuemin="0" aria-valuemax="100" aria-valuenow="20"><div class="fill" style="width:20%"></div></div></div></div>${oaDetailsBlock('quota','额度详情',`<p>${q==='unknown'?'恢复时间暂不可用':q==='checking'?'额度窗口已重置，正在核验可用额度':q==='available'?'5 小时窗口已重置':'预计恢复：今天 20:30'}</p><p>7 日窗口重置时间暂不可用。额度与暂停选择独立。</p>`)}`;}
+function oaIdentity(){if(oa.phase.startsWith('change-')&&['change-unknown','change-query','change-still-unknown'].includes(oa.phase))return '原账号 A → 目标账号 B';if(oa.phase.startsWith('stale'))return '上次记录的账号 '+(oa.id||'A');return oa.selected?'已接入账号 '+(oa.id||'A'):oa.phase==='empty'?'通过官方客户端登录':'待接入账号 '+(oa.id||'A');}
+function oaDraw(){if(!oa)return;const row=main.querySelector('[data-platform="Claude"]');if(!row)return;const p=oa.phase;const firstFlow=!!oa.journey&&!noSteps.has(p)&&(!normalPhases.has(p)||oaCompletion());row.classList.toggle('oa-first-flow',firstFlow);
+ row.innerHTML=`<div class="account-head"><span class="platform-icon">${icon('spark')}</span><div class="identity"><div class="platform-line"><h2>Claude</h2>${normalPhases.has(p)?'<span class="badge">Pro</span>':''}</div><p class="identifier">${oaIdentity()}</p></div><button class="quiet" data-oa="detail" aria-label="Claude 详情">详情 ${icon('arrow')}</button></div>${firstFlow?oaSteps():''}<div class="body-copy"><p class="status ${failurePhases.has(p)?'error':(oaCompletion()||oaTitle()==='可接单')?'good':''}" role="status" tabindex="-1">${esc(oaTitle())}</p>${oaNote()?`<p class="muted oa-note">${esc(oaNote())}</p>`:''}</div>${firstFlow?'':oaSteps()}<div class="action-help oa-actions">${oaActions()}</div>${oaSupplement()}`;
+ $('#side-status').textContent=oaTitle();main.querySelector('.count').textContent=`${(oa.selected?1:0)+state.accounts.slice(1).filter(a=>a.selected).length} 个已接入`;
+ oaSync();
+}
+render=function(focusAction){legacyRender(focusAction);oaDraw();};
+function oaSync(){const exact=Object.values(oaCatalog).filter(x=>x.phase===oa.phase&&!!x.completionPending===!!oa.completionPending&&!!x.panel===!!oaPanel&&(x.panel||null)===(oaPanel||null));const score=x=>(oa.journey==='first'&&x.journey==='first'?40:0)+(x.group===oa.group?12:0)+(!!x.resumePrepare===!!oa.resumePrepare?5:0)+(!!x.preparationIncluded===!!oa.preparationIncluded?15:0)+(!!x.authorizationRepair===!!oa.authorizationRepair?15:0)+(x.origin===oa.origin?5:0)+(x.paused===oa.paused?8:0)+(x.journey===oa.journey?30:0)+(x.selected===oa.selected?4:0)+(x.quota===oa.quota?3:0)+(x.result===oa.result?2:0)+(x.key===oa.key?1:0);const match=exact.sort((a,b)=>score(b)-score(a))[0];if(match)parent.postMessage({type:'bee-oa-position',scene:match.key},'*');}
+function oaClear(){oaEpoch++;oaTimers.forEach(clearTimeout);oaTimers.clear();}
+function oaLater(fn,delay=1100){const epoch=oaEpoch;const t=setTimeout(()=>{oaTimers.delete(t);if(epoch===oaEpoch)fn();},delay);oaTimers.add(t);}
+function oaGo(phase,extra={}){oa.phase=phase;oa.feedback='';Object.assign(oa,extra);oaDraw();if(!detail.open&&!confirmDialog.open){const row=main.querySelector('[data-platform="Claude"]');(row.querySelector('button.primary:not(:disabled)')||row.querySelector('.status')).focus({preventScroll:true});}}
+reset=function(payload){if(!payload?.model){legacyReset(payload);return;}oaClear();oa=null;legacyReset('running');oaCatalog=payload.catalog;oa={...payload.model};if(['preparing','prepare-retry','prepare-failed'].includes(oa.phase))oa.preparationIncluded=true;oa.source='';oa.store='keychain';if(oa.phase==='settings-failed')oa.inputSource='/example/claude';oaDisclosures=new Set(oa.disclosure?[oa.disclosure]:[]);oaPanel=null;oaReturn=null;oaDraw();if(oa.panel)oaShow(oa.panel);};
+function oaClose(){const priorPanel=oaPanel;if(oaPanel==='settings'&&oa.phase==='settings-saving')return;if(oaPanel==='settings'){delete oa.inputSource;delete oa.inputStore;}detail.close();confirmDialog.close();oaPanel=null;detailPlatform=null;oaDraw();const target=oaReturn?.isConnected&&oaReturn.matches('button,input,select,summary,a')&&!oaReturn.closest('dialog:not([open])')?oaReturn:main.querySelector(`[data-oa="${priorPanel==='settings'?'settings':priorPanel==='compare'?'compare':'detail'}"]`)||main.querySelector('[data-oa="detail"]');target?.focus({preventScroll:true});}
+function oaHeader(title){return `<header><h2 id="detail-title">${title}</h2><button data-oa="close" class="quiet" aria-label="关闭面板">关闭</button></header>`;}
+function oaShow(panel){oaReturn=document.activeElement;oaPanelReturn=oaPanel;detail.close();confirmDialog.close();detailPlatform=null;oaPanel=panel;let body='',title='',dialog=detail;
+ if(panel==='detail'){title='Claude 账号详情';body=`<dl class="facts"><div><dt>${oa.phase.startsWith('stale')?'上次记录':oa.selected?'已接入账号':'待接入账号'}</dt><dd>${oa.id||'A'}</dd></div><div><dt>账号状态</dt><dd>${esc(oaTitle())}</dd></div>${normalPhases.has(oa.phase)?'<div><dt>订阅套餐</dt><dd>Pro</dd></div>':''}${oa.phase.startsWith('stale')?'<div><dt>上次更新</dt><dd>今天 09:00（历史记录）</dd></div><div><dt>上次选择</dt><dd>'+ (oa.paused?'暂停':'允许接单')+'</dd></div>':''}</dl>${failurePhases.has(oa.phase)&&oaEvidence()?oaDetailsBlock('detail-errors','错误证据',oaEvidence()):''}<div class="sheet-actions">${oaButton('修改凭证读取设置','settings',!(normalPhases.has(oa.phase)||['expired','read-failed','verify-failed'].includes(oa.phase)),false)}${normalPhases.has(oa.phase)||['expired','read-failed'].includes(oa.phase)?oaButton('重新登录','relogin',false,false):''}</div>`;}
+ if(panel==='compare'){title='核对账号变更';body='<dl class="facts"><div><dt>已接入账号</dt><dd>A</dd></div><div><dt>发现新账号</dt><dd>B</dd></div></dl><p>确认换号前，Bee 保留已接入账号 A。</p>'+oaButton('确认换号','change');}
+ if(panel==='settings'){title='凭证读取设置';body=`<form id="oa-settings" class="source"><label>配置目录<input name="oa-directory" autocomplete="off" spellcheck="false" placeholder="使用 Claude Code 默认目录" value="${esc(oa.inputSource??oa.source)}"></label><label>存储方式<select name="oa-store">${[['keychain','系统钥匙串'],['file','文件']].map(([v,t])=>`<option value="${v}" ${v===(oa.inputStore||oa.store)?'selected':''}>${t}</option>`).join('')}</select></label><p>修改后，Bee 将重新读取并核验账号。</p><p id="oa-save-status" role="status">${oa.phase==='settings-failed'?'保存失败：写入设置文件时系统拒绝访问。输入已保留，请修复写入权限后重试。':oa.phase==='settings-saving'?'正在保存设置…':''}</p><div class="dialog-actions">${oaButton('取消','close',oa.phase==='settings-saving',false)}${oaButton(oa.phase==='settings-saving'?'保存中…':'保存','save',oa.phase==='settings-saving')}</div></form>`;}
+ if(panel==='install'){title='安装 Claude Code';body='<p>安装 Claude 官方 Claude Code CLI，确保当前用户可运行 claude 命令，再返回 Bee 重试。</p><p>安装完成后请返回账号页，点击重试。</p>'+oaButton('返回账号页','close',false,false);}
+ if(['intake','relogin','login','change'].includes(panel)){dialog=confirmDialog;title=panel==='intake'?'接入 Claude 账号':panel==='change'?'确认更换 Claude 账号':panel==='login'?'登录 Claude':'重新登录 Claude';body=panel==='intake'?`<p>账号 ${oa.id||'A'}</p><p>接单将使用该账号的订阅额度。</p><div class="callout">${oa.history==='none'?'首次接入，准备完成后将自动接单。':oa.paused?'保留当前暂停选择；准备完成后由你恢复接单。':'保留当前允许接单选择；准备期间临时停止派单，完成后按最新选择继续。'}</div>`:panel==='change'?'<p>已接入账号 A → 发现新账号 B</p><p>更换后使用 B 的订阅额度。将暂停此平台接单，准备就绪后仍暂停，由你恢复。</p>':`<p>调用已安装的 Claude Code 官方客户端，可能改变客户端当前登录账号。</p><div class="callout">${oa.selected?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。'}</div>`;body+=`<div class="dialog-actions">${oaButton('取消','cancel-confirm',false,false)}${oaButton(panel==='intake'?'确认接入':panel==='change'?'确认更换':'开始官方登录','confirm-'+panel)}</div>`;}
+ dialog.innerHTML=oaHeader(title)+body;if(dialog===confirmDialog){dialog.querySelector('h2').id='confirm-title';}dialog.showModal();(dialog.querySelector('input')||dialog.querySelector('[data-oa="cancel-confirm"]')||dialog.querySelector('button')).focus();oaSync();
+}
+function oaPrepared(){if(oa.result==='failure'){oaGo('prepare-failed');return;}oaGo(oa.quota&&oa.quota!=='available'?'quota':'normal',{selected:true,completionPending:!!oa.journey});}
+function oaPrepare(){oa.completionPending=false;if(!oa.journey)oa.journey=oa.id==='B'?'change':'intake';oaGo('preparing',{selected:true,preparationIncluded:true});oaLater(oaPrepared);}
+function oaVerified(){if(oa.result==='failure'){oaGo('verify-failed');return;}if(oa.result==='different'){oaGo('change',{journey:'change'});return;}if(!oa.selected){oaGo('candidate',{journey:oa.journey==='first'?'first':'intake'});return;}if(oa.resumePrepare){oaPrepare();return;}if(oa.origin==='supply'){oaGo('repair-query',{journey:null});return;}if(oa.independent){oaGo('reconnecting',{journey:null});return;}oaGo(oa.quota&&oa.quota!=='available'?'quota':'normal',{completionPending:!!oa.journey});}
+function oaStart(){oa.completionPending=false;oaClear();oaClose();oa.operation='login';oaGo('login-start');oaLater(()=>{oaGo('login-link');oaLater(()=>{oaGo('login-wait');oaLater(()=>{oaGo('login-verify');oaLater(oaVerified);},2200);});});}
+function oaRestart(){oaClear();oaClose();oa.operation='restart';oaGo('restart-old');oaLater(()=>{oa.operation='login';oaStart();},1500);}
+function oaQuery(){const p=oa.phase;oaClear();oaGo(p.startsWith('intake')?'intake-query':p.startsWith('change')?'change-query':'restart-query');oaLater(()=>{if(p.startsWith('intake')){if(oa.result==='success')oaPrepare();else oaGo(oa.result==='failure'?'intake-failed':'intake-long');}else if(p.startsWith('change')){if(oa.result==='success'){oa.id='B';oa.paused=true;oa.journey='change';oaPrepare();}else oaGo(oa.result==='failure'?'change-failed':'change-still-unknown',{paused:true});}else{if(oa.result==='success')oaGo('login-wait',{operation:'login'});else if(oa.result==='running')oaGo('restart-old');else oaGo(oa.result==='failure'?'restart-failed':'restart-unknown');}oa.feedback=oa.result?'本次查询已更新原操作的实际状态。':'本次核对仍未取得确定结果，未重新提交操作。';oaDraw();});}
+function oaAct(action){
+ if(action==='finish-onboarding'&&oaCompletion()){oaGo(oa.phase,{completionPending:false,journey:null});return;}
+ if(action==='close'){if(confirmDialog.open){oaAct('cancel-confirm');return;}oaClose();return;}
+ if(action==='cancel-confirm'){const previous=oaPanelReturn;oaClose();if(previous==='detail'||previous==='compare')oaShow(previous);return;}
+ if(['detail','settings','install','intake','relogin','login'].includes(action)){oaShow(action);return;}
+ if(action==='compare'){oaGo('change-review',{journey:'change'});oaShow('compare');return;}
+ if(action==='change'){oaShow('change');return;}
+ if(action==='confirm-intake'){oaClose();if(oa.journey!=='first')oa.journey='intake';oaClear();oaGo('intake-busy');oaLater(oaPrepare);return;}
+ if(action==='confirm-change'){oaClose();oaClear();oa.paused=true;oa.journey='change';oaGo('change-busy');oaLater(()=>{oa.id='B';oa.result=null;oaPrepare();});return;}
+ if(action==='confirm-relogin'||action==='confirm-login'){oa.authorizationRepair=oa.phase==='expired';oa.completionPending=false;if(oa.selected){oa.paused=true;oa.journey='relogin';}else oa.journey='first';oaStart();return;}
+ if(action==='start'){oaStart();return;}
+ if(action==='restart'){oaRestart();return;}
+ if(action==='cancel'){const target=oa.operation==='restart'?'restart':'login';oaClear();oaGo(target+'-cancelling');oaLater(()=>oaGo(target+'-cancelled'));return;}
+ if(action==='open'){oaGo('login-opening');oaLater(()=>{if(oa.phase==='login-opening')oaGo('login-opened');},500);return;}
+ if(action==='query'){oaQuery();return;}
+ if(action==='verify'){oaClear();oaGo('login-verify');oaLater(oaVerified);return;}
+ if(action==='intake-retry'){oaClear();oaGo('intake-busy');oaLater(oaPrepare);return;}
+ if(action==='history-query'){oaClear();oa.feedback='本次查询仍因连接中断失败，未按“无历史”处理，也未提交接入。';oaDraw();return;}
+ if(action==='prepare-retry'){oaClear();oaGo('prepare-retry',{preparationIncluded:true});oaLater(oaPrepared);return;}
+ if(action==='preference'){oa.paused=!oa.paused;oaDraw();main.querySelector('[data-oa="preference"]')?.focus();return;}
+ if(action==='toggle'){const paused=oa.paused,phase=oa.phase;oaClear();oaGo(paused?'resume-busy':'pause-busy');oaLater(()=>{oa.paused=!paused;oa.journey=null;oaGo(phase==='quota'?'quota':phase==='reconnecting'?'reconnecting':'normal');});return;}
+ if(action==='save'){const form=$('#oa-settings');oa.inputSource=form.elements['oa-directory'].value;oa.inputStore=form.elements['oa-store'].value;const fail=oa.phase==='settings-failed'&&!oa.saveFailureShown;oa.saveFailureShown=true;oaClear();oaGo('settings-saving');form.querySelectorAll('button,input,select').forEach(x=>x.disabled=true);$('#oa-save-status').textContent='正在保存设置…';oaLater(()=>{if(fail){oaGo('settings-failed');oaShow('settings');return;}oa.source=oa.inputSource;oa.store=oa.inputStore;oaGo('read-checking');oaClose();oaLater(()=>{if(oa.result==='failure'){oaGo('read-failed');return;}oaGo('read-verify');oaLater(oaVerified);});});return;}
+}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-oa]');if(!b||!oa)return;e.preventDefault();e.stopImmediatePropagation();oaAct(b.dataset.oa);},true);
+document.addEventListener('submit',e=>{if(e.target.id==='oa-settings'){e.preventDefault();if(oa.phase!=='settings-saving')oaAct('save');}},true);
+document.addEventListener('toggle',e=>{const k=e.target.dataset?.oaDisclosure;if(k){if(e.target.open)oaDisclosures.add(k);else oaDisclosures.delete(k);}},true);
+// Keep keyboard navigation inside the current Claude modal, including iframe boundaries.
+document.addEventListener('keydown',e=>{if(e.key!=='Tab'||!oaPanel)return;const modal=confirmDialog.open?confirmDialog:detail.open?detail:null;if(!modal)return;const items=[...modal.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),summary,a[href]')];const first=items[0],last=items.at(-1);if(!first)return;if(e.shiftKey&&(document.activeElement===first||!modal.contains(document.activeElement))){e.preventDefault();last.focus();}else if(!e.shiftKey&&(document.activeElement===last||!modal.contains(document.activeElement))){e.preventDefault();first.focus();}},true);
+for(const d of [detail,confirmDialog])d.addEventListener('cancel',e=>{if(!oaPanel)return;e.preventDefault();e.stopImmediatePropagation();if(d===confirmDialog)oaAct('cancel-confirm');else oaClose();},true);
+
+
+document.addEventListener('click',e=>{if(e.target.closest('[data-platform="OpenAI"] button')){e.preventDefault();e.stopImmediatePropagation();parent.postMessage({type:'bee-openai-review'},'*');}},true);
+// Claude macOS review adapter. All outcomes are synthetic; never opens Terminal.
+const claudeBaseIdentity=oaIdentity;
+oaIdentity=function(){return !oa.selected&&!['candidate','intake-busy','intake-failed','history-error'].includes(oa.phase)?'尚未接入':claudeBaseIdentity();};
+const claudeBaseTitle=oaTitle,claudeBaseNote=oaNote,claudeBaseActions=oaActions,claudeBaseEvidence=oaEvidence,claudeBaseShow=oaShow,claudeBaseDraw=oaDraw;
+oaTitle=function(){if(oa.phase==='login-start')return '正在打开登录终端…';if(oa.phase==='login-failed')return '无法打开登录终端';if(oa.phase==='login-wait')return '等待完成 Claude 登录';if(oa.phase==='read-failed'&&oa.store==='keychain')return '无法读取系统钥匙串凭证';return claudeBaseTitle();};
+oaNote=function(){if(oa.phase==='login-start')return 'Bee 正在打开系统终端，无需手动输入登录命令。';if(oa.phase==='login-failed')return '系统拒绝打开 Terminal，本次登录尚未开始。'+(oa.selected?' 接单保持暂停。':'');if(oa.phase==='login-wait')return 'Bee 已打开系统终端。请按终端提示在浏览器中完成登录；如果终端要求继续操作，请返回终端完成。找不到窗口？可从 Dock 切换到 Terminal。'+(oa.selected?' 接单保持暂停。':'');if(oa.phase==='read-failed'&&oa.store==='keychain')return '系统拒绝访问所选配置目录对应的钥匙串凭证，请检查钥匙串访问权限；原账号选择仍保留。';return claudeBaseNote();};
+oaActions=function(){if(oa.phase==='login-wait')return oaButton('取消登录','cancel',false,false);return claudeBaseActions();};
+oaEvidence=function(){if(oa.phase==='login-failed')return oaDetailsBlock('errors','查看错误详情','<p>失败环节：打开 Terminal。</p><p>系统拒绝启动终端；本次官方登录进程未启动，可重试。</p>');if(oa.phase==='read-failed'&&oa.store==='keychain')return oaDetailsBlock('errors','查看错误详情','<p>读取对象：当前配置目录对应的系统钥匙串凭证。</p><p>系统返回：访问被拒绝。未把读取失败判断为账号变更。</p>');return claudeBaseEvidence();};
+oaStart=function(){oa.completionPending=false;oaClear();oaClose();oa.operation='login';oaGo('login-start');oaLater(()=>{oaGo('login-wait');oaLater(()=>{oaGo('login-verify');oaLater(oaVerified);},4200);});};
+oaShow=function(panel){claudeBaseShow(panel);if(['login','relogin'].includes(panel)){const el=document.createElement('p');el.textContent='本次配置目录：'+(oa.source||'Claude Code 默认目录')+'；凭证存储：'+(oa.store==='file'?'文件':'系统钥匙串')+'。Bee 将打开系统终端，请按终端和浏览器提示完成登录。';confirmDialog.querySelector('.dialog-actions').before(el);if(oa.store==='file'){el.textContent+=' 当前选择为文件读取，与 macOS 官方登录的钥匙串存储不一致；请先修改凭证读取设置。';confirmDialog.querySelector('[data-oa="confirm-'+panel+'"]').disabled=true;confirmDialog.querySelector('.dialog-actions').insertAdjacentHTML('beforeend',oaButton('修改凭证读取设置','settings',false,false));}}if(panel==='settings'){const el=document.createElement('p');el.textContent='macOS 官方登录使用系统钥匙串；配置目录用于定位对应凭证，不表示凭证一定存为目录中的文件。';detail.querySelector('form').append(el);}};
+oaDraw=function(){claudeBaseDraw();if(!oa)return;const row=main.querySelector('[data-platform="Claude"]');row.querySelector('.platform-icon').innerHTML=icon('sun');row.querySelector('.platform-icon').classList.add('claude');row.parentElement.append(row);const other=main.querySelector('[data-platform="OpenAI"] .platform-icon');other.innerHTML=icon('spark');other.classList.remove('claude');};
+
+legacyReset('running');parent.postMessage({type:'bee-design-ready'},'*');
+</script></body></html>
+</template>
 <script>
 const $=id=>document.getElementById(id),frame=$('screen');
 // Review entries map to shared views; index IDs are coverage references, not pages.
@@ -580,6 +1085,110 @@ for(const [key,label,phase,refs,extra] of [
  ['quota','登录接入完成 · 等待额度','quota','PRE-02',{selected:true,quota:'known',journey:null}]
 ])add('first-'+key,login+' / 接入与准备',label,phase,refs,{selected:false,journey:'first',history:'none',...extra});
 
+
+// Claude shares approved OpenAI flow definitions; unsupported browser-link steps are excluded.
+const claudeBaseline=(()=>{const catalog={};
+function add(key,group,label,phase,refs,extra={}){catalog[key]={key,group,label,phase,refs,paused:false,selected:true,journey:null,...extra};}
+function variants(key,group,label,phase,refs,extra={}){for(const paused of [false,true])add(key+(paused?'-paused':'-allowed'),group,label+' / '+(paused?'已暂停':'允许接单'),phase,refs,{...extra,paused});}
+const intake='接入 / 接入账号',login='接入 / 官方登录',supply='接单 / 暂停与恢复',prep='接入 / 准备接单',auth='授权问题 / 读取与核验',rel='变更与恢复 / 重新登录',change='变更与恢复 / 核对账号变更',sync='变更与恢复 / 重连与状态更新',view='授权问题 / 查看与辅助操作';
+add('onboarding',intake,'尚未登录 · 首次接入','empty','IN-01',{selected:false,journey:'first',history:'none'});
+variants('intake-candidate',intake,'已登录 Codex，待接入 Bee','candidate','IN-02 LOGIN-09',{selected:false,journey:'intake'});
+variants('intake-confirm',intake,'确认接入弹窗','candidate','IN-03',{selected:false,journey:'intake',panel:'intake'});
+add('intake-no-history',intake,'首次接入 · 确无历史选择','candidate','IN-12',{selected:false,journey:'intake',panel:'intake',history:'none'});
+add('intake-history-error',intake,'历史接单选择查询失败','history-error','IN-12',{selected:false,journey:'intake'});
+add('intake-cancelled',intake,'已取消确认 · 尚未接入','candidate','IN-04',{selected:false,journey:'intake'});
+for(const [key,label,phase,refs] of [['submitting','正在接入','intake-busy','IN-05'],['failed','明确失败 · 原操作已结束','intake-failed','IN-07'],['unknown','结果未知 · 自动核对','intake-unknown','IN-08'],['long-unknown','长期未知 · 仅核对原流程','intake-long','IN-11'],['query','正在核对原接入结果','intake-query','IN-08 IN-11'],['retry','同身份同范围 · 重试接入中','intake-busy','IN-09']])variants('intake-'+key,intake,label,phase,refs,{selected:false,journey:'intake'});
+add('intake-changed',intake,'重试前身份变化 · 重新确认','candidate','IN-10',{selected:false,id:'B',journey:'intake',panel:'intake'});
+for(const context of ['first','relogin']){
+ const group=context==='first'?login:rel+' / 官方登录';
+ for(const [phase,label,refs] of [['login-start','正在启动登录','LOGIN-01 RE-03 RE-07 RE-08'],['login-missing','未找到 Codex','LOGIN-02'],['login-failed','启动失败 · 系统拒绝运行','LOGIN-03 RE-11'],['login-link','正在获取本次链接','LOGIN-04'],['login-no-link','持续无链接 · 允许安全重登','LOGIN-04'],['login-link-failed','读取链接明确失败','LOGIN-04'],['login-wait','等待官方授权 · 有效链接','LOGIN-05 RE-14'],['login-opening','正在打开本次登录页面','LOGIN-06'],['login-opened','已请求浏览器打开 · 仍待授权','LOGIN-06'],['login-open-failed','打开浏览器失败 · 链接仍有效','LOGIN-07'],['login-expired-link','链接已失效 · 登录已超时','LOGIN-07 RE-05'],['login-verify','官方登录完成 · 核验身份中','LOGIN-08 RE-14'],['verify-failed','身份核验失败 · 连接中断','LOGIN-12'],['login-cancelling','正在结束本次登录','LOGIN-13 RE-14'],['login-cancelled','已确认取消登录','LOGIN-14'],['login-cancel-failed','取消失败 · 允许安全结束后重登','LOGIN-15'],['login-cancel-unknown','取消结果未知 · 继续核对','LOGIN-15'],['login-cancel-blocked','取消受阻 · 无安全恢复许可','LOGIN-15']])add(context+'-'+phase,group,label,phase,refs,{selected:context!=='first',journey:context,paused:context!=='first',history:context==='first'?'none':'existing',operation:'login'});
+}
+add('relogin-different',rel,'从详情主动重新登录 · 预设返回 B','normal','RE-01 RE-04',{panel:'detail',result:'different'});
+add('relogin-confirm',rel,'重新登录确认 · 暂停告知','normal','RE-01',{panel:'relogin'});
+add('relogin-cancel-confirm',rel,'取消发起确认 · 保留原选择','normal','RE-02 AUTH-10',{panel:'detail'});
+for(const [phase,label,refs] of [['restart-old','正在安全结束旧流程','RE-06'],['restart-failed','结束旧流程失败 · 允许安全重试','RE-09'],['restart-blocked','旧流程归属不明 · 无安全许可','RE-10'],['restart-unknown','重新登录进度未知','RE-12'],['restart-query','正在查询原重登进度','RE-12'],['restart-cancelling','正在取消复合重登','RE-13'],['restart-cancelled','复合重登已取消 · 范围未变','RE-13'],['restart-cancel-failed','复合取消失败 · 安全重试许可','RE-13'],['restart-cancel-unknown','复合取消结果未知','RE-13']])add(phase,rel,label,phase,refs,{paused:true,journey:'relogin',operation:'restart'});
+add('login-same',rel,'核验仍是 A · 已准备就绪且暂停','normal','LOGIN-10 RE-04 AUTH-10',{paused:true,journey:'relogin'});
+add('login-different',rel,'核验发现 B · 保留 A','change','LOGIN-11 RE-04',{paused:true,journey:'change'});
+for(const [phase,label,refs] of [['preparing','正在准备接单','IN-06 PRE-01'],['prepare-failed','授权同步失败 · 连接中断','PRE-03'],['prepare-retry','再次准备接单中','PRE-04'],['normal','准备就绪 · 保留接单选择','PRE-02'],['quota','准备就绪 · 等待额度','PRE-02']])variants('prep-'+phase,prep,label,phase,refs,{journey:'intake',quota:phase==='quota'?'known':'available'});
+variants('prep-credentials',prep,'准备需修复读取设置','read-failed','PRE-05',{journey:'repair',resumePrepare:true});
+variants('prep-expired',prep,'准备需重新授权','expired','PRE-05',{journey:'relogin'});
+variants('prep-evidence',prep,'展开准备进度 · 可信细分事实','preparing','VIEW-05',{journey:'intake',disclosure:'progress',evidence:true});
+variants('prep-minimal',prep,'展开准备进度 · 仅有准备中事实','preparing','VIEW-05',{journey:'intake',disclosure:'progress'});
+add('ready',supply,'正常可接单','normal','SUP-01');add('paused',supply,'普通暂停','normal','SUP-02',{paused:true});
+for(const [phase,label,refs,paused] of [['pause-busy','正在暂停接单','SUP-03',false],['pause-done','暂停成功 · 已有任务可完成','SUP-04',true],['pause-failed','明确暂停失败 · 仍可能接单','SUP-05',false],['pause-unknown','暂停结果未知 · 自动核对','SUP-06',false],['resume-busy','正在恢复接单','SUP-07',true],['resume-done','恢复成功 · 允许接单','SUP-08',false],['resume-failed','明确恢复失败 · 仍暂停','SUP-10',true],['resume-unknown','恢复结果未知 · 自动核对','SUP-11',true],['pause-long','暂停长期未知 · 恢复出口待补','SUP-13',false],['resume-long','恢复长期未知 · 恢复出口待补','SUP-13',true],['pause-retry','明确未生效 · 有限自动重试中','SUP-14',false],['pause-retry-failed','有限重试已用尽 · 暂停失败','SUP-14',false]])add(phase,supply,label,phase,refs,{paused});
+for(const paused of [false,true])add('supply-checked-'+paused,supply,'原操作核对完成 / '+(paused?'仍暂停':'允许接单'),'normal','SUP-12',{paused});
+add('resume-quota',supply,'已恢复允许接单 · 额度不足','quota','SUP-09',{quota:'known'});add('resume-reconnect',supply,'已恢复允许接单 · 仍重连','reconnecting','SUP-09');
+for(const [phase,label] of [['expired','授权过期'],['read-failed','读取权限不足'],['service-blocked','服务拒绝接单操作'],['repair-query','修复完成 · 原恢复结果仍未知'],['resume-failed','修复完成 · 原恢复确定未生效'],['normal','修复完成 · 已核实原操作生效']])add('supply-repair-'+phase,supply,'接单故障 / '+label,phase,'SUP-15',{paused:phase!=='normal',journey:phase==='expired'?'relogin':phase==='read-failed'?'repair':null,origin:'supply'});
+const qp={known:'额度耗尽 · 恢复时间已知',unknown:'额度耗尽 · 恢复时间未知',checking:'额度恢复核验中',available:'额度已恢复'};let qi=1;
+for(const [q,label] of Object.entries(qp))for(const paused of [false,true])for(const panel of ['', 'detail'])add(`quota-${q}-${paused?'paused':'allowed'}${panel?'-detail':''}`,'接单 / 额度等待',label+' / '+(paused?'已暂停':'允许接单')+(panel?' / 详情':''),'quota','QUOTA-'+String(qi++).padStart(2,'0'),{quota:q,paused,panel});
+variants('read-failed',auth,'无法读取文件 · 系统拒绝访问','read-failed','AUTH-01 AUTH-02',{journey:'repair'});
+variants('settings',auth,'打开凭证读取设置 · 尚未保存','read-failed','AUTH-03 AUTH-04 VIEW-04',{journey:'repair',panel:'settings'});
+for(const [phase,label] of [['settings-saving','保存设置中'],['settings-failed','保存失败 · 保留输入'],['read-checking','保存成功 · 自动读取中'],['read-verify','读取成功 · 自动核验中'],['normal','核验仍是 A · 修复成功'],['change','核验发现 B · 保留 A'],['read-failed','设置已保存 · 读取仍失败']])variants('settings-'+phase,auth,label,phase,'AUTH-04 AUTH-05 AUTH-06 AUTH-07',{journey:phase==='change'?'change':'repair',panel:phase.startsWith('settings')?'settings':null});
+variants('expired',auth,'授权已过期','expired','AUTH-08 AUTH-09',{journey:'relogin'});
+for(const [phase,label,refs,panel] of [['change','发现不同账号 · 保留 A','CHG-01',null],['change-review','核对 A 与 B','CHG-02','compare'],['change-review','确认更换 A → B','CHG-03','change'],['change','取消换号确认 · 保留 A','CHG-03',null],['change-busy','正在换号','CHG-04',null],['preparing','已更换 B · 正在准备','CHG-04 CHG-07',null],['normal','B 已就绪 · 保持暂停','CHG-05 CHG-07',null],['change-unknown','换号结果待核对','CHG-06',null],['change-query','正在核对原换号结果','CHG-06',null],['change-failed','确定未更换 · 原操作已结束','CHG-08',null],['change-still-unknown','仍无法确认 · 保留 A → B','CHG-09',null]])add('change-'+(panel==='change'?'confirm':panel==='compare'?'review':refs==='CHG-03'?'cancelled':phase==='change'?'found':phase==='normal'?'ready':phase.replace(/^change-/,'')),change,label,phase,refs,{panel,journey:['change-unknown','change-query','change-failed','change-still-unknown'].includes(phase)?null:'change',paused:!['change','change-review'].includes(phase),id:['preparing','normal'].includes(phase)?'B':'A'});
+for(const [phase,label,refs] of [['reconnecting','自动重连中','SYNC-01'],['normal','重连成功','SYNC-02'],['stale','状态信息已过期 · 更新中','SYNC-03'],['normal','更新成功','SYNC-04'],['stale-failed','更新失败 · 暂无法确认','SYNC-05'],['expired','更新发现授权过期','SYNC-06'],['read-failed','更新发现读取失败','SYNC-06'],['change','更新发现不同账号','SYNC-06']])variants('sync-'+refs+'-'+phase,sync,label,phase,refs,{journey:phase==='expired'?'relogin':phase==='read-failed'?'repair':phase==='change'?'change':null});
+add('view-detail',view,'账号详情 · 身份与低频操作','normal','VIEW-01',{panel:'detail'});
+add('view-errors',view,'展开错误证据 · 同因去重','read-failed','VIEW-02',{paused:true,journey:'repair',disclosure:'errors',independent:true});
+add('view-quota',view,'查看额度 · 主界面只读展开','quota','VIEW-03',{quota:'known',disclosure:'quota'});
+add('view-install',view,'安装说明 · 不代表已安装','login-missing','VIEW-06',{selected:false,journey:'first',panel:'install'});
+// Additional deterministic branches are reviewable without external success controls.
+for(const [key,label,phase,result] of [['verify-again-fails','重新核验再次失败','verify-failed','failure'],['save-read-fails','保存后读取仍失败','read-failed','failure'],['save-discovers-b','保存后核验发现 B','read-failed','different'],['prepare-again-fails','重试准备再次失败','prepare-failed','failure'],['intake-check-success','核对原接入 · 预设已成功','intake-unknown','success'],['intake-check-failed','核对原接入 · 预设确定失败','intake-unknown','failure'],['change-check-success','核对原换号 · 预设已成功','change-unknown','success'],['change-check-failed','核对原换号 · 预设确定失败','change-unknown','failure'],['restart-check-running','查询原重登 · 预设仍在结束旧流程','restart-unknown','running'],['restart-check-started','查询原重登 · 预设新登录已启动','restart-unknown','success'],['restart-check-failed','查询原重登 · 预设明确失败','restart-unknown','failure']])add(key,phase.startsWith('intake')?intake:phase.startsWith('read')||phase.startsWith('verify')?auth:phase.startsWith('prepare')?prep:phase.startsWith('change')?change:rel,label,phase,phase.startsWith('intake')?'IN-11':phase.startsWith('read')?'AUTH-04':phase.startsWith('verify')?'LOGIN-12':phase.startsWith('prepare')?'PRE-04':phase.startsWith('change')?'CHG-06':'RE-12',{result,journey:phase.startsWith('read')?'repair':phase.startsWith('verify')||phase.startsWith('restart')?'relogin':phase.startsWith('prepare')?'intake':null,selected:!phase.startsWith('intake'),paused:!phase.startsWith('intake')});
+
+
+add('first-login-confirm',login,'首次登录确认弹窗','empty','IN-01 LOGIN-01',{selected:false,journey:'first',history:'none',panel:'login'});
+variants('relogin-confirm-choice',rel,'从详情重新登录 · 确认暂停影响','normal','RE-01 RE-02',{panel:'relogin'});
+variants('expired-confirm',auth,'授权过期 · 重新登录确认','expired','AUTH-08 AUTH-09 AUTH-10',{journey:'relogin',panel:'relogin'});
+variants('settings-normal',auth,'正常账号 · 读取设置编辑','normal','AUTH-04 VIEW-04',{panel:'settings'});
+variants('settings-cancelled',auth,'取消设置编辑 · 原读取故障保留','read-failed','AUTH-04',{journey:'repair'});
+add('verify-needs-read',auth,'登录核验需修复凭证读取','read-failed','LOGIN-12',{paused:true,journey:'repair'});
+add('login-needs-preparation',rel,'仍是 A · 尚需准备接单','preparing','LOGIN-10',{paused:true,journey:'relogin'});
+
+// Preserve the first-login origin when entering shared intake/preparation views.
+for(const [key,label,phase,refs,extra] of [
+ ['candidate','登录核验完成 · 待确认接入','candidate','LOGIN-09 IN-02',{}],
+ ['intake-confirm','登录后确认接入弹窗','candidate','IN-03 IN-12',{panel:'intake'}],
+ ['intake-cancelled','取消接入确认 · 保留登录进度','candidate','IN-04',{}],
+ ['intake-busy','登录后正在接入','intake-busy','IN-05',{}],
+ ['intake-failed','登录后接入明确失败','intake-failed','IN-07',{}],
+ ['preparing','登录后正在准备接单','preparing','IN-06 PRE-01',{selected:true}],
+ ['prepare-failed','登录后准备失败','prepare-failed','PRE-03',{selected:true}],
+ ['prepare-retry','登录后重试准备','prepare-retry','PRE-04',{selected:true}],
+ ['success','接入成功 · 等待点击完成','normal','PRE-02',{selected:true,completionPending:true}],
+ ['success-paused','接入成功 · 接单保持暂停','normal','PRE-02',{selected:true,paused:true,completionPending:true}],
+ ['success-quota','接入成功 · 等待额度恢复','quota','PRE-02',{selected:true,quota:'known',completionPending:true}],
+ ['ready','登录接入完成 · 允许接单','normal','PRE-02',{selected:true,journey:null}],
+ ['paused','登录接入完成 · 期间选择暂停','normal','PRE-02',{selected:true,paused:true,journey:null}],
+ ['quota','登录接入完成 · 等待额度','quota','PRE-02',{selected:true,quota:'known',journey:null}]
+])add('first-'+key,login+' / 接入与准备',label,phase,refs,{selected:false,journey:'first',history:'none',...extra});
+
+// Explicit completion entries remain still when selected directly.
+for(const [journey,group,title] of [['intake',intake,'账号接入成功'],['relogin',rel,'重新登录成功'],['repair',auth,'账号读取已修复'],['change',change,'账号更换成功']]){
+ for(const [suffix,label,paused,quota] of [['allowed','可以接单',false,'available'],['paused','接单保持暂停',true,'available'],['quota','等待额度恢复',false,'known']]){
+  if((journey==='change'||journey==='relogin')&&!paused)continue;
+  add('complete-'+journey+'-'+suffix,group,title+' · '+label,quota==='known'?'quota':'normal','PRE-02',{journey,paused,quota,id:journey==='change'?'B':'A',completionPending:true});
+  if(['repair','relogin'].includes(journey))add('complete-'+journey+'-prepared-'+suffix,group,title+' · 已完成准备 · '+label,quota==='known'?'quota':'normal','PRE-02',{journey,paused,quota,completionPending:true,preparationIncluded:true});
+ }
+}
+add('complete-authorization',auth,'账号授权已恢复 · 接单保持暂停','normal','AUTH-10',{journey:'relogin',paused:true,completionPending:true,authorizationRepair:true});
+for(const x of Object.values(catalog)){
+ if(x.journey&&x.journey!=='first'&&['normal','quota'].includes(x.phase)&&!x.panel&&['prep-normal','prep-quota','login-same','change-ready','settings-normal-'].some(prefix=>x.key.startsWith(prefix)))x.completionPending=true;
+}
+
+return catalog;})();
+const claudeExcluded=new Set(['login-link','login-no-link','login-link-failed','login-opening','login-opened','login-open-failed']);
+for(const source of Object.values(claudeBaseline)){
+ if(claudeExcluded.has(source.phase))continue;
+ const key='claude-'+source.key;
+ let label=source.label.replaceAll('Codex','Claude Code').replaceAll('OpenAI','Claude');
+ if(source.phase==='login-start')label='正在打开登录终端';
+ if(source.phase==='login-wait')label='等待终端与浏览器登录';
+ if(source.phase==='login-failed')label='系统拒绝打开 Terminal · 可安全重试';
+ if(source.phase==='login-expired-link')label='本次登录已超时';
+ const parts=source.group.split(' / ');parts.splice(1,0,'Claude');
+ catalog[key]={...source,key,label,group:parts.join(' / '),platform:'claude'};
+}
+catalog['claude-terminal-lost']={...catalog['claude-first-login-wait'],key:'claude-terminal-lost',label:'找不到登录窗口 · Dock 切换指引'};
+
 $('scene').innerHTML='';
 for(const group of [...new Set(Object.values(catalog).map(s=>s.group))]){const el=document.createElement('optgroup');el.label=group;for(const s of Object.values(catalog).filter(s=>s.group===group))el.append(new Option('　'+s.label,s.key));$('scene').append(el);}
 const params=new URLSearchParams(location.search),aliases={recovery:'expired-paused',change:Object.values(catalog).find(s=>s.phase==='change'&&s.refs==='CHG-01').key};
@@ -589,9 +1198,10 @@ let selectedStart=$('scene').value;
 function send(action,value){frame.contentWindow.postMessage({type:'bee-design-control',action,value},'*');}
 function remember(){const url=new URL(location.href);for(const key of ['scene','theme','size'])url.searchParams.set(key,key==='scene'?selectedStart:$(key).value);history.replaceState(null,'',url);}
 function presentation(){document.body.classList.toggle('dark',$('theme').value==='dark');frame.classList.toggle('narrow',$('size').value==='narrow');send('theme',$('theme').value);remember();}
-function hint(key){const s=catalog[key];$('hint').textContent='静态模拟 · '+s.group+' · '+s.label+'。直接选择停留；产品操作按预设推进。'+(s.phase==='restart-blocked'||s.phase.includes('long')||s.phase.includes('blocked')?' 此分支的安全恢复出口仍待接口补齐，草稿不模拟成功。':'');}
-function reset(){ $('scene').value=selectedStart;send('reset',{key:selectedStart,model:catalog[selectedStart],catalog});hint(selectedStart);remember();}
+function hint(key){const s=catalog[key];$('hint').textContent=(s.platform==='claude'?'待评审 · macOS · 静态模拟 · ':'静态模拟 · ')+s.group+' · '+s.label+'。直接选择停留；产品操作按预设推进。'+(s.platform==='claude'?' 官方终端与浏览器结果均为预设，不会打开真实终端。':'')+(s.phase==='restart-blocked'||s.phase.includes('long')||s.phase.includes('blocked')?' 此分支的安全恢复出口仍待接口补齐，草稿不模拟成功。':'');}
+let activeTemplate=null;
+function reset(){ $('scene').value=selectedStart;const name=catalog[selectedStart].platform==='claude'?'claude-template':'app-template';if(activeTemplate!==name){activeTemplate=name;frame.srcdoc=$(name).innerHTML;hint(selectedStart);remember();return;}const currentCatalog=Object.fromEntries(Object.entries(catalog).filter(([,s])=>(s.platform==='claude')===(name==='claude-template')));send('reset',{key:selectedStart,model:catalog[selectedStart],catalog:currentCatalog});hint(selectedStart);remember();}
 $('scene').onchange=()=>{selectedStart=$('scene').value;reset();};$('reset').onclick=reset;$('theme').onchange=presentation;$('size').onchange=presentation;
-window.addEventListener('message',e=>{if(e.source!==frame.contentWindow)return;if(e.data?.type==='bee-oa-position'&&catalog[e.data.scene]){$('scene').value=e.data.scene;hint(e.data.scene);}if(e.data?.type==='bee-design-ready'){reset();presentation();}});
-presentation();frame.srcdoc=$('app-template').innerHTML;
+window.addEventListener('message',e=>{if(e.source!==frame.contentWindow)return;if(e.data?.type==='bee-openai-review'){selectedStart='onboarding';reset();return;}if(e.data?.type==='bee-oa-position'&&catalog[e.data.scene]){$('scene').value=e.data.scene;hint(e.data.scene);}if(e.data?.type==='bee-design-ready'){reset();presentation();}});
+reset();presentation();
 </script></body></html>

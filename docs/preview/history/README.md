@@ -39,6 +39,9 @@
 
 | 2026-11-09 18:45:18 | 状态详情按新增信息展示：正文直接说明暂停条件，去掉重复折叠；保留有效错误证据、核对记录与细分进度。冻结主预览、对比页及旧版 | 已按确认建议修改；静态模拟，不代表真实接口验收 | [打开](20261109-184518-concise-state-details/index.html?scene=intake-retry-paused) |
 
+| 20261110-114533（Asia/Shanghai） | 本轮恢复候选修改前的完整认可主预览；旧对照稿取自 Git HEAD | 认可基线原样冻结，非新增认可 | [打开](20261110-114533-openai-recovery-before/index.html) |
+| 20261110-114533（Asia/Shanghai） | 复用认可外壳，新增重试耗尽、四种 60 秒结果核对结束及归属缺失候选；只读核实仍未知 | 待评审；未覆盖或更新主预览，未宣称 Q1 已闭环 | [候选](20261110-114533-openai-recovery-candidate/openai-recovery-candidate.html?scene=candidate-retries) |
+
 ## 20261110-115235 Claude 终端登录与共用流程（待评审）
 
 - 时间：2026-11-10，Asia/Shanghai。

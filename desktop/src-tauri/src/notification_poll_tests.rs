@@ -24,6 +24,7 @@ fn status(phase: BridgePhase) -> BridgeStatus {
             os: "test".into(),
             arch: "test".into(),
             instance: "a".repeat(32),
+            capabilities: vec![],
         }),
         error: None,
     }

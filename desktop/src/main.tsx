@@ -20,7 +20,7 @@ import './styles/tokens.css';
 import './styles/app.css';
 
 const runtimeFactory=(instance:string)=>createRuntimeClient(invoke,instance);
-const authorizeFactory=(instance:string)=>createAuthorizeClient(invoke,instance);
+const authorizeFactory=(instance:string,capabilities?:readonly string[])=>createAuthorizeClient(invoke,instance,capabilities);
 const accountFactory=(instance:string)=>createAccountClient(invoke,instance);
 const supply = (binding:SupplyBinding) => createSupplyClient(invoke,binding);
 const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:string|null,bindingRevision=0)=>createDiagnosticsClient(invoke,instance,revision,runId,bindingRevision);

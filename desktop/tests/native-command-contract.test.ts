@@ -38,7 +38,7 @@ function checkType(value:unknown, type:string, at:string):void {
   const name = type.split('::').at(-1)!;
   const structure = inputSource.match(new RegExp(`struct ${name}\\s*\\{([^}]+)\\}`));
   if (structure) {
-    const fields = [...structure[1].matchAll(/pub (\w+):\s*([^,\n]+)/g)].map(([,key,type]) => [key,type.trim()] as const);
+    const fields = [...structure[1].matchAll(/((?:\s*#\[[^\]]+\])*)\s*pub (\w+):\s*([^,\n]+)/g)].map(([,attributes,key,type]) => [key,type.trim(),/\bdefault\b/.test(attributes)] as const);
     checkFields(value, fields, at);
   } else {
     // All command-input enums use string serialization; their value whitelists
@@ -47,10 +47,10 @@ function checkType(value:unknown, type:string, at:string):void {
     assert.equal(typeof value, 'string', `${at}: required=serialized ${name}`);
   }
 }
-function checkFields(value:unknown, fields:readonly (readonly [string,string])[], at:string):void {
+function checkFields(value:unknown, fields:readonly (readonly [string,string,boolean?])[], at:string):void {
   assert.ok(value && typeof value === 'object' && !Array.isArray(value), `${at}: required=object`);
   const object = value as Record<string, unknown>;
-  assert.deepEqual(Object.keys(object).sort(), fields.map(([key]) => key).sort(), `${at}: payload keys differ from the Rust command/Serde definition`);
+  assert.deepEqual(Object.keys(object).sort(), fields.filter(([key,,optional])=>!optional||Object.hasOwn(object,key)).map(([key]) => key).sort(), `${at}: payload keys differ from the Rust command/Serde definition`);
   fields.forEach(([key,type]) => checkType(object[key], type, `${at}.${key}`));
 }
 function checkCall(command:string, args:unknown):void {
@@ -72,8 +72,8 @@ test('all registered native commands receive frontend arguments matching the Rus
   for (const action of [()=>device.status(),()=>device.begin('https://hive.example','Test Mac'),()=>device.open(),()=>device.context!(),()=>device.recoveryPrepare(),()=>device.recoveryStatus(),()=>device.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
   const accounts=createAccountClient(invoke,instance);
   for (const action of [()=>accounts.defaults(),()=>accounts.snapshot('openai',true),()=>accounts.detect({platform:'openai',directory:null,store:'auto',mode:'local'}),()=>accounts.action({platform:'openai',revision:1,candidate_ref:id,action:'select',confirmed:true})]) await sample(action);
-  const authorize=createAuthorizeClient(invoke,instance);
-  for (const action of [()=>authorize.start({platform:'openai',source:{directory:null,store:'auto'},expected_revision:1}),()=>authorize.status(id),()=>authorize.cancel(id)]) await sample(action);
+  const authorize=createAuthorizeClient(invoke,instance,['authorize_progress','authorize_open']);
+  for (const action of [()=>authorize.start({platform:'openai',source:{directory:null,store:'auto'},expected_revision:1}),()=>authorize.status(id),()=>authorize.cancel(id),()=>authorize.progress!(id),()=>authorize.open!(id)]) await sample(action);
   const runtime=createRuntimeClient(invoke,instance);
   for (const action of [()=>runtime.snapshot(),()=>runtime.start({expected_revision:1,resume_platforms:['openai']}),()=>runtime.stop(1)]) await sample(action);
   const supply=createSupplyClient(invoke,{hive:'https://hive.example',deviceId:'test-device'});
@@ -82,6 +82,7 @@ test('all registered native commands receive frontend arguments matching the Rus
   for (const action of [()=>network.snapshot(),()=>network.test(''),()=>network.saveProxy({proxy:'',origin:'https://hive.example',expectedRevision:1}),()=>network.applySaved(true)]) await sample(action);
   const preferences=createPreferencesClient(invoke);
   for (const action of [()=>preferences.read(),()=>preferences.save(0,defaultPreferences())]) await sample(action);
+  await assert.rejects(()=>preferences.save(0,{...defaultPreferences(),openai_source:{directory:null,store:'file'}}),error=>error===stopped);
   const notifications=createNotificationsClient(invoke);
   for (const action of [()=>notifications.permission(),()=>notifications.enable(),()=>notifications.autostartStatus(),()=>notifications.autostartSet(true),()=>notifications.deliveryStatus(),()=>notifications.retry()]) await sample(action);
 

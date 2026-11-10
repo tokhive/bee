@@ -26,6 +26,8 @@ type desktopAuthorization struct {
 	maintenance       *desktopLoginRecord
 	cleanupErr        error
 	processCleanupErr error
+	phase             string
+	loginLink         string // Sensitive, ephemeral; never persisted or returned.
 }
 
 // A process cleanup failure is distinct from a nonzero official login result.
@@ -38,22 +40,25 @@ func (e *desktopAuthorizationCleanupError) Unwrap() error { return e.cause }
 // DesktopAuthorizer supervises only the official commands it starts. It never
 // receives login passwords, callback URLs or authorization material from the UI.
 type DesktopAuthorizer struct {
-	mu       sync.Mutex
-	ctx      context.Context
-	cancel   context.CancelFunc
-	workers  sync.WaitGroup
-	closed   bool
-	accounts *DesktopAccounts
-	jobs     map[string]*desktopAuthorization
-	timeout  time.Duration
-	resolve  func(string) (string, error)
-	command  func(string, ...string) *exec.Cmd
-	interact func(context.Context, *exec.Cmd) error
+	mu           sync.Mutex
+	ctx          context.Context
+	cancel       context.CancelFunc
+	workers      sync.WaitGroup
+	closed       bool
+	accounts     *DesktopAccounts
+	jobs         map[string]*desktopAuthorization
+	timeout      time.Duration
+	resolve      func(string) (string, error)
+	command      func(string, ...string) *exec.Cmd
+	interact     func(context.Context, *exec.Cmd) error
+	openBrowser  func(context.Context, string) error
+	observations map[string]DesktopLoginProgress
+	rechecks     map[string]bool
 }
 
 func NewDesktopAuthorizer(parent context.Context, a *DesktopAccounts) *DesktopAuthorizer {
 	ctx, cancel := context.WithCancel(parent)
-	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command, interact: runDesktopInteractiveAuthorization}
+	owner := &DesktopAuthorizer{ctx: ctx, cancel: cancel, accounts: a, jobs: map[string]*desktopAuthorization{}, timeout: 10 * time.Minute, resolve: desktopOfficialExecutable, command: exec.Command, interact: runDesktopInteractiveAuthorization, openBrowser: openDesktopLoginURL, observations: map[string]DesktopLoginProgress{}, rechecks: map[string]bool{}}
 	a.lifecycleMu.Lock()
 	a.authorizer = owner
 	a.lifecycleMu.Unlock()
@@ -169,12 +174,13 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	p.snapshot.Revision++
 	op := DesktopOperation{ID: id, Kind: "authorize", Platform: accountString(request.Platform), State: "pending", Revision: p.snapshot.Revision}
 	p.snapshot.Operation = &op
-	job := &desktopAuthorization{operation: op, request: request, ctx: live, cancel: cancel, done: make(chan struct{})}
+	job := &desktopAuthorization{operation: op, request: request, ctx: live, cancel: cancel, done: make(chan struct{}), phase: "starting"}
 	// Keep at most the latest owned operation per platform; old IDs never attach
 	// to another process or a later authorization attempt.
 	for key, old := range o.jobs {
 		if old.request.Platform == request.Platform {
 			delete(o.jobs, key)
+			delete(o.observations, key)
 		}
 	}
 	o.jobs[id] = job
@@ -212,6 +218,8 @@ func (o *DesktopAuthorizer) Cancel(ctx context.Context, id string) (DesktopOpera
 		return DesktopOperation{}, fmt.Errorf("authorization operation is not owned by this management instance")
 	}
 	if job.operation.State == "pending" || job.operation.State == "running" {
+		job.loginLink = ""
+		job.phase = "cleaning_up"
 		job.cancel()
 	}
 	// Cancellation is terminal only after the owned process has exited and joined.
@@ -290,7 +298,9 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 		}
 		defer lease.close()
 		ctx = context.WithValue(ctx, desktopLoginProcessContextKey{}, lease)
+		o.mu.Lock()
 		job.ctx = ctx
+		o.mu.Unlock()
 	}
 	if err := o.beginLoginMaintenance(job, detect); err != nil {
 		return err
@@ -311,14 +321,23 @@ func (o *DesktopAuthorizer) authorize(job *desktopAuthorization) (resultErr erro
 	command.Stdin = nil
 	command.Stdout = io.Discard
 	command.Stderr = io.Discard
+	if request.Platform == "openai" {
+		// The bounded parser retains only a complete validated authorization URL.
+		// It never forwards official output into errors, logs or the journal.
+		output := newDesktopLoginOutput(func(link string) { o.acceptLoginLink(job.operation.ID, link) })
+		command.Stderr = output
+		defer output.Close()
+	}
 	check = "official_process"
 	run := runDesktopAuthorization
 	if request.Platform == "claude" {
 		run = o.interact
 	}
 	if err := run(ctx, command); err != nil {
+		o.setLoginPhase(job, "cleaning_up")
 		return desktopAuthorizationFailure(request.Platform, "authorization_process_failed", check, "official login process failed: "+err.Error(), nil, err)
 	}
+	o.setLoginPhase(job, "verifying")
 	if err := ctx.Err(); err != nil {
 		return err
 	}
@@ -395,6 +414,11 @@ func (o *DesktopAuthorizer) finish(job *desktopAuthorization, err error) {
 	defer o.accounts.lifecycleMu.Unlock()
 	o.mu.Lock()
 	defer o.mu.Unlock()
+	job.loginLink = ""
+	job.phase = "finished"
+	if job.processCleanupErr != nil {
+		job.phase = "cleaning_up"
+	}
 	p.working = false
 	delete(o.accounts.activeActions, job.request.Platform)
 	p.snapshot.Revision++

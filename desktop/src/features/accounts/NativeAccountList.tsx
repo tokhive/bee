@@ -1,3 +1,4 @@
+import {OpenaiAccountCard} from './OpenaiAccountCard';
 import {AccountCondition} from './AccountCondition';
 import {FailureNotice} from '../../components/ProblemNotice';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
@@ -23,6 +24,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
   <div className="section-heading">{!accounts.autoService&&<h2>{t('AI 账号')}</h2>}<div className="account-list-status"><AccountCheckStatus supply={supply}/><span>{countCopy}</span></div></div>
   <div className="native-account-list">{platforms.map(platform=>{
    const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
+   if(context==='accounts'&&accounts.autoService&&platform==='openai')return <OpenaiAccountCard key={platform} accounts={accounts} runtime={runtime} supply={supply} now={now} onNavigate={navigate} navigationRequest={navigationRequest}/>;
    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];
    const readFailed=!!accounts.readFailures[platform];
    const presentation=accountPresentation(snapshot,dirty,now,readFailed,!!accounts.deviceFailure),selected=snapshot?.selection.state==='selected';

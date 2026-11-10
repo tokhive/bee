@@ -5,6 +5,23 @@ const ready=(instance:string)=>({state:'ready',metadata:{instance,bee_version:'t
 const runtime=(network_revision=0)=>({revision:1,network_revision,local:'stopped',platforms:{},run_id:null});
 function fixture(){let listener:(v:any)=>void=()=>{};let calls=0;let current:any=runtime();const deps:any={bridge:{status:async()=>ready('a'),onStatus:async(fn:any)=>{listener=fn;return()=>{};}},device:{status:async()=>({state:'unbound'})},runtime:()=>({snapshot:async()=>{calls++;return current;}}),intervalMs:100000};return {deps,emit:(v:any)=>listener(v),calls:()=>calls,set:(v:any)=>{current=v;}};}
 const tick=()=>new Promise<void>(resolve=>setImmediate(resolve));
+test('OpenAI reads are pure and stop after 1/2/4 retries while Claude keeps its existing schedule',async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const f=fixture();const reads:{platform:string;at:number;refresh:boolean}[]=[];
+ f.deps.openaiQueries=true;f.deps.intervalMs=10000;f.deps.random=()=>1;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string,refresh:boolean)=>{
+  reads.push({platform,at:Date.now(),refresh});
+  if(platform==='openai')throw {code:'RESPONSE_TIMEOUT',message:'controlled OpenAI read unavailable'};
+  return {platform,revision:1,issues:[]};
+ }});
+ f.set({...runtime(),platforms:{openai:{account:{revision:0}},claude:{account:{revision:0}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ const start=reads[0].at;
+ for(const ms of [1000,2000,4000]){t.mock.timers.tick(ms);await tick();}
+ const openai=reads.filter(r=>r.platform==='openai');assert.deepEqual(openai.map(r=>r.at-start),[0,1000,3000,7000]);assert.ok(openai.every(r=>!r.refresh));
+ assert.equal(m.getSnapshot().accountRefresh.openai?.state,'blocked');
+ t.mock.timers.tick(20000);await tick();assert.equal(reads.filter(r=>r.platform==='openai').length,4);assert.ok(reads.filter(r=>r.platform==='claude').every(r=>r.refresh));
+});
 test('one coordinator shares snapshots across subscriptions without page-triggered reads',async()=>{const f=fixture();const m=createDesktopState(f.deps);let updates=0;const off=m.subscribe(()=>updates++);await tick();const calls=f.calls();const second=m.subscribe(()=>updates++);await tick();assert.equal(f.calls(),calls);await Promise.all([m.refresh(),m.refresh()]);assert.equal(f.calls(),calls+1);assert.ok(updates>0);off();second();m.dispose();await m.refresh();assert.equal(f.calls(),calls+1);});
 test('old child and network revision results never replace current state',async()=>{const f=fixture();const m=createDesktopState(f.deps);m.subscribe(()=>{});await tick();f.set(runtime(3));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.set(runtime(2));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.emit(ready('b'));await tick();assert.equal(m.getSnapshot().native.metadata?.instance,'b');m.dispose();});
 test('coordinator refreshes stopped account and supply observations once for all pages',async t=>{

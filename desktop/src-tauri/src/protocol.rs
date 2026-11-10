@@ -265,6 +265,8 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "authorize_start",
             "authorize_status",
             "authorize_cancel",
+            "authorize_progress",
+            "authorize_open",
             "diagnostics_start",
             "diagnostics_snapshot",
             "diagnostics_cancel",
@@ -792,6 +794,13 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(presence_candidates);
+    let login_candidates: Vec<_> = candidates.iter().filter_map(|group| {
+        let index = group.iter().position(|m| m == "authorize_cancel")?;
+        let mut group = group.clone();
+        group.splice(index+1..index+1, ["authorize_progress".into(), "authorize_open".into()]);
+        Some(group)
+    }).collect();
+    candidates.extend(login_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
             .iter()

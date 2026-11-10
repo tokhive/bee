@@ -29,7 +29,7 @@ import type {Page} from '../client/types';
 import {t,useLanguage} from '../i18n/index';
 
 interface NativeProps {
- /** Target account experience, enabled only by the development mock entry. */
+ /** Platform accounts with automatic service preparation. */
  autoService?:boolean;
  client:DeviceClient;supply:SupplyFactory;accountFactory:AccountFactory;runtimeFactory:RuntimeFactory;authorizeFactory:AuthorizeFactory;systemBridge:SystemBridge;
  updateClient:UpdateClient;preferencesClient:PreferencesClient;notificationsClient:ReturnType<typeof createNotificationsClient>;networkClient:NetworkClient;
@@ -45,7 +45,7 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
-function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,nativeLanguageFeedback}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
+function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeLanguageFeedback}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
  const {native,device:view}=snapshot;
  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
  const [recovery,setRecovery]=useState<RecoveryContext|null>(null);
@@ -106,7 +106,8 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const instance=native.metadata?.instance;
  const accountClient=useMemo(()=>instance?props.accountFactory(instance):undefined,[props.accountFactory,instance]);
  const runtimeClient=useMemo(()=>instance?props.runtimeFactory(instance):undefined,[props.runtimeFactory,instance]);
- const authorizeClient=useMemo(()=>instance?props.authorizeFactory(instance):undefined,[props.authorizeFactory,instance]);
+ const authorizeCapabilities=JSON.stringify([...(native.metadata?.capabilities??[])].sort());
+ const authorizeClient=useMemo(()=>instance?props.authorizeFactory(instance,JSON.parse(authorizeCapabilities) as string[]):undefined,[props.authorizeFactory,instance,authorizeCapabilities]);
  const supplyClient=useMemo(()=>view?.state==='bound'&&view.identity&&view.hive?props.supply({hive:view.hive,deviceId:view.identity.id}):undefined,[props.supply,view?.state,view?.hive,view?.identity?.id]);
  const generation=useCallback(()=>model?.generation()??0,[model]);
  const supplyLocal=useRef<Partial<Record<'openai'|'claude',string>>>({});
@@ -115,7 +116,15 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,onSaved,
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
  const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,sourceReady:preferencesReady,recheckOpenaiReads:model?.recheckOpenaiReads,openaiSource:preferences.preferences.openai_source,
+ saveOpenaiSource:async source=>{
+  const current=await props.preferencesClient.read();if(current.error)throw current.error;
+  const saved=await props.preferencesClient.save(current.preferences.revision,{...current.preferences,openai_source:source});
+  if(saved.error)throw saved.error;
+  const confirmed=await props.preferencesClient.read();if(confirmed.error)throw confirmed.error;
+  if(confirmed.preferences.revision<saved.preferences.revision||JSON.stringify(confirmed.preferences.openai_source)!==JSON.stringify(source))throw {code:'PREFERENCES_UNCONFIRMED',message:'OpenAI source readback differs from saved receipt; required=same directory/store and revision at least '+saved.preferences.revision};
+  onSaved(confirmed);return confirmed.preferences.openai_source!;
+ },error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
  const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
@@ -165,10 +174,10 @@ export function NativeApp(props:NativeProps){
   apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);
  },[preferences.preferences.theme]);
  useEffect(()=>{
-  const coordinator=createDesktopState({bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
+  const coordinator=createDesktopState({openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
   setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
   return()=>{off();coordinator.dispose();};
  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
- return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
+ return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { Preferences } from '../client/types';
-import { en } from './en.ts';
+import { en as sharedEnglish } from './en.ts';
+import {openaiEnglish} from './openai-en.ts';
+const en={...openaiEnglish,...sharedEnglish};
 import { zh } from './zh.ts';
 export const missingTranslations = new Set<string>();
 let language: 'zh' | 'en' = 'zh';

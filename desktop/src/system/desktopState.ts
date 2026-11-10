@@ -16,7 +16,7 @@ export interface DesktopSnapshot {
  refresh:RefreshStatus;accountRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;supplyRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;
  diagnosticFailure?:UiFailure|null;
 }
-export interface DesktopDeps {bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
+export interface DesktopDeps {openaiQueries?:boolean;bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
 const platforms=['openai','claude'] as const;
 export const idleRefresh=():RefreshStatus=>({state:'idle',nextRetryAt:null,lastConfirmedAt:null});
 const status=(previous:RefreshStatus|undefined,state:RefreshStatus['state'],nextRetryAt:string|null=null):RefreshStatus=>({...previous??idleRefresh(),state,nextRetryAt});
@@ -38,7 +38,8 @@ export function createDesktopState(deps:DesktopDeps){
  const gate=(key:Resource)=>{let g=gates.get(key);if(!g){g={failures:0,at:0,terminal:false};gates.set(key,g);}return g;};
  const laneBlocked=(platform?:AccountPlatform)=>nativePending.some(r=>!platform||r.platform===null||!['account_detect','account_snapshot','supply_status'].includes(r.method)||r.platform===platform);
  const allowed=(key:Resource)=>{const g=gate(key);return !g.terminal&&!g.waiting&&(!g.failures&&!automaticRound||Date.now()>=g.at);};
- const backoff=(g:Gate,problem?:UiFailure)=>{const delay=[2000,4000,8000,16000,30000][Math.min(g.failures-1,4)];g.at=Date.now()+Math.max(Math.round(delay*(0.8+0.2*(deps.random??Math.random)())),Number(problem?.evidence.retry_after_seconds??0)*1000);delete g.waiting;};
+ const limited=(g:Gate)=>deps.openaiQueries&&['account:openai','supply:openai'].some(k=>gates.get(k as Resource)===g);
+ const backoff=(g:Gate,problem?:UiFailure)=>{if(limited(g)){delete g.waiting;if(g.failures>3){g.terminal=true;return;}g.at=Date.now()+[1000,2000,4000][g.failures-1];return;}const delay=[2000,4000,8000,16000,30000][Math.min(g.failures-1,4)];g.at=Date.now()+Math.max(Math.round(delay*(0.8+0.2*(deps.random??Math.random)())),Number(problem?.evidence.retry_after_seconds??0)*1000);delete g.waiting;};
  const succeed=(key:Resource)=>{gates.set(key,{failures:0,at:Date.now()+(deps.intervalMs??10000),terminal:false});};
  const fail=(key:Resource,problem:UiFailure)=>{
   const g=gate(key);g.failures++;
@@ -203,7 +204,7 @@ export function createDesktopState(deps:DesktopDeps){
       }
       publish({accountRefresh:{...state.accountRefresh,[platform]:status(state.accountRefresh[platform],'reading')}});
       try{
-       const account=await accounts.snapshot(platform,true);if(!current())return;
+       const account=await accounts.snapshot(platform,!(deps.openaiQueries&&platform==='openai'));if(!current())return;
        const minimum=Math.max(accountReceiptRevisions[platform]??-1,state.accounts[platform]?.revision??-1,next.platforms[platform]?.account.revision??-1);
        if(account.revision<minimum)throw {code:'DESKTOP_STALE_RESULT',evidence:{actual:String(account.revision),required:'account revision >='+minimum},message:'account revision platform='+platform+' actual='+account.revision+'; required>='+minimum+' from last confirmed observation'};
        const errors={...state.accountErrors};delete errors[platform];
@@ -255,6 +256,12 @@ export function createDesktopState(deps:DesktopDeps){
  }
  return {
   async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refresh();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refresh();acceptStartup(next);},
+  recheckOpenaiReads(){
+   if(pending)return pending;
+   if(laneBlocked('openai'))return Promise.resolve();
+   for(const key of ['account:openai','supply:openai'] as Resource[])gates.delete(key);
+   return refresh();
+  },
   acceptDiagnosticReport,
   subscribe(fn:()=>void){if(disposed)return()=>{};listeners.add(fn);begin();return()=>{listeners.delete(fn);};},getSnapshot:()=>state,refresh,generation:()=>epoch,
   recordRuntimeReceipt(revision:number){repair();runtimeReceiptRevision=Math.max(runtimeReceiptRevision,revision);},

@@ -1,6 +1,6 @@
 /**
- * Contract for review and mocks only. The native progress/open/restart commands and a
- * production client do not exist yet. Do not advertise these as capabilities.
+ * Progress/open have a capability-gated native implementation. Restart remains a
+ * proposed contract; do not advertise restart until its durable workflow exists.
  * See docs/desktop/codex-login-contract.md for lifecycle and failure semantics.
  */
 import type {AccountError, AccountOperation, AccountSource} from './accounts';
@@ -24,7 +24,7 @@ export interface CodexLoginProgress {
   phase: CodexLoginPhase;
   /** A stop was triggered; this alone never confirms process cleanup/result. */
   stop_reason: 'cancelled' | 'timed_out' | 'failed' | null;
-  /** Proposed observation of the accepted maintenance worker, not request loading. */
+  /** Observation of the accepted maintenance worker, not request loading. */
   recheck_in_flight: boolean;
   actions: {
     /** A validated link belongs to this live operation; opening starts no login. */
@@ -59,7 +59,7 @@ export interface CodexLoginExtension {
   open(operationId: string): Promise<CodexLoginOpenReceipt>;
 }
 
-/** Proposed bridge result shapes. The existing bridge instance envelope applies. */
+/** Native bridge result shapes. The existing bridge instance envelope applies. */
 export interface CodexLoginProgressResult {progress: CodexLoginProgress}
 export interface CodexLoginOpenResult {open: CodexLoginOpenReceipt}
 

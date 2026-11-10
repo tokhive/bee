@@ -178,6 +178,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				}
 				if authorizer != nil {
 					capabilities = append(capabilities, authorizeMethods...)
+					if _, ok := authorizer.(CodexLoginAuthorizer); ok {
+						capabilities = append(capabilities, codexLoginMethods...)
+					}
 				}
 				if diagnosticService != nil {
 					capabilities = append(capabilities, diagnosticMethods...)
@@ -276,7 +279,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				} else {
 					answer.Result = value
 				}
-			case authorizer != nil && slices.Contains(authorizeMethods, req.Method):
+			case authorizer != nil && (slices.Contains(authorizeMethods, req.Method) || slices.Contains(codexLoginMethods, req.Method)):
 				value, err := authorizeResult(ctx, authorizer, req)
 				if err != nil {
 					answer.Result = struct {

@@ -212,7 +212,7 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	if slices.Contains(networkMethods, req.Method) {
 		return decodeNetworkParams(req, fields["params"])
 	}
-	if slices.Contains(authorizeMethods, req.Method) {
+	if slices.Contains(authorizeMethods, req.Method) || slices.Contains(codexLoginMethods, req.Method) {
 		return decodeAuthorizeParams(req, fields["params"])
 	}
 	if slices.Contains(runtimeMethods, req.Method) {

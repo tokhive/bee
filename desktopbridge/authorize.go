@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	bee "github.com/tokhive/bee/agent"
 	"slices"
 )
@@ -16,6 +17,12 @@ type Authorizer interface {
 }
 
 var authorizeMethods = []string{"authorize_start", "authorize_status", "authorize_cancel"}
+var codexLoginMethods = []string{"authorize_progress", "authorize_open"}
+
+type CodexLoginAuthorizer interface {
+	Progress(context.Context, string) (bee.DesktopLoginProgress, error)
+	Open(context.Context, string) (bee.DesktopLoginOpenReceipt, error)
+}
 
 // Decode exact keys before structs so duplicate and case-aliased fields cannot
 // replace a validated source, program or revision later in the frame.
@@ -82,6 +89,22 @@ func decodeAuthorizeParams(req request, raw json.RawMessage) (request, *protocol
 	return req, nil
 }
 func authorizeResult(ctx context.Context, service Authorizer, req request) (any, error) {
+	if slices.Contains(codexLoginMethods, req.Method) {
+		extension, ok := service.(CodexLoginAuthorizer)
+		if !ok {
+			return nil, fmt.Errorf("login extension unavailable: method=%s", req.Method)
+		}
+		if req.Method == "authorize_progress" {
+			progress, err := extension.Progress(ctx, req.OperationID)
+			return struct {
+				Progress bee.DesktopLoginProgress `json:"progress"`
+			}{progress}, err
+		}
+		opened, err := extension.Open(ctx, req.OperationID)
+		return struct {
+			Open bee.DesktopLoginOpenReceipt `json:"open"`
+		}{opened}, err
+	}
 	var op bee.DesktopOperation
 	var err error
 	switch req.Method {

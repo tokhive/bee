@@ -1,19 +1,19 @@
 # Codex 登录扩展契约与评审样本
 
-2026-11-06。本轮交付接口定义和静态模拟返回，供 UI 评审使用；暂缓完整后台实现和真实登录集成。不包含页面、按钮、文案或交互实现。
+2026-11-10 更新：`authorize_progress`／`authorize_open` 已有 Go、bridge、Rust 注册和 TypeScript 生产实现，并按同实例 capability 使用。复合重新登录仍仅为契约。受控测试和未闭环项见 [实施记录](evidence/2026-11-10-openai-completion/README.md)；未执行真实官方账号、桌面和 Hive 联调。2026-11-06 的静态样本继续仅用于契约测试。
 
 ## 交付状态与兼容性
 
 | 部分 | 当前状态 |
 | --- | --- |
-| `authorize_start`、`authorize_status`、`authorize_cancel` | 已有 Go → 私有 bridge → Rust → TypeScript 实现，本轮不改请求、返回或行为 |
+| `authorize_start`、`authorize_status`、`authorize_cancel` | 沿用 Go → 私有 bridge → Rust → TypeScript 请求和 operation 返回；本轮增加私有进度观测 |
 | `account_snapshot({platform:"openai",refresh:true/false})` | 已实现的维护核对入口／后续读回；不是清理进程命令，详见恢复约定 |
-| `authorize_progress`、`authorize_open` | 本文定义的扩展，**尚未实现或注册为 capability**，不能向真实 bridge 调用来冒充已接通 |
+| `authorize_progress`、`authorize_open` | **已实现和注册 capability**；只有当前实例声明支持才可调用；不包含 restart |
 | `authorize_restart`、`authorize_restart_status`、`authorize_restart_cancel` | 本次定义的“一次重新登录”复合操作，**均未实现**；不由 UI 串 cancel／snapshot／start 代替 |
-| [TypeScript 类型](../../desktop/src/system/codexLogin.contract.ts) | 仅契约，无生产 client、decoder 或原生实现 |
+| [TypeScript 类型](../../desktop/src/system/codexLogin.contract.ts) | progress／open 有生产 client、严格 decoder 和原生实现；restart 仍仅契约 |
 | [模拟返回](../../desktop/tests/fixtures/codex-login-contract.ts) | 静态、可导入的模拟信封；不是官方客户端返回，也不执行登录、取消、打开浏览器或账号写入 |
 
-沿用 TypeScript 7 的现有类型、`AccountOperation`、`AccountError` 和 bridge 实例信封；不新增依赖。后续原生实现沿用现有 Go authorizer 和 Rust/Tauri bridge。技术栈不变。
+沿用 TypeScript 7 的现有类型、`AccountOperation`、`AccountError` 和 bridge 实例信封；不新增依赖。原生实现复用现有 Go authorizer 和 Rust/Tauri bridge。技术栈不变。
 
 旧 mock 和现有 `AuthorizeClient` 继续使用原来的三个方法，不增加必填字段。扩展采用独立方法，是因为现有 Go/Rust/TS 解码器严格限制 `{operation}` 返回，直接给旧返回添加进度字段会破坏兼容性。真实接入时必须核对**同一管理实例**的对应 capability；一次重新登录需同时具备 restart／restart_status／restart_cancel，子登录的详细进度与安全打开另按各自 capability 解锁。`features.authorize.available=true` 只说明已有登录能力，不说明扩展已实现。评审样本只能在明确的 mock 环境使用。
 
@@ -27,8 +27,8 @@
 | --- | --- | --- | --- | --- | --- |
 | 发起一次登录 | `authorize_start` | `{request:{platform:"openai",source:{directory:null,store:"file"},expected_revision:0}}` | 上述 `request` 对象 | `{operation: AccountOperation}` | 已实现；revision 示例须替换为最新账号快照值 |
 | 查询已有粗粒度结果 | `authorize_status` | `{operationId}` | `{operation_id}` | `{operation: AccountOperation}` | 已实现 |
-| 查询本次详细进度与可执行动作 | `authorize_progress` | `{operationId}` | `{operation_id}` | `{progress: CodexLoginProgress}` | 仅定义 |
-| 再次打开本次官方登录页 | `authorize_open` | `{operationId}` | `{operation_id}` | `{open: CodexLoginOpenReceipt}` | 仅定义 |
+| 查询本次详细进度与可执行动作 | `authorize_progress` | `{operationId}` | `{operation_id}` | `{progress: CodexLoginProgress}` | 已实现，需 authorize_progress capability |
+| 再次打开本次官方登录页 | `authorize_open` | `{operationId}` | `{operation_id}` | `{open: CodexLoginOpenReceipt}` | 已实现，需 authorize_progress 和 authorize_open capability |
 | 请求取消 | `authorize_cancel` | `{operationId}` | `{operation_id}` | `{operation: AccountOperation}` | 已实现；返回不代表清理完成 |
 | 请求维护核对／读取核对结果 | `account_snapshot` | `{platform:"openai",refresh:true/false}` | 同 Tauri 参数 | `{account: AccountSnapshot}` | 已实现；true 可触发异步核对，false 读取当前快照，不启动核对 |
 | 已清理后的底层新尝试 | `authorize_start` | 新 `request` | 新请求 | 新 `{operation}`、新 ID | 已有；复合重新登录内部复用其准入，UI 不自行串联 |
@@ -36,7 +36,7 @@
 | 查询复合操作 | `authorize_restart_status` | `{restartId}` | `{restart_id}` | `{restart: CodexLoginRestartProgress}` | 仅定义；按同一请求 ID 读回 |
 | 取消复合操作 | `authorize_restart_cancel` | `{restartId}` | `{restart_id}` | 同 status | 仅定义；接受取消后仍完成必要停止／回收，不启动新登录 |
 
-所有 operation ID 仍为 48 位小写 hex。现有 authorize_status/cancel 和拟定的 open 必须由当前管理实例拥有；progress 的历史只读例外见恢复约定。`source` 沿用现有目录与存储校验；示例使用 file，不扩大 keyring 或版本支持范围。UI 不传 URL、命令、回调地址、授权码、token 或任意程序路径。
+所有 operation ID 仍为 48 位小写 hex。现有 authorize_status/cancel 和 open 必须由当前管理实例拥有；progress 的历史只读例外见恢复约定。`source` 沿用现有目录与存储校验；示例使用 file，不扩大 keyring 或版本支持范围。UI 不传 URL、命令、回调地址、授权码、token 或任意程序路径。
 
 返回保留现有外层 `{instance,result}`。未知 ID、其他归属 ID、被新尝试替换的旧 ID应拒绝，不附着到新的登录。实例重启后不能把持久化的旧 ID继续交给现有 authorize_status/cancel/open；按既有 `account_snapshot(platform,refresh=true)` 核对历史维护。
 
@@ -50,11 +50,11 @@
 | `sequence` | 本 operation 内从 0 开始的非负 JS safe integer；任何可观察进度、动作许可或 blocker 改变均递增。独立于账号／operation revision，避免等待阶段不变的 revision 无法排序 |
 | `phase` | 五个执行阶段之一，见下表；登录结果仍由 `operation.state/error` 表达 |
 | `stop_reason` | null / cancelled / timed_out / failed；说明已触发取消、到期或失败。收尾期间可先有原因、operation 仍 running；不能提前伪造取消／超时终态 |
-| `recheck_in_flight` | **仅定义**：该原维护 ID的核对 worker 已获准且尚未结束；不是 refresh 请求的 loading，也不表示正在杀进程 |
+| `recheck_in_flight` | **已实现**：该原维护 ID的核对 worker 已获准且尚未结束；不是 refresh 请求的 loading，也不表示正在杀进程 |
 | `actions.open` | 当前有经验证、属于本次且仍可使用的链接，后台允许打开 |
 | `actions.cancel` | 当前允许请求取消；为 false 不能推出取消成功或登录成功 |
 | `actions.retry` | 原尝试已收尾，且当前维护／并发等准入屏障允许重新发起。只是当前许可，下一次 start 仍做原子校验 |
-| `actions.recheck` | **仅定义**：允许调用既有 account_snapshot(openai,true) 核对该原维护；不保证核对能修复，不新增 recheck/cleanup 命令 |
+| `actions.recheck` | **已实现**：允许调用既有 account_snapshot(openai,true) 核对该原维护；不保证核对能修复，不新增 recheck/cleanup 命令 |
 | `actions.restart` | **仅定义**：允许受理下文的复合重新登录；旧停止尚未证明时也可由后台安全处理，不等于允许直接 start。与只允许清理后新尝试的 actions.retry 不同 |
 | `blocker` | 收尾／维护阻塞的具体 `AccountError`，没有则 null。保留原 `operation.error`，例如同时报告原超时和进程清理失败 |
 

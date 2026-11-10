@@ -1,18 +1,22 @@
 # Bee OpenAI 账号完整交付
 
-2026-11-10（Asia/Shanghai）。统一入口：[完整规格](spec.md)。用户已批准规格，规格状态为 ready-for-agent；所有任务定义充分并标记 ready-for-agent，是否可开始由真实依赖决定。没有开始产品实现。仅涵盖 AI 账号页 OpenAI 部分及必要 Bee／Hive 接口，正式 UI 按已认可主预览改造。一次完整交付，内部按依赖完成，不要求用户重新逐场景确认。
+2026-11-10（Asia/Shanghai）。统一入口：[完整规格](spec.md)。用户已批准规格，规格状态为 ready-for-agent；所有任务定义充分并标记 ready-for-agent，是否可开始由真实依赖决定。已开始授权内实施；完整规格尚未交付。仅涵盖 AI 账号页 OpenAI 部分及必要 Bee／Hive 接口，正式 UI 按已认可主预览改造。一次完整交付，内部按依赖完成，不要求用户重新逐场景确认。
 
 ## 任务
 
 | 编号 | 交付 | 状态 | 阻塞 |
 | --- | --- | --- | --- |
-| [01](issues/01-contract-closure.md) | 契约与恢复证据收敛 | ready-for-agent | 无 |
-| [02](issues/02-login.md) | 完整登录与安全重新登录 | ready-for-agent | 01 契约与恢复证据收敛 |
-| [03](issues/03-supply-recovery.md) | 接单结果核对与遗留准备恢复 | ready-for-agent | 01 契约与恢复证据收敛 |
-| [04](issues/04-ui-integration.md) | 正式账号页与恢复预览接通 | ready-for-agent | 02 完整登录与安全重新登录；03 接单结果核对与遗留准备恢复 |
-| [05](issues/05-acceptance.md) | 整体验收与交付记录 | ready-for-agent | 02 完整登录与安全重新登录；03 接单结果核对与遗留准备恢复；04 正式账号页与恢复预览接通 |
+| [01](issues/01-contract-closure.md) | 契约与恢复证据收敛 | partial-blocked | 本机安全重登隔离证据、Hive 协议待落实 |
+| [02](issues/02-login.md) | 完整登录与安全重新登录 | partial-blocked | 01；progress／open 已实现，复合重登未实现 |
+| [03](issues/03-supply-recovery.md) | 接单结果核对与遗留准备恢复 | blocked | 01；缺少获授权的 Hive 写工作区 |
+| [04](issues/04-ui-integration.md) | 正式账号页与恢复预览接通 | partial-blocked | 02／03；独立 UI 已实施，完整恢复未接通 |
+| [05](issues/05-acceptance.md) | 整体验收与交付记录 | partial-blocked | 02／03／04；受控验证已有，真实联调未执行 |
 
-规格已完成，没有等待用户重新确认的产品问题。当前执行入口为 01；02／03 依赖其技术交付，04 的完整集成依赖 02／03，05 依赖完整实现。ready-for-agent 不代表依赖已完成，也不代表已开始实现。独立 UI 和预览工作不必等待接口全部完工，但完整接通须满足依赖。Q1 产品方向、测试边界、纯样式不阻塞接口，以及最新 HTML 所需的连续流程／完成反馈／恢复出口补充均已确认。
+规格已批准，没有等待重新确认的产品问题。当前已实施可独立的 Bee 与 UI 部分；任务 01 的安全协议与 Hive 证据仍有缺口，02／03／04 的完整链路按依赖继续，05 尚不能宣称整体验收。ready-for-agent 是原定义充分程度，不代表依赖、实现或验收完成。
+
+## 2026-11-10 实施记录
+
+当前状态以上表和 [实施与验证记录](../../docs/desktop/evidence/2026-11-10-openai-completion/README.md) 为准；[108 项映射](../../docs/desktop/evidence/2026-11-10-openai-completion/scenarios.md) 区分局部受控证据与未闭环项。下方规格发布时的记录保留用于追溯，不代表实施完成。没有部署或真实账号写入。
 
 ## 验收分层
 
@@ -32,7 +36,7 @@
 
 完成提示生命周期已确认并纳入规格：本次 App 运行中切页保留，重启不重放，新故障／账号变化优先。
 
-## 一致性检查
+## 规格发布时的一致性检查（历史）
 
 - ✅ 对话：沿用最新接入选择、Q1 恢复方向、已确认测试边界与 HTML 调整；没有恢复已否定方案。
 - ✅ 纵向：规格与五张票据的术语、范围、状态及依赖一致；产品已批准，技术验证未冒充完成。

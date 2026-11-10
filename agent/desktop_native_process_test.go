@@ -11,6 +11,7 @@ import (
 )
 
 var nativeBridgeAudit = flag.String("bee-native-fixture-audit", "", "controlled native integration process audit output")
+var nativeLoginFixture = flag.Bool("bee-native-login-fixture", false, "enable controlled official subprocess and browser launcher")
 
 // The Rust integration test launches this compiled test process directly.
 // Keeping this external avoids an agent -> desktopbridge production cycle.
@@ -20,7 +21,15 @@ func TestDesktopNativeBridgeProcess(t *testing.T) {
 	}
 	ok := t.Run("serve", func(t *testing.T) {
 		device, accounts, runner, network := bee.NewDesktopNativeBridgeFixture(t, *nativeBridgeAudit)
-		if err := desktopbridge.RunWithExperience(context.Background(), os.Stdin, os.Stdout, os.Stderr, "native-fixture", device, accounts, runner, nil, nil, network); err != nil {
+		var authorizer *bee.DesktopAuthorizer
+		if *nativeLoginFixture {
+			authorizer = bee.NewDesktopNativeLoginFixture(t, accounts)
+		}
+		var authorization desktopbridge.Authorizer
+		if authorizer != nil {
+			authorization = authorizer
+		}
+		if err := desktopbridge.RunWithExperience(context.Background(), os.Stdin, os.Stdout, os.Stderr, "native-fixture", device, accounts, runner, authorization, nil, network); err != nil {
 			t.Fatal(err)
 		}
 	})

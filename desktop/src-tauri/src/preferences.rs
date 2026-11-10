@@ -44,6 +44,13 @@ fn required_nullable_scope<'de, D: serde::Deserializer<'de>>(
 }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct OpenaiSourcePreference {
+    #[serde(deserialize_with = "required_nullable_scope")]
+    pub directory: Option<String>,
+    pub store: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct DesktopPreferences {
     pub version: u32,
     pub revision: u64,
@@ -52,6 +59,11 @@ pub struct DesktopPreferences {
     pub notifications_enabled: bool,
     pub autostart_desired: bool,
     pub proxies: Vec<ProxyPreference>,
+    #[serde(default, deserialize_with = "optional_openai_source", skip_serializing_if = "Option::is_none")]
+    pub openai_source: Option<OpenaiSourcePreference>,
+}
+fn optional_openai_source<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<Option<OpenaiSourcePreference>, D::Error> {
+    OpenaiSourcePreference::deserialize(deserializer).map(Some)
 }
 impl Default for DesktopPreferences {
     fn default() -> Self {
@@ -63,6 +75,7 @@ impl Default for DesktopPreferences {
             notifications_enabled: false,
             autostart_desired: false,
             proxies: vec![],
+            openai_source: None,
         }
     }
 }
@@ -86,6 +99,16 @@ impl DesktopPreferences {
         }
         if self.revision > MAX_REVISION || self.proxies.len() > 128 {
             return Err(failure("PREFERENCES_SCHEMA",format!("preferences limits exceeded: revision={} proxies={}; required=safe revision, <=128 proxies",self.revision,self.proxies.len())));
+        }
+        if let Some(source) = &self.openai_source {
+            if !["auto", "file", "keyring"].contains(&source.store.as_str()) {
+                return Err(failure("PREFERENCES_SOURCE", "OpenAI source store is unsupported; required=auto/file/keyring"));
+            }
+            if let Some(directory) = &source.directory {
+                if !Path::new(directory).is_absolute() || directory.len() > 4096 || directory.chars().any(char::is_control) {
+                    return Err(failure("PREFERENCES_SOURCE", format!("OpenAI source directory rejected: absolute={} bytes={} contains_control={}; required=absolute directory of 1..4096 UTF-8 bytes without control characters", Path::new(directory).is_absolute(), directory.len(), directory.chars().any(char::is_control))));
+                }
+            }
         }
         let mut scopes = std::collections::HashSet::new();
         for proxy in &self.proxies {
@@ -462,3 +485,26 @@ pub(crate) fn private_write(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 #[cfg(test)]
 #[path = "preferences_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+mod openai_source_tests {
+    use super::*;
+    #[test]
+    fn source_preferences_migrate_and_survive_protected_readback() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = PreferencesStore::new(dir.path().join("preferences.json"));
+        let before = store.read();
+        assert!(before.error.is_none()); assert!(before.preferences.openai_source.is_none());
+        let mut prefs = before.preferences;
+        prefs.openai_source = Some(OpenaiSourcePreference {directory: Some(dir.path().join("controlled-codex").to_string_lossy().into_owned()), store:"file".into()});
+        let saved = store.save(0, prefs.clone()); assert!(saved.error.is_none());
+        let reopened = PreferencesStore::new(dir.path().join("preferences.json")).read();
+        assert!(reopened.error.is_none()); assert_eq!(reopened.preferences.openai_source, prefs.openai_source);
+        let mut bad = reopened.preferences.clone(); bad.openai_source.as_mut().unwrap().store="secret".into();
+        assert!(store.save(1, bad).error.is_some()); assert_eq!(store.read().preferences, reopened.preferences);
+        let mut bad = reopened.preferences.clone(); bad.openai_source.as_mut().unwrap().directory=Some("relative-directory".into());
+        assert!(store.save(1, bad).error.is_some()); assert_eq!(store.read().preferences, reopened.preferences);
+        let mut raw=serde_json::to_value(DesktopPreferences::default()).unwrap(); raw["openai_source"]=serde_json::Value::Null;
+        assert!(serde_json::from_value::<DesktopPreferences>(raw).is_err());
+    }
+}

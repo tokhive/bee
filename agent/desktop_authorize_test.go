@@ -54,6 +54,11 @@ func TestDesktopAuthorizeProcessHelper(t *testing.T) {
 	}
 	fmt.Print("https://official.example/authorize?code=PRIVATE_LOGIN_SECRET\nPRIVATE_TOKEN_SECRET")
 	switch mode {
+	case "link_wait":
+		fmt.Fprintln(os.Stderr, desktopTestLoginURL)
+		for {
+			time.Sleep(time.Second)
+		}
 	case "wait":
 		for {
 			time.Sleep(time.Second)

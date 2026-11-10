@@ -1,7 +1,11 @@
 # 02 完整登录与安全重新登录
 
-Status: ready-for-agent
+Status: partial-blocked
 Blocked by: 01 契约与恢复证据收敛
+
+## 2026-11-10 实施状态
+
+progress／open 跨层实现和受控验证已完成；复合重登、缺失归属恢复及无链接短等待仍未闭环。完整证据见 [实施记录](../../../docs/desktop/evidence/2026-11-10-openai-completion/README.md)。下列复选框按完整验收保留，局部自动通过不等同整体验收；票据发布时的边界说明保留作为历史。
 
 ## 用户可见交付
 

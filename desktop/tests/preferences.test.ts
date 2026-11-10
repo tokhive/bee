@@ -29,3 +29,12 @@ test('native preferences client sends revisioned commands and preserves failure 
  assert.deepEqual(calls[0],['preferences_read',{}]);
  assert.equal((calls[1] as any)[1].request.expected_revision,0);
 });
+
+test('OpenAI source is optional for old preferences, strictly validated and sent only as settings',async()=>{
+ const old=defaultPreferences();assert.ok(!('openai_source'in old));
+ const updated={...old,openai_source:{directory:'/tmp/controlled-codex',store:'file'}};
+ assert.deepEqual(decodePreferences({preferences:updated,error:null}).preferences,updated);
+ for(const source of [null,{directory:null,store:'keychain'},{directory:'relative-directory',store:'file'},{directory:'bad\u0000path',store:'file'},{directory:'/'+ '界'.repeat(1400),store:'file'},{directory:null,store:'file',token:'PRIVATE_SECRET'}])assert.throws(()=>decodePreferences({preferences:{...old,openai_source:source},error:null}),e=>e instanceof Error&&!e.message.includes('PRIVATE_SECRET'));
+ const calls:string[]=[];const client=createPreferencesClient(async(command)=>{calls.push(command);return {preferences:{...updated,revision:1},error:null};});
+ await client.save(0,updated);assert.deepEqual(calls,['preferences_save']);
+});

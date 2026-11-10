@@ -50,3 +50,7 @@
 - 交付：[Claude 等待登录](20261110-115235-claude-terminal-review/draft.html?scene=claude-first-login-wait) · [终端打开失败](20261110-115235-claude-terminal-review/draft.html?scene=claude-first-login-failed) · [完整流程](20261110-115235-claude-terminal-review/draft.html?scene=claude-onboarding)。评审状态：待评审。
 - 新增 216 个 Claude 入口，沿用共用账号流程；macOS 终端等待、启动失败与窗口定位引导差异化。历史文件独立内联，可在预览根目录使用现有本地 HTTP 服务打开。
 - 验证与真实业务边界见上级 README 的 Claude 专项；固定延时仅模拟外部结果。
+
+- 20261110-171341 Asia/Shanghai：紧凑调整前完整主预览，[快照](20261110-171341-before-openai-compact/index.html)。原认可基线。
+- 20261110-171341 Asia/Shanghai：OpenAI 故障与正常态共用紧凑布局，已接入账号固定显示额度；方案已获用户认可，[交付快照](20261110-171341-openai-compact/index.html)。单文件内联资源，通过 HTTP 打开，保留 scene/theme/size 参数。当前入口仍为 ../index.html。
+- 20261110-171805 Asia/Shanghai：本轮最终交付，[完整快照](20261110-171805-openai-compact-final/index.html)。修正 iframe 内紧凑样式与读取故障多余步骤；替代 171341 中间快照，保留中间版供追溯。

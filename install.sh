@@ -144,7 +144,7 @@ shell_quote() {
 
 service_status_help() {
 	printf '\n'
-	message 'View connection and accounts:\n  %s status --config %s\n' '查看连接与账号：\n  %s status --config %s\n' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
+	message 'View connection and accounts:\n  bee status\n' '查看连接与账号：\n  bee status\n'
 	message 'Check service:\n  sudo systemctl status tokhive-bee\n' '查看服务状态：\n  sudo systemctl status tokhive-bee\n'
 	message 'View logs:\n  sudo journalctl -u tokhive-bee -f\n' '查看运行日志：\n  sudo journalctl -u tokhive-bee -f\n'
 }

@@ -1,4 +1,12 @@
 export const openaiEnglish:Record<string,string>={
+  "钥匙串中未找到 Codex 登录项": "No Codex login item found in Keychain",
+  "未找到 Codex 官方客户端": "Codex official client was not found",
+  "安装 Codex": "Install Codex",
+  "查看安装说明": "View installation instructions",
+  "安装 OpenAI 官方 Codex CLI，确保当前用户可运行 codex 命令，再返回 Bee 重试。": "Install the official OpenAI Codex CLI and ensure the current user can run codex, then return to Bee and retry.",
+  "返回账号页": "Back to accounts",
+  "发现新账号": "New account found",
+
   "接单保持暂停。": "Requests remain paused.",
   "查看接单条件": "View request requirements",
   "查看相关设置": "View related settings",

@@ -36,19 +36,20 @@ export function AccountReadHistory({accounts,platform}:{accounts:AccountsModel;p
  }
  return accounts.deviceFailure&&snapshot.hive.observed_at?<div className="account-remote-history"><p>{t('Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。')}</p><p>{t('上次 Hive 观测')}: <time dateTime={snapshot.hive.observed_at}>{formatDate(snapshot.hive.observed_at,currentLocale())}</time></p></div>:null;
 }
-export function AccountQuota({presentation,resets=false}:{presentation:AccountPresentation;resets?:boolean}){
+export function AccountQuota({presentation,resets=false,compact=false}:{presentation:AccountPresentation;resets?:boolean;compact?:boolean}){
  const {windows,quotaState}=presentation;
- const ordered=[...windows].sort((a,b)=>a.seconds-b.seconds);
+ const ordered=[...(compact&&!windows.length?[18000,604800].map(seconds=>({seconds,scope:'',used_percent:null,reset_at:null})):windows)].sort((a,b)=>a.seconds-b.seconds);
  const windowName=(seconds:number)=>seconds===18000?t('5 小时'):seconds===604800?t('7 日'):t('{hours} 小时',{hours:formatNumber(seconds/3600,currentLocale())});
+ if(compact&&resets)return <div className="oa-reset-details">{ordered.map((w,i)=><p key={i}>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''} · {t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>)}</div>;
  return <div className={`native-account-quota ${quotaState==='current'?'':'quota-unconfirmed'}`}>
   {!ordered.length&&<div className="quota-window"><div className="quota-label"><span>{t('额度')}</span><span>{t('尚未核对')}</span></div><Progress value={null} aria-label={t('已用额度')}/></div>}
-  {ordered.map((w,i)=><div className="quota-window" key={`${w.scope}:${w.seconds}:${i}`}><div className="quota-label"><span>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''}</span><span className="quota-value">{w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}</span></div>
-   <Progress value={w.used_percent} aria-label={`${windowName(w.seconds)} ${w.scope} ${t('已用额度')}`} aria-valuetext={w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}/>
+  {ordered.map((w,i)=><div className="quota-window" key={`${w.scope}:${w.seconds}:${i}`}><div className="quota-label"><span>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''}</span><span className="quota-value">{w.used_percent===null?(compact?'—':t('尚未核对')):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}</span></div>
+   <Progress value={w.used_percent} aria-label={`${windowName(w.seconds)} ${w.scope} ${t('已用额度')}`} aria-valuetext={w.used_percent===null?(compact?'—':t('尚未核对')):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}/>
    {resets&&<p className="quota-reset">{t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>}
   </div>)}
   {quotaState==='stale'&&<p className="quota-history">{t('历史数据，已过期')}</p>}
   {quotaState==='unconfirmed'&&<p className="quota-history">{t('上次确认的额度；当前待核对。')}</p>}
   {(quotaState==='stale'||quotaState==='unconfirmed')&&presentation.observedAt&&<p className="quota-history">{t('上次额度观测')}: <time dateTime={presentation.observedAt}>{formatDate(presentation.observedAt,currentLocale())}</time></p>}
-  {quotaState==='current'&&windows.some(w=>w.used_percent!==null&&w.used_percent>=100)&&<p className="quota-exhausted">{t('有额度窗口已耗尽；请查看各窗口重置时间。')}</p>}
+  {!compact&&quotaState==='current'&&windows.some(w=>w.used_percent!==null&&w.used_percent>=100)&&<p className="quota-exhausted">{t('有额度窗口已耗尽；请查看各窗口重置时间。')}</p>}
  </div>;
 }

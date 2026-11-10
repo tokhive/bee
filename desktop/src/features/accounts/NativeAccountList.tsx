@@ -21,7 +21,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
  const selectedCount=confirmedPlatforms.filter(p=>accounts.views[p]?.selection.state==='selected').length;
  const countCopy=confirmedPlatforms.length===platforms.length?t('{count} 个已接入',{count:formatNumber(selectedCount,currentLocale())}):selectedCount?t('已确认接入 {count} 个，其余待确认',{count:formatNumber(selectedCount,currentLocale())}):t('接入数量待确认');
  return <section className={`native-accounts-section ${accounts.autoService?'auto-service-accounts':''}`} aria-label={t('平台账号列表')}>
-  <div className="section-heading">{!accounts.autoService&&<h2>{t('AI 账号')}</h2>}<div className="account-list-status"><AccountCheckStatus supply={supply}/><span>{countCopy}</span></div></div>
+  <div className={`section-heading ${accounts.autoService&&context==='accounts'?'account-inline-check':''}`}>{!accounts.autoService&&<h2>{t('AI 账号')}</h2>}<div className="account-list-status"><AccountCheckStatus supply={supply}/>{!(accounts.autoService&&context==='accounts')&&<span>{countCopy}</span>}</div></div>
   <div className="native-account-list">{platforms.map(platform=>{
    const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
    if(context==='accounts'&&accounts.autoService&&platform==='openai')return <OpenaiAccountCard key={platform} accounts={accounts} runtime={runtime} supply={supply} now={now} onNavigate={navigate} navigationRequest={navigationRequest}/>;

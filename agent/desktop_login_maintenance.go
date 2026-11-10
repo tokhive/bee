@@ -179,7 +179,9 @@ func desktopAuthorizationResult(job *desktopAuthorization, err error) DesktopOpe
 func (o *DesktopAuthorizer) reconcileAuthorization(job *desktopAuthorization, loginErr error) {
 	var processFailure *desktopAuthorizationCleanupError
 	if errors.As(loginErr, &processFailure) {
+		o.mu.Lock()
 		job.processCleanupErr = processFailure
+		o.mu.Unlock()
 		job.cleanupErr = processFailure
 	}
 	if job.maintenance == nil {
@@ -393,6 +395,10 @@ func (a *DesktopAccounts) launchLoginMaintenanceRecheck(p *desktopAccountPlatfor
 	}
 	o := a.authorizer
 	id := p.snapshot.LoginMaintenance.Operation.ID
+	o.mu.Lock()
+	o.rechecks[id] = true
+	o.advanceLoginSequenceLocked(id)
+	o.mu.Unlock()
 	ctx, cancel := context.WithTimeout(a.ctx, 12*time.Second)
 	worker := &desktopAccountWorker{cancel: cancel, done: make(chan struct{})}
 	p.working = true
@@ -403,6 +409,7 @@ func (a *DesktopAccounts) launchLoginMaintenanceRecheck(p *desktopAccountPlatfor
 		defer a.workers.Done()
 		defer close(worker.done)
 		defer cancel()
+		defer func() { o.mu.Lock(); delete(o.rechecks, id); o.advanceLoginSequenceLocked(id); o.mu.Unlock() }()
 		var record *desktopLoginRecord
 		session, release, err := a.device.acquireSession(ctx)
 		if err == nil {

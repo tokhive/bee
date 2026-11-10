@@ -1,7 +1,11 @@
 # 03 接单结果核对与遗留准备恢复
 
-Status: ready-for-agent
+Status: blocked
 Blocked by: 01 契约与恢复证据收敛
+
+## 2026-11-10 实施状态
+
+已只读核实 Hive，原操作持久结果／意图排序／跨设备恢复协议缺失；当前无 Hive 写工作区授权。完整证据见 [实施记录](../../../docs/desktop/evidence/2026-11-10-openai-completion/README.md)。下列复选框按完整验收保留，局部自动通过不等同整体验收；票据发布时的边界说明保留作为历史。
 
 ## 用户可见交付
 

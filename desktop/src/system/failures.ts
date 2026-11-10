@@ -1,7 +1,7 @@
 import type {BridgeError} from './bridge';
 export interface UiFailure {code:string;check:string;observedAt:string|null;evidence:Record<string,string>;message:string}
 export interface FailureDetails {check:string;observed_at:string;evidence:Record<string,string>}
-export const requestMethods='hello ping shutdown device_status device_begin device_context device_recovery_prepare device_recovery_confirm device_recovery_status account_defaults account_detect account_snapshot account_action supply_status supply_set_paused authorize_start authorize_status authorize_cancel diagnostics_start diagnostics_snapshot diagnostics_cancel runtime_snapshot runtime_start runtime_stop runtime_restore runtime_configure_network runtime_enable_presence runtime_verify network_status network_test notification_snapshot'.split(' ');
+export const requestMethods='hello ping shutdown device_status device_begin device_context device_recovery_prepare device_recovery_confirm device_recovery_status account_defaults account_detect account_snapshot account_action supply_status supply_set_paused authorize_start authorize_status authorize_cancel authorize_progress authorize_open diagnostics_start diagnostics_snapshot diagnostics_cancel runtime_snapshot runtime_start runtime_stop runtime_restore runtime_configure_network runtime_enable_presence runtime_verify network_status network_test notification_snapshot'.split(' ');
 export const failureKinds='timeout dns_temporary dns_failed tls_failed connection_refused connection_closed http_rejected unknown_failure'.split(' ');
 export function retryEvidence(key:string,value:string):boolean|undefined {
  const integer=(max:number)=>/^(0|[1-9]\d{0,15})$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)<=max;

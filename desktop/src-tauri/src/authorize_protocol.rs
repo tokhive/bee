@@ -92,6 +92,42 @@ pub fn validate_authorize_reply(
     Ok(())
 }
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LoginActions { open: bool, cancel: bool, retry: bool, recheck: bool, restart: bool }
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct LoginProgress { operation: Value, sequence: u64, phase: String, stop_reason: Value, recheck_in_flight: bool, actions: LoginActions, blocker: Value }
+
+fn validate_login_progress(value: &Value, id: &str) -> Result<(), BridgeError> {
+    let p: LoginProgress = serde_json::from_value(value.clone()).map_err(|e| crate::protocol::invalid_json("login progress", e))?;
+    validate_operation(&p.operation, Some(SupplyPlatform::Openai), &["authorize"])?;
+    if p.operation["id"].as_str() != Some(id) || p.sequence > 9_007_199_254_740_991 || !["starting","waiting_authorization","verifying","cleaning_up","finished"].contains(&p.phase.as_str()) {
+        return Err(invalid("login progress ID, sequence or phase rejected; required=current operation, safe sequence and known phase"));
+    }
+    if !p.stop_reason.is_null() && ![Some("cancelled"),Some("timed_out"),Some("failed")].contains(&p.stop_reason.as_str()) { return Err(invalid("login stop reason rejected")); }
+    crate::protocol::validate_account_error(&p.blocker, Some(SupplyPlatform::Openai))?;
+    let live = [Some("pending"),Some("running")].contains(&p.operation["state"].as_str());
+    if p.actions.cancel && (!live || ["cleaning_up","finished"].contains(&p.phase.as_str()) || !p.stop_reason.is_null()) || p.actions.recheck && p.phase != "finished" || p.actions.open && (p.phase != "waiting_authorization" || !live || !p.stop_reason.is_null()) || p.phase == "finished" && live || p.actions.retry && (p.phase != "finished" || ![Some("failed"),Some("cancelled"),Some("unknown")].contains(&p.operation["state"].as_str()) || !p.blocker.is_null()) || p.recheck_in_flight && (p.actions.open || p.actions.cancel || p.actions.retry || p.actions.recheck || p.actions.restart) {
+        return Err(invalid("login progress action permission contradicts phase, stop, blocker or worker evidence"));
+    }
+    Ok(())
+}
+
+pub fn validate_login_reply(result: &Value, id: &str, open: bool) -> Result<(), BridgeError> {
+    let object = result.as_object().ok_or_else(|| invalid("login extension result requires object"))?;
+    if object.len() != 1 { return Err(invalid("login extension result requires exactly one field")); }
+    if object.contains_key("error") { return validate_authorize_reply(result, None, None); }
+    if !open { return validate_login_progress(object.get("progress").ok_or_else(|| invalid("login progress field missing"))?, id); }
+    #[derive(Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct OpenReceipt { opened: bool, error: Value, progress: Value }
+    let receipt: OpenReceipt = serde_json::from_value(object.get("open").ok_or_else(|| invalid("login open field missing"))?.clone()).map_err(|e| crate::protocol::invalid_json("login open", e))?;
+    if receipt.opened != receipt.error.is_null() { return Err(invalid("login open receipt success and error disagree")); }
+    crate::protocol::validate_account_error(&receipt.error, Some(SupplyPlatform::Openai))?;
+    validate_login_progress(&receipt.progress, id)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -128,4 +164,21 @@ mod tests {
             assert!(!error.message.contains("PRIVATE_SECRET"));
         }
     }
+    #[test]
+    fn login_extension_rejects_unbound_or_contradictory_permissions() {
+        let id = "a".repeat(48);
+        let good = json!({"progress":{"operation":{"id":id,"kind":"authorize","platform":"openai","state":"running","revision":1,"error":null},"sequence":1,"phase":"waiting_authorization","stop_reason":null,"recheck_in_flight":false,"actions":{"open":true,"cancel":true,"retry":false,"recheck":false,"restart":false},"blocker":null}});
+        validate_login_reply(&good, &id, false).unwrap();
+        for (field, value) in [("url",json!("PRIVATE_SECRET")),("phase",json!("finished")),("stop_reason",json!("cancelled")),("sequence",json!(9_007_199_254_740_992u64)),("recheck_in_flight",json!(true))] {
+            let mut bad = good.clone(); bad["progress"][field] = value;
+            let error = validate_login_reply(&bad, &id, false).unwrap_err();
+            assert!(!error.message.contains("PRIVATE_SECRET"));
+        }
+        assert!(validate_login_reply(&good, &"b".repeat(48), false).is_err());
+        let opened = json!({"open":{"opened":true,"error":null,"progress":good["progress"]}});
+        validate_login_reply(&opened, &id, true).unwrap();
+        let mut bad = opened; bad["open"]["url"] = json!("PRIVATE_SECRET");
+        assert!(validate_login_reply(&bad, &id, true).is_err());
+    }
+
 }

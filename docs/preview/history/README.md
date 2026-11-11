@@ -54,3 +54,12 @@
 - 20261110-171341 Asia/Shanghai：紧凑调整前完整主预览，[快照](20261110-171341-before-openai-compact/index.html)。原认可基线。
 - 20261110-171341 Asia/Shanghai：OpenAI 故障与正常态共用紧凑布局，已接入账号固定显示额度；方案已获用户认可，[交付快照](20261110-171341-openai-compact/index.html)。单文件内联资源，通过 HTTP 打开，保留 scene/theme/size 参数。当前入口仍为 ../index.html。
 - 20261110-171805 Asia/Shanghai：本轮最终交付，[完整快照](20261110-171805-openai-compact-final/index.html)。修正 iframe 内紧凑样式与读取故障多余步骤；替代 171341 中间快照，保留中间版供追溯。
+
+
+## 20261111-145858 Claude 同步 OpenAI 紧凑账号布局
+
+- 时区：Asia/Shanghai；评审状态：**待评审**。
+- 修改前：[完整草稿](20261111-145548-before-claude-sync/draft.html?scene=claude-first-login-failed)；[当时主预览基线](20261111-145548-before-claude-sync/index.html?scene=compact-normal&page=accounts)，同时冻结其旧版对照依赖。
+- 交付：[完整 Claude 草稿](20261111-145858-claude-compact-sync/draft.html?scene=claude-compact-normal&theme=light&size=wide)。资源内联，可独立打开；未更新 index.html。
+- 同步账号／状态／额度／操作四列、未知与历史额度标记、错误证据浮层和步骤展示；保留 Claude 终端登录差异，新增 4 个紧凑布局起点。
+- 验证范围见预览 README 的本轮记录；HTML 交互不代表真实登录或业务验收。

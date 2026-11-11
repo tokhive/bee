@@ -151,6 +151,9 @@ func desktopSupplyCall(ctx context.Context, state localState, platform string, p
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
 	req.Header.Set("User-Agent", userAgent())
+	if state.RuntimeEpoch != "" {
+		req.Header.Set(beewire.RuntimeEpochHeader, state.RuntimeEpoch)
+	}
 	req.Header.Set("Authorization", "Bearer "+state.Credential)
 	// No idempotency header and no application retry: a lost PUT response can
 	// mean a committed owner/platform change, not permission to repeat the write.

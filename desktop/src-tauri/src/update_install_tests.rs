@@ -106,8 +106,11 @@ async fn update_install_every_exit_receipt_failure_blocks_installer_and_retains_
 }
 
 async fn install_bridge(mode: &str) -> crate::sidecar::Bridge {
+    install_bridge_spec(crate::sidecar::tests::fixture(mode)).await
+}
+async fn install_bridge_spec(spec: crate::sidecar::LaunchSpec) -> crate::sidecar::Bridge {
     use crate::sidecar::{Bridge, BridgePhase};
-    let bridge = Bridge::start(crate::sidecar::tests::fixture(mode));
+    let bridge = Bridge::start(spec);
     let mut statuses = bridge.subscribe();
     tokio::time::timeout(std::time::Duration::from_secs(30), async {
         while statuses.borrow_and_update().state == BridgePhase::Starting {
@@ -227,12 +230,11 @@ async fn update_install_late_startup_cannot_stop_again_or_overwrite_install_admi
 async fn update_install_inflight_startup_failure_cannot_replay_its_owned_stop() {
     use crate::preferences::PreferencesStore;
     let (dir, manager, request) = ready();
-    let bridge = install_bridge("owned-exit-slow").await;
+    let control = dir.path().join("inspection");
+    let mut spec = crate::sidecar::tests::fixture("owned-exit-slow");
+    spec.args.extend([String::new(), control.to_string_lossy().into_owned()]);
+    let bridge = install_bridge_spec(spec).await;
     let before = bridge.runtime_snapshot().await.unwrap();
-    let reading_bridge = bridge.clone();
-    let reading = tokio::spawn(async move { reading_bridge.device_status().await });
-    tokio::time::sleep(std::time::Duration::from_millis(30)).await;
-    assert!(!reading.is_finished());
     let startup_bridge = bridge.clone();
     let startup_manager = manager.clone();
     let preferences = PreferencesStore::new(dir.path().join("preferences.json")).read();
@@ -240,17 +242,17 @@ async fn update_install_inflight_startup_failure_cannot_replay_its_owned_stop() 
         verify_startup(&startup_manager, &startup_bridge, preferences, "stable").await
     });
     tokio::time::timeout(std::time::Duration::from_secs(1), async {
-        while !bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst) {
+        while !control.exists() {
             tokio::task::yield_now().await;
         }
     })
     .await
-    .expect("startup restore was not admitted within 1s");
+    .expect("startup inspection was not in flight within 1s");
     let ticket = prepare_owned_install(&manager, &request, &bridge).unwrap();
+    std::fs::write(control.with_extension("release"), b"release").unwrap();
     let admitted = manager.snapshot().unwrap();
     let failure = startup.await.unwrap().unwrap_err();
     assert_eq!(failure.code, "OWNED_EXIT_PENDING");
-    reading.await.unwrap().unwrap();
     assert_eq!(manager.snapshot().unwrap(), admitted);
     let after = bridge
         .exit_request("runtime_snapshot", serde_json::json!({}))

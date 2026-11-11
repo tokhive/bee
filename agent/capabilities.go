@@ -488,7 +488,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 	if err != nil || !current.sameAuthorization(credential) {
 		// Do not publish a query from a source that changed while the requests ran.
 		cfg.authorization = nil
-		return call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil)
+		return callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil)
 	}
 	fingerprint := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
 	revision := sha256.Sum256([]byte(credential.Secret.Token))
@@ -497,7 +497,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 		report.ReuseMetadata = true
 		report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 	}
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/capabilities", "POST", state.Credential, report, nil); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/capabilities", "POST", report, nil); err != nil {
 		var failure *apiFailure
 		if errors.As(err, &failure) && failure.Code == "capability_metadata_required" {
 			cfg.metadataReportedAt = time.Time{}

@@ -9,14 +9,25 @@ export interface BridgeReply { protocol: 1; id: string; instance: string; result
 export interface DownloadResult { url: string; success: boolean }
 export type Unlisten = () => void;
 export type NotificationPage = 'overview'|'accounts'|'diagnostics'|'settings';
-export interface StartupStatus {state:'checking'|'ready'|'blocked';failure:UiFailure|null;instance:string|null;binding_revision:number|null;network_revision:number|null;observed_at:string|null;revision:number}
+export interface StartupProgress {stage:'connecting'|'checking_previous'|'checking_device'|'preparing_accounts'|'confirming_service';operation_id:string|null;completed:number|null;total:number|null}
+export function decodeStartupProgress(value:unknown):StartupProgress {
+ const invalid=():never=>{throw new Error('STARTUP_PROGRESS_INVALID: required=real bounded stage, operation and consistent account counts');};
+ if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
+ const p=value as Record<string,unknown>,fields=['stage','operation_id','completed','total'];
+ if(Object.keys(p).length!==fields.length||!fields.every(k=>Object.hasOwn(p,k))||!['connecting','checking_previous','checking_device','preparing_accounts','confirming_service'].includes(String(p.stage))||p.operation_id!==null&&(typeof p.operation_id!=='string'||!/^[a-f0-9]{48}$/.test(p.operation_id))||(p.completed===null)!==(p.total===null)||p.total!==null&&(p.stage!=='preparing_accounts'||typeof p.total!=='number'||!Number.isSafeInteger(p.total)||p.total<1||p.total>2||typeof p.completed!=='number'||!Number.isSafeInteger(p.completed)||p.completed<0||p.completed>p.total))return invalid();
+ return structuredClone(p) as unknown as StartupProgress;
+}
+export interface StartupStatus {progress?:StartupProgress;can_retry?:boolean;recovering?:boolean;state:'checking'|'ready'|'blocked';failure:UiFailure|null;instance:string|null;binding_revision:number|null;network_revision:number|null;observed_at:string|null;revision:number}
 export function decodeStartupStatus(value:unknown):StartupStatus {
  const invalid=():never=>{throw new Error('STARTUP_STATUS_INVALID: required=bounded status, raw failure and current context');};
  if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
- const v=value as Record<string,unknown>,fields=['state','failure','instance','binding_revision','network_revision','observed_at','revision'];
+ const v=value as Record<string,unknown>,fields=['state','failure','instance','binding_revision','network_revision','observed_at','revision',...(Object.hasOwn(value,'progress')?['progress']:[]),...(Object.hasOwn(value,'can_retry')?['can_retry']:[]),...(Object.hasOwn(value,'recovering')?['recovering']:[])];
  if(Object.keys(v).length!==fields.length||!fields.every(k=>Object.hasOwn(v,k))||!['checking','ready','blocked'].includes(String(v.state)))return invalid();
  const revision=(n:unknown)=>typeof n==='number'&&Number.isSafeInteger(n)&&n>=0;
  if(!revision(v.revision)||v.instance!==null&&(typeof v.instance!=='string'||!/^[a-f0-9]{32}$/.test(v.instance))||['binding_revision','network_revision'].some(k=>v[k]!==null&&!revision(v[k]))||v.observed_at!==null&&!validFailureTime(v.observed_at)||(v.state==='blocked')!==(v.failure!==null))return invalid();
+ if(Object.hasOwn(v,'progress'))decodeStartupProgress(v.progress);
+ if(Object.hasOwn(v,'can_retry')&&typeof v.can_retry!=='boolean'||v.can_retry===true&&v.state!=='blocked')return invalid();
+ if(Object.hasOwn(v,'recovering')&&typeof v.recovering!=='boolean')return invalid();
  const failure=v.failure===null?null:normalizeFailure(decodeBridgeError(v.failure,'STARTUP_STATUS_INVALID'),'startup_check');
  return {...v,failure} as unknown as StartupStatus;
 }
@@ -45,6 +56,8 @@ export interface SystemBridge {
  syncNativeLocale?(locale:'zh'|'en',revision:number):Promise<void>;
  startupStatus?():Promise<StartupStatus>;
  startupRecheck?():Promise<StartupStatus>;
+ startupQuery?():Promise<StartupStatus>;
+ startupRetry?():Promise<StartupStatus>;
  onStartup?(listener:(status:StartupStatus)=>void):Promise<Unlisten>;
   status(): Promise<BridgeStatus>;
   ping(): Promise<BridgeReply>;
@@ -77,6 +90,8 @@ export function createSystemBridge(): SystemBridge {
  async onRequestSettled(listener){let active=true;const off=await listen<unknown>('bee://request-settled',event=>{if(active)listener(decodeRequestSettled(event.payload));});return()=>{active=false;off();};},
  startupStatus: async()=>decodeStartupStatus(await invoke('startup_status')),
  startupRecheck: async()=>decodeStartupStatus(await invoke('startup_recheck')),
+ startupQuery: async()=>decodeStartupStatus(await invoke('startup_query')),
+ startupRetry: async()=>decodeStartupStatus(await invoke('startup_retry')),
  async onStartup(listener){let active=true;const off=await listen<unknown>('bee://startup-status',event=>{if(active)listener(decodeStartupStatus(event.payload));});return()=>{active=false;off();};},
     ping: () => invoke<BridgeReply>('bridge_request', { method: 'ping' }),
     async onNotification(listener) {

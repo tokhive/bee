@@ -55,3 +55,42 @@ test('absent and corrupt binding revisions drive diagnostics and isolate valid t
  }
  const pending=client.start();await tick();kind='corrupt';binding++;await model.refresh();client.setContext(2,null,(model.getSnapshot() as any).bindingRevision);resolve({instance,result:{report:{...diagnosticReport(),instance,run_id:null,binding_revision:binding-1}}});await assert.rejects(pending,/context changed/);
 });
+
+test('stopped management retains the observed startup failure and rejects late events from its retired instance',async t=>{
+ const instance='a'.repeat(32);let bridgeListener:any,startupListener:any;
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async(fn:any)=>{bridgeListener=fn;return()=>{};},onStartup:async(fn:any)=>{startupListener=fn;return()=>{};}} as any,device:{} as any,runtime:()=>({}) as any});t.after(()=>model.dispose());model.subscribe(()=>{});await tick();
+ startupListener(startup(instance,4));bridgeListener({state:'stopped'});
+ assert.equal(model.getSnapshot().startup?.failure?.code,'device_replaced');
+ bridgeListener({state:'ready',metadata:{instance:'b'.repeat(32)}});startupListener(startup(instance,99));
+ assert.equal(model.getSnapshot().startup,undefined);
+});
+
+test('blocked startup reads local runtime without querying account maintenance or defaults',async t=>{
+ const instance='a'.repeat(32),calls:string[]=[];
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},startupStatus:async()=>({...startup(instance),failure:{...startup(instance).failure,code:'RECOVERY_SESSION_UNCONFIRMED'}})} as any,device:{context:async()=>({hive:'https://hive.example',name:'Mac',device_id:'device',owner_id:'owner',binding_revision:1}),status:async()=>({state:'unbound'})} as any,runtime:()=>({snapshot:async()=>({revision:1,network_revision:0,local:'stopped',run_id:null,platforms:{}})}) as any,accounts:()=>({defaults:async()=>{calls.push('defaults');return {platforms:[]};},snapshot:async()=>{calls.push('account');throw Error('maintenance must remain blocked');}}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await tick();await model.refresh();
+ assert.equal(model.getSnapshot().runtime?.local,'stopped');assert.equal(model.getSnapshot().startup?.failure?.code,'RECOVERY_SESSION_UNCONFIRMED');assert.deepEqual(calls,[]);
+});
+
+test('failed first startup read keeps account maintenance blocked until a verified receipt',async t=>{
+ const instance='a'.repeat(32),calls:string[]=[];let listener:any;
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},onStartup:async(fn:any)=>{listener=fn;return()=>{};},startupStatus:async()=>{throw {code:'STARTUP_READ_FAILED',message:'native startup receipt unavailable'};}} as any,device:{context:async()=>({hive:'https://hive.example',name:'Mac',device_id:'device',owner_id:'owner',binding_revision:1}),status:async()=>({state:'unbound'})} as any,runtime:()=>({snapshot:async()=>({revision:1,network_revision:0,local:'stopped',run_id:null,platforms:{}})}) as any,accounts:()=>({defaults:async()=>{calls.push('defaults');return {platforms:[]};},snapshot:async()=>{calls.push('account');throw Error('maintenance must remain blocked');}}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await tick();await model.refresh();
+ assert.equal(model.getSnapshot().startupReadError?.code,'STARTUP_READ_FAILED');assert.equal(calls.length,0);
+ listener({...startup(instance,2),state:'ready',failure:null});
+ assert.equal(model.getSnapshot().startupReadError,null);
+ await tick();assert.ok(calls.includes('defaults'));
+});
+
+
+test('startup observation exposes exhausted retries and still accepts late terminal events',async t=>{
+ t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-11-11T00:00:00Z')});
+ const instance='a'.repeat(32);let reads=0,listener:any;
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},onStartup:async(fn:any)=>{listener=fn;return()=>{};},startupStatus:async()=>{if(++reads===1)return {...startup(instance),state:'checking',failure:null,observed_at:new Date().toISOString()};throw Error('startup IPC unavailable');}} as any,device:{} as any,runtime:()=>({}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await tick();
+ for(const delay of [2000,1000,2000,4000]){t.mock.timers.tick(delay);await tick();}
+ assert.equal(reads,5);assert.equal(model.getSnapshot().startupObservation,'stopped');
+ t.mock.timers.tick(40000);await tick();assert.equal(reads,5);
+ listener({...startup(instance,2),state:'ready',failure:null});
+ assert.equal(model.getSnapshot().startup?.state,'ready');assert.equal(model.getSnapshot().startupObservation,'idle');
+});

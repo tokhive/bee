@@ -17,7 +17,7 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 		input = map[string]bool{"paused": command == "pause"}
 	}
 	var result beewire.PlatformSupply
-	err := call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, method, state.Credential, input, &result)
+	err := callState(ctx, client, state, "/api/bee/platforms/"+platform, method, input, &result)
 	if err != nil {
 		if method == "PUT" {
 			return fmt.Errorf("operation result unconfirmed: %w; connect to Hive and run bee supply-status --platform %s to verify; the same operation can be retried", err, platform)

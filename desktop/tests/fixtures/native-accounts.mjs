@@ -56,6 +56,11 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   if(candidate.reference)detectedSources[p]={key:sourceKey(p,source),revision:1};
  }
  const sourceRecord=(p,source)=>accountSources.get(sourceKey(p,source))??{value:sourceDefaults[p],revision:0,fingerprint:(p==='openai'?'b':'c').repeat(64),expires_at:'2099-01-01T00:00:00Z',official:scenarios.previewSources?emptyOfficial(p):null};
+ const currentSources=Object.fromEntries(['openai','claude'].map(p=>[p,accounts[p].candidate.source??{directory:null,store:p==='openai'?'file':'keychain'}]));
+ w.__beeMockAccountContext=()=>Object.fromEntries(['openai','claude'].map(p=>{
+  const a=accounts[p],active=!!a.operation&&['pending','running','reconciling'].includes(a.operation.state);
+  return [p,{selected:a.selection.state==='selected',candidate:a.candidate.state,changed:!!a.selection.fingerprint&&!!a.candidate.fingerprint&&a.selection.fingerprint!==a.candidate.fingerprint,preparing:a.authorization.state==='preparing',paused:!!w.paused[p],source:currentSources[p],sourceCondition:sourceRecord(p,currentSources[p]).value,active,loginOperation:a.operation?.kind==='authorize'&&['pending','running'].includes(a.operation.state)?a.operation.id:null,refreshAllowed:a.selection.state==='selected'&&!!a.candidate.source&&!active}];
+ }));
  const accountControls=w.__beeMockControls;
  accountControls['account-source']=request=>{
   const {platform,directory,store,value}=request;
@@ -70,6 +75,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   return {message:`${platform==='openai'?'OpenAI':'Claude'} 来源已设为${{available:'可读取',missing:'缺失',denied:'拒绝读取'}[value]}；重新读取所选来源后可核对。`};
  };
  const detectAccount=request=>{
+  currentSources[request.platform]={directory:request.directory??null,store:request.store};
   const {platform,mode}=request,a=structuredClone(accounts[platform]),source={directory:request.directory,store:request.store==='auto'?'file':request.store},record=sourceRecord(platform,source),official=mode==='official';
   a.revision++;a.checked_at=new Date().toISOString();
   const condition=w.fail===platform?'denied':record.value;
@@ -155,7 +161,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   return {instance,result:{operation:structuredClone(job.operation)}};
  };
  const callbacks=new Map(),subscriptions=new Map();
- const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}});
+ const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance,capabilities:['runtime_inspect_recovery']}});
  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
  w.emitRequestSettled=request=>emit('bee://request-settled',{instance,...request});
  w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});

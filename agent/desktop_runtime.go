@@ -172,6 +172,7 @@ func (r *DesktopRuntime) beginStartLocked(ctx context.Context, input DesktopStar
 	r.snapshot.StopReceipt = nil
 	op := DesktopOperation{ID: id, Kind: "start", State: "pending", Revision: r.snapshot.Revision}
 	r.snapshot.Operation = &op
+	r.snapshot.StartupProgress = &DesktopStartupProgress{Stage: "checking_device", OperationID: &id}
 	pauseRevisions := map[string]uint64{}
 	for platform, slot := range r.slots {
 		pauseRevisions[platform] = slot.pauseRevision.Load()
@@ -336,6 +337,14 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 	if err := r.recoverSavedLoginMaintenance(ctx, session, state); err != nil {
 		return err
 	}
+	r.mu.Lock()
+	total := int64(len(scope.Selections))
+	completed := int64(0)
+	if r.snapshot.RunID != nil && *r.snapshot.RunID == run {
+		r.snapshot.StartupProgress = &DesktopStartupProgress{Stage: "preparing_accounts", OperationID: &r.snapshot.Operation.ID, Completed: &completed, Total: &total}
+		r.snapshot.Revision++
+	}
+	r.mu.Unlock()
 	var prepared sync.WaitGroup
 	for platform, selection := range scope.Selections {
 		prepared.Go(func() {
@@ -344,6 +353,14 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 			err := r.preparePlatform(ctx, session, state, platform, selection, slices.Contains(resume, platform), pauseRevisions[platform])
 			if err != nil {
 				r.platformFailure(platform, "runtime_prepare", err)
+			} else {
+				r.mu.Lock()
+				if r.snapshot.RunID != nil && *r.snapshot.RunID == run && r.snapshot.Local == "starting" && r.snapshot.StartupProgress != nil && r.snapshot.StartupProgress.Stage == "preparing_accounts" {
+					n := *r.snapshot.StartupProgress.Completed + 1
+					r.snapshot.StartupProgress.Completed = &n
+					r.snapshot.Revision++
+				}
+				r.mu.Unlock()
 			}
 		})
 	}
@@ -363,6 +380,12 @@ func (r *DesktopRuntime) run(ctx context.Context, run string, resume []string, p
 	if len(targets) == 0 {
 		return fmt.Errorf("runtime start has no verified forwarding platforms: targets=0; inspect platform preparation errors")
 	}
+	r.mu.Lock()
+	if r.snapshot.RunID != nil && *r.snapshot.RunID == run {
+		r.snapshot.StartupProgress = &DesktopStartupProgress{Stage: "confirming_service", OperationID: &r.snapshot.Operation.ID}
+		r.snapshot.Revision++
+	}
+	r.mu.Unlock()
 	cfg := &egressConfig{Targets: targets, ConnectProxy: network.ConnectProxy, desktop: r}
 	return r.connectDesktop(ctx, state, cfg, func(observation DesktopConnectionObservation) { r.connectionObserved(run, observation) })
 }
@@ -438,6 +461,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	r.retiredAccountSession = nil
 	op := DesktopOperation{ID: id, Kind: "stop", State: "pending", Revision: r.snapshot.Revision}
 	r.snapshot.Operation = &op
+	r.snapshot.StartupProgress = nil
 	cancel, done := r.runCancel, r.runDone
 	controlCancel, controlDone := r.controlCancel, r.controlDone
 	accountWorkers := r.accountWorkersLocked()

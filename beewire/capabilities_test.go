@@ -157,3 +157,43 @@ func TestCapabilityCreditsOnlyOnReadyOpenAIReports(t *testing.T) {
 		t.Fatal("an unknown report carried credits")
 	}
 }
+
+// An OpenAI account out of subscription quota keeps serving from paid credits
+// it can still spend; without them, or on Claude, exhaustion stops it.
+func TestOpenAICreditsCoverExhaustedQuota(t *testing.T) {
+	now := time.Now()
+	used, full := 10, 100
+	c := Capabilities{Sequence: 1, Status: "ready", Plan: "plus", ObservedAt: now, Models: []string{"gpt-test"}, Windows: []QuotaWindow{
+		{Seconds: 18000, UsedPercent: &used, ResetAt: now.Add(time.Hour)},
+		{Seconds: 604800, UsedPercent: &full, ResetAt: now.Add(time.Hour)},
+	}}
+	for _, test := range []struct {
+		name    string
+		credits *Credits
+		want    string
+	}{
+		{"no credits reported", nil, ReasonQuotaExhausted},
+		{"no balance", &Credits{}, ReasonQuotaExhausted},
+		{"balance", &Credits{HasCredits: true}, ""},
+		{"unlimited", &Credits{Unlimited: true}, ""},
+		{"overage limit reached", &Credits{HasCredits: true, OverageReached: true}, ReasonQuotaExhausted},
+	} {
+		c.Credits = test.credits
+		if !c.ValidFor("openai", now) {
+			t.Fatalf("%s: report refused", test.name)
+		}
+		if got := c.ReasonFor("openai", now, "gpt-test"); got != test.want {
+			t.Fatalf("%s: reason %q, want %q", test.name, got, test.want)
+		}
+	}
+	c.Credits = &Credits{HasCredits: true}
+	if got := c.ReasonFor("openai", now, "gpt-other"); got != ReasonModelUnavailable {
+		t.Fatalf("credits supplied an unlisted model: %q", got)
+	}
+	if got := c.ReasonFor("openai", now.Add(2*time.Hour), "gpt-test"); got == "" {
+		t.Fatal("credits kept a stale report serving")
+	}
+	if got := c.ReasonFor("claude", now, ""); got != ReasonQuotaExhausted {
+		t.Fatalf("credits covered a Claude account: %q", got)
+	}
+}

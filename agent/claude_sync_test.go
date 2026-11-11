@@ -261,3 +261,63 @@ func TestClaudeRuntimeConfigurationAndIndependentWorkers(t *testing.T) {
 		t.Fatal("blocked Claude source stopped OpenAI synchronization")
 	}
 }
+
+// A source that stays unavailable is reported to Hive once, then again only
+// when the reason or the connection changes or a minute has passed. Before,
+// every two second cycle asked Hive for the account and suspended it again.
+func TestClaudeUnavailableSourceIsNotReportedEveryCycle(t *testing.T) {
+	var reads, stops atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/api/bee/platforms/claude/account":
+			reads.Add(1)
+			json.NewEncoder(w).Encode(beewire.PlatformAccount{Platform: "claude", Generation: 1, Status: "source_unavailable"})
+		case "/api/bee/platforms/claude/account/source":
+			stops.Add(1)
+			io.WriteString(w, `{}`)
+		default:
+			t.Error("unexpected Hive request", r.URL.Path)
+			w.WriteHeader(404)
+		}
+	}))
+	defer server.Close()
+	reason := errClaudeKeychainMissing
+	source := &claudeSource{Store: "keychain", read: func(context.Context) (claudeCredential, error) { return claudeCredential{}, reason }}
+	state := localState{Hive: server.URL, Credential: "bee-test", Identity: &beewire.Identity{ID: "device"}}
+	var output bytes.Buffer
+	cycle := func(lease string, first bool) {
+		t.Helper()
+		if err := source.synchronize(context.Background(), state, lease, &output, first); err != nil {
+			t.Fatal(err)
+		}
+	}
+	expect := func(when string, want int32) {
+		t.Helper()
+		if got := stops.Load(); got != want {
+			t.Fatalf("%s: %d unavailable reports, want %d", when, got, want)
+		}
+	}
+
+	cycle("lease", true)
+	expect("first cycle", 1)
+	for range 5 {
+		cycle("lease", false)
+	}
+	expect("five cycles with the same reason", 1)
+	if reads.Load() != 1 {
+		t.Fatalf("an unchanged unavailable source still read the account %d times", reads.Load())
+	}
+
+	cycle("lease", true)
+	expect("a forced cycle", 2)
+	cycle("new-lease", false)
+	expect("a new connection", 3)
+	reason = errClaudeExpired
+	cycle("new-lease", false)
+	expect("a new reason", 4)
+	source.suspended.at = time.Now().Add(-unavailableReportInterval)
+	cycle("new-lease", false)
+	expect("a minute later", 5)
+	cycle("new-lease", false)
+	expect("right after", 5)
+}

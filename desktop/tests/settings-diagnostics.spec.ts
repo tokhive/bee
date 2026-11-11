@@ -26,7 +26,7 @@ test('语言即时覆盖导航/表单/弹窗，系统语言和主题可跟随', 
   await page.getByLabel('Appearance', { exact: true }).selectOption('system');
   await page.emulateMedia({ colorScheme: 'dark' });
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'system');
-  expect(await page.locator('html').evaluate(e => getComputedStyle(e).getPropertyValue('--paper').trim())).toBe('#222426');
+  expect(await page.locator('html').evaluate(e => getComputedStyle(e).getPropertyValue('--paper').trim())).toBe('#242421');
   await page.emulateMedia({ colorScheme: 'light' });
   expect(await page.locator('html').evaluate(e => getComputedStyle(e).getPropertyValue('--paper').trim())).toBe('#ffffff');
   await nav(page, 'AI accounts');
@@ -226,7 +226,7 @@ test('系统语言事件、显式浅深主题、可见焦点与代理校验均�
   await page.getByLabel('外观', { exact: true }).selectOption('dark');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   await page.emulateMedia({ colorScheme: 'light' });
-  expect(await page.locator('html').evaluate(e => getComputedStyle(e).getPropertyValue('--paper').trim())).toBe('#222426');
+  expect(await page.locator('html').evaluate(e => getComputedStyle(e).getPropertyValue('--paper').trim())).toBe('#242421');
   await page.getByLabel('外观', { exact: true }).selectOption('light');
   await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
   await page.emulateMedia({ colorScheme: 'dark' });

@@ -172,6 +172,10 @@ jobs:
           npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
           npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
           npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
+      - name: Complete TypeScript unit and native command contract tests
+        run: |
+          set -euo pipefail
+          npm --prefix desktop run test:unit 2>&1 | tee desktop-ci-evidence/unit-tests.log
       - name: Build source-verified native Windows Bee sidecar
         run: |
           set -euo pipefail

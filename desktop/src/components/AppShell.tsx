@@ -2,7 +2,7 @@ import type {DesktopPresentation} from '../presentation/desktopStatus';
 import { t } from '../i18n/index';
 import {useEffect,useRef,type ReactNode} from 'react';
 import { Monitor } from 'lucide-react';
-import { navigation,navigationSelector,validNavigationTarget,type NavigationRequest } from '../app/navigation';
+import { navigation,demoNavigation,navigationSelector,validNavigationTarget,type NavigationRequest } from '../app/navigation';
 import type { Page } from '../client/types';
 import logo from '../assets/app-icon-dark.svg';
 export function AppShell({
@@ -43,7 +43,8 @@ export function AppShell({
     if(focus())return;
     const observer=new MutationObserver(()=>{if(focus())observer.disconnect();});observer.observe(document.body,{subtree:true,childList:true});return()=>observer.disconnect();
   },[page,navigationRequest?.sequence,deviceMode]);
-  const current = navigation.find((item) => item.id === page) ?? navigation[0];
+  const items = demo && !deviceMode ? demoNavigation : navigation;
+  const current = items.find((item) => item.id === page) ?? items[0];
   return (
     <div data-desktop-status={desktopStatus?.kind} className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
       <aside className="sidebar">
@@ -52,7 +53,7 @@ export function AppShell({
           <span>Bee</span>
         </div>
         <nav aria-label={t("主导航")}>
-          {navigation.map(({ id, label, icon: Icon }) => (
+          {items.map(({ id, label, icon: Icon }) => (
             <button key={id} aria-current={id === page ? 'page' : undefined} onClick={() => onNavigate(id)}>
               <Icon aria-hidden="true" />
               {t(label)}

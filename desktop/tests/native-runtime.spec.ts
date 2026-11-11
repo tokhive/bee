@@ -369,3 +369,29 @@ for(const connection of ['connected','reconnecting','rejected','occupied'] as co
  }
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
 });
+
+test('Claude official login warns about official account, supports cancellation, and completed login remains a candidate',async({page})=>{
+ await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page,'Claude').getByText('已有登录，尚未接入')).toBeVisible();await openDetails(page,'Claude');
+ await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();
+ const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
+ await expect(login).toContainText('可能改变该客户端当前账号');
+ await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ const cancel=login.getByRole('button',{name:'取消登录',exact:true});await expect(cancel).toBeEnabled();await cancel.click();
+ await expect(login.getByText('本次登录已取消',{exact:true})).toBeVisible();
+ await expect(login).toContainText('官方客户端可能已保存登录，可以检查当前登录后继续。');
+ await page.evaluate(()=>{(window as any).loginComplete=true;});
+ await login.getByRole('button',{name:'重新登录',exact:true}).click();await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect(login.getByText('已登录 Claude，尚未接入',{exact:true})).toBeVisible();
+ await expect(card(page,'Claude').getByText('已有登录，尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+});
+
+for(const denial of ['device','recovery'])test('Claude '+denial+' failure allows local login and cancellation but keeps account selection blocked',async({page})=>{
+ const consoleErrors:string[]=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
+ await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_status'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeDisabled();await openDetails(page,'Claude');
+ const login=page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true});await expect(login).toBeEnabled();await login.click();
+ const loginStatus=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await loginStatus.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
+ const cancel=loginStatus.getByRole('button',{name:'取消登录',exact:true});await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
+ await expect(loginStatus.getByText('本次登录已取消',{exact:true})).toBeVisible();await expect(loginStatus).toContainText('官方客户端可能已保存登录，可以检查当前登录后继续。');expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
+});

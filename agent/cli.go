@@ -206,7 +206,7 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 
 func login(ctx context.Context, client *http.Client, path string, state localState, out io.Writer) error {
 	var identity beewire.Identity
-	err := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err := callState(ctx, client, state, "/api/bee/identity", "GET", nil, &identity)
 	if err == nil {
 		return finishLogin(path, state, identity, out)
 	}
@@ -263,7 +263,7 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 			}
 		}
 		// The credential was persisted before exchange, so an uncertain response is recoverable.
-		if identityErr := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity); identityErr == nil {
+		if identityErr := callState(ctx, client, state, "/api/bee/identity", "GET", nil, &identity); identityErr == nil {
 			return finishLogin(path, state, identity, out)
 		}
 		if err != nil {

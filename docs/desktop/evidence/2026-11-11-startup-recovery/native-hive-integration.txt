@@ -1,0 +1,53 @@
+Bee / Hive 会话恢复隔离联调证据
+日期：2026-11-11（Asia/Shanghai）
+范围：合成账号；专用 PostgreSQL；真实 Rust → Go sidecar → Hive HTTP → DB；未部署。
+Hive base: f5950789b1f89d9b8cee5557429f90e129a6de30
+Bee wire: 328270e79c5ba040f8537eab56010c0286f3ed8b
+Bee desktop base: 690af0ba91768a00fa36a5ba4f055fefff00b9d6
+Bee desktop source: dirty worktree（含其他会话修改，不等同于纯提交构建）
+platform: macOS-15.7.7-arm64-arm-64bit-Mach-O
+go version go1.27.3 darwin/arm64
+
+复跑：在完整 Bee 桌面 checkout 中设置专用 TEST_DATABASE_URL 后：
+python3 scripts/test-runtime-retirement.py --hive /absolute/path/to/hive-checkout
+
+实际运行结果：
+{"journal":"succeeded","owned_exit":true,"pause_preserved":true,"retirement_id":"5d0e64ce6dde5ba551ad465140f1871e8b166ff86c279b35","scenario":"success"}
+{"journal":"succeeded","owned_exit":true,"pause_preserved":true,"retirement_id":"c727b11e64f3a1ec37f17b8ccbb5dd92e7bf6f909da4bd12","scenario":"lost_response"}
+{"journal":"succeeded","owned_exit":true,"pause_preserved":true,"retirement_id":"98b9b26506576e4cca57db3d0eb713ed63ae168bfad654b1","scenario":"draining_restart"}
+--- PASS: TestRuntimeRecoveryNativeDesktop (27.83s)
+--- PASS: TestRuntimeRecoveryNativeDesktop/success (5.38s)
+--- PASS: TestRuntimeRecoveryNativeDesktop/lost_response (4.88s)
+--- PASS: TestRuntimeRecoveryNativeDesktop/draining_restart (8.07s)
+--- PASS: TestRuntimeRecoveryNativeDesktop/conflict (4.74s)
+--- PASS: TestRuntimeRecoveryNativeDesktop/exit_race (4.77s)
+--- PASS: TestRuntimeRecoveryFencesOldRequestsPreservesPauseAndSurvivesRestart (0.53s)
+--- PASS: TestRuntimeRecoveryWaitsForAlreadyAdmittedSupplyWrite (0.40s)
+--- PASS: TestRuntimeRecoveryKeepsUnfinishedWorkAndOriginalPreparationBlocked (0.37s)
+--- PASS: TestRuntimeRecoveryRejectsPreparationFingerprintConflictWithoutReleasingBarrier (0.35s)
+ok  	github.com/tokhive/hive/hive/internal/integration	31.395s
+
+Hive gate/编译：
+ok  	github.com/tokhive/hive/hive/internal/service	1.511s
+ok  	github.com/tokhive/hive/hive/internal/controller	1.871s [no tests to run]
+?   	github.com/tokhive/hive/hive/internal/router	[no test files]
+
+Bee 恢复回归：
+ok  	github.com/tokhive/bee/agent	3.676s
+ok  	github.com/tokhive/bee/desktopbridge	2.456s [no tests to run]
+ok  	github.com/tokhive/bee/beewire	2.871s [no tests to run]
+
+Hive build: go build -o <isolated-artifacts>/hive ./hive/cmd/hive (exit 0)
+Hive vet: go vet ./hive/internal/service ./hive/internal/controller ./hive/internal/router ./hive/internal/integration (exit 0)
+
+SHA-256（本次真实测试可执行文件与日志）：
+69ae08a91e155c1f012ff7f4c05c73a9c59379361f3402f3916bcf4aef9c4a0f  hive
+f17b0648ad5b036537cb16b183eb9fac6c9a7c3b14983a331a13bc655b6d1f72  bee-agent.test
+b453b5d46c914983ebc75429df76f20fcfd70093c04443e592bafd390ba094c3  hive-native.log
+3d6427a6da66a5473f8175a5174554b8671b912893611b9e39f6b7d35d9acc54  bee-focused.log
+94e090a4a2070e658fe960259018f5d54d99120d6b5fbd35eff7f92054890fc7  bee_desktop_lib-e47ffb094a055526
+
+边界：官方登录与额度为合成边界；draining 的执行记录由测试置入，并由测试直接确认终止。
+SIGKILL 实际作用于本测试启动的 Go 子进程；丢失响应发生于实际 Hive 成功处理之后。
+本轮在已交付补丁之外新增验收 harness 与文档；生产恢复逻辑未再调整。测试修正涉及等待、错误码、严格退出和本地代理配置。
+未验收：真实部署、真实账号、打包原生窗口、正式签名/公证、Windows/Linux。

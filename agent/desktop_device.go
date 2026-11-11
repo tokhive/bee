@@ -226,6 +226,8 @@ func validateDesktopIdentity(state localState, identity beewire.Identity) error 
 // credentials. Error codes are bounded to the Hive contract's public alphabet.
 func safeCode(code string) string {
 	switch code {
+	case "runtime_retired", "invalid_runtime_recovery", "runtime_recovery_conflict", "runtime_preparation_conflict", "runtime_account_conflict":
+		return code
 	case "", "pending", "draining", "approved", "redeemed", "device_exists", "device_draining", "replacement_pending", "pairing_expired", "pairing_redeemed", "invalid_device_credential", "device_replaced", "rate_limited", "invalid_pairing", "invalid_pairing_token", "unavailable", "device_changed", "pairing_pending":
 		return code
 	case "device_connected", "forbidden", "invalid_content_type", "invalid_json", "invalid_platform", "invalid_pause",
@@ -275,6 +277,9 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
 	req.Header.Set("User-Agent", userAgent())
+	if state.RuntimeEpoch != "" {
+		req.Header.Set(beewire.RuntimeEpochHeader, state.RuntimeEpoch)
+	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
 	}

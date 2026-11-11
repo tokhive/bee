@@ -1,0 +1,13 @@
+--prepared:/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app/Contents/MacOS/bee
+--validated:/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app/Contents/MacOS/bee
+desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app: valid on disk
+desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app: satisfies its Designated Requirement
+
+Verified at 2026-11-11T12:26:34.993141+08:00
+CFBundleName: Bee S1 Dev
+CFBundleIdentifier: dev.tokhive.bee
+CFBundleShortVersionString: 0.1.0
+CFBundleExecutable: bee-desktop
+bee-desktop sha256: fde4bfdbb71b125a3256a196a24088d90484cd2f4d8457c76925ba2ed175835c
+bee sha256: 11a0c47aea3bdfe234931b35b597e1ef8253fd8cb597c889457e00e96df9d61a
+App was built and verified, not launched with real account data.

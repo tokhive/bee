@@ -51,8 +51,16 @@ fn checked(reply: BridgeReply, kind: RuntimeReplyKind) -> Result<BridgeReply, Br
 impl Bridge {
     // Called once at App startup, after handshake. A failed child is never restarted.
     pub(crate) async fn restore_when_ready(&self) -> Result<(), BridgeError> {
+        self.restore_with_progress(&|_| {}, None).await
+    }
+    pub(crate) async fn restore_with_progress(
+        &self,
+        progress: &(impl Fn(crate::startup_recovery::RecoveryProgress) + Send + Sync),
+        mut journal: Option<(&crate::startup_recovery::RecoveryJournal, &mut crate::startup_recovery::RecoveryRecord)>,
+    ) -> Result<(), BridgeError> {
         self.check_restore_admission()?;
         if self.0.restored.swap(true, Ordering::SeqCst) {
+            if journal.is_some(){return Err(BridgeError::new("RECOVERY_RESULT_UNCONFIRMED","this management instance already attempted startup restore; query the original operation instead of creating another attempt".into()));}
             return Ok(());
         }
         let mut statuses = self.subscribe();
@@ -80,6 +88,11 @@ impl Bridge {
             RuntimeReplyKind::Operation,
         )?;
         let operation = &admitted.result["operation"];
+        if let Some((store,record))=journal.as_mut() {
+            record.operation_id=operation["id"].as_str().map(str::to_owned);
+            store.save(record)?;
+        }
+        progress(crate::startup_recovery::RecoveryProgress{stage:"confirming_service".into(),operation_id:operation["id"].as_str().map(str::to_owned),completed:None,total:None});
         if operation["kind"] != "start" {
             return Err(failure(format!(
                 "startup restore admission kind={}; required=start",
@@ -100,6 +113,12 @@ impl Bridge {
                     return Err(failure(format!("startup restore receipt binding failed: instance_matches={} operation_matches={} kind={} revision={observed} previous={revision}; required=same instance/run/start operation and monotonic revision",reply.instance == admitted.instance,current["id"] == operation["id"],current["kind"])));
                 }
                 revision=observed;
+                if let Some(raw)=snapshot.get("startup_progress") {
+                    let phase:crate::startup_recovery::RecoveryProgress=serde_json::from_value(raw.clone()).map_err(|e|crate::protocol::invalid_json("runtime startup progress",e))?;
+                    phase.validate()?;
+                    if phase.operation_id.as_deref()!=operation["id"].as_str() {return Err(failure("startup progress belongs to a different operation"));}
+                    progress(phase);
+                }
                 // An idle saved intent can complete by clearing run_id; only bind a
                 // concrete run while pending, then verify its successful terminal state.
                 match current["state"].as_str() {
@@ -109,7 +128,11 @@ impl Bridge {
                         }
                         return Ok(());
                     }
-                    Some("failed"|"cancelled") => return Err(failure(format!("startup restore terminal state={}; error={}; saved intent not proven restored",current["state"],current["error"]))),
+                    Some("failed"|"cancelled") => {
+                        let cause=failure(format!("startup restore terminal state={}; error={}; saved intent not proven restored",current["state"],current["error"]));
+                        if let Some((store,record))=journal.as_mut(){record.phase="failed".into();record.failure=Some(cause.clone());store.save(record)?;}
+                        return Err(cause);
+                    },
                     _ => {
                         if !snapshot["run_id"].is_null(){run_id=Some(snapshot["run_id"].clone());}
                         sleep(Duration::from_millis(25)).await;

@@ -242,7 +242,7 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 
 func checkHive(ctx context.Context, report *doctorReport, state localState) bool {
 	var identity beewire.Identity
-	err := call(ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err := callState(ctx, httpClient(), state, "/api/bee/identity", "GET", nil, &identity)
 	if err != nil {
 		report.problem("hive", "", "fail", hiveProblem(err))
 		return false
@@ -270,7 +270,7 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 	path := "/api/bee/platforms/" + platform
 	var account beewire.PlatformAccount
 	explained := ""
-	if err := call(ctx, httpClient(), state.Hive, path+"/account", "GET", state.Credential, nil, &account); err != nil {
+	if err := callState(ctx, httpClient(), state, path+"/account", "GET", nil, &account); err != nil {
 		// The supply query would fail the same way; say it once.
 		report.problem("account", platform, "fail", hiveProblem(err))
 		report.skip("supply", platform, "account check failed")
@@ -295,7 +295,7 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 		}
 	}
 	var supply beewire.PlatformSupply
-	if err := call(ctx, httpClient(), state.Hive, path, "GET", state.Credential, nil, &supply); err != nil {
+	if err := callState(ctx, httpClient(), state, path, "GET", nil, &supply); err != nil {
 		report.problem("supply", platform, "fail", hiveProblem(err))
 		return
 	}

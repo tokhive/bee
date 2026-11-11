@@ -1,0 +1,22 @@
+--prepared:/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app/Contents/MacOS/bee
+--validated:/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app/Contents/MacOS/bee
+desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app: valid on disk
+desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app: satisfies its Designated Requirement
+
+Verified at 2026-11-11T15:48:53.605203+08:00
+bee-desktop sha256: e1a2a9853e36d957b141a0064e6db12306ed6669c3f3ce2a03567316adc51dd5
+bee sha256: 4eb6bf1f89b2e6e6f683971fa1c8580abb41fffade6f3f704098259feeeff544
+
+Source provenance before packaging/signing:
+{
+  "revision": "690af0ba91768a00fa36a5ba4f055fefff00b9d6",
+  "teeRevision": "a687f86d781e825c04c1d84d75b41bba5d862254",
+  "target": "aarch64-apple-darwin",
+  "goos": "darwin",
+  "goarch": "arm64",
+  "go": "go version go1.27.3 darwin/arm64",
+  "beeVersion": "dev+690af0ba9176-dirty",
+  "binarySha256": "caf298a4d27c31ad3eff3118d3cefd9465f905fec1c231289acff6568adab3c5"
+}
+
+Packaged executables are signed; their hashes differ from unsigned input. App was built and verified, not launched with real account data.

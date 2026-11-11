@@ -10,11 +10,12 @@ import (
 )
 
 type localState struct {
-	Hive       string            `json:"hive"`
-	Name       string            `json:"name"`
-	Credential string            `json:"credential"`
-	Pairing    *beewire.Pairing  `json:"pairing,omitempty"`
-	Identity   *beewire.Identity `json:"identity,omitempty"`
+	RuntimeEpoch string            `json:"runtime_epoch,omitempty"`
+	Hive         string            `json:"hive"`
+	Name         string            `json:"name"`
+	Credential   string            `json:"credential"`
+	Pairing      *beewire.Pairing  `json:"pairing,omitempty"`
+	Identity     *beewire.Identity `json:"identity,omitempty"`
 }
 
 func readState(path string) (localState, error) {
@@ -34,6 +35,9 @@ func readState(path string) (localState, error) {
 	decoder.DisallowUnknownFields()
 	if err = decoder.Decode(&state); err != nil {
 		return localState{}, fmt.Errorf("decode Bee configuration %q: %w", path, err)
+	}
+	if state.RuntimeEpoch != "" && !desktopHexID(state.RuntimeEpoch, 24) {
+		return localState{}, fmt.Errorf("Bee runtime epoch rejected: bytes=%d; required=48 lowercase hex characters", len(state.RuntimeEpoch))
 	}
 	return state, nil
 }

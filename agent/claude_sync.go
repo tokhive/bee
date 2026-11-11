@@ -125,7 +125,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	observed, known := source.pacer.expected()
 	source.pacer.unsettled()
 	if !known {
-		if readErr := call(ctx, httpClient(), state.Hive, path, "GET", state.Credential, nil, &observed); readErr != nil {
+		if readErr := callState(ctx, httpClient(), state, path, "GET", nil, &observed); readErr != nil {
 			return readErr
 		}
 	}
@@ -133,7 +133,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		return errors.New("Hive returned an unexpected platform for the Claude account")
 	}
 	stop := func(reason error) error {
-		if err := call(ctx, httpClient(), state.Hive, path+"/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); err != nil {
+		if err := callState(ctx, httpClient(), state, path+"/source", "PUT", map[string]string{"lease": lease}, nil); err != nil {
 			return err
 		}
 		source.message(out, "source_unavailable", "new Claude jobs paused; waiting for official authorization recovery: "+reason.Error())
@@ -148,7 +148,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	}
 	var result beewire.MaintenanceResponse
 	input := beewire.MaintenanceRequest{Lease: lease, Claude: &auth, ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshSupported: source.maintenance != nil && credential.hasRefreshToken, RefreshRequired: profileRejected}
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential, input, &result); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/maintenance", "POST", input, &result); err != nil {
 		return err
 	}
 	if result.Account.Platform != "claude" {
@@ -169,7 +169,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 			return errors.New("invalid Hive Claude authorization maintenance task binding")
 		}
 		var key tee.InboxPublic
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &key); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
 			return err
 		}
 		if !validClaudeMaintenanceKey(key) {
@@ -211,7 +211,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		var registered struct {
 			Generation int64 `json:"account_generation"`
 		}
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential, upload, &registered); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/credentials", "POST", upload, &registered); err != nil {
 			var failure *apiFailure
 			if errors.As(err, &failure) && failure.Code == "invalid_claude_authorization" {
 				return stop(errClaudeExpired)
@@ -244,7 +244,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 			report.ReuseMetadata = true
 			report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 		}
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/claude/capabilities", "POST", state.Credential, report, nil); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/platforms/claude/capabilities", "POST", report, nil); err != nil {
 			var failure *apiFailure
 			if errors.As(err, &failure) && failure.Code == "capability_metadata_required" {
 				source.metadataReportedAt = time.Time{}

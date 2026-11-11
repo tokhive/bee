@@ -1,0 +1,10 @@
+{
+  "product": "Bee",
+  "native_state": "ready",
+  "startup_state": "blocked",
+  "instance": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "revision": 3,
+  "observed_at": "2026-11-11T04:03:33.855Z",
+  "progress": null,
+  "failure": "错误码: RECOVERY_SESSION_UNCONFIRMED\n失败环节: startup_check\n原始原因: previous_session_active=true clean=false; old workers and remote preparation ownership not proven retired"
+}

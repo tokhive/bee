@@ -54,3 +54,46 @@
 .account-page-count{font-size:12px;color:var(--muted)}
 .openai-account .oa-icon{background:var(--surface-soft,#f8f7f4)}
 [data-theme=dark] .openai-account .oa-icon{background:#292824}
+
+/* Approved compact account overview; workflow steps keep their existing layout. */
+.account-list-compact{container-type:inline-size;--account-columns:minmax(85px,.95fr) minmax(105px,1.15fr) minmax(145px,1.55fr) 132px}
+.account-list-heading{display:grid;grid-template-columns:var(--account-columns);gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);font-size:11px;color:var(--muted)}
+.account-list-compact:has(.oa-flow)>.account-list-heading{display:none}
+.auto-service-accounts .account-list-compact .native-account-row.oa-compact,.auto-service-accounts .account-list-compact .account-compact-row{display:grid;grid-template-columns:var(--account-columns);gap:12px;padding:18px 16px;align-items:center}
+.account-list-compact .openai-account.oa-compact .oa-head{grid-column:1;grid-row:1;display:block;min-width:0}
+.account-list-compact .oa-compact .oa-icon,.account-list-compact .platform-mark{display:none}
+.account-list-compact .oa-compact .oa-body,.account-list-compact .account-list-condition{grid-column:2;grid-row:1;margin:0;min-width:0}
+.account-list-compact .openai-account.oa-compact .oa-actions,.auto-service-accounts .account-list-compact .native-account-row-actions{grid-column:4;grid-row:1;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;margin:0;gap:7px;min-width:0;max-width:none;padding:0}
+.account-list-compact .oa-compact .oa-actions button,.account-list-compact .native-account-row-actions button{font-size:12px;white-space:normal;max-width:100%;padding:5px 8px;min-height:32px;height:auto}
+.account-list-compact .oa-compact .oa-actions>div{min-width:0}
+.account-list-compact .oa-compact .oa-actions>.quiet{color:var(--muted)}
+.account-list-compact .openai-account.oa-compact>.oa-quota,.account-list-compact .account-compact-row>.account-list-quota{grid-column:3;grid-row:1;margin:0;min-width:0}
+.account-list-compact .openai-account.oa-compact>.oa-evidence{grid-column:1/-1;grid-row:auto;margin:0}
+.account-list-compact .oa-compact h3,.account-list-compact .native-platform-name h3{font-size:14px}
+.account-list-compact .oa-compact .oa-title{font-size:12px}
+.account-list-compact .oa-compact .oa-note,.account-list-compact .native-account-fingerprint{font-size:11px}
+.account-list-compact .account-compact-row .native-account-identity{grid-column:1;grid-row:1;padding:0;min-width:0}
+.account-list-compact .account-compact-row .native-account-copy{min-width:0}
+.account-list-compact .account-compact-row>.native-account-login{grid-column:1/-1}
+.account-list-compact .native-account-condition{font-size:12px}
+.account-list-compact .account-status-block{margin:0}
+.account-list-compact .native-account-row-actions .account-action-help{text-align:left}
+.account-list-quota{min-width:0;display:grid;gap:10px}
+.account-quota-caption{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted)}
+.account-list-window{display:grid;grid-template-columns:minmax(36px,auto) minmax(12px,1fr) auto;gap:4px 7px;align-items:center;font-size:11px;min-width:0}
+.account-list-window .quota-value{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.account-list-window .quota-window-name{overflow-wrap:anywhere;max-width:80px}
+.account-list-window .quota-reset{grid-column:2/-1;margin:0;font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.account-list-window.is-exhausted [data-slot=progress-indicator]{background:var(--oa-danger,#a24231)}
+.account-list-quota .quota-history{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.oa-status-line{display:flex;align-items:center;gap:3px}
+button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4px;border:0;box-shadow:none;color:var(--muted);background:transparent}
+.account-error-trigger svg{width:15px;height:15px}
+.account-error-popover{z-index:60;width:420px;max-width:calc(100vw - 24px);max-height:var(--radix-popover-content-available-height);overflow:auto;overscroll-behavior:contain;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:16px 18px;box-shadow:0 8px 30px var(--shadow)}
+.account-error-popover header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:10px}
+.account-error-popover h3{font-size:13px;margin:0}
+.account-error-popover pre{font:12px/1.65 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;user-select:text}
+@container(max-width:620px){.account-list-heading{display:none}.auto-service-accounts .account-list-compact .native-account-row.oa-compact,.auto-service-accounts .account-list-compact .account-compact-row{grid-template-columns:minmax(0,1fr) minmax(0,1.2fr);gap:14px 18px}.account-list-compact .openai-account.oa-compact>.oa-quota,.account-list-compact .account-compact-row>.account-list-quota{grid-column:1;grid-row:2}.account-list-compact .openai-account.oa-compact .oa-actions,.auto-service-accounts .account-list-compact .native-account-row-actions{grid-column:2;grid-row:2}}
+@container(max-width:320px){.auto-service-accounts .account-list-compact .native-account-row.oa-compact,.auto-service-accounts .account-list-compact .account-compact-row{grid-template-columns:1fr}.account-list-compact .openai-account.oa-compact .oa-body,.account-list-compact .account-list-condition,.account-list-compact .openai-account.oa-compact .oa-actions,.auto-service-accounts .account-list-compact .native-account-row-actions,.account-list-compact .openai-account.oa-compact>.oa-quota,.account-list-compact .account-compact-row>.account-list-quota{grid-column:1;grid-row:auto}}
+@media(max-width:760px){[data-radix-popper-content-wrapper]:has(>.account-error-popover){position:fixed!important;inset:auto 12px 12px!important;transform:none!important;width:calc(100vw - 24px)!important;min-width:0!important}.account-error-popover{width:100%;max-height:70vh;border-radius:12px}}
+@media(pointer:coarse){button.account-error-trigger{width:44px;min-height:44px}}

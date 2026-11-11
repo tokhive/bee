@@ -1,0 +1,2 @@
+import {defineConfig,devices} from '@playwright/test';
+export default defineConfig({testDir:'./tests',testMatch:'compact-account-list.spec.ts',workers:1,retries:0,outputDir:'../.cache/compact-list-implementation/playwright',use:{...devices['Desktop Chrome'],channel:'chrome',locale:'zh-CN',baseURL:'http://127.0.0.1:1432',trace:'retain-on-failure'},webServer:{command:'npm run dev -- --port 1432',url:'http://127.0.0.1:1432',reuseExistingServer:false,timeout:30000}});

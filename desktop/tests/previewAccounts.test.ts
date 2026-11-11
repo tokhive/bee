@@ -110,7 +110,9 @@ test('candidate actions require confirmation, revision, live source and matching
  t.mock.timers.tick(601);
  await runtime.snapshot();
  current=await accounts.snapshot('openai',false);
- assert.equal(current.authorization.state,'official_identity_verified');
+ assert.equal(current.authorization.state,'synchronized');
+ assert.equal(current.hive.state,'ready');
+ assert.equal(current.hive.fingerprint,current.selection.fingerprint);
  const selected=current.selection.fingerprint;
  const next=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:current.revision});
  assert.notEqual(next.id,login.id);

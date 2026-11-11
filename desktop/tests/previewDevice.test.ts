@@ -336,3 +336,22 @@ test('temporary device identity rejection preserves structured HTTP evidence thr
   return true;
  });
 });
+
+test('account verification while disconnected never invents synchronized Hive readiness',async t=>{
+ const {instance,runtime}=await preview(t,'accounts-auto-running');
+ const w=window as any,account=createAccountClient(invoke,instance);
+ applyPreviewEvent({session:w.__beePreviewSession,action:'runtime-connection',value:'offline'});
+ const detected=await account.detect({platform:'openai',directory:null,store:'file',mode:'official'});
+ assert.equal(detected.candidate.identity_verified,true);
+ assert.equal(detected.authorization.state,'official_identity_verified');
+ assert.equal(detected.hive.state,'unconfirmed');
+ const snapshot=await account.snapshot('openai',false);
+ assert.equal(snapshot.authorization.state,'official_identity_verified');
+ assert.equal(snapshot.hive.state,'unconfirmed');
+ assert.equal((await runtime.snapshot()).connection,'reconnecting');
+ applyPreviewEvent({session:w.__beePreviewSession,action:'runtime-connection',value:'online'});
+ const recovered=await account.snapshot('openai',false);
+ assert.equal(recovered.authorization.state,'synchronized');
+ assert.equal(recovered.hive.state,'ready');
+ assert.equal(recovered.hive.fingerprint,recovered.selection.fingerprint);
+});

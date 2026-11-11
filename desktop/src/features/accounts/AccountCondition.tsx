@@ -5,7 +5,7 @@ import {normalizeFailure,type UiFailure} from '../../system/failures';
 import type {NavigationTarget} from '../../app/navigation';
 import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
-import {currentLocale,t} from '../../i18n/index';
+import {currentLocale,formatDate,t} from '../../i18n/index';
 import {accountPending,type AccountsModel} from './useAccounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {supplyFresh,type SharedSupply} from '../supply/useSupply';
@@ -60,7 +60,21 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
    <summary>{t('查看原因（{count}）',{count})}</summary>
    <ul>
     {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <li key={index}><p>{p.summary}</p>{p.impact&&p.impact!==p.summary&&<p className="muted">{p.impact}</p>}<details className="account-condition-evidence"><summary>{t('查看失败详情')}</summary><pre>{p.details}</pre></details>{p.action&&p.action.section!=='source'&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</li>;})}
-    {reasons.map(reason=>{const p=supplyProblem(reason,platform);return <li key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p><p className="muted">{t(p.impact)}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t(p.target.section==='source'?'打开读取设置':p.target.section==='connection'?'查看连接':'查看账号详情')}</Button>}</li>;})}
+    {reasons.map(reason=>{
+     const p=supplyProblem(reason,platform);
+     if(reason==='offline'){
+      const detail=runtime.view?.connection_detail;
+      const failure=detail?.failure?presentFailure(normalizeFailure({...detail.failure,check:detail.failure.stage,observedAt:detail.failure.occurred_at},'connection'),currentLocale()):null;
+      return <li key={reason}>
+       <p>{failure?.summary??t(p.summary)}</p>
+       <p className="muted">{t(detail?.retry==='attempting'?'正在尝试连接 Hive。':detail?.retry==='scheduled'?'已安排重新连接：':detail?.retry==='halted'?'自动重连已停止，请先处理当前问题。':'Hive 尚未确认此平台在线，请重新核对连接。')}{detail?.retry==='scheduled'&&detail.next_retry_at&&formatDate(detail.next_retry_at,currentLocale())}</p>
+       {failure&&<details className="account-condition-evidence"><summary>{t('查看失败详情')}</summary><pre>{failure.details}</pre></details>}
+       <Button variant="ghost" disabled={runtime.busy||runtime.refreshing||supply?.state.busy} onClick={()=>{void runtime.refresh();void supply?.model.read();}}>{t('重新核对连接')}</Button>
+       {detail?.retry==='halted'&&onNavigate&&<Button variant="ghost" onClick={()=>navigate({page:'diagnostics',section:'connection'})}>{t('前往诊断检查 Hive 连接')}</Button>}
+      </li>;
+     }
+     return <li key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p><p className="muted">{t(p.impact)}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t(p.target.section==='source'?'打开读取设置':'查看账号详情')}</Button>}</li>;
+    })}
     {changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))&&<li>{t('发现不同账号，请在详情确认换号；原账号选择仍保留。')}</li>}
     {expired&&<li>{t('所选来源的授权已过期，请重新登录。')}</li>}
     {stale&&!errors.length&&<li>{t('上次报告不能证明当前接单状态，正在重新核对。')}</li>}

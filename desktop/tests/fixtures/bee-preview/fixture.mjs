@@ -19,8 +19,8 @@ export async function installPreviewFixture(id){
  const seeded=(platform,selected=true)=>{
   const a=accountFixture(platform),fingerprint=(platform==='openai'?'b':'c').repeat(64);
   a.candidate={...a.candidate,state:'available',reference:(platform==='openai'?'a':'d').repeat(48),source:{directory:null,store:platform==='claude'?'keychain':'file'},fingerprint,plan:platform==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:stamp(0)};
-  if(selected)a.selection={...a.selection,state:'selected',fingerprint,observed_at:stamp(0)};
-  a.authorization={...a.authorization,state:'official_identity_verified',fingerprint,observed_at:stamp(0)};
+  if(selected){a.selection={...a.selection,state:'selected',fingerprint,observed_at:stamp(0)};a.hive={...a.hive,state:'ready',fingerprint,generation:1};}
+  a.authorization={...a.authorization,state:selected?'synchronized':'official_identity_verified',fingerprint,observed_at:stamp(0)};
   a.capabilities[0]={...a.capabilities[0],status:'ready',plan:a.candidate.plan,observed_at:stamp(0),metadata_observed_at:stamp(0),valid_until:stamp(3600000),windows:[{scope:'',seconds:18000,used_percent:3,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:2,reset_at:'2099-01-01T00:00:00Z'}]};
   return a;
  };
@@ -201,7 +201,7 @@ export async function installPreviewFixture(id){
   if(command==='runtime_snapshot'){
    for(const [platform,preparation] of preparingAccounts)if(Date.now()>=preparation.deadline){
     preparingAccounts.delete(platform);const account=w.accounts[platform];
-    if(account.revision===preparation.revision&&account.authorization.state==='preparing'&&account.selection.fingerprint===preparation.fingerprint){account.authorization.state='official_identity_verified';account.revision++;}
+    if(account.revision===preparation.revision&&account.authorization.state==='preparing'&&account.selection.fingerprint===preparation.fingerprint){account.authorization.state=local==='running'&&connection==='connected'?'synchronized':'official_identity_verified';if(account.authorization.state==='synchronized')account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};account.revision++;}
    }
    if(autoService&&preparingUntil&&Date.now()>=preparingUntil){local=prepareFailure?'failed':'running';preparingUntil=0;revision++;}
    w.calls.push({command,args});
@@ -210,18 +210,21 @@ export async function installPreviewFixture(id){
    return {instance,result:{runtime:{run_id:runId(),revision,network_revision:w.networkRevision??0,observed_at:stamp(0),local,connection,connection_detail:connectionDetail(),legacy_stop:null,platforms:Object.fromEntries(['openai','claude'].map(p=>[p,{account:clone(w.accounts[p]),supply:local==='running'&&connection==='connected'&&!id.startsWith('check-')&&!(id==='supply-partial'&&p==='claude')?supply(p):null,selection_revision:w.accounts[p].selection.state==='selected'?1:0}])),operation:clone(runtimeOperation),stop_receipt:clone(stopReceipt)}}};
   }
   if(autoService&&command==='account_action'){
-   const previous=w.accounts[args.request.platform]?.operation?.id;
+   const previous=w.accounts[args.request.platform]?.operation?.id,pausedBefore=w.paused[args.request.platform];
    try{return await original(command,args);}
    finally{
     w.actionUnknown=false;
     const operation=w.accounts[args.request.platform]?.operation;
-    if(operation?.id!==previous&&operation?.state==='succeeded'&&['select','confirm_change'].includes(operation.kind)){const p=args.request.platform,account=w.accounts[p];if(local==='waiting')local='running';account.authorization.state='preparing';account.revision++;preparingAccounts.set(p,{deadline:Date.now()+600,revision:account.revision,fingerprint:account.selection.fingerprint});revision++;}
+    if(operation?.id!==previous&&operation?.state==='succeeded'&&['select','confirm_change'].includes(operation.kind)){const p=args.request.platform,account=w.accounts[p];if(operation.kind==='select')w.paused[p]=pausedBefore;if(local==='waiting')local='running';account.authorization.state='preparing';account.revision++;preparingAccounts.set(p,{deadline:Date.now()+600,revision:account.revision,fingerprint:account.selection.fingerprint});revision++;}
    }
   }
   if(command==='account_detect'||command==='account_snapshot'){
    const p=args.request?.platform??args.platform;
    if(id==='account-reading'&&p==='openai')return hold();
-   return original(command,args);
+   const reply=await original(command,args);
+   const account=w.accounts[p];
+   if(autoService&&local==='running'&&connection==='connected'&&account.selection.state==='selected'&&account.candidate.identity_verified&&account.candidate.fingerprint===account.selection.fingerprint&&!account.candidate.error&&!preparingAccounts.has(p)&&!['pending','running','reconciling'].includes(account.operation?.state)){account.authorization.state='synchronized';account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};if(reply.result?.account)reply.result.account=clone(account);}
+   return reply;
   }
   if(['supply_status','supply_set_paused'].includes(command)){
    w.calls.push({command,args});const p=args.platform;

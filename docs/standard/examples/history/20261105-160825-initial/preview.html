@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HTML 预览规范 · 示例</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f3f5;color:#272b31;font:14px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;--paper:#fff;--muted:#606873;--line:#dce0e5;--soft:#f7f8fa;--ink:#272b31;--accent:#2858a5;--warning:#925e16}
+body.dark{background:#171a1e;color:#e8ebef;--paper:#22262c;--muted:#aeb6c2;--line:#434b56;--soft:#2b3038;--ink:#e8ebef;--accent:#a6c5ff;--warning:#edc17c;color-scheme:dark}
+main{padding:24px;max-width:1200px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}h1{font-size:16px;margin:0}label{display:flex;align-items:center;gap:7px}.controls{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+button,select,textarea{font:inherit;color:inherit;background:var(--paper);border:1px solid var(--line);border-radius:6px}button,select{min-height:36px;padding:6px 11px}button{cursor:pointer;touch-action:manipulation}button:hover:not(:disabled){border-color:var(--accent)}button:disabled{opacity:.65;cursor:wait}:is(button,select,textarea,summary):focus-visible{outline:2px solid var(--accent);outline-offset:3px}.primary{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#description{margin:14px 0;color:var(--muted)}.viewport{overflow:auto;padding:1px 1px 12px;overscroll-behavior:contain}.app{width:860px;height:600px;max-width:none;overflow:auto;background:var(--paper);border:1px solid var(--line);border-radius:10px;margin:0 auto;box-shadow:0 6px 24px #00000008}.app.wide{width:1120px;height:760px}.titlebar{height:44px;background:var(--soft);border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:12px;color:var(--muted)}.content{padding:30px;max-width:760px;margin:auto}h2{margin:0 0 22px;font-size:23px;font-weight:600}.card{border:1px solid var(--line);border-radius:8px;padding:24px}.card h3{margin:0 0 8px;font-size:17px}.card p{margin:8px 0 18px;overflow-wrap:anywhere;white-space:pre-wrap}.status{font-size:13px;color:var(--muted)}.warning{color:var(--warning)}details{margin:14px 0}summary{cursor:pointer;width:fit-content;padding:4px 0}pre{padding:12px;background:var(--soft);border-radius:5px;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere}#feedback{min-height:24px;margin-top:14px;color:var(--muted)}.footer{color:var(--muted);font-size:12px;margin:10px 0 0}dialog{width:min(460px,calc(100% - 32px));border:1px solid var(--line);border-radius:10px;background:var(--paper);color:inherit;padding:24px}dialog::backdrop{background:#0006}dialog h2{font-size:19px;margin-bottom:16px}dialog label{display:block}textarea{display:block;width:100%;min-height:130px;padding:10px;resize:vertical;margin:6px 0 20px}.actions{display:flex;gap:10px;justify-content:flex-end}body.dark dialog{color:var(--ink)}@media(max-width:700px){main{padding:16px}.controls{gap:8px}header{align-items:flex-start}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>HTML 预览规范 · 示例</h1><div class="controls">
+<label for="scene">场景<select id="scene"><optgroup label="内容展示"><option value="content">有内容</option><option value="empty">无内容</option></optgroup><optgroup label="异常展示"><option value="error">读取失败</option></optgroup></select></label>
+<label for="theme">外观<select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
+<label for="size">窗口<select id="size"><option value="narrow">860 × 600</option><option value="wide">1120 × 760</option></select></label>
+<button id="reset" type="button">重置场景</button></div></header>
+<p id="description" aria-live="polite"></p>
+<div class="viewport"><section class="app" aria-label="示例应用"><div class="titlebar"><span>示例应用</span><span>模拟数据</span></div><div class="content"><h2>示例页面</h2><div id="page"></div><p id="feedback" role="status"></p></div></section></div>
+<p class="footer">仅演示预览规范，不连接真实业务。场景切换回到预设起点。</p>
+</main>
+<dialog id="editor" aria-labelledby="editor-title"><form id="edit-form"><h2 id="editor-title">编辑示例内容</h2><label for="draft">内容<textarea id="draft" name="content" required maxlength="500"></textarea></label><div class="actions"><button id="cancel" type="button">取消</button><button type="submit" class="primary">保存内容</button></div></form></dialog>
+<script>
+const byId=id=>document.getElementById(id);
+const scene=byId('scene'),theme=byId('theme'),size=byId('size'),page=byId('page'),feedback=byId('feedback'),editor=byId('editor');
+const descriptions={content:'检查文字与按钮层级；编辑保存后应显示新内容。',empty:'检查空内容提示；添加内容后应在当前页面显示。',error:'检查失败原因和折叠详情；要比较正常页面，可切换到“有内容”。'};
+const initialText='这是一段用于检查字体、间距和按钮层级的示例内容。';
+let content='',timer=null;
+const params=new URLSearchParams(location.search);
+for(const control of [scene,theme,size])if([...control.options].some(option=>option.value===params.get(control.id)))control.value=params.get(control.id);
+function remember(){const url=new URL(location.href);for(const control of [scene,theme,size])url.searchParams.set(control.id,control.value);try{history.replaceState(null,'',url);}catch{/* Some file URL environments restrict history updates. */}}
+function appearance(){document.body.classList.toggle('dark',theme.value==='dark');document.documentElement.style.colorScheme=theme.value;}
+function layout(){document.querySelector('.app').classList.toggle('wide',size.value==='wide');}
+function edit(){byId('draft').value=content;editor.showModal();byId('draft').focus();}
+function render(){
+ if(scene.value==='error'){
+  page.innerHTML='<article class="card"><h3>无法读取内容</h3><p class="warning">读取示例资料时连接超时，未取得本次内容。</p><details><summary>查看失败详情</summary><pre>操作：读取示例资料\n等待时间：1 秒\n结果：连接超时（预设模拟结果）</pre></details><button id="retry" type="button" class="primary">重新读取</button></article>';
+  byId('retry').onclick=()=>{byId('retry').disabled=true;byId('retry').textContent='正在读取…';feedback.textContent='正在重新读取示例资料…';timer=setTimeout(()=>{timer=null;render();feedback.textContent='重新读取仍超时（1 秒）。当前预设条件未改变。';},1000);};
+ }else{
+  page.innerHTML='<article class="card"><h3></h3><p></p><button class="primary" type="button"></button></article>';
+  page.querySelector('h3').textContent=content?'项目说明':'暂无内容';page.querySelector('p').textContent=content||'添加一段内容，查看保存后的展示效果。';
+  const action=page.querySelector('button');action.textContent=content?'编辑内容':'添加内容';action.onclick=edit;
+ }
+}
+function reset(){clearTimeout(timer);timer=null;if(editor.open)editor.close();content=scene.value==='content'?initialText:'';feedback.textContent='';byId('description').textContent=descriptions[scene.value];render();remember();}
+byId('edit-form').onsubmit=event=>{event.preventDefault();content=byId('draft').value;editor.close();render();feedback.textContent='内容已保存，仅影响当前预览。';page.querySelector('button').focus();};
+byId('cancel').onclick=()=>editor.close();editor.addEventListener('close',()=>{if(document.activeElement===document.body)page.querySelector('button')?.focus();});
+scene.onchange=reset;byId('reset').onclick=reset;theme.onchange=()=>{appearance();remember();};size.onchange=()=>{layout();remember();};
+appearance();layout();reset();
+</script>
+</body>
+</html>

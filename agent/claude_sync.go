@@ -43,6 +43,28 @@ type claudeSource struct {
 	metadataLease      string
 	pacer              syncPacer
 	reportedAuth       beewire.Authorization
+	// suspended is the last unavailable source this Bee told Hive about: why,
+	// on which connection, and when. See unavailableReportInterval.
+	suspended struct {
+		reason, lease string
+		at            time.Time
+	}
+}
+
+// unavailableReportInterval is how often a source that stays unavailable for
+// the same reason is reported to Hive again. The first report is what
+// suspends the account; Hive keeps it suspended until the source is reported
+// back, so repeating it every cycle, every two seconds, only cost two Hive
+// requests per cycle for as long as the Provider stayed logged out. It is
+// still repeated now and then, which reasserts it to a Hive that has lost
+// track for any reason, and at once on a new connection or a new reason.
+const unavailableReportInterval = time.Minute
+
+// unavailableUnchanged reports whether reason was already reported on lease
+// recently enough that telling Hive again says nothing new.
+func (source *claudeSource) unavailableUnchanged(reason error, lease string, now time.Time) bool {
+	last := source.suspended
+	return reason != nil && last.lease == lease && last.reason == reason.Error() && now.Sub(last.at) < unavailableReportInterval
 }
 
 // capabilityWorkAt is when this platform next owes a capability report, so the
@@ -121,6 +143,12 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	// the window. Only the Hive round trip below is paced, because that is the
 	// part that costs a write transaction.
 	credential, auth, err := source.authorization(ctx)
+	if err == nil {
+		source.suspended.reason = ""
+	} else if !force && source.unavailableUnchanged(err, lease, time.Now()) {
+		// Still unavailable for the reason Hive was told a moment ago.
+		return nil
+	}
 	if !force && err == nil && auth == source.reportedAuth && !capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) && source.pacer.skip(time.Now()) {
 		return nil
 	}
@@ -141,6 +169,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		if err := call(ctx, httpClient(), state.Hive, path+"/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); err != nil {
 			return err
 		}
+		source.suspended.reason, source.suspended.lease, source.suspended.at = reason.Error(), lease, time.Now()
 		source.message(out, "source_unavailable", "new Claude jobs paused; waiting for official authorization recovery: "+reason.Error())
 		return nil
 	}

@@ -34,13 +34,15 @@ test('收益平台筛选、统计范围、分页与删号历史保持全局余�
 });
 test('提现空与已填均保留输入、余额与流水，全部操作无非静态请求', async ({
   page,
+  baseURL,
 }) => {
+  const staticOrigin = new URL(baseURL!).origin;
   const requests: string[] = [];
   await page.route('**/*', (route) => {
     const r = route.request();
     const u = new URL(r.url());
     if (
-      u.origin === 'http://127.0.0.1:1420' &&
+      u.origin === staticOrigin &&
       ['document', 'script', 'stylesheet', 'image', 'font', 'other'].includes(
         r.resourceType(),
       ) &&

@@ -108,16 +108,10 @@ jobs:
           npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
           npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
 
-      - name: Tooling and bridge tests
-        run: |
-          npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
-          npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
-
-      - name: Install locked Playwright Chromium, Firefox and WebKit and run browser E2E
+      - name: Install locked browsers and run the complete desktop checks
         run: |
           npm --prefix desktop exec -- playwright install chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
-          npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
-          npm --prefix desktop run test:device 2>&1 | tee desktop-ci-evidence/device-pairing.log
+          npm --prefix desktop test 2>&1 | tee desktop-ci-evidence/desktop-tests.log
 
       - name: Build and verify native Bee sidecar
         run: node desktop/scripts/build-bee.mjs --target "$BEE_CI_TARGET" 2>&1 | tee desktop-ci-evidence/sidecar.log
@@ -177,6 +171,7 @@ jobs:
             desktop/test-results/
             desktop/playwright-report/
             .cache/device-pairing/playwright/
+            .cache/bee-preview/playwright/
           include-hidden-files: true
 
       # No release upload: these outputs stay in the controlled runner workspace.

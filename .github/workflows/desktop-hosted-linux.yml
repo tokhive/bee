@@ -108,21 +108,19 @@ jobs:
           go vet ./... 2>&1 | tee desktop-ci-evidence/go-vet.log
           go test ./... -count=1 2>&1 | tee desktop-ci-evidence/go-test.log
 
-      - name: Locked frontend install, typecheck, build and tooling
+      - name: Locked frontend install, builds and AppImage tooling
         run: |
           unset FORCE_COLOR NO_COLOR
           npm --prefix desktop ci 2>&1 | tee desktop-ci-evidence/npm-ci.log
           npm --prefix desktop run typecheck 2>&1 | tee desktop-ci-evidence/typecheck.log
           npm --prefix desktop run build 2>&1 | tee desktop-ci-evidence/frontend-build.log
-          npm --prefix desktop run test:tooling 2>&1 | tee desktop-ci-evidence/tooling.log
           node --test desktop/tests/linux-appimage.test.mjs 2>&1 | tee desktop-ci-evidence/appimage-tooling.log
-          npm --prefix desktop run test:bridge 2>&1 | tee desktop-ci-evidence/bridge.log
 
-      - name: Locked Chromium, Firefox and WebKit browser E2E
+      - name: Locked browsers and complete desktop checks
         run: |
           unset FORCE_COLOR NO_COLOR
           npm --prefix desktop exec -- playwright install --with-deps chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
-          npm --prefix desktop run test:e2e 2>&1 | tee desktop-ci-evidence/browser-e2e.log
+          npm --prefix desktop test 2>&1 | tee desktop-ci-evidence/desktop-tests.log
 
       - name: Build actual native Bee and test Rust bridge
         run: |
@@ -184,6 +182,9 @@ jobs:
             desktop-ci-evidence/
             desktop/test-results/
             desktop/playwright-report/
+            .cache/device-pairing/playwright/
+            .cache/bee-preview/playwright/
+          include-hidden-files: true
 
       - name: Prepare optional native Bee release candidate (no publish or upload)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.release_candidate }}

@@ -6,21 +6,21 @@ export function DetailSheet({
   title,
   description,
   children,
-  open,onOpenChange,onCloseAutoFocus,
+  open,onOpenChange,onCloseAutoFocus,onOpenAutoFocus,
 }: {
   trigger: ReactNode;
   /** Already translated by the caller; interpolated business values stay literal. */
   title: string;
   description: string;
   children: ReactNode;
-  open?:boolean;onOpenChange?:(open:boolean)=>void;onCloseAutoFocus?:(event:Event)=>void;
+  open?:boolean;onOpenChange?:(open:boolean)=>void;onCloseAutoFocus?:(event:Event)=>void;onOpenAutoFocus?:(event:Event)=>void;
 }) {
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className="dialog-overlay" />
-        <Dialog.Content className="detail-sheet" onCloseAutoFocus={onCloseAutoFocus}>
+        <Dialog.Content className="detail-sheet" onCloseAutoFocus={onCloseAutoFocus} onOpenAutoFocus={onOpenAutoFocus}>
           <header>
             <Dialog.Title>{title}</Dialog.Title>
             <Dialog.Close asChild>

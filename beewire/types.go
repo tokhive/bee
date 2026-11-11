@@ -96,7 +96,8 @@ type MaintenanceTask struct {
 
 // MaintenanceRequest is a Bee's observation of its authorization source.
 // RefreshRequired asks Hive to refresh now: Claude's profile rejected the
-// token, or OpenAI's usage report names a plan the token does not.
+// token, or OpenAI rejected the token with 401 or its usage report names a
+// plan the token does not.
 type MaintenanceRequest struct {
 	RefreshSupported   bool               `json:"refresh_supported,omitempty"`
 	RefreshRequired    bool               `json:"refresh_required,omitempty"`
@@ -121,8 +122,9 @@ type CredentialRegistration struct {
 	Claude   *Authorization `json:"claude,omitempty"`
 	// Reseller registers an API reseller key instead of a subscription
 	// account; it carries no authorization and no maintenance task.
-	Reseller *ResellerKey `json:"reseller,omitempty"`
-	TaskID   string       `json:"task_id,omitempty"`
+	OpenAIAPI *OpenAIAPIKey `json:"openai_api,omitempty"`
+	Reseller  *ResellerKey  `json:"reseller,omitempty"`
+	TaskID    string        `json:"task_id,omitempty"`
 }
 
 type MaintenanceResponse struct {

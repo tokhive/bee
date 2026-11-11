@@ -8,14 +8,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log/slog"
 	"net/http"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/tee/tee"
@@ -56,7 +52,10 @@ type resellerSource struct {
 	reportedAt                     time.Time
 	// chargedThrough is the newest charge already reported, so each cycle
 	// reads only the reseller's billing records that came after it.
+	// chargesResumed is set once it has been taken from Hive, which keeps
+	// the cursor across Bee restarts.
 	chargedThrough time.Time
+	chargesResumed bool
 }
 
 func (source *resellerSource) validate() error {
@@ -76,30 +75,7 @@ func (source *resellerSource) validate() error {
 // key reads the key file. It is read every cycle, so replacing the key needs
 // no restart.
 func (source *resellerSource) key() (string, error) {
-	if !filepath.IsAbs(source.KeyFile) {
-		return "", fail("BEE-CONFIG-RESELLER-KEY", "key_file must be an absolute path")
-	}
-	info, err := os.Lstat(source.KeyFile)
-	switch {
-	case errors.Is(err, fs.ErrNotExist):
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" does not exist")
-	case err != nil || !info.Mode().IsRegular():
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is not a readable regular file")
-	case info.Mode().Perm()&0077 != 0:
-		return "", failf("BEE-CONFIG-RESELLER-KEY", "%s has mode %04o", source.KeyFile, info.Mode().Perm())
-	case info.Size() > 1024:
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is too large for a key")
-	}
-	raw, err := os.ReadFile(source.KeyFile)
-	if err != nil {
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" is not a readable regular file")
-	}
-	key := strings.TrimSpace(string(raw))
-	if key == "" || strings.IndexFunc(key, unicode.IsSpace) >= 0 || (tee.Secret{Header: "authorization", Scheme: "Bearer", Token: key}).Validate() != nil {
-		// The key is never echoed.
-		return "", fail("BEE-CONFIG-RESELLER-KEY", source.KeyFile+" does not hold a single key")
-	}
-	return key, nil
+	return readStaticKeyFile(source.KeyFile, "BEE-CONFIG-RESELLER-KEY")
 }
 
 func fingerprint(key string) string {
@@ -252,18 +228,52 @@ func (source *resellerSource) get(ctx context.Context, key, path string, out any
 }
 
 // resellerChargePages bounds how far back one cycle reads the reseller's
-// billing records: twenty a page, newest first.
-const resellerChargePages = 10
+// billing records, twenty a page, newest first: enough to catch up on days
+// of busy traffic after an outage.
+const resellerChargePages = 500
+
+// resellerChargeOverlap is how far before Hive's newest stored charge a Bee
+// resumes, so a record sharing that timestamp is not skipped; Hive keeps the
+// first report of each request.
+const resellerChargeOverlap = 5 * time.Minute
+
+// resumeCharges sets the cursor from what Hive already stores, once per
+// process. A Hive without the endpoint (404) leaves the cursor where it is,
+// so the reseller's records are read back to the page bound as before; any
+// other failure is retried next cycle rather than guessed.
+func (source *resellerSource) resumeCharges(ctx context.Context, state localState) error {
+	if source.chargesResumed {
+		return nil
+	}
+	var stored beewire.ResellerChargesStored
+	err := call(ctx, httpClient(), state.Hive, "/api/bee/resellers/"+source.Reseller+"/charges/latest", "GET", state.Credential, nil, &stored)
+	var failure *apiFailure
+	switch {
+	case errors.As(err, &failure) && failure.Status == http.StatusNotFound:
+	case err != nil:
+		return fmt.Errorf("stored charges unavailable: %w", err)
+	case stored.ChargedThrough != nil:
+		if resume := stored.ChargedThrough.Add(-resellerChargeOverlap); resume.After(source.chargedThrough) {
+			source.chargedThrough = resume
+		}
+	}
+	source.chargesResumed = true
+	return nil
+}
 
 // reportCharges reads the reseller's per-request billing records made since
 // the last report and sends them to Hive, which reconciles them with what it
 // settled for the same requests. A record without an amount (a request the
 // reseller did not charge) is reported as zero.
 func (source *resellerSource) reportCharges(ctx context.Context, state localState, key, keyPrint string) error {
+	if err := source.resumeCharges(ctx, state); err != nil {
+		return err
+	}
 	var charges []beewire.ResellerCharge
 	seen := map[string]bool{}
 	newest := source.chargedThrough
-	for page := 1; page <= resellerChargePages; page++ {
+	reached := false
+	for page := 1; page <= resellerChargePages && !reached; page++ {
 		var records struct {
 			Data []struct {
 				ID        string    `json:"id"`
@@ -276,7 +286,7 @@ func (source *resellerSource) reportCharges(ctx context.Context, state localStat
 		if code := source.get(ctx, key, fmt.Sprintf("/v1/requests?page=%d", page), &records); code != http.StatusOK {
 			return fmt.Errorf("billing records answered %d", code)
 		}
-		reached := len(records.Data) == 0
+		reached = len(records.Data) == 0
 		for _, record := range records.Data {
 			if !record.CreatedAt.After(source.chargedThrough) {
 				reached = true
@@ -295,9 +305,11 @@ func (source *resellerSource) reportCharges(ctx context.Context, state localStat
 				newest = record.CreatedAt
 			}
 		}
-		if reached {
-			break
-		}
+	}
+	if !reached {
+		// The cursor still moves on: re-reading the same bound every cycle
+		// would never get past it.
+		slog.Warn("reseller billing records beyond the page bound not reported", "module", "sync", "reseller", source.Reseller, "pages", resellerChargePages)
 	}
 	for len(charges) > 0 {
 		batch := charges[:min(len(charges), beewire.MaxResellerCharges)]

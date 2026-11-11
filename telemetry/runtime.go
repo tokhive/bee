@@ -33,7 +33,7 @@ type Runtime struct {
 
 // TimingWriter is deliberately independent of the ordinary debug-log filters.
 func TimingWriter() io.Writer {
-	if os.Getenv("TOKHIVE_TIMING_LOG") == "1" {
+	if os.Getenv("HIVE_TIMING_LOG") == "1" {
 		return os.Stderr
 	}
 	return nil

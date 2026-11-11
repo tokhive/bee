@@ -777,8 +777,7 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
         self.assertFalse((self.root / 'unexpected').exists())
         lines = result.stdout.splitlines()
         status_command = lines[lines.index('View connection and accounts:') + 1]
-        self.assertEqual(shlex.split(status_command),
-                         [str(special / 'bin/bee'), 'status', '--config', str(special / 'config/tokhive/bee.json')])
+        self.assertEqual(shlex.split(status_command), ['bee', 'status'])
 
     def assert_success(self, result):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)

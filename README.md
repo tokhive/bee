@@ -196,18 +196,22 @@ The market falls back to a third-party API reseller, such as wokey, when no subs
 }
 ```
 
-Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. While the key is ready it also reads the reseller's per-request billing records made since its last report and sends them to Hive, which reconciles what it settled against what the reseller charged. Replacing the key in the file takes effect on the next synchronization.
+Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. While the key is ready it also reads the reseller's per-request billing records made since its last report and sends them to Hive, which reconciles what it settled against what the reseller charged. After a restart it asks Hive for the newest charge it already holds and resumes a few minutes before it, so records missed while Bee or Hive was down are still reported; up to 10,000 records are read back in one cycle. Replacing the key in the file takes effect on the next synchronization.
 
 ### Environment variables
 
 | Variable | Effect |
 | --- | --- |
-| `TOKHIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
-| `TOKHIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
-| `TOKHIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
+| `HIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
+| `HIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
+| `HIVE_TIMING_LOG` | Set to `1` to write asynchronous JSON timing logs to stderr. |
+| `HIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
 | `BEE_DEBUG` | Any value turns on debug logging. |
 | `BEE_METRICS_ADDR` | Serve Prometheus metrics on this address, for example `127.0.0.1:9464`. |
 | `HTTPS_PROXY` | Standard proxy setting. It takes precedence over `connect_proxy`. |
+
+When upgrading, rename the old `TOKHIVE_` logging and timing variables to
+`HIVE_`; old names are no longer read. Bee-specific `BEE_` variables are unchanged.
 
 ## Running as a service
 

@@ -139,3 +139,12 @@ Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗�
 [正常账号](draft.html?scene=claude-compact-normal&theme=light&size=wide) · [凭证缺失](draft.html?scene=claude-compact-missing&theme=light&size=narrow) · [终端启动失败](draft.html?scene=claude-first-login-failed&theme=light&size=narrow) · [完整冻结草稿](history/20261111-145858-claude-compact-sync/draft.html?scene=claude-compact-normal)。
 
 验证：220 个起点加载且无模拟定时器；登录重试／取消、暂停接单、错误浮层关闭与焦点返回、设置输入跨外观与尺寸保持、切场景取消旧任务，以及浅色窄窗／深色宽窗截图。仅静态 HTML 模拟；未修改主预览或正式实现，待人工评审。
+
+
+## Claude 已纳入唯一主预览（20261111-150658）
+
+用户确认“更新到主预览吧”，上述 Claude 草稿现为**已认可并合入**。使用 [Claude 额度未知](index.html?scene=claude-compact-unknown&theme=light&size=narrow)、[正常账号](index.html?scene=claude-compact-normal&theme=light&size=wide) 或 [终端登录失败](index.html?scene=claude-first-login-failed)。后续评审以 index.html 为准，draft.html 保留本次方案来源。
+
+保留原有 240 个场景，加入 220 个 Claude 起点；概览和启动恢复仍可使用。Claude 的概览摘要沿用主预览样式并反映当前 Claude 状态；主题、尺寸和同平台页面切换保留操作状态。验证两平台切换、概览往返、登录重试、错误浮层与切场景取消旧任务，复查启动恢复未丢失。仅 HTML 模拟，未修改正式代码。
+
+[完整合入快照](history/20261111-150658-approved-claude/index.html?scene=claude-compact-unknown)。

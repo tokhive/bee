@@ -130,3 +130,12 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 验证：216 个 Claude 直接入口渲染、无意外定时推进及无 Codex 打开页面按钮；浏览器演练首次登录→核验→确认接入→准备→完成、打开失败重试、取消到终态、同号重登仍暂停、配置目录保存及重登告知、主题／尺寸保留输入、切场景取消旧任务。深色紧凑与浅色宽屏目视检查；完整冻结版独立打开。此记录不宣称真实业务通过。
 
 修改前完整保存 20261110-114307-before-claude-draft（含已有未提交草稿和当时主预览）；交付冻结为 20261110-115235-claude-terminal-review。两者均为完整内联 HTML。原 OpenAI 工作草稿仍保留，Claude 单独模板复用最新主预览以避免覆盖其他会话修改。
+
+
+## Claude 同步主预览账号布局（20261111-145858，待评审）
+
+Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗口额度、状态旁 ⓘ 错误证据浮层与步骤展示方式。保留 macOS Terminal 登录、配置目录和钥匙串差异。补充正常、耗尽、未知额度和凭证缺失四个入口；Claude 共 220 个可直接查看的起点。
+
+[正常账号](draft.html?scene=claude-compact-normal&theme=light&size=wide) · [凭证缺失](draft.html?scene=claude-compact-missing&theme=light&size=narrow) · [终端启动失败](draft.html?scene=claude-first-login-failed&theme=light&size=narrow) · [完整冻结草稿](history/20261111-145858-claude-compact-sync/draft.html?scene=claude-compact-normal)。
+
+验证：220 个起点加载且无模拟定时器；登录重试／取消、暂停接单、错误浮层关闭与焦点返回、设置输入跨外观与尺寸保持、切场景取消旧任务，以及浅色窄窗／深色宽窗截图。仅静态 HTML 模拟；未修改主预览或正式实现，待人工评审。

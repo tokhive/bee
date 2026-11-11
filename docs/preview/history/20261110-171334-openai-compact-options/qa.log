@@ -1,0 +1,38 @@
+[
+  { text: '修改凭证读取设置', label: null },
+  { text: '详情', label: 'OpenAI 账号详情' },
+  { text: '', label: '上一个方案' },
+  { text: '', label: null },
+  { text: '', label: null },
+  { text: '', label: null },
+  { text: '', label: null },
+  { text: '', label: '下一个方案' }
+]
+800 { layout: 'columns', height: 255, width: 738, scroll: 738, over: [] }
+800 { layout: 'bands', height: 290, width: 738, scroll: 738, over: [] }
+800 { layout: 'row', height: 229, width: 738, scroll: 738, over: [] }
+800 { layout: 'split', height: 257, width: 738, scroll: 738, over: [] }
+736 { layout: 'columns', height: 255, width: 674, scroll: 674, over: [] }
+736 { layout: 'bands', height: 290, width: 674, scroll: 674, over: [] }
+736 { layout: 'row', height: 229, width: 674, scroll: 674, over: [] }
+736 { layout: 'split', height: 257, width: 674, scroll: 674, over: [] }
+660 { layout: 'columns', height: 294, width: 610, scroll: 610, over: [] }
+660 { layout: 'bands', height: 339, width: 610, scroll: 610, over: [] }
+660 { layout: 'row', height: 328, width: 610, scroll: 610, over: [] }
+660 { layout: 'split', height: 249, width: 610, scroll: 610, over: [] }
+440 { layout: 'columns', height: 290, width: 398, scroll: 398, over: [] }
+440 { layout: 'bands', height: 384, width: 398, scroll: 398, over: [] }
+440 { layout: 'row', height: 375, width: 398, scroll: 398, over: [] }
+440 { layout: 'split', height: 348, width: 398, scroll: 398, over: [] }
+360 { layout: 'columns', height: 360, width: 318, scroll: 318, over: [] }
+360 { layout: 'bands', height: 384, width: 318, scroll: 318, over: [] }
+360 { layout: 'row', height: 375, width: 318, scroll: 318, over: [] }
+360 { layout: 'split', height: 348, width: 318, scroll: 318, over: [] }
+320 { layout: 'columns', height: 360, width: 278, scroll: 278, over: [] }
+320 { layout: 'bands', height: 384, width: 278, scroll: 278, over: [] }
+320 { layout: 'row', height: 392, width: 278, scroll: 278, over: [] }
+320 { layout: 'split', height: 348, width: 278, scroll: 278, over: [] }
+normal [ '已用 3%', '已用 20%' ]
+exhausted [ '已用 100%', '已用 20%' ]
+unknown [ '已用 —', '已用 —' ]
+errors []

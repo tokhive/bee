@@ -1,10 +1,23 @@
-# Bee 原生自动服务预览历史
+# 账户交互验收预览历史
 
-以选择的历史目录作为独立网站根目录运行：
+当前工作预览：`../index.html?scene=accounts-auto-empty&theme=light&size=narrow`，开发调试另加 `&debug=1`。
+
+| 时间 | 变更 | 评审状态 | 完整 HTML 快照 |
+| --- | --- | --- | --- |
+| 2026-11-05 15:30:25 Asia/Shanghai | 简化前：七个场景及折叠事件面板 | 已否定（验收复杂） | [20261105-153025-accounts-before-simple](20261105-153025-accounts-before-simple/tests/fixtures/bee-preview/index.html) |
+| 2026-11-05 15:33:14 Asia/Shanghai | 简化后：三个验收项目及当前操作指引 | 待评审 | [20261105-153314-accounts-simple](20261105-153314-accounts-simple/tests/fixtures/bee-preview/index.html) |
+
+来源：`feat/bee-desktop-ui-review` 工作区，每轮修改前及交付时使用 Vite 冻结。包含独立脚本、样式、图片和模拟数据；不依赖当前版源码或在线业务服务。为运行 mock，冻结构建保留开发预览开关，仅供评审。
+
+历史包需要独立作为网站根目录启动，不能在当前 Vite 服务内直接打开子目录链接：
 
 ```sh
-python3 -m http.server 1492 --bind 127.0.0.1 --directory '<历史目录绝对路径>'
+python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录绝对路径>'
 ```
+
+然后访问 `http://127.0.0.1:1492/tests/fixtures/bee-preview/index.html?scene=accounts-auto-empty&theme=light&size=narrow`。支持原有 `scene`、`theme`、`size` 参数；简化后支持 `debug=1`。直接用 file:// 打开不支持模块和 iframe 通信。
+
+验证：两版均已在独立静态 HTTP 服务中打开，资源和账号页面正常；简化版已切换到“暂停与恢复”，点击 OpenAI 暂停后正确显示“已暂停接单”。当前开发版本的 15 项账户浏览器用例全部通过。
 
 ## 原生自动服务场景迁移（2026-11-05）
 

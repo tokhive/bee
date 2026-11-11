@@ -1,0 +1,226 @@
+<div id="bee-account-layout-options" aria-label="账号场景">
+  <div class="viz-carousel viz-dotted-background" aria-label="OpenAI 账号紧凑布局" data-previous-label="上一个方案" data-next-label="下一个方案">
+    <section data-variant="左右分区" aria-label="左右分区方案">
+      <div class="bee-stage"><div class="bee-card" data-layout="split" aria-label="左右分区账号卡片"></div><div class="bee-preview-meta"><span>模拟数据 · 待评审</span><span data-height></span></div></div>
+    </section>
+    <section data-variant="三列对齐" aria-label="三列对齐方案" hidden>
+      <div class="bee-stage"><div class="bee-card" data-layout="columns" aria-label="三列对齐账号卡片"></div><div class="bee-preview-meta"><span>模拟数据 · 待评审</span><span data-height></span></div></div>
+    </section>
+    <section data-variant="双层卡片" aria-label="双层卡片方案" hidden>
+      <div class="bee-stage"><div class="bee-card" data-layout="bands" aria-label="双层账号卡片"></div><div class="bee-preview-meta"><span>模拟数据 · 待评审</span><span data-height></span></div></div>
+    </section>
+    <section data-variant="紧凑列表" aria-label="紧凑列表方案" hidden>
+      <div class="bee-stage"><div class="bee-card" data-layout="row" aria-label="紧凑列表账号卡片"></div><div class="bee-preview-meta"><span>模拟数据 · 待评审</span><span data-height></span></div></div>
+    </section>
+  </div>
+</div>
+<style>
+#bee-account-layout-options {
+  --bee-bg:light-dark(#ffffff,#242420);--bee-fg:light-dark(#30312d,#e9e8e2);
+  --bee-soft:light-dark(#72736c,#b1b0a6);--bee-line:light-dark(#e7e6df,#41413a);
+  --bee-track:light-dark(#efeee8,#3a3b33);--bee-good:light-dark(#39714d,#91c18d);
+  --bee-bad:light-dark(#ac4937,#ef9a82);--bee-mark:light-dark(#4c7160,#a0bc8c);
+  --bee-button:light-dark(#30312d,#e9e8df);--bee-button-text:light-dark(#fff,#242420);
+  color:var(--bee-fg);font-family:Inter,-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  font-size:13px;line-height:1.5;isolation:isolate;
+}
+#bee-account-layout-options * {box-sizing:border-box;}
+#bee-account-layout-options .bee-stage {padding:20px 14px 8px;min-height:330px;}
+#bee-account-layout-options .bee-card {background:var(--bee-bg);border:1px solid var(--bee-line);border-radius:12px;padding:22px 24px;box-shadow:0 2px 4px #00000004;position:relative;}
+#bee-account-layout-options button,#bee-account-layout-options input,#bee-account-layout-options select {font:inherit;}
+#bee-account-layout-options button {min-height:32px;white-space:nowrap;}
+#bee-account-layout-options button:focus-visible,#bee-account-layout-options summary:focus-visible,#bee-account-layout-options input:focus-visible,#bee-account-layout-options select:focus-visible {outline:2px solid var(--bee-mark);outline-offset:3px;}
+#bee-account-layout-options .bee-btn {background:var(--bee-button);color:var(--bee-button-text);border:1px solid transparent;border-radius:6px;padding:7px 12px;font-weight:500;transition:opacity 120ms;}
+#bee-account-layout-options .bee-btn:hover {opacity:.85;}
+#bee-account-layout-options .bee-link {border:0;background:transparent;color:var(--bee-soft);padding:4px 0;text-align:left;display:inline-flex;align-items:center;gap:5px;}
+#bee-account-layout-options .bee-outline {background:transparent;color:var(--bee-fg);border-color:var(--bee-line);}
+#bee-account-layout-options .bee-title-row {display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+#bee-account-layout-options .bee-icon {width:31px;height:31px;display:grid;place-items:center;border:1px solid var(--bee-line);border-radius:8px;flex:none;}
+#bee-account-layout-options .bee-icon svg {width:20px;height:20px;}
+#bee-account-layout-options h3 {font-size:16px;line-height:1.4;font-weight:500;margin:0;}
+#bee-account-layout-options .bee-plan {border:1px solid var(--bee-line);border-radius:4px;font-size:11px;padding:1px 5px;color:var(--bee-soft);}
+#bee-account-layout-options .bee-small {font-size:12px;color:var(--bee-soft);}
+#bee-account-layout-options .bee-id {margin:0;color:var(--bee-soft);font-size:12px;font-variant-numeric:tabular-nums;}
+#bee-account-layout-options .bee-source {margin-top:6px;display:flex;align-items:center;gap:5px;color:var(--bee-soft);font-size:12px;}
+#bee-account-layout-options .bee-source svg {width:12px;height:12px;}
+#bee-account-layout-options .bee-top-detail {position:absolute;inset-inline-end:20px;inset-block-start:15px;}
+#bee-account-layout-options .bee-status {display:flex;align-items:center;gap:7px;font-weight:500;}
+#bee-account-layout-options .bee-status-dot {width:6px;height:6px;border-radius:50%;background:currentColor;flex:none;}
+#bee-account-layout-options .bee-status.good {color:var(--bee-good);}
+#bee-account-layout-options .bee-status.bad {color:var(--bee-bad);}
+#bee-account-layout-options .bee-status.wait {color:var(--bee-soft);}
+#bee-account-layout-options .bee-note {font-size:12px;color:var(--bee-soft);margin:5px 0 10px;}
+#bee-account-layout-options .bee-quota-heading {display:flex;justify-content:space-between;gap:10px;font-size:11px;color:var(--bee-soft);margin-bottom:11px;}
+#bee-account-layout-options .bee-quota-unit + .bee-quota-unit {margin-top:13px;}
+#bee-account-layout-options .bee-quota-label {display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-size:12px;}
+#bee-account-layout-options .bee-quota-value {color:var(--bee-fg);font-variant-numeric:tabular-nums;white-space:nowrap;font-weight:500;}
+#bee-account-layout-options .bee-meter {height:5px;background:var(--bee-track);border-radius:6px;overflow:hidden;margin:6px 0 3px;}
+#bee-account-layout-options .bee-fill {height:100%;border-radius:6px;background:var(--bee-mark);}
+#bee-account-layout-options .bee-fill.exhausted {background:var(--bee-bad);}
+#bee-account-layout-options .bee-quota-reset {font-size:11px;color:var(--bee-soft);display:block;font-variant-numeric:tabular-nums;}
+#bee-account-layout-options .bee-quota-explanation {margin-top:6px;color:var(--bee-soft);font-size:11px;}
+#bee-account-layout-options .bee-evidence {grid-area:evidence;font-size:12px;border-top:1px solid var(--bee-line);padding-top:10px;margin-top:13px;}
+#bee-account-layout-options .bee-evidence summary {color:var(--bee-soft);width:fit-content;min-height:24px;}
+#bee-account-layout-options .bee-evidence dl {display:grid;grid-template-columns:72px minmax(0,1fr);gap:5px 12px;margin:10px 0 3px;font-size:12px;}
+#bee-account-layout-options .bee-evidence dt {color:var(--bee-soft);}
+#bee-account-layout-options .bee-evidence dd {margin:0;overflow-wrap:anywhere;}
+#bee-account-layout-options .bee-evidence code {font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;background:none;color:inherit;}
+#bee-account-layout-options .bee-preview-meta {display:flex;justify-content:space-between;gap:12px;margin:10px 2px 0;color:var(--bee-soft);font-size:11px;font-variant-numeric:tabular-nums;}
+#bee-account-layout-options [data-layout="split"] {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.88fr);grid-template-areas:"identity quota" "status quota" "evidence evidence";column-gap:40px;}
+#bee-account-layout-options .bee-identity {grid-area:identity;min-width:0;}
+#bee-account-layout-options .bee-status-group {grid-area:status;min-width:0;}
+#bee-account-layout-options .bee-quotas {grid-area:quota;min-width:0;}
+#bee-account-layout-options [data-layout="split"] .bee-status-group {margin-top:17px;}
+#bee-account-layout-options [data-layout="split"] .bee-quotas {border-left:1px solid var(--bee-line);padding-left:28px;margin-top:25px;}
+#bee-account-layout-options [data-layout="split"] .bee-source {display:none;}
+#bee-account-layout-options [data-layout="columns"] {display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.05fr) minmax(0,1.3fr);grid-template-areas:"identity status quota" "evidence evidence evidence";column-gap:22px;align-items:center;}
+#bee-account-layout-options [data-layout="columns"] .bee-status-group {padding-top:14px;}
+#bee-account-layout-options [data-layout="columns"] .bee-quotas {margin-top:23px;}
+#bee-account-layout-options [data-layout="columns"] .bee-title-row {gap:7px;flex-wrap:wrap;}
+#bee-account-layout-options [data-layout="columns"] .bee-icon {display:none;}
+#bee-account-layout-options [data-layout="columns"] .bee-note {max-width:170px;}
+#bee-account-layout-options [data-layout="bands"] {display:grid;grid-template-columns:1fr auto;grid-template-areas:"identity status" "quota quota" "evidence evidence";gap:0 18px;}
+#bee-account-layout-options [data-layout="bands"] .bee-top-detail {position:static;justify-self:end;grid-area:detail;display:none;}
+#bee-account-layout-options [data-layout="bands"] .bee-status-group {display:grid;grid-template-columns:1fr auto;grid-template-areas:"status action" "note action";gap:0 15px;align-items:center;}
+#bee-account-layout-options [data-layout="bands"] .bee-status {grid-area:status;}
+#bee-account-layout-options [data-layout="bands"] .bee-note {grid-area:note;margin-bottom:0;}
+#bee-account-layout-options [data-layout="bands"] .bee-primary-action {grid-area:action;}
+#bee-account-layout-options [data-layout="bands"] .bee-source {margin-top:3px;}
+#bee-account-layout-options [data-layout="bands"] .bee-quotas {border-top:1px solid var(--bee-line);margin-top:18px;padding-top:13px;}
+#bee-account-layout-options [data-layout="bands"] .bee-quota-heading {margin-bottom:9px;}
+#bee-account-layout-options [data-layout="bands"] .bee-quota-windows {display:grid;grid-template-columns:1fr 1fr;gap:25px;}
+#bee-account-layout-options [data-layout="bands"] .bee-quota-unit + .bee-quota-unit {margin-top:0;}
+#bee-account-layout-options .bee-band-detail {display:none;}
+#bee-account-layout-options [data-layout="bands"] .bee-band-detail {display:inline-flex;margin-left:8px;}
+#bee-account-layout-options [data-layout="row"] {display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.6fr) auto;grid-template-areas:"labels labels labels labels" "identity status quota action" "evidence evidence evidence evidence";column-gap:18px;padding:0 20px 16px;align-items:center;}
+#bee-account-layout-options .bee-column-labels {display:none;}
+#bee-account-layout-options [data-layout="row"] .bee-column-labels {grid-area:labels;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr) minmax(0,1.6fr) 136px;gap:18px;border-bottom:1px solid var(--bee-line);font-size:11px;color:var(--bee-soft);margin:0 -20px 19px;padding:10px 20px;}
+#bee-account-layout-options [data-layout="row"] .bee-title-row {gap:7px;}
+#bee-account-layout-options [data-layout="row"] .bee-icon {display:none;}
+#bee-account-layout-options [data-layout="row"] .bee-status-group > .bee-primary-action {display:none;}
+#bee-account-layout-options .bee-row-actions {display:none;}
+#bee-account-layout-options [data-layout="row"] .bee-row-actions {grid-area:action;display:flex;flex-direction:column;align-items:flex-start;gap:4px;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-heading {font-size:11px;margin-bottom:6px;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-unit {display:grid;grid-template-columns:39px minmax(25px,1fr) 35px;gap:3px 8px;align-items:center;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-label {display:contents;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-label > span:first-child {grid-column:1;grid-row:1;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-value {grid-column:3;grid-row:1;text-align:right;}
+#bee-account-layout-options [data-layout="row"] .bee-meter {grid-column:2;grid-row:1;margin:0;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-reset {grid-column:2 / 4;font-size:11px;}
+#bee-account-layout-options [data-layout="row"] .bee-quota-unit + .bee-quota-unit {margin-top:9px;}
+#bee-account-layout-options [data-layout="row"] .bee-note {margin-bottom:0;}
+#bee-account-layout-options [data-layout="row"] .bee-top-detail {display:none;}
+#bee-account-layout-options .bee-inline-panel {grid-column:1 / -1;padding-top:15px;margin-top:15px;border-top:1px solid var(--bee-line);}
+#bee-account-layout-options .bee-panel-title {display:flex;align-items:center;justify-content:space-between;gap:15px;font-weight:500;margin-bottom:10px;}
+#bee-account-layout-options .bee-fields {display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.5fr);gap:12px;}
+#bee-account-layout-options .bee-fields label {display:grid;gap:5px;color:var(--bee-soft);font-size:12px;}
+#bee-account-layout-options .bee-fields input,#bee-account-layout-options .bee-fields select {width:100%;min-width:0;background:var(--bee-bg);color:var(--bee-fg);border:1px solid var(--bee-line);border-radius:6px;padding:7px 9px;}
+#bee-account-layout-options .bee-panel-actions {display:flex;justify-content:flex-end;gap:10px;margin-top:13px;}
+#bee-account-layout-options .bee-panel-status {font-size:12px;color:var(--bee-soft);margin:8px 0 0;}
+@media(max-width:660px){
+ #bee-account-layout-options .bee-stage {padding:16px 8px 6px;min-height:400px;}
+ #bee-account-layout-options .bee-card {padding:18px;}
+ #bee-account-layout-options [data-layout="columns"] {column-gap:15px;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);grid-template-areas:"identity status" "quota quota" "evidence evidence";}
+ #bee-account-layout-options [data-layout="columns"] .bee-quotas {margin-top:17px;border-top:1px solid var(--bee-line);padding-top:12px;}
+ #bee-account-layout-options [data-layout="columns"] .bee-quota-windows {display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+ #bee-account-layout-options [data-layout="columns"] .bee-quota-unit + .bee-quota-unit {margin:0;}
+ #bee-account-layout-options [data-layout="bands"] {grid-template-areas:"identity identity" "status status" "quota quota" "evidence evidence";}
+ #bee-account-layout-options [data-layout="bands"] .bee-status-group {margin-top:14px;}
+ #bee-account-layout-options [data-layout="row"] {padding:0 18px 18px;grid-template-columns:1fr 1fr;grid-template-areas:"labels labels" "identity action" "status status" "quota quota" "evidence evidence";gap:12px 16px;}
+ #bee-account-layout-options [data-layout="row"] .bee-column-labels {display:block;padding:10px 18px;margin:0 -18px 0;}
+ #bee-account-layout-options [data-layout="row"] .bee-column-labels span:not(:first-child) {display:none;}
+ #bee-account-layout-options [data-layout="row"] .bee-column-labels span:first-child::after {content:"与额度";}
+ #bee-account-layout-options [data-layout="row"] .bee-row-actions {align-items:flex-end;}
+ #bee-account-layout-options [data-layout="row"] .bee-quota-windows {display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+ #bee-account-layout-options [data-layout="row"] .bee-quota-unit + .bee-quota-unit {margin:0;}
+ #bee-account-layout-options [data-layout="row"] .bee-quota-unit {grid-template-columns:36px minmax(20px,1fr) 40px;gap:3px 6px;}
+}
+@media(max-width:440px){
+ #bee-account-layout-options .bee-stage {padding:12px 4px 6px;min-height:510px;}
+ #bee-account-layout-options .bee-card {padding:16px;}
+ #bee-account-layout-options [data-layout="split"] {grid-template-columns:1fr;grid-template-areas:"identity" "status" "quota" "evidence";}
+ #bee-account-layout-options [data-layout="split"] .bee-quotas {border-left:0;border-top:1px solid var(--bee-line);padding:12px 0 0;margin-top:17px;}
+ #bee-account-layout-options [data-layout="split"] .bee-quota-windows {display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+ #bee-account-layout-options [data-layout="split"] .bee-quota-unit + .bee-quota-unit {margin:0;}
+ #bee-account-layout-options [data-layout="bands"] .bee-status-group {grid-template-columns:1fr;grid-template-areas:"status" "note" "action";gap:7px;}
+ #bee-account-layout-options [data-layout="bands"] .bee-primary-action {justify-self:start;}
+ #bee-account-layout-options [data-layout="bands"] .bee-quota-windows {gap:15px;}
+ #bee-account-layout-options .bee-fields {grid-template-columns:1fr;}
+ #bee-account-layout-options [data-layout="row"] {padding:0 16px 16px;}
+ #bee-account-layout-options [data-layout="row"] .bee-column-labels {margin:0 -16px;padding:10px 16px;}
+ #bee-account-layout-options [data-layout="row"] .bee-quota-windows {grid-template-columns:1fr;gap:12px;}
+ #bee-account-layout-options [data-layout="row"] .bee-quota-unit {grid-template-columns:42px minmax(20px,1fr) 36px;}
+}
+@media(max-width:360px){#bee-account-layout-options [data-layout="columns"] {grid-template-columns:1fr;grid-template-areas:"identity" "status" "quota" "evidence";}}
+@media(pointer:coarse){#bee-account-layout-options button,#bee-account-layout-options summary{min-height:44px;}#bee-account-layout-options input,#bee-account-layout-options select{font-size:16px;}}
+@media(prefers-reduced-motion:reduce){#bee-account-layout-options .bee-btn {transition:none;}}
+</style>
+<script>
+(function(){
+  const root=document.getElementById('bee-account-layout-options');
+  const saved=window.openai&&window.openai.widgetState;
+  const choices=['missing','normal','exhausted','unknown'];
+  const shared={scene:choices.includes(saved&&saved.modelContent&&saved.modelContent.scene)?saved.modelContent.scene:'missing'};
+  const local=new Map();
+  const cards=Array.from(root.querySelectorAll('.bee-card'));
+  cards.forEach(function(card){local.set(card,{panel:null,paused:false,repaired:false,busy:false,generation:0,directory:'',store:'keyring'});});
+  function esc(value){return String(value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function icon(name){return '<i data-lucide="'+name+'" aria-hidden="true"></i>';}
+  function data(card){
+    const state=local.get(card),fault=shared.scene==='missing'&&!state.repaired,unknown=shared.scene==='unknown';
+    const exhausted=shared.scene==='exhausted'||shared.scene==='missing';
+    return {state:state,fault:fault,unknown:unknown,exhausted:exhausted,used:unknown?null:exhausted?100:3,weekly:unknown?null:20,
+      title:state.paused?'已暂停':fault?'凭证缺失':unknown?'额度待核对':exhausted?'等待额度恢复':'可接单',
+      note:fault?'钥匙串中未找到 Codex 登录项':state.paused?'保留当前账号和接单选择':unknown?'尚未取得本次额度报告':exhausted?'额度恢复后按接单选择继续':'账号与供给状态已确认',
+      action:fault?'修改凭证读取设置':state.paused?'恢复接单':'暂停接单'};
+  }
+  function identity(){return '<div class="bee-identity"><div class="bee-title-row"><span class="bee-icon">'+icon('sparkle')+'</span><h3>OpenAI</h3><span class="bee-plan">Plus</span></div><p class="bee-id">已接入 a18f…9c42</p><div class="bee-source">'+icon('key-round')+'<span>系统钥匙串</span><button class="bee-link bee-band-detail cursor-interaction" data-action="details">详情 '+icon('arrow-up-right')+'</button></div></div>';}
+  function primary(d){return '<button class="bee-btn bee-primary-action cursor-interaction" data-action="primary">'+d.action+'</button>';}
+  function status(d){return '<div class="bee-status-group" aria-live="polite"><div class="bee-status '+(d.fault?'bad':!d.state.paused&&!d.unknown&&!d.exhausted?'good':'wait')+'"><span class="bee-status-dot"></span><span>'+d.title+'</span></div><p class="bee-note">'+d.note+'</p>'+primary(d)+'</div>';}
+  function unit(name,used,reset,compact){
+    const value=used===null?'—':used+'%';
+    return '<div class="bee-quota-unit"><div class="bee-quota-label"><span>'+name+'</span><span class="bee-quota-value">'+(compact?'':'已用 ')+value+'</span></div><div class="bee-meter" role="progressbar" aria-label="'+name+'已用额度" aria-valuemin="0" aria-valuemax="100" '+(used===null?'aria-valuetext="尚未取得额度数据"':'aria-valuenow="'+used+'"')+'><div class="bee-fill '+(used===100?'exhausted':'')+'" style="width:'+(used===null?0:used)+'%"></div></div><span class="bee-quota-reset">'+(used===null?'重置时间待确认':reset+' 重置')+'</span></div>';
+  }
+  function quotas(d,layout){return '<div class="bee-quotas"><div class="bee-quota-heading"><span>'+(layout==='row'?'已用额度':'额度')+'</span><span>'+(d.unknown?'尚未取得数据':shared.scene==='missing'?'上次记录 · 10:52':'更新于 10:52')+'</span></div><div class="bee-quota-windows">'+unit('5 小时',d.used,'今天 18:30',layout==='row')+unit('7 日',d.weekly,'11/12 15:40',layout==='row')+'</div></div>';}
+  function evidence(d){return d.fault?'<details class="bee-evidence"><summary class="cursor-interaction">错误详情</summary><dl><dt>失败检查</dt><dd>读取 Codex 钥匙串登录项</dd><dt>系统结果</dt><dd>未找到登录项（security exit=44；not_found=true；permission_denied=false）</dd><dt>错误码</dt><dd><code>source_missing · read_keyring</code></dd><dt>原始原因</dt><dd><code>Codex Keychain item absent: security exit=44: file does not exist<br>official source could not be read; check source selection and system permissions</code></dd></dl></details>':'';}
+  function panel(d){
+    if(!d.state.panel)return '';
+    const close='<button type="button" class="bee-link cursor-interaction" data-action="close" aria-label="关闭面板">关闭 '+icon('x')+'</button>';
+    if(d.state.panel==='details')return '<section class="bee-inline-panel"><div class="bee-panel-title">账号信息'+close+'</div><dl class="bee-small"><dt>账号标识</dt><dd>a18f…9c42</dd><dt>凭证来源</dt><dd>Codex 系统钥匙串</dd><dt>接单选择</dt><dd>'+(d.state.paused?'已暂停':'允许接单')+'</dd></dl></section>';
+    if(d.state.panel==='confirm')return '<section class="bee-inline-panel"><div class="bee-panel-title">'+(d.state.paused?'恢复接单':'暂停接单')+close+'</div><p class="bee-small">'+(d.state.paused?'其他接单条件满足后，开始接收新任务。':'暂停后不再接收新任务，已有任务可以继续完成。')+'</p><div class="bee-panel-actions"><button class="bee-btn bee-outline cursor-interaction" data-action="close">取消</button><button class="bee-btn cursor-interaction" data-action="confirm">'+(d.state.paused?'确认恢复':'确认暂停')+'</button></div></section>';
+    return '<form class="bee-inline-panel" data-settings><div class="bee-panel-title">凭证读取设置'+close+'</div><div class="bee-fields"><label>读取目录<input name="directory" autocomplete="off" placeholder="Codex 默认目录" value="'+esc(d.state.directory)+'" '+(d.state.busy?'disabled':'')+'></label><label>存储方式<select name="store" '+(d.state.busy?'disabled':'')+'><option value="keyring" '+(d.state.store==='keyring'?'selected':'')+'>系统钥匙串</option><option value="file" '+(d.state.store==='file'?'selected':'')+'>登录文件</option></select></label></div><p class="bee-panel-status" role="status">'+(d.state.busy?'正在读取并核验所选凭证…':'保存后读取并核验，保留原有接单选择。')+'</p><div class="bee-panel-actions"><button type="button" class="bee-btn bee-outline cursor-interaction" data-action="close" '+(d.state.busy?'disabled':'')+'>取消</button><button type="button" data-action="save" class="bee-btn cursor-interaction" '+(d.state.busy?'disabled':'')+'>'+(d.state.busy?'正在核验…':'保存并核验')+'</button></div></form>';
+  }
+  function renderCard(card){
+    const d=data(card),layout=card.dataset.layout;
+    card.innerHTML='<div class="bee-column-labels"><span>账号</span><span>状态</span><span>额度</span><span>操作</span></div>'+identity()+status(d)+quotas(d,layout)+'<button class="bee-link bee-top-detail cursor-interaction" data-action="details" aria-label="OpenAI 账号详情">详情 '+icon('arrow-up-right')+'</button><div class="bee-row-actions">'+primary(d)+'<button class="bee-link cursor-interaction" data-action="details">账号详情 '+icon('arrow-up-right')+'</button></div>'+evidence(d)+panel(d);
+    if(globalThis.lucide)lucide.createIcons({attrs:{width:15,height:15}});
+  }
+  function renderAll(){cards.forEach(renderCard);}
+  function remember(){if(window.openai&&window.openai.setWidgetState)window.openai.setWidgetState({modelContent:{scene:shared.scene},privateContent:null}).catch(function(){});}
+  function changeScene(){cards.forEach(function(card){local.get(card).generation++;Object.assign(local.get(card),{panel:null,paused:false,repaired:false,busy:false});});renderAll();remember();}
+  root.addEventListener('click',function(event){
+    const button=event.target.closest('[data-action]');if(!button||button.disabled)return;
+    const card=button.closest('.bee-card'),state=local.get(card),d=data(card),action=button.dataset.action;
+    if(action==='save'){save(card);return;}
+    if(action==='primary')state.panel=d.fault?'settings':'confirm';
+    if(action==='details')state.panel='details';
+    if(action==='close'){event.preventDefault();state.panel=null;}
+    if(action==='confirm'){state.paused=!state.paused;state.panel=null;}
+    renderCard(card);
+    const target=card.querySelector(state.panel?'input, [data-action="close"]':'[data-action="primary"]');if(target)target.focus({preventScroll:true});
+  });
+  root.addEventListener('input',function(event){const card=event.target.closest('.bee-card');if(!card)return;const state=local.get(card);if(event.target.name==='directory')state.directory=event.target.value;});
+  root.addEventListener('change',function(event){const card=event.target.closest('.bee-card');if(card&&event.target.name==='store')local.get(card).store=event.target.value;});
+  function save(card){
+    const state=local.get(card),scene=shared.scene;if(state.busy)return;
+    const generation=++state.generation;state.busy=true;renderCard(card);
+    setTimeout(function(){if(shared.scene!==scene||state.generation!==generation||!state.busy)return;state.busy=false;state.repaired=true;state.panel=null;renderCard(card);const target=card.querySelector('[data-action="primary"]');if(target)target.focus({preventScroll:true});},850);
+  }
+  root.addEventListener('submit',function(event){if(event.target.matches('[data-settings]')){event.preventDefault();save(event.target.closest('.bee-card'));}});
+  root.addEventListener('keydown',function(event){if(event.key==='Enter'&&event.target.matches('[data-settings] input')){event.preventDefault();save(event.target.closest('.bee-card'));}});
+  window.addEventListener('openai:set_globals',function(event){const scene=event.detail?.globals?.widgetState?.modelContent?.scene;if(choices.includes(scene)&&scene!==shared.scene){shared.scene=scene;cards.forEach(function(card){local.get(card).generation++;Object.assign(local.get(card),{panel:null,paused:false,repaired:false,busy:false});});renderAll();}});
+  renderAll();
+  if(globalThis.ResizeObserver){const observer=new ResizeObserver(function(entries){entries.forEach(function(entry){const label=entry.target.closest('.bee-stage').querySelector('[data-height]');if(entry.target.offsetHeight)label.textContent='卡片高度 '+Math.round(entry.target.getBoundingClientRect().height)+' px';});});cards.forEach(function(card){observer.observe(card);});}
+  if(globalThis.Tweak){const tweak=new Tweak({container:root,onChange:changeScene});tweak.addSelect(shared,'scene',{label:'账号场景',options:[{label:'凭证缺失 · 保留历史额度',value:'missing'},{label:'运行正常',value:'normal'},{label:'额度耗尽',value:'exhausted'},{label:'额度未知',value:'unknown'}]});}
+})();
+</script>

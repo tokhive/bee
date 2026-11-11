@@ -6,7 +6,7 @@ require (
 	github.com/coder/websocket v1.8.14
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/prometheus/client_golang v1.24.1
-	github.com/tokhive/tee v0.0.0-20261022033800-8065bca7dc1f
+	github.com/tokhive/tee v0.0.0-20261111094119-c46f7dbf2ed4
 	golang.org/x/sys v0.48.0
 	golang.org/x/text v0.41.0
 )

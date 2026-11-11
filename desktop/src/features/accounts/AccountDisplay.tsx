@@ -36,8 +36,22 @@ export function AccountReadHistory({accounts,platform}:{accounts:AccountsModel;p
  }
  return accounts.deviceFailure&&snapshot.hive.observed_at?<div className="account-remote-history"><p>{t('Hive 记录未重新确认，仅供参考；本机凭证读取结果单独展示。')}</p><p>{t('上次 Hive 观测')}: <time dateTime={snapshot.hive.observed_at}>{formatDate(snapshot.hive.observed_at,currentLocale())}</time></p></div>:null;
 }
-export function AccountQuota({presentation,resets=false,compact=false}:{presentation:AccountPresentation;resets?:boolean;compact?:boolean}){
+export function AccountQuota({presentation,resets=false,compact=false,list=false,historical=false}:{presentation:AccountPresentation;resets?:boolean;compact?:boolean;list?:boolean;historical?:boolean}){
  const {windows,quotaState}=presentation;
+ if(list){
+  const listWindows=[...windows,...[18000,604800].filter(seconds=>!windows.some(w=>w.seconds===seconds)).map(seconds=>({seconds,scope:'',used_percent:null,reset_at:null}))].sort((a,b)=>a.seconds-b.seconds);
+  const history=historical||quotaState==='stale'||quotaState==='unconfirmed';
+  const compactTime=(value:string)=>formatDate(value,currentLocale(),{dateStyle:undefined,timeStyle:undefined,year:undefined,month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:undefined});
+  return <div className="account-list-quota">
+   <div className="account-quota-caption"><span>{t('已用额度')}</span><span>{history?t('上次记录'):quotaState==='unknown'?t('尚未核对'):t('当前额度')}{presentation.observedAt&&<time dateTime={presentation.observedAt} title={formatDate(presentation.observedAt,currentLocale())}> · {compactTime(presentation.observedAt)}</time>}</span></div>
+   {listWindows.map((w,i)=><div className={`account-list-window ${w.used_percent!==null&&w.used_percent>=100?'is-exhausted':''}`} key={`${w.scope}:${w.seconds}:${i}`}>
+    <span className="quota-window-name">{w.seconds===18000?t('5 小时'):w.seconds===604800?t('7 日'):t('{hours} 小时',{hours:formatNumber(w.seconds/3600,currentLocale())})}{w.scope?` · ${w.scope}`:''}</span>
+    <Progress value={w.used_percent} aria-label={t('已用额度')} aria-valuetext={w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}/>
+    <span className="quota-value">{w.used_percent===null?'—':t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}</span>
+    <span className="quota-reset">{w.reset_at?<><time dateTime={w.reset_at} title={formatDate(w.reset_at,currentLocale())}>{compactTime(w.reset_at)}</time> {t('重置')}</>:t('重置时间未知')}</span>
+   </div>)}
+  </div>;
+ }
  const ordered=[...(compact&&!windows.length?[18000,604800].map(seconds=>({seconds,scope:'',used_percent:null,reset_at:null})):windows)].sort((a,b)=>a.seconds-b.seconds);
  const windowName=(seconds:number)=>seconds===18000?t('5 小时'):seconds===604800?t('7 日'):t('{hours} 小时',{hours:formatNumber(seconds/3600,currentLocale())});
  if(compact&&resets)return <div className="oa-reset-details">{ordered.map((w,i)=><p key={i}>{windowName(w.seconds)}{w.scope?` · ${w.scope}`:''} · {t('重置时间')}: {w.reset_at?formatDate(w.reset_at,currentLocale()):t('未知')}</p>)}</div>;

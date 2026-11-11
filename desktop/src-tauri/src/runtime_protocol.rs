@@ -4,6 +4,29 @@ use crate::protocol::{
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct RecoveryProgress {
+    pub stage: String,
+    pub operation_id: Option<String>,
+    pub completed: Option<u64>,
+    pub total: Option<u64>,
+}
+impl RecoveryProgress {
+    pub fn stage(stage: &str) -> Self { Self {stage:stage.into(),operation_id:None,completed:None,total:None} }
+    pub fn validate(&self) -> Result<(),BridgeError> {
+        if !["connecting","checking_previous","checking_device","preparing_accounts","confirming_service"].contains(&self.stage.as_str())
+            || self.operation_id.as_ref().is_some_and(|v| !digest(v,48))
+            || self.completed.is_some()!=self.total.is_some()
+            || self.total.is_some_and(|v|v==0 || v>2)
+            || self.completed.zip(self.total).is_some_and(|(a,b)|a>b)
+            || self.total.is_some() && self.stage!="preparing_accounts" {
+            return Err(invalid("startup progress requires a known stage, bound operation and consistent account counts"));
+        }
+        Ok(())
+    }
+}
+
 const SAFE_INTEGER: u64 = 9_007_199_254_740_991;
 fn invalid(message: impl Into<String>) -> BridgeError {
     BridgeError {
@@ -264,6 +287,8 @@ pub struct StopReceipt {
 #[derive(Debug, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct RuntimeSnapshot {
+    #[serde(default)]
+    startup_progress: Option<RecoveryProgress>,
     #[serde(deserialize_with = "present")]
     run_id: Option<String>,
     revision: u64,
@@ -521,6 +546,10 @@ pub fn validate_runtime_reply(result: &Value, kind: RuntimeReplyKind) -> Result<
                     .ok_or_else(|| invalid("runtime snapshot result missing"))?,
                 "runtime snapshot",
             )?;
+            if let Some(progress)=&s.startup_progress {
+                progress.validate()?;
+                if progress.operation_id.as_deref()!=s.operation.as_ref().and_then(|v|v["id"].as_str()) {return Err(invalid("startup progress operation differs from runtime operation"));}
+            }
             safe(s.revision, "runtime.revision")?;
             safe(s.network_revision, "runtime.network_revision")?;
             if s.run_id.as_ref().is_some_and(|id| !digest(id, 32)) || !timestamp(&s.observed_at) {

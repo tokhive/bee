@@ -23,10 +23,10 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","authorize_progress","authorize_open","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_inspect_recovery","runtime_reconcile_recovery","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
 ```
 
-版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供上述 **30 项**有序能力（包含设备在线、上下文核验与设备恢复）。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供示例所列 **34 项**有序能力（包含设备在线、上下文核验与设备恢复）。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
 
 | 请求 method | result | 含义 |
 | --- | --- | --- |
@@ -94,13 +94,13 @@ Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最�
 
 公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置；S1-T4 已接通官方登录；S1-T6 接通仅供 Rust 启动生命周期调用的 runtime_restore。
 
-Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-login-contract.md)仅供评审，尚未实现 `authorize_progress`／`authorize_open`，也未注册 capability。现有 `authorize_start/status/cancel` 请求及 `{operation}` 返回保持不变；不要把类型定义或模拟数据当作真实桥能力。
+Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-login-contract.md)对应 `authorize_progress`／`authorize_open`；仅实现扩展接口时在 `authorize_cancel` 后按顺序声明这两项 capability。`authorize_start/status/cancel` 请求及 `{operation}` 返回保持不变；静态样本不能代替真实登录验收。
 
 | 数据／动作 | 固定字段及语义 |
 | --- | --- |
 | `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
 | `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled；authorize 另允许 unknown）、revision、error；id是本机动作引用，不是Hive confirmation_id |
-| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/waiting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt、legacy_stop（必填可空）。桥envelope的instance仍为管理进程实例 |
+| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/waiting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt、legacy_stop（必填可空）、startup_progress（可选，见启动恢复扩展）。桥envelope的instance仍为管理进程实例 |
 | platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
 | `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
 | `runtime_stop` | expected_revision、reason（user_stop/app_exit/update/network_change）；reason由固定Rust入口生成；网页只可明确停止 |
@@ -223,9 +223,9 @@ Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，�
 
 ### S1-T6 恢复与退出
 
-Rust 在管理进程 ready 后仅发一次 `runtime_restore({})`，不自动重启崩溃进程。Go 在返回开始操作前保存本次活动会话，自动恢复核验已选账号及正常结束证据；无账号为 waiting，旧停止意图按一次性迁移处理；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
+Rust 在管理进程 ready 后先只读核对资格和原持久尝试；通过后才提交本次 `runtime_restore({})`，失败不自动循环。管理连接确定失败时可人工受控重连，旧 owned Child 必须先回收。Go 在返回开始操作前保存本次活动会话，自动恢复核验已选账号及正常结束证据；无账号为 waiting，旧停止意图按一次性迁移处理；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
 
-`runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。上次非 clean 标记必须通过明确开始处理。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
+`runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。本轮启动恢复不接管上次非 clean 标记；必须取得旧 worker／远端准备保护退役证明后另行处理，不能通过普通开始或删除记录绕过启动准入。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
 
 `Bridge::prepare_owned_exit(OwnedExitReason::{AppExit,Update})` 冻结新请求及尚未发送的排队操作，核对同 instance、run_id、stop operation 和修订的停止回执，最多等待12秒后仍必须回收 owned Child。调用方取消不会取消该清理任务。仅保存意图、会话clean和Child wait/reap均被证实后返回四项为真的 `OwnedExitReceipt`；配置锁随该子进程退出释放。更新准备不释放 App 单实例，普通退出在回收后才释放。该回执不代表 Hive 在途任务已排空。
 
@@ -259,3 +259,35 @@ prepare只保存待确认记录，不创建配对；begin_pairing只适用于awa
 原生 `native_locale_sync` 成功回执严格为 null，locale/revision/sequence 由偏好同步调用携带。旧测试替身已补该回执，不能把缺少命令产生的语言同步警告解释为设备配对失败。
 
 最终核心连接使用相同外部二进制，经真实HTTP核对401/403/409/503/EOF；另外在Docker internal网络与专属临时数据库里真实upgrade后断socket及listener，观察connection_refused与实际next_retry_at，再恢复listener，确认同run重新connected、手动暂停保持且resume PUT=0，最后完整停止回执。`t10-linux-runtime-isolated-v9.log/json`保存网络inspect与无默认路由证据；这些连接事实不证明官方账号维护或上游请求已通过。Hive验收提交为`bf05ea6`＋`d0e979b`，gitlink仍为`ab8140a`。
+
+
+### 启动恢复只读准入与本地记录（2026-11-11）
+
+`runtime_inspect_recovery` 是可选 Go capability，有序排列在 `device_context` 后、`runtime_verify` 前；参数为 `{}`，只供 Rust 启动协调器使用。返回：
+
+```json
+{"recovery":{"state":"eligible","binding_revision":1,"previous_run_id":null,"account_revision":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","intent_running":true,"failure":null}}
+```
+
+`state` 为 `eligible|idle|blocked`；仅 blocked 带 `{code,message}` failure。`previous_run_id` 是 32 位小写十六进制或 null；`account_revision` 是已保存账号 scope 的规范 JSON SHA256 或 null；eligible 要求原意图有效且范围摘要存在。检查在 Go lifecycle／runtime／设备会话锁内读取，产生本次预留、worker 和外部请求前完成；资格不能替代实际 Restore 的再校验。未声明能力时不提交恢复。
+
+Rust 新增固定 Tauri 命令 `startup_query({})`、`startup_retry({})`，保留 `startup_status({})`、`startup_recheck({})`。query 只核对原记录与当前资格，读取失败独立返回，保留最初 startup.failure；retry 串行进入连接与启动准入，结果未知时不得换 ID 重做。已核验的同一 ready 实例重复 retry 返回现有结果。业务 recheck 不恢复运行意图或清除升级标记。
+
+StartupStatus 保留 `state/failure/instance/binding_revision/network_revision/observed_at/revision`，增加 `can_retry`、`recovering` 和可选 `progress:{stage,operation_id,completed,total}`。stage 为 connecting／checking_previous／checking_device／preparing_accounts／confirming_service；operation_id 为 48 位小写十六进制或 null；计数成对存在，仅 preparing_accounts 可用，`0 <= completed <= total <= 2` 且 total 非零。Go runtime 快照可选 `startup_progress`，必须绑定当前 operation；失败准备不计入 completed。Rust／TS 严格解码，不用计时器推进阶段或估算百分比。
+
+`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。没有运行真实用户账号恢复；[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+
+
+### 旧会话安全结束扩展（2026-11-11）
+
+新增可选 Go capability `runtime_reconcile_recovery`，在 `runtime_inspect_recovery` 后；固定空参数 `{}`，仅供 Rust 启动协调使用，前端无直接透传入口。返回相同 recovery 结构。它会产生远端结束会话的副作用，不能归为只读检查：先保存原请求，再查／推进同一 Hive 操作；不启动 relay、不上传凭据、不修改暂停。退出／升级准入在调用前后仍复核。
+
+RecoveryInspection 增可选 `binding_identity`（64 位小写 hex，原设备绑定 SHA-256，不含会话代）和 `retirement_id`（48 位小写 hex）。后者仅在持久结束证明与当前完整退休 scope、设备和 epoch 一致时返回。普通状态检查不会签发证明。
+
+Go 私有原子文件 `desktop-session-retirement.json` 保存原 scope、原 guard、设备绑定摘要、请求和 proof，完成后保留；新结束操作先归档至 `desktop-session-retirement-<id>.json`。任何部分保存中断均沿用同 ID、同 proof 继续，未完成记录继续阻塞普通 Restore。
+
+Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要的旧未知记录继续阻塞。
+
+Hive 未支持时返回 `RECOVERY_SERVER_UNSUPPORTED`；任务未排空为 `RECOVERY_REMOTE_DRAINING`，原回执待核对为 `RECOVERY_RETIREMENT_UNCONFIRMED`，明确 HTTP 拒绝为 `RECOVERY_RETIREMENT_CONFLICT`，本地原记录损坏为 `RECOVERY_RETIREMENT_INVALID`。排空／未知时显示“继续恢复”，仍使用原操作；不支持、冲突或损坏时保留诊断，隐藏无效核对入口。查询不会清除继续恢复资格。
+
+Hive HTTP 结构、迁移与部署顺序见[配套补丁](integrations/hive-session-retirement/README.md)。设备配置新增可选 `runtime_epoch`；旧客户端严格解码与降级限制同见该文档。上文“凭据恢复不改变 CLI localState”只指设备配对恢复扩展，本次会话隔离会增加该字段。

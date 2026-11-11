@@ -285,14 +285,14 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	observed, known := cfg.pacer.expected()
 	cfg.pacer.unsettled()
 	if !known {
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account", "GET", state.Credential, nil, &observed); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account", "GET", nil, &observed); err != nil {
 			return err
 		}
 	}
 	if sourceErr != nil {
 		cfg.authorization = nil
 		if force || cfg.lastAccountState != "source_unavailable" || time.Since(cfg.lastRegistration) >= 10*time.Second {
-			if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); err != nil {
+			if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); err != nil {
 				return err
 			}
 			cfg.lastRegistration = time.Now()
@@ -303,7 +303,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	var result beewire.MaintenanceResponse
 	revision := credential.metadata().CredentialRevision
 	stalePlan := cfg.Capabilities.wantsPlanRefresh(revision, time.Now())
-	err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential,
+	err := callState(ctx, httpClient(), state, "/api/bee/maintenance", "POST",
 		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: stalePlan}, &result)
 	if err != nil {
 		return err
@@ -330,7 +330,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		credential, err = cfg.Codex.executeMaintenance(ctx, *task)
 		if err != nil {
 			cfg.authorization = nil
-			if stopErr := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); stopErr != nil {
+			if stopErr := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); stopErr != nil {
 				return stopErr
 			}
 			cfg.accountMessage(out, "maintenance_wait", "new OpenAI jobs paused; waiting for official Codex authorization recovery: "+err.Error())
@@ -342,7 +342,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 			var failure *apiFailure
 			if errors.Is(err, errCodexExpired) || errors.As(err, &failure) && failure.Code == "invalid_codex_authorization" {
 				cfg.authorization = nil
-				if stopErr := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); stopErr != nil {
+				if stopErr := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); stopErr != nil {
 					return stopErr
 				}
 				cfg.accountMessage(out, "maintenance_wait", "OpenAI authorization expired during synchronization; waiting for a new authorization maintenance task")
@@ -413,7 +413,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 		codex = &metadata
 	}
 	var key tee.InboxPublic
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &key); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
 		return err
 	}
 	hash := sha256.Sum256(key.PublicKey)
@@ -438,7 +438,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 	var registered struct {
 		Generation int64 `json:"account_generation"`
 	}
-	err = call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential,
+	err = callState(ctx, httpClient(), state, "/api/bee/credentials", "POST",
 		struct {
 			Lease    string                      `json:"lease"`
 			Envelope tee.Envelope                `json:"envelope"`

@@ -745,3 +745,144 @@ async fn late_start_presence_requires_original_context_and_live_admission() {
         }
     }
 }
+
+#[tokio::test]
+async fn unsupported_retirement_is_rejected_before_restore_and_management_survives() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"recovery_blocked":true}));
+    startup(app.handle().clone(),bridge.clone()).await;
+    let status=app.state::<StartupGate>().snapshot();
+    assert_eq!(status.state,"blocked");
+    assert_eq!(status.failure.unwrap().code,"RECOVERY_SERVER_UNSUPPORTED");
+    assert_eq!(bridge.status().state,BridgePhase::Ready);
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|line| line=="runtime_restore" || line=="runtime_stop"),"unexpected side effects: {calls}");
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn a_failed_recovery_query_does_not_replace_the_original_startup_failure() {
+    let (_dir,bridge,app)=fixture(serde_json::json!({"recovery_blocked":true}));
+    startup(app.handle().clone(),bridge.clone()).await;
+    let before=app.state::<StartupGate>().snapshot();
+    bridge.freeze_for_exit();
+    assert_eq!(query(app.handle(),&bridge).await.unwrap_err().code,"OWNED_EXIT_PENDING");
+    let after=app.state::<StartupGate>().snapshot();
+    assert_eq!(after.failure.unwrap().code,before.failure.unwrap().code);
+    assert!(!after.can_retry);
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn retry_after_success_returns_the_same_result_without_a_second_restore() {
+    let (dir,bridge,app)=fixture(serde_json::json!({"apply":true}));
+    startup(app.handle().clone(),bridge.clone()).await;
+    assert_eq!(app.state::<StartupGate>().snapshot().state,"ready");
+    let manager=app.state::<UpdateManager>();
+    let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+    let before=journal.load().unwrap().unwrap().attempt_id;
+    assert_eq!(retry(app.handle().clone(),bridge.clone()).await.state,"ready");
+    assert_eq!(journal.load().unwrap().unwrap().attempt_id,before);
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert_eq!(calls.lines().filter(|method|*method=="runtime_restore").count(),1);
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn startup_query_retains_continuation_for_pending_retirement() {
+    let (_dir, bridge, app) = fixture(serde_json::json!({"recovery_blocked":true}));
+    wait_bridge(&bridge).await.unwrap();
+    let gate=app.state::<StartupGate>();
+    gate.status.lock().unwrap().state="blocked".into();
+    gate.status.lock().unwrap().failure=Some(BridgeError::new("RECOVERY_REMOTE_DRAINING","original retirement pending".into()));
+    let _ = query(app.handle(),&bridge).await;
+    assert!(gate.snapshot().can_retry);
+    assert_eq!(gate.snapshot().failure.unwrap().code,"RECOVERY_REMOTE_DRAINING");
+    assert!(!bridge.0.restored.load(Ordering::SeqCst));
+    bridge.stop().await.unwrap();
+}
+
+
+#[tokio::test]
+async fn startup_retires_inherited_session_before_restore_including_unknown_previous_attempt() {
+    for previous_unknown in [false, true] {
+        let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"recovery_blocked":true,"retirement":true}));
+        let manager = app.state::<UpdateManager>();
+        let journal = crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+        if previous_unknown {
+            journal.save(&unknown_startup_record()).unwrap();
+        }
+        startup(app.handle().clone(), bridge.clone()).await;
+        let status = app.state::<StartupGate>().snapshot();
+        assert_eq!(status.state, "ready", "unknown={previous_unknown}: {:?}", status.failure);
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        let methods: Vec<_> = calls.lines().collect();
+        let index = |method| methods.iter().position(|value| *value == method).unwrap();
+        assert!(index("device_status") < index("runtime_reconcile_recovery"));
+        assert!(index("runtime_reconcile_recovery") < index("runtime_restore"));
+        assert_eq!(methods.iter().filter(|method| **method == "runtime_restore").count(), 1);
+        assert_eq!(journal.load().unwrap().unwrap().phase, "succeeded");
+        if previous_unknown {
+            let archived = std::fs::read_to_string(dir.path().join(format!("desktop-startup-recovery-{}.json", "a".repeat(32)))).unwrap();
+            assert!(archived.contains("original receipt lost"));
+            assert!(archived.contains("outcome remains unconfirmed"));
+        }
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn startup_retirement_keeps_device_and_remote_proof_failures_blocking() {
+    for (config, expected, reconciles) in [
+        (serde_json::json!({"apply":true,"recovery_blocked":true,"retirement":true,"rejected":true}), "device_replaced", false),
+        (serde_json::json!({"apply":true,"recovery_blocked":true,"retirement":true,"retirement_error":"RECOVERY_REMOTE_DRAINING"}), "RECOVERY_REMOTE_DRAINING", true),
+    ] {
+        let (dir, bridge, app) = fixture(config);
+        startup(app.handle().clone(), bridge.clone()).await;
+        let status = app.state::<StartupGate>().snapshot();
+        assert_eq!(status.state, "blocked");
+        assert_eq!(status.failure.unwrap().code, expected);
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert_eq!(calls.lines().any(|method| method == "runtime_reconcile_recovery"), reconciles);
+        assert!(!calls.lines().any(|method| method == "runtime_restore"));
+        bridge.stop().await.unwrap();
+    }
+}
+
+
+fn unknown_startup_record() -> crate::startup_recovery::RecoveryRecord {
+    crate::startup_recovery::RecoveryRecord {
+        version: 1, attempt_id: "a".repeat(32), instance: "d".repeat(32),
+        binding_revision: 1, binding_identity: Some("b".repeat(64)), network_revision: 0,
+        previous_run_id: Some("d".repeat(32)), account_revision: Some("a".repeat(64)),
+        intent_running: true, trigger: "automatic".into(), previous_attempt_id: None,
+        operation_id: Some("a".repeat(48)), phase: "unknown".into(),
+        failure: Some(BridgeError::new("RECOVERY_RESULT_UNCONFIRMED", "original receipt lost".into())),
+    }
+}
+
+#[tokio::test]
+async fn startup_never_replays_unknown_attempt_without_matching_retirement_proof() {
+    for scenario in ["no_proof", "wrong_binding", "same_instance"] {
+        let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"recovery_blocked":scenario!="no_proof","retirement":true}));
+        let manager = app.state::<UpdateManager>();
+        let journal = crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+        let mut original = unknown_startup_record();
+        if scenario == "wrong_binding" { original.binding_identity = Some("c".repeat(64)); }
+        if scenario == "same_instance" { original.instance = "f".repeat(32); }
+        journal.save(&original).unwrap();
+        startup(app.handle().clone(), bridge.clone()).await;
+        let status = app.state::<StartupGate>().snapshot();
+        assert_eq!(status.state, "blocked", "{scenario}");
+        assert_eq!(status.failure.unwrap().code, if scenario == "wrong_binding" { "RECOVERY_CONTEXT_CHANGED" } else { "RECOVERY_RESULT_UNCONFIRMED" });
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(!calls.lines().any(|method| method == "runtime_restore"), "{scenario}: {calls}");
+        if scenario == "same_instance" {
+            assert!(!calls.lines().any(|method| method == "runtime_reconcile_recovery"));
+        }
+        let saved = journal.load().unwrap().unwrap();
+        assert_eq!(saved.phase, "unknown");
+        assert_eq!(saved.attempt_id, original.attempt_id);
+        assert_eq!(saved.failure.unwrap().message, "original receipt lost");
+        bridge.stop().await.unwrap();
+    }
+}

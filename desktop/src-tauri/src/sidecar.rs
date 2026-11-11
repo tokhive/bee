@@ -93,6 +93,7 @@ impl Default for RequestTracker {
     }
 }
 
+#[derive(Clone)]
 pub(crate) struct LaunchSpec {
     pub program: PathBuf,
     pub bundle: Option<PathBuf>,
@@ -373,6 +374,7 @@ fn validate_method_result(
                 },
             )
         }
+        "runtime_inspect_recovery" | "runtime_reconcile_recovery" => { crate::startup_recovery::inspection(result).map(|_| ()) },
         "runtime_verify" | "runtime_enable_presence" => {
             if result.get("error").is_some() {
                 return Ok(());
@@ -461,7 +463,9 @@ pub(crate) struct Inner {
     status: watch::Receiver<BridgeStatus>,
     status_tx: watch::Sender<BridgeStatus>,
     stop: watch::Sender<bool>,
-    requests: mpsc::Sender<Request>,
+    requests: StdMutex<mpsc::Sender<Request>>,
+    launch: Option<LaunchSpec>,
+    reconnect_serial: Mutex<()>,
     capacity: Arc<Semaphore>,
     wake: Arc<Notify>,
     timeout: Duration,
@@ -615,7 +619,9 @@ impl Bridge {
                     status: state,
                     status_tx,
                     stop,
-                    requests,
+                    requests: StdMutex::new(requests),
+                    launch: None,
+                    reconnect_serial: Mutex::new(()),
                     capacity: Arc::new(Semaphore::new(16)),
                     wake: Arc::new(Notify::new()),
                     timeout: Duration::from_secs(5),
@@ -638,6 +644,7 @@ impl Bridge {
         let frozen = Arc::new(AtomicBool::new(false));
         let wake = Arc::new(Notify::new());
         let tracker = Arc::new(RequestTracker::default());
+        let launch=spec.clone();
         let task = tauri::async_runtime::spawn(supervise(
             spec,
             status_tx.clone(),
@@ -655,7 +662,9 @@ impl Bridge {
             status: status_rx,
             status_tx,
             stop: stop_tx,
-            requests: requests_tx,
+            requests: StdMutex::new(requests_tx),
+            launch: Some(launch),
+            reconnect_serial: Mutex::new(()),
             capacity: Arc::new(Semaphore::new(16)),
             wake,
             timeout: duration,
@@ -1003,6 +1012,31 @@ impl Bridge {
         crate::protocol::device_context_state(&reply.result)?;
         Ok(reply)
     }
+    pub(crate) async fn inspect_recovery(&self) -> Result<crate::startup_recovery::RecoveryInspection, BridgeError> {
+        let mut statuses=self.subscribe();
+        timeout(Duration::from_secs(20),async {
+            while statuses.borrow_and_update().state==BridgePhase::Starting {
+                statuses.changed().await.map_err(|_|error("RECOVERY_UNAVAILABLE","management status channel closed before recovery inspection"))?;
+            }
+            Ok::<(),BridgeError>(())
+        }).await.map_err(|_|error("RECOVERY_UNAVAILABLE","management connection deadline elapsed before recovery inspection: limit=20000ms"))??;
+        if self.status().state!=BridgePhase::Ready {return Err(self.status().error.unwrap_or_else(||error("BRIDGE_NOT_READY","recovery inspection requires a ready management process")));}
+        if self.status().metadata.as_ref().is_none_or(|v|!v.capabilities.iter().any(|v|v=="runtime_inspect_recovery")) {
+            return Err(error("RECOVERY_UNAVAILABLE","bundled management process does not advertise read-only recovery inspection; no automatic restore submitted"));
+        }
+        let reply=self.request("runtime_inspect_recovery",serde_json::json!({}),Duration::from_secs(15)).await?;
+        crate::protocol::result_error(&reply.result)?;
+        crate::startup_recovery::inspection(&reply.result)
+    }
+    pub(crate) async fn reconcile_recovery(&self) -> Result<crate::startup_recovery::RecoveryInspection, BridgeError> {
+        self.check_restore_admission()?;
+        if self.status().metadata.as_ref().is_none_or(|v|!v.capabilities.iter().any(|v|v=="runtime_reconcile_recovery")) {
+            return Err(error("RECOVERY_UNAVAILABLE","management process does not advertise verified session retirement; original guards retained"));
+        }
+        let reply=self.request("runtime_reconcile_recovery",serde_json::json!({}),Duration::from_secs(15)).await?;
+        crate::protocol::result_error(&reply.result)?;
+        crate::startup_recovery::inspection(&reply.result)
+    }
     pub(crate) async fn verify_local_startup(&self) -> Result<(), BridgeError> {
         let reply = self
             .request(
@@ -1143,6 +1177,8 @@ impl Bridge {
                 | "device_recovery_prepare"
                 | "device_recovery_confirm"
                 | "device_recovery_status"
+                | "runtime_inspect_recovery"
+                | "runtime_reconcile_recovery"
                 | "runtime_verify"
                 | "runtime_snapshot"
                 | "runtime_restore"
@@ -1190,7 +1226,7 @@ impl Bridge {
             self.0.capacity.clone().try_acquire_owned().map_err(|_| error("REQUEST_NOT_QUEUED",format!("{method} rejected: outstanding request budget exhausted; maximum=16 including queued and in-flight requests")))?
         };
         self.0
-            .requests
+            .requests.lock().unwrap_or_else(|v|v.into_inner())
             .try_send(Request {
                 exit_request,
                 method,
@@ -1223,6 +1259,28 @@ impl Bridge {
         })?
     }
 
+    pub(crate) async fn reconnect(&self) -> Result<(),BridgeError> {
+        let _serial=self.0.reconnect_serial.try_lock().map_err(|_|error("RECOVERY_OWNER_BUSY","management reconnect already in progress"))?;
+        self.check_restore_admission()?;
+        if !matches!(self.status().state,BridgePhase::Failed|BridgePhase::Stopped) {return Err(error("RECOVERY_OWNER_BUSY","management reconnect requires a stopped or failed child"));}
+        self.stop().await?;
+        let mut task=self.0.task.lock().await;
+        self.check_restore_admission()?;
+        if !self.pending_requests().requests.is_empty(){return Err(error("RECOVERY_RESULT_UNCONFIRMED","management requests remain unresolved after child cleanup"));}
+        let spec=self.0.launch.clone().ok_or_else(||error("RECOVERY_UNAVAILABLE","management launch source was not verified; inspect the original launch error"))?;
+        let (sender,receiver)=mpsc::channel(16);
+        *self.0.requests.lock().unwrap_or_else(|v|v.into_inner())=sender;
+        self.0.stop.send_replace(false);
+        // Exit can freeze before or after resetting the stop channel. In either
+        // order the new supervisor must observe the exit request.
+        if let Err(cause)=self.check_restore_admission(){self.0.stop.send_replace(true);return Err(cause);}
+        self.0.restored.store(false,Ordering::SeqCst);
+        self.0.startup_verified.store(false,Ordering::SeqCst);
+        self.0.status_tx.send_replace(status(BridgePhase::Starting,None,None));
+        task.result=None;
+        task.handle=Some(tauri::async_runtime::spawn(supervise(spec,self.0.status_tx.clone(),self.0.stop.subscribe(),receiver,self.0.frozen.clone(),self.0.wake.clone(),self.0.tracker.clone())));
+        Ok(())
+    }
     pub async fn stop(&self) -> Result<(), BridgeError> {
         self.0.stop.send_replace(true);
         // Hold this lock while joining so every concurrent stop waits for reaping.

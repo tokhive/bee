@@ -112,7 +112,7 @@ test('all registered native commands receive frontend arguments matching the Rus
   t.after(()=>{ clearMocks(); for (const [key,descriptor] of [['window',originalWindow],['isTauri',originalTauri]] as const) { if(descriptor)Object.defineProperty(globalThis,key,descriptor); else Reflect.deleteProperty(globalThis,key); } });
   mockIPC((command,args)=>command.startsWith('plugin:event|') ? 1 : invoke(command,args as Record<string,unknown>));
   const bridge=createSystemBridge();
-  for (const action of [()=>bridge.status(),()=>bridge.pendingRequests!(),()=>bridge.ping(),()=>bridge.startupStatus!(),()=>bridge.startupRecheck!(),()=>bridge.syncNativeLocale!('zh',0),()=>onLoginReturn(()=>{})]) await sample(action);
+  for (const action of [()=>bridge.status(),()=>bridge.pendingRequests!(),()=>bridge.ping(),()=>bridge.startupStatus!(),()=>bridge.startupRecheck!(),()=>bridge.startupRetry!(),()=>bridge.startupQuery!(),()=>bridge.syncNativeLocale!('zh',0),()=>onLoginReturn(()=>{})]) await sample(action);
 
   // hive_open is the sole inline application invoke rather than a client method.
   const main=readFileSync(new URL('../src/main.tsx',import.meta.url),'utf8');

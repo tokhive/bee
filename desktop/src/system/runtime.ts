@@ -1,3 +1,4 @@
+import {decodeStartupProgress} from './bridge.ts';
 import {decodeBridgeError,throwBridgeError} from './failures.ts';
 import type {DeviceInvoke} from './device';
 import type {AccountError,AccountPlatform,AccountSnapshot} from './accounts';
@@ -11,6 +12,7 @@ export interface ConnectionFailure {code:'dns_failed'|'tls_failed'|'connection_r
 export interface ConnectionDetail {failure:ConnectionFailure|null;retry:'idle'|'attempting'|'scheduled'|'halted';next_retry_at:string|null}
 export interface LegacyStopStatus {phase:'processing'|'reconciling'|'blocked'|'completed';platforms:AccountPlatform[];error:AccountError|null;can_recheck:boolean}
 export interface RuntimeSnapshot {
+ startup_progress?:import('./bridge').StartupProgress;
  legacy_stop:LegacyStopStatus|null;
  run_id:string|null;revision:number;network_revision:number;observed_at:string;
  local:'stopped'|'waiting'|'starting'|'running'|'stopping'|'failed';
@@ -81,11 +83,14 @@ function result(reply:unknown,instance:string,key:string):unknown{
 }
 export function decodeRuntimeOperation(reply:unknown,instance:string):RuntimeOperation{return operation(result(reply,instance,'operation'));}
 export function decodeRuntimeSnapshot(reply:unknown,instance:string):RuntimeSnapshot{
- const s=object(result(reply,instance,'runtime'),['run_id','revision','network_revision','observed_at','local','connection','connection_detail','legacy_stop','platforms','operation','stop_receipt'],'runtime');
+ const raw=result(reply,instance,'runtime');
+ const hasProgress=!!raw&&typeof raw==='object'&&Object.hasOwn(raw,'startup_progress');
+ const s=object(raw,[...(hasProgress?['startup_progress']:[]),'run_id','revision','network_revision','observed_at','local','connection','connection_detail','legacy_stop','platforms','operation','stop_receipt'],'runtime');
  if(s.run_id!==null&&(typeof s.run_id!=='string'||!/^[a-f0-9]{32}$/.test(s.run_id)))invalid('run_id requires null or 32 lowercase hex');
  integer(s.revision,'revision');integer(s.network_revision,'network_revision');timestamp(s.observed_at,'observed_at');
  oneOf(s.local,['stopped','waiting','starting','running','stopping','failed'],'local');oneOf(s.connection,['disconnected','connecting','connected','reconnecting','rejected','occupied'],'connection');
  connectionDetail(s.connection_detail);
+ if(hasProgress)decodeStartupProgress(s.startup_progress);
  if(s.legacy_stop!==null){
   const legacy=object(s.legacy_stop,['phase','platforms','error','can_recheck'],'legacy_stop');
   oneOf(legacy.phase,['processing','reconciling','blocked','completed'],'legacy_stop.phase');

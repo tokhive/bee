@@ -12,6 +12,8 @@ import (
 
 var nativeBridgeAudit = flag.String("bee-native-fixture-audit", "", "controlled native integration process audit output")
 var nativeLoginFixture = flag.Bool("bee-native-login-fixture", false, "enable controlled official subprocess and browser launcher")
+var nativeHiveFixture = flag.String("bee-native-hive-fixture", "", "isolated Hive integration fixture file")
+var nativeHiveRoot = flag.String("bee-native-hive-root", "", "persistent synthetic integration state")
 
 // The Rust integration test launches this compiled test process directly.
 // Keeping this external avoids an agent -> desktopbridge production cycle.
@@ -20,7 +22,15 @@ func TestDesktopNativeBridgeProcess(t *testing.T) {
 		t.Skip("invoked only by the controlled Rust/Go integration test")
 	}
 	ok := t.Run("serve", func(t *testing.T) {
-		device, accounts, runner, network := bee.NewDesktopNativeBridgeFixture(t, *nativeBridgeAudit)
+		var device *bee.DesktopDevice
+		var accounts *bee.DesktopAccounts
+		var runner *bee.DesktopRuntime
+		var network *bee.DesktopNetwork
+		if *nativeHiveFixture != "" {
+			device, accounts, runner, network = bee.NewDesktopHiveRetirementFixture(t, *nativeHiveFixture, *nativeHiveRoot)
+		} else {
+			device, accounts, runner, network = bee.NewDesktopNativeBridgeFixture(t, *nativeBridgeAudit)
+		}
 		var authorizer *bee.DesktopAuthorizer
 		if *nativeLoginFixture {
 			authorizer = bee.NewDesktopNativeLoginFixture(t, accounts)

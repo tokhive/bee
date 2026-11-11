@@ -642,6 +642,35 @@ test('startup recovery shows real compact phases and stops pretending to load af
  await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
 });
 
+for(const blocked of [true,false])test(`device read failure ${blocked?'during blocked recovery uses only the startup notice':'after startup keeps its own recovery action'}`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(blocked=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.deviceReadFailure=blocked?'startup recovery guard unconfirmed: local=stopped; required=clean guard or current owned running session':'GET identity HTTP 503';
+  w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>{
+   if(['startup_status','startup_query','startup_recheck'].includes(command)){w.calls.push({command,args});return Promise.resolve({state:blocked?'blocked':'ready',failure:blocked?{code:'RECOVERY_SESSION_UNCONFIRMED',message:'previous_session_active=true clean=false; remote ownership unconfirmed'}:null,instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false});}
+   if(command==='device_status'&&w.deviceReadFailure){w.calls.push({command,args});return Promise.resolve({result:{error:{code:'DEVICE_OPERATION_FAILED',message:w.deviceReadFailure}}});}
+   return invoke(command,args);
+  };
+ },blocked);
+ await page.goto('/');await nav(page,'AI 账号').click();
+ await expect.poll(async()=>(await calls(page,'device_status')).length).toBeGreaterThan(0);
+ const notice=page.getByTestId('startup-recovery'),recheck=page.getByRole('button',{name:'重新检查设备',exact:true});
+ await expect(page.getByRole('alert')).toHaveCount(1);
+ if(blocked){
+  await expect(notice).toContainText('上次运行未确认安全结束，暂未重新启动服务。');
+  await expect(notice.locator('details')).not.toHaveAttribute('open');await expect(recheck).toHaveCount(0);await expect(page.getByText('查看失败详情',{exact:true})).toHaveCount(0);
+  await notice.getByRole('button',{name:'核对结果',exact:true}).click();expect((await calls(page,'startup_query')).length).toBe(1);expect(await calls(page,'startup_recheck')).toEqual([]);await expect(page.getByRole('alert')).toHaveCount(1);
+  await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(recheck).toHaveCount(0);await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+  await page.locator('.native-diagnostic-evidence > summary').click();await expect(page.locator('.native-diagnostic-evidence')).toContainText('startup recovery guard unconfirmed: local=stopped');
+  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'startup_retry')).toEqual([]);
+ }else{
+  await expect(notice).toHaveCount(0);await expect(page.getByRole('alert')).toContainText('GET identity HTTP 503');await expect(recheck).toBeEnabled();
+  await page.evaluate(()=>{(window as any).deviceReadFailure=null;});await recheck.click();
+  await expect(page.getByRole('alert')).toHaveCount(0);await expect(recheck).toHaveCount(0);await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toBeVisible();
+ }
+});
+
 test('startup automatic observation ends at sixty seconds without replaying recovery',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?(w.calls.push({command,args}),Promise.resolve({state:'checking',failure:null,instance:'b'.repeat(32),binding_revision:null,network_revision:null,observed_at:null,revision:1})):invoke(command,args);});

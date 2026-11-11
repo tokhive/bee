@@ -63,3 +63,12 @@
 - 交付：[完整 Claude 草稿](20261111-145858-claude-compact-sync/draft.html?scene=claude-compact-normal&theme=light&size=wide)。资源内联，可独立打开；未更新 index.html。
 - 同步账号／状态／额度／操作四列、未知与历史额度标记、错误证据浮层和步骤展示；保留 Claude 终端登录差异，新增 4 个紧凑布局起点。
 - 验证范围见预览 README 的本轮记录；HTML 交互不代表真实登录或业务验收。
+
+
+## 20261111-150658 Claude 方案确认纳入主预览
+
+- 时区：Asia/Shanghai；状态：**已认可**，依据：用户“更新到主预览吧”。认可范围为 20261111-145858 的 Claude 同步方案；此前该条“待评审”状态由本记录更新，冻结 HTML 不改写。
+- 修改前复用 [完整主预览](20261111-145548-before-claude-sync/index.html)，已确认与本轮修改前字节一致。
+- [累计主预览完整快照](20261111-150658-approved-claude/index.html?scene=claude-compact-unknown&theme=light&size=narrow)：保留原有 240 个起点，加入 220 个 Claude 起点及必要的主入口导航连接。
+- 同目录冻结 baseline.html、before-startup.html、claude-baseline.html，旧版对照入口不依赖当前草稿。
+- 验证范围见预览 README；仅静态模拟，主入口路径不变。

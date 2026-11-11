@@ -1,0 +1,63 @@
+
+p0-full.log
+ℹ pass 333
+ℹ fail 0
+ℹ pass 37
+ℹ fail 0
+  338 failed
+  169 passed (1.5m)
+
+p0-device.log
+ℹ pass 62
+ℹ fail 0
+  15 failed
+    [chromium] › tests/account-auto-read.spec.ts:6:1 › account entry reads each source once and never performs automatic writes or sign-in
+    [chromium] › tests/account-auto-read.spec.ts:18:1 › selected matching candidate automatically reads official quota once and retains the raw percentage
+    [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling select retries refreshed snapshots at ten seconds without replaying actions
+    [chromium] › tests/account-auto-read.spec.ts:79:47 › reconciling confirm_change retries refreshed snapshots at ten seconds without replaying actions
+    [chromium] › tests/account-auto-read.spec.ts:171:1 › NativeApp reconciling coordinator waits exactly ten seconds without replaying writes
+    [chromium] › tests/device-recovery.spec.ts:21:1 › revoked credential recovery requires local consent, external approval and explicit new owner adoption
+    [chromium] › tests/device-recovery.spec.ts:43:1 › saved revoked identity and missing selected source keep all pages reachable without account or runtime writes
+    [chromium] › tests/native-accounts.spec.ts:60:1 › account page automatically reads sources; selected quotas preserve 120%, unknown windows and detail focus
+    [chromium] › tests/native-accounts.spec.ts:68:1 › source edits reject late automatic results; platform failures remain independent with English and dark theme
+    [chromium] › tests/native-accounts.spec.ts:77:1 › overview and accounts share per-platform pause state; resume never starts contribution
+    [chromium] › tests/native-accounts.spec.ts:81:1 › official scope diagnostics retain the local candidate and expired authorization never offers a valid quota
+    [chromium] › tests/native-accounts.spec.ts:88:1 › device verification failure permits local reads and preserves selected historical Hive quota
+    [chromium] › tests/native-accounts.spec.ts:93:1 › approved shared rows show saved identity and a keyboard-accessible compact detail
+    [chromium] › tests/native-accounts.spec.ts:109:1 › unconnected candidate shows its target and exact pause impact before connecting
+    [chromium] › tests/native-accounts.spec.ts:128:1 › candidate expiring at the safety boundary explains zero-write refusal
+  2 interrupted
+    [chromium] › tests/native-accounts.spec.ts:134:85 › selected source source_missing stays scoped and leaves the other platform usable
+    [chromium] › tests/native-accounts.spec.ts:134:85 › selected source permission_denied stays scoped and leaves the other platform usable
+  259 did not run
+  81 passed (2.4m)
+
+p0-preview.log
+  5 failed
+    [chromium] › tests/preview-accounts.spec.ts:27:1 › preview login creates a candidate and requires explicit connection before cross-page paused feedback
+    [chromium] › tests/preview-accounts.spec.ts:47:1 › preview failed login recovers in the same account flow and cancellation prevents a late result
+    [chromium] › tests/preview-accounts.spec.ts:65:1 › preview account change keeps the old selection until confirmation and then remains paused
+    [chromium] › tests/preview-accounts.spec.ts:85:1 › preview source conditions can recover through the formal source editor without launching login
+    [chromium] › tests/preview-accounts.spec.ts:104:1 › preview Claude login controls follow its current operation and preserve the inline confirmation
+  2 interrupted
+    [chromium] › tests/preview-device.spec.ts:20:1 › formal first pairing saves the entered Hive and name and becomes online without starting contribution
+    [chromium] › tests/preview-device.spec.ts:47:1 › revoked credential recovery requires consent and explicit owner adoption and keeps all pages usable
+  76 did not run
+  16 passed (55.1s)
+
+p0-claude-final.log
+ℹ pass 62
+ℹ fail 0
+  9 passed (9.3s)
+
+p0-retry.log
+  1 passed (16.8s)
+
+p0-baseline-failure.log
+  1 failed
+    [chromium] › tests/account-auto-read.spec.ts:6:1 › account entry reads each source once and never performs automatic writes or sign-in
+
+p0-build-final.log
+✓ built in 291ms
+
+p0-typecheck-final.log

@@ -147,6 +147,7 @@ test('automatic recovery traverses stale, failed, retrying and recovered states 
  await expect(card(page).getByText('可接单',{exact:true})).toBeVisible();
  test.setTimeout(45000);
  await expect(page.locator('.account-check-status>span')).toHaveText('等待自动重试…',{timeout:6000});
+ await expect(page.locator('.account-check-status time')).toHaveAttribute('datetime',/^\d{4}-\d{2}-\d{2}T.*Z$/);
  await expect(card(page).getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(card(page).getByRole('button',{name:'暂停接单'})).toBeDisabled();
  expect(await page.evaluate(()=>(window as any).__beePreviewPhase)).toBe('current');

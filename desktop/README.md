@@ -80,15 +80,43 @@ macOS 原生“编辑”菜单随应用语言切换，提供撤销、重做、�
 
 ## 开发检查
 
-Node 24.x、Go 1.27.3、Rust 1.94 工具链及对应系统原生依赖须满足脚本预检。从 Bee 仓库根执行：
+默认全套仍有待核对的历史回归失败，详见[迁移验证记录](../docs/desktop/evidence/2026-11-11-p0-retirement/README.md)；命令退出非零时不能视为通过。
+
+日常 UI、契约与 mock 回归使用同一个入口。从 Bee 仓库根执行（Node 24.x）：
+
+```sh
+npm --prefix desktop ci
+npm --prefix desktop exec -- playwright install chromium firefox webkit
+npm --prefix desktop test
+```
+
+Linux 首次准备浏览器时使用 `playwright install --with-deps chromium firefox webkit` 安装所需系统库。`npm test` 依次执行类型检查、全量 TS 单测、工具测试、原有浏览器 E2E、正式页面模拟 IPC 测试和正式场景预览；任一组失败立即退出，尚未执行的组不视为通过。
+
+| 单独运行 | 覆盖内容 |
+| --- | --- |
+| `npm --prefix desktop run typecheck` | TypeScript 类型检查 |
+| `npm --prefix desktop run test:unit` | 全部 `tests/*.test.ts`，包含 TS 调用与 Rust 原生命令的契约检查 |
+| `npm --prefix desktop run test:tooling` | 构建、打包等工具脚本 |
+| `npm --prefix desktop run test:e2e` | Chromium、Firefox、WebKit 上的原有 E2E（含隔离 demo 回归） |
+| `npm --prefix desktop run test:device` | 设备／供给／账号单测，以及 Chromium 上正式页面的模拟 IPC 测试 |
+| `npm --prefix desktop run test:preview` | Chromium 上正式场景预览入口与场景断言 |
+
+Playwright 自动启动并关闭各自的 Vite 服务。默认端口分别为 1420（E2E）、1421（正式页面）、1471（预览）；端口占用时在 macOS／Linux 可指定：
+
+```sh
+BEE_E2E_PORT=28461 BEE_DEVICE_TEST_PORT=28462 npm --prefix desktop test
+```
+
+预览也读取 `BEE_E2E_PORT`，因各组按顺序运行，可与 E2E 复用端口。测试拒绝复用已有服务，避免连到错误的数据模式。`overview-refresh-stability.spec.ts` 只由正式页面配置收集。T10 布局专项仍使用独立配置和外部预览服务，不属于这个默认入口。
+
+[主桌面 CI](../.github/workflows/desktop.yml)与 hosted macOS／Linux 的浏览器阶段调用同一 `npm test`，失败时上传日志、截图和 trace。hosted Windows 的构建流程增加全量 TS 单测；它本身不运行浏览器，主桌面 CI 的 Windows 矩阵承担统一浏览器检查。原有 Go／Rust、构建与签名校验继续保留。
+
+原生联调另需 Go 1.27.3、Rust 1.94 及对应系统依赖，满足脚本预检后执行：
 
 ```sh
 node desktop/scripts/preflight.mjs
 node desktop/scripts/prepare-tee.mjs
 npm --prefix desktop ci
-npm --prefix desktop run test:tooling
-npm --prefix desktop run test:bridge
-npm --prefix desktop run test:device
 npm --prefix desktop run build
 node desktop/scripts/build-bee.mjs
 cargo test --locked --manifest-path desktop/src-tauri/Cargo.toml
@@ -97,14 +125,7 @@ npm --prefix desktop run tauri -- dev
 
 构建实际 Bee 后再运行依赖该二进制的 Cargo 测试。安装或构建成功不等于真实 GUI／官方账号／生产签名验收通过。
 
-完整 TS 单测与正式场景检查目前需单独运行；进入 `desktop/` 后执行：
-
-```sh
-node --test tests/*.test.ts
-npm exec -- playwright test --config playwright.preview.config.ts
-```
-
-需要先安装对应 Playwright 浏览器。`playwright.device.config.ts` 覆盖正式原生页面的模拟 IPC 测试，`playwright.preview.config.ts` 覆盖正式场景入口。默认 `test:e2e` 不包含这两套完整范围；统一默认检查及 CI 仍是[开发工作流计划](../docs/superpowers/plans/2026-11-03-ui-development-workflow.md)中的未完成项。
+默认入口中的浏览器检查使用隔离数据或模拟 IPC。通过这些检查不代表真实 Hive、官方登录、原生权限或签名更新已验收；真实路径状态见[验收台账](../docs/desktop/acceptance.md)。
 
 ## 原生构建与发布
 

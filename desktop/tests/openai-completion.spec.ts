@@ -122,16 +122,16 @@ test('credential failures retain quota, deduplicate one cause and preserve indep
  await expect(card(page).locator('.oa-quota')).toHaveCount(1);
  await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
  await expect(card(page).getByText('接单保持暂停。',{exact:true})).toBeVisible();
- await card(page).getByText('查看错误详情',{exact:true}).click();
- await expect(card(page).locator('.oa-evidence .oa-error-evidence')).toHaveCount(2);
- await expect(card(page)).toContainText('EACCES');await expect(card(page)).toContainText('HTTP 403');
+ await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'错误详情'}).locator('pre')).toHaveCount(1);
+ await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('EACCES');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('HTTP 403');
  await page.screenshot({path:resolve(evidence,'formal-independent-errors-dark-narrow.png')});
- await card(page).getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
+ await page.keyboard.press('Escape');await card(page).getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
  await expect(page.getByRole('dialog').getByLabel('读取目录')).toBeVisible();expect(await writes(page)).toEqual([]);
  await page.screenshot({path:resolve(evidence,'formal-source-details-dark-narrow.png')});
 });
 
-const evidence=resolve(import.meta.dirname,'../../docs/desktop/evidence/2026-11-10-openai-alignment');
+const evidence=resolve(import.meta.dirname,'../../docs/desktop/evidence/2026-11-11-compact-list');
 for(const theme of ['light','dark'])for(const [size,width,height] of [['narrow',820,680],['wide',1080,700]] as const){
  test(`formal React and approved preview — ${theme} ${size}`,async({page})=>{
   mkdirSync(evidence,{recursive:true});await page.clock.install();await page.setViewportSize({width,height});
@@ -183,15 +183,15 @@ test('keyring missing keeps true quota and one repair action; unknown quota is n
   a.issues=[{code:'quota_exhausted',platform:'openai',fingerprint:a.selection.fingerprint,message:'Quota exhausted',notify:false}];
   a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:20,reset_at:null}];a.revision++;
  });await page.clock.runFor(11000);
- await expect(card(page).getByRole('status')).toHaveText('钥匙串中未找到 Codex 登录项');
+ await expect(card(page).getByRole('status')).toHaveText('凭证缺失');
  await expect(card(page).getByText('已用 100%',{exact:true})).toBeVisible();await expect(card(page).getByText('已用 20%',{exact:true})).toBeVisible();
- await expect(card(page).locator('.oa-actions button')).toHaveCount(1);
+ await expect(card(page).getByRole('button',{name:'修改凭证读取设置',exact:true})).toHaveCount(1);
  await expect(card(page).getByText('查看接单条件',{exact:true})).toHaveCount(0);
  const fault=await card(page).boundingBox();expect(fault!.height-normal!.height).toBeLessThan(90);
  await page.screenshot({path:resolve(evidence,'formal-keyring-compact.png')});
- await card(page).getByText('查看错误详情',{exact:true}).click();await expect(card(page).locator('.oa-error-evidence')).toHaveCount(1);
- await expect(card(page)).toContainText('security exit=44');await expect(card(page).locator('details details')).toHaveCount(0);
- await card(page).getByText('额度详情',{exact:true}).click();await expect(card(page).getByRole('progressbar')).toHaveCount(2);
+ await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'}).locator('pre')).toHaveCount(1);
+ await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('security exit=44');await expect(card(page).locator('details details')).toHaveCount(0);
+ await page.keyboard.press('Escape');await expect(card(page).getByRole('progressbar')).toHaveCount(2);
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.capabilities.forEach((c:any)=>c.windows=[]);a.revision++;});await page.clock.runFor(11000);
  await expect(card(page).locator('.quota-value')).toHaveText(['—','—']);
  expect(await writes(page)).toEqual([]);
@@ -211,14 +211,14 @@ test('different identity opens review before confirmation and Escape restores fo
 });
 
 test('approved compact preview and final frozen history keep quota in a read failure',async({page})=>{
- const frozen='history/20261110-171805-openai-compact-final';
+ const frozen='history/20261111-112027-approved-compact-list';
  for(const path of ['index.html',`${frozen}/index.html`]){
   await page.goto(`http://127.0.0.1:1497/${path}?scene=read-failed-allowed&theme=dark&size=narrow`);
   const app=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});
   await expect(app).toHaveClass(/oa-compact/);await expect(app.getByRole('progressbar')).toHaveCount(2);
   await expect(app.locator('.workflow')).toHaveCount(0);
   expect(await app.evaluate(el=>getComputedStyle(el).display)).toBe('grid');
-  await app.getByText('查看错误详情',{exact:true}).click();await expect(app).toContainText('EACCES');
+  await app.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.frameLocator('iframe').locator('#list-error-popover')).toContainText('EACCES');await page.keyboard.press('Escape');
   await app.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.frameLocator('iframe').getByLabel('读取目录')).toBeVisible();
  }
  await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-dark-narrow.png')});

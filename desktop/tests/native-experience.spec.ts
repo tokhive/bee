@@ -50,7 +50,7 @@ test('safe logs load manually with module/platform/level filters and native curs
 test('management startup failure keeps safe native logs accessible without enabling diagnostics',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
- await page.goto('/');await expect(page.getByRole('alert')).toHaveCount(1);const failure=page.locator('.status-view .problem-notice');await expect(failure).toContainText('SIDECAR_EXIT');await failure.getByText('查看失败详情',{exact:true}).click();await expect(failure).toContainText('owned management child exited: status=1');
+ await page.goto('/');await expect(page.getByRole('alert')).toHaveCount(1);const failure=page.getByTestId('startup-recovery');await expect(failure).toContainText('SIDECAR_EXIT');await failure.getByText('错误详情',{exact:true}).click();await expect(failure).toContainText('owned management child exited: status=1');
  await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);
@@ -620,4 +620,119 @@ test('system reread superseding an in-flight retry follow-up is not reported as 
  await page.getByTestId('system-check-button').click();await page.evaluate(()=>{(window as any).releaseDelivery();});await page.clock.runFor(1100);
  await expect(page.getByTestId('notification-retry-result')).toHaveText('后台检查已完成，通知状态已更新。待处理 0 · 明确失败 0 · 结果未知 0');
  await expect(page.getByRole('alert')).toHaveCount(0);expect((await calls(page,'notification_retry')).length).toBe(1);
+});
+
+test('startup recovery shows real compact phases and stops pretending to load after a block',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.startupView={state:'checking',failure:null,instance:'b'.repeat(32),binding_revision:null,network_revision:null,observed_at:null,revision:1,can_retry:false,recovering:true,progress:{stage:'checking_previous',operation_id:null,completed:null,total:null}};
+  w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?(w.calls.push({command,args}),Promise.resolve(structuredClone(w.startupView))):invoke(command,args);
+ });
+ await page.clock.install();await page.goto('/');
+ const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('正在恢复 Bee…');await expect(notice).toContainText('正在确认上次任务是否结束…');
+ await page.clock.runFor(11000);await expect(notice).toContainText('等待时间较长');
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'startup_retry')).toEqual([]);
+ await page.evaluate(()=>{const w=window as any;w.startupView={...w.startupView,revision:2,progress:{stage:'preparing_accounts',operation_id:'a'.repeat(48),completed:1,total:2}};});
+ await page.clock.runFor(2200);await expect(notice).toContainText('正在准备账号（1/2）…');
+ await page.evaluate(()=>{const w=window as any;w.startupView={...w.startupView,state:'blocked',progress:undefined,revision:3,failure:{code:'RECOVERY_SESSION_UNCONFIRMED',message:'previous_session_active=true clean=false; remote ownership unconfirmed'}};delete w.startupView.progress;});
+ await page.clock.runFor(2200);await expect(notice).toContainText('暂时无法恢复 Bee');await expect(notice).not.toContainText('正在恢复 Bee');
+ await notice.getByRole('button',{name:'核对结果',exact:true}).click();expect((await calls(page,'startup_query')).length).toBe(1);await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toBeFocused();await expect(page.getByRole('alert')).toHaveCount(1);
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'startup_retry')).toEqual([]);
+ await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+});
+
+test('startup automatic observation ends at sixty seconds without replaying recovery',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?(w.calls.push({command,args}),Promise.resolve({state:'checking',failure:null,instance:'b'.repeat(32),binding_revision:null,network_revision:null,observed_at:null,revision:1})):invoke(command,args);});
+ await page.clock.install();await page.goto('/');await expect(page.getByTestId('startup-recovery')).toContainText('正在启动 Bee…');
+ await page.clock.runFor(61000);await expect(page.getByTestId('startup-recovery')).toContainText('状态待核对');
+ const count=(await calls(page,'startup_status')).length;await page.clock.runFor(12000);expect((await calls(page,'startup_status')).length).toBe(count);expect(await calls(page,'startup_retry')).toEqual([]);
+ await page.getByTestId('startup-recovery').getByRole('button',{name:'核对结果',exact:true}).click();expect((await calls(page,'startup_query')).length).toBe(1);expect(await calls(page,'startup_retry')).toEqual([]);
+});
+
+test('failed first startup query is visible and keeps account actions unavailable until readback',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='startup_status'?Promise.reject({code:'STARTUP_READ_FAILED',message:'startup receipt channel rejected the read'}):invoke(command==='startup_query'?'startup_status':command,args);});
+ await page.goto('/');await nav(page,'AI 账号').click();
+ const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('状态待核对');
+ await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('startup receipt channel rejected the read');
+ await expect(page.getByRole('button',{name:'接入账号',exact:true})).toHaveCount(0);expect(await calls(page,'account_defaults')).toEqual([]);
+ await notice.getByRole('button',{name:'核对结果',exact:true}).click();await expect(notice).toBeHidden();
+ await expect.poll(async()=>(await calls(page,'account_defaults')).length).toBe(1);
+});
+
+test('unsupported Hive recovery gives an honest next step and no ineffective query loop',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?Promise.resolve({state:'blocked',failure:{code:'RECOVERY_SERVER_UNSUPPORTED',message:'Hive runtime recovery protocol unavailable: HTTP 404; original guard retained'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false,recovering:false}):invoke(command,args);});
+ await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('需要先升级 Hive');
+ await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toHaveCount(0);await expect(page.getByRole('alert')).toHaveCount(1);
+ await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('HTTP 404');
+ await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);
+});
+
+test('pending retirement continues the original recovery and returns to normal account reads',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let finished=false;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>{
+  if(command==='startup_retry'){w.calls.push({command,args});finished=true;}
+  if(['startup_status','startup_query','startup_retry'].includes(command))return Promise.resolve({state:finished?'ready':'blocked',failure:finished?null:{code:'RECOVERY_REMOTE_DRAINING',message:'original retirement operation retained; unfinished=true'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:finished?3:2,can_retry:!finished,recovering:false});
+  return invoke(command,args);
+ };});
+ await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('等待上次任务结束');await notice.getByRole('button',{name:'继续恢复',exact:true}).click();
+ await expect(notice).toHaveCount(0);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBeGreaterThan(0);expect((await calls(page,'startup_retry')).length).toBe(1);expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);
+});
+
+
+test('retirement conflict keeps the original cause and only offers diagnostics',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?Promise.resolve({state:'blocked',failure:{code:'RECOVERY_RETIREMENT_CONFLICT',message:'HTTP 409 runtime_preparation_conflict; original preparation retained'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false,recovering:false}):invoke(command,args);});
+ await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('Hive 拒绝结束旧会话');
+ await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);await expect(notice.getByRole('button',{name:'继续恢复',exact:true})).toHaveCount(0);
+ await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('runtime_preparation_conflict');await expect(page.getByRole('alert')).toHaveCount(1);
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);
+});
+
+
+test('startup exhausted observation immediately offers manual query and retains last confirmation',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>{
+   if(command==='startup_status'){w.calls.push({command,args});if(w.startupReadFails)return Promise.reject({code:'STARTUP_READ_FAILED',message:'startup IPC unavailable'});return Promise.resolve({state:'checking',failure:null,instance:'b'.repeat(32),binding_revision:null,network_revision:null,observed_at:new Date().toISOString(),revision:1});}
+   return invoke(command==='startup_query'?'startup_status':command,args);
+  };
+ });
+ await page.clock.install();await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('正在启动 Bee…');
+ await page.evaluate(()=>{(window as any).startupReadFails=true;});await page.clock.runFor(9500);await expect(notice.getByRole('heading')).toHaveText('状态待核对');await expect(notice).toHaveAttribute('aria-busy','false');await expect(notice).toContainText('上次确认：');
+ const count=(await calls(page,'startup_status')).length;await page.clock.runFor(20000);expect((await calls(page,'startup_status')).length).toBe(count);
+ await notice.getByRole('button',{name:'核对结果',exact:true}).click();await expect(notice).toBeHidden();expect(await calls(page,'runtime_start')).toEqual([]);
+});
+
+for(const capabilities of [undefined,[]])test(`legacy recovery capability ${capabilities?'empty':'absent'} exposes diagnostics only`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(({capabilities})=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+  if(command==='startup_status')return {state:'blocked',failure:{code:'RECOVERY_UNAVAILABLE',message:'bundled management process does not advertise read-only recovery inspection; no automatic restore submitted'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false};
+  const reply=await invoke(command,args);if(command==='bridge_status'){if(capabilities)reply.metadata.capabilities=capabilities;else delete reply.metadata.capabilities;}return reply;
+ };},{capabilities});
+ await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('暂时无法恢复 Bee');await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);
+ await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();expect(await calls(page,'startup_query')).toEqual([]);
+});
+
+test('explicit OpenAI supply recheck clears a terminal GET gate without replaying a write',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{autoService:true},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.supplyAccessDenied=true;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   const result=await invoke(command,args);
+   if(command==='supply_status'&&args.platform==='openai'&&w.supplyAccessDenied)throw {code:'SUPPLY_OPERATION_FAILED',message:'GET supply HTTP 403 access denied',details:{check:'supply_status',observed_at:new Date().toISOString(),evidence:{failure_kind:'http_rejected',http_status:'403',method:'GET'}}};
+   return result;
+  };
+ });
+ await page.clock.install();await page.goto('/');await nav(page,'AI 账号').click();
+ const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(account.getByRole('button',{name:'核对结果',exact:true})).toBeVisible();
+ const count=()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='supply_status'&&c.args.platform==='openai').length);
+ const before=await count();await page.evaluate(()=>{(window as any).supplyAccessDenied=false;});
+ await page.clock.runFor(11000);expect(await count()).toBe(before);
+ await account.getByRole('button',{name:'核对结果',exact:true}).click();await expect.poll(count).toBeGreaterThan(before);
+ await expect(account.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);
+ expect(await calls(page,'supply_set_paused')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
 });

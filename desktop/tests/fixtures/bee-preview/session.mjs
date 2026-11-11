@@ -10,7 +10,7 @@ export function installPreviewSession(scene){
  const send=(type,payload={})=>window.parent.postMessage({type,scene,session,...payload},location.origin);
  const current=()=>window.__beePreviewSession===session;
  window.__beePreviewPreferences=value=>{if(current())send('bee-preview-preferences',{theme:value.theme});};
- const announce=()=>{if(current())send('bee-preview-controls',{actions:Object.keys(window.__beeMockControls??{}),loginOperations:Object.fromEntries(['openai','claude'].map(platform=>[platform,window.accounts?.[platform]?.operation?.kind==='authorize'?window.accounts[platform].operation.id:null])),diagnosticReport:window.__beeMockDiagnosticContext?.()??null,deviceOperation:window.__beeMockDeviceContext?.()??null});};
+ const announce=()=>{if(current())send('bee-preview-controls',{actions:Object.keys(window.__beeMockControls??{}),accounts:window.__beeMockAccountContext?.()??{},loginOperations:Object.fromEntries(['openai','claude'].map(platform=>[platform,window.accounts?.[platform]?.operation?.kind==='authorize'?window.accounts[platform].operation.id:null])),diagnosticReport:window.__beeMockDiagnosticContext?.()??null,deviceOperation:window.__beeMockDeviceContext?.()??null});};
  window.__beePreviewAnnounceReady=()=>{if(current()){send('bee-preview-ready');announce();}};
  const original=window.__TAURI_INTERNALS__.invoke;
  const activity={accountReads:0,accountReadsStarted:0};window.__beePreviewActivity=activity;

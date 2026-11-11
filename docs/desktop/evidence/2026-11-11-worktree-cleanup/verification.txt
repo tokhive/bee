@@ -1,0 +1,48 @@
+2026-11-11 Bee 提交前最终验证摘要（Asia/Shanghai）
+原始日志在 .cache/commit-cleanup/；测试均使用受控数据。
+
+
+go-final.log
+ok  	github.com/tokhive/bee/agent	145.193s
+ok  	github.com/tokhive/bee/beewire	(cached)
+ok  	github.com/tokhive/bee/cmd/bee	11.853s
+ok  	github.com/tokhive/bee/desktopbridge	3.015s
+ok  	github.com/tokhive/bee/logx	(cached)
+ok  	github.com/tokhive/bee/relay	(cached)
+ok  	github.com/tokhive/bee/telemetry	(cached)
+
+rust-final.log
+test result: ok. 307 passed; 0 failed; 5 ignored; 0 measured; 0 filtered out; finished in 37.95s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+test result: ok. 76 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.47s
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+frontend-final.log
+✓ built in 835ms
+
+browser-final.log
+  94 passed (1.3m)
+
+openai-final.log
+  13 passed (22.8s)
+
+integration/hive-native.log
+--- PASS: TestRuntimeRecoveryNativeDesktop (30.31s)
+--- PASS: TestRuntimeRecoveryFencesOldRequestsPreservesPauseAndSurvivesRestart (0.65s)
+--- PASS: TestRuntimeRecoveryWaitsForAlreadyAdmittedSupplyWrite (0.47s)
+--- PASS: TestRuntimeRecoveryKeepsUnfinishedWorkAndOriginalPreparationBlocked (0.64s)
+--- PASS: TestRuntimeRecoveryRejectsPreparationFingerprintConflictWithoutReleasingBarrier (0.67s)
+ok  	github.com/tokhive/hive/hive/internal/integration	34.268s
+
+node-final.log
+ℹ tests 543
+ℹ suites 0
+ℹ pass 542
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 45840.632375
+
+compact-final.log
+  5 passed (6.8s)

@@ -4,10 +4,11 @@
 <title>Bee · AI 账号待评审稿</title>
 <!-- STATIC REVIEW DRAFT: shared OpenAI scenarios; existing Bee shell and Claude content retained. No real business calls. -->
 <style>
-*{box-sizing:border-box}body{margin:0;background:#edf0f3;color:#30312e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}body.dark{background:#141619;color:#e5e4df;color-scheme:dark}.studio{padding:20px 24px 24px}.toolbar{display:flex;gap:18px;align-items:end;flex-wrap:wrap;max-width:1100px;margin:0 auto}.toolbar label{display:flex;align-items:center;gap:8px;color:#63666b;font-size:12px}.dark .toolbar label,.dark .hint{color:#b4b7bb}select,button{font:inherit;color:inherit;background:#fff;border:1px solid #cfd3d8;border-radius:6px;min-height:34px;padding:5px 10px}button{cursor:pointer}.dark select,.dark button{background:#242421;border-color:#45433d}select:focus-visible,button:focus-visible{outline:2px solid #805a20;outline-offset:3px}.hint{max-width:1100px;margin:13px auto 18px;color:#62666d;min-height:21px;font-size:12px}.stage{overflow:auto;padding:2px 2px 10px}iframe{display:block;width:1080px;height:700px;margin:0 auto;border:1px solid #d4d6d9;border-radius:10px;background:white;box-shadow:0 8px 35px #2233440b}iframe.narrow{width:820px;height:680px}.dark iframe{border-color:#45433d}@media(max-width:870px){.studio{padding:14px 12px}.stage iframe{margin-left:0}.toolbar{gap:10px}}
+*{box-sizing:border-box}body{margin:0;background:#edf0f3;color:#30312e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}body.dark{background:#141619;color:#e5e4df;color-scheme:dark}.studio{padding:20px 24px 24px}.toolbar{display:flex;gap:18px;align-items:end;flex-wrap:wrap;max-width:1100px;margin:0 auto}.toolbar label{max-width:100%;display:flex;align-items:center;gap:8px;color:#63666b;font-size:12px}.toolbar select{min-width:0;max-width:100%}#flow{width:180px}#scene{width:300px}.dark .toolbar label,.dark .hint{color:#b4b7bb}select,button{font:inherit;color:inherit;background:#fff;border:1px solid #cfd3d8;border-radius:6px;min-height:34px;padding:5px 10px}button{cursor:pointer}.dark select,.dark button{background:#242421;border-color:#45433d}select:focus-visible,button:focus-visible{outline:2px solid #805a20;outline-offset:3px}.hint{max-width:1100px;margin:13px auto 18px;color:#62666d;min-height:21px;font-size:12px}.stage{overflow:auto;padding:2px 2px 10px}iframe{display:block;width:1080px;height:700px;margin:0 auto;border:1px solid #d4d6d9;border-radius:10px;background:white;box-shadow:0 8px 35px #2233440b}iframe.narrow{width:820px;height:680px}.dark iframe{border-color:#45433d}@media(max-width:870px){.studio{padding:14px 12px}.stage iframe{margin-left:0}.toolbar{gap:10px}}
 </style></head><body><div class="studio">
 <div class="toolbar" aria-label="预览工具栏">
-<label>场景<select id="scene"><optgroup label="接入"><option value="onboarding">首次接入</option></optgroup><optgroup label="接单"><option value="ready">可接单</option></optgroup><optgroup label="授权问题"><option value="recovery">故障恢复</option></optgroup><optgroup label="变更与恢复"><option value="relogin-different">主动重新登录（返回不同账号）</option><option value="change">发现不同账号，待确认</option></optgroup></select></label>
+<label>一级场景<select id="flow"></select></label>
+<label>二级场景<select id="scene"></select></label>
 <label>外观<select id="theme"><option value="light">浅色</option><option value="dark">深色</option></select></label>
 <label>窗口<select id="size"><option value="narrow">紧凑 · 820 × 680</option><option value="wide">宽屏 · 1080 × 700</option></select></label>
 <button id="reset">重置场景</button>
@@ -1267,10 +1268,15 @@ for(const source of Object.values(claudeBaseline)){
 }
 catalog['claude-terminal-lost']={...catalog['claude-first-login-wait'],key:'claude-terminal-lost',label:'找不到登录窗口 · Dock 切换指引'};
 
-$('scene').innerHTML='';
-for(const group of [...new Set(Object.values(catalog).map(s=>s.group))]){const el=document.createElement('optgroup');el.label=group;for(const s of Object.values(catalog).filter(s=>s.group===group))el.append(new Option('　'+s.label,s.key));$('scene').append(el);}
+// Keep first-login states together, including the completion acknowledgement.
+function flowOf(s){if(s.platform==='claude')return s.group;if(s.key==='onboarding'||s.key.startsWith('first-'))return '首次登录与接入';if(s.group.startsWith(rel))return '重新登录';return ({[intake]:'已登录账号接入',[login]:'首次登录与接入',[prep]:'准备接单',[supply]:'暂停与恢复',['接单 / 额度等待']:'额度等待',[auth]:'授权与读取修复',[change]:'更换账号',[sync]:'重连与状态更新',[view]:'详情与辅助操作'})[s.group]||s.group;}
+const flows=[...new Set(Object.values(catalog).map(flowOf))];
+for(const name of flows)$('flow').append(new Option(name,name));
+function selectScene(key){const flow=flowOf(catalog[key]);if($('flow').value!==flow||!Array.from($('scene').options).some(o=>o.value===key)){
+ $('flow').value=flow;$('scene').replaceChildren(...Object.values(catalog).filter(s=>flowOf(s)===flow).map(s=>new Option(s.label,s.key)));
+ }$('scene').value=key;}
 const params=new URLSearchParams(location.search),aliases={recovery:'expired-paused',change:Object.values(catalog).find(s=>s.phase==='change'&&s.refs==='CHG-01').key};
-$('scene').value=catalog[params.get('scene')]?params.get('scene'):aliases[params.get('scene')]||'onboarding';
+selectScene(catalog[params.get('scene')]?params.get('scene'):aliases[params.get('scene')]||'onboarding');
 for(const key of ['theme','size'])if([...$(key).options].some(o=>o.value===params.get(key)))$(key).value=params.get(key);
 let selectedStart=$('scene').value;
 function send(action,value){frame.contentWindow.postMessage({type:'bee-design-control',action,value},'*');}
@@ -1278,8 +1284,9 @@ function remember(){const url=new URL(location.href);for(const key of ['scene','
 function presentation(){document.body.classList.toggle('dark',$('theme').value==='dark');frame.classList.toggle('narrow',$('size').value==='narrow');send('theme',$('theme').value);remember();}
 function hint(key){const s=catalog[key];$('hint').textContent=(s.platform==='claude'?'待评审 · macOS · 静态模拟 · ':'静态模拟 · ')+s.group+' · '+s.label+'。直接选择停留；产品操作按预设推进。'+(s.platform==='claude'?' 官方终端与浏览器结果均为预设，不会打开真实终端。':'')+(s.phase==='restart-blocked'||s.phase.includes('long')||s.phase.includes('blocked')?' 此分支的安全恢复出口仍待接口补齐，草稿不模拟成功。':'');}
 let activeTemplate=null;
-function reset(){ $('scene').value=selectedStart;const name=catalog[selectedStart].platform==='claude'?'claude-template':'app-template';if(activeTemplate!==name){activeTemplate=name;frame.srcdoc=$(name).innerHTML;hint(selectedStart);remember();return;}const currentCatalog=Object.fromEntries(Object.entries(catalog).filter(([,s])=>(s.platform==='claude')===(name==='claude-template')));send('reset',{key:selectedStart,model:catalog[selectedStart],catalog:currentCatalog});hint(selectedStart);remember();}
+function reset(){selectScene(selectedStart);const name=catalog[selectedStart].platform==='claude'?'claude-template':'app-template';if(activeTemplate!==name){activeTemplate=name;frame.srcdoc=$(name).innerHTML;hint(selectedStart);remember();return;}const currentCatalog=Object.fromEntries(Object.entries(catalog).filter(([,s])=>(s.platform==='claude')===(name==='claude-template')));send('reset',{key:selectedStart,model:catalog[selectedStart],catalog:currentCatalog});hint(selectedStart);remember();}
+$('flow').onchange=()=>{selectedStart=Object.values(catalog).find(s=>flowOf(s)===$('flow').value).key;reset();};
 $('scene').onchange=()=>{selectedStart=$('scene').value;reset();};$('reset').onclick=reset;$('theme').onchange=presentation;$('size').onchange=presentation;
-window.addEventListener('message',e=>{if(e.source!==frame.contentWindow)return;if(e.data?.type==='bee-openai-review'){selectedStart='onboarding';reset();return;}if(e.data?.type==='bee-oa-position'&&catalog[e.data.scene]){$('scene').value=e.data.scene;hint(e.data.scene);}if(e.data?.type==='bee-design-ready'){reset();presentation();}});
+window.addEventListener('message',e=>{if(e.source!==frame.contentWindow)return;if(e.data?.type==='bee-openai-review'){selectedStart='onboarding';reset();return;}if(e.data?.type==='bee-oa-position'&&catalog[e.data.scene]){selectScene(e.data.scene);hint(e.data.scene);}if(e.data?.type==='bee-design-ready'){reset();presentation();}});
 reset();presentation();
 </script></body></html>

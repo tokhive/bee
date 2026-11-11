@@ -285,7 +285,13 @@ async fn sent_deadline_and_abandoned_caller_preserve_live_session() {
         assert_eq!(bridge.0.capacity.available_permits(), 15);
         std::fs::write(control.with_extension("json.release"), b"release").unwrap();
         bridge.ping().await.unwrap();
-        assert_eq!(bridge.0.capacity.available_permits(), 16);
+        // Ping may overtake the abandoned account read. Wait for that original
+        // response to release its permit instead of assuming response order.
+        timeout(Duration::from_secs(2), async {
+            while bridge.0.capacity.available_permits() != 16 {
+                tokio::task::yield_now().await;
+            }
+        }).await.expect("original account read did not release capacity");
         bridge.stop().await.unwrap();
     }
 }
@@ -376,7 +382,7 @@ async fn owned_exit_reclaims_full_budget_before_internal_requests() {
         }));
     }
     timeout(Duration::from_secs(2), async {
-        while bridge.0.capacity.available_permits() != 0 || bridge.0.requests.capacity() != 16 {
+        while bridge.0.capacity.available_permits() != 0 || bridge.0.requests.lock().unwrap().capacity() != 16 {
             tokio::task::yield_now().await;
         }
     })
@@ -1315,10 +1321,8 @@ async fn unsent_mpsc_requests_keep_terminal_evidence() {
     spec.timeout = Duration::from_millis(150);
     let bridge = Bridge::start(spec);
     let (reply, receive) = oneshot::channel();
-    bridge
-        .0
-        .requests
-        .send(Request {
+    let sender=bridge.0.requests.lock().unwrap().clone();
+    sender.send(Request {
             exit_request: false,
             method: "ping",
             params: serde_json::json!({}),
@@ -2073,4 +2077,19 @@ async fn on_time_invalid_nested_failures_revoke_owned_session() {
         assert_eq!(status.state, BridgePhase::Failed);
         assert!(bridge.pending_requests().requests.is_empty());
     }
+}
+
+#[tokio::test]
+async fn explicit_management_reconnect_reaps_old_child_and_respects_exit_freeze() {
+    let bridge=Bridge::start(fixture("owned-exit"));
+    let mut statuses=bridge.subscribe();
+    while statuses.borrow_and_update().state==BridgePhase::Starting {statuses.changed().await.unwrap();}
+    bridge.stop().await.unwrap();
+    bridge.reconnect().await.unwrap();
+    while statuses.borrow_and_update().state==BridgePhase::Starting {statuses.changed().await.unwrap();}
+    assert_eq!(bridge.status().state,BridgePhase::Ready);
+    assert!(!bridge.0.startup_verified.load(Ordering::SeqCst));
+    bridge.freeze_for_exit();
+    assert_eq!(bridge.reconnect().await.unwrap_err().code,"OWNED_EXIT_PENDING");
+    bridge.stop().await.unwrap();
 }

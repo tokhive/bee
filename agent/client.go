@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/relay"
 )
 
@@ -64,6 +65,14 @@ func httpClient() *http.Client {
 }
 
 func call(ctx context.Context, client *http.Client, origin, path, method, secret string, input, output any) error {
+	return callWithEpoch(ctx, client, origin, path, method, secret, "", input, output)
+}
+
+func callState(ctx context.Context, client *http.Client, state localState, path, method string, input, output any) error {
+	return callWithEpoch(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, input, output)
+}
+
+func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
@@ -79,6 +88,9 @@ func call(ctx context.Context, client *http.Client, origin, path, method, secret
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
 	req.Header.Set("User-Agent", userAgent())
+	if epoch != "" {
+		req.Header.Set(beewire.RuntimeEpochHeader, epoch)
+	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
 	}
@@ -173,7 +185,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
-		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}}})
+		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}})
 		cancel()
 		metrics.connect(connectStart, err)
 		handshakeConnected := err == nil
@@ -229,7 +241,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 					var status struct {
 						Status string `json:"status"`
 					}
-					statusErr := call(statusCtx, httpClient(), state.Hive, "/api/bee/supply-status", "GET", state.Credential, nil, &status)
+					statusErr := callState(statusCtx, httpClient(), state, "/api/bee/supply-status", "GET", nil, &status)
 					stopStatus()
 					if statusErr == nil && status.Status == "codex_authorization_rejected" {
 						notify(out, slog.LevelError, "connect", "upstream rejected Codex authorization; supply stopped; update the official login and restart Bee, then have the operator verify and restart Hive to restore supply")
@@ -281,7 +293,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			}
 			lastFailure = observedConnectionFailure(err, response, state, path, "connect")
 			emit("rejected", "halted", nil)
-			identityErr := call(ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, nil)
+			identityErr := callState(ctx, httpClient(), state, "/api/bee/identity", "GET", nil, nil)
 			if replacedDevice(identityErr, out) {
 				return nil
 			}

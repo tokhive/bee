@@ -153,7 +153,16 @@ async fn native_auto_service_through_real_go_transport_and_controlled_hive() {
         v["local"] == "stopped" && v["operation"]["state"] == "succeeded"
     })
     .await;
-    bridge.restore_when_ready().await.unwrap();
+    assert_eq!(bridge.inspect_recovery().await.unwrap().state, "eligible");
+    let manager = crate::updater::UpdateManager::new(
+        "0.1.0", crate::updater::UpdateStore::new(audit.path().join("update.json")),
+    ).unwrap();
+    let preferences = crate::preferences::PreferencesStore::new(audit.path().join("preferences.json"));
+    crate::update_install::verify_startup_progress(&manager, &bridge, preferences.read(), "stable", &|progress| {
+        progress.validate().unwrap();
+    }, false).await.unwrap();
+    let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+    assert_eq!(journal.load().unwrap().unwrap().phase,"succeeded");
     let reopened = observe(&bridge, |v| {
         v["local"] == "running"
             && v["platforms"]["openai"]["supply"]["paused"] == false

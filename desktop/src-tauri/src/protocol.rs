@@ -277,6 +277,8 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "runtime_configure_network",
             "runtime_enable_presence",
             "runtime_verify",
+            "runtime_inspect_recovery",
+            "runtime_reconcile_recovery",
             "network_status",
             "network_test",
             "notification_snapshot",
@@ -794,6 +796,10 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(presence_candidates);
+    let inspection_candidates:Vec<_>=candidates.iter().filter(|v|v.iter().any(|m|m=="runtime_restore")).map(|v|{let mut v=v.clone();let index=v.iter().position(|m|m=="runtime_verify"||m=="device_recovery_prepare").unwrap_or(v.len());v.insert(index,"runtime_inspect_recovery".into());v}).collect();
+    candidates.extend(inspection_candidates);
+    let retirement_candidates:Vec<_>=candidates.iter().filter_map(|v|{let index=v.iter().position(|m|m=="runtime_inspect_recovery")?;let mut v=v.clone();v.insert(index+1,"runtime_reconcile_recovery".into());Some(v)}).collect();
+    candidates.extend(retirement_candidates);
     let login_candidates: Vec<_> = candidates.iter().filter_map(|group| {
         let index = group.iter().position(|m| m == "authorize_cancel")?;
         let mut group = group.clone();

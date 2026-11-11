@@ -35,6 +35,12 @@ type DeviceContext interface {
 	Context(context.Context) (bee.DesktopDeviceContext, error)
 }
 type StartupVerifier interface{ VerifyStartup(context.Context) error }
+type RecoveryInspector interface {
+	InspectRecovery(context.Context) bee.DesktopRecoveryInspection
+}
+type RecoveryReconciler interface {
+	ReconcileRecovery(context.Context) bee.DesktopRecoveryInspection
+}
 
 type Supplies interface {
 	SupplyStatus(context.Context, string) (bee.DesktopSupply, error)
@@ -79,6 +85,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	recoveries, hasRecovery := devices.(DeviceRecovery)
 	contexts, hasContext := devices.(DeviceContext)
 	verifier, hasVerifier := runner.(StartupVerifier)
+	inspector, hasInspector := runner.(RecoveryInspector)
+	reconciler, hasReconciler := runner.(RecoveryReconciler)
 	supplies, hasSupplies := devices.(Supplies)
 	notifications, hasNotifications := accounts.(Notifications)
 	hasNotifications = hasNotifications && (diagnosticService != nil || network != nil)
@@ -194,6 +202,12 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasContext {
 					capabilities = append(capabilities, "device_context")
 				}
+				if hasInspector {
+					capabilities = append(capabilities, "runtime_inspect_recovery")
+				}
+				if hasReconciler {
+					capabilities = append(capabilities, "runtime_reconcile_recovery")
+				}
 				if hasVerifier {
 					capabilities = append(capabilities, "runtime_verify")
 				}
@@ -238,6 +252,14 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 						Context bee.DesktopDeviceContext `json:"context"`
 					}{value}
 				}
+			case hasInspector && req.Method == "runtime_inspect_recovery":
+				answer.Result = struct {
+					Recovery bee.DesktopRecoveryInspection `json:"recovery"`
+				}{inspector.InspectRecovery(ctx)}
+			case hasReconciler && req.Method == "runtime_reconcile_recovery":
+				answer.Result = struct {
+					Recovery bee.DesktopRecoveryInspection `json:"recovery"`
+				}{reconciler.ReconcileRecovery(ctx)}
 			case hasVerifier && req.Method == "runtime_verify":
 				if err := verifier.VerifyStartup(ctx); err != nil {
 					answer.Result = struct {

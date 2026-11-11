@@ -8,3 +8,5 @@ mod runtime_protocol;
 mod network;
 #[path = "../src/preferences.rs"]
 mod preferences;
+#[path = "../src/authorize_protocol.rs"]
+mod authorize_protocol;

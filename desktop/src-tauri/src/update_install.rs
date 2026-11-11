@@ -193,6 +193,16 @@ pub(crate) async fn verify_startup(
     preferences: crate::preferences::PreferencesSnapshot,
     current_channel: &str,
 ) -> Result<(), BridgeError> {
+    verify_startup_progress(manager, bridge, preferences, current_channel, &|_| {}, false).await
+}
+pub(crate) async fn verify_startup_progress(
+    manager: &UpdateManager,
+    bridge: &crate::sidecar::Bridge,
+    preferences: crate::preferences::PreferencesSnapshot,
+    current_channel: &str,
+    progress: &(impl Fn(crate::startup_recovery::RecoveryProgress) + Send + Sync),
+    manual_retry: bool,
+) -> Result<(), BridgeError> {
     bridge.check_restore_admission()?;
     let pending = manager.lock()?.persistent.pending_update.clone();
     let mut restore_attempted = false;
@@ -208,8 +218,41 @@ pub(crate) async fn verify_startup(
         }
         // S1 verifies the bundled child, protocol, pairing, account format, pending
         // operations and saved running/paused intent. Admission alone is insufficient.
+        progress(crate::startup_recovery::RecoveryProgress::stage("checking_previous"));
+        let mut inspection = bridge.inspect_recovery().await?;
+        if inspection.requires_retirement() {
+            inspection=bridge.reconcile_recovery().await?;
+        }
+        if let Some(cause)=inspection.failure { return Err(cause); }
+        let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+        let current_instance=bridge.status().metadata.ok_or_else(||error("RECOVERY_CONTEXT_INVALID","management metadata missing after session retirement"))?.instance;
+        journal.retire_previous(&inspection,&current_instance)?;
+        let previous=journal.observe(bridge).await?;
+        if let Some(old)=previous.as_ref() {
+            if old.phase=="failed" && manual_retry {bridge.0.restored.store(false,std::sync::atomic::Ordering::SeqCst);}
+            else if !["succeeded","retired"].contains(&old.phase.as_str()) {
+                return Err(old.failure.clone().unwrap_or_else(||error("RECOVERY_RESULT_UNCONFIRMED",format!("prior recovery attempt={} operation={:?} phase={}; query original result before retry; no restore submitted",old.attempt_id,old.operation_id,old.phase))));
+            }
+        }
+        let status=bridge.status();
+        let instance=status.metadata.ok_or_else(||error("RECOVERY_CONTEXT_INVALID","management metadata missing before restore"))?.instance;
+        let local=bridge.device_context().await?;
+        if local.instance!=instance || crate::protocol::device_context_state(&local.result)?.binding_revision!=inspection.binding_revision {
+            return Err(error("STARTUP_CONTEXT_CHANGED","binding or instance changed after recovery inspection; no restore submitted"));
+        }
+        let runtime=bridge.runtime_snapshot().await?;
+        let network=runtime.result["runtime"]["network_revision"].as_u64().ok_or_else(||error("RECOVERY_CONTEXT_INVALID","runtime network revision missing"))?;
+        let mut record=crate::startup_recovery::RecoveryRecord{version:1,attempt_id:format!("{:032x}",time::OffsetDateTime::now_utc().unix_timestamp_nanos() as u128),instance,binding_revision:inspection.binding_revision,binding_identity:inspection.binding_identity,network_revision:network,previous_run_id:inspection.previous_run_id,account_revision:inspection.account_revision,intent_running:inspection.intent_running,trigger:if manual_retry{"manual"}else{"automatic"}.into(),previous_attempt_id:previous.as_ref().map(|v|v.attempt_id.clone()),operation_id:None,phase:"submitted".into(),failure:None};
+        journal.save(&record)?;
         restore_attempted = true;
-        bridge.restore_when_ready().await?;
+        let restored=bridge.restore_with_progress(&|p| { progress(p); }, Some((&journal,&mut record))).await;
+        if record.phase!="failed" {
+            record.phase=if restored.is_ok(){"succeeded"}else{"unknown"}.into();
+            record.failure=restored.as_ref().err().cloned();
+        }
+        // Unknown submissions stay unresolved even when cleanup later succeeds.
+        journal.save(&record)?;
+        restored?;
         bridge.check_restore_admission()?;
         if let Some(pending) = &pending {
             let version = manager.snapshot()?.current_version;

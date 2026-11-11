@@ -7,13 +7,18 @@ mod diagnostics;
 mod diagnostics_native;
 mod diagnostics_protocol;
 mod experience;
+mod startup_recovery;
 mod lifecycle;
+// Native acceptance probes share the production notification locale policy.
+pub use lifecycle::{NativeLanguage, NativeLocale};
 mod navigation;
 mod network;
 mod network_native;
 mod network_protocol;
 #[cfg(test)]
 mod native_integration_tests;
+#[cfg(all(test, unix))]
+mod native_retirement_tests;
 mod notification_poll;
 mod notifications;
 mod preferences;
@@ -66,6 +71,8 @@ pub fn run() {
             commands::bridge_pending_requests,
  commands::startup_status,
  commands::startup_recheck,
+ commands::startup_retry,
+ commands::startup_query,
  commands::device_context,
 commands::device_recovery_prepare,
 commands::device_recovery_confirm,
@@ -162,11 +169,8 @@ commands::device_recovery_status,
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
             let updates=updater::setup(app.handle()).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
-            let preferences=app.state::<preferences::PreferencesStore>().read();
             let bridge = sidecar::Bridge::bundled();
-            if updates.has_pending().map_err(|e|std::io::Error::other(e.message))? || preferences.error.is_some() {
-                update_install::hold_startup(&bridge);
-            }
+            update_install::hold_startup(&bridge);
             let mut statuses = bridge.subscribe();
             let handle = app.handle().clone();
             tauri::async_runtime::spawn(async move {

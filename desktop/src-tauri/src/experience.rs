@@ -21,6 +21,10 @@ pub(crate) struct StartupStatus {
     pub network_revision: Option<u64>,
     pub observed_at: Option<String>,
     pub revision: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub progress: Option<crate::startup_recovery::RecoveryProgress>,
+    pub can_retry: bool,
+    pub recovering: bool,
 }
 impl Default for StartupStatus {
     fn default() -> Self {
@@ -32,6 +36,9 @@ impl Default for StartupStatus {
             network_revision: None,
             observed_at: None,
             revision: 0,
+            progress: None,
+            can_retry: false,
+            recovering: false,
         }
     }
 }
@@ -74,12 +81,18 @@ impl StartupGate {
         self.ready.store(false, Ordering::Release);
         let mut status = self.status.lock().unwrap_or_else(|v| v.into_inner());
         status.state = "checking".into();
+        status.progress = None;
+        status.can_retry = false;
         status.failure = None;
         status.instance = instance;
         status.binding_revision = None;
         status.network_revision = None;
         status.observed_at = None;
         status.revision += 1;
+    }
+    fn progress(&self, progress: crate::startup_recovery::RecoveryProgress) {
+        let mut status=self.status.lock().unwrap_or_else(|v|v.into_inner());
+        if status.state=="checking" && status.progress.as_ref()!=Some(&progress) {status.progress=Some(progress);status.revision+=1;status.observed_at=time::OffsetDateTime::now_utc().format(&time::format_description::well_known::Rfc3339).ok();}
     }
     fn finish(&self, result: Result<CheckContext, BridgeError>) {
         let mut status = self.status.lock().unwrap_or_else(|v| v.into_inner());
@@ -217,20 +230,67 @@ async fn prerequisites(
     context(bridge, store).await
 }
 pub(crate) async fn startup<R: tauri::Runtime>(app: tauri::AppHandle<R>, bridge: Bridge) {
+    startup_mode(app,bridge,false).await;
+}
+pub(crate) async fn retry<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge)->StartupStatus {
+    startup_mode(app.clone(),bridge,true).await;
+    app.state::<StartupGate>().snapshot()
+}
+async fn startup_mode<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge,manual_retry:bool) {
     let gate = app.state::<StartupGate>();
-    let _serial = gate.serial.lock().await;
+    let Ok(_serial) = gate.serial.try_lock() else { return; };
+    let current = bridge.status();
+    let verified = gate.snapshot();
+    if verified.state == "ready"
+        && current.state == BridgePhase::Ready
+        && current.metadata.as_ref().is_some_and(|metadata| verified.instance.as_ref() == Some(&metadata.instance))
+    {
+        return;
+    }
     gate.checking(bridge.status().metadata.map(|v| v.instance));
+    gate.status.lock().unwrap_or_else(|v|v.into_inner()).recovering=manual_retry;
     emit(&app, &gate);
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
+    gate.progress(crate::startup_recovery::RecoveryProgress::stage("connecting"));emit(&app,&gate);
+    let observer=|progress|{gate.progress(progress);emit(&app,&gate);};
     let result = async {
+        if manual_retry && matches!(bridge.status().state,BridgePhase::Failed|BridgePhase::Stopped) {bridge.reconnect().await?;}
+        wait_bridge(&bridge).await?;
+        observer(crate::startup_recovery::RecoveryProgress::stage("checking_previous"));
+        let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+        if let Some(old) = journal.load()? {
+            // A different manager cannot observe the original in-memory operation.
+            // Keep that journal unresolved until verify_startup_progress binds it
+            // to durable retirement proof; same-instance operations remain read-only.
+            let current_instance = bridge.status().metadata.map(|value| value.instance);
+            if current_instance.as_deref() == Some(old.instance.as_str()) {
+                journal.observe(&bridge).await?;
+            }
+            if old.phase == "failed" && !manual_retry {
+                return Err(old.failure.expect("validated terminal failure"));
+            }
+        }
+        // Inspect before network bootstrap, runtime reservation or account workers.
+        let inspected=bridge.inspect_recovery().await?;
+        {
+            let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());
+            status.recovering=manual_retry || inspected.state=="eligible" || inspected.previous_run_id.is_some();
+            status.revision+=1;
+        }
+        if !inspected.requires_retirement() {
+            if let Some(cause) = inspected.failure { return Err(cause); }
+        }
+        observer(crate::startup_recovery::RecoveryProgress::stage("checking_device"));
         let checked = prerequisites(&bridge, &store, &controller, true).await?;
         // The only automatic runtime recovery path belongs to initial startup.
-        crate::update_install::verify_startup(
+        crate::update_install::verify_startup_progress(
             &app.state::<crate::updater::UpdateManager>(),
             &bridge,
             store.read(),
             option_env!("BEE_RELEASE_CHANNEL").unwrap_or(""),
+            &observer,
+            manual_retry,
         )
         .await?;
         let current = context(&bridge, &store).await?;
@@ -258,7 +318,36 @@ pub(crate) async fn startup<R: tauri::Runtime>(app: tauri::AppHandle<R>, bridge:
         }
     }
     gate.finish(result);
+    refresh_retry(&gate,&bridge,&app.state::<crate::updater::UpdateManager>()).await;
     emit(&app, &gate);
+}
+async fn refresh_retry(gate:&StartupGate,bridge:&Bridge,manager:&crate::updater::UpdateManager) {
+    if gate.snapshot().state!="blocked" || bridge.status().state!=BridgePhase::Ready{return;}
+    if gate.snapshot().failure.as_ref().is_some_and(|v|["RECOVERY_REMOTE_DRAINING","RECOVERY_RETIREMENT_UNCONFIRMED"].contains(&v.code.as_str())) {
+        let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=true;status.revision+=1;return;
+    }
+    let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+    if let Ok(Some(record))=journal.load() {
+        if record.phase=="failed" && bridge.inspect_recovery().await.is_ok_and(|v|v.failure.is_none()) {
+            let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=true;status.revision+=1;
+        }
+    }
+}
+pub(crate) async fn query<R:tauri::Runtime>(app:&tauri::AppHandle<R>,bridge:&Bridge)->Result<StartupStatus,BridgeError> {
+    let gate=app.state::<StartupGate>();
+    let Ok(_serial)=gate.serial.try_lock() else {return Ok(gate.snapshot());};
+    if bridge.status().state!=BridgePhase::Ready || gate.snapshot().state=="ready" {return Ok(gate.snapshot());}
+    let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+    let result=async {
+        journal.observe(bridge).await?;
+        let inspection=bridge.inspect_recovery().await?;
+        if let Some(cause)=inspection.failure{return Err(cause);}
+        Ok(())
+    }.await;
+    if gate.snapshot().state=="blocked" {let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=result.is_ok();status.revision+=1;}
+    refresh_retry(&gate,bridge,&app.state::<crate::updater::UpdateManager>()).await;
+    // A failed read has its own receipt; retain the original startup failure.
+    emit(app,&gate);result.map(|_|gate.snapshot())
 }
 pub(crate) async fn recheck<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
@@ -442,11 +531,22 @@ async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &
     let Ok(_serial) = gate.serial.try_lock() else {
         return gate.snapshot();
     };
+    let previous=gate.snapshot();
     gate.checking(bridge.status().metadata.map(|v| v.instance));
     emit(app, &gate);
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
     let result = async {
+        if !new_binding {
+            if previous.state=="blocked" && previous.failure.as_ref().is_some_and(|v|v.code.starts_with("RECOVERY_")) {
+                let inspected=bridge.inspect_recovery().await?;
+                if let Some(cause)=inspected.failure{return Err(cause);}
+            }
+            let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+            if let Some(record)=journal.observe(bridge).await? {
+                if let Some(cause)=record.failure{return Err(cause);}
+            }
+        }
         if new_binding {
             crate::update_install::verify_recheck(&app.state::<crate::updater::UpdateManager>(), bridge, store.read()).await?;
             let before = binding(bridge).await?;
@@ -488,6 +588,7 @@ async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &
         }
     }
     gate.finish(result);
+    refresh_retry(&gate,bridge,&app.state::<crate::updater::UpdateManager>()).await;
     emit(app, &gate);
     gate.snapshot()
 }

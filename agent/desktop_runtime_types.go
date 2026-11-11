@@ -28,7 +28,15 @@ type DesktopRuntimePlatform struct {
 	SelectionRevision int64                  `json:"selection_revision"`
 }
 
+type DesktopStartupProgress struct {
+	Stage       string  `json:"stage"`
+	OperationID *string `json:"operation_id"`
+	Completed   *int64  `json:"completed"`
+	Total       *int64  `json:"total"`
+}
+
 type DesktopRuntimeSnapshot struct {
+	StartupProgress  *DesktopStartupProgress           `json:"startup_progress,omitempty"`
 	RunID            *string                           `json:"run_id"`
 	Revision         int64                             `json:"revision"`
 	NetworkRevision  int64                             `json:"network_revision"`
@@ -74,7 +82,15 @@ type DesktopAuthorizeRequest struct {
 // The sidecar is bundled with the desktop; omission is a contract error rather
 // than an implicit assertion that there was no observed failure.
 func (s *DesktopRuntimeSnapshot) UnmarshalJSON(raw []byte) error {
-	if _, err := connectionObject(raw, "run_id", "revision", "network_revision", "observed_at", "local", "connection", "connection_detail", "platforms", "operation", "stop_receipt", "legacy_stop"); err != nil {
+	fields := []string{"run_id", "revision", "network_revision", "observed_at", "local", "connection", "connection_detail", "platforms", "operation", "stop_receipt", "legacy_stop"}
+	var members map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &members); err != nil {
+		return err
+	}
+	if _, ok := members["startup_progress"]; ok {
+		fields = append(fields, "startup_progress")
+	}
+	if _, err := connectionObject(raw, fields...); err != nil {
 		return fmt.Errorf("runtime snapshot fields: %w", err)
 	}
 	type plain DesktopRuntimeSnapshot

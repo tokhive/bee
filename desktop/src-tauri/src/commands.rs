@@ -785,6 +785,20 @@ pub fn startup_status(
     gate.snapshot()
 }
 #[tauri::command]
+pub async fn startup_query(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<crate::experience::StartupStatus, BridgeError> {
+    crate::experience::query(&app,&bridge).await
+}
+#[tauri::command]
+pub async fn startup_retry(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, Bridge>,
+) -> Result<crate::experience::StartupStatus, BridgeError> {
+    Ok(crate::experience::retry(app,bridge.inner().clone()).await)
+}
+#[tauri::command]
 pub async fn startup_recheck(
     app: tauri::AppHandle,
     bridge: tauri::State<'_, Bridge>,

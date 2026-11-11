@@ -22,7 +22,7 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  const blockedPlatforms=platforms.filter(p=>!readyPlatforms.includes(p)&&(!!s.accountErrors[p]||!!s.supplyErrors[p]||selected.includes(p)));
  const result=(kind:DesktopPresentation['kind'],problem:UiFailure|null=null,primaryTarget:NavigationTarget|null=null,preparationStep:DesktopPresentation['preparationStep']=null):DesktopPresentation=>({kind,severity:severities[kind],readyPlatforms:kind==='ready'?readyPlatforms:[],blockedPlatforms,problem,primaryTarget,preparationStep});
  if(s.native.state==='starting')return result('loading');
- if(s.native.state==='failed'||s.native.state==='stopped')return result('failed',s.native.error?normalizeFailure(s.native.error,'bridge_startup'):null,{page:'diagnostics'});
+ if(s.native.state==='failed'||s.native.state==='stopped')return result('failed',s.native.error?normalizeFailure(s.native.error,'bridge_startup'):s.startup?.failure??null,{page:'diagnostics'});
  if(s.error)return result('unconfirmed',s.error,{page:'diagnostics'});
  if(s.refresh.state==='waiting'&&s.refresh.lastConfirmedAt&&now-Date.parse(s.refresh.lastConfirmedAt)>30000)return result('unconfirmed',null,{page:'diagnostics'});
  const problem=s.deviceError??s.recoveryError??s.diagnosticFailure??startup?.failure??null;

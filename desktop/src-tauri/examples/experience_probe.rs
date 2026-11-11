@@ -1,4 +1,8 @@
 //! Isolated native acceptance UI. It never constructs the Bee bridge or runtime.
+use bee_desktop_lib::authorize_protocol;
+mod lifecycle {
+    pub use bee_desktop_lib::{NativeLanguage, NativeLocale};
+}
 #[path = "../src/autostart.rs"]
 #[allow(dead_code)]
 mod autostart;
@@ -107,6 +111,7 @@ fn error(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError {
         code: code.into(),
         message: message.into(),
+        details: None,
     }
 }
 fn io_error(stage: &str, cause: std::io::Error) -> BridgeError {
@@ -396,6 +401,7 @@ fn perform(app: &tauri::AppHandle, action: Action) -> Result<Value, BridgeError>
                 instance: "cccccccccccccccccccccccccccccccc".into(),
                 run_id: None,
                 network_revision: 0,
+                binding_revision: 0,
                 started_at: "2026-10-28T00:00:00Z".into(),
                 finished_at: Some("2026-10-28T00:00:01Z".into()),
                 state: "completed".into(),
@@ -695,7 +701,7 @@ fn main() {
                     let _=handle.emit_to("probe","probe://receipt",receipt);
                 }
                 if let Some(window)=handle.get_webview_window("probe") {let _=window.show();let _=window.unminimize();let _=window.set_focus();}
-            }));
+            }),Arc::new(lifecycle::NativeLanguage::default()));
             app.manage(NotificationService::new(root.join("notification-delivery.json"),Arc::new(adapter)));
             let config=app.config().app.windows.first().expect("dedicated probe window config");
             tauri::WebviewWindowBuilder::from_config(app,config)?

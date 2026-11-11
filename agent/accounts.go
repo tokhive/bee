@@ -66,7 +66,7 @@ func reportReadiness(ctx context.Context, state localState, platform string, out
 func accountControl(ctx context.Context, state localState, platform, fingerprint string, confirm bool, out io.Writer) error {
 	path := "/api/bee/platforms/" + platform + "/account"
 	var account beewire.PlatformAccount
-	if err := call(ctx, httpClient(), state.Hive, path, "GET", state.Credential, nil, &account); err != nil {
+	if err := callState(ctx, httpClient(), state, path, "GET", nil, &account); err != nil {
 		return err
 	}
 	if account.Platform != platform {
@@ -86,7 +86,7 @@ func accountControl(ctx context.Context, state localState, platform, fingerprint
 			}
 		} else {
 			input := map[string]string{"account_fingerprint": fingerprint, "confirmation_id": account.ConfirmationID}
-			if err := call(ctx, httpClient(), state.Hive, path+"/confirm", "POST", state.Credential, input, &account); err != nil {
+			if err := callState(ctx, httpClient(), state, path+"/confirm", "POST", input, &account); err != nil {
 				return fmt.Errorf("account confirmation result unconfirmed; query account status again: %w", err)
 			}
 			if account.Platform != platform || account.AccountFingerprint != fingerprint {

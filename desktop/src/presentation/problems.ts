@@ -4,6 +4,24 @@ import type {NavigationTarget} from '../app/navigation';
 import {translate,formatDate} from '../i18n/index.ts';
 export interface PresentedProblem {summary:string;impact:string;details:string;action:NavigationTarget|null;actionLabel?:string;detailsLabel?:string}
 const copy:Record<string,string>={
+ RECOVERY_SESSION_UNCONFIRMED:'上次运行未确认安全结束，暂未重新启动服务。',
+ RECOVERY_RETIREMENT_CONFLICT:'Hive 拒绝结束旧会话，原记录已保留。请导出启动诊断以核对具体冲突。',
+ RECOVERY_SERVER_UNSUPPORTED:'当前 Hive 尚不支持安全恢复，需要先升级 Hive。账号和设备信息已保留。',
+ RECOVERY_REMOTE_DRAINING:'Hive 正在等待上次任务结束，暂未重新启动服务。稍后可继续恢复。',
+ RECOVERY_RETIREMENT_UNCONFIRMED:'上次会话的结束结果尚未确认；继续恢复会核对原操作。',
+ RECOVERY_RETIREMENT_INVALID:'本地会话结束记录未通过校验，已保留原记录。',
+ RECOVERY_LOGIN_UNRESOLVED:'上次登录操作尚未核对，暂未结束旧会话。',
+ RECOVERY_GUARD_UNCONFIRMED:'上次运行的保护记录尚未核实，暂未重新启动服务。',
+ RECOVERY_OPERATION_UNRESOLVED:'上次账号操作的结果尚未确认。',
+ RECOVERY_RESULT_UNCONFIRMED:'上次恢复的结果尚未确认，需要核对原操作。',
+ RECOVERY_JOURNAL_INVALID:'本地恢复记录未通过校验，已保留原记录。',
+ RECOVERY_JOURNAL_IO:'无法安全读取或保存本地恢复记录。',
+ RECOVERY_JOURNAL_CONFLICT:'本地恢复记录与当前操作不一致。',
+ RECOVERY_OWNER_BUSY:'后台仍有操作正在处理，请先核对当前状态。',
+ RECOVERY_UNAVAILABLE:'后台启动来源未通过核验。',
+ RECOVERY_CONTEXT_INVALID:'恢复所需的设备或后台状态尚未核实。',
+ RECOVERY_FAILED:'上次恢复已失败，请查看具体失败环节。',
+
  VERSION_MISMATCH:'Bee 管理协议版本与当前应用不兼容。',
  BUNDLED_BEE_INVALID:'随附的 Bee 程序未通过完整性校验。',
  UPDATE_BYTES_MISSING:'已验证的更新内容不可读取，本次未退出或安装。',

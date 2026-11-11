@@ -1,0 +1,69 @@
+{
+  "hive_base": "f5950789b1f89d9b8cee5557429f90e129a6de30",
+  "bee_submodule_base": "6fccf3b11a2a430075e4e23634eda4913e3ced08",
+  "files": {
+    "hive/internal/service/runtime_recovery.go": {
+      "base_sha256": null,
+      "patched_sha256": "60b05ced108c623ad226841ebd80a5fb3315b75cfb42d507dd13afcfb933a9a7"
+    },
+    "hive/internal/service/runtime_recovery_test.go": {
+      "base_sha256": null,
+      "patched_sha256": "d52ee5423f9c4eee9ba3f61100051067d6c323a2c69a14ee4e5e7f0aeea4c9fc"
+    },
+    "hive/internal/controller/runtime_recovery.go": {
+      "base_sha256": null,
+      "patched_sha256": "86716036cdc5862d504e9ebaf62e76be9a6584251b65a92f62a0f8e846f9eaea"
+    },
+    "hive/internal/repository/migrations/068_runtime_recovery.sql": {
+      "base_sha256": null,
+      "patched_sha256": "9023eeb9f66c7df6e48dc73f36d4b8857fe9ad5819808885e8956759c5860283"
+    },
+    "hive/internal/integration/runtime_recovery_test.go": {
+      "base_sha256": null,
+      "patched_sha256": "2810f7a54298aa572d309e5a37f15d29646e77c0989f139e5beb9ec83be0fbe3"
+    },
+    "hive/internal/service/market.go": {
+      "base_sha256": "a9ea6f244dd56281934d25b3f57f356f08f9b3c33aacabb72fa2dadd403bdf15",
+      "patched_sha256": "4b6412c25ce8ea267392e6df3d55ce90be6483d8959b425c85194d42cdcdcc65"
+    },
+    "hive/internal/service/device_replacement.go": {
+      "base_sha256": "57d8ecefae9adf3e241cf8f091ec6c80b72612788a3e11fd98e209613f67c051",
+      "patched_sha256": "30881546054cef9610c9d2355695c83b1e8a1354c2352c5d1cadffd57f1f73b0"
+    },
+    "hive/internal/service/candidate_facts.go": {
+      "base_sha256": "c6387dcd1154673fe425419c51a41139b5ab1269aab50798432c26f392f81f57",
+      "patched_sha256": "ca7c12f78616d6e11e7747e9f7a8016c2305ba89af18ccaa69673644ea903690"
+    },
+    "hive/internal/controller/bee_connection.go": {
+      "base_sha256": "5a9d57472d83a3029f08283c26e762a342bb3704d14e684670b43a6708f5c102",
+      "patched_sha256": "17adbf1daa10386849c2378dbd7f6a595404fc54b69d3a4b0a00b7c7214b8ef3"
+    },
+    "hive/internal/router/router.go": {
+      "base_sha256": "e2b4635fbfbe6c04ba3192713aaf44ab0b0f298a485ca432ebc27384bb298d8c",
+      "patched_sha256": "d21e725281bfaa380407e19dba4b442da9b2f896f5ee33628d5b4e313abfd7c1"
+    },
+    "hive/internal/integration/runtime_recovery_native_test.go": {
+      "base_sha256": null,
+      "patched_sha256": "60a810b7e0c2437af7d9d48962b49a29facd5f73ba0e533659d6531e0ee7a7dd"
+    }
+  },
+  "integration": {
+    "hive_branch": "fix/runtime-session-retirement",
+    "bee_wire_commit": "328270e79c5ba040f8537eab56010c0286f3ed8b",
+    "bee_wire_sha256": "faf89e8af6df9f27d329d212feedb15f8b75d3a645261ade57344ddd9100e983",
+    "hive_commit": "04ee9fee7962f6495d803909ee4dc42f12b3f835"
+  },
+  "published_integration": {
+    "hive_pr": "https://github.com/tokhive/hive/pull/292",
+    "hive_branch": "fix/runtime-session-retirement",
+    "hive_commit": "b13db702df61bba3f8d0da5fab90fb43332b41f9",
+    "hive_main_base": "db4b2a5e29c7b027f5b04921d20f061487b44a87",
+    "bee_wire_commit": "c8f628af3fa662df36b1f5705e5871ba9a1159d9",
+    "migrations": [
+      "078_supply_preparations.sql",
+      "079_runtime_recovery.sql"
+    ],
+    "historical_patch_base_unchanged": true,
+    "hive_verified_source_commit": "58db70fdc9ed286de85f9b1ea7d98137e0ada2ec"
+  }
+}

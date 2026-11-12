@@ -5,6 +5,7 @@ import {clearMocks, mockIPC} from '@tauri-apps/api/mocks';
 import {createAccountClient} from '../src/system/accounts.ts';
 import {createAuthorizeClient} from '../src/system/authorize.ts';
 import {createSystemBridge} from '../src/system/bridge.ts';
+import {createHiveSwitchClient} from '../src/system/hiveSwitch.ts';
 import {createDeviceClient, type DeviceInvoke} from '../src/system/device.ts';
 import {createDiagnosticsClient} from '../src/system/diagnostics.ts';
 import {onLoginReturn} from '../src/system/lifecycle.ts';
@@ -18,7 +19,7 @@ import {createUpdateClient} from '../src/system/updater.ts';
 const rust = (module:string) => readFileSync(new URL(`../src-tauri/src/${module}.rs`, import.meta.url), 'utf8');
 const registry = rust('lib').match(/tauri::generate_handler!\[([\s\S]*?)\]/)![1];
 const commands = new Map([...registry.matchAll(/(\w+)::(\w+)/g)].map(([, module, name]) => {
-  const signature = rust(module).match(new RegExp(`#\\[tauri::command\\]\\s*pub (?:async )?fn ${name}(?:<[^\\n]+>)?\\(([\\s\\S]*?)\\)\\s*->`));
+  const signature = rust(module).match(new RegExp(`#\\[tauri::command\\]\\s*pub(?:\\(crate\\))? (?:async )?fn ${name}(?:<[^\\n]+>)?\\(([\\s\\S]*?)\\)\\s*->`));
   assert.ok(signature, `${module}::${name}: registered command must have an inspectable default Tauri argument naming policy`);
   const fields = [...signature[1].matchAll(/(?:^|\n)\s*(?:mut )?(\w+):\s*([^\n]+)/g)]
     .map(([, key, type]) => [key.replace(/_([a-z])/g, (_, c:string) => c.toUpperCase()), type.trim().replace(/,$/, '')] as const)
@@ -70,6 +71,8 @@ test('all registered native commands receive frontend arguments matching the Rus
   const instance='b'.repeat(32), id='a'.repeat(48);
   const device=createDeviceClient(invoke);
   for (const action of [()=>device.status(),()=>device.begin('https://hive.example','Test Mac'),()=>device.open(),()=>device.context!(),()=>device.recoveryPrepare(),()=>device.recoveryStatus(),()=>device.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
+  const switching=createHiveSwitchClient(invoke);
+  for(const action of [()=>switching.snapshot(),()=>switching.start('https://target.example','Target Mac'),()=>switching.observe(),()=>switching.cancel(),()=>switching.continue(),()=>switching.quit('continue_waiting'),()=>switching.target.status(),()=>switching.target.begin('','Target Mac'),()=>switching.target.open(),()=>switching.target.recoveryPrepare(),()=>switching.target.recoveryStatus(),()=>switching.target.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
   const accounts=createAccountClient(invoke,instance);
   for (const action of [()=>accounts.defaults(),()=>accounts.snapshot('openai',true),()=>accounts.detect({platform:'openai',directory:null,store:'auto',mode:'local'}),()=>accounts.action({platform:'openai',revision:1,candidate_ref:id,action:'select',confirmed:true})]) await sample(action);
   const authorize=createAuthorizeClient(invoke,instance,['authorize_progress','authorize_open']);

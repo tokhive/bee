@@ -1,3 +1,5 @@
+import {createHiveSwitchClient} from './system/hiveSwitch';
+import {listen} from '@tauri-apps/api/event';
 import {createUpdateClient} from './system/updater';
 import {createRuntimeClient} from './system/runtime';
 import {createAuthorizeClient} from './system/authorize';
@@ -24,6 +26,7 @@ const authorizeFactory=(instance:string,capabilities?:readonly string[])=>create
 const accountFactory=(instance:string)=>createAccountClient(invoke,instance);
 const supply = (binding:SupplyBinding) => createSupplyClient(invoke,binding);
 const diagnosticsFactory=(instance:string|undefined,revision:number,runId?:string|null,bindingRevision=0)=>createDiagnosticsClient(invoke,instance,revision,runId,bindingRevision);
+const hiveSwitchClient=createHiveSwitchClient(invoke,async listener=>listen<{operation_id:string}>('bee://hive-switch-exit-request',event=>{if(typeof event.payload?.operation_id==='string')listener(event.payload.operation_id);}));
 async function mount() {
   const root = createRoot(document.getElementById('root')!);
   const params = new URLSearchParams(location.search);
@@ -42,7 +45,7 @@ async function mount() {
     return;
   }
   if (isTauri() && import.meta.env.VITE_BEE_DATA_MODE !== 'demo') {
-    root.render(<React.StrictMode><NativeApp autoService updateClient={createUpdateClient(invoke)} preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
+    root.render(<React.StrictMode><NativeApp hiveSwitchClient={hiveSwitchClient} autoService updateClient={createUpdateClient(invoke)} preferencesClient={createPreferencesClient(invoke)} notificationsClient={createNotificationsClient(invoke)} networkClient={createNetworkClient(invoke)} diagnosticsFactory={diagnosticsFactory} openHive={()=>invoke('hive_open',{})} runtimeFactory={runtimeFactory} authorizeFactory={authorizeFactory} accountFactory={accountFactory} supply={supply} client={createDeviceClient(invoke)} systemBridge={createSystemBridge()} /></React.StrictMode>);
     return;
   }
   let initialError: string | undefined;

@@ -59,3 +59,46 @@ test('preview appearance seeds preferences once and later reads preserve the sav
  assert.equal(saved.preferences.revision,initial.preferences.revision+1);
  assert.deepEqual(await preferences.read(),saved);
 });
+
+test('switch target recovery never publishes the target identity to the current device route',async t=>{
+ const call=await preview(t,'switch-target-recovery');
+ const {createHiveSwitchClient}=await import('../src/system/hiveSwitch.ts');
+ const switching=createHiveSwitchClient(call),device=createDeviceClient(call);
+ const source=await device.status();const state=await switching.snapshot();
+ assert.equal(state.operation?.phase,'preparing_target');
+ await assert.rejects(()=>switching.target.status(),(e:any)=>e.code==='invalid_device_credential');
+ const transaction=await switching.target.recoveryPrepare();await switching.target.recoveryConfirm(transaction.operation_id,transaction.revision,'begin_pairing');
+ assert.equal((await switching.target.recoveryStatus()).phase,'pending');
+ assert.deepEqual(await device.status(),source);
+ assert.equal((await switching.snapshot()).profiles.current_profile,state.profiles.current_profile);
+});
+
+test('first launch exposes profile-required gate then accepts original device_begin and retains the original pairing',async t=>{
+ const call=await preview(t,'switch-first-launch');const {createHiveSwitchClient}=await import('../src/system/hiveSwitch.ts');const switching=createHiveSwitchClient(call),device=createDeviceClient(call);
+ assert.equal((await call<any>('bridge_status')).error.code,'HIVE_PROFILE_REQUIRED');assert.equal((await switching.snapshot()).profiles.current_profile,null);
+ const pending=await device.begin('https://first-hive.example','First Mac');assert.equal(pending.state,'pending');
+ assert.equal((await switching.snapshot()).profiles.profiles[0].origin,'https://first-hive.example');assert.deepEqual(await device.status(),pending);
+});
+
+test('switch preview keeps profile account selections across A to B to A',async t=>{
+ const call=await preview(t,'switch-saved');const {createHiveSwitchClient}=await import('../src/system/hiveSwitch.ts');const switching=createHiveSwitchClient(call);
+ const initial=await switching.snapshot(),first=await switching.start('https://target-hive.example','Target Mac');
+ await switching.target.begin('','Target Mac');await switching.target.open();await switching.target.status();
+ let state=first;for(let i=0;i<8&&state.operation?.phase!=='succeeded';i++)state=await switching.observe();
+ assert.equal(state.operation?.phase,'succeeded');assert.notEqual(state.profiles.current_profile,initial.profiles.current_profile);
+ assert.equal((window as any).accounts.openai.selection.state,'not_selected');
+ const back=await switching.start('https://hive.example','Bee Desktop');assert.notEqual(back.operation?.id,first.operation?.id);
+ state=back;for(let i=0;i<8&&state.operation?.phase!=='succeeded';i++)state=await switching.observe();
+ assert.equal(state.profiles.current_profile,initial.profiles.current_profile);assert.equal(state.operation?.phase,'succeeded');
+ assert.equal((window as any).accounts.openai.selection.state,'selected');assert.equal((await createDeviceClient(call).status()).hive,'https://hive.example');
+});
+
+
+test('switch mock public fields match the final native serialized DTO definitions',async t=>{
+ const call=await preview(t,'switch-waiting');const {readFile}=await import('node:fs/promises');
+ const source=await readFile(new URL('../src-tauri/src/hive_switch.rs',import.meta.url),'utf8'),profiles=await readFile(new URL('../src-tauri/src/profiles.rs',import.meta.url),'utf8');
+ const state=await call<any>('hive_switch_snapshot');
+ const fields=(text:string,name:string)=>{const body=text.match(new RegExp('struct '+name+' \\{([\\s\\S]*?)\\n\\}'));assert.ok(body,name+' native struct must remain inspectable');return [...body[1].matchAll(/pub (\w+):/g)].map(([,name])=>name).sort();};
+ for(const [name,value]of [['SwitchSnapshot',state],['SwitchRecord',state.operation],['SwitchLeg',state.operation.source],['Observation',state.observation],['SwitchActions',state.actions],['CurrentScope',state.current_scope],['ProfileIdentity',state.profile_identities[0]]])assert.deepEqual(Object.keys(value).sort(),fields(source,name));
+ for(const [name,value]of [['ProfileIndex',state.profiles],['ProfileEntry',state.profiles.profiles[0]]])assert.deepEqual(Object.keys(value).sort(),fields(profiles,name));
+});

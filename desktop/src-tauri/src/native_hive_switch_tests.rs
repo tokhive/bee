@@ -250,9 +250,15 @@ async fn managed_profile_task_settles_before_roundtrip() {
     let draining = coordinator.continue_waiting(prefs.clone()).await.unwrap();
     let record = draining.operation.as_ref().unwrap();
     assert_eq!(record.phase, "draining_source", "{record:?}");
+    let work_case = f["work"].as_str().unwrap_or("held");
+    let expected_work = match work_case {
+        "unknown" => json!({"executions":0,"unknown_terminations":1,"unsettled":0}),
+        "unsettled" => json!({"executions":0,"unknown_terminations":0,"unsettled":1}),
+        _ => json!({"executions":1,"unknown_terminations":0,"unsettled":0}),
+    };
     assert_eq!(
-        record.source.status.as_ref().unwrap()["current"]["work"]["executions"],
-        1
+        record.source.status.as_ref().unwrap()["current"]["work"],
+        expected_work
     );
     assert!(!record.source.child_reaped);
     control(&f, "blocked", json!({})).await;
@@ -275,6 +281,23 @@ async fn managed_profile_task_settles_before_roundtrip() {
         .unwrap();
     assert_eq!(waiting.operation.as_ref().unwrap().phase, "draining_source");
     let original = waiting.operation.as_ref().unwrap().id.clone();
+    if work_case != "held" {
+        let record = waiting.operation.as_ref().unwrap();
+        assert_eq!(
+            record.source.status.as_ref().unwrap()["current"]["work"],
+            expected_work
+        );
+        assert!(record.source.seal.is_none());
+        assert!(!record.source.child_reaped && !record.source.workers_stopped && !record.committed);
+        assert_eq!(waiting.profiles.current_profile, Some(a.id.clone()));
+        let quit = coordinator.request_quit(prefs.clone()).await.unwrap();
+        assert_eq!(quit.operation.unwrap().phase, "cancelled");
+        println!(
+            "REAL_HIVE_SWITCH_UNFINISHED {}",
+            json!({"work":expected_work,"source_device":f["source"]["identity"]["id"],"request_id":admitted["request_id"],"switch":original,"current":a.id,"sealed":false,"committed":false})
+        );
+        return;
+    }
     let settled = control(&f, "finish", json!({})).await;
     assert_eq!(settled["state"], "settled");
     assert_eq!(settled["device_id"], f["source"]["identity"]["id"]);

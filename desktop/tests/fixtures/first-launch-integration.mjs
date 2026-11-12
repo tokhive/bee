@@ -28,7 +28,7 @@ w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
  if(command==='device_context'){
   if(control.completedMutation==='context-owner'&&result.result?.context?.device_id)result.result.context.owner_id='unexpected-owner';
   const binding=result.result?.context?.binding_revision??result.result?.binding_revision;
-  if(binding!==lastBinding){lastBinding=binding;setTimeout(async()=>w.emitStartup(await invoke('startup_status')),0);}
+  lastBinding=binding;
  }
  if(command==='device_status'&&result.result?.device?.state==='bound'&&control.loseCompletion){control.loseCompletion=false;if(control.holdAfterLost)control.hold('device_status');return {result:{error:{code:'RESPONSE_TIMEOUT',message:'device status receipt lost after local identity save; result unconfirmed'}}};}
  if(command==='device_status'&&result.result?.device?.state==='bound'&&control.completedMutation==='operation')result.result.device.recovery.operation_id='f'.repeat(48);

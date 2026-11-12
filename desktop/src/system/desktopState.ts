@@ -7,7 +7,7 @@ import type {RuntimeFactory,RuntimeSnapshot} from './runtime';
 import type {DiagnosticReport} from './diagnostics';
 export interface RefreshStatus {state:'idle'|'reading'|'scheduled'|'blocked'|'waiting';nextRetryAt:string|null;lastConfirmedAt:string|null}
 export interface DesktopSnapshot {
- native:BridgeStatus;startup?:StartupStatus;startupReadError?:UiFailure|null;startupObservation?:'active'|'stopped'|'idle';deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;
+ currentProfile?:string|null;native:BridgeStatus;startup?:StartupStatus;startupReadError?:UiFailure|null;startupObservation?:'active'|'stopped'|'idle';deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;
  recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;
  device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;
  accounts:Partial<Record<AccountPlatform,AccountSnapshot>>;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;
@@ -26,6 +26,7 @@ const failure=(e:unknown,check='desktop_refresh')=>normalizeFailure(e,check);
 export function createDesktopState(deps:DesktopDeps){
  let state:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
  let disposed=false,started=false,epoch=0,pendingEpoch=0,blocked=false;
+ let currentScope:{profile_id:string;instance:string}|null|undefined;
  let unlistenSettled:(()=>void)|undefined;
  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
  let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0;
@@ -72,7 +73,7 @@ export function createDesktopState(deps:DesktopDeps){
   for(const g of gates.values())if(g.waiting&&!nativePending.some(r=>r.id===g.waiting))backoff(g);
  }
  function acceptSettled(event:RequestSettled){
-  if(disposed||event.instance!==state.native.metadata?.instance)return;
+  if(disposed||event.instance!==state.native.metadata?.instance||currentScope!==undefined&&(!currentScope||event.profile_id!==currentScope.profile_id))return;
   nativePending=nativePending.filter(r=>r.id!==event.id);
   for(const g of gates.values())if(g.waiting===event.id)backoff(g);
   updateStatuses();if(!pending)schedule(deps.intervalMs??10000);
@@ -81,6 +82,7 @@ export function createDesktopState(deps:DesktopDeps){
  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
  const reset=()=>({recovery:undefined,recoveryError:null,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
  const acceptStartup=(next:StartupStatus)=>{
+  if(currentScope!==undefined&&(!currentScope||next.instance!==currentScope.instance))return;
   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
   if(next.state!=='checking'){
    if(state.bindingRevision!==undefined&&next.binding_revision!==null&&next.binding_revision!==state.bindingRevision)return;
@@ -94,7 +96,8 @@ export function createDesktopState(deps:DesktopDeps){
  };
  function accept(native:BridgeStatus){
   if(disposed)return;
-  const changed=native.metadata?.instance!==state.native.metadata?.instance||native.state!==state.native.state;
+  if(currentScope!==undefined&&(native.profile_id!==undefined&&native.profile_id!==currentScope?.profile_id||native.state==='ready'&&(!currentScope||native.metadata?.instance!==currentScope.instance)))return;
+  const changed=native.metadata?.instance!==state.native.metadata?.instance||native.profile_id!==state.native.profile_id||native.state!==state.native.state;
   if(!changed){publish({native});return;}
   const previousInstance=state.native.metadata?.instance??state.startup?.instance;
   epoch++;blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
@@ -104,12 +107,12 @@ export function createDesktopState(deps:DesktopDeps){
  }
  async function readStartup(){
   if(disposed||startupReading||!deps.bridge.startupStatus)return;
-  startupReading=true;publish({startupObservation:'active'});
-  try{const next=await deps.bridge.startupStatus();startupFailures=0;publish({startupReadError:null});acceptStartup(next);}
-  catch(cause){startupFailures++;publish({startupReadError:failure(cause,'startup_status')});}
+  const generation=epoch;startupReading=true;publish({startupObservation:'active'});
+  try{const next=await deps.bridge.startupStatus();if(disposed||generation!==epoch)return;startupFailures=0;publish({startupReadError:null});acceptStartup(next);}
+  catch(cause){if(!disposed&&generation===epoch){startupFailures++;publish({startupReadError:failure(cause,'startup_status')});}}
   finally{
-   startupReading=false;
-   if(!disposed&&state.startup?.state!=='ready'&&state.startup?.state!=='blocked'){
+   if(generation===epoch)startupReading=false;
+   if(!disposed&&generation===epoch&&state.startup?.state!=='ready'&&state.startup?.state!=='blocked'){
     if(startupFailures>3||Date.now()-startupBegan>=60000)publish({startupObservation:'stopped'});
     else startupTimer=setTimeout(()=>void readStartup(),Math.min(startupFailures?[1000,2000,4000][startupFailures-1]:2000,60000-(Date.now()-startupBegan)));
    }
@@ -275,6 +278,13 @@ export function createDesktopState(deps:DesktopDeps){
   }
  }
  return {
+  setCurrentScope(scope:{profile_id:string;instance:string}|null){
+   if(currentScope!==undefined&&JSON.stringify(currentScope)===JSON.stringify(scope))return;
+   currentScope=scope;epoch++;startupReading=false;startupFailures=0;blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);clearTimeout(startupTimer);
+   publish({...reset(),currentProfile:scope?.profile_id??null,native:{state:'starting'},startup:undefined,startupReadError:null,busy:false});
+   const generation=epoch;
+   if(scope)void deps.bridge.status().then(v=>{if(!disposed&&generation===epoch){accept(v);void readStartup();}},cause=>{if(!disposed&&generation===epoch)publish({error:failure(cause,'bridge_status')});});
+  },
   async observeStartup(){const next=await (deps.bridge.startupQuery?.()??deps.bridge.startupStatus?.());if(next)acceptStartup(next);},
   async retryStartup(){if(!deps.bridge.startupRetry)return;const next=await deps.bridge.startupRetry();acceptStartup(next);if(next.state==='ready'){repair();await refresh();}},
   async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refresh();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refresh();acceptStartup(next);},

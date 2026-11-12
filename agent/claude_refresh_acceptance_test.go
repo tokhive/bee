@@ -15,8 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 type claudeRefreshAcceptanceTransport struct {

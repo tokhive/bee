@@ -25,7 +25,35 @@ Prebuilt binaries are published on the [releases page](https://github.com/tokhiv
 curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
 ```
 
-Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place; restart `bee run` afterwards.
+On Linux, the script also registers and enables the system-level `tokhive-bee` service. It runs as the installing user at boot, even before an SSH login. Run the installer as the user who will pair Bee, without putting the whole command under `sudo`; only service management requests administrator access. In an interactive terminal, the installer offers to pair Bee, choose which signed-in accounts to supply, and start the background service. Accept the prompt, enter your Hive address and confirm pairing in its web console. Sign in to the official clients first so account setup can find them. See [Running as a service](#running-as-a-service) for the manual path.
+
+If Hive has deleted or replaced this device and rejects its previous pairing, the interactive installer offers to pair again (default **no**). After you agree and enter the Hive address, it stops the service, backs up only `bee.json` into a private, uniquely named directory beside it, and shows the backup path. It then opens the normal web pairing flow and reuses `egress.json`. Re-pairing requires the Linux `flock` tool (usually included in `util-linux`); a busy configuration lock or a changed configuration stops recovery. Declining or ending input keeps the existing configuration. A failed new pairing keeps both the backup and any newly saved pairing state so you can resume by running the installer again. Confirming a replacement in Hive may deactivate another Bee.
+
+Installation continues in **English** without a language-selection prompt. Installation results appear separately from the three setup steps: **1/3 device pairing**, **2/3 supplied accounts**, and **3/3 background startup**. Existing configuration is reused while all three steps and the final service state remain visible. Terminal output uses separators, status icons and colors; redirected output or `TERM=dumb` uses plain text, and `NO_COLOR=1` disables colors.
+
+The default language is English regardless of the system locale, with or without an interactive terminal. Set `BEE_LANG=zh` to use Chinese, or `BEE_LANG=en` to select English explicitly:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_LANG=zh sh
+```
+
+`bee login`, `bee setup`, and the management menu also accept `BEE_LANG`. When it is unset, they use English and do not follow the system locale. Full bilingual pairing and account selection require a Bee release containing this support; an older release selected by the installer continues working with its original command output. The language choice applies to this run and is not saved in the service configuration.
+
+Set `BEE_VERSION=v0.1.0` to install a specific release, or `BEE_INSTALL_DIR` to install somewhere else. Running the script again upgrades Bee in place. If the service is already running, the installer asks whether to restart it; the default is **no**, so current work can finish. Restart later with `sudo systemctl restart tokhive-bee`, or restart your foreground process if you use one.
+
+Set `BEE_INSTALL_INTERACTIVE=0` to skip the wizard. Without an interactive terminal it also skips automatically and prints manual commands; boot startup is still enabled. For example:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_INSTALL_INTERACTIVE=0 sh
+```
+
+For Linux without systemd or administrator access, or to keep an existing manually configured service, install only the binary:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | BEE_INSTALL_SERVICE=0 sh
+```
+
+macOS installation remains binary-only.
 
 **Manual download.** Download `bee_<os>_<arch>.tar.gz` and `checksums.txt` from the releases page, check the archive with `shasum -a 256 -c checksums.txt --ignore-missing`, then extract it and move `bee` onto your `PATH`. On macOS, a file downloaded through a browser is quarantined and Gatekeeper refuses to run the unsigned binary; clear the flag with `xattr -d com.apple.quarantine bee`. The install script downloads with `curl` and is not affected.
 
@@ -36,10 +64,10 @@ Check the installed version with `bee version`.
 ```sh
 git clone https://github.com/tokhive/bee.git
 cd bee
-make build        # fetches the pinned TEE client library, then builds bin/bee
+make build        # builds bin/bee
 ```
 
-`make build` runs `scripts/prepare-tee.sh` first. The script downloads the TEE client library at the commit pinned in `TEE_REVISION` and places it in `.cache/reclaim-tee`. That library can't be fetched through the Go module proxy, so `go.mod` points to the local copy. After the first run you can also build with plain `go build -o bin/bee ./cmd/bee`.
+Bee depends on the TEE client library [`github.com/tokhive/tee`](https://github.com/tokhive/tee) as an ordinary Go module, pinned in `go.mod`. You can also build with plain `go build -o bin/bee ./cmd/bee`.
 
 For the macOS desktop development App, run `make app`. It prepares dependencies and builds the native Bee, frontend, and Tauri bundle. See the [desktop build guide](desktop/README.md#一键构建-macos-app) for toolchain requirements and the output path.
 
@@ -52,6 +80,34 @@ make test
 ```
 
 ## Getting started
+
+In a terminal, run `bee` with no arguments to open the numbered management menu:
+
+```sh
+bee
+```
+
+The menu opens in **English** without a language-selection prompt, regardless of the system locale. The main menu groups all existing command capabilities into **Start Bee**, **Status**, **Device pairing**, **Supplied accounts**, **Background service**, **Logs and diagnostics**, **Advanced options**, **Help and version**, and **Change language**. Use `0` to return directly from a submenu, or to exit from the main menu. Exiting the menu leaves the background Bee running. Set `BEE_LANG=zh` for Chinese or `BEE_LANG=en` for English. **Change language** affects only the current session.
+
+**Start Bee** checks configuration automatically. Missing or unfinished pairing opens the pairing flow; a missing supply file opens account selection. Pairing and saving accounts still require confirmation; cancelling either step leaves Bee stopped. With complete, valid configuration, it starts directly without another question. It automatically starts the matching installer-managed systemd service on Linux, or runs in the foreground when no supported background service is available (including macOS). If the service is already active, Bee reports that instead of starting again. Service inspection or configuration-matching errors stop the action with diagnostic details. Foreground operation occupies the terminal: **closing the terminal or pressing Ctrl+C stops this Bee**. Ctrl+C exits the program; enter `bee` again to reopen the menu. Background startup returns to the menu and keeps running after the terminal closes.
+
+Unreadable, incorrectly permissioned or malformed configuration stops startup with the file path and recovery guidance; existing files are kept. A paired device is verified with Hive before starting. Only an explicit device-replaced or invalid-credential response opens re-pairing, with confirmation and a private backup before replacing the device configuration. Supply selections are kept. Network or other verification failures stop this attempt without resetting pairing. A valid supply file whose official Codex or Claude sign-in is temporarily unavailable is kept: Bee can connect and wait for sign-in recovery. To change existing choices, use **Device pairing** or **Supplied accounts** from the main menu.
+
+**Advanced options → Run existing configuration in foreground** preserves explicit foreground operation with custom supply paths. Without a default supply file, this action keeps Bee online without supplying accounts. Ordinary **Start Bee** completes missing supply configuration before running.
+
+Under **Supplied accounts**, query registered accounts and supply status independently, select accounts individually or all at once, pause/resume supply, or confirm a pending account change. Configuration options include platform filtering, official-client directories and a local HTTP CONNECT proxy (keep, set or clear). The final confirmation shows the complete selection and removed platforms. Codex and Claude Code checks have separate local sign-in and online model/quota actions; Claude also offers online identity verification. Their options select the official directory and credential store. Claude's omitted directory, explicitly empty directory and literal directory value retain the CLI's distinct meanings.
+
+**Advanced options** changes the device and supply paths for this menu session without saving preferences or modifying the environment. Selecting a device file resets its associated supply path and service target. A custom supply path applies to account setup, direct foreground run and diagnostics. Start Bee and status always use `egress.json` beside the device file; the displayed paths identify the actual targets. Background controls still require an exact service match. **Logs and diagnostics** includes the complete diagnostic JSON report; **Help and version** works without pairing or network access and includes every command's original option reference.
+
+The menu uses compact pages, status icons and colors. `NO_COLOR=1` disables colors; `TERM=dumb` uses plain text. Known errors and recovery steps follow the selected language. Error codes and HTTP statuses remain visible; unfamiliar external errors and service logs appear as clearly labeled original technical details.
+
+Linux service controls require the installer-managed system service for the same user, executable and configuration. Custom units, drop-ins and other installation paths require manual management. **Start/stop** changes the current process; **enable/disable boot startup** changes what happens after reboot. Saving an account selection does not apply it to a running process until you confirm a restart. Service activity and account readiness are shown separately.
+
+The other menu actions work on macOS, including automatic foreground operation under **Start Bee**; this version does not manage macOS background services. Existing subcommands remain available. Without both terminal input and output, bare `bee` prints help and exits.
+
+The menu requires a binary built from this change or a release containing it. Updating `install.sh` alone cannot add it to an older release. To test before a release, build this branch with `make build` and run `./bin/bee`.
+
+If the Linux installer has completed setup and started the service, use `bee status` to check it. The following steps are for macOS, binary-only installation, or running in the foreground.
 
 First sign in to the official client on this machine, as the user that will run Bee: Codex (`codex login`) for an OpenAI subscription, Claude Code (`claude`) for a Claude subscription. Then copy the command from the **Devices** page of your Hive, which already contains its address:
 
@@ -83,6 +139,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 
 | Command | Purpose |
 | --- | --- |
+| `bee` | Open the bilingual management menu in an interactive terminal; exiting leaves the background service running. |
 | `bee start [--hive URL] [--name NAME] [--yes]` | Pair, choose the subscriptions and run, skipping the steps already done. The way to start Bee. |
 | `bee status` | Show the build, the Hive, the device and whether each supplied account is taking work. |
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
@@ -124,40 +181,79 @@ While running, `login` and `run` hold a lock file next to the configuration, so 
 
 - `targets` is the allowlist of upstream hosts Bee will open connections to for the TEE.
 - `codex` selects the Codex login. `store` is `file`, `keyring` or `auto`. The top-level `capabilities` enables model and quota reports for OpenAI.
+- Model and quota reports go to Hive every five minutes, and sooner when Hive asks: after an upstream quota refusal's cooldown, or while a request waits on the account, Hive opens a control stream on the connection and Bee reports within a few seconds, at most once every ten. Bee announces this in its `X-Bee-Controls` connection header, and Hive asks no Bee that did not.
 - `claude` selects the Claude Code login. `store` is `keychain` (macOS) or `file`, which reads `.credentials.json` in the Claude Code configuration directory; `bee setup` picks the one Claude Code uses on your system, and Bee never falls back from one to the other. `capabilities` enables model and quota reports, which are required for taking work. With `refresh: true`, Hive may also schedule token refreshes, and Bee writes the refreshed token back to the official store. The default `false` only re-seals tokens that the official client has refreshed. `config_dir` selects a non-default Claude Code configuration.
 - `connect_proxy` (optional, for example `http://127.0.0.1:7890`) sends Bee's outbound connections through a local HTTP proxy.
 
 To contribute only one platform, remove the other platform's entry and its target. Pass the file with `bee run --egress-config PATH`. Without the flag, Bee uses the `egress.json` that `setup` wrote. If neither exists, Bee stays online but serves nothing and prints `BEE-SETUP-NEEDED`.
 
+### API resellers
+
+The market falls back to a third-party API reseller, such as wokey, when no subscription account can serve a request ([Hive ADR 0030](https://github.com/tokhive/hive/blob/main/docs/adr/0030-api-relay-fallback-supply.md)). This is the platform's own supply: Hive accepts a reseller key only from a Bee signed in to the platform's administrator account. To supply one, put the key alone in a file with mode `0600` and add:
+
+```json
+{
+  "targets": ["api.wokey.ai:443"],
+  "reseller": {"reseller": "wokey", "key_file": "/absolute/path/to/wokey.key"}
+}
+```
+
+Bee reads the key file on every synchronization, seals the key for the TEE and registers its SHA-256 fingerprint with Hive; the key itself never leaves the envelope. Every five minutes it reads the reseller's model list and balance with the key and reports whether the key is accepted (`ready`, `invalid_key` or `insufficient_balance`), the models it lists and the balance left. While the key is ready it also reads the reseller's per-request billing records made since its last report and sends them to Hive, which reconciles what it settled against what the reseller charged. After a restart it asks Hive for the newest charge it already holds and resumes a few minutes before it, so records missed while Bee or Hive was down are still reported; up to 10,000 records are read back in one cycle. Replacing the key in the file takes effect on the next synchronization.
+
 ### Environment variables
 
 | Variable | Effect |
 | --- | --- |
-| `TOKHIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
-| `TOKHIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
-| `TOKHIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
+| `HIVE_LOG_LEVEL` | `debug`, `info` (default), `warn` or `error`. |
+| `HIVE_LOG_MODULES` | Comma-separated list of log modules to keep, for example `sync,connect`. |
+| `HIVE_TIMING_LOG` | Set to `1` to write asynchronous JSON timing logs to stderr. |
+| `HIVE_LOG_FORMAT` | `logfmt` keeps the structured `time=… level=…` lines in a terminal too. In a terminal, `bee start` and `bee run` otherwise print short readable lines and hide routine process logs; under a service manager, in a pipe or with any log variable set, output is always structured. |
 | `BEE_DEBUG` | Any value turns on debug logging. |
 | `BEE_METRICS_ADDR` | Serve Prometheus metrics on this address, for example `127.0.0.1:9464`. |
 | `HTTPS_PROXY` | Standard proxy setting. It takes precedence over `connect_proxy`. |
 
+When upgrading, rename the old `TOKHIVE_` logging and timing variables to
+`HIVE_`; old names are no longer read. Bee-specific `BEE_` variables are unchanged.
+
 ## Running as a service
 
-`bee start` and `bee run` run in the foreground. To keep Bee running, set it up once with `bee start`, stop it, then hand `bee run` to a user-level service manager, running as the user who paired the device. A systemd unit for Linux:
+`bee start` and `bee run` run in the foreground. The Linux installer enables `/etc/systemd/system/tokhive-bee.service`, which runs `bee run` as the installing user. This is a **system-level** service: no `--user` commands or lingering are needed. It requires systemd 243 or newer for the configuration checks.
 
-```ini
-[Unit]
-Description=TokHive Bee
+The installer offers to set up and start an inactive service (default **yes**). It runs `bee login` to pair or validate your saved identity, runs `bee setup` only when account configuration is missing, then starts the service. It keeps existing account choices. A failed step stops the wizard and keeps the installed binary and any configuration already written.
 
-[Service]
-ExecStart=%h/.local/bin/bee run
-Restart=on-failure
-RestartSec=10
+If a manually started Bee holds the same configuration lock, the installer shows its PID, UID and configuration path, then asks whether to stop it and switch to systemd background operation (default **no**). Accepting interrupts current work: Bee sends SIGTERM only to a verified process owned by the current user, waits up to ten seconds for it to exit and release the lock, then retries pairing validation once. Declining or ending input keeps the existing process and leaves the service stopped. Unknown process identities, custom systemd services, timeouts and another process taking the lock stop the wizard with diagnostics; it never escalates to SIGKILL. Automatic handoff requires a Bee release containing `install-handoff`, readable Linux `/proc` and kernel support for pidfd (Linux 5.3+). Older releases or unsupported environments require stopping the old process manually and rerunning the installer.
 
-[Install]
-WantedBy=default.target
+If you decline, disable the wizard, or install without a terminal, sign in to the official clients and run the printed commands as the installing user. With the default configuration paths:
+
+```sh
+bee login --hive https://hive.example.com  # existing pairing: bee login
+bee setup                              # only if egress.json is missing
+sudo systemctl start tokhive-bee
+sudo systemctl status tokhive-bee
+sudo journalctl -u tokhive-bee -f
 ```
 
-`%h` is your home directory; change the path if you installed Bee elsewhere, and add `--config` or `--egress-config` if you don't use the defaults. Save it as `~/.config/systemd/user/tokhive-bee.service`, then run `systemctl --user daemon-reload && systemctl --user enable --now tokhive-bee`. If the service must run while nobody is logged in, enable lingering for the user. On macOS, use a LaunchAgent with the same arguments, `RunAtLoad` and `KeepAlive`.
+Bee then runs in the background and starts automatically after a reboot. The wizard reports success only after systemd reports the service as active; use `bee status` to check Hive connectivity and whether accounts can take work. The service skips startup until both `bee.json` and `egress.json` exist. It restarts after failures, waiting ten seconds between attempts; a normal exit, including replacement by a new device, does not restart it. Upgrades ask before restarting an active service, defaulting to no; a service in a transitional state is left in place.
+
+The service records the installation's absolute binary path, `HOME`, `XDG_CONFIG_HOME`, `PATH`, and any explicitly set `CODEX_HOME`, `CLAUDE_CONFIG_DIR` or `CLAUDE_SECURESTORAGE_CONFIG_DIR`. Use the same environment when installing and pairing. Non-default device or egress configuration paths, proxy settings and other required environment variables can be set with `sudo systemctl edit tokhive-bee`. Credentials must be readable without an interactive login; a login-locked keyring is not unlocked by starting the service.
+
+If you previously enabled the README's user-level service, stop and disable it before rerunning the installer:
+
+```sh
+systemctl --user disable --now tokhive-bee
+```
+
+The installer updates units marked as managed by Bee and refuses to overwrite a hand-written or linked system unit. Keep those units with `BEE_INSTALL_SERVICE=0`, or migrate them explicitly.
+
+To remove the installed service:
+
+```sh
+sudo systemctl disable --now tokhive-bee
+sudo rm /etc/systemd/system/tokhive-bee.service
+sudo systemctl daemon-reload
+```
+
+This keeps the binary and pairing configuration. On macOS, use a LaunchAgent with the `bee run` arguments, `RunAtLoad` and `KeepAlive`; it depends on the user's login session.
 
 If the network drops, Bee reconnects with exponential backoff from 1 to 30 seconds, so it can be started before Hive is reachable. When you pair a new machine to replace this one, the old Bee finishes the work it already has and then exits.
 

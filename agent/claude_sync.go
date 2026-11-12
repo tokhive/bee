@@ -7,10 +7,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sync/atomic"
 	"time"
 
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 type claudeSource struct {
@@ -31,12 +32,40 @@ type claudeSource struct {
 	capabilityRevision    string
 	lastCapabilitySync    time.Time
 	lastCapabilityAttempt time.Time
-	metadataReportedAt    time.Time
-	metadataGeneration    int64
-	metadataLease         string
-	pacer                 syncPacer
-	reportedAuth          beewire.Authorization
-	synchronized          *desktopSynchronizationReceipt
+	// announceReady is a capability recovery whose readiness line waits for
+	// Hive to accept the report.
+	announceReady bool
+	// capabilityWanted is Hive asking for a Claude capability report now; it
+	// lives on the egress configuration, which control streams reach.
+	capabilityWanted   *atomic.Bool
+	metadataReportedAt time.Time
+	metadataGeneration int64
+	metadataLease      string
+	pacer              syncPacer
+	reportedAuth       beewire.Authorization
+	synchronized       *desktopSynchronizationReceipt
+	// suspended is the last unavailable source this Bee told Hive about: why,
+	// on which connection, and when. See unavailableReportInterval.
+	suspended struct {
+		reason, lease string
+		at            time.Time
+	}
+}
+
+// unavailableReportInterval is how often a source that stays unavailable for
+// the same reason is reported to Hive again. The first report is what
+// suspends the account; Hive keeps it suspended until the source is reported
+// back, so repeating it every cycle, every two seconds, only cost two Hive
+// requests per cycle for as long as the Provider stayed logged out. It is
+// still repeated now and then, which reasserts it to a Hive that has lost
+// track for any reason, and at once on a new connection or a new reason.
+const unavailableReportInterval = time.Minute
+
+// unavailableUnchanged reports whether reason was already reported on lease
+// recently enough that telling Hive again says nothing new.
+func (source *claudeSource) unavailableUnchanged(reason error, lease string, now time.Time) bool {
+	last := source.suspended
+	return reason != nil && last.lease == lease && last.reason == reason.Error() && now.Sub(last.at) < unavailableReportInterval
 }
 
 // capabilityWorkAt is when this platform next owes a capability report, so the
@@ -115,7 +144,13 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	// the window. Only the Hive round trip below is paced, because that is the
 	// part that costs a write transaction.
 	credential, auth, err := source.authorization(ctx)
-	if !force && err == nil && auth == source.reportedAuth && source.pacer.skip(time.Now()) {
+	if err == nil {
+		source.suspended.reason = ""
+	} else if !force && source.unavailableUnchanged(err, lease, time.Now()) {
+		// Still unavailable for the reason Hive was told a moment ago.
+		return nil
+	}
+	if !force && err == nil && auth == source.reportedAuth && !capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) && source.pacer.skip(time.Now()) {
 		return nil
 	}
 	source.synchronized = nil
@@ -136,6 +171,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		if err := callState(ctx, httpClient(), state, path+"/source", "PUT", map[string]string{"lease": lease}, nil); err != nil {
 			return err
 		}
+		source.suspended.reason, source.suspended.lease, source.suspended.at = reason.Error(), lease, time.Now()
 		source.message(out, "source_unavailable", "new Claude jobs paused; waiting for official authorization recovery: "+reason.Error())
 		return nil
 	}
@@ -153,6 +189,10 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	}
 	if result.Account.Platform != "claude" {
 		return errors.New("Hive returned an unexpected platform for Claude maintenance")
+	}
+	if result.Account.Status == "account_in_use" {
+		source.message(out, "account_in_use", accountStateLabels["account_in_use"]+"; new Claude jobs paused")
+		return nil
 	}
 	if result.Account.Status == "confirmation_required" {
 		source.message(out, "confirmation_required", "different Claude account detected; new jobs paused; run bee account-status --platform claude and explicitly confirm with bee confirm-account")
@@ -224,12 +264,17 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		slog.Debug("claude credential registered", "module", "maintenance", "task", task.ID, "generation", registered.Generation)
 	}
 	source.message(out, "ready", "Claude authorization synchronized and account confirmed")
-	if source.Capabilities && (force || time.Since(source.lastCapabilityAttempt) >= 10*time.Second && (source.capabilityRevision != auth.CredentialRevision || time.Since(source.lastCapabilitySync) >= beewire.CapabilityUsageInterval)) {
+	if source.Capabilities && (force || capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) || time.Since(source.lastCapabilityAttempt) >= 10*time.Second && (source.capabilityRevision != auth.CredentialRevision || time.Since(source.lastCapabilitySync) >= beewire.CapabilityUsageInterval)) {
 		source.lastCapabilityAttempt = time.Now()
+		if source.capabilityWanted != nil {
+			source.capabilityWanted.Store(false)
+		}
 		source.capabilitySequence++
 		snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, source.capabilitySequence, source.transport)
 		source.capabilities.announce(out)
-		logCapabilityFailure("claude", &source.capabilities.logged, source.capabilities.failure)
+		if logCapabilityFailure("claude", &source.capabilities.logged, source.capabilities.failure) {
+			source.announceReady = true
+		}
 		if errors.Is(err, errClaudeProfileRejected) {
 			source.verifiedAt = time.Time{}
 			return stop(err)
@@ -256,6 +301,10 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		source.metadataReportedAt = snapshot.MetadataObservedAt
 		source.metadataGeneration, source.metadataLease = result.Account.Generation, lease
 		source.capabilityRevision = auth.CredentialRevision
+		if source.announceReady {
+			source.announceReady = false
+			go reportReadiness(ctx, state, "claude", out)
+		}
 	}
 	// A cycle that handled a task leaves Hive in a state worth confirming at
 	// once, so only a quiet one may idle, and only until the observation needs

@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 type codexSource struct {
@@ -63,25 +63,33 @@ func codexStatus(ctx context.Context, args []string, out io.Writer) error {
 	if flags.NArg() != 0 {
 		return errors.New("unexpected arguments")
 	}
-	credential, err := source.read(ctx)
+	report, err := readCodexStatus(ctx, source, *queryCapabilities)
 	if err != nil {
 		return err
 	}
+	return json.NewEncoder(out).Encode(report)
+}
+
+func readCodexStatus(ctx context.Context, source codexSource, queryCapabilities bool) (map[string]any, error) {
+	credential, err := source.read(ctx)
+	if err != nil {
+		return nil, err
+	}
 	hash := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
 	status := map[string]any{"source": credential.Source, "account_fingerprint": hex.EncodeToString(hash[:]), "plan": credential.Plan, "expires_at": credential.ExpiresAt.UTC().Format(time.RFC3339), "validation": "local_structure_only"}
-	if *queryCapabilities {
-		probe := &capabilitySource{home: source.Home}
+	if queryCapabilities {
+		probe := &capabilitySource{home: source.Home, transport: source.transport}
 		capabilities := probe.observe(ctx, credential, 1)
 		current, err := source.read(ctx)
 		if err != nil || !current.sameAuthorization(credential) {
-			return errors.New("official authorization source changed during query; check again")
+			return nil, errors.New("official authorization source changed during query; check again")
 		}
 		status["capabilities"] = capabilities
 		if probe.failure != "" {
 			status["capabilities_unknown_reason"] = probe.failure
 		}
 	}
-	return json.NewEncoder(out).Encode(status)
+	return status, nil
 }
 
 func (source codexSource) read(ctx context.Context) (codexCredential, error) {
@@ -140,19 +148,30 @@ func (source codexSource) readForMaintenance(ctx context.Context) (codexCredenti
 }
 
 func readCodexFile(path string) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if os.IsNotExist(err) {
+		return nil, &credentialError{kind: "missing", detail: path}
+	}
+	if err != nil {
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
+	}
+	if !info.Mode().IsRegular() {
+		return nil, &credentialError{kind: "regular", detail: fmt.Sprintf("%s; mode=%s", path, info.Mode())}
+	}
 	file, err := openRegularNoFollow(path)
 	if err != nil {
-		return nil, fmt.Errorf("open official authorization file without following links: %w", err)
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
 	}
 	defer file.Close()
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
 	if err != nil {
-		return nil, fmt.Errorf("read official authorization file %q: %w", path, err)
+		clear(raw)
+		return nil, &credentialError{kind: "read", detail: path, cause: err}
 	}
 	if len(raw) > 65536 {
 		size := len(raw)
 		clear(raw)
-		return nil, fmt.Errorf("official authorization file %q exceeds 64 KiB: bytes read=%d; required<=65536", path, size)
+		return nil, &credentialError{kind: "size", detail: fmt.Sprintf("%s; bytes_read=%d", path, size)}
 	}
 	return raw, nil
 }

@@ -1,4 +1,5 @@
 //! Installation consumes S1 exit evidence; this module never stops processes by name.
+use tauri::Manager;
 use crate::{
     protocol::BridgeError,
     updater::{error, PendingUpdate, UpdateManager, UpdateSnapshot, UpdateState},
@@ -224,7 +225,7 @@ pub(crate) async fn verify_startup_progress(
             inspection=bridge.reconcile_recovery().await?;
         }
         if let Some(cause)=inspection.failure { return Err(cause); }
-        let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+        let journal=bridge.startup_journal(manager.store.path());
         let current_instance=bridge.status().metadata.ok_or_else(||error("RECOVERY_CONTEXT_INVALID","management metadata missing after session retirement"))?.instance;
         journal.retire_previous(&inspection,&current_instance)?;
         let previous=journal.observe(bridge).await?;
@@ -333,12 +334,14 @@ pub(crate) async fn verify_recheck(
 }
 
 #[tauri::command]
-pub fn update_install(
+pub(crate) fn update_install(
     app: tauri::AppHandle,
     manager: tauri::State<'_, UpdateManager>,
-    bridge: tauri::State<'_, crate::sidecar::Bridge>,
+    bridge: tauri::State<'_, crate::hive_switch::CurrentBridge>,
     request: UpdateInstallRequest,
 ) -> Result<UpdateSnapshot, BridgeError> {
+    let bridge=bridge.get()?;
+    if app.state::<crate::hive_switch::HiveSwitch>().pending()? {return Err(error("HIVE_SWITCH_BUSY","update installation waits for the existing Hive switch to settle"));}
     if !request.confirmed {
         return Err(error(
             "UPDATE_CONFIRMATION_REQUIRED",
@@ -367,7 +370,7 @@ pub fn update_install(
     let ticket = prepare_owned_install(&manager, &request, &bridge)?;
     let snapshot = manager.snapshot()?;
     let manager = manager.inner().clone();
-    let bridge = bridge.inner().clone();
+    let bridge = bridge.clone();
     // The fixed command returns admission promptly. Cancelling the IPC caller cannot
     // abandon an admitted shutdown or leave an unobserved half-frozen child.
     tauri::async_runtime::spawn(async move {

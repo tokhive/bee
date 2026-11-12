@@ -1,8 +1,18 @@
+use crate::hive_switch::CurrentBridge;
 use crate::{
     protocol::{AccountActionRequest, AccountDetectRequest, BridgeError, SupplyPlatform},
-    sidecar::{Bridge, BridgeReply, BridgeStatus},
+    sidecar::{BridgeReply, BridgeStatus},
 };
 use tauri::Manager;
+
+fn require_idle_switch<R: tauri::Runtime>(app: &tauri::AppHandle<R>) -> Result<(), BridgeError> {
+    if let Some(coordinator) = app.try_state::<crate::hive_switch::HiveSwitch>() {
+        if coordinator.pending()? {
+            return Err(BridgeError::new("HIVE_SWITCH_BUSY", "the existing Hive switch owns runtime and binding recovery; reconcile that operation first".into()));
+        }
+    }
+    Ok(())
+}
 
 #[tauri::command]
 pub fn preferences_read(
@@ -51,56 +61,62 @@ fn check_method(method: &str) -> Result<(), BridgeError> {
 
 #[tauri::command]
 pub async fn bridge_request(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     method: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     check_method(&method)?;
     bridge.ping().await
 }
 
 #[tauri::command]
-pub fn bridge_status(bridge: tauri::State<'_, Bridge>) -> BridgeStatus {
-    bridge.status()
+pub fn bridge_status(bridge: tauri::State<'_, CurrentBridge>) -> BridgeStatus {
+    bridge.get().map(|b|b.status()).unwrap_or_else(|cause|crate::sidecar::BridgeStatus{state:crate::sidecar::BridgePhase::Failed,metadata:None,error:Some(cause)})
 }
 
 #[tauri::command]
-pub fn bridge_pending_requests(bridge: tauri::State<'_, Bridge>) -> crate::sidecar::PendingRequests {
-    bridge.pending_requests()
+pub fn bridge_pending_requests(bridge: tauri::State<'_, CurrentBridge>) -> crate::sidecar::PendingRequests {
+    bridge.get().map(|b|b.pending_requests()).unwrap_or(crate::sidecar::PendingRequests{instance:None,requests:vec![]})
 }
 
 #[tauri::command]
 pub async fn account_defaults(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.account_defaults().await
 }
 #[tauri::command]
 pub async fn account_detect(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     request: AccountDetectRequest,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.account_detect(request).await
 }
 #[tauri::command]
 pub async fn account_snapshot(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     platform: SupplyPlatform,
     refresh: bool,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.account_snapshot(platform, refresh).await
 }
 #[tauri::command]
 pub async fn account_action(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     request: AccountActionRequest,
     gate: tauri::State<'_, crate::experience::StartupGate>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     gate.check()?;
     bridge.account_action(request).await
 }
 
 #[tauri::command]
-pub async fn device_status(app: tauri::AppHandle, bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
+pub async fn device_status(app: tauri::AppHandle, bridge: tauri::State<'_, CurrentBridge>) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge.device_status().await?;
     crate::experience::observe_device(&app, &bridge, &reply.result).await;
     Ok(reply)
@@ -108,28 +124,30 @@ pub async fn device_status(app: tauri::AppHandle, bridge: tauri::State<'_, Bridg
 
 #[tauri::command]
 pub async fn device_begin(
-    bridge: tauri::State<'_, Bridge>,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
     hive: String,
     name: String,
 ) -> Result<BridgeReply, BridgeError> {
-    bridge.device_begin(hive, name).await
+    coordinator.initial_begin(hive, name).await
 }
 
 #[tauri::command]
 pub async fn supply_status(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     platform: SupplyPlatform,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.supply_status(platform).await
 }
 
 #[tauri::command]
 pub async fn supply_set_paused(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     gate: tauri::State<'_, crate::experience::StartupGate>,
     platform: SupplyPlatform,
     paused: bool,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     if !paused {
         gate.check()?;
     }
@@ -185,7 +203,7 @@ fn pairing_url(value: &serde_json::Value) -> Result<tauri::Url, BridgeError> {
     Ok(url)
 }
 
-fn pairing_browser_action(value: &serde_json::Value) -> Result<Option<tauri::Url>, BridgeError> {
+pub(crate) fn pairing_browser_action(value: &serde_json::Value) -> Result<Option<tauri::Url>, BridgeError> {
     match value
         .pointer("/device/state")
         .and_then(|state| state.as_str())
@@ -195,7 +213,7 @@ fn pairing_browser_action(value: &serde_json::Value) -> Result<Option<tauri::Url
     }
 }
 
-fn recovery_browser_action(
+pub(crate) fn recovery_browser_action(
     value: &serde_json::Value,
     context: &serde_json::Value,
 ) -> Result<tauri::Url, BridgeError> {
@@ -254,8 +272,9 @@ async fn wait_opener(
 #[tauri::command]
 pub async fn device_open(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge.device_status().await?;
     let (reply, url) = if let Some(cause) = reply.result.get("error") {
         if !matches!(
@@ -280,6 +299,11 @@ pub async fn device_open(
         };
         (reply, url)
     };
+    open_pairing_url(url).await?;
+    Ok(reply)
+}
+
+pub(crate) async fn open_pairing_url(url:tauri::Url)->Result<(),BridgeError>{
     // No shell interpolation or executable/path supplied by the frontend.
     #[cfg(target_os = "macos")]
     let command = {
@@ -301,7 +325,7 @@ pub async fn device_open(
         c
     };
     wait_opener(command, std::time::Duration::from_secs(5)).await?;
-    Ok(reply)
+    Ok(())
 }
 
 #[cfg(test)]
@@ -408,9 +432,10 @@ mod browser_action_tests {
 
 #[tauri::command]
 pub async fn runtime_snapshot(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge.runtime_snapshot().await?;
     diagnostics.capture_runtime(&reply)?;
     Ok(reply)
@@ -418,19 +443,21 @@ pub async fn runtime_snapshot(
 #[tauri::command]
 pub async fn runtime_start<R: tauri::Runtime>(
     app: tauri::AppHandle<R>,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     request: crate::runtime_protocol::RuntimeStartRequest,
     gate: tauri::State<'_, crate::experience::StartupGate>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     crate::experience::start_with_presence(&app, &bridge, &store, &controller, &gate, request).await
 }
 #[tauri::command]
 pub async fn runtime_stop(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     expected_revision: u64,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge
         .runtime_stop(
             expected_revision,
@@ -441,37 +468,42 @@ pub async fn runtime_stop(
 
 #[tauri::command]
 pub async fn authorize_start(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     request: crate::authorize_protocol::AuthorizeRequest,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.authorize_start(request).await
 }
 #[tauri::command]
 pub async fn authorize_status(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     operation_id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.authorize_status(operation_id).await
 }
 #[tauri::command]
 pub async fn authorize_cancel(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     operation_id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.authorize_cancel(operation_id).await
 }
 #[tauri::command]
 pub async fn authorize_progress(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     operation_id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.authorize_progress(operation_id).await
 }
 #[tauri::command]
 pub async fn authorize_open(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     operation_id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.authorize_open(operation_id).await
 }
 
@@ -521,19 +553,21 @@ pub fn autostart_set(
 
 #[tauri::command]
 pub async fn diagnostics_start(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge.diagnostics_action("diagnostics_start", None).await?;
     diagnostics.capture(&reply)?;
     Ok(reply)
 }
 #[tauri::command]
 pub async fn diagnostics_snapshot(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
     id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge
         .diagnostics_action("diagnostics_snapshot", Some(id))
         .await?;
@@ -542,10 +576,11 @@ pub async fn diagnostics_snapshot(
 }
 #[tauri::command]
 pub async fn diagnostics_cancel(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
     id: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge
         .diagnostics_action("diagnostics_cancel", Some(id))
         .await?;
@@ -561,11 +596,12 @@ pub fn diagnostic_logs(
 }
 #[tauri::command]
 pub async fn diagnostics_export(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     diagnostics: tauri::State<'_, crate::diagnostics_native::NativeDiagnostics>,
     report_id: String,
     include_logs: bool,
 ) -> Result<crate::diagnostic_log::DiagnosticExport, BridgeError> {
+    let bridge=bridge.get()?;
     let reply = bridge
         .diagnostics_action("diagnostics_snapshot", Some(report_id))
         .await?;
@@ -630,18 +666,20 @@ pub async fn notification_enable(
 }
 #[tauri::command]
 pub async fn network_test(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     proxy: String,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.network_test(proxy).await
 }
 
 #[tauri::command]
 pub async fn network_snapshot(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
 ) -> Result<crate::network::NetworkSnapshot, BridgeError> {
+    let bridge=bridge.get()?;
     let device = bridge.device_status().await?;
     let scope = controller.bind_verified_device(&store, &device.result)?;
     Ok(controller
@@ -653,25 +691,29 @@ pub async fn network_snapshot(
         .await)
 }
 #[tauri::command]
-pub async fn network_apply_saved(
-    bridge: tauri::State<'_, Bridge>,
+pub async fn network_apply_saved<R:tauri::Runtime>(
+    app:tauri::AppHandle<R>,
+    bridge: tauri::State<'_, CurrentBridge>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     controller: tauri::State<'_, crate::network::NetworkController>,
     gate: tauri::State<'_, crate::experience::StartupGate>,
     manager: tauri::State<'_, crate::updater::UpdateManager>,
     confirmed: bool,
 ) -> Result<crate::network::NetworkSnapshot, BridgeError> {
+    require_idle_switch(&app)?;
+    let bridge=bridge.get()?;
     crate::experience::apply_saved_network(&bridge, &store, &controller, &gate, &manager, confirmed)
         .await
 }
 #[tauri::command]
 pub async fn network_save_proxy(
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     store: tauri::State<'_, crate::preferences::PreferencesStore>,
     proxy: String,
     origin: Option<String>,
     expected_revision: u64,
 ) -> Result<crate::preferences::PreferencesSnapshot, BridgeError> {
+    let bridge=bridge.get()?;
     crate::preferences::validate_proxy(&proxy)?;
     let saved = store.read();
     if let Some(error) = saved.error {
@@ -738,7 +780,8 @@ fn hive_root(value: &serde_json::Value) -> Result<tauri::Url, BridgeError> {
     })
 }
 #[tauri::command]
-pub async fn hive_open(bridge: tauri::State<'_, Bridge>) -> Result<(), BridgeError> {
+pub async fn hive_open(bridge: tauri::State<'_, CurrentBridge>) -> Result<(), BridgeError> {
+    let bridge=bridge.get()?;
     let context = bridge.device_context().await?;
     let value = serde_json::json!({"device":{"hive":crate::protocol::device_context(&context.result)?.hive}});
     let url = hive_root(&value)?;
@@ -775,7 +818,8 @@ mod hive_root_tests {
 }
 
 #[tauri::command]
-pub async fn device_context(bridge: tauri::State<'_, Bridge>) -> Result<BridgeReply, BridgeError> {
+pub async fn device_context(bridge: tauri::State<'_, CurrentBridge>) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     bridge.device_context().await
 }
 #[tauri::command]
@@ -787,47 +831,57 @@ pub fn startup_status(
 #[tauri::command]
 pub async fn startup_query(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
+    let bridge=bridge.get()?;
     crate::experience::query(&app,&bridge).await
 }
 #[tauri::command]
 pub async fn startup_retry(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
-    Ok(crate::experience::retry(app,bridge.inner().clone()).await)
+    require_idle_switch(&app)?;
+    let bridge=bridge.get()?;
+    Ok(crate::experience::retry(app,bridge.clone()).await)
 }
 #[tauri::command]
 pub async fn startup_recheck(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
+    require_idle_switch(&app)?;
+    let bridge=bridge.get()?;
     Ok(crate::experience::recheck(&app, &bridge).await)
 }
 
 #[tauri::command]
 pub async fn device_recovery_prepare(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<BridgeReply, BridgeError> {
+    require_idle_switch(&app)?;
+    let bridge=bridge.get()?;
     crate::experience::recover_device(&app, &bridge, None, true).await
 }
 #[tauri::command]
 pub async fn device_recovery_status(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<BridgeReply, BridgeError> {
+    let bridge=bridge.get()?;
     crate::experience::recover_device(&app, &bridge, None, false).await
 }
 #[tauri::command]
 pub async fn device_recovery_confirm(
     app: tauri::AppHandle,
-    bridge: tauri::State<'_, Bridge>,
+    bridge: tauri::State<'_, CurrentBridge>,
     operation_id: String,
     expected_revision: u64,
     decision: String,
 ) -> Result<BridgeReply, BridgeError> {
+    require_idle_switch(&app)?;
+    let bridge=bridge.get()?;
     let request = crate::protocol::DeviceRecoveryConfirm {
         operation_id,
         expected_revision,
@@ -835,4 +889,89 @@ pub async fn device_recovery_confirm(
     };
     request.validate()?;
     crate::experience::recover_device(&app, &bridge, Some(request), false).await
+}
+
+#[tauri::command]
+pub fn hive_switch_snapshot(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    coordinator.snapshot()
+}
+#[tauri::command]
+pub async fn hive_switch_start(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    origin: String,
+    name: String,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    let snapshot = coordinator.start(origin, name, store.read()).await?;
+    if snapshot.operation.as_ref().is_some_and(|r| r.terminal()) {
+        coordinator.startup_current(app).await;
+    }
+    Ok(snapshot)
+}
+#[tauri::command]
+pub async fn hive_switch_observe(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    let pending = coordinator.pending()?;
+    let snapshot = coordinator.observe(store.read()).await?;
+    if pending && snapshot.operation.as_ref().is_some_and(|r| r.terminal()) {
+        coordinator.startup_current(app).await;
+    }
+    Ok(snapshot)
+}
+#[tauri::command]
+pub async fn hive_switch_target_status(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator.target_status().await
+}
+#[tauri::command]
+pub async fn hive_switch_target_begin(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    name: String,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator.target_begin(name).await
+}
+
+#[tauri::command]
+pub async fn hive_switch_target_recovery_prepare(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator.target_recovery(None, true).await
+}
+#[tauri::command]
+pub async fn hive_switch_target_recovery_status(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator.target_recovery(None, false).await
+}
+#[tauri::command]
+pub async fn hive_switch_target_recovery_confirm(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    operation_id: String,
+    expected_revision: u64,
+    decision: String,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator
+        .target_recovery(
+            Some(crate::protocol::DeviceRecoveryConfirm {
+                operation_id,
+                expected_revision,
+                decision,
+            }),
+            false,
+        )
+        .await
+}
+
+#[tauri::command]
+pub async fn hive_switch_target_open(
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+) -> Result<BridgeReply, BridgeError> {
+    coordinator.target_open().await
 }

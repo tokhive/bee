@@ -6,7 +6,7 @@ use crate::{
     },
     preferences::{PreferencesSnapshot, PreferencesStore},
     protocol::BridgeError,
-    sidecar::{Bridge, BridgePhase, BridgeReply, BridgeStatus},
+    sidecar::{BridgePhase, BridgeReply, BridgeStatus},
 };
 use serde::Deserialize;
 use serde_json::Value;
@@ -255,14 +255,15 @@ fn retain(app: &tauri::AppHandle, error: BridgeError) {
     );
     app.state::<NotificationPollState>().retain(error);
 }
-pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
+pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge) {
     let mut interval = tokio::time::interval(Duration::from_secs(10));
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         interval.tick().await;
+        let Ok(bridge)=route.get() else {continue;};
         let before = bridge.status();
         if before.state == BridgePhase::Stopped {
-            return;
+            continue;
         }
         // System language is resolved by the WebView. Until its first trusted
         // metadata receipt, do not touch the ledger or consume an attempt/retry.
@@ -305,11 +306,10 @@ pub async fn run(app: tauri::AppHandle, bridge: Bridge) {
             }
         };
         let worker_app = app.clone();
-        let worker_bridge = bridge.clone();
         let result=tokio::task::spawn_blocking(move || {
             // Recheck immediately before disk/OS work so a delayed blocking task
             // cannot deliver a sample from a replaced management instance.
-            let status=worker_bridge.status();
+            let status=worker_app.state::<crate::hive_switch::CurrentBridge>().get()?.status();
             let startup_ready=worker_app.state::<crate::experience::StartupGate>().check().is_ok();
             if ready_instance(&status,startup_ready)? != Some(instance.as_str()) {
                 return Err(BridgeError{ details: None,code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification submission blocked: management instance/startup gate changed while scheduling native reconciliation".into()});

@@ -28,7 +28,7 @@ import type {AccountFactory} from '../system/accounts';
 import type {RuntimeFactory} from '../system/runtime';
 import type {AuthorizeFactory} from '../system/authorize';
 import type {SupplyFactory} from '../system/supply';
-import type {SystemBridge} from '../system/bridge';
+import type {SystemBridge,NotificationSource} from '../system/bridge';
 import type {Page} from '../client/types';
 import {t,useLanguage} from '../i18n/index';
 
@@ -49,7 +49,7 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
-function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeLanguageFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
+function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeFeedback:ReactNode}){
  const {native,device:view}=snapshot;
  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
  const [recovery,setRecovery]=useState<RecoveryContext|null>(null);
@@ -144,7 +144,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
   {showSharedProblem&&page!=='overview'&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
   {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}
   {error&&page!=='overview' &&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
-  {nativeLanguageFeedback}
+  {nativeFeedback}
   {(!ready&&(firstProfile||switchingPending)||switchingPending&&page!=='overview')&&<div data-nav-section="device" tabIndex={-1}><DevicePairingPage inputDraft={switching} switchControl={switchControl} switchStatus={switchStatus} view={firstProfile?{state:'unbound'}:undefined} busy={busy} error={error} begin={beginDevice} refresh={()=>void switching.refresh()} canRefresh={false} open={()=>{}}/></div>}
   {ready&&page==='overview'&&<NativeOverviewPage inputDraft={switching} switchControl={switchControl} switchStatus={switchStatus} canRefresh={!startupReadOnly||!!snapshot.recovery} showAccounts={!startupReadOnly} presentation={presentation} onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} context={snapshot.deviceContext} recovery={snapshot.recovery} recoveryError={snapshot.recoveryError} refreshStatus={snapshot.refresh} recover={recover} operationError={error} busy={busy} checking={checking} initialLoading={!view&&!snapshot.recovery&&!sharedProblem&&!snapshot.recoveryError&&!snapshot.refresh.lastConfirmedAt} error={startupReadOnly?null:error??sharedProblem} reportedFailure={snapshot.startup?.failure} begin={beginDevice} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false,true)} open={()=>void run(()=>snapshot.recovery?props.client.recoveryOpen():props.client.open())}/>}
   {ready&&!startupReadOnly&&page==='accounts'&&<NativeAccountsPage navigationRequest={navigationRequest} onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||(showSharedProblem?null:snapshot.deviceError)}/>}
@@ -154,6 +154,8 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
 }
 export function NativeApp(props:NativeProps){
  const switching=useHiveSwitch(props.hiveSwitchClient);
+ const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
+ const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
@@ -188,6 +190,6 @@ export function NativeApp(props:NativeProps){
  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
- useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
- return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
+ useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
+ return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeFeedback={<>{notificationSource&&<div className="problem-notice" role="status"><p>{t('此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。',{origin:notificationSource.origin})}</p><div className="inline-actions"><button onClick={()=>{setPage('overview');switching.setChooserOpen(true);}}>{t('查看 Hive 列表')}</button><button aria-label={t('关闭通知提示')} onClick={()=>setNotificationSource(null)}>{t('关闭')}</button></div></div>}{localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}</>}/>;
 }

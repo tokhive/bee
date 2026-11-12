@@ -290,21 +290,29 @@ fn unconfirmed_system_language_never_changes_delivery_ledger_or_consumes_permiss
     active["notifications"]["facts"][0]["active"] = json!(true);
     active["notifications"]["facts"][0]["eligible"] = json!(true);
     let reconcile = |enabled, events: &[NotificationEvent]| service.reconcile(enabled, events);
-    apply_localized(decode(&active).unwrap(), prefs(true), None, reconcile).unwrap();
+    apply_localized(decode(&active).unwrap(), prefs(true), None, None, reconcile).unwrap();
     assert!(!path.exists());
     assert_eq!(adapter.0.load(Ordering::SeqCst), 0);
+    let source = crate::notifications::NotificationSource {
+        profile_id: "1".repeat(32),
+        origin: "https://a.example".into(),
+    };
     apply_localized(
         decode(&active).unwrap(),
         prefs(true),
         Some(crate::lifecycle::NativeLocale::Zh),
+        Some(source.clone()),
         reconcile,
     )
     .unwrap();
     let before = std::fs::read(&path).unwrap();
+    let ledger: serde_json::Value = serde_json::from_slice(&before).unwrap();
+    assert_eq!(ledger["records"][0]["notice"]["source"], serde_json::to_value(&source).unwrap());
     apply_localized(
         decode(&active).unwrap(),
         prefs(true),
         Some(crate::lifecycle::NativeLocale::En),
+        Some(source),
         reconcile,
     )
     .unwrap();

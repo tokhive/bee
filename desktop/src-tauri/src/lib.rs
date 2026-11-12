@@ -143,9 +143,11 @@ commands::device_recovery_status,
             app.manage(native_language.clone());
             app.manage(diagnostics_native::NativeDiagnostics::new(app.path().app_log_dir()?.join("safe-diagnostics")));
             let notify_handle = app.handle().clone();
-            let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |page| {
+            let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |target| {
+                let coordinator = notify_handle.try_state::<hive_switch::HiveSwitch>();
+                let activation = notifications::activate_target(target, coordinator.as_ref().map(|c| c.profiles.as_ref()));
                 lifecycle::dispatch(&notify_handle,lifecycle::WindowEvent::Reopen);
-                if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",page){eprintln!("notification navigation delivery failed: {cause}");}
+                if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",activation){eprintln!("notification navigation delivery failed: {cause}");}
             }),native_language);
             app.manage(notifications::NotificationService::new(app.path().config_dir()?.join("tokhive/notification-delivery.json"),std::sync::Arc::new(adapter)));
             let config = app.config().app.windows.first().ok_or_else(|| {

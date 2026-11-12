@@ -17,16 +17,19 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 		input = map[string]bool{"paused": command == "pause"}
 	}
 	var result beewire.PlatformSupply
-	err := callState(ctx, client, state, "/api/bee/platforms/"+platform, method, input, &result)
-	if err != nil {
-		if method == "PUT" {
-			return fmt.Errorf("operation result unconfirmed: %w; connect to Hive and run bee supply-status --platform %s to verify; the same operation can be retried", err, platform)
+	var err error
+	if method == "PUT" {
+		result, err = updatePlatformSupply(ctx, client, state, platform, command == "pause")
+	} else {
+		err = callState(ctx, client, state, "/api/bee/platforms/"+platform, method, input, &result)
+		if err == nil && result.Platform != platform {
+			err = fmt.Errorf("Hive returned platform %q; expected %q", result.Platform, platform)
 		}
+	}
+	if err != nil {
 		return err
 	}
-	if result.Platform != platform || (method == "PUT" && result.Paused != (command == "pause")) {
-		return fmt.Errorf("Hive returned a state inconsistent with the operation; run bee supply-status --platform %s to verify again", platform)
-	}
+
 	if method == "PUT" {
 		action := "manual pause cleared"
 		if result.Paused {
@@ -55,7 +58,9 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 // supplyReasonLabels says each reason Hive gives for not sending work in a
 // few words, for bee supply-status and bee status.
 var supplyReasonLabels = map[string]string{
-	"capabilities_unknown": "account capabilities unknown or expired", "quota_unknown": "quota awaiting a new query", "quota_exhausted": "account quota exhausted", "rate_limited": "upstream rate limit cooldown active", "concurrency_full": "account concurrency limit reached",
+	"codex_account_in_use":  "OpenAI account registered to another Provider",
+	"claude_account_in_use": "Claude account registered to another Provider",
+	"capabilities_unknown":  "account capabilities unknown or expired", "quota_unknown": "quota awaiting a new query", "quota_exhausted": "account quota exhausted", "rate_limited": "upstream rate limit cooldown active", "concurrency_full": "account concurrency limit reached",
 	"manually_paused": "manually paused", "banned": "banned by administrator", "device_draining": "device being replaced; finishing in-flight execution and settlement", "plan_not_configured": "no concurrency limit configured for this plan", "offline": "Bee offline", "not_configured": "supply not configured",
 	"model_unavailable": "model not tradable", "codex_authorization_rejected": "Codex authorization rejected by upstream",
 	"authorization_unavailable":     "no valid online authorization envelope",
@@ -64,4 +69,16 @@ var supplyReasonLabels = map[string]string{
 	"claude_authorization_rejected": "Claude authorization rejected by upstream",
 	"claude_source_unavailable":     "waiting for official Claude Code authorization recovery",
 	"claude_confirmation_required":  "Claude account changed; awaiting explicit confirmation",
+}
+
+func updatePlatformSupply(ctx context.Context, client *http.Client, state localState, platform string, paused bool) (beewire.PlatformSupply, error) {
+	var result beewire.PlatformSupply
+	err := callState(ctx, client, state, "/api/bee/platforms/"+platform, "PUT", map[string]bool{"paused": paused}, &result)
+	if err != nil {
+		return result, fmt.Errorf("operation result unconfirmed: %w; query bee supply-status --platform %s before retrying", err, platform)
+	}
+	if result.Platform != platform || result.Paused != paused {
+		return result, fmt.Errorf("Hive returned platform=%q paused=%t; expected %q paused=%t; query supply status again", result.Platform, result.Paused, platform, paused)
+	}
+	return result, nil
 }

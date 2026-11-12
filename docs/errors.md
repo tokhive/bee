@@ -47,10 +47,11 @@ The file contains a field that Bee doesn't recognize, and the error gives its na
 
 | Location | Fields |
 | --- | --- |
-| Top level | `targets`, `codex`, `claude`, `capabilities`, `connect_proxy`, `inbox_key_id`, `credential` |
+| Top level | `targets`, `codex`, `claude`, `reseller`, `capabilities`, `connect_proxy`, `inbox_key_id`, `credential` |
 | `codex` | `home`, `store`, `keyring_backend` |
 | `claude` | `store`, `config_dir`, `refresh`, `capabilities` |
 | `capabilities` | `local_url` (only for local test fixtures) |
+| `reseller` | `reseller`, `key_file` |
 
 ### BEE-CONFIG-FIELD-TYPE
 
@@ -107,6 +108,14 @@ The top-level `capabilities` only enables model and quota reports for Codex, so 
 ### BEE-CONFIG-CAPABILITIES-URL
 
 `capabilities.local_url` is not an HTTP address on a loopback IP. The field is only for local test fixtures; remove it for real supply.
+
+### BEE-CONFIG-RESELLER
+
+`reseller.reseller` names an API reseller Bee does not know. The only supported reseller is `wokey`. An API reseller is the market's fallback supply and only a Bee signed in to the platform's administrator account may supply one; see [API resellers](../README.md#api-resellers).
+
+### BEE-CONFIG-RESELLER-KEY
+
+The reseller key file can't be used. `reseller.key_file` must be an absolute path to a regular file that holds only the key, readable by the user running Bee alone (`chmod 600`). Bee reads it on every synchronization, so replacing the key needs no restart. The key is never printed.
 
 ### BEE-CONFIG-CLAUDE-STORE
 
@@ -290,6 +299,10 @@ Bee can't currently read the Codex login. Sign in again with the official Codex 
 
 The Codex login switched to a different account, and the change must be confirmed before it takes effect. Run `bee account-status --platform openai` to see the pending fingerprint, then confirm it with `bee confirm-account`.
 
+### `codex_account_in_use`
+
+This OpenAI subscription account is registered to another Provider. New work is paused. Use a different account, or ask the original Provider to confirm a switch to a different account. Disconnecting or pausing Bee does not release ownership; once it is released, a running Bee retries automatically. An existing account switch still needs explicit confirmation.
+
 ### `codex_authorization_rejected`
 
 OpenAI rejected the account's authorization. Sign in again with the official Codex client.
@@ -302,6 +315,18 @@ Bee can't currently read the Claude Code login. Sign in to Claude Code again; a 
 
 The Claude Code login switched to a different account, and the change must be confirmed before it takes effect. Run `bee account-status --platform claude` to see the pending fingerprint, then confirm it with `bee confirm-account`.
 
+### `claude_account_in_use`
+
+This Claude subscription account is registered to another Provider. New work is paused. Use a different account, or ask the original Provider to confirm a switch to a different account. Disconnecting or pausing Bee does not release ownership; once it is released, a running Bee retries automatically. An existing account switch still needs explicit confirmation.
+
 ### `claude_authorization_rejected`
 
 Anthropic rejected the account's authorization. Sign in to Claude Code again.
+
+### BEE-CONFIG-OPENAI-API
+
+官方 OpenAI API 供给配置无效。`openai_api.models` 必须选择 1–512 个不重复的模型 ID；`local_url` 仅用于全部目标均为 loopback 的本地测试。
+
+### BEE-CONFIG-OPENAI-API-KEY
+
+官方 API Key 文件不可读取或内容无效。`openai_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个 Key。Key 不应写入配置文件、日志或命令参数。

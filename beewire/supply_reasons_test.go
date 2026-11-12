@@ -28,7 +28,7 @@ func TestEveryReasonIsExplainedAndEveryExplanationIsAReason(t *testing.T) {
 }
 
 func TestDetailedSupplyReasonExplanationsPreserveLegacyReasons(t *testing.T) {
-	legacy := []string{"manually_paused", "banned", "device_draining", "offline", "not_configured", "model_unavailable", "authorization_unavailable", "capabilities_unknown", "rate_limited", "quota_unknown", "quota_exhausted", "plan_not_configured", "concurrency_full", "codex_source_unavailable", "codex_confirmation_required", "codex_authorization_rejected", "claude_source_unavailable", "claude_confirmation_required", "claude_authorization_rejected"}
+	legacy := []string{"manually_paused", "banned", "device_draining", "offline", "not_configured", "model_unavailable", "authorization_unavailable", "capabilities_unknown", "rate_limited", "quota_unknown", "quota_exhausted", "plan_not_configured", "concurrency_full", "codex_source_unavailable", "codex_confirmation_required", "codex_authorization_rejected", "codex_account_in_use", "claude_source_unavailable", "claude_confirmation_required", "claude_authorization_rejected", "claude_account_in_use"}
 	if !slices.Equal(SupplyReasons(), legacy) {
 		t.Fatalf("legacy reasons changed: actual=%v required=%v", SupplyReasons(), legacy)
 	}

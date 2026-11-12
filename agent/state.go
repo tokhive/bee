@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/tokhive/bee/beewire"
@@ -25,21 +26,28 @@ func readState(path string) (localState, error) {
 		return state, nil
 	}
 	if err != nil {
-		return state, fmt.Errorf("open Bee configuration: %w", err)
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("open device configuration %s: %w", path, err))
 	}
 	defer file.Close()
 	if err := validatePrivateFile(file); err != nil {
-		return state, fmt.Errorf("check Bee configuration protection: %w", err)
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("check device configuration protection %s: %w", path, err))
 	}
 	decoder := json.NewDecoder(file)
 	decoder.DisallowUnknownFields()
-	if err = decoder.Decode(&state); err != nil {
-		return localState{}, fmt.Errorf("decode Bee configuration %q: %w", path, err)
+	var decoded *localState
+	if err = decoder.Decode(&decoded); err != nil {
+		return state, failCause("BEE-DEVICE-CONFIG", fmt.Errorf("decode device configuration %s: %w", path, err))
 	}
-	if state.RuntimeEpoch != "" && !desktopHexID(state.RuntimeEpoch, 24) {
-		return localState{}, fmt.Errorf("Bee runtime epoch rejected: bytes=%d; required=48 lowercase hex characters", len(state.RuntimeEpoch))
+	if decoded == nil {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: expected a JSON object, got null", path)
 	}
-	return state, nil
+	if err = decoder.Decode(new(any)); err != io.EOF {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: extra content after the device JSON object at byte %d; keep exactly one JSON object", path, decoder.InputOffset())
+	}
+	if decoded.RuntimeEpoch != "" && !desktopHexID(decoded.RuntimeEpoch, 24) {
+		return state, failf("BEE-DEVICE-CONFIG", "%s: Bee runtime epoch rejected: bytes=%d; required=48 lowercase hex characters", path, len(decoded.RuntimeEpoch))
+	}
+	return *decoded, nil
 }
 
 func saveState(path string, state localState) error {

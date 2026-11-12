@@ -13,8 +13,8 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 // Hive ae6573b service/credential_maintenance.go schedules an OpenAI refresh
@@ -119,11 +119,11 @@ func TestOpenAIPlanRefreshIsBoundedByAuthorizationRevisionAndTime(t *testing.T) 
 		t.Fatalf("plan mismatch accepted: status=%s", result.Status)
 	}
 	now := time.Now()
-	if !source.wantsPlanRefresh(revision, now) || source.wantsPlanRefresh("another-revision", now) {
+	if !source.wantsRefresh(revision, now) || source.wantsRefresh("another-revision", now) {
 		t.Fatal("plan refresh is not bound to the observed authorization revision")
 	}
-	source.askedPlanRefresh(revision, now)
-	if source.wantsPlanRefresh(revision, now.Add(2*time.Hour)) {
+	source.askedRefresh(revision, now)
+	if source.wantsRefresh(revision, now.Add(2*time.Hour)) {
 		t.Fatal("the same token requested a second refresh")
 	}
 	credential.Secret.Token = "synthetic-refreshed-access"
@@ -133,28 +133,28 @@ func TestOpenAIPlanRefreshIsBoundedByAuthorizationRevisionAndTime(t *testing.T) 
 		delta time.Duration
 		want  bool
 	}{{time.Hour - time.Nanosecond, false}, {time.Hour, true}, {time.Hour + time.Nanosecond, true}} {
-		if got := source.wantsPlanRefresh(newRevision, now.Add(at.delta)); got != at.want {
+		if got := source.wantsRefresh(newRevision, now.Add(at.delta)); got != at.want {
 			t.Fatalf("refresh throttle at %s: got=%t required=%t", at.delta, got, at.want)
 		}
 	}
 	source.transport = &openaiControlFixture{plan: "pro"}
-	if result := source.observe(context.Background(), credential, 3); result.Status != "ready" || source.wantsPlanRefresh(newRevision, now.Add(2*time.Hour)) {
+	if result := source.observe(context.Background(), credential, 3); result.Status != "ready" || source.wantsRefresh(newRevision, now.Add(2*time.Hour)) {
 		t.Fatalf("matching plans retained a refresh request: status=%s", result.Status)
 	}
 	// Missing single-window plan metadata is insufficient evidence of a plan
 	// change, and a failed query must not reuse an earlier disagreement.
 	credential.Plan = "free"
 	source.transport = &openaiControlFixture{}
-	if result := source.observe(context.Background(), credential, 4); result.Status != "unknown" || source.wantsPlanRefresh(newRevision, now.Add(2*time.Hour)) {
+	if result := source.observe(context.Background(), credential, 4); result.Status != "unknown" || source.wantsRefresh(newRevision, now.Add(2*time.Hour)) {
 		t.Fatalf("missing plan requested refresh: status=%s", result.Status)
 	}
 	source.transport = &openaiControlFixture{plan: "pro", fail: true}
 	source.observe(context.Background(), credential, 5)
-	if source.wantsPlanRefresh(newRevision, now.Add(2*time.Hour)) {
+	if source.wantsRefresh(newRevision, now.Add(2*time.Hour)) {
 		t.Fatal("failed usage query requested a refresh")
 	}
 	var absent *capabilitySource
-	if absent.wantsPlanRefresh(revision, now) {
+	if absent.wantsRefresh(revision, now) {
 		t.Fatal("disabled capability observation requested a refresh")
 	}
 }

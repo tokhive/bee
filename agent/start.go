@@ -16,6 +16,9 @@ import (
 
 const usage = `Bee supplies your AI subscriptions to a TokHive market.
 
+Interactive management:
+  bee                       open the numbered management menu in a terminal
+
 Get started (run it again any time to start Bee):
   bee start --hive URL       pair this machine, choose the accounts to supply, and run
 
@@ -42,6 +45,8 @@ Machine entry (no contribution or configuration access):
 
 Device commands take --config PATH to use another device configuration.
 bee desktop accepts no flags or additional arguments.
+codex-status and claude-status use their own official-client directory options.
+help and version do not read device configuration.
 Run bee <command> -h for its options.
 `
 

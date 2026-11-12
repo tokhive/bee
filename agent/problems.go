@@ -96,13 +96,29 @@ var problems = map[string]problem{
 		"capabilities.local_url is not an HTTP address at a loopback IP",
 		"remove local_url; it exists only for local test fixtures",
 	},
+	"BEE-CONFIG-OPENAI-API": {
+		"official OpenAI API supply configuration is invalid",
+		"select 1 to 512 distinct model IDs; local_url is only for loopback test fixtures",
+	},
+	"BEE-CONFIG-OPENAI-API-KEY": {
+		"the official API key file is missing, unreadable, open to other users or does not hold a single key",
+		"set openai_api.key_file to an absolute path holding only the key, with permissions 600",
+	},
+	"BEE-CONFIG-RESELLER": {
+		"reseller names an API reseller Bee does not know",
+		"set reseller.reseller to a supported reseller, such as wokey",
+	},
+	"BEE-CONFIG-RESELLER-KEY": {
+		"the reseller key file is missing, unreadable, open to other users or does not hold a single key",
+		"set reseller.key_file to an absolute path of a file holding only the key, and run chmod 600 on it",
+	},
 	"BEE-CONFIG-CLAUDE-STORE": {
 		`claude.store is neither "keychain" nor "file"`,
 		`set claude.store to "keychain" on macOS or "file" on Linux, or run bee setup to write it`,
 	},
 	"BEE-DEVICE-CONFIG": {
 		"the Bee device configuration cannot be used",
-		"check the --config path; " + privateFilePermissionFix,
+		"configuration kept; fix the reported JSON or path issue; " + privateFilePermissionFix + "; then start again",
 	},
 	"BEE-DEVICE-NOT-PAIRED": {
 		"this Bee is not paired with Hive",
@@ -196,6 +212,7 @@ func init() {
 type codedError struct {
 	code   string
 	detail string
+	cause  error
 }
 
 func fail(code, detail string) error {
@@ -204,6 +221,18 @@ func fail(code, detail string) error {
 	}
 	return &codedError{code: code, detail: detail}
 }
+
+// failCause preserves the typed cause for menu presentation while keeping the
+// established English CLI/JSON format and including the response evidence.
+func failCause(code string, cause error) error {
+	e := fail(code, cause.Error()).(*codedError)
+	e.cause = cause
+	if api, ok := cause.(*apiFailure); ok {
+		e.detail += fmt.Sprintf(" (HTTP %d; code=%s)", api.Status, api.Code)
+	}
+	return e
+}
+func (e *codedError) Unwrap() error { return e.cause }
 
 func failf(code, format string, args ...any) error {
 	return fail(code, fmt.Sprintf(format, args...))

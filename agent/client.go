@@ -185,7 +185,11 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
-		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}})
+		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}
+		if egress != nil {
+			header.Set(beewire.ControlsHeader, beewire.ControlCapabilities)
+		}
+		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: header})
 		cancel()
 		metrics.connect(connectStart, err)
 		handshakeConnected := err == nil
@@ -194,7 +198,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			lastFailure = nil
 			emit("connected", "idle", nil)
 			delay, conflicts = time.Second, 0
-			notify(out, slog.LevelInfo, "connect", "Bee connected to Hive", "endpoint", endpoint)
+			notifyConnected(out, endpoint)
 			var live context.Context
 			var end func()
 			var syncFailures <-chan error

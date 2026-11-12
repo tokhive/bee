@@ -70,7 +70,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
  useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
  useEffect(()=>{if(form&&!creating)hiveInput.current?.focus({preventScroll:true});},[form]);
  const identity=view?.identity;
- const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&context.name===view.name&&context.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id;
+ const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&context.name===view.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
  const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
  const failures=[error,operationError,transactionFailure,phaseFailure].filter((failure):failure is UiFailure=>!!failure);
  const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure}/>);

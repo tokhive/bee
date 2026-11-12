@@ -6,7 +6,7 @@
 
 **Blocked by:** 04 Hive 安全封存、取消和重新激活; 05 Bee 后台支持受限准备与安全交接
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] 仅一笔切换；A 继续工作直到 B 预检成功，提交前 B 无接单。
 - [ ] journal 与索引提交窗口可核对，明确失败安全返回 A，成功后的账号故障留 B。

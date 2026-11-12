@@ -25,6 +25,7 @@ import (
 // DesktopConnectionObservation describes a real attempt, its failure and timer.
 // The enclosing runtime owns the run/revision that accepts this observation.
 type DesktopConnectionObservation struct {
+	Lease      string
 	Connection string
 	Detail     *DesktopConnectionDetail
 }

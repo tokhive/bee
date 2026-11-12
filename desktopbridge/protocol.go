@@ -19,6 +19,7 @@ const (
 )
 
 type request struct {
+	Switch           bee.DesktopSwitchRequest
 	Protocol         int
 	ID               string
 	Method           string
@@ -202,6 +203,9 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 	}
 	if params == nil {
 		return req, rejected("INVALID_REQUEST", "params is null; required={}")
+	}
+	if req.Method == "desktop_switch" {
+		return decodeSwitchParams(req, fields["params"])
 	}
 	if slices.Contains(notificationMethods, req.Method) {
 		return decodeNotificationParams(req, fields["params"])

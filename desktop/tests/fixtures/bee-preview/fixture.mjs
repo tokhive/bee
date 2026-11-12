@@ -121,7 +121,7 @@ export async function installPreviewFixture(id){
   w.bindingRevision=(w.bindingRevision??1)+1;w.networkRevision=(w.networkRevision??0)+1;w.effectiveProxy='';
   w.__beePreviewBindingChanged({bound:true});
  };
- const original=w.__TAURI_INTERNALS__.invoke;
+ const original=w.__TAURI_INTERNALS__.invoke;let reportedBindingRevision=w.bindingRevision??1;
  const instance=(await original('bridge_status')).metadata.instance;
  deviceSession=createPreviewDeviceSession({scene:id,origin,current,instance,onConfigurationChanged:next=>{origin=next.hive;w.bindingRevision=(w.bindingRevision??1)+1;},onCompleted:finishBinding,onRevoked:()=>{bound=false;connection='rejected';revision++;}});
  const networkSession=createPreviewNetworkSession({scene:id,origin,current,invoke:original,instance,context:()=>({...w.__beeMockRuntimeContext(),local,bound}),applyNetwork:next=>{
@@ -163,7 +163,14 @@ export async function installPreviewFixture(id){
    if(command==='network_apply_saved')throw Object.assign(new Error(error.message),error);
    return {instance,result:{error}};
   }
-  if(deviceSession?.handles(command))return deviceSession.invoke(command,args);
+  if(deviceSession?.handles(command)){
+   const result=await deviceSession.invoke(command,args);
+   if(command==='device_context'){
+    const binding=result.result?.context?.binding_revision??result.result?.binding_revision;
+    if(binding!==reportedBindingRevision){reportedBindingRevision=binding;setTimeout(async()=>{if(current())w.emitStartup(await deviceSession.invoke('startup_status'));},0);}
+   }
+   return result;
+  }
   if(networkSession.handles(command))return networkSession.invoke(command,args);
   if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
   if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}

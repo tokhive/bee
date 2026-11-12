@@ -54,28 +54,13 @@ test('coordinated hooks share initial reads, the ten-second poll and explicit ru
  await expect.poll(counts).toEqual({runtime_snapshot:3,account_defaults:1,account_snapshot:6,supply_status:6});
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
 });
-test('unpaired proxy drafts save a Hive origin and survive an empty effective network snapshot',async({page})=>{
- await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{
-  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
-  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
-   if(command==='device_status')return {result:{device:{state:'unbound'}}};
-   if(command==='device_context')return {result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved device configuration'}}};
-   if(command==='network_snapshot')return {saved_revision:0,effective_revision:0,saved_proxy:'',effective_proxy:'',paths:{relay:'direct',official:'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'},pending_restart:false,error:null};
-   const result=await invoke(command,args);
-   if(command==='network_save_proxy')result.preferences.proxies=result.preferences.proxies.map((entry:any)=>({...entry,device_scope:null}));
-   return result;
-  };
- });
- await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();
- await page.getByLabel('代理草稿的 Hive 地址',{exact:true}).fill('https://draft.hive.example');await page.getByLabel('本机 HTTP 代理',{exact:true}).fill('http://127.0.0.1:7890');
- await page.getByRole('button',{name:'保存代理',exact:true}).click();
- await expect(page.getByRole('alert')).toHaveCount(0);await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7890');
- expect((await calls(page,'network_save_proxy'))[0].args).toEqual({proxy:'http://127.0.0.1:7890',origin:'https://draft.hive.example',expectedRevision:0});
- await page.getByRole('button',{name:'刷新生效路径',exact:true}).click();await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7890');
- await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();
- await expect(page.getByLabel('代理草稿的 Hive 地址',{exact:true})).toHaveValue('https://draft.hive.example');await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveValue('http://127.0.0.1:7890');
- await expect(page.getByRole('button',{name:'停止并重新启动以应用',exact:true})).toHaveCount(0);expect(await calls(page,'network_apply_saved')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
+test('fresh unpaired startup cannot open proxy settings or submit network and runtime writes',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-integration.html');await page.waitForFunction(()=>(window as any).__firstLaunchReady);
+ await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);
+ await page.evaluate(()=>(window as any).emitNotification('settings'));
+ await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeVisible();
+ await expect(page.getByLabel('代理草稿的 Hive 地址',{exact:true})).toHaveCount(0);await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toHaveCount(0);
+ for(const command of ['network_save_proxy','network_apply_saved','runtime_start','device_begin'])expect(await calls(page,command)).toEqual([]);
 });
 test('a successful account write still requires a verified read when central readback fails',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeEnabled();

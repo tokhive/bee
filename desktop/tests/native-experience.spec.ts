@@ -49,11 +49,13 @@ test('safe logs load manually with module/platform/level filters and native curs
 
 test('management startup failure keeps safe native logs accessible without enabling diagnostics',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let failed=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command==='bridge_status'&&failed)return {state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}};if(command==='startup_retry'){w.calls.push({command,args});failed=false;w.emit('b'.repeat(32));return invoke('startup_status');}return invoke(command,args);};});
  await page.goto('/');await expect(page.getByRole('alert')).toHaveCount(1);const failure=page.getByTestId('startup-recovery');await expect(failure).toContainText('SIDECAR_EXIT');await failure.getByText('错误详情',{exact:true}).click();await expect(failure).toContainText('owned management child exited: status=1');
- await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+ await failure.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('navigation')).toHaveCount(0);await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);
+ await page.getByRole('button',{name:'返回设备设置',exact:true}).click();await expect(page.getByRole('heading',{name:'状态待核对',exact:true})).toBeFocused();
+ await failure.getByRole('button',{name:'重新连接',exact:true}).click();await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();expect(await calls(page,'startup_retry')).toHaveLength(1);
 });
 
 test('failed preference save keeps the saved appearance; recovery and English copy stay usable',async({page})=>{
@@ -274,7 +276,7 @@ test('denied notifications and unknown autostart remain distinct without request
 
 test('about shows a missing Bee version as unread while retaining the real build version',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const reply=await invoke(command,args);if(command==='bridge_status')reply.metadata.bee_version='';return reply;};});
  await page.goto('/');await nav(page,'设置').click();await tab(page,'关于').click();
  await expect(page.locator('.ns-core-version')).toContainText('尚未读取');await expect(page.getByRole('heading',{name:'Bee 0.1.0',exact:true})).toBeVisible();
 });

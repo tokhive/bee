@@ -20,6 +20,7 @@ var accountStateLabels = map[string]string{
 	"ready":                  "authorization synchronized",
 	"source_unavailable":     "waiting for official authorization recovery or synchronization",
 	"confirmation_required":  "account changed; awaiting explicit confirmation",
+	"account_in_use":         "account registered to another Provider; use a different account or ask the original Provider to confirm an account switch",
 	"authorization_rejected": "authorization rejected by upstream; waiting for an official client update",
 }
 
@@ -64,15 +65,14 @@ func reportReadiness(ctx context.Context, state localState, platform string, out
 }
 
 func accountControl(ctx context.Context, state localState, platform, fingerprint string, confirm bool, out io.Writer) error {
-	path := "/api/bee/platforms/" + platform + "/account"
-	var account beewire.PlatformAccount
-	if err := callState(ctx, httpClient(), state, path, "GET", nil, &account); err != nil {
+	account, err := readPlatformAccount(ctx, state, platform)
+	if err != nil {
 		return err
 	}
-	if account.Platform != platform {
-		return errors.New("Hive returned an unexpected account platform")
-	}
 	if confirm {
+		if account.Status == "account_in_use" {
+			return errors.New(accountStateLabels["account_in_use"])
+		}
 		fingerprint = strings.ToLower(fingerprint)
 		decoded, err := hex.DecodeString(fingerprint)
 		if err != nil || len(decoded) != 32 {
@@ -85,12 +85,9 @@ func accountControl(ctx context.Context, state localState, platform, fingerprint
 				return errors.New("pending account changed or expired; run bee account-status again")
 			}
 		} else {
-			input := map[string]string{"account_fingerprint": fingerprint, "confirmation_id": account.ConfirmationID}
-			if err := callState(ctx, httpClient(), state, path+"/confirm", "POST", input, &account); err != nil {
-				return fmt.Errorf("account confirmation result unconfirmed; query account status again: %w", err)
-			}
-			if account.Platform != platform || account.AccountFingerprint != fingerprint {
-				return errors.New("unexpected Hive account confirmation result; query again")
+			account, err = submitAccountConfirmation(ctx, state, platform, fingerprint, account.ConfirmationID)
+			if err != nil {
+				return err
 			}
 			fmt.Fprintln(out, "Hive confirmed the account switch; waiting for the running Bee to synchronize authorization; manual pause state is preserved")
 		}
@@ -104,4 +101,27 @@ func accountControl(ctx context.Context, state localState, platform, fingerprint
 		fmt.Fprintf(out, "Pending account fingerprint: %s\n", account.PendingFingerprint)
 	}
 	return nil
+}
+
+func readPlatformAccount(ctx context.Context, state localState, p string) (beewire.PlatformAccount, error) {
+	var account beewire.PlatformAccount
+	if e := callState(ctx, httpClient(), state, "/api/bee/platforms/"+p+"/account", "GET", nil, &account); e != nil {
+		return account, e
+	}
+	if account.Platform != p {
+		return account, fmt.Errorf("Hive account platform=%q; expected %q", account.Platform, p)
+	}
+	return account, nil
+}
+
+func submitAccountConfirmation(ctx context.Context, state localState, platform, fingerprint, confirmationID string) (beewire.PlatformAccount, error) {
+	var account beewire.PlatformAccount
+	input := map[string]string{"account_fingerprint": fingerprint, "confirmation_id": confirmationID}
+	if err := callState(ctx, httpClient(), state, "/api/bee/platforms/"+platform+"/account/confirm", "POST", input, &account); err != nil {
+		return account, fmt.Errorf("account confirmation result unconfirmed; query account status again: %w", err)
+	}
+	if account.Platform != platform || account.AccountFingerprint != fingerprint {
+		return account, fmt.Errorf("unexpected Hive account confirmation result: platform=%q fingerprint=%q; expected platform=%q and the displayed fingerprint; query again", account.Platform, account.AccountFingerprint, platform)
+	}
+	return account, nil
 }

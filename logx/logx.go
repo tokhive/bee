@@ -2,8 +2,8 @@
 // full date-and-time stamp, one environment variable selects the level, and a
 // second selects which modules speak at all.
 //
-// TOKHIVE_LOG_LEVEL picks debug, info (the default), warn or error.
-// TOKHIVE_LOG_MODULES is a comma-separated allowlist — "sync,connect" keeps
+// HIVE_LOG_LEVEL picks debug, info (the default), warn or error.
+// HIVE_LOG_MODULES is a comma-separated allowlist — "sync,connect" keeps
 // only those modules' lines; empty (the default) keeps every module. A line
 // without a module tag counts as "core" and survives only when the allowlist
 // is empty. The two legacy switches — BEE_DEBUG and HIVE_DEBUG — keep their
@@ -41,11 +41,11 @@ var level slog.LevelVar
 
 // Setup installs the process-wide slog default: a text handler on stderr that
 // prefixes every line with the date, time, level and the service name, drops
-// records whose module is not allowlisted, and levels per TOKHIVE_LOG_LEVEL.
+// records whose module is not allowlisted, and levels per HIVE_LOG_LEVEL.
 // Call it once at startup, before any request is served.
 func Setup(service, legacyDebugEnv string) *slog.Logger {
 	threshold := slog.LevelInfo
-	switch strings.ToLower(strings.TrimSpace(os.Getenv("TOKHIVE_LOG_LEVEL"))) {
+	switch strings.ToLower(strings.TrimSpace(os.Getenv("HIVE_LOG_LEVEL"))) {
 	case "debug":
 		threshold = slog.LevelDebug
 	case "warn", "warning":
@@ -58,7 +58,7 @@ func Setup(service, legacyDebugEnv string) *slog.Logger {
 	}
 	level.Set(threshold)
 	var allowed map[string]bool
-	if raw := os.Getenv("TOKHIVE_LOG_MODULES"); strings.TrimSpace(raw) != "" {
+	if raw := os.Getenv("HIVE_LOG_MODULES"); strings.TrimSpace(raw) != "" {
 		allowed = make(map[string]bool)
 		for _, name := range strings.Split(raw, ",") {
 			if name = strings.ToLower(strings.TrimSpace(name)); name != "" {
@@ -84,10 +84,10 @@ func Console(w io.Writer, service string) *slog.Logger {
 	return slog.New(&moduleFilter{Handler: base, allowed: allowed})
 }
 
-// DebugOn reports whether TOKHIVE_LOG_LEVEL asks for debug, so the legacy
+// DebugOn reports whether HIVE_LOG_LEVEL asks for debug, so the legacy
 // debug switches can honour the shared variable without giving up their own.
 func DebugOn() bool {
-	return strings.EqualFold(strings.TrimSpace(os.Getenv("TOKHIVE_LOG_LEVEL")), "debug")
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("HIVE_LOG_LEVEL")), "debug")
 }
 
 // ModuleOn reports whether the allowlist lets a module speak. An empty

@@ -11,7 +11,7 @@ import {Button} from '../../components/ui';
 type Decision='begin_pairing'|'adopt_owner'|'renew_expired';
 const phaseCopy={awaiting_confirmation:'等待确认后生成配对码',creating:'正在创建配对请求',creation_unknown:'创建结果未知',pending:'等待网页确认',draining:'等待旧设备完成任务和结算',redeeming:'兑换已提交，正在核对新设备身份',redemption_unknown:'兑换结果未知，正在核对新设备身份',awaiting_owner_confirmation:'新设备归属与原设备不同',saving:'新设备身份已核对，正在保存本机配置',completed:'上次重新绑定已完成，未自动开始贡献。',expired:'Hive 已确认配对码过期',blocked:'设备配对暂时无法继续'};
 export function DevicePairingPage({view,context,recovery,recoveryError,refreshStatus,busy:writing,checking=false,initialLoading=false,error,reportedFailure,operationError,begin,refresh,open,recover,onNavigate,canRefresh=true,switchControl,switchStatus,inputDraft,title}:{
- title?:string;inputDraft?:{hive:string;name:string;setHive:(value:string)=>void;setName:(value:string)=>void};switchControl?:ReactNode;switchStatus?:ReactNode;view?:DeviceView;context?:DeviceContext;recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;refreshStatus?:RefreshStatus;busy:boolean;checking?:boolean;initialLoading?:boolean;error:UiFailure|null;reportedFailure?:UiFailure|null;operationError?:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;canRefresh?:boolean;
+ title?:string;inputDraft?:{hive:string;name:string;hiveReadOnly?:boolean;setHive:(value:string)=>void;setName:(value:string)=>void};switchControl?:ReactNode;switchStatus?:ReactNode;view?:DeviceView;context?:DeviceContext;recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;refreshStatus?:RefreshStatus;busy:boolean;checking?:boolean;initialLoading?:boolean;error:UiFailure|null;reportedFailure?:UiFailure|null;operationError?:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;canRefresh?:boolean;
  begin:(hive:string,name:string)=>void;refresh:()=>void;open:()=>void;recover?:(decision:Decision,transaction?:DeviceRecoveryView)=>Promise<boolean>;
 }) {
  const [localHive,setLocalHive]=useState(''),[localName,setLocalName]=useState('Bee Desktop');
@@ -56,7 +56,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
   {error&&error!==reportedFailure&&<FailureNotice failure={error} check="device_status" onNavigate={onNavigate}/>}
   {recoveryError&&recoveryError!==error&&<FailureNotice failure={recoveryError} check="device_recovery_status" onNavigate={onNavigate}/>}
   {transaction||phase?<div className="device-transaction">
-   <div className="device-transaction-heading"><p className="pairing-phase" role="status">{t(phase==='saving'&&transaction?.failure?'本机保存未完成，需重新核对':phaseCopy[phase!])}</p>{pairing&&waiting&&<Button disabled={busy||seconds===0} onClick={open}>{t('打开 Hive 确认网页')}<ExternalLink aria-hidden="true"/></Button>}</div>
+   <div className="device-transaction-heading"><p className="pairing-phase" role="status">{t(phase==='saving'&&transaction?.failure?'本机保存未完成，需重新核对':phase==='completed'&&!transaction?.old_identity?'设备已配对，未自动开始贡献。':phaseCopy[phase!])}</p>{pairing&&waiting&&<Button disabled={busy||seconds===0} onClick={open}>{t('打开 Hive 确认网页')}<ExternalLink aria-hidden="true"/></Button>}</div>
    {phase==='awaiting_confirmation'&&<><p>{t('此请求尚未提交；确认后才会生成配对码。')}</p>{credentialRecovery?<Button disabled={busy||!!recoveryError} onClick={event=>ask(event.currentTarget,'begin_pairing',transaction)}>{t('重新绑定设备')}</Button>:<Button disabled={busy} onClick={()=>begin(view!.hive!,view!.name!)}>{t('继续生成配对码')}</Button>}</>}
    {phase==='creating'&&<p>{t('正在处理已保存的请求，请勿重复创建。')}</p>}
    {phase==='creation_unknown'&&<p>{t('未取得原请求的配对凭据，不能重新创建。请在 Hive 控制台核对并导出诊断。')}</p>}
@@ -71,7 +71,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
    {phase==='expired'&&<><p>{t('旧配对已确认过期；重新生成需由你发起。')}</p><Button disabled={busy||!!recoveryError} onClick={event=>credentialRecovery?ask(event.currentTarget,'renew_expired',transaction):begin(view!.hive!,view!.name!)}>{t('重新生成配对码')}</Button></>}
    {transaction?.failure&&<FailureNotice failure={transaction.failure} check="device_recovery" onNavigate={onNavigate}/>}
   </div>:view?.state==='unbound'&&!error&&!recoveryError?<><p>{t('在 Hive 网页确认这台设备的归属；绑定不会开始贡献。')}</p><form className="settings-form" onSubmit={event=>{event.preventDefault();if(!busy)begin(hive.trim(),name.trim());}}>
-   <label>{t('Hive 地址')}<input type="url" required placeholder="https://hive.example" value={hive} disabled={busy} onChange={event=>setHive(event.target.value)}/></label>
+   <label>{t('Hive 地址')}<input type="url" required readOnly={inputDraft?.hiveReadOnly} placeholder="https://hive.example" value={hive} disabled={busy} onChange={event=>setHive(event.target.value)}/></label>
    <label>{t('设备名称')}<input required maxLength={80} value={name} disabled={busy} onChange={event=>setName(event.target.value)}/></label>
    <Button disabled={busy||!hive.trim()||!name.trim()} type="submit">{t('生成配对码')}</Button>
   </form><p className="feature-note">{t('设备配置独立保存，不覆盖 CLI；已有设备的替换请在 Hive 网页核对后确认。')}</p></>:!initialLoading&&!knownIdentity&&!error&&!recoveryError?<p role="status">{t(statusCopy)}</p>:null}

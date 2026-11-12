@@ -101,7 +101,7 @@ test('startup reads and actual failures block the form while the authorized pre-
  await expect(page.getByRole('heading',{name:'正在检查设备…',exact:true})).toBeVisible();
  await expect(page.getByRole('textbox',{name:'Hive 地址',exact:true})).toHaveCount(0);
  await page.evaluate(()=>window.setWizardProps({initialLoading:false,error:{code:'CONFIG_READ_DENIED',check:'device_context',observedAt:null,evidence:{},message:'read device.json: permission denied (EACCES)'}}));
- await expect(page.getByText('read device.json: permission denied (EACCES)',{exact:true})).toBeVisible();
+ await expect(page.getByText('read device.json: permission denied (EACCES)',{exact:false})).toBeVisible();
  await expect(page.getByRole('button',{name:'继续绑定设备',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'查看错误详情',exact:true})).toBeEnabled();
  await page.getByRole('button',{name:'重新检查设备',exact:true}).click();
@@ -137,7 +137,7 @@ test('a known unbound result keeps the draft retry and normal scheduled checks r
  await expect(page.getByText('设备检查暂未完成，等待已安排的重试。',{exact:true})).toHaveCount(0);
  await page.evaluate(()=>window.setWizardProps({error:{code:'HTTP_UNAVAILABLE',check:'device_status',observedAt:null,evidence:{},message:'GET pairing HTTP 503'}}));
  await expect(page.getByText(pairing.code,{exact:true})).toBeVisible();
- await expect(page.getByText('GET pairing HTTP 503',{exact:true})).toBeVisible();
+ await expect(page.getByText('GET pairing HTTP 503',{exact:false})).toBeVisible();
  await expect(page.getByText('完成网页确认后回到 Bee，此处会自动更新。',{exact:true})).toHaveCount(0);
 });
 
@@ -190,22 +190,82 @@ test('copy success preserves the exact original URL and background refresh does 
 test('native browser failure code and check remain available without invented timestamp or extra evidence',async({page})=>{
  await page.goto('/tests/fixtures/first-launch-wizard.html');
  await page.evaluate(view=>window.setWizardProps({view,operationError:{code:'BROWSER_OPEN_FAILED',check:'device_open',observedAt:null,evidence:{},message:'default browser open failed: OS denied launch'}}),pending);
- await expect(page.getByRole('alert')).toContainText('default browser open failed: OS denied launch');
+ await expect(page.getByRole('alert')).toContainText('默认浏览器打开失败。');
  await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('BROWSER_OPEN_FAILED');
  await expect(page.getByRole('dialog')).toContainText('device_open');
- await expect(page.getByRole('dialog').locator('pre')).toHaveText('BROWSER_OPEN_FAILED\ndevice_open');
+ await expect(page.getByRole('dialog').locator('pre')).toHaveText('错误码: BROWSER_OPEN_FAILED\n失败环节: device_open\n原始原因: default browser open failed: OS denied launch');
  await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeEnabled();
 });
 
 test('completed binding accepts a Hive display name that differs from the saved local name while identity mismatches stay blocked',async({page})=>{
  await page.goto('/tests/fixtures/first-launch-wizard.html');
  const renamed={...identity,name:'Hive renamed Mac'};
- await page.evaluate(({renamed,transaction})=>window.setWizardProps({completed:true,view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:renamed}},context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2}}),{renamed,transaction});
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({completed:true,view:{state:'bound',hive:'https://hive.example',name:'Hive renamed Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:renamed}},context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2}}),{renamed,transaction});
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
  await expect(page.getByText('Hive renamed Mac',{exact:true})).toBeVisible();
  await page.evaluate(()=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'different-device',owner_id:'owner-1',binding_revision:2}}));
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
- await page.evaluate(({renamed,transaction})=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2},view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:{...renamed,id:'different-transaction-device'}}}}),{renamed,transaction});
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2},view:{state:'bound',hive:'https://hive.example',name:'Hive renamed Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:{...renamed,id:'different-transaction-device'}}}}),{renamed,transaction});
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
+});
+
+test('Enter validation is announced politely while the invalid input already has focus',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ const hive=page.getByRole('textbox',{name:'Hive 地址',exact:true}),name=page.getByRole('textbox',{name:'设备名称',exact:true});
+ const hiveError=page.locator('#first-launch-hive-error'),nameError=page.locator('#first-launch-name-error');
+ await expect(hiveError).toBeEmpty();await expect(nameError).toBeEmpty();
+ await expect(hive).toBeFocused();await hive.press('Enter');
+ await expect(hive).toBeFocused();await expect(hive).toHaveAttribute('aria-invalid','true');
+ await expect(hive).toHaveAttribute('aria-describedby',/first-launch-hive-error/);
+ await expect(hiveError).toHaveAttribute('aria-live','polite');await expect(hiveError).toHaveText('请填写 Hive 地址。');
+ await hive.fill('https://hive.example');await name.fill('');await name.press('Enter');
+ await expect(name).toBeFocused();await expect(name).toHaveAttribute('aria-invalid','true');
+ await expect(name).toHaveAttribute('aria-describedby',/first-launch-name-error/);
+ await expect(nameError).toHaveAttribute('aria-live','polite');await expect(nameError).toHaveText('请填写设备名称。');
+ await expect(page.getByLabel('Fixture actions')).toHaveText('');
+});
+
+for(const locale of ['zh','en'])test('wizard failures use '+locale+' reasons and guidance while retaining safe native evidence',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html?lang='+locale);
+ const check=(code:string,message:string,evidence:Record<string,string>={})=>page.evaluate(({pending,code,message,evidence})=>window.setWizardProps({view:pending,error:{code,message,evidence,check:'device_status',observedAt:null}}),{pending,code,message,evidence});
+ const alert=page.getByRole('alert');
+ await check('tls_failed','TLS certificate verify failed; required=trusted issuer; target=https://hive.example?token=SECRET');
+ await expect(alert).toContainText(locale==='zh'?'Hive 安全连接验证失败。':'Hive TLS verification failed.');
+ await expect(alert).toContainText(locale==='zh'?'依赖设备身份的操作保持不可用':'Actions requiring its identity remain unavailable');
+ await expect(alert).toContainText(locale==='zh'?'核对 Hive 地址与服务证书':'Check the Hive address and server certificate');
+ const details=page.getByRole('button',{name:locale==='zh'?'查看错误详情':'View error details',exact:true});
+ await details.focus();await page.keyboard.press('Enter');
+ await expect(page.getByRole('dialog')).toContainText('TLS certificate verify failed; required=trusted issuer');
+ await expect(page.getByRole('dialog')).toContainText('tls_failed');
+ await expect(page.getByRole('dialog')).not.toContainText('SECRET');
+ await page.keyboard.press('Escape');await expect(details).toBeFocused();
+ await check('unavailable','GET /api/bee/identity HTTP 503; service maintenance',{http_status:'503',path:'/api/bee/identity'});
+ await expect(alert).toContainText(locale==='zh'?'Hive 暂时无法处理本次请求（HTTP 503）。':'Hive cannot process this request right now (HTTP 503).');
+ await expect(alert).toContainText(locale==='zh'?'等待 Hive 恢复服务':'Wait for Hive to become available');
+ await details.click();await expect(page.getByRole('dialog')).toContainText('GET /api/bee/identity HTTP 503; service maintenance');await page.keyboard.press('Escape');
+ await check('future_reason','unclassified upstream rejection; actual=409; required=confirmed receipt');
+ await expect(alert).toContainText('unclassified upstream rejection; actual=409; required=confirmed receipt');
+ await expect(alert).not.toContainText(locale==='zh'?'服务证书':'server certificate');
+ await expect(page.getByRole('button',{name:locale==='zh'?'重新检查设备':'Check device again',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:/继续绑定设备|Continue to bind device|进入概览|Go to overview/})).toHaveCount(0);
+ await expect(page.getByLabel('Fixture actions')).toHaveText('');
+});
+
+for(const locale of ['zh','en'])test('native browser failures provide '+locale+' manual confirmation guidance without claiming success',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html?lang='+locale);
+ for(const [code,message,zh,en]of [
+  ['BROWSER_OPEN_FAILED','system browser launcher exited with status=7; use the displayed pairing URL','默认浏览器打开失败。','The default browser could not be opened.'],
+  ['BROWSER_OPEN_TIMEOUT','browser launcher exceeded 5000ms and was reaped; opening result is unconfirmed; use the displayed pairing URL','打开浏览器超时，网页打开结果尚未确认。','Opening the browser timed out; the result is unconfirmed.'],
+  ['BROWSER_OPEN_CLEANUP_FAILED','browser launcher exceeded 5000ms; terminate and reap failed: permission denied','浏览器打开程序超时，且未能确认已结束。','The browser launcher timed out and its termination could not be confirmed.'],
+ ]){
+  await page.evaluate(({pending,code,message})=>window.setWizardProps({view:pending,operationError:{code,message,check:'device_open',observedAt:null,evidence:{}}}),{pending,code,message});
+  const alert=page.getByRole('alert');await expect(alert).toContainText(locale==='zh'?zh:en);
+  await expect(alert).toContainText(locale==='zh'?'在浏览器中手动打开':'open it manually in your browser');
+  await expect(page.getByRole('button',{name:locale==='zh'?'复制确认网址':'Copy confirmation URL',exact:true})).toBeEnabled();
+  await page.getByRole('button',{name:locale==='zh'?'查看错误详情':'View error details',exact:true}).click();
+  await expect(page.getByRole('dialog')).toContainText(message);await expect(page.getByRole('dialog')).toContainText(code);await page.keyboard.press('Escape');
+  await expect(page.getByText(locale==='zh'?'浏览器已打开':'Browser opened',{exact:true})).toHaveCount(0);
+ }
+ await expect(page.getByLabel('Fixture actions')).toHaveText('');
 });

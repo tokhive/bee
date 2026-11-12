@@ -1,8 +1,9 @@
 import {useEffect,useId,useRef,useState,type FormEvent} from 'react';
 import type {DeviceView,DeviceContext} from '../../system/device';
 import type {RefreshStatus} from '../../system/desktopState';
-import {normalizeFailure,safeFailureText,safeOrigin,type UiFailure} from '../../system/failures';
+import {normalizeFailure,safeOrigin,type UiFailure} from '../../system/failures';
 import {currentLocale,formatDate} from '../../i18n';
+import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
 import {Popover} from 'radix-ui';
 import {CircleAlert} from 'lucide-react';
@@ -29,16 +30,20 @@ function validateHive(raw:string):string {
  return '';
 }
 
-function WizardFailure({failure}:{failure:UiFailure}){
+function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;manualUrlAvailable?:boolean}){
  const [open,setOpen]=useState(false),titleId=useId();
- const details=[failure.code,failure.check,failure.observedAt,...Object.entries(failure.evidence).map(([key,value])=>`${key}: ${safeFailureText(value)}`)].filter(Boolean).join('\n');
+ const problem=presentFailure(failure,currentLocale()),details=problem.details;
+ const browserReason:Record<string,string>={BROWSER_OPEN_FAILED:'默认浏览器打开失败。',BROWSER_OPEN_TIMEOUT:'打开浏览器超时，网页打开结果尚未确认。',BROWSER_OPEN_CLEANUP_FAILED:'浏览器打开程序超时，且未能确认已结束。'};
+ const browser=browserReason[failure.code],summary=browser?w(browser):problem.summary;
+ const impact=browser&&manualUrlAvailable?w('原配对请求已保留，设备绑定仍需在 Hive 网页确认。'):problem.impact;
+ const guidance=browser&&manualUrlAvailable?'可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':failure.code==='tls_failed'?'请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':failure.code==='unavailable'?'请等待 Hive 恢复服务，再继续当前绑定步骤。':'';
  useEffect(()=>setOpen(false),[details]);
- return <div className="first-launch-failure" role="alert"><p>{safeFailureText(failure.message)}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
+ return <div className="first-launch-failure" role="alert"><p>{summary}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
   <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
   <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
    <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>
   </Popover.Content></Popover.Portal>
- </Popover.Root>}</p></div>;
+ </Popover.Root>}</p><p>{impact}</p>{guidance&&<p>{w(guidance)}</p>}</div>;
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */
@@ -70,10 +75,10 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
  useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
  useEffect(()=>{if(form&&!creating)hiveInput.current?.focus({preventScroll:true});},[form]);
  const identity=view?.identity;
- const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&context.name===view.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
+ const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&view.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
  const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
  const failures=[error,operationError,transactionFailure,phaseFailure].filter((failure):failure is UiFailure=>!!failure);
- const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure}/>);
+ const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure} manualUrlAvailable={!!pairing&&waiting&&!expired}/>);
  useEffect(()=>{if(complete)title.current?.focus({preventScroll:true});},[complete]);
  useEffect(()=>{
   setNow(Date.now());if(!pairing)return;
@@ -106,9 +111,9 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
   <h1 ref={title} tabIndex={-1}>{w(loading?'正在检查设备…':readBlocked?'无法确认设备状态':complete?'设备已绑定':'设置这台设备')}</h1>{!loading&&!readBlocked&&<ol className="first-launch-steps" aria-label={w('设置步骤')}><li aria-current={form?'step':undefined} className={!form?'done':undefined}><span>{form?'1':'✓'}</span>{w('连接 Hive')}</li><li aria-current={!form&&!complete?'step':undefined} className={complete?'done':undefined}><span>{complete?'✓':'2'}</span>{w('绑定设备')}</li></ol>}
   {loading?<p role="status">{w('正在读取本机配置与设备状态…')}</p>:readBlocked?<>{failureNotices}<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button>{onRepair&&<Button type="button" variant="outline" onClick={onRepair}>{w('修复当前问题')}</Button>}</div></>:complete?<><dl className="first-launch-facts"><dt>{w('设备')}</dt><dd>{identity.name}</dd><dt>{w('归属账号')}</dt><dd>{identity.owner_email}</dd><dt>Hive</dt><dd>{view.hive}</dd></dl><h2>{w('下一步：接入 AI 账号')}</h2><p>{w('接入后才能使用该账号参与贡献。')}</p><div className="first-launch-actions"><Button type="button" onClick={()=>onNavigate('accounts')}>{w('前往接入 AI 账号')}</Button><Button type="button" variant="ghost" onClick={()=>onNavigate('overview')}>{w('进入概览')}</Button></div></>:form?<form noValidate onSubmit={submit}>
    <label htmlFor="first-launch-hive">{w('Hive 地址')}</label><input ref={hiveInput} id="first-launch-hive" name="hive" type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://hive.example…" value={hive} disabled={creating} aria-invalid={!!fieldErrors.hive} aria-describedby="first-launch-hive-help first-launch-hive-error" onChange={event=>{setHive(event.target.value);setFieldErrors(current=>({...current,hive:''}));}}/>
-   <p id="first-launch-hive-help" className="first-launch-help">{w('填写你要连接的 Hive 服务地址。')}</p><p id="first-launch-hive-error" className="first-launch-field-error">{w(fieldErrors.hive)}</p>
+   <p id="first-launch-hive-help" className="first-launch-help">{w('填写你要连接的 Hive 服务地址。')}</p><p id="first-launch-hive-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.hive)}</p>
    <label htmlFor="first-launch-name">{w('设备名称')}</label><input ref={nameInput} id="first-launch-name" name="device-name" autoComplete="off" value={name} disabled={creating} aria-invalid={!!fieldErrors.name} aria-describedby="first-launch-name-help first-launch-name-error" onChange={event=>{setName(event.target.value);setFieldErrors(current=>({...current,name:''}));}}/>
-   <p id="first-launch-name-help" className="first-launch-help">{w('用于在 Hive 中识别这台设备。')}</p><p id="first-launch-name-error" className="first-launch-field-error">{w(fieldErrors.name)}</p>
+   <p id="first-launch-name-help" className="first-launch-help">{w('用于在 Hive 中识别这台设备。')}</p><p id="first-launch-name-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.name)}</p>
    {failureNotices}
    <div className="first-launch-actions"><Button type="submit" disabled={creating} aria-busy={creating}>{w(creating?'正在创建配对请求…':'继续绑定设备')}</Button></div>
   </form>:<><h2>{w(phase==='saving'||phase==='redeeming'||phase==='redemption_unknown'?'正在完成设备绑定':phase==='creation_unknown'?'尚无法确认配对请求结果':phase==='draining'?'正在等待旧设备结束连接':phase==='blocked'||phase==='awaiting_owner_confirmation'?'设备绑定已阻塞':'在 Hive 网页确认设备归属')}</h2><dl className="first-launch-facts"><dt>Hive</dt><dd>{view?.hive}</dd><dt>{w('设备')}</dt><dd>{view?.name}</dd></dl>

@@ -26,7 +26,7 @@ const english:Record<string,string>={
  '正在等待旧设备结束连接':'Waiting for the previous device to disconnect','设备绑定已阻塞':'Device binding is blocked','在 Hive 网页确认设备归属':'Confirm device ownership on Hive',
  '复制配对码':'Copy pairing code','有效期至':'Valid until','打开 Hive 确认网页':'Open Hive confirmation page',
  '复制确认网址':'Copy confirmation URL','配对码已复制':'Pairing code copied','确认网址已复制':'Confirmation URL copied',
- '重新生成配对码':'Generate a new pairing code',
+ '重新生成配对码':'Generate a new pairing code','打开 Hive 控制台':'Open Hive console',
  '正在检查绑定结果并继续保存…':'Checking binding result and continuing to save…',
  '设备身份已确认，本机保存尚未完成。':'Device identity is confirmed; the local configuration has not been saved.',
  '正在保存设备配置…':'Saving device configuration…',

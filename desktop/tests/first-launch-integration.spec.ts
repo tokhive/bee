@@ -99,7 +99,7 @@ for(const mutation of ['operation','context-owner'])test('completion rejects cur
 });
 test('failed creation keeps the draft while diagnostics stays inside the first-launch gate',async({page})=>{
  await open(page);await page.getByLabel('Hive 地址',{exact:true}).fill('https://other-hive.example');await page.getByLabel('设备名称',{exact:true}).fill('Draft desktop');
- await page.evaluate(()=>(window as any).__firstLaunchTest.beginFailure={code:'http_rejected',message:'POST pairing HTTP 503; original request not submitted'});
+ await page.evaluate(()=>(window as any).__firstLaunchTest.beginFailure={code:'http_rejected',message:'GET /api/bee/identity HTTP 503; creation_attempted=false; pairing POST not submitted'});
  await page.getByRole('button',{name:'继续绑定设备',exact:true}).click();
  await page.getByRole('button',{name:'查看诊断',exact:true}).click();
  await expect(page.getByRole('heading',{name:'诊断',exact:true})).toBeVisible();
@@ -107,6 +107,8 @@ test('failed creation keeps the draft while diagnostics stays inside the first-l
  await page.getByRole('button',{name:'返回设备设置',exact:true}).click();
  await expect(page.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://other-hive.example');
  await expect(page.getByLabel('设备名称',{exact:true})).toHaveValue('Draft desktop');
+ await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeFocused();
+ await expect(page.getByRole('alert')).toContainText('GET /api/bee/identity HTTP 503; creation_attempted=false; pairing POST not submitted');
 });
 test('first binding survives configuration revisions and waits for explicit completion navigation',async({page})=>{
  await open(page);await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');await page.getByLabel('设备名称',{exact:true}).fill('My desktop');
@@ -122,4 +124,14 @@ test('first binding survives configuration revisions and waits for explicit comp
  await page.getByRole('button',{name:'前往接入 AI 账号',exact:true}).click();
  await expect(page.getByRole('heading',{name:'AI 账号',exact:true})).toBeVisible();
  expect((await calls(page)).filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm','account_action','authorize_start','runtime_start','supply_set_paused'].includes(c.command)).map(c=>c.command)).toEqual(['device_begin']);
+});
+
+test('unknown creation opens only the saved Hive console without replaying the original request',async({page})=>{
+ await open(page,'?scene=device-creation-unknown');
+ await expect(page.getByRole('heading',{name:'尚无法确认配对请求结果',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).focus();await page.keyboard.press('Enter');
+ expect((await calls(page)).filter(c=>c.command==='hive_open')).toEqual([{command:'hive_open',args:{}}]);
+ expect(await page.evaluate(()=>(window as any).openedHive)).toBe('https://hive.example/');
+ await expect(page.getByRole('navigation')).toHaveCount(0);
+ expect((await calls(page)).filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm','account_action','authorize_start','runtime_start','supply_set_paused'].includes(c.command))).toEqual([]);
 });

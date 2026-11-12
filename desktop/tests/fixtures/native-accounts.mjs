@@ -161,16 +161,18 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   return {instance,result:{operation:structuredClone(job.operation)}};
  };
  const callbacks=new Map(),subscriptions=new Map();
- const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance,capabilities:['runtime_inspect_recovery']}});
+ w.currentHiveProfile='1'.repeat(32);
+ const status=()=>({state:'ready',profile_id:w.currentHiveProfile,metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance,capabilities:['runtime_inspect_recovery']}});
  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
- w.emitRequestSettled=request=>emit('bee://request-settled',{instance,...request});
- w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});
+ w.emitRequestSettled=request=>emit('bee://request-settled',{instance,profile_id:w.currentHiveProfile,...request});
+ w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});w.requestSwitchExit=operation_id=>emit('bee://hive-switch-exit-request',{operation_id});
  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
  const supply=p=>{const reasons=[...new Set([...(w.paused[p]?['manually_paused']:[]),...(local!=='running'||connection!=='connected'?['offline']:[]),...(accounts[p].selection.state!=='selected'?['not_configured']:[]),...(w.accountScenarios.reasons?.[p]??[])])];return {hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:reasons.length===0,reasons,checked_at:new Date().toISOString()};};
  const network=()=>{const saved=preferences.proxies[0]?.connect_proxy??'',effective=w.effectiveProxy??'';return {saved_revision:preferences.revision,effective_revision:w.networkRevision??0,saved_proxy:saved,effective_proxy:effective,paths:{relay:effective?'local_proxy':'direct',official:`openai=${effective?'local_proxy':'direct'};claude=${effective?'local_proxy':'direct'}`,hive:'process_environment',official_login:'official_client'},pending_restart:saved!==effective,error:null};};
  const preferenceError=()=>({code:'PREFERENCES_WRITE_FAILED',message:'private file publish failed: kind=PermissionDenied os_code=13'});
  w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:id=>{callbacks.delete(id);},invoke:async(command,args={})=>{
+  if(command==='hive_switch_snapshot')return {profile_identities:[{profile_id:'1'.repeat(32),name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}],profiles:{version:1,revision:1,profiles:[{id:'1'.repeat(32),origin:'https://hive.example',raw_origin:'https://hive.example',binding_revision:w.bindingRevision??1,binding_digest:null,blockers:[]}],current_profile:'1'.repeat(32),committed_operation:null,migration_id:null,migration_blockers:[],historical_conflicts:[]},operation:null,observation:{state:'idle',reason:null,next_query_at:null},actions:{can_cancel:false,can_continue:false,can_observe:false,target_pairing:false},current_scope:{profile_id:'1'.repeat(32),instance}};
   if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();if(command==='bridge_pending_requests')return {instance,requests:w.pendingRequests??[]};
   if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
   if(command==='device_context')return {instance,result:{context:{hive:'https://hive.example',name:'Fixture',device_id:'dev-1',owner_id:'owner-1',binding_revision:w.bindingRevision??1}}};

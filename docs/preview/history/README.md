@@ -163,3 +163,11 @@
 - 修改前主预览已完整保存在 [before-setup.html](20261112-150523-setup-error-clarity/before-setup.html)，合入前逐字节确认；来源草稿为 [已认可冻结稿](20261112-150523-setup-error-clarity/draft.html)。
 - [固定主入口](../index.html?scene=setup-form) · [完整主预览快照](20261112-152533-approved-first-launch/index.html?scene=setup-form)。新快照包含全部冻结对照依赖；仅标题与认可标记相对草稿更新，历史文件未改写。
 - 保留 481 个场景；复用此前交互验证，补查主入口正常绑定、错误浮层、完成出口和新快照。正式 App 与真实绑定接口未在本轮修改或验收。
+
+
+## 20261112-221434 Hive 切换界面（待评审）
+
+- 时间：2026-11-12 22:14:34，Asia/Shanghai。来源：已确认 Hive URL 切换 spec，用户已授权同步正式 UI 与主预览；本轮新增视觉未另行认可。
+- 修改前复用 [20261112-152533-approved-first-launch](20261112-152533-approved-first-launch/index.html)，修改前 SHA-256 与该完整基线相同。
+- [本轮主预览快照](20261112-221434-hive-switch-interface/index.html?scene=switch-waiting&theme=light&size=narrow)，新增 15 个 Hive 起点，保留此前全部场景。内联资源；baseline.html、before-setup.html、before-startup.html、claude-baseline.html 与 before-switch.html 一并冻结。
+- 已检查冻结版列表、Escape、焦点及 before-switch 对照可独立打开；正式 React／mock 与真实业务边界见 [验证记录](../../desktop/evidence/2026-11-12-hive-switch-ui/README.md)。

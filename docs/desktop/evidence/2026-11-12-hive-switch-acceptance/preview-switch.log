@@ -1,0 +1,25 @@
+[WebServer] (node:39015) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 10 tests using 4 workers
+
+(node:39142) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39143) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39141) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:39144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   3 [chromium] › tests/preview-hive-switch.spec.ts:6:1 › first target pairing retains the fixed Hive origin before a device config exists (2.7s)
+  ✓   1 [chromium] › tests/preview-hive-switch.spec.ts:24:1 › first profile gate permits pairing and preserves the entered Hive (3.0s)
+  ✓   2 [chromium] › tests/preview-hive-switch.spec.ts:20:1 › unknown and expired observation show no percent and continue the original operation (3.1s)
+  ✓   4 [chromium] › tests/preview-hive-switch.spec.ts:14:1 › saved list supports keyboard close and keeps entered URL and background operation (3.1s)
+  ✓   5 [chromium] › tests/preview-hive-switch.spec.ts:28:1 › handoff progress stays visible when the ordinary source bridge is unavailable (1.1s)
+  ✓   7 [chromium] › tests/preview-hive-switch.spec.ts:36:1 › main preview includes compact switching in both overview templates and preserves focus and failure input (1.2s)
+  ✓   8 [chromium] › tests/preview-hive-switch.spec.ts:45:1 › native exit request keeps the original operation and requires an explicit decision (1.8s)
+  ✓   6 [chromium] › tests/preview-hive-switch.spec.ts:31:1 › target credential rejection uses dedicated recovery and keeps A identity until commit (2.0s)
+  ✓  10 [chromium] › tests/preview-hive-switch.spec.ts:63:1 › native add rejection preserves the URL, device name and saved profiles (1.1s)
+  ✓   9 [chromium] › tests/preview-hive-switch.spec.ts:54:1 › committed B remains current with no account selection and after an account source error (2.0s)
+
+  10 passed (7.6s)

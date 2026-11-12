@@ -1,0 +1,89 @@
+{
+  "beeRevision": "9a254fb44d933ec6ceb15f4934e04fa647792f8b",
+  "productionNativeApp": true,
+  "profile": "dev/custom-protocol",
+  "platform": "linux/arm64",
+  "windowSizes": [
+    "1000x700",
+    "900x700"
+  ],
+  "originA": "http://127.0.0.1:46177",
+  "originB": "http://127.0.0.1:34685",
+  "syntheticOfflineOrigin": "http://127.0.0.1:3685",
+  "firstSwitch": "ae7ffca951297d0eb928610eef411e92adcef3e6a5003515",
+  "returnSwitch": "6ec16a864c325a5fce89a61261c66c380e2738493bdbafba",
+  "beforeCrash": {
+    "id": "44d17034c5420bf54632eb17b9db815cddc7af625f103161",
+    "phase": "preparing_target",
+    "committed": false,
+    "cancel_requested": false,
+    "quit_requested": false,
+    "observation_round": 2,
+    "observation_started": "2026-11-12T15:12:26.796883926Z",
+    "observation_last": "2026-11-12T15:13:26.698878801Z",
+    "observation_blocked": false,
+    "query_failures": 0,
+    "source": {
+      "profile": "73425a0cad9e9ccfea98b54c59115625",
+      "instance": null,
+      "network_revision": 0,
+      "pending": null
+    },
+    "target": {
+      "profile": "7dff1a137f3bfc0a15c9cc90d8017903",
+      "instance": null,
+      "network_revision": 0,
+      "pending": null
+    }
+  },
+  "afterCrash": {
+    "id": "44d17034c5420bf54632eb17b9db815cddc7af625f103161",
+    "phase": "preparing_target",
+    "committed": false,
+    "cancel_requested": false,
+    "quit_requested": false,
+    "observation_round": 2,
+    "observation_started": "2026-11-12T15:12:26.796883926Z",
+    "observation_last": "2026-11-12T15:13:26.698878801Z",
+    "observation_blocked": false,
+    "query_failures": 0,
+    "source": {
+      "profile": "73425a0cad9e9ccfea98b54c59115625",
+      "instance": null,
+      "network_revision": 0,
+      "pending": null
+    },
+    "target": {
+      "profile": "7dff1a137f3bfc0a15c9cc90d8017903",
+      "instance": null,
+      "network_revision": 0,
+      "pending": null
+    }
+  },
+  "cancelQuit": {
+    "id": "616abf87b6144178ac3a50e8fb9d5644dc981a75e69e5317",
+    "phase": "cancelled",
+    "committed": false,
+    "cancel_requested": true,
+    "quit_requested": true,
+    "failure": null
+  },
+  "currentAfterQuit": {
+    "current_profile": "73425a0cad9e9ccfea98b54c59115625",
+    "current_origin": "http://127.0.0.1:46177",
+    "committed_operation": "6ec16a864c325a5fce89a61261c66c380e2738493bdbafba"
+  },
+  "binaryHashes": [
+    "398f1282e734982b70eae5812813d39ddff75b60dbe5fd2202c26856fab36357  /qa/target/debug/bee-desktop",
+    "b12dd76082dfaad0be83d65080faf487e02ee37155bc099f6db29c52cd8753fe  /qa/target/debug/bee"
+  ],
+  "screenshots": {
+    "restart-target-preserved.png": "873f4de7558ae1db908528826d8f0b5a6cb2c5ba268ade8b28c16212bb2d8932",
+    "first-b-connected.png": "fb990231054eea0852ba93208d5762d427b78389a4065cf2b55c0c336b22c1b4",
+    "saved-hives.png": "a9bced4055560ed3bb6e35350e92577a360d936d131b3029af6a31ac1217efd8",
+    "returned-a.png": "645884640e403b51fbb197f4eb4b3d042bcba63ecd3032f262f82ee9b9986e1f",
+    "native-quit-choice.png": "8b37b12bbce075ab2c055a88c0376bc7d7c128d177c8e52e8dcc35ad0051f8b3",
+    "cancel-quit-restart-a.png": "0c2120b452b9042917ad0c453aede779a31167f6bbc07bd95b402ea8eef0c2e4",
+    "dark-narrow-chooser.png": "46a0f4c0fe4a7ce1649c41d7736371a3c9122b8e06fc42f55dae868463f39704"
+  }
+}

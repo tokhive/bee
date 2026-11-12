@@ -195,14 +195,15 @@ impl SwitchJournal {
             error(
                 "HIVE_SWITCH_JOURNAL_INVALID",
                 format!(
-                    "switch journal unique JSON rejected: category={:?} line={} column={}",
+                    "switch journal unique JSON rejected: {}; category={:?} line={} column={}; original preserved",
+                    crate::startup_recovery::journal_schema_reason(&e),
                     e.classify(),
                     e.line(),
                     e.column()
                 ),
             )
         })?;
-        let record:SwitchRecord=serde_json::from_value(value).map_err(|e|error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch journal JSON rejected: category={:?} line={} column={}; original preserved",e.classify(),e.line(),e.column())))?;
+        let record:SwitchRecord=serde_json::from_value(value).map_err(|e|error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch journal JSON rejected: {}; category={:?} line={} column={}; original preserved",crate::startup_recovery::journal_schema_reason(&e),e.classify(),e.line(),e.column())))?;
         Self::validate(&record)?;
         Ok(Some(record))
     }
@@ -354,7 +355,16 @@ impl SwitchJournal {
                 }
                 for (a, b) in [(&old.source, &r.source), (&old.target, &r.target)] {
                     if let Some(action) = a.pending.as_deref() {
+                        let cancelling_absent_begin = (r.cancel_requested || r.quit_requested)
+                            && action == "drain_begin"
+                            && b.pending.as_deref() == Some("drain_release")
+                            && b.status.as_ref().is_some_and(|s| s["state"] == "absent")
+                            && b.release.as_ref().is_some_and(|release| {
+                                release["mode"] == "cancel"
+                                    && Some(&release["request"]) == a.operation.as_ref()
+                            });
                         if b.pending.as_deref() != Some(action)
+                            && !cancelling_absent_begin
                             && (b.pending.is_some()
                                 || b.status.as_ref().is_none_or(|s| !b.resolves(action, s)))
                         {
@@ -1128,6 +1138,10 @@ impl HiveSwitch {
                 "target Hive already owns the current profile",
             ));
         }
+        let entry = index.profiles.iter().find(|p| p.id == target.id).unwrap();
+        if !entry.blockers.is_empty() {
+            return Err(error("HIVE_SWITCH_BINDING_BLOCKED", format!("target profile={} blockers={:?}; reconcile preserved original records before preparing this Hive", target.id, entry.blockers)));
+        }
         let mut r = SwitchRecord::new(source, target.id);
         r.source_index_operation = index.committed_operation;
         r.observation_round = 1;
@@ -1572,6 +1586,24 @@ impl HiveSwitch {
             // A single absent read is never permission to replay an uncertain write.
             let resolved = leg.resolves(leg.pending.as_deref().unwrap(), status);
             if !resolved {
+                if (record.cancel_requested || record.quit_requested)
+                    && leg.pending.as_deref() == Some("drain_begin")
+                    && status["state"] == "absent"
+                {
+                    // Absence cannot authorize a begin replay. Cancellation is
+                    // a different action: persist its original-ID tombstone
+                    // obligation atomically before replacing the pending begin.
+                    leg.status = Some(status.clone());
+                    leg.release = Some(json!({"id":id(),"request":leg.operation,"mode":"cancel","expected_epoch":status["current"]["epoch"],"expected_lease":status["current"]["lease"]}));
+                    leg.pending = Some("drain_release".into());
+                    self.journal.save(record)?;
+                    let leg = if target { &mut record.target } else { &mut record.source };
+                    let released = self.control(leg, bridge, "drain_release").await?;
+                    leg.status = Some(released["drain"].clone());
+                    leg.pending = None;
+                    self.journal.save(record)?;
+                    return Ok(released);
+                }
                 return Err(error(
                     "HIVE_SWITCH_RESULT_UNCONFIRMED",
                     format!(
@@ -2172,6 +2204,28 @@ mod tests {
         crate::preferences::private_write(&context.device_path(),&serde_json::to_vec(&json!({"hive":context.origin,"name":"Synthetic Mac","credential":format!("bee_{}","b".repeat(43)),"identity":{"id":"synthetic-device","name":"Synthetic Mac","owner_id":"synthetic-owner","owner_email":"synthetic@example.com"}})).unwrap()).unwrap();
     }
     #[tokio::test]
+    async fn historical_conflict_blocks_target_preparation_and_keeps_current_binding() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        private_write(&profiles.root().join("bee-desktop.json"), br#"{"hive":"https://a.example","name":"A","credential":"synthetic","identity":{"id":"device","owner_id":"owner"}}"#).unwrap();
+        private_write(&profiles.root().join("ai-accounts.json"), br#"{"version":3,"revision":1,"entries":{},"scopes":{"one":{"hive":"https://b.example","owner_id":"one","device_id":"one","pending_operations":{}},"two":{"hive":"https://B.example:443/","owner_id":"two","device_id":"two","pending_operations":{}}}}"#).unwrap();
+        let index = profiles.migrate_legacy(&root.join("app")).unwrap();
+        let source = index.current_profile.unwrap();
+        let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let cause = c.start("https://b.example".into(), "B".into(), prefs).await.unwrap_err();
+        assert_eq!(cause.code, "HIVE_SWITCH_BINDING_BLOCKED");
+        assert!(cause.message.contains("historical_origin_conflict:https://b.example"));
+        let snapshot = c.snapshot().unwrap();
+        assert!(snapshot.operation.is_none());
+        assert_eq!(snapshot.profiles.current_profile.as_deref(), Some(source.as_str()));
+        assert!(snapshot.profiles.profiles.iter().find(|p| p.id == source).unwrap().blockers.is_empty());
+        assert!(snapshot.profiles.profiles.iter().any(|p| p.origin == "https://b.example" && !p.blockers.is_empty()));
+        assert!(c.target.lock().await.is_none());
+        c.current.get().unwrap().stop().await.unwrap();
+    }
+    #[tokio::test]
     async fn real_go_children_handoff_with_index_commit_before_target_release() {
         let a_server = Server::start();
         let b_server = Server::start();
@@ -2742,8 +2796,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn recorded_unsent_source_can_cancel_but_unknown_begin_absence_never_authorizes_a_new_write(
+    async fn cancelling_unsent_or_lost_begin_fences_late_begin_with_one_original_release(
     ) {
+        let _ = rustls::crypto::ring::default_provider().install_default();
         for unknown in [false, true] {
             let server = Server::start();
             let tmp = tempfile::tempdir().unwrap();
@@ -2777,6 +2832,11 @@ mod tests {
             c.control(&mut r.source, &source, "freeze").await.unwrap();
             let prefs =
                 crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+            if unknown {
+                let waiting = c.continue_waiting(prefs.clone()).await.unwrap().operation.unwrap();
+                assert_eq!(waiting.source.pending.as_deref(), Some("drain_begin"));
+                assert!(audit(&server).await.as_array().unwrap().iter().all(|e| e["method"] != "POST"), "absence without cancellation must not authorize a write");
+            }
             let result = c.cancel(prefs).await.unwrap().operation.unwrap();
             let writes = audit(&server)
                 .await
@@ -2786,16 +2846,67 @@ mod tests {
                 .filter(|e| e["method"] == "POST")
                 .cloned()
                 .collect::<Vec<_>>();
-            if unknown {
-                assert!(!result.terminal());
-                assert_eq!(result.source.pending.as_deref(), Some("drain_begin"));
-                assert!(writes.is_empty(), "{writes:?}");
-            } else {
-                assert_eq!(result.phase, "cancelled", "{result:?}");
-                assert_eq!(writes.len(), 1);
-                assert!(writes[0]["path"].as_str().unwrap().ends_with("/release"));
-            }
+            assert_eq!(result.phase, "cancelled", "{result:?}");
+            assert_eq!(writes.len(), 1);
+            assert!(writes[0]["path"].as_str().unwrap().ends_with("/release"));
+            assert_eq!(writes[0]["body"]["request"], r.source.operation.clone().unwrap());
+            let late = reqwest::Client::builder().no_proxy().build().unwrap()
+                .post(format!("{}/api/bee/device-drains/{}/begin", server.1, r.source.operation.as_ref().unwrap()["id"].as_str().unwrap()))
+                .body(serde_json::to_vec(&r.source.operation).unwrap()).send().await.unwrap().bytes().await.unwrap();
+            let late: Value = serde_json::from_slice(&late).unwrap();
+            assert_eq!(late["state"], "released");
+            assert_eq!(late["current"]["barrier_id"], "");
             source.stop().await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn lost_begin_cancellation_survives_lost_release_and_restart_on_either_leg() {
+        for target in [false, true] {
+            let a_server = Server::start();
+            let b_server = Server::start();
+            let failing = if target { &b_server } else { &a_server };
+            configure(failing, json!({"faults":{"begin_before_accept":1,"release":1}})).await;
+            let tmp = tempfile::tempdir().unwrap();
+            let root = tmp.path().canonicalize().unwrap();
+            let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+            let a = profiles.register(&a_server.1).unwrap();
+            let b = profiles.register(&b_server.1).unwrap();
+            bind(&a); bind(&b);
+            profiles.commit_current(profiles.snapshot().unwrap().revision, &a.id, &id()).unwrap();
+            let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+            let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+            let started = c.start(b.origin, "Mac".into(), prefs.clone()).await.unwrap().operation.unwrap();
+            let leg = if target { &started.target } else { &started.source };
+            assert_eq!(leg.pending.as_deref(), Some("drain_begin"), "{started:?}");
+            let operation = leg.operation.clone().unwrap();
+            let cancelling = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
+            let leg = if target { &cancelling.target } else { &cancelling.source };
+            assert_eq!(leg.pending.as_deref(), Some("drain_release"), "{cancelling:?}");
+            let release = leg.release.clone().unwrap();
+            assert_eq!(release["request"], operation);
+            assert!(!cancelling.terminal());
+            c.current.get().unwrap().stop().await.unwrap();
+            c.shutdown_target().await.unwrap();
+            drop(c);
+            let resumed = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+            let done = resumed.continue_waiting(prefs).await.unwrap().operation.unwrap();
+            assert_eq!(done.phase, "cancelled", "{done:?}");
+            let leg = if target { &done.target } else { &done.source };
+            assert_eq!(leg.release, Some(release.clone()));
+            let writes = audit(failing).await.as_array().unwrap().iter()
+                .filter(|e| e["method"] == "POST" && e["path"].as_str().is_some_and(|p| p.ends_with("/release")))
+                .cloned().collect::<Vec<_>>();
+            assert_eq!(writes.len(), 1, "{writes:?}");
+            assert_eq!(writes[0]["body"], release);
+            let late = reqwest::Client::builder().no_proxy().build().unwrap()
+                .post(format!("{}/api/bee/device-drains/{}/begin", failing.1, operation["id"].as_str().unwrap()))
+                .body(serde_json::to_vec(&operation).unwrap()).send().await.unwrap().bytes().await.unwrap();
+            let late: Value = serde_json::from_slice(&late).unwrap();
+            assert_eq!(late["state"], "released");
+            assert_eq!(late["current"]["barrier_id"], "");
+            resumed.current.get().unwrap().stop().await.unwrap();
+            resumed.shutdown_target().await.unwrap();
         }
     }
 
@@ -3042,7 +3153,21 @@ mod tests {
         let mut value = serde_json::to_value(&r).unwrap();
         value.as_object_mut().unwrap().remove("commit_revision");
         private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
-        assert!(SwitchJournal::new(path.clone()).load().is_err());
+        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
+        assert!(cause.message.contains("missing field `commit_revision`"), "{cause:?}");
+        assert_eq!(protected_read_bounded(&path, 1_048_576).unwrap(), serde_json::to_vec(&value).unwrap());
+        value = serde_json::to_value(&r).unwrap();
+        value["committed"] = json!("bee_synthetic-secret-value");
+        private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
+        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
+        assert!(cause.message.contains("invalid type: string") && cause.message.contains("expected a boolean"), "{cause:?}");
+        assert!(!cause.message.contains("synthetic-secret"));
+        value = serde_json::to_value(&r).unwrap();
+        value["bee_synthetic-secret-field"] = json!(true);
+        private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
+        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
+        assert!(cause.message.contains("unknown field"), "{cause:?}");
+        assert!(!cause.message.contains("synthetic-secret"));
         let mut forged = r.clone();
         forged.phase = "succeeded".into();
         assert!(SwitchJournal::new(dir.path().join("forged.json"))
@@ -3054,6 +3179,8 @@ mod tests {
             1,
         );
         private_write(&path, duplicate.as_bytes()).unwrap();
-        assert!(SwitchJournal::new(path).load().is_err());
+        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
+        assert!(cause.message.contains("duplicate JSON field"), "{cause:?}");
+        assert_eq!(protected_read_bounded(&path, 1_048_576).unwrap(), duplicate.as_bytes());
     }
 }

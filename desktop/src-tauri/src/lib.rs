@@ -1,6 +1,7 @@
 pub mod authorize_protocol;
 mod autostart;
 pub mod build_source;
+pub mod hive_origin;
 mod commands;
 mod diagnostic_log;
 mod diagnostics;

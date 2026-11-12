@@ -1,6 +1,7 @@
 import {normalizeFailure,decodeBridgeError,validFailureTime,requestMethods,retryEvidence,type UiFailure,type FailureDetails} from './failures.ts';
 export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
+  profile_id?:string|null;
   state: 'starting' | 'ready' | 'failed' | 'stopped';
   metadata?: { bee_version: string; os: string; arch: string; instance: string; capabilities?: string[] };
   error?: BridgeError;
@@ -32,12 +33,12 @@ export function decodeStartupStatus(value:unknown):StartupStatus {
  return {...v,failure} as unknown as StartupStatus;
 }
 export interface PendingRequest {id:string;method:string;platform:'openai'|'claude'|null}
-export interface RequestSettled extends PendingRequest {instance:string}
+export interface RequestSettled extends PendingRequest {instance:string;profile_id?:string|null}
 export interface PendingRequests {instance:string|null;requests:PendingRequest[]}
 function decodePendingRequest(value:unknown,settled=false):PendingRequest|RequestSettled {
  const invalid=():never=>{throw new Error('BRIDGE_PENDING_INVALID: request requires exact bounded id, method, platform and current instance');};
  if(!value||typeof value!=='object'||Array.isArray(value))return invalid();
- const v=value as Record<string,unknown>,fields=settled?['instance','id','method','platform']:['id','method','platform'];
+ const v=value as Record<string,unknown>,fields=settled?['instance','id','method','platform',...(Object.hasOwn(v,'profile_id')?['profile_id']:[])]:['id','method','platform'];
  if(Object.keys(v).length!==fields.length||!fields.every(k=>Object.hasOwn(v,k))||typeof v.id!=='string'||retryEvidence('request_id',v.id)!==true||typeof v.method!=='string'||!requestMethods.includes(v.method)||![null,'openai','claude'].includes(v.platform as null)||settled&&(typeof v.instance!=='string'||!/^[a-f0-9]{32}$/.test(v.instance)))return invalid();
  return structuredClone(v) as unknown as PendingRequest|RequestSettled;
 }

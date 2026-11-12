@@ -232,6 +232,11 @@ async fn prerequisites(
 pub(crate) async fn startup<R: tauri::Runtime>(app: tauri::AppHandle<R>, bridge: Bridge) {
     startup_mode(app,bridge,false).await;
 }
+pub(crate) fn block_startup<R:tauri::Runtime>(app:&tauri::AppHandle<R>,bridge:&Bridge,cause:BridgeError){
+    let gate=app.state::<StartupGate>();
+    gate.checking(bridge.status().metadata.map(|v|v.instance));
+    gate.finish(Err(cause));emit(app,&gate);
+}
 pub(crate) async fn retry<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge)->StartupStatus {
     startup_mode(app.clone(),bridge,true).await;
     app.state::<StartupGate>().snapshot()
@@ -258,7 +263,7 @@ async fn startup_mode<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge,ma
         if manual_retry && matches!(bridge.status().state,BridgePhase::Failed|BridgePhase::Stopped) {bridge.reconnect().await?;}
         wait_bridge(&bridge).await?;
         observer(crate::startup_recovery::RecoveryProgress::stage("checking_previous"));
-        let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+        let journal=bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
         if let Some(old) = journal.load()? {
             // A different manager cannot observe the original in-memory operation.
             // Keep that journal unresolved until verify_startup_progress binds it
@@ -326,7 +331,7 @@ async fn refresh_retry(gate:&StartupGate,bridge:&Bridge,manager:&crate::updater:
     if gate.snapshot().failure.as_ref().is_some_and(|v|["RECOVERY_REMOTE_DRAINING","RECOVERY_RETIREMENT_UNCONFIRMED"].contains(&v.code.as_str())) {
         let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=true;status.revision+=1;return;
     }
-    let journal=crate::startup_recovery::RecoveryJournal::beside(manager.store.path());
+    let journal=bridge.startup_journal(manager.store.path());
     if let Ok(Some(record))=journal.load() {
         if record.phase=="failed" && bridge.inspect_recovery().await.is_ok_and(|v|v.failure.is_none()) {
             let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=true;status.revision+=1;
@@ -337,7 +342,7 @@ pub(crate) async fn query<R:tauri::Runtime>(app:&tauri::AppHandle<R>,bridge:&Bri
     let gate=app.state::<StartupGate>();
     let Ok(_serial)=gate.serial.try_lock() else {return Ok(gate.snapshot());};
     if bridge.status().state!=BridgePhase::Ready || gate.snapshot().state=="ready" {return Ok(gate.snapshot());}
-    let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+    let journal=bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
     let result=async {
         journal.observe(bridge).await?;
         let inspection=bridge.inspect_recovery().await?;
@@ -516,6 +521,7 @@ async fn resume_start_presence<R: tauri::Runtime>(
 // Pairing changes the saved binding revision. A new binding gets its own scoped
 // network preparation; an ordinary status read must never apply a saved draft.
 pub(crate) async fn observe_device<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &Bridge, result: &serde_json::Value) {
+    if app.try_state::<crate::hive_switch::HiveSwitch>().is_some_and(|c|c.pending().unwrap_or(true)){return;}
     if result["device"]["state"] != "bound" { return; }
     let gate = app.state::<StartupGate>();
     let before = gate.snapshot();
@@ -542,7 +548,7 @@ async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &
                 let inspected=bridge.inspect_recovery().await?;
                 if let Some(cause)=inspected.failure{return Err(cause);}
             }
-            let journal=crate::startup_recovery::RecoveryJournal::beside(app.state::<crate::updater::UpdateManager>().store.path());
+            let journal=bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
             if let Some(record)=journal.observe(bridge).await? {
                 if let Some(cause)=record.failure{return Err(cause);}
             }

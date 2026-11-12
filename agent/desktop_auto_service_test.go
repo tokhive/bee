@@ -238,6 +238,66 @@ func TestDesktopAutoServiceWaitingAllowsFirstOfficialLogin(t *testing.T) {
 	}
 }
 
+func TestDesktopAutoServiceMaintenanceFailureDropsPreviousStartupProgress(t *testing.T) {
+	d := desktopRuntimeDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+		if desktopSupplyServeIdentity(w, q) {
+			return
+		}
+		if q.Method == "GET" && q.URL.Path == "/api/bee/connect" {
+			connection, err := websocket.Accept(w, q, nil)
+			if err == nil {
+				defer connection.CloseNow()
+				<-connection.CloseRead(q.Context()).Done()
+			}
+			return
+		}
+		t.Errorf("maintenance failure sent unexpected request: %s %s", q.Method, q.URL.Path)
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	original, err := os.ReadFile(d.path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.WriteFile(d.path, original, 0600) })
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	r := NewDesktopRuntime(context.Background(), d, a)
+	defer r.Close()
+	if _, err := r.Restore(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Local == "waiting" })
+	enableTestPresence(t, r)
+	before := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool { return s.Connection == "connected" })
+	if before.StartupProgress == nil || before.StartupProgress.OperationID == nil || *before.StartupProgress.OperationID != before.Operation.ID {
+		t.Fatalf("waiting startup progress is not bound to its operation: %+v", before)
+	}
+	session, release, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := session.read()
+	if err == nil {
+		state.Name = "Changed Mac"
+		err = session.save(state)
+	}
+	release()
+	if err != nil {
+		t.Fatal(err)
+	}
+	r.maintainSelectedAccounts()
+	failed, err := r.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if failed.Local != "failed" || failed.Operation == nil || failed.Operation.ID == before.Operation.ID || failed.Operation.Error == nil || !strings.Contains(failed.Operation.Error.Message, "waiting context changed") {
+		t.Fatalf("maintenance did not preserve its actual binding failure: local=%s operation=%+v", failed.Local, failed.Operation)
+	}
+	if failed.StartupProgress != nil {
+		t.Fatalf("failed maintenance retained another operation's progress: progress=%+v operation=%s", failed.StartupProgress, failed.Operation.ID)
+	}
+}
+
 func TestDesktopAutoServiceStartEmptyAccountsPreservesSavedIntent(t *testing.T) {
 	for _, running := range []bool{false, true} {
 		t.Run(map[bool]string{false: "stopped", true: "running"}[running], func(t *testing.T) {

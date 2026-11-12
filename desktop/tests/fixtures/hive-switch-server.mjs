@@ -12,16 +12,18 @@ const server=http.createServer(async(req,res)=>{
  let raw='';for await(const chunk of req)raw+=chunk;const body=raw?JSON.parse(raw):null;audit.push({method:req.method,path:req.url,body});
  const respond=(code,value)=>{const bytes=JSON.stringify(value);res.writeHead(code,{'Content-Type':'application/json','Content-Length':Buffer.byteLength(bytes)});res.end(bytes);};
  if(req.url==='/__audit')return respond(200,audit);
- if(req.url==='/__configure'){expect=body.expect??expect;faults={...faults,...body.faults};return respond(200,{ok:true});}
- if(req.url==='/api/bee/identity'){if(faults.identity_after_seal&&[...operations.values()].some(op=>op.state==='sealed'))return respond(faults.identity_after_seal===1?401:faults.identity_after_seal,{error:{code:'invalid_device_credential',message:'synthetic target credential rejected after preparation'}});return respond(200,identity);}
+ if(req.url==='/__configure'){expect=body.expect??expect;faults={...faults,...body.faults};Object.assign(work,body.work??{});return respond(200,{ok:true});}
+ if(req.url==='/api/bee/pairings'&&faults.initial_pairing_unknown){req.socket.destroy();return;}
+ if(req.url==='/api/bee/identity'){if(faults.initial_pairing_unknown)return respond(401,{error:{code:'invalid_device_credential'}});if(faults.identity_after_seal&&[...operations.values()].some(op=>op.state==='sealed'))return respond(faults.identity_after_seal===1?401:faults.identity_after_seal,{error:{code:'invalid_device_credential',message:'synthetic target credential rejected after preparation'}});return respond(200,identity);}
+ if(req.url==='/api/bee/device-drain-capabilities'&&faults.capabilities)return respond(faults.capabilities,{error:{code:'unavailable',message:'synthetic capability query failure'}});
  if(req.url==='/api/bee/device-drain-capabilities')return respond(200,{version:1,device_drain:1});
  const match=/^\/api\/bee\/device-drains\/([a-f0-9]{48})(?:\/(begin|seal|release))?$/.exec(req.url);
  if(!match)return respond(404,{error:{code:'fixture_route',message:`unexpected fixture route ${req.method} ${req.url}`}});
  const [,id,action]=match;let op=operations.get(id);
- if(!action){if(!op)return respond(200,{version:1,device_id:identity.id,owner_id:identity.owner_id,operation_id:id,state:'absent',request:null,seal:null,release:null,receipt:null,current:{epoch,lease,barrier_id:barrier,work}});return respond(200,view(op));}
- if(action==='begin'){if(!op){op={request:body,state:'ready'};operations.set(id,op);barrier=id;}}
+ if(!action){if(faults.status)return respond(faults.status,{error:{code:'unavailable',message:'synthetic original status query failure'}});if(op&&op.state==='draining'&&Object.values(work).every(n=>n===0))op.state='ready';if(!op)return respond(200,{version:1,device_id:identity.id,owner_id:identity.owner_id,operation_id:id,state:'absent',request:null,seal:null,release:null,receipt:null,current:{epoch,lease,barrier_id:barrier,work}});return respond(200,view(op));}
+ if(action==='begin'){if(!op){op={request:body,state:Object.values(work).every(n=>n===0)?'ready':'draining'};operations.set(id,op);barrier=id;}}
  if(action==='seal'){op.seal=body;epoch=body.id;op.state='sealed';lease='';if(connected){connected.destroy();connected=null;}op.receipt={version:1,seal:body,epoch,connection_retired:true,work};}
- if(action==='release'){if(body.mode==='activate'&&expect){const index=JSON.parse(readFileSync(expect.index_path,'utf8'));if(index.current_profile!==expect.target||!index.committed_operation)return respond(409,{error:{code:'index_not_committed',message:'target release observed before durable current profile commit'}});}op.release=body;op.state='released';barrier='';}
+ if(action==='release'){if(!op&&body.mode==='cancel'){op={request:body.request,state:'absent'};operations.set(id,op);}if(body.mode==='activate'&&expect){const index=JSON.parse(readFileSync(expect.index_path,'utf8'));if(index.current_profile!==expect.target||!index.committed_operation)return respond(409,{error:{code:'index_not_committed',message:'target release observed before durable current profile commit'}});}op.release=body;op.state='released';barrier='';}
  if(faults[action]){faults[action]--;req.socket.destroy();return;}
  respond(200,view(op));
 });

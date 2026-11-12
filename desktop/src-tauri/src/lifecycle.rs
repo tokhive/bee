@@ -277,10 +277,46 @@ pub fn dispatch(app: &tauri::AppHandle, event: WindowEvent) {
     }
 }
 
+pub(crate) fn switch_quit_prompt(app: &tauri::AppHandle) -> bool {
+    let Some(coordinator) = app.try_state::<crate::hive_switch::HiveSwitch>() else {
+        return false;
+    };
+    if coordinator.exit_authorized.load(Ordering::SeqCst) {
+        return false;
+    }
+    match coordinator.snapshot() {
+        Ok(snapshot) => {
+            let Some(record) = snapshot.operation.filter(|r| !r.terminal()) else {
+                return false;
+            };
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
+            }
+            if let Err(cause) = app.emit_to(
+                "main",
+                "bee://hive-switch-exit-request",
+                serde_json::json!({"operation_id":record.id}),
+            ) {
+                eprintln!("switch quit prompt delivery failed: {cause}");
+            }
+            true
+        }
+        Err(cause) => {
+            eprintln!(
+                "switch quit journal unavailable: {}: {}",
+                cause.code, cause.message
+            );
+            true
+        }
+    }
+}
+
 fn apply(app: &tauri::AppHandle, intent: WindowIntent) -> tauri::Result<()> {
     if intent == WindowIntent::Quit {
         // RunEvent::Exit performs the existing owned Child stop-and-reap path.
-        app.exit(0);
+        if !switch_quit_prompt(app) { app.exit(0); }
         return Ok(());
     }
     // A second launch can arrive while setup is still creating the main window.

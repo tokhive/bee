@@ -144,6 +144,10 @@ pub(crate) struct SwitchRecord {
     #[serde(deserialize_with = "present")]
     pub observation_started: Option<String>,
     pub query_failures: u32,
+    #[serde(default)]
+    pub observation_last: Option<String>,
+    #[serde(default)]
+    pub observation_blocked: bool,
     #[serde(deserialize_with = "present")]
     pub failure: Option<BridgeError>,
 }
@@ -163,6 +167,8 @@ impl SwitchRecord {
             observation_round: 0,
             observation_started: None,
             query_failures: 0,
+            observation_last: None,
+            observation_blocked: false,
             failure: None,
         }
     }
@@ -237,6 +243,18 @@ impl SwitchJournal {
                         .is_none_or(|s| s["state"] != "released"))
         {
             return Err(error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch phase evidence rejected: phase={} committed={} target_verified={} source_reaped={}",r.phase,r.committed,r.target.verified,r.source.child_reaped)));
+        }
+        if r.query_failures > 4
+            || r.observation_round > 9_007_199_254_740_991
+            || [&r.observation_started, &r.observation_last]
+                .iter()
+                .any(|v| {
+                    v.as_ref()
+                        .is_some_and(|s| !crate::runtime_protocol::timestamp(s))
+                })
+            || r.observation_round > 0 && r.observation_started.is_none()
+        {
+            return Err(error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch observation budget rejected: round={} failures={} started_present={}; require bounded persisted budget and UTC timestamps",r.observation_round,r.query_failures,r.observation_started.is_some())));
         }
         for l in [&r.source, &r.target] {
             if l.binding_revision.is_some() != l.binding_digest.is_some()
@@ -353,7 +371,9 @@ impl SwitchJournal {
                         return Err(error("HIVE_SWITCH_JOURNAL_CONFLICT","switch immutable profile, binding or original remote action changed; original evidence preserved"));
                     }
                 }
-                if old.committed && !r.committed
+                if old.cancel_requested && !r.cancel_requested
+                    || old.quit_requested && !r.quit_requested
+                    || old.committed && !r.committed
                     || old.terminal()
                         && serde_json::to_value(&old).ok() != serde_json::to_value(r).ok()
                 {
@@ -444,6 +464,31 @@ impl CurrentBridge {
         *self.value.write().unwrap_or_else(|e| e.into_inner()) = Some((context, bridge));
         self.changed.send_modify(|n| *n += 1);
     }
+    pub(crate) fn capture(&self) -> Option<(Option<ProfileContext>, Bridge)> {
+        self.value.read().unwrap_or_else(|e| e.into_inner()).clone()
+    }
+    pub(crate) fn scope(&self) -> Option<CurrentScope> {
+        let value = self.value.read().unwrap_or_else(|e| e.into_inner());
+        let (context, bridge) = value.as_ref()?;
+        Some(CurrentScope {
+            profile_id: context.as_ref()?.id.clone(),
+            instance: bridge.status().metadata?.instance,
+        })
+    }
+    pub(crate) fn with_scope<T>(
+        &self,
+        expected: &CurrentScope,
+        apply: impl FnOnce() -> T,
+    ) -> Option<T> {
+        let value = self.value.read().unwrap_or_else(|e| e.into_inner());
+        let (context, bridge) = value.as_ref()?;
+        if context.as_ref()?.id != expected.profile_id
+            || bridge.status().metadata?.instance != expected.instance
+        {
+            return None;
+        }
+        Some(apply())
+    }
     pub(crate) fn subscribe(&self) -> watch::Receiver<u64> {
         self.changed.subscribe()
     }
@@ -452,6 +497,113 @@ impl CurrentBridge {
 pub(crate) struct SwitchSnapshot {
     pub profiles: ProfileIndex,
     pub operation: Option<SwitchRecord>,
+    pub observation: Observation,
+    pub actions: SwitchActions,
+    pub current_scope: Option<CurrentScope>,
+    pub profile_identities: Vec<ProfileIdentity>,
+}
+#[derive(Clone, Debug, Serialize, PartialEq, Eq)]
+pub(crate) struct CurrentScope {
+    pub profile_id: String,
+    pub instance: String,
+}
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct Observation {
+    pub state: String,
+    pub reason: Option<String>,
+    pub next_query_at: Option<String>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct SwitchActions {
+    pub can_cancel: bool,
+    pub can_continue: bool,
+    pub can_observe: bool,
+    pub target_pairing: bool,
+}
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct ProfileIdentity {
+    pub profile_id: String,
+    pub name: String,
+    pub owner_id: String,
+    pub owner_email: String,
+}
+fn now() -> String {
+    time::OffsetDateTime::now_utc()
+        .format(&time::format_description::well_known::Rfc3339)
+        .expect("UTC timestamp")
+}
+fn parsed(value: &Option<String>) -> Option<time::OffsetDateTime> {
+    value.as_ref().and_then(|v| {
+        time::OffsetDateTime::parse(v, &time::format_description::well_known::Rfc3339).ok()
+    })
+}
+fn observation(record: Option<&SwitchRecord>) -> Observation {
+    let Some(r) = record.filter(|r| !r.terminal()) else {
+        return Observation {
+            state: "idle".into(),
+            reason: None,
+            next_query_at: None,
+        };
+    };
+    let reason = if r.observation_blocked {
+        Some("query_not_retryable")
+    } else if r.query_failures >= 4 {
+        Some("query_retry_exhausted")
+    } else if parsed(&r.observation_started)
+        .is_some_and(|t| time::OffsetDateTime::now_utc() - t >= time::Duration::seconds(60))
+    {
+        Some("round_elapsed")
+    } else {
+        None
+    };
+    Observation {
+        state: if r.observation_blocked {
+            "blocked"
+        } else if reason.is_some() {
+            "paused"
+        } else {
+            "observing"
+        }
+        .into(),
+        reason: reason.map(str::to_owned),
+        next_query_at: if reason.is_none() {
+            parsed(&r.observation_last).map(|t| {
+                (t + time::Duration::seconds(2))
+                    .format(&time::format_description::well_known::Rfc3339)
+                    .expect("UTC timestamp")
+            })
+        } else {
+            None
+        },
+    }
+}
+fn query_failure(r: &mut SwitchRecord, cause: &BridgeError) {
+    // A successful GET reporting an unresolved action is progress, not a failed
+    // query. In particular, absent never licenses resubmitting the write.
+    if cause.code == "HIVE_SWITCH_RESULT_UNCONFIRMED" {
+        return;
+    }
+    let status = cause
+        .details
+        .as_ref()
+        .and_then(|d| d.evidence.get("http_status"))
+        .and_then(|v| v.parse::<u16>().ok());
+    let retryable = status
+        .is_some_and(|s| s == 408 || s == 429 || s >= 500 && s != 501 && s != 505)
+        || status.is_none()
+            && (cause.details.as_ref().is_some_and(|d| {
+                d.evidence.get("failure_kind").is_some_and(|v| {
+                    matches!(
+                        v.as_str(),
+                        "timeout" | "connection_closed" | "connection_refused" | "dns_temporary"
+                    )
+                })
+            }) || matches!(
+                cause.code.as_str(),
+                "RESPONSE_TIMEOUT" | "REQUEST_QUEUE_TIMEOUT" | "REQUEST_PENDING"
+            ));
+    r.query_failures = r.query_failures.saturating_add(1).min(4);
+    r.observation_blocked = !retryable;
 }
 /// Holds the App ownership lock from migration until final shutdown. A target
 /// preparation child never becomes the current route before the index commit.
@@ -462,6 +614,7 @@ pub(crate) struct HiveSwitch {
     pub(crate) serial: Mutex<()>,
     target: Mutex<Option<(ProfileContext, ProfileMode, Bridge)>>,
     launch: LaunchSpec,
+    pub(crate) exit_authorized: std::sync::atomic::AtomicBool,
 }
 impl HiveSwitch {
     pub(crate) fn open(root: PathBuf, startup: &Path) -> Result<Self, BridgeError> {
@@ -506,12 +659,74 @@ impl HiveSwitch {
             serial: Mutex::new(()),
             target: Mutex::new(None),
             launch,
+            exit_authorized: std::sync::atomic::AtomicBool::new(false),
         })
     }
     pub(crate) fn snapshot(&self) -> Result<SwitchSnapshot, BridgeError> {
+        let profiles = self.profiles.snapshot()?;
+        let operation = self.journal.load()?;
+        let observation = observation(operation.as_ref());
+        let pending = operation.as_ref().is_some_and(|r| !r.terminal());
+        let actions = SwitchActions {
+            can_cancel: pending
+                && operation.as_ref().is_some_and(|r| {
+                    !r.committed
+                        && !r.cancel_requested
+                        && profiles.committed_operation.as_deref() != Some(&r.id)
+                }),
+            can_continue: pending && matches!(observation.state.as_str(), "paused" | "blocked"),
+            can_observe: pending && observation.state == "observing",
+            target_pairing: operation.as_ref().is_some_and(|r| {
+                r.phase == "preparing_target"
+                    && !r.cancel_requested
+                    && !r.quit_requested
+                    && r.target.operation.is_none()
+            }),
+        };
+        let mut profile_identities = Vec::new();
+        for entry in &profiles.profiles {
+            let context = self.profiles.context(&entry.id)?;
+            if let Ok(raw) = protected_read_bounded(&context.device_path(), 65536) {
+                if let Ok(v) = crate::profiles::unique_value(&raw) {
+                    if v["hive"]
+                        .as_str()
+                        .and_then(|h| crate::hive_origin::normalize_hive_origin(h).ok())
+                        .as_deref()
+                        == Some(&entry.origin)
+                    {
+                        let i = &v["identity"];
+                        if let (Some(name), Some(owner), Some(email), Some(device)) = (
+                            i["name"].as_str(),
+                            i["owner_id"].as_str(),
+                            i["owner_email"].as_str(),
+                            i["id"].as_str(),
+                        ) {
+                            if [name, owner, email, device].iter().all(|v| {
+                                !v.is_empty() && v.len() <= 512 && !v.chars().any(char::is_control)
+                            }) {
+                                profile_identities.push(ProfileIdentity {
+                                    profile_id: entry.id.clone(),
+                                    name: name.into(),
+                                    owner_id: owner.into(),
+                                    owner_email: email.into(),
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        let current_scope = self
+            .current
+            .scope()
+            .filter(|scope| profiles.current_profile.as_deref() == Some(&scope.profile_id));
         Ok(SwitchSnapshot {
-            profiles: self.profiles.snapshot()?,
-            operation: self.journal.load()?,
+            profiles,
+            operation,
+            observation,
+            actions,
+            current_scope,
+            profile_identities,
         })
     }
     pub(crate) fn pending(&self) -> Result<bool, BridgeError> {
@@ -702,13 +917,7 @@ impl HiveSwitch {
         let canonical = crate::hive_origin::normalize_hive_origin(&origin)?;
         if let Some(context) = self.current.context() {
             if context.origin != canonical {
-                return Err(error(
-                    "HIVE_SWITCH_REQUIRED",
-                    format!(
-                        "requested Hive differs from current={}; use the Hive switch operation",
-                        context.origin
-                    ),
-                ));
+                self.retarget_initial(&context, &origin).await?;
             }
         } else {
             let context = self.profiles.register(&origin)?;
@@ -726,6 +935,163 @@ impl HiveSwitch {
         let bridge = self.current.get()?;
         Self::ready(&bridge).await?;
         bridge.device_begin(origin, name).await
+    }
+    fn initial_evidence(
+        context: &ProfileContext,
+    ) -> Result<Vec<(PathBuf, Option<Vec<u8>>)>, BridgeError> {
+        let mut evidence = Vec::new();
+        for name in [
+            "bee-desktop.json",
+            "bee-desktop-recovery.json",
+            "runtime-session",
+            "desktop-switch-seal.json",
+            "desktop-session-retirement.json",
+            "ai-accounts.json",
+            "login-maintenance.json",
+            "desktop-startup-recovery.json",
+        ] {
+            let path = context.device_path().with_file_name(name);
+            let raw = match protected_read_bounded(&path, 1_048_576) {
+                Ok(v) => Some(v),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => None,
+                Err(e) => return Err(io_error("inspect initial address correction evidence", e)),
+            };
+            evidence.push((path, raw));
+        }
+        let decode = |raw: &Vec<u8>| {
+            crate::profiles::unique_value(raw).map_err(|e|error("HIVE_INITIAL_EVIDENCE_INVALID",format!("initial address evidence JSON rejected: category={:?} line={} column={}; original retained",e.classify(),e.line(),e.column())))
+        };
+        let state = evidence[0].1.as_ref().map(decode).transpose()?;
+        let recovery = evidence[1].1.as_ref().map(decode).transpose()?;
+        if let Some(v) = state.as_ref() {
+            let saved_origin = v["hive"]
+                .as_str()
+                .and_then(|h| crate::hive_origin::normalize_hive_origin(h).ok());
+            if saved_origin.as_deref() != Some(&context.origin)
+                || !v["identity"].is_null()
+                || !v["pairing"].is_null()
+                || v.get("runtime_epoch")
+                    .is_some_and(|v| v.as_str() != Some(""))
+            {
+                return Err(error("HIVE_SWITCH_REQUIRED",format!("initial address correction rejected: profile={} origin_matches={} identity_present={} pairing_present={} runtime_epoch_present={}; use original Hive transaction or a safe switch",context.id,saved_origin.as_deref()==Some(&context.origin),!v["identity"].is_null(),!v["pairing"].is_null(),v.get("runtime_epoch").is_some_and(|v|v.as_str()!=Some("")))));
+            }
+        }
+        if let Some(r) = recovery.as_ref() {
+            let expected_fields = [
+                "version",
+                "purpose",
+                "operation_id",
+                "revision",
+                "phase",
+                "hive",
+                "name",
+                "old_identity",
+                "old_binding",
+                "binding_revision",
+                "credential",
+                "create_attempted",
+                "redeem_attempted",
+                "pairing",
+                "new_identity",
+                "confirmed_owner",
+                "accepted",
+                "failure",
+            ];
+            let exact = r.as_object().is_some_and(|m| {
+                m.len() == expected_fields.len()
+                    && expected_fields.iter().all(|key| m.contains_key(*key))
+            });
+            let unsubmitted = exact
+                && r["version"] == 1
+                && r["purpose"] == "initial_pairing"
+                && r["phase"] == "awaiting_confirmation"
+                && r["create_attempted"] == false
+                && r["redeem_attempted"] == false
+                && r["pairing"].is_null()
+                && r["new_identity"].is_null()
+                && r["old_identity"].is_null()
+                && r["confirmed_owner"] == ""
+                && r["accepted"] == json!([])
+                && r["hive"] == context.origin
+                && state
+                    .as_ref()
+                    .is_some_and(|v| v["credential"] == r["credential"] && v["name"] == r["name"]);
+            if !unsubmitted {
+                return Err(error("HIVE_INITIAL_PAIRING_UNRESOLVED",format!("initial address correction blocked: profile={} recovery_phase={} create_attempted={} redeem_attempted={}; preserve original transaction and query its result",context.id,r["phase"],r["create_attempted"],r["redeem_attempted"])));
+            }
+        } else if state.is_some() {
+            return Err(error("HIVE_INITIAL_PAIRING_UNRESOLVED","initial address correction blocked: saved configuration has no original unsubmitted recovery proof; existing credential retained"));
+        }
+        if evidence[3..].iter().any(|(_, v)| v.is_some()) {
+            return Err(error("HIVE_INITIAL_RUNTIME_UNRESOLVED","initial address correction blocked: switch/session retirement evidence is present; reconcile original ownership"));
+        }
+        Ok(evidence)
+    }
+    async fn retarget_initial(
+        &self,
+        old: &ProfileContext,
+        origin: &str,
+    ) -> Result<(), BridgeError> {
+        if self.journal.load()?.is_some() {
+            return Err(error("HIVE_SWITCH_REQUIRED","initial address correction requires no prior switch history; use the original Hive switch recovery"));
+        }
+        let child = self.current.get()?;
+        Self::ready(&child).await?;
+        let evidence = Self::initial_evidence(old)?;
+        let inspection = child.inspect_recovery().await?;
+        if inspection.state != "idle"
+            || inspection.previous_run_id.is_some()
+            || inspection.intent_running
+            || inspection.failure.is_some()
+        {
+            return Err(error("HIVE_INITIAL_RUNTIME_UNRESOLVED",format!("initial address correction blocked: recovery_state={} previous_run={} running_intent={} failure={:?}; original records retained",inspection.state,inspection.previous_run_id.is_some(),inspection.intent_running,inspection.failure)));
+        }
+        let runtime = child.runtime_snapshot().await?;
+        crate::protocol::result_error(&runtime.result)?;
+        let r = &runtime.result["runtime"];
+        if r["local"] != "stopped"
+            || r["connection"] != "disconnected"
+            || !r["run_id"].is_null()
+            || !r["operation"].is_null()
+            || !child.pending_requests().requests.is_empty()
+        {
+            return Err(error("HIVE_INITIAL_RUNTIME_UNRESOLVED",format!("initial address correction blocked: local={} connection={} run_present={} operation_present={} pending_ipc={}",r["local"],r["connection"],!r["run_id"].is_null(),!r["operation"].is_null(),child.pending_requests().requests.len())));
+        }
+        let target = self.profiles.register(origin)?;
+        if target.id == old.id {
+            return Ok(());
+        }
+        let target_evidence = Self::initial_evidence(&target)?;
+        if target_evidence.iter().any(|(_, v)| v.is_some()) {
+            return Err(error("HIVE_SWITCH_REQUIRED",format!("initial address correction target={} already has saved records; use its original transaction",target.id)));
+        }
+        child.freeze_for_exit();
+        if !child.pending_requests().requests.is_empty() {
+            return Err(error("HIVE_INITIAL_IPC_PENDING",format!("initial address correction pending_ipc={}; wait for original requests before restart",child.pending_requests().requests.len())));
+        }
+        child.stop().await?;
+        if Self::initial_evidence(old)? != evidence
+            || Self::initial_evidence(&target)? != target_evidence
+        {
+            return Err(error("HIVE_INITIAL_EVIDENCE_CHANGED","initial address correction evidence changed during owned child shutdown; current index retained"));
+        }
+        let index = self.profiles.snapshot()?;
+        if index.current_profile.as_deref() != Some(&old.id) {
+            return Err(error(
+                "HIVE_INITIAL_INDEX_CHANGED",
+                "initial address correction current owner changed; old profile retained",
+            ));
+        }
+        self.profiles
+            .commit_current(index.revision, &target.id, &id())?;
+        let bridge = Bridge::start(
+            self.launch
+                .clone()
+                .for_profile(&target, ProfileMode::Current)?,
+        );
+        crate::update_install::hold_startup(&bridge);
+        self.current.replace(Some(target), bridge);
+        Ok(())
     }
     pub(crate) async fn start(
         &self,
@@ -764,6 +1130,9 @@ impl HiveSwitch {
         }
         let mut r = SwitchRecord::new(source, target.id);
         r.source_index_operation = index.committed_operation;
+        r.observation_round = 1;
+        r.observation_started = Some(now());
+        r.observation_last = Some(now());
         self.journal.save(&r)?;
         self.advance(r, prefs).await
     }
@@ -772,16 +1141,156 @@ impl HiveSwitch {
         prefs: PreferencesSnapshot,
     ) -> Result<SwitchSnapshot, BridgeError> {
         let _serial = self.serial.lock().await;
-        let Some(r) = self.journal.load()? else {
+        let Some(mut r) = self.journal.load()? else {
+            return self.snapshot();
+        };
+        if r.terminal() || observation(Some(&r)).state != "observing" {
+            return self.snapshot();
+        }
+        if parsed(&r.observation_last)
+            .is_some_and(|t| time::OffsetDateTime::now_utc() - t < time::Duration::seconds(2))
+        {
+            return self.snapshot();
+        }
+        if r.observation_started.is_none() {
+            r.observation_started = Some(now());
+            r.observation_round = r.observation_round.max(1);
+        }
+        r.observation_last = Some(now());
+        self.journal.save(&r)?;
+        if r.cancel_requested || r.quit_requested {
+            return self.cancel_inner(r, &prefs).await;
+        }
+        self.advance(r, prefs).await
+    }
+    pub(crate) async fn request_quit(
+        &self,
+        prefs: PreferencesSnapshot,
+    ) -> Result<SwitchSnapshot, BridgeError> {
+        let _serial = self.serial.lock().await;
+        if let Some(mut r) = self.journal.load()? {
+            if !r.terminal() {
+                r.quit_requested = true;
+                let index = self.profiles.snapshot()?;
+                if !r.committed && index.committed_operation.as_deref() != Some(&r.id) {
+                    r.cancel_requested = true;
+                }
+                self.journal.save(&r)?;
+                // Query/restore the original cancellation first. An unknown
+                // result remains pending and never authorizes forward switching.
+                self.cancel_inner(r, &prefs).await?;
+            }
+        }
+        // Q9 permits owned cleanup even when Go reports a failed Stop with
+        // WorkersStopped=true/SessionClean=false. None of this cleanup is saved
+        // as switch workers/clean/offline evidence.
+        if let Ok(child) = self.current.get() {
+            if child.status().state == BridgePhase::Ready {
+                if let Err(cause) = child
+                    .prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
+                    .await
+                {
+                    eprintln!("switch quit owned stop: {}: {}", cause.code, cause.message);
+                }
+            }
+            child.stop().await?;
+        }
+        self.shutdown_target().await?;
+        self.exit_authorized.store(true, Ordering::SeqCst);
+        self.snapshot()
+    }
+    pub(crate) async fn continue_waiting(
+        &self,
+        prefs: PreferencesSnapshot,
+    ) -> Result<SwitchSnapshot, BridgeError> {
+        let _serial = self.serial.lock().await;
+        let Some(mut r) = self.journal.load()? else {
             return self.snapshot();
         };
         if r.terminal() {
             return self.snapshot();
         }
+        r.observation_round = r.observation_round.saturating_add(1);
+        r.observation_started = Some(now());
+        r.observation_last = Some(now());
+        r.query_failures = 0;
+        r.observation_blocked = false;
+        self.journal.save(&r)?;
         if r.cancel_requested || r.quit_requested {
-            return Err(error("HIVE_SWITCH_CANCEL_PENDING",format!("switch operation={} has persisted cancellation/exit intent; forward switching is blocked",r.id)));
+            self.cancel_inner(r, &prefs).await
+        } else {
+            self.advance(r, prefs).await
         }
-        self.advance(r, prefs).await
+    }
+    pub(crate) async fn cancel(
+        &self,
+        prefs: PreferencesSnapshot,
+    ) -> Result<SwitchSnapshot, BridgeError> {
+        let _serial = self.serial.lock().await;
+        let Some(mut r) = self.journal.load()? else {
+            return self.snapshot();
+        };
+        if r.terminal() {
+            return self.snapshot();
+        }
+        let index = self.profiles.snapshot()?;
+        if r.committed || index.committed_operation.as_deref() == Some(&r.id) {
+            return self.advance(r, prefs).await;
+        }
+        r.cancel_requested = true;
+        r.observation_last = Some(now());
+        self.journal.save(&r)?;
+        self.cancel_inner(r, &prefs).await
+    }
+    async fn cancel_inner(
+        &self,
+        mut r: SwitchRecord,
+        prefs: &PreferencesSnapshot,
+    ) -> Result<SwitchSnapshot, BridgeError> {
+        let result = self.cancel_reconcile(&mut r, prefs).await;
+        if !r.terminal() {
+            r.observation_last = Some(now());
+        }
+        if let Err(cause) = result {
+            query_failure(&mut r, &cause);
+            r.failure = Some(cause);
+            self.journal.save(&r)?;
+        }
+        self.snapshot()
+    }
+    async fn cancel_reconcile(
+        &self,
+        r: &mut SwitchRecord,
+        prefs: &PreferencesSnapshot,
+    ) -> Result<(), BridgeError> {
+        let index = self.profiles.snapshot()?;
+        if r.committed || index.committed_operation.as_deref() == Some(&r.id) {
+            // The atomic index is the success boundary. A late cancellation can
+            // only finish the committed target's original release.
+            return self.advance_inner(r, prefs).await;
+        }
+        if r.target.pending.is_some() {
+            let target = self
+                .target_child(&r.target.profile, ProfileMode::Prepare)
+                .await?;
+            self.inspect(&mut r.target, &target).await?;
+            self.original(r, true, &target, "drain_status").await?;
+        }
+        // Preparing a target can leave a pairing/recovery child transaction.
+        // Its protected files and original credential remain intact. A prepare
+        // child has no contribution permission, so reaping it does not claim
+        // that pairing has been cancelled remotely.
+        self.shutdown_target().await?;
+        self.target.lock().await.take();
+        if r.source.operation.is_none() {
+            r.phase = "cancelled".into();
+            r.failure = None;
+            self.journal.save(r)?;
+            return Ok(());
+        }
+        r.phase = "restoring_source".into();
+        self.journal.save(r)?;
+        self.restore_source(r, prefs).await
     }
     pub(crate) async fn target_status(&self) -> Result<crate::sidecar::BridgeReply, BridgeError> {
         let _serial = self.serial.lock().await;
@@ -791,7 +1300,7 @@ impl HiveSwitch {
                 "target pairing requires an existing switch",
             )
         })?;
-        if r.phase != "preparing_target" {
+        if r.phase != "preparing_target" || r.cancel_requested || r.quit_requested {
             return Err(error(
                 "HIVE_SWITCH_PHASE",
                 format!(
@@ -816,7 +1325,7 @@ impl HiveSwitch {
                 "target pairing requires an existing switch",
             )
         })?;
-        if r.phase != "preparing_target" {
+        if r.phase != "preparing_target" || r.cancel_requested || r.quit_requested {
             return Err(error(
                 "HIVE_SWITCH_PHASE",
                 format!(
@@ -839,7 +1348,7 @@ impl HiveSwitch {
                 "target browser open requires an existing switch",
             )
         })?;
-        if r.phase != "preparing_target" {
+        if r.phase != "preparing_target" || r.cancel_requested || r.quit_requested {
             return Err(error(
                 "HIVE_SWITCH_PHASE",
                 format!(
@@ -892,6 +1401,8 @@ impl HiveSwitch {
             )
         })?;
         if r.phase != "preparing_target"
+            || r.cancel_requested
+            || r.quit_requested
             || r.source.operation.is_some()
             || r.target.operation.is_some()
         {
@@ -1141,6 +1652,9 @@ impl HiveSwitch {
         prefs: PreferencesSnapshot,
     ) -> Result<SwitchSnapshot, BridgeError> {
         let result = self.advance_inner(&mut r, &prefs).await;
+        if !r.terminal() {
+            r.observation_last = Some(now());
+        }
         if let Err(cause) = result {
             let definite = cause
                 .details
@@ -1153,6 +1667,7 @@ impl HiveSwitch {
                 && definite
                 && r.source.pending.is_none()
                 && r.target.pending.is_none();
+            query_failure(&mut r, &cause);
             r.failure = Some(cause);
             if restore {
                 r.phase = "restoring_source".into();
@@ -1165,6 +1680,10 @@ impl HiveSwitch {
                     self.journal.save(&r)?;
                 }
             }
+        } else if !r.terminal() {
+            r.query_failures = 0;
+            r.observation_blocked = false;
+            self.journal.save(&r)?;
         }
         self.snapshot()
     }
@@ -1223,7 +1742,7 @@ impl HiveSwitch {
                         .as_ref()
                         .is_some_and(|s| s["receipt"] == source_view["drain"]["receipt"]);
                 if !offline {
-                    return Err(error("HIVE_SWITCH_SOURCE_UNVERIFIED",format!("source capability query failed: {}: {}; complete matching offline seal/worker/IPC/reap evidence is absent",cause.code,cause.message)));
+                    return Err(BridgeError {code:"HIVE_SWITCH_SOURCE_UNVERIFIED".into(),message:format!("source capability query failed: {}: {}; complete matching offline seal/worker/IPC/reap evidence is absent",cause.code,cause.message),details:cause.details});
                 }
             }
             if !self.prepare_barrier(r, true, &target).await? {
@@ -1235,8 +1754,25 @@ impl HiveSwitch {
         if r.phase == "draining_source" {
             self.binding(&mut r.target, false)?;
             let source = self.current.get()?;
-            self.inspect(&mut r.source, &source).await?;
+            let view = self.inspect(&mut r.source, &source).await?;
             self.binding(&mut r.source, false)?;
+            // Record the source's original operation before freezing local
+            // admission. If freezing/IPC fails, cancellation can terminate this
+            // same (possibly unsent) ID using the server's cancel tombstone.
+            if r.source.operation.is_none() {
+                if view["seal_persisted"] == true && view["drain"]["state"] == "sealed" {
+                    r.source.operation = Some(view["drain"]["request"].clone());
+                    r.source.seal = Some(view["drain"]["seal"].clone());
+                    r.source.status = Some(view["drain"].clone());
+                } else {
+                    let context =
+                        crate::protocol::device_context(&source.device_context().await?.result)?;
+                    r.source.operation = Some(
+                        json!({"id":id(),"device_id":context.device_id,"owner_id":context.owner_id,"origin":context.hive,"expected_epoch":view["epoch"],"expected_lease":view["lease"]}),
+                    );
+                }
+                self.journal.save(r)?;
+            }
             self.control(&mut r.source, &source, "freeze").await?;
             if !self.prepare_barrier(r, false, &source).await? {
                 return Ok(());
@@ -1452,7 +1988,15 @@ impl HiveSwitch {
         }
         // Ordinary startup restores the original Running/paused selection. A
         // failure there is reported within A and cannot send the user to B.
-        r.phase = "failed".into();
+        r.phase = if r.cancel_requested {
+            "cancelled"
+        } else {
+            "failed"
+        }
+        .into();
+        if r.cancel_requested {
+            r.failure = None;
+        }
         self.journal.save(r)?;
         Ok(())
     }
@@ -1472,27 +2016,56 @@ impl HiveSwitch {
     }
 }
 
+pub(crate) async fn run(app: tauri::AppHandle) {
+    use tauri::{Emitter, Manager};
+    let mut interval = tokio::time::interval(std::time::Duration::from_secs(2));
+    interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+    loop {
+        interval.tick().await;
+        let coordinator = app.state::<HiveSwitch>();
+        if !coordinator.pending().unwrap_or(false) {
+            continue;
+        }
+        match coordinator
+            .observe(app.state::<crate::preferences::PreferencesStore>().read())
+            .await
+        {
+            Ok(snapshot) => {
+                let terminal = snapshot.operation.as_ref().is_some_and(|r| r.terminal());
+                if let Err(cause) = app.emit_to("main", "bee://hive-switch-snapshot", snapshot) {
+                    eprintln!("deliver switch observation: {cause}");
+                }
+                if terminal {
+                    coordinator.startup_current(app.clone()).await;
+                }
+            }
+            Err(cause) => eprintln!("switch observation: {}: {}", cause.code, cause.message),
+        }
+    }
+}
+
 /// Rebinds App event subscriptions when committed current ownership changes.
 /// Pending/diagnostic events retain their original management instance.
 pub(crate) async fn observe_current(app: tauri::AppHandle, route: CurrentBridge) {
     use tauri::{Emitter, Manager};
     let mut changed = route.subscribe();
     loop {
-        let Ok(bridge) = route.get() else {
+        let Some((context, bridge)) = route.capture() else {
             if changed.changed().await.is_err() {
                 return;
             }
             continue;
         };
+        let profile_id = context.map(|c| c.id);
         let mut statuses = bridge.subscribe();
         let mut settled = bridge.subscribe_settled();
         let mut diagnostics = bridge.subscribe_diagnostics();
         loop {
             tokio::select! {
                 update=changed.changed()=>{if update.is_err(){return;}break;},
-                update=statuses.changed()=>{if update.is_err(){break;}let state=statuses.borrow_and_update().clone();if let Err(cause)=app.emit_to("main","bee://bridge-status",state){eprintln!("deliver current bridge status: {cause}");}},
-                event=settled.recv()=>{match event {Ok(event)=>{if let Err(cause)=app.emit_to("main","bee://request-settled",event){eprintln!("deliver current request settlement: {cause}");}},Err(tokio::sync::broadcast::error::RecvError::Lagged(count))=>eprintln!("current request events lagged: count={count}"),Err(_)=>break}},
-                event=diagnostics.recv()=>{match event {Ok(event)=>{if let Err(cause)=app.state::<crate::diagnostics_native::NativeDiagnostics>().logs.record(event){eprintln!("persist current diagnostic: {}: {}",cause.code,cause.message);}},Err(tokio::sync::broadcast::error::RecvError::Lagged(count))=>eprintln!("current diagnostic events lagged: count={count}"),Err(_)=>break}},
+                update=statuses.changed()=>{if update.is_err(){break;}let state=statuses.borrow_and_update().clone();let mut payload=serde_json::to_value(&state).expect("bridge status serializable");payload["profile_id"]=json!(profile_id);if let Err(cause)=app.emit_to("main","bee://bridge-status",payload){eprintln!("deliver current bridge status: {cause}");}},
+                event=settled.recv()=>{match event {Ok(event)=>{let mut payload=serde_json::to_value(&event).expect("settlement serializable");payload["profile_id"]=json!(profile_id);if let Err(cause)=app.emit_to("main","bee://request-settled",payload){eprintln!("deliver current request settlement: {cause}");}},Err(tokio::sync::broadcast::error::RecvError::Lagged(count))=>eprintln!("current request events lagged: count={count}"),Err(_)=>break}},
+                event=diagnostics.recv()=>{match event {Ok(event)=>{if let (Some(profile_id),Some(instance))=(profile_id.as_ref(),event["instance"].as_str()){let scope=CurrentScope{profile_id:profile_id.clone(),instance:instance.into()};route.with_scope(&scope,||{if let Err(cause)=app.state::<crate::diagnostics_native::NativeDiagnostics>().logs.record(event){eprintln!("persist current diagnostic: {}: {}",cause.code,cause.message);}});}},Err(tokio::sync::broadcast::error::RecvError::Lagged(count))=>eprintln!("current diagnostic events lagged: count={count}"),Err(_)=>break}},
             }
         }
     }
@@ -1672,6 +2245,546 @@ mod tests {
         coordinator.shutdown_target().await.unwrap();
     }
 
+    #[tokio::test]
+    async fn persisted_cancel_during_pairing_preserves_target_and_stays_on_source() {
+        let server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&server.1).unwrap();
+        bind(&a);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let result = c
+            .start("http://127.0.0.1:19998".into(), "Mac".into(), prefs.clone())
+            .await
+            .unwrap();
+        let mut record = result.operation.unwrap();
+        let target = record.target.profile.clone();
+        assert_eq!(record.phase, "preparing_target");
+        record.cancel_requested = true;
+        c.journal.save(&record).unwrap();
+        let result = c.cancel(prefs).await.unwrap();
+        assert_eq!(result.operation.unwrap().phase, "cancelled");
+        assert_eq!(result.profiles.current_profile, Some(a.id));
+        assert!(profiles.context(&target).is_ok());
+        c.current.get().unwrap().stop().await.unwrap();
+        c.shutdown_target().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn restart_does_not_refresh_elapsed_observation_or_failure_budget() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register("http://127.0.0.1:19997").unwrap();
+        let b = profiles.register("http://127.0.0.1:19998").unwrap();
+        let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let mut r = SwitchRecord::new(a.id, b.id);
+        r.observation_round = 7;
+        r.observation_started = Some("2020-01-01T00:00:00Z".into());
+        r.query_failures = 4;
+        c.journal.save(&r).unwrap();
+        let result = serde_json::to_value(c.observe(prefs.clone()).await.unwrap()).unwrap();
+        assert_eq!(result["observation"]["state"], "paused");
+        assert_eq!(result["operation"]["observation_round"], 7);
+        assert_eq!(result["operation"]["query_failures"], 4);
+        r.query_failures = 0;
+        c.journal.save(&r).unwrap();
+        let elapsed = c.observe(prefs.clone()).await.unwrap();
+        assert_eq!(elapsed.observation.reason.as_deref(), Some("round_elapsed"));
+        let continued = c.continue_waiting(prefs).await.unwrap();
+        assert_eq!(continued.operation.as_ref().unwrap().id, r.id);
+        assert_eq!(continued.operation.as_ref().unwrap().observation_round, 8);
+        assert_eq!(continued.observation.state, "observing");
+        c.shutdown_target().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn cancelling_lost_source_release_restarts_with_get_only_and_original_ids() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        configure(
+            &a_server,
+            json!({"work":{"executions":1},"faults":{"release":1}}),
+        )
+        .await;
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let waiting = c
+            .start(b.origin, "Mac".into(), prefs.clone())
+            .await
+            .unwrap();
+        assert_eq!(waiting.operation.unwrap().phase, "draining_source");
+        let unknown = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
+        assert!(
+            unknown.cancel_requested && !unknown.terminal(),
+            "{unknown:?}"
+        );
+        assert_eq!(unknown.source.pending.as_deref(), Some("drain_release"));
+        c.current.get().unwrap().stop().await.unwrap();
+        c.shutdown_target().await.unwrap();
+        drop(c);
+        let resumed = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+        let done = resumed.observe(prefs).await.unwrap().operation.unwrap();
+        assert_eq!(done.phase, "cancelled", "{done:?}");
+        assert_eq!(done.source.operation, unknown.source.operation);
+        assert_eq!(done.source.release, unknown.source.release);
+        assert_eq!(
+            audit(&a_server)
+                .await
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["method"] == "POST"
+                    && e["path"].as_str().is_some_and(|p| p.ends_with("/release")))
+                .count(),
+            1
+        );
+        resumed.current.get().unwrap().stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn cancellation_after_source_seal_returns_under_new_epoch_and_never_rewrites_success() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        configure(&b_server, json!({"faults":{"identity_after_seal":503}})).await;
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let waiting = c
+            .start(b.origin.clone(), "Mac".into(), prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert!(
+            waiting.source.child_reaped && !waiting.committed,
+            "{waiting:?}"
+        );
+        let done = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
+        assert_eq!(done.phase, "cancelled", "{done:?}");
+        assert_eq!(
+            done.source.release.as_ref().unwrap()["expected_epoch"],
+            done.source.seal.as_ref().unwrap()["id"]
+        );
+        assert_eq!(profiles.snapshot().unwrap().current_profile, Some(a.id));
+        configure(&b_server, json!({"faults":{"identity_after_seal":0}})).await;
+        let switched = c
+            .start(b.origin, "Mac".into(), prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(switched.phase, "succeeded", "{switched:?}");
+        let late = c.cancel(prefs).await.unwrap().operation.unwrap();
+        assert_eq!(
+            serde_json::to_value(late).unwrap(),
+            serde_json::to_value(switched).unwrap()
+        );
+        c.current.get().unwrap().stop().await.unwrap();
+        c.shutdown_target().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn initial_wrong_address_can_move_only_unattempted_pairing_and_preserves_old_profile() {
+        let server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let wrong = "http://127.0.0.1:19996";
+        let first = c.initial_begin(wrong.into(), "Mac".into()).await.unwrap();
+        assert!(first.result["error"].is_object());
+        let old = c.current.context().unwrap();
+        let recovery = protected_read_bounded(
+            &old.device_path()
+                .with_file_name("bee-desktop-recovery.json"),
+            65536,
+        )
+        .unwrap();
+        let result = c
+            .initial_begin(server.1.clone(), "Mac".into())
+            .await
+            .unwrap();
+        crate::protocol::result_error(&result.result).unwrap();
+        assert_eq!(c.current.context().unwrap().origin, server.1);
+        assert_ne!(c.current.context().unwrap().id, old.id);
+        assert_eq!(
+            protected_read_bounded(
+                &old.device_path()
+                    .with_file_name("bee-desktop-recovery.json"),
+                65536
+            )
+            .unwrap(),
+            recovery
+        );
+        assert!(profiles.context(&old.id).is_ok());
+        c.current.get().unwrap().stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn query_failures_stop_after_three_retries_and_continue_keeps_original_switch() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        configure(&b_server, json!({"faults":{"capabilities":503}})).await;
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let mut c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let first = c
+            .start(b.origin, "Mac".into(), prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(first.query_failures, 1);
+        assert!(!first.observation_blocked, "{first:?}");
+        let count = |events: Value| {
+            events
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["path"] == "/api/bee/device-drain-capabilities")
+                .count()
+        };
+        c.observe(prefs.clone()).await.unwrap();
+        assert_eq!(
+            count(audit(&b_server).await),
+            1,
+            "two-second interval must suppress immediate polling"
+        );
+        for failure in 2..=4 {
+            tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+            let observed = c.observe(prefs.clone()).await.unwrap().operation.unwrap();
+            assert_eq!(observed.query_failures, failure, "{observed:?}");
+            if failure == 2 {
+                c.current.get().unwrap().stop().await.unwrap();
+                c.shutdown_target().await.unwrap();
+                drop(c);
+                c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+            }
+        }
+        assert_eq!(count(audit(&b_server).await), 4);
+        let paused = c.observe(prefs.clone()).await.unwrap();
+        assert_eq!(paused.observation.state, "paused");
+        assert_eq!(count(audit(&b_server).await), 4);
+        configure(&b_server, json!({"faults":{"capabilities":401}})).await;
+        let continued = c.continue_waiting(prefs.clone()).await.unwrap();
+        assert_eq!(continued.operation.as_ref().unwrap().id, first.id);
+        assert_eq!(continued.operation.as_ref().unwrap().observation_round, 2);
+        assert_eq!(continued.observation.state, "blocked");
+        tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+        c.observe(prefs).await.unwrap();
+        assert_eq!(
+            count(audit(&b_server).await),
+            5,
+            "authentication rejection must not auto retry"
+        );
+        c.current.get().unwrap().stop().await.unwrap();
+        c.shutdown_target().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn quit_with_unknown_cancel_reaps_only_owned_children_and_retains_dirty_guard() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        configure(&a_server, json!({"work":{"executions":1}})).await;
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let waiting = c
+            .start(b.origin, "Mac".into(), prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(waiting.phase, "draining_source");
+        let guard = a.device_path().with_file_name("runtime-session");
+        private_write(&guard, b"original-dirty-owner\n").unwrap();
+        configure(&a_server, json!({"faults":{"status":503}})).await;
+        let exiting = c
+            .request_quit(prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert!(
+            exiting.quit_requested && exiting.cancel_requested && !exiting.terminal(),
+            "{exiting:?}"
+        );
+        assert!(
+            !exiting.source.child_reaped && !exiting.source.workers_stopped,
+            "owned cleanup is not sealed offline proof"
+        );
+        assert_eq!(
+            c.current.get().unwrap().status().state,
+            BridgePhase::Stopped
+        );
+        assert_eq!(
+            protected_read_bounded(&guard, 65536).unwrap(),
+            b"original-dirty-owner\n"
+        );
+        assert_eq!(profiles.snapshot().unwrap().current_profile, Some(a.id));
+        drop(c);
+        configure(&a_server, json!({"faults":{"status":0}})).await;
+        let resumed = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+        let done = resumed.observe(prefs).await.unwrap().operation.unwrap();
+        assert_eq!(done.phase, "cancelled", "{done:?}");
+        assert_eq!(done.source.operation, waiting.source.operation);
+        assert!(done.quit_requested && done.cancel_requested);
+        assert_eq!(
+            protected_read_bounded(&guard, 65536).unwrap(),
+            b"original-dirty-owner\n"
+        );
+        resumed.current.get().unwrap().stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn initial_correction_rejects_unknown_pairing_and_preserves_original_query_evidence() {
+        let server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        configure(&server, json!({"faults":{"initial_pairing_unknown":1}})).await;
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let first = c
+            .initial_begin(server.1.clone(), "Mac".into())
+            .await
+            .unwrap();
+        assert_eq!(
+            first.result["device"]["recovery"]["phase"], "creation_unknown",
+            "{:?}",
+            first.result
+        );
+        let context = c.current.context().unwrap();
+        let path = context
+            .device_path()
+            .with_file_name("bee-desktop-recovery.json");
+        let original = protected_read_bounded(&path, 65536).unwrap();
+        let rejected = c
+            .initial_begin("http://127.0.0.1:19995".into(), "Mac".into())
+            .await
+            .unwrap_err();
+        assert_eq!(rejected.code, "HIVE_INITIAL_PAIRING_UNRESOLVED");
+        assert_eq!(c.current.context().unwrap().id, context.id);
+        assert_eq!(protected_read_bounded(&path, 65536).unwrap(), original);
+        assert_eq!(
+            audit(&server)
+                .await
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["method"] == "POST" && e["path"] == "/api/bee/pairings")
+                .count(),
+            1
+        );
+        c.current.get().unwrap().stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn current_scope_rejects_late_work_even_if_profile_instances_share_a_fixture_identity() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register("http://127.0.0.1:19994").unwrap();
+        let b = profiles.register("http://127.0.0.1:19995").unwrap();
+        let first = Bridge::start(crate::sidecar::tests::fixture("echo"));
+        let second = Bridge::start(crate::sidecar::tests::fixture("echo"));
+        HiveSwitch::ready(&first).await.unwrap();
+        HiveSwitch::ready(&second).await.unwrap();
+        let route = CurrentBridge::default();
+        route.replace(Some(a), first.clone());
+        let scope = route.scope().unwrap();
+        route.replace(Some(b), second.clone());
+        assert_eq!(
+            route.scope().unwrap().instance,
+            scope.instance,
+            "fixture deliberately reuses instance"
+        );
+        let mut applied = false;
+        assert!(route.with_scope(&scope, || applied = true).is_none());
+        assert!(!applied);
+        first.stop().await.unwrap();
+        second.stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn saved_identity_projection_is_local_last_known_and_never_exports_credentials() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register("http://127.0.0.1:19994").unwrap();
+        let b = profiles.register("http://127.0.0.1:19995").unwrap();
+        bind(&a);
+        let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        let snapshot = serde_json::to_value(c.snapshot().unwrap()).unwrap();
+        assert_eq!(
+            snapshot["profile_identities"],
+            json!([{"profile_id":a.id,"name":"Synthetic Mac","owner_id":"synthetic-owner","owner_email":"synthetic@example.com"}])
+        );
+        assert!(!snapshot
+            .to_string()
+            .contains(&format!("bee_{}", "b".repeat(43))));
+        assert!(!snapshot["profile_identities"].to_string().contains(&b.id));
+    }
+
+    #[tokio::test]
+    async fn unknown_cancel_status_restores_source_admission_without_replaying_release() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        configure(
+            &a_server,
+            json!({"work":{"executions":1},"faults":{"release":1}}),
+        )
+        .await;
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        c.start(b.origin, "Mac".into(), prefs.clone())
+            .await
+            .unwrap();
+        assert!(!c
+            .cancel(prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap()
+            .terminal());
+        tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
+        let mut done = c.observe(prefs).await.unwrap().operation.unwrap();
+        assert_eq!(done.phase, "cancelled", "{done:?}");
+        let local = c
+            .inspect(&mut done.source, &c.current.get().unwrap())
+            .await
+            .unwrap();
+        assert_eq!(
+            local["maintenance_allowed"], true,
+            "confirmed original cancellation must restore admission: {local}"
+        );
+        assert_eq!(
+            audit(&a_server)
+                .await
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["method"] == "POST"
+                    && e["path"].as_str().is_some_and(|p| p.ends_with("/release")))
+                .count(),
+            1
+        );
+        c.current.get().unwrap().stop().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn recorded_unsent_source_can_cancel_but_unknown_begin_absence_never_authorizes_a_new_write(
+    ) {
+        for unknown in [false, true] {
+            let server = Server::start();
+            let tmp = tempfile::tempdir().unwrap();
+            let root = tmp.path().canonicalize().unwrap();
+            let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+            let a = profiles.register(&server.1).unwrap();
+            let b = profiles.register("http://127.0.0.1:19993").unwrap();
+            bind(&a);
+            let index = profiles
+                .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+                .unwrap();
+            let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+            let source = c.current.get().unwrap();
+            // Explicit durable boundary fixture: ID recorded before freeze, or
+            // begin emitted with unknown result. No actual crash is claimed.
+            let mut r = SwitchRecord::new(a.id, b.id);
+            r.source_index_operation = index.committed_operation;
+            r.phase = "draining_source".into();
+            let view = c.inspect(&mut r.source, &source).await.unwrap();
+            c.binding(&mut r.source, true).unwrap();
+            let context =
+                crate::protocol::device_context(&source.device_context().await.unwrap().result)
+                    .unwrap();
+            r.source.operation = Some(
+                json!({"id":id(),"device_id":context.device_id,"owner_id":context.owner_id,"origin":context.hive,"expected_epoch":view["epoch"],"expected_lease":view["lease"]}),
+            );
+            if unknown {
+                r.source.pending = Some("drain_begin".into());
+            }
+            c.journal.save(&r).unwrap();
+            c.control(&mut r.source, &source, "freeze").await.unwrap();
+            let prefs =
+                crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+            let result = c.cancel(prefs).await.unwrap().operation.unwrap();
+            let writes = audit(&server)
+                .await
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| e["method"] == "POST")
+                .cloned()
+                .collect::<Vec<_>>();
+            if unknown {
+                assert!(!result.terminal());
+                assert_eq!(result.source.pending.as_deref(), Some("drain_begin"));
+                assert!(writes.is_empty(), "{writes:?}");
+            } else {
+                assert_eq!(result.phase, "cancelled", "{result:?}");
+                assert_eq!(writes.len(), 1);
+                assert!(writes[0]["path"].as_str().unwrap().ends_with("/release"));
+            }
+            source.stop().await.unwrap();
+        }
+    }
+
     async fn audit(server: &Server) -> Value {
         let response = reqwest::Client::builder()
             .no_proxy()
@@ -1723,6 +2836,7 @@ mod tests {
             coordinator.shutdown_target().await.unwrap();
             drop(coordinator);
             let resumed = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+            tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
             let done = resumed.observe(prefs).await.unwrap();
             assert_eq!(
                 done.operation.as_ref().unwrap().phase,
@@ -1863,6 +2977,7 @@ mod tests {
                     "reaped source must not be spawned again before target ownership is committed"
                 );
             }
+            tokio::time::sleep(std::time::Duration::from_millis(2050)).await;
             let done = resumed.observe(prefs).await.unwrap();
             assert_eq!(
                 done.operation.as_ref().unwrap().phase,

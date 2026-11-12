@@ -66,7 +66,7 @@ test('pairing polling keeps the website action stable',async({page})=>{
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=page.getByRole('button',{name:'打开 Hive 确认网页',exact:true});await expect(button).toBeEnabled();
  await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();
- await page.evaluate(()=>(window as any).release());await expect(button).toBeEnabled();await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();expect(await calls(page,'device_open')).toHaveLength(1);expect(await calls(page,'device_begin')).toHaveLength(0);
+ await page.evaluate(()=>(window as any).release());await expect(button).toBeEnabled();await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'重新检查设备',exact:true})).toHaveCount(0);expect(await calls(page,'device_open')).toHaveLength(1);expect(await calls(page,'device_begin')).toHaveLength(0);
 });
 
 test('account status polling never disables cancel login and the explicit cancel is not lost',async({page})=>{

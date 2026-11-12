@@ -17,11 +17,11 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
 	"github.com/tokhive/bee/agent"
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/relay"
+	"github.com/tokhive/tee/tee"
+	"github.com/tokhive/tee/tunnel"
 )
 
 type maintenanceTransport struct {

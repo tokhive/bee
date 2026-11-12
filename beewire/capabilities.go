@@ -37,6 +37,26 @@ type Capabilities struct {
 	// account's requests as. Only a ready report carries it; it is metadata,
 	// reported and reused with the models.
 	ClientVersion string `json:"client_version,omitempty"`
+
+	// Credits is the paid balance an OpenAI account holds beside its
+	// subscription, which the upstream may draw on once the subscription
+	// quota runs out. Only a ready OpenAI report carries it. While the balance
+	// can still be drawn on, an exhausted quota window does not stop the
+	// account being scheduled.
+	Credits *Credits `json:"credits,omitempty"`
+}
+
+// Credits is what the usage report says about an account's paid balance.
+type Credits struct {
+	HasCredits     bool `json:"has_credits"`
+	Unlimited      bool `json:"unlimited"`
+	OverageReached bool `json:"overage_limit_reached"`
+}
+
+// Spendable reports whether the upstream can still draw on the balance: there
+// is one, or it is unlimited, and its overage limit has not been reached.
+func (c *Credits) Spendable() bool {
+	return c != nil && (c.HasCredits || c.Unlimited) && !c.OverageReached
 }
 
 type CapabilityReport struct {
@@ -114,6 +134,9 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 		return false
 	}
 	if c.ClientVersion != "" && (c.Status != "ready" || !ValidClientVersion(c.ClientVersion)) {
+		return false
+	}
+	if c.Credits != nil && (c.Status != "ready" || platform != "openai") {
 		return false
 	}
 	seen := map[string]bool{}
@@ -199,7 +222,9 @@ func (c Capabilities) ReasonFor(platform string, now time.Time, model string) st
 		if !now.Before(window.ResetAt) {
 			return ReasonQuotaUnknown
 		}
-		if *window.UsedPercent >= 100 {
+		// An OpenAI account out of subscription quota is served from its
+		// paid credits for as long as it has any to spend.
+		if *window.UsedPercent >= 100 && !(platform == "openai" && c.Credits.Spendable()) {
 			return ReasonQuotaExhausted
 		}
 	}

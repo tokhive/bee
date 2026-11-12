@@ -9,8 +9,9 @@ import { fileURLToPath } from 'node:url';
 import { prepareTee } from '../scripts/prepare-tee.mjs';
 
 const repository = fileURLToPath(new URL('../../', import.meta.url));
-const source = join(repository, '.cache/tee-source');
-const archiveSha256 = '4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38';
+const source = join(repository, '.cache/tokhive-tee-source');
+// Canonical Git archive of the maintained TEE dependency at c46f7dbf2ed4.
+const archiveSha256 = '24370b402b392e92f1c86e0f8507106ff9ea41bbc3717bd97ede04ea83556405';
 const service = 'deploy/snp-image/mkosi.extra/etc/systemd/system/snp-prober.service';
 const alias = 'deploy/snp-image/mkosi.extra/etc/systemd/system/multi-user.target.wants/snp-prober.service';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -50,7 +51,7 @@ test('native host verifies the real pinned TEE export, existing cache and tamper
   // No platform override: this is evidence only for the actual host OS.
   // Missing source is cloned by prepareTee from its official pinned repository.
   const destination = prepareTee({ root, source });
-  assert.equal(destination, join(root, '.cache/reclaim-tee'));
+  assert.equal(destination, join(root, '.cache/tee'));
   const archive = join(root, 'pinned-source.tar');
   git(['-c', 'core.autocrlf=false', '-c', 'core.eol=lf', '-C', source, 'archive', '--format=tar', `--output=${archive}`, revision]);
   const actualArchiveSha256 = sha256(readFileSync(archive));

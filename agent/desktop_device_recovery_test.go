@@ -82,6 +82,7 @@ type recoveryHive struct {
 	hideNewIdentity                                            bool
 	oldAccepted                                                bool
 	owner                                                      string
+	deviceID                                                   string
 	status                                                     int
 	code                                                       string
 	hook                                                       func(string)
@@ -89,7 +90,7 @@ type recoveryHive struct {
 
 func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 	t.Helper()
-	h := &recoveryHive{oldCredential: "bee_" + strings.Repeat("o", 43), owner: "owner", status: 401, code: "device_replaced"}
+	h := &recoveryHive{oldCredential: "bee_" + strings.Repeat("o", 43), owner: "owner", deviceID: "new-device", status: 401, code: "device_replaced"}
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.hook != nil {
 			h.hook(r.Method + " " + r.URL.Path)
@@ -105,7 +106,7 @@ func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 				return
 			}
 			if h.bound && !h.hideNewIdentity && r.Header.Get("Authorization") != "Bearer "+h.oldCredential {
-				json.NewEncoder(w).Encode(beewire.Identity{ID: "new-device", Name: "Mac", OwnerID: h.owner, OwnerEmail: "new@example.test"})
+				json.NewEncoder(w).Encode(beewire.Identity{ID: h.deviceID, Name: "Mac", OwnerID: h.owner, OwnerEmail: "new@example.test"})
 				return
 			}
 			reject(h.status, h.code)
@@ -141,7 +142,7 @@ func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 				w.Write([]byte(`{`))
 				return
 			}
-			json.NewEncoder(w).Encode(beewire.Identity{ID: "new-device", Name: "Mac", OwnerID: h.owner, OwnerEmail: "new@example.test"})
+			json.NewEncoder(w).Encode(beewire.Identity{ID: h.deviceID, Name: "Mac", OwnerID: h.owner, OwnerEmail: "new@example.test"})
 		default:
 			t.Errorf("unexpected request %s %s", r.Method, r.URL.Path)
 			w.WriteHeader(500)

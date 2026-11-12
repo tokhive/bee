@@ -153,6 +153,7 @@ fn events(snapshot: Snapshot) -> Vec<NotificationEvent> {
                         identity: fact.identity,
                         platform: fact.platform,
                         problem: fact.problem,
+                        source: None,
                     },
                     eligible: fact.eligible,
                 })
@@ -206,12 +207,19 @@ fn apply_localized(
     snapshot: Snapshot,
     preferences: PreferencesSnapshot,
     locale: Option<crate::lifecycle::NativeLocale>,
+    source: Option<crate::notifications::NotificationSource>,
     reconcile: impl FnOnce(bool, &[NotificationEvent]) -> Result<Vec<DeliveryOutcome>, BridgeError>,
 ) -> Result<(), BridgeError> {
     if locale.is_none() {
         return Ok(());
     }
-    apply(snapshot, preferences, reconcile)
+    apply(snapshot, preferences, |enabled, events| {
+        let events = events.iter().cloned().map(|mut event| {
+            if let NotificationEvent::Problem { notice, .. } = &mut event { notice.source = source.clone(); }
+            event
+        }).collect::<Vec<_>>();
+        reconcile(enabled, &events)
+    })
 }
 fn safe_code(code: &str) -> &str {
     // A shape check alone would still log caller-controlled uppercase data.
@@ -295,7 +303,7 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
             }
         };
         let scope = crate::hive_switch::CurrentScope {
-            profile_id: context.id,
+            profile_id: context.id.clone(),
             instance: instance.clone(),
         };
         let reply = match bridge.notification_snapshot().await {
@@ -331,7 +339,7 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
                 if !startup_ready {return Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification submission blocked: startup gate changed before native reconciliation".into()));}
                 let preferences=worker_app.state::<PreferencesStore>().read();
                 let service=worker_app.state::<NotificationService>();
-                apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
+                apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),Some(crate::notifications::NotificationSource{profile_id:context.id,origin:context.origin}),|enabled,events|service.reconcile(enabled,events))
             }).unwrap_or_else(||Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification sample discarded: profile/management instance changed before native reconciliation".into())))
         }).await;
         route.with_scope(&scope,||match result {

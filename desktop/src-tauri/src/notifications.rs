@@ -42,6 +42,38 @@ pub struct Notice {
     pub identity: String,
     pub platform: NotificationPlatform,
     pub problem: NotificationProblem,
+    #[serde(default)]
+    pub source: Option<NotificationSource>,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct NotificationSource {
+    pub profile_id: String,
+    pub origin: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct NotificationTarget {
+    pub page: NotificationPage,
+    pub source: Option<NotificationSource>,
+}
+#[derive(Clone, Debug, Serialize)]
+pub(crate) struct NotificationActivation {
+    pub target: NotificationTarget,
+    pub current_profile: Option<String>,
+    pub can_navigate: bool,
+}
+pub(crate) fn activate_target(target: NotificationTarget, profiles: Option<&crate::profiles::ProfileStore>) -> NotificationActivation {
+    // Read the durable owner at OS activation, independent of a delayed UI
+    // snapshot or the management process that originally submitted the notice.
+    let current_profile = match profiles.map(|p| p.snapshot()).transpose() {
+        Ok(snapshot) => snapshot.and_then(|p| p.current_profile),
+        Err(cause) => {
+            eprintln!("notification activation current profile read failed: {}: {}", cause.code, cause.message);
+            None
+        }
+    };
+    let can_navigate = target.source.as_ref().is_none_or(|source| current_profile.as_deref() == Some(&source.profile_id));
+    NotificationActivation { target, current_profile, can_navigate }
 }
 #[derive(Clone, Debug)]
 pub enum NotificationEvent {
@@ -237,12 +269,16 @@ impl NotificationService {
         for event in events {
             let identity = match event {
                 NotificationEvent::Problem { notice, .. } => {
+                    validate_source(notice.source.as_ref())?;
                     if ledger
                         .records
                         .iter()
-                        .any(|r| r.notice.identity == notice.identity && r.notice != *notice)
+                        .any(|r| r.notice.identity == notice.identity
+                            && (r.notice.platform != notice.platform
+                                || r.notice.problem != notice.problem
+                                || r.notice.source.is_some() && r.notice.source != notice.source))
                     {
-                        return Err(failure("NOTIFICATION_IDENTITY","stable notification identity reused for different platform/problem; original ledger preserved"));
+                        return Err(failure("NOTIFICATION_IDENTITY","stable notification identity reused for different platform/problem/source; original ledger preserved"));
                     }
                     &notice.identity
                 }
@@ -385,6 +421,7 @@ fn validate_ledger(ledger: &Ledger) -> Result<(), BridgeError> {
     let mut identities = HashSet::new();
     for record in &ledger.records {
         validate_identity(&record.notice.identity)?;
+        validate_source(record.notice.source.as_ref())?;
         let code_valid = record.error_code.as_ref().is_some_and(|s| {
             !s.is_empty()
                 && s.len() <= 64
@@ -475,7 +512,18 @@ impl Notice {
             NotificationPlatform::Claude => "Bee · Claude",
         }
     }
-    fn body(&self, locale: NativeLocale) -> &'static str {
+    fn body(&self, locale: NativeLocale) -> String {
+        let text = self.problem_body(locale);
+        match &self.source {
+            Some(source) if locale == NativeLocale::Zh => format!("Hive：{}\n{text}", source.origin),
+            Some(source) => format!("Hive: {}\n{text}", source.origin),
+            None => text.into(),
+        }
+    }
+    fn target(&self) -> NotificationTarget {
+        NotificationTarget { page: self.page(), source: self.source.clone() }
+    }
+    fn problem_body(&self, locale: NativeLocale) -> &'static str {
         if locale == NativeLocale::Zh {
             return match self.problem {
                 NotificationProblem::AuthorizationRejected => {
@@ -503,26 +551,57 @@ impl Notice {
     }
 }
 fn click_route(notice: &Notice) -> String {
-    format!(
+    let mut route = format!(
         "bee.{}.{}",
         match notice.page() {
             NotificationPage::Accounts => "accounts",
             NotificationPage::Diagnostics => "diagnostics",
         },
         notice.identity
-    )
-}
-fn parse_click_route(route: &str) -> Option<NotificationPage> {
-    let (page, identity) = route.strip_prefix("bee.")?.split_once('.')?;
-    validate_identity(identity).ok()?;
-    match page {
-        "accounts" => Some(NotificationPage::Accounts),
-        "diagnostics" => Some(NotificationPage::Diagnostics),
-        _ => None,
+    );
+    if let Some(source) = &notice.source {
+        let origin = source.origin.bytes().map(|b| format!("{b:02x}")).collect::<String>();
+        route.push_str(&format!(".{}.{origin}", source.profile_id));
     }
+    route
+}
+fn parse_click_route(route: &str) -> Option<NotificationTarget> {
+    let mut parts = route.strip_prefix("bee.")?.split('.');
+    let page = parts.next()?;
+    let identity = parts.next()?;
+    validate_identity(identity).ok()?;
+    let page = match page {
+        "accounts" => NotificationPage::Accounts,
+        "diagnostics" => NotificationPage::Diagnostics,
+        _ => return None,
+    };
+    let source = match parts.next() {
+        None => None,
+        Some(profile_id) => {
+            let encoded = parts.next()?;
+            if encoded.len() > 4096 || encoded.len() % 2 != 0 || !encoded.is_ascii() { return None; }
+            let bytes = (0..encoded.len()).step_by(2).map(|i| u8::from_str_radix(&encoded[i..i+2], 16)).collect::<Result<Vec<_>,_>>().ok()?;
+            let source = NotificationSource { profile_id: profile_id.into(), origin: String::from_utf8(bytes).ok()? };
+            validate_source(Some(&source)).ok()?;
+            Some(source)
+        }
+    };
+    if parts.next().is_some() { return None; }
+    Some(NotificationTarget { page, source })
 }
 
-type Navigate = Arc<dyn Fn(NotificationPage) + Send + Sync>;
+fn validate_source(source: Option<&NotificationSource>) -> Result<(), BridgeError> {
+    if let Some(source) = source {
+        if !crate::startup_recovery::digest(&source.profile_id, 32)
+            || source.origin.len() > 2048
+            || crate::hive_origin::normalize_hive_origin(&source.origin).ok().as_ref() != Some(&source.origin)
+        {
+            return Err(failure("NOTIFICATION_INPUT", format!("notification source rejected: profile_id_valid={} origin_bytes={}; required=internal profile ID and canonical public Hive origin",crate::startup_recovery::digest(&source.profile_id,32),source.origin.len())));
+        }
+    }
+    Ok(())
+}
+type Navigate = Arc<dyn Fn(NotificationTarget) + Send + Sync>;
 pub struct NativeNotificationAdapter {
     inner: native::Adapter,
     language: Arc<NativeLanguage>,
@@ -550,6 +629,7 @@ impl NotificationAdapter for NativeNotificationAdapter {
     }
     fn submit(&self, notice: &Notice) -> Result<SubmissionReceipt, SubmissionFailure> {
         validate_identity(&notice.identity).map_err(SubmissionFailure::rejected)?;
+        validate_source(notice.source.as_ref()).map_err(SubmissionFailure::rejected)?;
         let locale=self.language.current().ok_or_else(||SubmissionFailure::rejected(failure("NATIVE_LOCALE_UNCONFIRMED","notification submission requires confirmed App language; no OS submission performed")))?;
         self.inner.submit(notice, locale)
     }
@@ -694,7 +774,7 @@ mod native {
             let center = self.center().map_err(SubmissionFailure::rejected)?;
             let content = UNMutableNotificationContent::new();
             content.setTitle(&NSString::from_str(notice.title()));
-            content.setBody(&NSString::from_str(notice.body(locale)));
+            content.setBody(&NSString::from_str(&notice.body(locale)));
             let request = UNNotificationRequest::requestWithIdentifier_content_trigger(
                 &NSString::from_str(&click_route(notice)),
                 &content,
@@ -750,7 +830,7 @@ mod linux_native {
     };
     const DEST: &str = "org.freedesktop.Notifications";
     const PATH: &str = "/org/freedesktop/Notifications";
-    type Routes = Arc<Mutex<HashMap<u32, (String, NotificationPage, Instant)>>>;
+    type Routes = Arc<Mutex<HashMap<u32, (String, NotificationTarget, Instant)>>>;
     #[derive(Clone)]
     struct Bus {
         connection: Connection,
@@ -959,7 +1039,7 @@ mod linux_native {
             if id == 0 {
                 return Err(SubmissionFailure::uncertain(failure("NOTIFICATION_SUBMISSION_UNCERTAIN","Notify receipt server_id=0; required=positive server identifier; OS acceptance unknown")));
             }
-            routes.insert(id, (owner, notice.page(), Instant::now()));
+            routes.insert(id, (owner, notice.target(), Instant::now()));
             Ok(SubmissionReceipt::Accepted)
         }
     }
@@ -1117,7 +1197,7 @@ mod native {
             let _apartment = Apartment::enter()?;
             let notifier = self.notifier()?;
             let document = XmlDocument::new().map_err(|e| win_error("XmlDocument.new", e))?;
-            // All text comes from fixed enums, and the route contains only a hex digest.
+            // Text uses fixed copy and a validated public origin; routes use hex.
             let xml=format!("<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text></binding></visual></toast>",click_route(notice),notice.title(),notice.body(locale));
             document
                 .LoadXml(&HSTRING::from(xml))
@@ -1151,7 +1231,7 @@ mod native {
                 .map_err(|e| win_error("ToastNotification.SetExpirationTime", e))?;
             let route = click_route(notice);
             let navigate = self.navigate.clone();
-            let page = notice.page();
+            let target = notice.target();
             let routes = Arc::downgrade(&self.toasts);
             let activated_route = route.clone();
             toast
@@ -1163,7 +1243,7 @@ mod native {
                             }
                         }
                         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                            navigate(page)
+                            navigate(target.clone())
                         }));
                         Ok(())
                     },

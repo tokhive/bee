@@ -35,4 +35,7 @@ python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录
 
 | 2026-11-12 22:14:34 Asia/Shanghai | Hive 切换界面初版，最终原生字段核对前 | 中间快照；勿用于最终接口验收 | [完整快照](20261112-221434-hive-switch-interface/tests/fixtures/bee-preview/index.html) |
 | 2026-11-12 22:26:01 Asia/Shanghai | Hive 切换最终 DTO、作用域事件、配对与恢复；正式 React mock 完整构建 | 待评审；342 单元与 28 相关浏览器用例通过 | [最终快照](20261112-222601-hive-switch-final/tests/fixtures/bee-preview/index.html) |
-| 2026-11-12 23:28:50 Asia/Shanghai | 验收修复：首次目标地址预填只读、初次配对反馈及英文切换文案；来源 4a1c2fc / UI 9a254fb | 待评审；独立 HTTP/ego-browser 配对、暗色列表、输入与焦点保留通过；当前交付版 | [验收修复快照](20261112-232850-hive-switch-acceptance-fixes/tests/fixtures/bee-preview/index.html) |
+| 2026-11-12 23:28:50 Asia/Shanghai | 验收修复：首次目标地址预填只读、初次配对反馈及英文切换文案；来源 4a1c2fc / UI 9a254fb | 待评审；独立 HTTP/ego-browser 配对、暗色列表、输入与焦点保留通过；此前交付版 | [验收修复快照](20261112-232850-hive-switch-acceptance-fixes/tests/fixtures/bee-preview/index.html) |
+
+| 2026-11-13 00:08:07 Asia/Shanghai | 审查修复第一次冻结，漏 iframe app.html；独立运行出现 404，原样保留 | 未通过；不能用于评审 | [中间构建](20261113-000807-hive-switch-review-fixes/tests/fixtures/bee-preview/index.html) |
+| 2026-11-13 00:10:30 Asia/Shanghai | 历史冲突说明与局部禁用；通知携带原 Hive，跨范围点击只提示并可查看列表；基线及源码差异见 SOURCE.md | 待评审；当前交付版，独立 HTTP/ego-browser 关键交互及完整切换回归 12/12 通过 | [审查修复快照](20261113-001030-hive-switch-review-fixes/tests/fixtures/bee-preview/index.html) |

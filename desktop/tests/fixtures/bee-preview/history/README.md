@@ -32,3 +32,6 @@ python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录
 各目录包含冻结 HTML、JavaScript、CSS、图片与模拟数据。以选中目录作为独立网站根目录运行上方 Python 命令，访问 `/tests/fixtures/bee-preview/index.html?scene=running&theme=light`；支持 scene/theme/size，开发事件另加 debug=1。冻结版本不随之后的源码修复更新。
 
 | 2026-11-12 21:52:52 Asia/Shanghai | Hive 切换前，3c713be 完整正式 mock | 修改前基线 | [完整快照](20261112-215252-before-hive-switch/tests/fixtures/bee-preview/index.html) |
+
+| 2026-11-12 22:14:34 Asia/Shanghai | Hive 切换界面初版，最终原生字段核对前 | 中间快照；勿用于最终接口验收 | [完整快照](20261112-221434-hive-switch-interface/tests/fixtures/bee-preview/index.html) |
+| 2026-11-12 22:26:01 Asia/Shanghai | Hive 切换最终 DTO、作用域事件、配对与恢复；正式 React mock 完整构建 | 待评审；342 单元与 28 相关浏览器用例通过 | [最终快照](20261112-222601-hive-switch-final/tests/fixtures/bee-preview/index.html) |

@@ -72,7 +72,7 @@ test('all registered native commands receive frontend arguments matching the Rus
   const device=createDeviceClient(invoke);
   for (const action of [()=>device.status(),()=>device.begin('https://hive.example','Test Mac'),()=>device.open(),()=>device.context!(),()=>device.recoveryPrepare(),()=>device.recoveryStatus(),()=>device.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
   const switching=createHiveSwitchClient(invoke);
-  for(const action of [()=>switching.snapshot(),()=>switching.start('https://target.example','Target Mac'),()=>switching.observe(),()=>switching.target.status(),()=>switching.target.begin('','Target Mac'),()=>switching.target.open(),()=>switching.target.recoveryPrepare(),()=>switching.target.recoveryStatus(),()=>switching.target.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
+  for(const action of [()=>switching.snapshot(),()=>switching.start('https://target.example','Target Mac'),()=>switching.observe(),()=>switching.cancel(),()=>switching.continue(),()=>switching.quit('continue_waiting'),()=>switching.target.status(),()=>switching.target.begin('','Target Mac'),()=>switching.target.open(),()=>switching.target.recoveryPrepare(),()=>switching.target.recoveryStatus(),()=>switching.target.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
   const accounts=createAccountClient(invoke,instance);
   for (const action of [()=>accounts.defaults(),()=>accounts.snapshot('openai',true),()=>accounts.detect({platform:'openai',directory:null,store:'auto',mode:'local'}),()=>accounts.action({platform:'openai',revision:1,candidate_ref:id,action:'select',confirmed:true})]) await sample(action);
   const authorize=createAuthorizeClient(invoke,instance,['authorize_progress','authorize_open']);

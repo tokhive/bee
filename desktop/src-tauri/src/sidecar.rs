@@ -101,6 +101,26 @@ pub(crate) struct LaunchSpec {
     pub source: BuildSource,
     pub timeout: Duration,
 }
+impl LaunchSpec {
+    /// The context is resolved by the App's protected index, never by WebView paths.
+    /// Reconnection clones the resulting fixed argument vector.
+    pub(crate) fn for_profile(
+        mut self,
+        context: &crate::profiles::ProfileContext,
+        mode: crate::profiles::ProfileMode,
+    ) -> Result<Self, BridgeError> {
+        let directory = context
+            .directory()
+            .to_str()
+            .filter(|_| context.directory().is_absolute())
+            .ok_or_else(|| error("PROFILE_LAUNCH_PATH", "profile launch directory absolute_UTF8=false; required=registered absolute profile directory"))?;
+        self.args = vec![
+            "desktop".into(), "--profile-dir".into(), directory.into(),
+            "--mode".into(), mode.argument().into(),
+        ];
+        Ok(self)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 enum RequestPhase {
@@ -574,7 +594,15 @@ fn status(
 
 impl Bridge {
     pub(crate) fn bundled() -> Self {
-        let spec = (|| {
+        Self::from_launch_result(Self::bundled_spec())
+    }
+
+    pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+        Self::from_launch_result(Self::bundled_spec().and_then(|spec| spec.for_profile(context, mode)))
+    }
+
+    pub(crate) fn bundled_spec() -> Result<LaunchSpec, BridgeError> {
+        (|| {
             let source = BuildSource::parse(
                 include_bytes!(env!("BEE_SOURCE_FILE")),
                 env!("BEE_TARGET"),
@@ -603,7 +631,10 @@ impl Bridge {
                 source,
                 timeout: Duration::from_secs(5),
             })
-        })();
+        })()
+    }
+
+    fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
         match spec {
             Ok(spec) => Self::start(spec),
             Err(cause) => {

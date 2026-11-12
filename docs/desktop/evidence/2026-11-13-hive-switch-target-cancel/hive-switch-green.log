@@ -1,0 +1,49 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-target-cancel/desktop/src-tauri)
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bee-desktop` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 10.63s
+     Running unittests src/lib.rs (/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 24 tests
+test hive_switch::tests::damaged_or_incomplete_journal_cannot_authorize_a_handoff ... ok
+test hive_switch::tests::current_scope_rejects_late_work_even_if_profile_instances_share_a_fixture_identity ... ok
+test hive_switch::tests::initial_correction_rejects_unknown_pairing_and_preserves_original_query_evidence ... ok
+test hive_switch::tests::ordinary_requests_follow_current_route_and_old_child_keeps_its_owner ... ok
+test hive_switch::tests::historical_conflict_blocks_target_preparation_and_keeps_current_binding ... ok
+test hive_switch::tests::cancelling_unsent_or_lost_begin_fences_late_begin_with_one_original_release ... ok
+test hive_switch::tests::initial_wrong_address_can_move_only_unattempted_pairing_and_preserves_old_profile ... ok
+test hive_switch::tests::persisted_cancel_during_pairing_preserves_target_and_stays_on_source ... ok
+test hive_switch::tests::cancelling_lost_source_release_restarts_with_get_only_and_original_ids ... ok
+test hive_switch::tests::restart_does_not_refresh_elapsed_observation_or_failure_budget ... ok
+test hive_switch::tests::saved_identity_projection_is_local_last_known_and_never_exports_credentials ... ok
+test hive_switch::tests::accepted_target_cancellation_with_lost_release_restarts_by_query_only ... ok
+test hive_switch::tests::unresolved_remote_action_preserves_original_parameters_after_restart ... ok
+test native_hive_switch_tests::managed_profile_task_settles_before_roundtrip ... ignored, requires two real Hive/PG servers and synthetic account/TEE harness
+test hive_switch::tests::quit_with_unknown_cancel_reaps_only_owned_children_and_retains_dirty_guard ... ok
+test hive_switch::tests::definite_target_rejection_before_commit_reconnects_source_under_original_barrier ... ok
+test hive_switch::tests::lost_begin_cancellation_survives_lost_release_and_restart_on_either_leg ... ok
+test hive_switch::tests::query_failures_stop_after_three_retries_and_continue_keeps_original_switch ... ok
+test hive_switch::tests::cancellation_after_source_seal_returns_under_new_epoch_and_never_rewrites_success ... ok
+test hive_switch::tests::real_go_children_handoff_with_index_commit_before_target_release ... ok
+test hive_switch::tests::unknown_cancel_status_restores_source_admission_without_replaying_release ... ok
+test hive_switch::tests::reaped_source_stays_offline_and_committed_index_wins_the_journal_window ... ok
+test hive_switch::tests::accepted_target_begin_cancellation_releases_barrier_before_another_switch ... ok
+test hive_switch::tests::lost_target_write_responses_restart_by_querying_original_ids_without_replay ... ok
+
+test result: ok. 23 passed; 0 failed; 1 ignored; 0 measured; 339 filtered out; finished in 31.36s
+

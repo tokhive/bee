@@ -1,0 +1,42 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-target-cancel/desktop/src-tauri)
+   Compiling tauri-plugin-single-instance v2.5.4 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-target-cancel/desktop/src-tauri/vendor/tauri-plugin-single-instance)
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bee-desktop` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.47s
+     Running unittests src/lib.rs (/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-e47ffb094a055526)
+
+running 1 test
+test hive_switch::tests::accepted_target_begin_cancellation_releases_barrier_before_another_switch ... FAILED
+
+failures:
+
+---- hive_switch::tests::accepted_target_begin_cancellation_releases_barrier_before_another_switch stdout ----
+
+thread 'hive_switch::tests::accepted_target_begin_cancellation_releases_barrier_before_another_switch' (42219775) panicked at src/hive_switch.rs:2934:13:
+assertion `left == right` failed: SwitchRecord { version: 1, id: "9920aedcdd7f474f42d9ed2c1b7f943434a2c408e50f7211", source: SwitchLeg { profile: "b2f2dfe22d14e73042afdaab7b8ca0f0", binding_revision: Some(1), binding_digest: Some("f36c841c2ee96393c7ddaf0aa0081fc7f4d06686c852beef3beb908839ba963c"), instance: Some("d99d9d7d3a5afe70ddc452a83e1d73b2"), process_binding_revision: Some(1), network_revision: 0, operation: None, seal: None, release: None, status: None, pending: None, workers_stopped: false, child_reaped: false, ipc_empty: false, verified: false }, target: SwitchLeg { profile: "47b3c33e7210514bfa0f62cc9b93cc18", binding_revision: Some(1), binding_digest: Some("a5c14fed7fa16c35021a1d2b189270dcc092e369f22db9f4b5a5c22ce6e9e65c"), instance: Some("badd0f74a7a6957c2f3b038d52016947"), process_binding_revision: Some(1), network_revision: 0, operation: Some(Object {"device_id": String("synthetic-device"), "expected_epoch": String(""), "expected_lease": String(""), "id": String("a2d961e572395eb73811aecc2cffe4b8bd21c769bded8a27"), "origin": String("http://127.0.0.1:51909"), "owner_id": String("synthetic-owner")}), seal: None, release: None, status: Some(Object {"current": Object {"barrier_id": String("a2d961e572395eb73811aecc2cffe4b8bd21c769bded8a27"), "epoch": String(""), "lease": String(""), "work": Object {"executions": Number(1), "unknown_terminations": Number(0), "unsettled": Number(0)}}, "device_id": String("synthetic-device"), "operation_id": String("a2d961e572395eb73811aecc2cffe4b8bd21c769bded8a27"), "owner_id": String("synthetic-owner"), "receipt": Null, "release": Null, "request": Object {"device_id": String("synthetic-device"), "expected_epoch": String(""), "expected_lease": String(""), "id": String("a2d961e572395eb73811aecc2cffe4b8bd21c769bded8a27"), "origin": String("http://127.0.0.1:51909"), "owner_id": String("synthetic-owner")}, "seal": Null, "state": String("draining"), "version": Number(1)}), pending: None, workers_stopped: false, child_reaped: false, ipc_empty: false, verified: false }, phase: "cancelled", source_index_operation: Some("ee7972cdd06a7bd0ccf373b2de17d10d706bf9d28cc21cef"), commit_revision: None, committed: false, cancel_requested: true, quit_requested: false, observation_round: 1, observation_started: Some("2026-11-12T16:38:23.580443Z"), query_failures: 0, observation_last: Some("2026-11-12T16:38:25.33111Z"), observation_blocked: false, failure: None }
+  left: String("draining")
+ right: "released"
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    hive_switch::tests::accepted_target_begin_cancellation_releases_barrier_before_another_switch
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 361 filtered out; finished in 2.03s
+
+error: test failed, to rerun pass `--lib`

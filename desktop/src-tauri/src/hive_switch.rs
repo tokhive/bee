@@ -1283,12 +1283,43 @@ impl HiveSwitch {
             // only finish the committed target's original release.
             return self.advance_inner(r, prefs).await;
         }
-        if r.target.pending.is_some() {
+        if r.target.operation.is_some() {
             let target = self
                 .target_child(&r.target.profile, ProfileMode::Prepare)
                 .await?;
             self.inspect(&mut r.target, &target).await?;
-            self.original(r, true, &target, "drain_status").await?;
+            let mut view = self.original(r, true, &target, "drain_status").await?;
+            if matches!(
+                view["drain"]["state"].as_str(),
+                Some("absent" | "draining" | "ready")
+            ) {
+                // An accepted unsealed begin is not saved as a Go seal proof.
+                // Release this original barrier before discarding the prepare
+                // child, so the next switch can acquire its own operation ID.
+                if r.target.release.is_none() {
+                    r.target.release = Some(
+                        json!({"id":id(),"request":r.target.operation,"mode":"cancel","expected_epoch":view["drain"]["current"]["epoch"],"expected_lease":view["drain"]["current"]["lease"]}),
+                    );
+                    self.journal.save(r)?;
+                }
+                view = self.original(r, true, &target, "drain_release").await?;
+            }
+            let released = r.target.resolves("drain_release", &view["drain"]);
+            // Keep a persisted sealed target closed for a later switch. It may
+            // be a historical proof: cancellation cannot connect or admit B.
+            let sealed = view["drain"]["state"] == "sealed" && view["seal_persisted"] == true;
+            if !released && !sealed {
+                return Err(error(
+                    "HIVE_SWITCH_RESULT_UNCONFIRMED",
+                    format!(
+                        "target cancellation operation={} state={} release_matches={} seal_persisted={}; require matching release or retained sealed barrier",
+                        r.target.operation.as_ref().unwrap()["id"],
+                        view["drain"]["state"],
+                        released,
+                        view["seal_persisted"],
+                    ),
+                ));
+            }
         }
         // Preparing a target can leave a pairing/recovery child transaction.
         // Its protected files and original credential remain intact. A prepare
@@ -2456,6 +2487,10 @@ mod tests {
         );
         let done = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
         assert_eq!(done.phase, "cancelled", "{done:?}");
+        assert_eq!(done.target.operation, waiting.target.operation);
+        assert_eq!(done.target.status.as_ref().unwrap()["state"], "sealed");
+        assert_eq!(done.target.status.as_ref().unwrap()["receipt"], waiting.target.status.as_ref().unwrap()["receipt"]);
+        assert!(audit(&b_server).await.as_array().unwrap().iter().all(|e| e["method"] != "UPGRADE" && !e["path"].as_str().is_some_and(|p| p.ends_with("/release"))), "cancelled sealed target stays closed");
         assert_eq!(
             done.source.release.as_ref().unwrap()["expected_epoch"],
             done.source.seal.as_ref().unwrap()["id"]
@@ -2469,6 +2504,7 @@ mod tests {
             .operation
             .unwrap();
         assert_eq!(switched.phase, "succeeded", "{switched:?}");
+        assert_eq!(switched.target.operation, waiting.target.operation, "next switch reuses the preserved target seal");
         let late = c.cancel(prefs).await.unwrap().operation.unwrap();
         assert_eq!(
             serde_json::to_value(late).unwrap(),
@@ -2910,6 +2946,203 @@ mod tests {
         }
     }
 
+    #[tokio::test]
+    async fn accepted_target_begin_cancellation_releases_barrier_before_another_switch() {
+        for (lost_reply, executions) in [(false, 1), (true, 1), (true, 0)] {
+            let a_server = Server::start();
+            let b_server = Server::start();
+            configure(
+                &b_server,
+                json!({"work":{"executions":executions},"faults":{"begin":u8::from(lost_reply)}}),
+            )
+            .await;
+            let tmp = tempfile::tempdir().unwrap();
+            let root = tmp.path().canonicalize().unwrap();
+            let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+            let a = profiles.register(&a_server.1).unwrap();
+            let b = profiles.register(&b_server.1).unwrap();
+            bind(&a);
+            bind(&b);
+            profiles
+                .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+                .unwrap();
+            let prefs =
+                crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+            let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+            let started = c
+                .start(b.origin.clone(), "Mac".into(), prefs.clone())
+                .await
+                .unwrap()
+                .operation
+                .unwrap();
+            assert_eq!(started.target.pending.is_some(), lost_reply, "{started:?}");
+            let original = started.target.operation.unwrap();
+            let cancelled = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
+            assert_eq!(cancelled.phase, "cancelled", "{cancelled:?}");
+            assert_eq!(
+                cancelled.target.status.as_ref().unwrap()["state"],
+                "released",
+                "{cancelled:?}"
+            );
+            let release = cancelled.target.release.unwrap();
+            assert_eq!(release["request"], original);
+            assert_eq!(release["mode"], "cancel");
+            assert!(
+                audit(&b_server)
+                    .await
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .all(|e| e["method"] != "UPGRADE"),
+                "uncommitted target cannot connect"
+            );
+
+            configure(&b_server, json!({"work":{"executions":1}})).await;
+            let next = c
+                .start(b.origin.clone(), "Mac".into(), prefs.clone())
+                .await
+                .unwrap()
+                .operation
+                .unwrap();
+            assert_eq!(
+                next.target.status.as_ref().unwrap()["state"],
+                "draining",
+                "{next:?}"
+            );
+            let next_operation = next.target.operation.unwrap();
+            assert_ne!(next_operation["id"], original["id"]);
+            for (action, body) in [("begin", original.clone()), ("release", release)] {
+                let late = reqwest::Client::builder()
+                    .no_proxy()
+                    .build()
+                    .unwrap()
+                    .post(format!(
+                        "{}/api/bee/device-drains/{}/{action}",
+                        b_server.1,
+                        original["id"].as_str().unwrap()
+                    ))
+                    .body(serde_json::to_vec(&body).unwrap())
+                    .send()
+                    .await
+                    .unwrap()
+                    .bytes()
+                    .await
+                    .unwrap();
+                let late: Value = serde_json::from_slice(&late).unwrap();
+                assert_eq!(late["state"], "released");
+                assert_eq!(
+                    late["current"]["barrier_id"], next_operation["id"],
+                    "late {action} cannot change the next barrier"
+                );
+            }
+            configure(&b_server, json!({"work":{"executions":0}})).await;
+            let done = c.continue_waiting(prefs).await.unwrap().operation.unwrap();
+            assert_eq!(done.phase, "succeeded", "{done:?}");
+            assert_eq!(
+                profiles.snapshot().unwrap().current_profile.as_deref(),
+                Some(b.id.as_str())
+            );
+            c.current.get().unwrap().stop().await.unwrap();
+            c.shutdown_target().await.unwrap();
+        }
+    }
+
+    #[tokio::test]
+    async fn accepted_target_cancellation_with_lost_release_restarts_by_query_only() {
+        let a_server = Server::start();
+        let b_server = Server::start();
+        configure(&b_server, json!({"faults":{"begin":1,"release":1}})).await;
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let a = profiles.register(&a_server.1).unwrap();
+        let b = profiles.register(&b_server.1).unwrap();
+        bind(&a);
+        bind(&b);
+        profiles
+            .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+            .unwrap();
+        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+        let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let started = c
+            .start(b.origin.clone(), "Mac".into(), prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(started.target.pending.as_deref(), Some("drain_begin"));
+        let original = started.target.operation.unwrap();
+        let cancelling = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
+        assert!(!cancelling.terminal(), "{cancelling:?}");
+        assert_eq!(cancelling.target.pending.as_deref(), Some("drain_release"));
+        let release = cancelling.target.release.unwrap();
+        assert_eq!(release["request"], original);
+        c.current.get().unwrap().stop().await.unwrap();
+        c.shutdown_target().await.unwrap();
+        drop(c);
+
+        configure(&b_server, json!({"faults":{"status":503}})).await;
+        let resumed = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
+        let waiting = resumed
+            .continue_waiting(prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert!(!waiting.terminal(), "{waiting:?}");
+        assert_eq!(waiting.target.pending.as_deref(), Some("drain_release"));
+        assert_eq!(waiting.target.operation.as_ref(), Some(&original));
+        assert_eq!(waiting.target.release.as_ref(), Some(&release));
+        assert_eq!(
+            profiles.snapshot().unwrap().current_profile.as_deref(),
+            Some(a.id.as_str())
+        );
+        configure(&b_server, json!({"faults":{"status":0}})).await;
+        let done = resumed
+            .continue_waiting(prefs.clone())
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(done.phase, "cancelled", "{done:?}");
+        assert_eq!(done.target.release.as_ref(), Some(&release));
+        let events = audit(&b_server).await;
+        let writes = events
+            .as_array()
+            .unwrap()
+            .iter()
+            .filter(|e| {
+                e["method"] == "POST"
+                    && e["path"]
+                        .as_str()
+                        .is_some_and(|p| p.starts_with("/api/bee/device-drains/"))
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(
+            writes.len(),
+            2,
+            "restart cannot replay uncertain begin or release: {writes:?}"
+        );
+        assert_eq!(writes[0]["body"], original);
+        assert_eq!(writes[1]["body"], release);
+        assert!(
+            events
+                .as_array()
+                .unwrap()
+                .iter()
+                .all(|e| e["method"] != "UPGRADE"),
+            "cancelled target cannot connect"
+        );
+        let next = resumed
+            .start(b.origin.clone(), "Mac".into(), prefs)
+            .await
+            .unwrap()
+            .operation
+            .unwrap();
+        assert_eq!(next.phase, "succeeded", "{next:?}");
+        resumed.current.get().unwrap().stop().await.unwrap();
+        resumed.shutdown_target().await.unwrap();
+    }
     async fn audit(server: &Server) -> Value {
         let response = reqwest::Client::builder()
             .no_proxy()

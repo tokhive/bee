@@ -1,6 +1,13 @@
 import {currentLocale} from '../../i18n';
 
 const english:Record<string,string>={
+ '默认浏览器打开失败。':'The default browser could not be opened.',
+ '打开浏览器超时，网页打开结果尚未确认。':'Opening the browser timed out; the result is unconfirmed.',
+ '浏览器打开程序超时，且未能确认已结束。':'The browser launcher timed out and its termination could not be confirmed.',
+ '原配对请求已保留，设备绑定仍需在 Hive 网页确认。':'The original pairing request is preserved. Device binding still needs confirmation on Hive.',
+ '可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':'Copy or select the confirmation URL above and open it manually in your browser, then return to Bee after confirming.',
+ '请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':'Check the Hive address and server certificate, then continue the current binding step after fixing the issue.',
+ '请等待 Hive 恢复服务，再继续当前绑定步骤。':'Wait for Hive to become available, then continue the current binding step.',
  '跳到设备设置':'Skip to device setup',
  '请填写 Hive 地址。':'Enter the Hive address.',
  'Hive 地址须为完整的 HTTPS 网址。':'Enter a complete HTTPS URL for Hive.',

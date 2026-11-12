@@ -292,7 +292,8 @@ test('pairing copy feedback and failed browser opening retain the same request',
  await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('clipboard permission denied');}}});const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_open'){w.calls.push({command,args});throw {code:'BROWSER_OPEN_FAILED',message:'open failed; OS denied browser launch'};}return invoke(command,args);};});
  await page.getByRole('button',{name:'复制确认网址',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'clipboard permission denied'})).toBeVisible();
  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();await expect(page.getByText('https://hive.example/devices/pair?code=ABCD-EFGH',{exact:true})).toBeVisible();
- await expect(page.getByRole('alert').filter({hasText:'OS denied browser launch'})).toBeVisible();
+ const browserFailure=page.getByRole('alert').filter({hasText:'默认浏览器打开失败。'});await expect(browserFailure).toBeVisible();
+ await browserFailure.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('open failed; OS denied browser launch');await page.keyboard.press('Escape');
  expect(await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId)).toBe(operation);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 for(const [phase,copy] of [['creation-unknown','尚无法确认配对请求结果'],['draining','正在等待旧设备完成任务和结算。'],['redeeming','正在确认设备身份…'],['redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],['saving','设备身份已确认，本机保存尚未完成。']] as const)test(`initial pairing presents ${phase} from its durable transaction`,async({page})=>{

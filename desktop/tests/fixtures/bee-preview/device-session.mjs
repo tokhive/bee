@@ -13,6 +13,8 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
  const w=window,isInitial=scene.startsWith('device-')&&!['device-bound','device-error','device-recovery-confirm','device-revoked-source-missing'].includes(scene);
  let savedHive=scene==='device-unbound'||scene==='device-loading'?'':origin,name='Bee Desktop',identity=isInitial?null:{id:'dev-1',name,owner_id:'owner-1',owner_email:'owner@example.test'};
  let revoked=['device-recovery-confirm','device-revoked-source-missing','startup-blocked'].includes(scene)||scene.startsWith('recovery-')&&scene!=='recovery-completed';
+ let hiveDisplayName=null;
+ w.__beeMockSetHiveDisplayName=value=>{hiveDisplayName=value;if(identity)identity.name=value;if(transaction?.new_identity)transaction.new_identity.name=value;};
  let transaction=null,accepted=[],approved=false,redeemAttempted=false,pairingSequence=0,identitySequence=1;
  const pair=()=>{const code=['ABCD-EFGH','BCDE-FGHJ','CDEF-GHJK'][pairingSequence++%3];return {code,verification_url:savedHive+'/devices/pair?code='+code,expires_at:stamp(600000)};};
  const makeTransaction=(phase,oldIdentity)=>({operation_id:operationId(),revision:1,phase,old_identity:clone(oldIdentity),new_identity:null,pairing:null,failure:null});
@@ -62,16 +64,16 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
   if(['pending','draining'].includes(transaction.phase)&&Date.parse(transaction.pairing.expires_at)<=Date.now()&&!redeemAttempted){approved=false;changed('expired',{failure:null});return;}
   if(!approved||!['pending','draining','redeeming','redemption_unknown'].includes(transaction.phase))return;
   approved=false;redeemAttempted=true;
-  const nextIdentity={id:'dev-'+(++identitySequence),name,owner_id:'owner-'+identitySequence,owner_email:'new-owner@example.test'};
+  const nextIdentity={id:'dev-'+(++identitySequence),name:hiveDisplayName??name,owner_id:'owner-'+identitySequence,owner_email:'new-owner@example.test'};
   changed(transaction.old_identity&&transaction.old_identity.owner_id!==nextIdentity.owner_id?'awaiting_owner_confirmation':'saving',{new_identity:nextIdentity,failure:null});
   if(transaction.phase==='saving')complete();
  };
  const device=()=>{
   if(transaction&&!transaction.old_identity){
    const state=transaction.phase==='completed'?'bound':['pending','draining','expired'].includes(transaction.phase)?transaction.phase:'pairing';
-   return {state,hive:savedHive,name,...state==='bound'?{identity:clone(identity)}:{},...['pending','draining'].includes(state)?{user_code:transaction.pairing.code,verification_url:transaction.pairing.verification_url,expires_at:transaction.pairing.expires_at,poll_interval_seconds:2}:{},recovery:clone(transaction)};
+   return {state,hive:savedHive,name:state==='bound'?identity.name:name,...state==='bound'?{identity:clone(identity)}:{},...['pending','draining'].includes(state)?{user_code:transaction.pairing.code,verification_url:transaction.pairing.verification_url,expires_at:transaction.pairing.expires_at,poll_interval_seconds:2}:{},recovery:clone(transaction)};
   }
-  return identity?{state:'bound',hive:savedHive,name,identity:clone(identity)}:{state:'unbound'};
+  return identity?{state:'bound',hive:savedHive,name:identity.name,identity:clone(identity)}:{state:'unbound'};
  };
  const admission=()=>{
   const local=w.__beeMockRuntimeLocal();

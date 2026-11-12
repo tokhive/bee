@@ -11,7 +11,14 @@ for(const destination of ['概览','诊断','AI 账号'])test('settings draft su
 });
 test('binding replacement isolates unsaved settings drafts',async({page})=>{
  await open(page);await nav(page,'设置').click();const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:18181');
- await page.evaluate(()=>(window as any).bindingRevision=2);await page.clock.runFor(10100);await expect(proxy).toHaveValue('');expect(await calls(page,'network_save_proxy')).toBe(0);
+ const reads=await calls(page,'runtime_snapshot');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.bindingReads={context:0,recovery:0};w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='device_context'&&value.result.context.binding_revision===2)w.bindingReads.context++;if(command==='device_recovery_status')w.bindingReads.recovery++;return value;};w.bindingRevision=2;});await page.clock.runFor(10100);
+ await expect.poll(()=>page.evaluate(()=>(window as any).bindingReads.context)).toBeGreaterThan(0);
+ await expect.poll(()=>calls(page,'runtime_snapshot')).toBeGreaterThan(reads);await page.clock.runFor(0);
+ // A revision first seen by the second context read invalidates recovery evidence until the next normal round.
+ const recoveryReads=await page.evaluate(()=>(window as any).bindingReads.recovery);await page.clock.runFor(10000);
+ await expect.poll(()=>page.evaluate(()=>(window as any).bindingReads.recovery)).toBeGreaterThan(recoveryReads);await page.clock.runFor(0);
+ await expect(proxy).toHaveValue('');expect(await calls(page,'network_save_proxy')).toBe(0);
 });
 test('source repair navigates to a settings target and returns to the same platform draft',async({page})=>{
  await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(cmd:string,args:any)=>{if(cmd==='account_detect'&&args.request.platform==='openai')throw {code:'NETWORK_APPLY_REQUIRED',message:'saved network revision=3 effective=2',details:{check:'source_read',observed_at:new Date().toISOString(),evidence:{actual:'2',required:'3'}}};return invoke(cmd,args);};});

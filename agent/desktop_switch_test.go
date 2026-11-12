@@ -159,6 +159,133 @@ func desktopSwitchDeviceFixture(t *testing.T, handler http.HandlerFunc) *Desktop
 	return newDesktopTestDevice(t, path)
 }
 
+func TestDesktopSwitchReleasedAdmissionSurvivesNormalRetirementEpochAndRestart(t *testing.T) {
+	var retirement *beewire.RuntimeRecoveryRequest
+	posts := 0
+	d := desktopRetirementDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+		if desktopSupplyServeIdentity(w, q) {
+			return
+		}
+		if !strings.HasPrefix(q.URL.Path, "/api/bee/runtime-recovery/") {
+			t.Errorf("unexpected request %s %s", q.Method, q.URL.Path)
+			w.WriteHeader(500)
+			return
+		}
+		if q.Method == http.MethodPost {
+			posts++
+			if err := json.NewDecoder(q.Body).Decode(&retirement); err != nil {
+				t.Error(err)
+			}
+		}
+		result := beewire.RuntimeRecoveryResult{Version: 1, DeviceID: "device-1", OwnerID: "owner-1", State: "absent"}
+		if retirement != nil {
+			result.Request = retirement
+			result.State = "retired"
+			result.Epoch = retirement.ID
+			result.ConnectionRetired = true
+			result.PreparationsRetired = true
+		}
+		json.NewEncoder(w).Encode(result)
+	})
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	desktopRuntimeSelectionFixture(t, d, a)
+	r := NewDesktopRuntime(context.Background(), d, a)
+	s, end, err := d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, revision, err := s.readBinding()
+	if err != nil {
+		end()
+		t.Fatal(err)
+	}
+	op := beewire.DeviceDrainRequest{ID: strings.Repeat("1", 48), DeviceID: state.Identity.ID, OwnerID: state.Identity.OwnerID, Origin: state.Hive}
+	seal := beewire.DeviceDrainSealRequest{ID: strings.Repeat("2", 48), Request: op}
+	status := switchSealedStatus(op, seal)
+	status.State = "released"
+	status.Current.BarrierID = ""
+	status.Release = &beewire.DeviceDrainReleaseRequest{ID: strings.Repeat("3", 48), Request: op, Mode: "activate", ExpectedEpoch: seal.ID, ExpectedLease: "verified-lease"}
+	state.RuntimeEpoch = seal.ID
+	if err = saveState(s.path, state); err != nil {
+		end()
+		t.Fatal(err)
+	}
+	if err = r.saveSwitchProof(s, &desktopSwitchSeal{Version: 1, Binding: retirementBinding(state), OriginalEpoch: op.ExpectedEpoch, Status: status, Released: true}); err != nil {
+		end()
+		t.Fatal(err)
+	}
+	end()
+	if _, err = r.SwitchControl(context.Background(), DesktopSwitchRequest{Action: "commit", BindingRevision: revision, Operation: &op}); err != nil {
+		t.Fatal(err)
+	}
+	s, end, err = d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = a.selectionScope(s, state, func(scope *desktopAccountScope) error {
+		scope.RuntimeIntent.Running = true
+		scope.Session = desktopSessionMarker{RunID: strings.Repeat("a", 32), Active: true}
+		return nil
+	})
+	end()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = os.WriteFile(filepath.Join(filepath.Dir(d.path), "runtime-session"), []byte(strings.Repeat("a", 32)+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	retired := r.ReconcileRecovery(context.Background())
+	if retired.Failure != nil || retired.State != "eligible" || posts != 1 {
+		t.Fatalf("ordinary retirement did not complete: %+v posts=%d", retired, posts)
+	}
+	s, end, err = d.acquireSession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, _, err = s.readBinding()
+	end()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.RuntimeEpoch != retirement.ID || state.RuntimeEpoch == seal.ID {
+		t.Fatal("retirement did not advance current epoch")
+	}
+	r.Close()
+	next := NewDesktopRuntime(context.Background(), d, a)
+	defer next.Close()
+	c, err := d.Context(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, err := next.SwitchControl(context.Background(), DesktopSwitchRequest{Action: "inspect", BindingRevision: c.BindingRevision})
+	if err != nil || view.Frozen || !view.MaintenanceAllowed {
+		t.Fatalf("completed historical switch blocked normal retired epoch: %+v %v", view, err)
+	}
+	if view.Drain == nil || view.Drain.Request.ID != op.ID || view.Drain.Receipt.Epoch != seal.ID || view.Epoch != retirement.ID {
+		t.Fatalf("historical receipt was lost or treated as current fact: %+v", view)
+	}
+	next.Close()
+	for _, mode := range []DesktopProfileMode{DesktopProfilePrepare, DesktopProfileActivate} {
+		d.profileMode = mode
+		limited := NewDesktopRuntime(context.Background(), d, a)
+		view, err = limited.SwitchControl(context.Background(), DesktopSwitchRequest{Action: "inspect", BindingRevision: c.BindingRevision})
+		if err != nil || !view.Frozen || view.MaintenanceAllowed {
+			t.Fatalf("historical completion opened restricted mode=%s: %+v %v", mode, view, err)
+		}
+		limited.Close()
+	}
+	d.profileMode = DesktopProfileCurrent
+	if err = os.WriteFile(filepath.Join(filepath.Dir(d.path), "runtime-session"), []byte(strings.Repeat("f", 32)+"\n"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	dirty := NewDesktopRuntime(context.Background(), d, a)
+	defer dirty.Close()
+	if inspection := dirty.InspectRecovery(context.Background()); inspection.Failure == nil || inspection.State != "blocked" {
+		t.Fatalf("switch completion bypassed ordinary dirty guard: %+v", inspection)
+	}
+}
+
 func TestDesktopSwitchStopRequiresDurableOriginalSeal(t *testing.T) {
 	var calls atomic.Int32
 	d := desktopSwitchDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) { calls.Add(1); w.WriteHeader(500) })
@@ -347,7 +474,7 @@ func TestDesktopSwitchFreezeLeavesRuntimeIntentAndRejectsNewWrites(t *testing.T)
 }
 
 func TestDesktopSwitchMalformedSavedProofFailsClosed(t *testing.T) {
-	for _, scenario := range []string{"missing_receipt", "binding_changed", "epoch_changed"} {
+	for _, scenario := range []string{"missing_receipt", "binding_changed", "epoch_changed", "completion_before_release", "completed_unexplained_epoch"} {
 		t.Run(scenario, func(t *testing.T) {
 			d := desktopSwitchDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
 				t.Errorf("unexpected request %s", q.URL.Path)
@@ -384,6 +511,19 @@ func TestDesktopSwitchMalformedSavedProofFailsClosed(t *testing.T) {
 				proof.Status.Request.ExpectedEpoch = proof.OriginalEpoch
 				proof.Status.Seal.Request = *proof.Status.Request
 				proof.Status.Receipt.Seal = *proof.Status.Seal
+			case "completion_before_release":
+				proof.AdmissionCompleted = true
+			case "completed_unexplained_epoch":
+				proof.AdmissionCompleted = true
+				proof.Released = true
+				proof.WorkersStopped = false
+				proof.Status.State = "released"
+				proof.Status.Current.BarrierID = ""
+				proof.Status.Release = &beewire.DeviceDrainReleaseRequest{ID: strings.Repeat("3", 48), Request: op, Mode: "activate", ExpectedEpoch: seal.ID, ExpectedLease: "verified-lease"}
+				state.RuntimeEpoch = strings.Repeat("4", 48)
+				if err = saveState(session.path, state); err != nil {
+					t.Fatal(err)
+				}
 			}
 			raw, err := json.Marshal(proof)
 			if err != nil {

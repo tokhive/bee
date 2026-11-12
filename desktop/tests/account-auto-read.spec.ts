@@ -12,8 +12,8 @@ test('account entry reads each source once and never performs automatic writes o
  await page.getByRole('button',{name:'概览',exact:true}).click();await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  await page.waitForTimeout(500);expect(await calls(page,'account_detect')).toHaveLength(2);
  expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'authorize_start')).toHaveLength(0);
- await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();const source=page.getByRole('dialog').getByLabel('自定义目录');await source.fill('/tmp/new');await source.blur();
- await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new').length).toBe(1);
+ await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();const source=page.getByRole('dialog').getByLabel('读取目录');await source.fill('/tmp/new');await source.blur();expect((await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new')).toHaveLength(0);await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();
+ await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new'&&c.args.request.mode==='local').length).toBe(1);
 });
 test('selected matching candidate automatically reads official quota once and retains the raw percentage',async({page})=>{
  const openai=accountFixture('openai') as any;openai.selection={...openai.selection,state:'selected',fingerprint:'b'.repeat(64)};
@@ -21,7 +21,7 @@ test('selected matching candidate automatically reads official quota once and re
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.mode==='official').length).toBe(1);
  await page.waitForTimeout(500);expect(await calls(page,'account_detect')).toHaveLength(3);
- await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByText(/120%/).first()).toBeVisible();
+ await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
 });
 
 async function hookHarness(page:Page){
@@ -76,12 +76,12 @@ test('one platform snapshot error does not slow the other pending operation or s
  await page.evaluate(()=>{(window as any).snapshotFail='';});await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>((window as any).model.errors.openai?.message??''))).toBe('');
 });
 
-for(const kind of ['select','confirm_change'])test(`reconciling ${kind} retries refreshed snapshots at ten seconds without replaying actions`,async({page})=>{
- await page.clock.install();await hookHarness(page);await page.evaluate(kind=>{const w=window as any;const view=w.data.openai;view.operation={id:'e'.repeat(48),kind,state:'reconciling',platform:'openai',revision:view.revision,error:null};w.model.refresh('openai');},kind);
- await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.operation?.state)).toBe('reconciling');
- const before=await page.evaluate(()=>(window as any).snapshotReads.length);await page.clock.runFor(9000);expect(await page.evaluate(()=>(window as any).snapshotReads.length)).toBe(before);
- await page.clock.runFor(1000);await expect.poll(()=>page.evaluate(()=>(window as any).snapshotReads.length)).toBe(before+1);expect(await page.evaluate(()=>(window as any).snapshotReads.at(-1))).toEqual({platform:'openai',refresh:true});
- await page.evaluate(()=>{const w=window as any;w.data.openai.revision++;w.data.openai.operation.state='succeeded';});await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>(window as any).model.views.openai.operation.state)).toBe('succeeded');expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
+for(const kind of ['select','confirm_change'])test(`Claude reconciling ${kind} retries refreshed snapshots at ten seconds without replaying actions`,async({page})=>{
+ await page.clock.install();await hookHarness(page);await page.evaluate(kind=>{const w=window as any;const view=w.data.claude;view.operation={id:'e'.repeat(48),kind,state:'reconciling',platform:'claude',revision:view.revision,error:null};w.model.refresh('claude');},kind);
+ await expect.poll(()=>page.evaluate(()=>(window as any).model.views.claude.operation?.state)).toBe('reconciling');
+ const before=await page.evaluate(()=>(window as any).snapshotReads.filter((r:any)=>r.refresh).length);await page.clock.runFor(9000);expect(await page.evaluate(()=>(window as any).snapshotReads.filter((r:any)=>r.refresh).length)).toBe(before);
+ await page.clock.runFor(1000);await expect.poll(()=>page.evaluate(()=>(window as any).snapshotReads.filter((r:any)=>r.refresh).length)).toBe(before+1);expect(await page.evaluate(()=>(window as any).snapshotReads.filter((r:any)=>r.refresh).at(-1))).toEqual({platform:'claude',refresh:true});
+ await page.evaluate(()=>{const w=window as any;w.data.claude.revision++;w.data.claude.operation.state='succeeded';});await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>(window as any).model.views.claude.operation.state)).toBe('succeeded');expect(await page.evaluate(()=>(window as any).counts.action)).toBe(0);
 });
 for(const code of ['permission_denied','source_unavailable'])test(`resolved ${code} source failures retry on re-entry without repeated permission prompts`,async({page})=>{
  await page.clock.install();await hookHarness(page);await page.evaluate(code=>{const w=window as any;const view=structuredClone(w.data.openai);view.revision++;view.candidate={...view.candidate,state:code,reference:null,source:null,fingerprint:null,error:{code,check:'source_read',platform:'openai',message:'source access failed',evidence:{permission_denied:String(code==='permission_denied')}}};w.detectFailureReply=view;w.autoRead=true;w.rerender();},code);
@@ -172,9 +172,10 @@ test('NativeApp reconciling coordinator waits exactly ten seconds without replay
  await page.clock.install();await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
  const openai=accountFixture('openai') as AccountSnapshot;openai.operation={id:'e'.repeat(48),kind:'select',state:'reconciling',platform:'openai',revision:openai.revision,error:null};
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai,claude:accountFixture('claude')}});await page.goto('/');
- await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(2);
- await page.clock.runFor(9999);expect(await calls(page,'account_snapshot')).toHaveLength(2);
- await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(4);
+ await expect.poll(async()=>(await calls(page,'account_snapshot')).filter((c:any)=>c.args.platform==='claude').length).toBe(1);
+ await page.clock.runFor(9999);expect((await calls(page,'account_snapshot')).filter((c:any)=>c.args.platform==='claude')).toHaveLength(1);
+ await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'account_snapshot')).filter((c:any)=>c.args.platform==='claude').length).toBe(2);
+ expect((await calls(page,'account_snapshot')).filter((c:any)=>c.args.platform==='openai').every((c:any)=>c.args.refresh===false)).toBe(true);
  for(const command of ['account_action','authorize_start','runtime_start','supply_set_paused'])expect(await calls(page,command)).toHaveLength(0);
 });
 

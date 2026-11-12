@@ -25,11 +25,12 @@ try{
    await until(()=>window.__beePreviewActivity.accountReadsStarted>0&&window.__beePreviewActivity.accountReads===0);
    await new Promise(resolve=>requestAnimationFrame(resolve));
   }
-  if(['detail','change','clear'].includes(scene.action)){
-   step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('{platform} 详情',{platform:'OpenAI'}))+']'))).click();
-   await until(()=>document.querySelector('.account-source'));
+  if(['detail','clear'].includes(scene.action)){
+   step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('OpenAI 详情'))+']'))).click();
+   await until(()=>document.querySelector('.detail-sheet'));
   }
-  const names={'prepare-unknown':'重试准备',login:'登录 OpenAI',select:'接入',change:'换号',clear:'取消接入'};
+  if(scene.action==='change'){step='核对账号变更';(await until(()=>button(t('核对账号变更')))).click();}
+  const names={'prepare-unknown':'重试准备',login:'登录 OpenAI',select:'接入账号',change:'确认换号',clear:'取消接入'};
   if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(t(names[scene.action])))).click();}
   if(scene.action!=='detail'&&scene.action!=='prepare-unknown')await until(()=>document.querySelector('.dialog-content'));
   if(scene.action==='prepare-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));

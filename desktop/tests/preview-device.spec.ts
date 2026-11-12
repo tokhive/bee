@@ -30,11 +30,11 @@ test('formal first pairing saves the entered Hive and name and becomes online wi
  await expect(app.getByRole('main')).toContainText('https://design-hive.example');
  await app.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await event(page);
- await device.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await page.clock.runFor(2100);
  await expect(device).toContainText('设备已绑定。');
  await expect(device).toContainText('Design Laptop');
  await expect(device).toContainText('new-owner@example.test');
- const runtime=app.getByRole('region',{name:'贡献运行',exact:true});
+ const runtime=app.getByRole('region',{name:'服务状态',exact:true});
  await expect(runtime).toContainText('贡献未启动');
  await expect(runtime).toContainText('Hive 已连接');
  for(const destination of ['AI 账号','诊断','概览'])await app.getByRole('navigation').getByRole('button',{name:destination,exact:true}).click();
@@ -69,11 +69,11 @@ test('revoked credential recovery requires consent and explicit owner adoption a
  await device.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await app.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(device).toContainText('设备已绑定。');
- await expect(device.locator('.pairing-phase')).toContainText('未自动开始贡献');
- const runtime=app.getByRole('region',{name:'贡献运行',exact:true});
+ await expect(device.locator('.pairing-phase')).toContainText('未自动开始贡献');await device.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ const runtime=app.getByRole('region',{name:'服务状态',exact:true});
  await expect(runtime).toContainText('贡献未启动');await expect(runtime).toContainText('Hive 已连接');
  await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
- await expect(app.getByRole('region',{name:'OpenAI 账号',exact:true})).toContainText('尚未接入 OpenAI 账号');
+ await expect(app.getByRole('region',{name:'OpenAI 账号',exact:true})).toContainText('登录 OpenAI');
  await app.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();
  await app.getByRole('tab',{name:'关于',exact:true}).click();
  await expect(app.getByRole('main')).toContainText('https://hive.example');
@@ -96,5 +96,5 @@ test('a seeded unknown redemption is reconciled by the common approval control w
  const after=await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).__beeMockDeviceContext().operationId);
  expect(after).toBe(before);
  expect((await commands(page)).filter(c=>writes.has(c.command))).toEqual([]);
- await expect(app.getByRole('region',{name:'贡献运行',exact:true})).toContainText('Hive 已连接');
+ await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('Hive 已连接');
 });

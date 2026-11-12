@@ -80,7 +80,7 @@ test('an uncertain write retries GET automatically, preserves diagnostics and ne
  await expect(page.getByRole('button',{name:'重新核对平台'})).toHaveCount(0);
 });
 test('independent platform polling waits ten seconds after success and backs off failed reads without overlap',async({page})=>{
- await fixture(page,{delay:700});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');
+ await fixture(page,{delay:700});await page.clock.install({time:new Date('2026-11-12T00:00:00Z')});await page.clock.pauseAt(new Date('2026-11-12T00:01:00Z'));await page.goto('/');
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(2);await page.clock.runFor(700);
  await expectPaused(page,'Claude');
  const initial=await calls(page,'supply_status');expect(initial.map(c=>c.platform).sort()).toEqual(['claude','openai']);expect(initial.every(c=>c.completedAt!==undefined)).toBe(true);
@@ -88,10 +88,10 @@ test('independent platform polling waits ten seconds after success and backs off
  await page.evaluate(()=>{const w=window as any;w.fail='GET /api/bee/platforms/openai HTTP 502';w.failStatus=502;});await page.clock.runFor(1);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(4);await page.clock.runFor(700);
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
- await page.clock.runFor(1999);expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1);
+ await page.clock.runFor(999);expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(5);await page.clock.runFor(1000);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(6);await page.clock.runFor(700);
  const reads=await calls(page,'supply_status');
- for(const platform of ['openai','claude']){const own=reads.filter(c=>c.platform===platform);expect(own).toHaveLength(3);expect(own[1].startedAt-own[0].completedAt!).toBe(10000);expect(own[2].startedAt-own[1].completedAt!).toBe(2000);}
+ for(const platform of ['openai','claude']){const own=reads.filter(c=>c.platform===platform);expect(own).toHaveLength(3);expect(own[1].startedAt-own[0].completedAt!).toBe(10000);expect(own[2].startedAt-own[1].completedAt!).toBe(platform==='openai'?1000:2000);}
  await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
 });
@@ -108,7 +108,7 @@ test('fresh background reads stay quiet and hide previous success only when thir
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
 });
 test('navigation keeps one application poller and old results cannot repopulate a new manager instance',async({page})=>{
- await fixture(page);await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expectPaused(page,'Claude');
+ await fixture(page);await page.clock.install({time:new Date('2026-11-12T00:00:00Z')});await page.clock.pauseAt(new Date('2026-11-12T00:01:00Z'));await page.goto('/');await expectPaused(page,'Claude');
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=1000;});await page.clock.runFor(10001);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.clock.runFor(1500);const count=await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length);await page.clock.runFor(9000);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count);await page.clock.runFor(3500);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(count+2);
  await page.evaluate(()=>{const w=window as unknown as {emit:(id:string)=>void;delay:number;fail:string};w.delay=0;w.fail='new instance GET HTTP 503';w.emit('c'.repeat(32));});
@@ -127,7 +127,7 @@ test('unverified devices never issue supply IPC',async({page})=>{
 });
 
 test('old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round',async({page})=>{
- await fixture(page,{ready:true});await page.clock.install();await page.clock.pauseAt(new Date());await page.goto('/');await expectPaused(page,'Claude');
+ await fixture(page,{ready:true});await page.clock.install({time:new Date('2026-11-12T00:00:00Z')});await page.clock.pauseAt(new Date('2026-11-12T00:01:00Z'));await page.goto('/');await expectPaused(page,'Claude');
  await page.evaluate(()=>{(window as any).delay=1000;});await page.clock.runFor(10000);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(4);
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
@@ -137,7 +137,7 @@ test('old in-flight platform reads cannot overwrite replacement failure or sched
  await diagnostics(page,'replacement GET HTTP 503');await expect(card(page,'OpenAI').getByText('可接单',{exact:true})).toHaveCount(0);await expect(card(page,'Claude').getByText('已暂停接单',{exact:true})).toHaveCount(0);
  const reads=await calls(page,'supply_status');expect(reads.map(c=>[c.instance,c.platform])).toEqual([['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['b'.repeat(32),'openai'],['b'.repeat(32),'claude'],['c'.repeat(32),'openai'],['c'.repeat(32),'claude']]);
  expect(reads[4].startedAt).toBeGreaterThanOrEqual(Math.max(reads[2].completedAt!,reads[3].completedAt!));
- await page.clock.runFor(1999);expect(await calls(page,'supply_status')).toHaveLength(6);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(8);
+ await page.clock.runFor(999);expect(await calls(page,'supply_status')).toHaveLength(6);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(7);await page.clock.runFor(1000);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(8);
  expect((await calls(page,'supply_status')).slice(6).map(c=>c.instance)).toEqual(['c'.repeat(32),'c'.repeat(32)]);
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
 });

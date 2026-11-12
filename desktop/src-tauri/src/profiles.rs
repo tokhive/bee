@@ -48,31 +48,8 @@ fn identifier() -> String {
 fn valid_id(id: &str) -> bool {
     crate::startup_recovery::digest(id, 32)
 }
-// Replaced by the shared contract wrapper when protocol ticket01 is merged.
 fn normalize(origin: &str) -> Result<String, BridgeError> {
-    let url = tauri::Url::parse(origin).map_err(|_| {
-        error(
-            "PROFILE_ORIGIN",
-            format!(
-                "Hive origin parsing failed: bytes={}; required=HTTP(S) service origin",
-                origin.len()
-            ),
-        )
-    })?;
-    let canonical = url.origin().ascii_serialization();
-    if !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || url.path() != "/"
-    {
-        return Err(error(
-            "PROFILE_ORIGIN",
-            "Hive origin has credentials, path, query or fragment; required=service origin",
-        ));
-    }
-    crate::preferences::validate_origin(&canonical)?;
-    Ok(canonical)
+    crate::preferences::normalize_hive_origin(origin)
 }
 fn private_dir(path: &Path) -> Result<(), BridgeError> {
     if !path.exists() {
@@ -524,10 +501,11 @@ impl ProfileStore {
         if !index.migration_blockers.is_empty() {
             return Err(error("PROFILE_MIGRATION_BLOCKED",format!("unattributed migration blockers={:?}; original evidence must be reconciled before activating a profile",index.migration_blockers)));
         }
-        if index.current_profile.as_deref() == Some(id)
-            && index.committed_operation.as_deref() == Some(operation)
-        {
-            return Ok(index);
+        if index.committed_operation.as_deref() == Some(operation) {
+            if index.current_profile.as_deref() == Some(id) {
+                return Ok(index);
+            }
+            return Err(error("PROFILE_OPERATION_CONFLICT",format!("profile commit operation already belongs to current={:?} requested={id}; original committed result preserved",index.current_profile)));
         }
         if index.revision != expected || expected >= MAX_REVISION {
             return Err(error("PROFILE_REVISION_CONFLICT",format!("profile revision actual={} expected={expected}; reread persisted current profile",index.revision)));
@@ -1154,6 +1132,11 @@ impl ProfileStore {
                 verify_file(&backup.join(&file.source).join(&file.name), file)?;
             }
             let mut index = self.snapshot()?;
+            if record.phase == MigrationPhase::Committed
+                && index.migration_id.as_deref() != Some(&record.id)
+            {
+                return Err(error("PROFILE_INDEX_MISSING","completed migration index_matches=false; current Hive cannot be reconstructed from an old migration; recover the protected index"));
+            }
             if index.migration_id.as_deref() != Some(&record.id) {
                 if !index.profiles.is_empty() || index.migration_id.is_some() {
                     return Err(error(
@@ -1204,6 +1187,27 @@ impl ProfileStore {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn a_completed_migration_never_rebuilds_a_lost_index_with_the_old_current_hive() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("tokhive");
+        let store = ProfileStore::open(root.clone()).unwrap();
+        write(
+            &root.join("bee-desktop.json"),
+            br#"{"hive":"https://a.example","name":"A","credential":"synthetic"}"#,
+        )
+        .unwrap();
+        let startup = tmp.path().join("app");
+        store.migrate_legacy(&startup).unwrap();
+        let b = store.register("https://b.example").unwrap();
+        let before = store.snapshot().unwrap();
+        store
+            .commit_current(before.revision, &b.id, &"a".repeat(48))
+            .unwrap();
+        fs::remove_file(root.join("hive-profiles.json")).unwrap();
+        assert!(store.migrate_legacy(&startup).is_err());
+        assert!(!root.join("hive-profiles.json").exists());
+    }
     #[test]
     fn v2_scopes_are_attributed_without_occupying_the_next_core_upgrade_backup() {
         let tmp = tempfile::tempdir().unwrap();
@@ -1706,6 +1710,9 @@ mod tests {
             after.committed_operation.as_deref(),
             Some("a".repeat(48).as_str())
         );
+        assert!(store
+            .commit_current(after.revision, &a.id, &"a".repeat(48))
+            .is_err());
         assert!(store
             .commit_current(before.revision, &a.id, &"b".repeat(48))
             .is_err());

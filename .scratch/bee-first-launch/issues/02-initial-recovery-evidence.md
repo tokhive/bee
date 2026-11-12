@@ -2,7 +2,7 @@
 
 **Spec:** /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/docs/desktop/first-launch-design.md
 
-**Status:** in-progress
+**Status:** done
 
 **Blocked by:** None
 
@@ -13,3 +13,10 @@
 **Ownership:** agent/desktop_first_launch_test.go（新增独立测试文件优先）；必要最小后端修复，不碰前端。
 
 实现记录写在本票末尾：red→green证据、命令/结果、提交及限制；未实测系统路径不得宣称通过。
+
+## 实现与验收
+
+- 实现 `eea51df`，集成合并 `6dba1fb`。新增真实文件替换失败与保存成功但完成记录失败的同会话／重启覆盖，create/redeem 各一次。
+- 红测试发现首次配对恢复会覆盖已确认身份；最小修复先比较原身份，阻止归属／设备变化和无效身份消除原保存约束。
+- `go test -race -timeout=180s ./agent -run "^(TestDesktopFirstLaunch|TestDesktopDevice|TestDeviceRecovery)" -count=1` 通过。
+- 使用临时目录、合成 Hive 与实际文件系统故障；不代表真实 Hive、桥传输丢包或断电验证。

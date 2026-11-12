@@ -1475,6 +1475,14 @@ impl HiveSwitch {
                     .effective_revision;
         }
         let view = self.control(leg, bridge, "inspect").await?;
+        if bridge.profile_mode() == ProfileMode::Prepare {
+            leg.network_revision = view["network_revision"].as_u64().ok_or_else(|| {
+                error(
+                    "HIVE_SWITCH_REPLY_INVALID",
+                    "prepared child inspect network_revision is not a validated integer",
+                )
+            })?;
+        }
         Ok(view)
     }
     async fn control(

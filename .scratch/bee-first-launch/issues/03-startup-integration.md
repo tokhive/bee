@@ -2,7 +2,7 @@
 
 **Spec:** /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/docs/desktop/first-launch-design.md
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 **Blocked by:** 01 — 首次设置向导的完整界面
 

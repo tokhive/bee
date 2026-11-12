@@ -6,8 +6,10 @@
 
 **Blocked by:** None (can start immediately)
 
-**Status:** in-progress
+**Status:** implemented
 
-- [ ] 索引、迁移日志、备份及 Rust 恢复日志持久化，崩溃可继续；原始 origin／摘要不改写。
-- [ ] 旧程序在迁移后无法继续使用旧入口；已有旧 worker／不明记录不被自动清理。
-- [ ] 代理按 profile 路由，历史冲突局部阻塞；全局偏好保留。
+- [x] 索引、迁移日志、备份及 Rust 恢复日志持久化，崩溃可继续；原始 origin／摘要不改写。
+- [x] 旧程序在迁移后无法继续使用旧入口；已有旧 worker／不明记录不被自动清理。
+- [x] 代理按 profile 路由，历史冲突局部阻塞；全局偏好保留。
+
+**进度：** `aad3edd` 已无冲突合入 `cad1336`。合并后 Rust profile 17 项、固定启动归属 1 项及 Go 旧入口迁移拒绝测试通过。App 生命周期接线由 05／06 继续；本任务未执行真实原生往返验收。

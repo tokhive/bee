@@ -6,5 +6,5 @@
 
 - [01 首次设置向导的完整界面](issues/01-wizard-ui.md)：done；Blocked by None
 - [02 首次配对持久化恢复故障证据](issues/02-initial-recovery-evidence.md)：done；Blocked by None
-- [03 可信启动分流及跨绑定会话完成页](issues/03-startup-integration.md)：in-progress；Blocked by 01 — 首次设置向导的完整界面
-- [04 真实前端回归与首次向导验收](issues/04-regression-acceptance.md)：ready-for-agent；Blocked by 02 — 首次配对持久化恢复故障证据；03 — 可信启动分流及跨绑定会话完成页
+- [03 可信启动分流及跨绑定会话完成页](issues/03-startup-integration.md)：done；Blocked by 01 — 首次设置向导的完整界面
+- [04 真实前端回归与首次向导验收](issues/04-regression-acceptance.md)：in-progress；Blocked by 02 — 首次配对持久化恢复故障证据；03 — 可信启动分流及跨绑定会话完成页

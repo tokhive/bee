@@ -2,7 +2,7 @@
 
 **Spec:** /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/docs/desktop/first-launch-design.md
 
-**Status:** in-progress
+**Status:** done
 
 **Blocked by:** 01 — 首次设置向导的完整界面
 
@@ -13,3 +13,10 @@
 **Ownership:** desktop/src/app/NativeApp.tsx；必要新 system/firstLaunch.ts；必要 coordinator 最小事实适配；desktop/tests/first-launch*.test.ts、first-launch-integration.spec.ts；必要 bridge fixture 支持。01组件 API适配可改；不扩大已定UI。
 
 实现记录写在本票末尾：red→green证据、命令/结果、提交及限制；未实测系统路径不得宣称通过。
+
+## 实施记录（2026-11-12）
+
+- 实现 `a8af4d5`，合并 `0705f32`。可信 recovery absence、稳定首次 session、实际渲染门槛及诊断往返已接入；旧 begin 回执按实例、事务与当前绑定围栏隔离。
+- 实际 red→green：恢复未读门槛、两次 revision 后完成停留、诊断草稿、完成关联错误、事务 revision 倒退及同实例旧 begin 污染新 Hive。
+- 最终 typecheck、31 coordinator 单测、26 first-launch Playwright（12 集成＋14 组件）通过。未冒充真实 Hive、OS 浏览器及 Tauri 原生验收。
+- 详细过程见 `/tmp/bee-first-launch-context/03-report.md`；持久化原生证据见票据 02。票据 04 承接旧测试适配与整体验收。

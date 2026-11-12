@@ -2,7 +2,7 @@
 
 **Spec:** /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-desktop-ui/docs/desktop/first-launch-design.md
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 **Blocked by:** 02 — 首次配对持久化恢复故障证据；03 — 可信启动分流及跨绑定会话完成页
 

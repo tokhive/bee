@@ -33,6 +33,9 @@
 - 现有账号作用域上限为 16，登录维护记录上限为 32；历史绑定保留与上限行为需在设计中明确。
 - 正式概览设备区已有设备名称、归属和 Hive 地址，当前没有切换按钮；正式设置页没有历史 Hive 列表。旧演示页的切换按钮仅操作模拟状态。
 - Go 已保存地址契约保留主机大小写、显式默认端口及部分 IPv6／Unicode 形式；代理偏好使用的 URL 规则不同。统一地址时需覆盖 Go／Rust／TypeScript 与历史记录迁移，不能只在前端变换字符串。
+- 正式 Go 桌面入口没有可选设备目录参数；设备 session 获取锁后禁止更换路径，Rust 重连复用固定启动参数。按 URL 存储还需配套管理进程与未决 IPC 的归属切换。
+- Rust 启动恢复记录不随 Go 设备目录变化；偏好和通知投递记录仍是全局数据，代理已有独立的设备作用域。官方登录文件及钥匙串由官方客户端管理，不能作为 Bee 绑定数据复制。
+- device_status 可能保存身份及推进原配对，Restore 会预约运行保护；历史绑定列表与目标预检不能直接复用这些入口并假设无副作用。
 
 事实入口：agent/desktop_device.go、agent/desktop_account_persistence.go、agent/desktop_login_journal.go、agent/desktop_runtime.go、agent/desktop_session_retirement.go、desktop/src-tauri/src/startup_recovery.rs。
 

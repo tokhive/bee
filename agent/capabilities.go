@@ -41,22 +41,31 @@ type capabilitySource struct {
 	// failure is why the last observation came out unknown, empty when it
 	// did not; logged is the failure the operator was last told about.
 	failure, logged string
-	// Track the token whose plan disagrees with usage. Acknowledged requests
-	// are limited per revision and across revisions to avoid refresh loops.
-	stalePlan           string
-	planRefreshRevision string
-	planRefreshAt       time.Time
+	// staleToken is the revision of an authorization upstream no longer
+	// honours as issued: the usage report contradicted its plan, or an
+	// official endpoint rejected it with 401. Both happen when the plan
+	// changes, well before the token's own expiry, and a refreshed token
+	// fixes both. refreshRevision and refreshAt record the last time Bee
+	// asked Hive to refresh for that, so one stale token asks once, and a
+	// refresh that is still stale cannot turn into a refresh loop.
+	staleToken      string
+	refreshRevision string
+	refreshAt       time.Time
 }
 
-const planRefreshInterval = time.Hour
+// staleRefreshInterval bounds how often a stale token asks for a refresh.
+const staleRefreshInterval = time.Hour
 
-func (s *capabilitySource) wantsPlanRefresh(revision string, now time.Time) bool {
-	return s != nil && s.stalePlan != "" && s.stalePlan == revision && s.planRefreshRevision != revision &&
-		(s.planRefreshAt.IsZero() || !now.Before(s.planRefreshAt.Add(planRefreshInterval)))
+// wantsRefresh reports whether the authorization with revision should be
+// refreshed because it is stale and Bee has not asked for it yet.
+func (s *capabilitySource) wantsRefresh(revision string, now time.Time) bool {
+	return s != nil && s.staleToken != "" && s.staleToken == revision && s.refreshRevision != revision &&
+		(s.refreshAt.IsZero() || !now.Before(s.refreshAt.Add(staleRefreshInterval)))
 }
 
-func (s *capabilitySource) askedPlanRefresh(revision string, now time.Time) {
-	s.planRefreshRevision, s.planRefreshAt = revision, now
+// askedRefresh records that Hive took a refresh request for revision.
+func (s *capabilitySource) askedRefresh(revision string, now time.Time) {
+	s.refreshRevision, s.refreshAt = revision, now
 }
 
 // reusable avoids extra upstream queries on reconnect while the observation
@@ -201,20 +210,21 @@ func newerVersion(a, b string) bool {
 const officialCapabilityQueryTimeout = 10 * time.Minute
 
 // query fetches one official endpoint into target. It returns why it failed,
-// empty on success, and the time a 429 asked to be left alone until.
-func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (string, time.Time) {
+// empty on success, the time a 429 asked to be left alone until, and whether
+// upstream rejected the token itself.
+func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (string, time.Time, bool) {
 	base := "https://chatgpt.com"
 	if s.LocalURL != "" {
 		base = s.LocalURL
 	}
 	u, err := url.Parse(base)
 	if err != nil {
-		return "invalid capability query URL", time.Time{}
+		return "invalid capability query URL", time.Time{}, false
 	}
 	reference, _ := url.Parse(path)
 	req, err := http.NewRequestWithContext(ctx, "GET", u.ResolveReference(reference).String(), nil)
 	if err != nil {
-		return "invalid capability query URL", time.Time{}
+		return "invalid capability query URL", time.Time{}, false
 	}
 	req.Header.Set("Authorization", "Bearer "+credential.Secret.Token)
 	req.Header.Set("ChatGPT-Account-Id", credential.AccountID)
@@ -229,7 +239,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	client := &http.Client{Transport: s.transport, Timeout: officialCapabilityQueryTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
-		return capabilityTransportFailure(err), time.Time{}
+		return capabilityTransportFailure(err), time.Time{}, false
 	}
 	defer res.Body.Close()
 	if res.StatusCode == http.StatusTooManyRequests {
@@ -238,16 +248,16 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 		if seconds, err := strconv.ParseInt(retry, 10, 32); err == nil && seconds > 0 {
 			at = wallNow().Add(time.Duration(seconds) * time.Second)
 		}
-		return reference.Path + " answered 429 without a usable Retry-After", at
+		return reference.Path + " answered 429 without a usable Retry-After", at, false
 	}
 	if res.StatusCode != http.StatusOK {
-		return fmt.Sprintf("%s answered HTTP %d", reference.Path, res.StatusCode), time.Time{}
+		return fmt.Sprintf("%s answered HTTP %d", reference.Path, res.StatusCode), time.Time{}, res.StatusCode == http.StatusUnauthorized
 	}
 	decoder := json.NewDecoder(io.LimitReader(res.Body, 1<<20))
 	if decoder.Decode(target) != nil || decoder.Decode(new(any)) != io.EOF {
-		return reference.Path + " response not understood", time.Time{}
+		return reference.Path + " response not understood", time.Time{}, false
 	}
-	return "", time.Time{}
+	return "", time.Time{}, false
 }
 
 // capabilityTransportFailure names a request that never got an answer. The
@@ -259,10 +269,13 @@ func capabilityTransportFailure(err error) string {
 
 // logCapabilityFailure tells the operator once why a platform's capabilities
 // are unknown, and once when they recover. Hive only ever sees "unknown"; the
-// reason exists nowhere but here.
-func logCapabilityFailure(platform string, logged *string, failure string) {
+// reason exists nowhere but here. It reports whether this observation is the
+// recovery, so the caller can announce readiness once Hive has the report: a
+// terminal shows only warnings from this log, and the readiness line printed
+// after the first synchronization would otherwise be the last word.
+func logCapabilityFailure(platform string, logged *string, failure string) bool {
 	if failure == *logged {
-		return
+		return false
 	}
 	if failure != "" {
 		slog.Warn("capability query unknown", "module", "capabilities", "platform", platform, "reason", failure)
@@ -270,6 +283,7 @@ func logCapabilityFailure(platform string, logged *string, failure string) {
 		slog.Info("capability query recovered", "module", "capabilities", "platform", platform)
 	}
 	*logged = failure
+	return failure == ""
 }
 
 type usageWindow struct {
@@ -340,7 +354,7 @@ func wallNow() time.Time { return time.Now().Round(0) }
 func (s *capabilitySource) observe(ctx context.Context, credential codexCredential, sequence int64) beewire.Capabilities {
 	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
-	s.failure, s.stalePlan = "", ""
+	s.failure, s.staleToken = "", ""
 	fail := func(reason string) beewire.Capabilities {
 		s.failure = reason
 		return unknown
@@ -385,6 +399,14 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		} `json:"rate_limit"`
 		Additional []json.RawMessage `json:"additional_rate_limits"`
 		Spend      json.RawMessage   `json:"spend_control"`
+		Credits    *struct {
+			Has       *bool `json:"has_credits"`
+			Unlimited *bool `json:"unlimited"`
+			Overage   bool  `json:"overage_limit_reached"`
+		} `json:"credits"`
+		ModelUsage map[string]struct {
+			Available *bool `json:"available"`
+		} `json:"model_usage"`
 	}
 	refreshMetadata := s.LocalURL != "" || s.metadataAt.IsZero() || !now.Before(s.metadataAt.Add(capabilityMetadataTTL)) || s.metadataPlan != credential.Plan || s.metadataVersion != s.version
 	queries := []struct {
@@ -402,7 +424,12 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		target any
 	}{"/backend-api/wham/usage", &usage})
 	for _, query := range queries {
-		if failure, retry := s.query(ctx, credential, query.path, query.target); failure != "" {
+		if failure, retry, rejected := s.query(ctx, credential, query.path, query.target); failure != "" {
+			if rejected {
+				// Codex refreshes on a 401 too; Bee asks Hive to, as Hive
+				// directs every refresh.
+				s.staleToken = credential.metadata().CredentialRevision
+			}
 			if retry.After(time.Now()) {
 				s.retryAt = retry
 				limited := unknown
@@ -423,7 +450,9 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 	single := beewire.OpenAISingleWindow(credential.Plan)
 	if usage.Plan != "" && usage.Plan != credential.Plan || single != 0 && usage.Plan != credential.Plan {
 		if usage.Plan != "" {
-			s.stalePlan = credential.metadata().CredentialRevision
+			// The account changed plan after this token was issued; a
+			// refreshed token carries the current one.
+			s.staleToken = credential.metadata().CredentialRevision
 		}
 		return fail(fmt.Sprintf("usage plan %q does not match authorization plan %q", usage.Plan, credential.Plan))
 	}
@@ -444,7 +473,14 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 		}
 		result.MetadataObservedAt = now
 	}
+	if c := usage.Credits; c != nil && c.Has != nil && c.Unlimited != nil {
+		result.Credits = &beewire.Credits{HasCredits: *c.Has, Unlimited: *c.Unlimited, OverageReached: c.Overage}
+	}
 	for _, model := range catalog {
+		// The usage report names the models this account cannot use now.
+		if use, listed := usage.ModelUsage[model]; listed && use.Available != nil && !*use.Available {
+			continue
+		}
 		if !excluded[model] {
 			result.Models = append(result.Models, model)
 		}
@@ -483,7 +519,9 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 	cfg.capabilitySequence++
 	cfg.Capabilities.home = cfg.Codex.Home
 	snapshot := cfg.Capabilities.observe(ctx, credential, cfg.capabilitySequence)
-	logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure)
+	if logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure) {
+		cfg.announceReady = true
+	}
 	current, err := cfg.Codex.read(ctx)
 	if err != nil || !current.sameAuthorization(credential) {
 		// Do not publish a query from a source that changed while the requests ran.

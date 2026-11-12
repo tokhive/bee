@@ -12,15 +12,15 @@ import (
 
 // Readable reports whether w is a terminal a person is watching and nobody
 // asked for structured lines: none of the log variables is set, and
-// TOKHIVE_LOG_FORMAT is not "logfmt". A service manager, a pipe or a file
+// HIVE_LOG_FORMAT is not "logfmt". A service manager, a pipe or a file
 // always gets the structured format.
 func Readable(w io.Writer) bool {
-	for _, name := range []string{"TOKHIVE_LOG_LEVEL", "TOKHIVE_LOG_MODULES", "BEE_DEBUG"} {
+	for _, name := range []string{"HIVE_LOG_LEVEL", "HIVE_LOG_MODULES", "BEE_DEBUG"} {
 		if os.Getenv(name) != "" {
 			return false
 		}
 	}
-	if strings.EqualFold(strings.TrimSpace(os.Getenv("TOKHIVE_LOG_FORMAT")), "logfmt") {
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("HIVE_LOG_FORMAT")), "logfmt") {
 		return false
 	}
 	file, ok := w.(*os.File)

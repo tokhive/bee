@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
+	"github.com/tokhive/tee/tunnel"
 )
 
 // sessions joins a client tunnel to a server tunnel serving with options; the

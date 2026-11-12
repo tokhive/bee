@@ -23,6 +23,9 @@ func TestClaudeIndependentReportIntervals(t *testing.T) {
 			json.NewEncoder(w).Encode(beewire.PlatformAccount{Platform: "claude", Status: "ready", Generation: 3})
 		case "/api/bee/maintenance":
 			json.NewEncoder(w).Encode(beewire.MaintenanceResponse{Account: beewire.PlatformAccount{Platform: "claude", Status: "ready", Generation: 3}})
+		case "/api/bee/platforms/claude":
+			// The readiness check that follows a capability recovery.
+			json.NewEncoder(w).Encode(map[string]any{})
 		case "/api/bee/platforms/claude/capabilities":
 			var report map[string]json.RawMessage
 			if err := json.NewDecoder(r.Body).Decode(&report); err != nil {

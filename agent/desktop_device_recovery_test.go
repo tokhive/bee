@@ -80,6 +80,7 @@ type recoveryHive struct {
 	creates, redeems                                           int
 	approved, bound, lostCreate, lostRedeem, draining, expired bool
 	hideNewIdentity                                            bool
+	oldAccepted                                                bool
 	owner                                                      string
 	status                                                     int
 	code                                                       string
@@ -99,6 +100,10 @@ func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 		}
 		switch r.Method + " " + r.URL.Path {
 		case "GET /api/bee/identity":
+			if h.oldAccepted && r.Header.Get("Authorization") == "Bearer "+h.oldCredential {
+				json.NewEncoder(w).Encode(beewire.Identity{ID: "old-device", Name: "Mac", OwnerID: "owner", OwnerEmail: "old@example.test"})
+				return
+			}
 			if h.bound && !h.hideNewIdentity && r.Header.Get("Authorization") != "Bearer "+h.oldCredential {
 				json.NewEncoder(w).Encode(beewire.Identity{ID: "new-device", Name: "Mac", OwnerID: h.owner, OwnerEmail: "new@example.test"})
 				return
@@ -150,6 +155,64 @@ func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 	}
 	return h, newDesktopTestDevice(t, path), path
 }
+
+func TestDeviceRecoveryAfterStartupKeepsRuntimeSnapshotCoherent(t *testing.T) {
+	for _, phase := range []string{"completed", "redemption_unknown", "awaiting_owner_confirmation"} {
+		t.Run(phase, func(t *testing.T) {
+			h, d, _ := newRecoveryHive(t)
+			h.oldAccepted = true
+			a := NewDesktopAccounts(d)
+			defer a.Close()
+			r := NewDesktopRuntime(context.Background(), d, a)
+			defer r.Close()
+			if _, err := r.Restore(context.Background()); err != nil {
+				t.Fatal(err)
+			}
+			before := waitRuntime(t, r, func(s DesktopRuntimeSnapshot) bool {
+				return s.Operation != nil && s.Operation.State == "succeeded"
+			})
+			if before.Local != "waiting" || before.StartupProgress == nil || before.StartupProgress.OperationID == nil || *before.StartupProgress.OperationID != before.Operation.ID {
+				t.Fatalf("startup did not produce a bound progress snapshot: %+v", before)
+			}
+			<-r.runDone
+			h.oldAccepted = false
+			v, err := d.RecoveryPrepare(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			v, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "begin_pairing")
+			if err != nil || v.Phase != "pending" {
+				t.Fatalf("begin replacement: phase=%s error=%v", v.Phase, err)
+			}
+			h.approved = true
+			h.lostRedeem, h.hideNewIdentity = phase == "redemption_unknown", phase == "redemption_unknown"
+			if phase == "awaiting_owner_confirmation" {
+				h.owner = "different-owner"
+			}
+			v, err = d.RecoveryStatus(context.Background())
+			if err != nil || v.Phase != phase {
+				t.Fatalf("replacement: phase=%s required=%s error=%v", v.Phase, phase, err)
+			}
+			snapshot, err := r.Snapshot(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			if phase != "completed" {
+				if snapshot.Operation == nil || snapshot.Operation.ID != before.Operation.ID || snapshot.StartupProgress == nil || snapshot.StartupProgress.OperationID == nil || *snapshot.StartupProgress.OperationID != snapshot.Operation.ID {
+					t.Fatalf("unconfirmed replacement discarded the original operation or progress: %+v", snapshot)
+				}
+				return
+			}
+			if snapshot.Operation != nil || snapshot.StartupProgress != nil || snapshot.RunID != nil || snapshot.Local != "stopped" {
+				t.Fatalf("new device retained the previous startup operation or progress: operation=%+v progress=%+v run=%v local=%s", snapshot.Operation, snapshot.StartupProgress, snapshot.RunID, snapshot.Local)
+			}
+			if err := r.VerifyStartup(context.Background()); err != nil {
+				t.Fatalf("new device startup check failed: %v", err)
+			}
+		})
+	}
+}
+
 func TestDeviceRecoveryExplicitConfirmationAndOwnerAdoption(t *testing.T) {
 	for _, owner := range []string{"owner", "different-owner"} {
 		t.Run(owner, func(t *testing.T) {

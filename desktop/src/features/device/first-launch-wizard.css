@@ -23,7 +23,7 @@
 .first-launch-steps li.done{color:var(--good)}
 .first-launch-content h2{font-size:17px;margin:24px 0 6px}
 .first-launch-facts{margin:20px 0;display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px 14px;font-size:13px}
-.first-launch-facts dt{color:var(--muted)}
+.first-launch-facts dt{margin:0;color:var(--muted)}
 .first-launch-facts dd{margin:0;overflow-wrap:anywhere}
 .first-launch-pair{padding:18px 20px;background:var(--canvas);border:1px solid var(--line);border-radius:8px;margin-top:22px}
 .first-launch-pair>div{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}

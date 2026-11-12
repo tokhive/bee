@@ -239,7 +239,8 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 				end = func() {}
 			}
 			liveness := relay.NewLiveness(conn, moved)
-			for live.Err() == nil {
+			var syncErr error
+			for live.Err() == nil && syncErr == nil {
 				if egress != nil && !egress.dynamicAuthorization() && !rejectionReported {
 					statusCtx, stopStatus := context.WithTimeout(live, 5*time.Second)
 					var status struct {
@@ -270,19 +271,8 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 				// account source — simply never fires.
 				timer := time.NewTimer(heartbeatInterval)
 				select {
-				case syncErr := <-syncFailures:
-					if ctx.Err() == nil {
-						lastFailure = observedConnectionFailure(syncErr, nil, state, path, "synchronize")
-						emit("disconnected", "halted", nil)
-					}
+				case syncErr = <-syncFailures:
 					timer.Stop()
-					conn.CloseNow()
-					end()
-					slog.Error("authorization synchronization failed", "module", "sync", "error", syncErr.Error())
-					if replacedDevice(syncErr, out) {
-						return nil
-					}
-					return syncErr
 				case <-timer.C:
 				case <-live.Done():
 					timer.Stop()
@@ -291,6 +281,26 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			conn.CloseNow()
 			metrics.disconnect()
 			end()
+			// Join synchronization before choosing a reconnect. The transport
+			// may close at the same time a worker queues a terminal failure;
+			// that failure must still halt instead of becoming a heartbeat retry.
+			if syncErr == nil {
+				select {
+				case syncErr = <-syncFailures:
+				default:
+				}
+			}
+			if syncErr != nil {
+				if ctx.Err() == nil {
+					lastFailure = observedConnectionFailure(syncErr, nil, state, path, "synchronize")
+					emit("disconnected", "halted", nil)
+				}
+				slog.Error("authorization synchronization failed", "module", "sync", "error", syncErr.Error())
+				if replacedDevice(syncErr, out) {
+					return nil
+				}
+				return syncErr
+			}
 		} else if response != nil && (response.StatusCode == 401 || response.StatusCode == 403) {
 			if ctx.Err() != nil {
 				return nil

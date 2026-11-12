@@ -8,7 +8,7 @@
 
 依赖：01→03→04；01+02→05；04+05→06；06→07、08；07+08→09。
 
-当前执行：01–05 已实现并合入，06 App 持久切换协调器进行中，07–09 等待依赖。Hive 草稿 PR [#307](https://github.com/tokhive/hive/pull/307) 已更新到完整服务端生命周期，尚未完成 Bee 切换和整体验收。Hive 父议题 [#302](https://github.com/tokhive/hive/issues/302)，03→[#303](https://github.com/tokhive/hive/issues/303)，04→[#304](https://github.com/tokhive/hive/issues/304)。
+当前执行：01–05 已实现并合入，06 App 持久切换协调器已实现，07／08 可接续，09 等待取消恢复和正式 UI。06 已完成相关 Go race gate 和 Rust 分组验证，真实 Hive／Postgres／任务结算及原生验收仍归 09。Hive 草稿 PR [#307](https://github.com/tokhive/hive/pull/307) 已更新到完整服务端生命周期，尚未完成 Bee 整体交互和整体验收。Hive 父议题 [#302](https://github.com/tokhive/hive/issues/302)，03→[#303](https://github.com/tokhive/hive/issues/303)，04→[#304](https://github.com/tokhive/hive/issues/304)。
 
 - [01 共享安全切换协议与地址判定](issues/01-protocol.md)
 - [02 独立 Hive 数据目录、旧数据迁移与进程归属](issues/02-profile-storage.md)

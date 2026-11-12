@@ -33,7 +33,7 @@ function WizardFailure({failure}:{failure:UiFailure}){
  const [open,setOpen]=useState(false),titleId=useId();
  const details=[failure.code,failure.check,failure.observedAt,...Object.entries(failure.evidence).map(([key,value])=>`${key}: ${safeFailureText(value)}`)].filter(Boolean).join('\n');
  useEffect(()=>setOpen(false),[details]);
- return <div className="first-launch-failure" role="alert"><p>{safeFailureText(failure.message)}{(failure.observedAt||Object.keys(failure.evidence).length>0)&&<Popover.Root open={open} onOpenChange={setOpen}>
+ return <div className="first-launch-failure" role="alert"><p>{safeFailureText(failure.message)}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
   <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
   <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
    <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>

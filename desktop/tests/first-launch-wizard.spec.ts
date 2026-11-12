@@ -90,7 +90,7 @@ test('transaction phases expose only the permitted original-request actions',asy
  await page.evaluate(({pending,transaction})=>window.setWizardProps({view:{state:'pairing',hive:pending.hive,name:pending.name,recovery:{...transaction,new_identity:null,phase:'blocked'}}}),{pending,transaction});
  await expect(page.getByText('设备绑定暂时无法继续，请查看具体原因并导出诊断。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:/继续绑定设备|重新生成配对码|重新检查设备/})).toHaveCount(0);
- await page.getByRole('button',{name:'导出诊断',exact:true}).click();
+ await page.getByRole('button',{name:'查看诊断',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nbegin https://hive.example Work Mac\ndiagnostics');
 });
 
@@ -171,7 +171,7 @@ test('contradictory or unsupported initial pairing facts fail closed without a r
  await page.evaluate(({pending,transaction})=>window.setWizardProps({view:{state:'pairing',hive:pending.hive,name:pending.name,recovery:{...transaction,phase:'awaiting_owner_confirmation'}}}),{pending,transaction});
  await expect(page.getByRole('alert')).toContainText('awaiting_owner_confirmation');
  await expect(page.getByRole('button',{name:/继续绑定设备|确认采用新归属|重新生成配对码|重新检查设备/})).toHaveCount(0);
- await expect(page.getByRole('button',{name:'导出诊断',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'查看诊断',exact:true})).toBeEnabled();
 });
 
 test('copy success preserves the exact original URL and background refresh does not move focus',async({page})=>{

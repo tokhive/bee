@@ -164,6 +164,8 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  const status=()=>({state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance,capabilities:['runtime_inspect_recovery']}});
  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
  w.emitRequestSettled=request=>emit('bee://request-settled',{instance,...request});
+ w.emitNotification=page=>emit('bee://notification-navigation',page);
+ w.emitStartup=payload=>emit('bee://startup-status',payload);
  w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});
  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};

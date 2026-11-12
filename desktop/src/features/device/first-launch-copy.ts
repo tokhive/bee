@@ -31,7 +31,7 @@ const english:Record<string,string>={
  '设备身份已确认，本机保存尚未完成。':'Device identity is confirmed; the local configuration has not been saved.',
  '正在保存设备配置…':'Saving device configuration…',
  '请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。':'Resolve the reported save failure, then click “Continue binding”. Bee will check the existing binding and continue saving.',
- '继续完成绑定':'Continue binding','导出诊断':'Export diagnostics',
+ '继续完成绑定':'Continue binding','导出诊断':'Export diagnostics','查看诊断':'View diagnostics',
  '设备检查已暂停，请先处理当前问题，再重新检查设备。':'Device checks are paused. Resolve the current issue, then check the device again.',
  '前次设备检查尚未结束，结果待确认。':'The previous device check is still running; its result is not yet confirmed.',
  '设备检查暂未完成，等待已安排的重试。':'The device check is incomplete; waiting for the scheduled retry.',

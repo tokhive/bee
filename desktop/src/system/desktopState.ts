@@ -8,7 +8,7 @@ import type {DiagnosticReport} from './diagnostics';
 export interface RefreshStatus {state:'idle'|'reading'|'scheduled'|'blocked'|'waiting';nextRetryAt:string|null;lastConfirmedAt:string|null}
 export interface DesktopSnapshot {
  native:BridgeStatus;startup?:StartupStatus;startupReadError?:UiFailure|null;startupObservation?:'active'|'stopped'|'idle';deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;
- recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;
+ recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;recoveryObservation?:'absent'|'present';
  device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;
  accounts:Partial<Record<AccountPlatform,AccountSnapshot>>;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;
  supplies:Partial<Record<AccountPlatform,SupplyView>>;supplyErrors:Partial<Record<AccountPlatform,UiFailure>>;
@@ -79,7 +79,7 @@ export function createDesktopState(deps:DesktopDeps){
  }
  const repair=()=>{for(const [key,g]of gates)if(g.terminal)gates.delete(key);blocked=false;};
  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
- const reset=()=>({recovery:undefined,recoveryError:null,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
+ const reset=()=>({recovery:undefined,recoveryError:null,recoveryObservation:undefined,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
  const acceptStartup=(next:StartupStatus)=>{
   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
   if(next.state!=='checking'){
@@ -158,13 +158,13 @@ export function createDesktopState(deps:DesktopDeps){
      epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;device=undefined;
      publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
     }else publish({deviceContext,bindingRevision,deviceContextFailure});
-    let recovery=state.recovery,recoveryError:UiFailure|null=state.recoveryError??null;
+    let recovery=state.recovery,recoveryError:UiFailure|null=state.recoveryError??null,recoveryObservation=state.recoveryObservation;
     if(deps.device.recoveryStatus&&!gate('context').failures&&!laneBlocked()&&allowed('recovery'))try{
      scopeMayHaveChanged=true;
      const nextRecovery=await deps.device.recoveryStatus();if(!current())return;
      if(recovery&&(recovery.operation_id===nextRecovery.operation_id&&nextRecovery.revision<recovery.revision||recovery.operation_id!==nextRecovery.operation_id&&recovery.phase!=='completed'))throw {code:'DESKTOP_STALE_RESULT',message:'recovery observation conflicts with the current transaction; actual='+nextRecovery.operation_id+':'+nextRecovery.revision+' required='+recovery.operation_id+':'+recovery.revision,details:{check:'device_recovery_status',observed_at:new Date().toISOString(),evidence:{actual:nextRecovery.operation_id+':'+nextRecovery.revision,required:recovery.operation_id+':'+recovery.revision}}};
-     recovery=nextRecovery;recoveryError=null;succeed('recovery');
-    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;succeed('recovery');}else {recoveryError=problem;fail('recovery',problem);await readPending();}}
+     recovery=nextRecovery;recoveryError=null;recoveryObservation='present';succeed('recovery');
+    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;recoveryObservation='absent';succeed('recovery');}else {recoveryObservation=undefined;recoveryError=problem;fail('recovery',problem);await readPending();}}
     if(!current())return;
     if(!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))try{scopeMayHaveChanged=true;publish({refresh:status(state.refresh,'reading')});device=await deps.device.status();deviceError=null;succeed('device');deviceObservedAt=new Date().toISOString();if(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt))publish({diagnosticFailure:null});}catch(e){if(!current())return;deviceError=failure(e,'device_status');fail('device',deviceError);await readPending();}
     if(!current())return;
@@ -177,13 +177,14 @@ export function createDesktopState(deps:DesktopDeps){
      const previousBinding=bindingRevision;observeContext(local);
 
      if(local.binding_revision!==previousBinding){
+      recoveryObservation=undefined;
       epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;
       if('failure'in local||device?.state!=='bound'||device.identity?.id!==local.device_id||device.hive!==local.hive)device=undefined;
 
       publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
      }
     }
-    publish({recovery,recoveryError});
+    publish({recovery,recoveryError,recoveryObservation});
     // Runtime and defaults form the shared read. Validate all shared floors BEFORE publishing any of it.
     let next=state.runtime,defaults=state.defaults,runtimeRead=false;
     if(!laneBlocked()&&allowed('runtime')){

@@ -64,7 +64,9 @@
 | `connect` | activate／current 恢复专用；核验本地未决记录、设备身份和原 sealed 屏障，用新 epoch 连接 `/api/bee/connect` 并验证 lease／心跳；不读取官方账号来源 |
 | `commit` | App 持久索引提交成功后通知后台；与匹配的新连接或已释放证明绑定，不能代替远端 release |
 
-响应为 `{"switch":...}`，包含 mode、绑定／网络版本、epoch、lease、连接状态、冻结／维护许可、workers_stopped、seal_persisted、capabilities 和 drain。`inspect` 的历史 receipt 仅证明原封存，不推断当前远端事实。重启加载原证明仍冻结维护；查询到 released 本身不会开放维护。activate release 要求先 commit，已封存 cancel 也要求新 epoch／lease。connect／release 尝试前撤销旧 workers_stopped，防止把后续重连／释放尝试之前的退出证明用于离线切换。
+响应为 `{"switch":...}`，包含 mode、绑定／网络版本、epoch、lease、连接状态、冻结／维护许可、workers_stopped、seal_persisted、capabilities 和 drain。`inspect` 的历史 receipt 仅证明原封存，不推断当前远端事实。尚未完成原生准入的证明在重启后冻结维护；查询到 released 本身不会开放维护。activate release 要求先 commit，已封存 cancel 也要求新 epoch／lease。connect／release 尝试前撤销旧 workers_stopped，防止把后续重连／释放尝试之前的退出证明用于离线切换。
+
+App 用真实 current 索引及原 request／seal／receipt／release 核对终态；成功目标绑定本次 switch ID，安全返回源绑定保存的 predecessor ID。随后原生 `commit` 才在私有证明中持久保存 `admission_completed:true`，写入、目录同步和回读成功后开放准入；旧证明缺此字段按 false 处理。断电发生在完成位保存前时仍需按原 ID 核对；保存后不丢失原历史回执。prepare／activate 重启不能单凭此位开放维护。current 的后续 epoch 若不同于原封存 epoch，必须有当前绑定、相同 epoch、已完成的普通 session-retirement 及其严格远端 proof；普通 guard、未决操作与启动恢复仍独立验证，无对应证据的 epoch 变化继续阻塞。
 
 普通 user_stop／network_change／startup_recovery 不能绕过冻结。取消结果未知时 app_exit／update 仍正常 join owned worker，但无持久 seal 时停止结果保持失败、`StopReceipt.WorkersStopped=true`、`SessionClean=false`，原 guard 不变；这表示本地退出清理已完成，不能表示切换安全或恢复获准。`workers_stopped` 只覆盖该 Go owner 的 worker／socket，App 还须独立证明在途 IPC 已结束、子进程正常退出且已 reap，以及持久取消／退出意图，才能形成完整离线证据。
 

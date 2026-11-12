@@ -673,7 +673,7 @@ fn local_binding_digest(value: &serde_json::Value) -> Result<String, BridgeError
             )
         })
 }
-fn unique_value(raw: &[u8]) -> Result<serde_json::Value, serde_json::Error> {
+pub(crate) fn unique_value(raw: &[u8]) -> Result<serde_json::Value, serde_json::Error> {
     serde_json::from_slice::<UniqueValue>(raw).map(|value| value.0)
 }
 // A copy of a multi-scope store is not a second set of credentials. Only exact

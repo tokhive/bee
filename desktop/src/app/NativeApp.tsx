@@ -8,6 +8,8 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import {AppShell} from '../components/AppShell';
 import {StartupRecoveryNotice} from '../components/StartupRecoveryNotice';
 import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
+import {FirstLaunchWizard} from '../features/device/FirstLaunchWizard';
+import {observeFirstLaunch,firstLaunchIntent,firstLaunchReceipt,firstLaunchAdmission,type FirstLaunchSession} from '../system/firstLaunch';
 import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
 import {useAccounts} from '../features/accounts/useAccounts';
 import {useRuntime} from '../features/lifecycle/useRuntime';
@@ -45,6 +47,33 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
+function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedback,admission,onIntent,onReceipt}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;admission:ReturnType<typeof firstLaunchAdmission>;onIntent:(hive:string,name:string)=>void;onReceipt:(view:DeviceView)=>void;onNavigate:(page:'accounts'|'overview')=>void;nativeLanguageFeedback:ReactNode}){
+ const [diagnostic,setDiagnostic]=useState(false),[busy,setBusy]=useState(false),[checking,setChecking]=useState(false),[operationError,setOperationError]=useState<UiFailure|null>(null);
+ const working=useRef(false),mounted=useRef(true),sequence=useRef(0);
+ const returnToSetup=()=>{setDiagnostic(false);requestAnimationFrame(()=>document.querySelector<HTMLElement>('.first-launch-wizard h1')?.focus());};
+ useEffect(()=>{if(diagnostic)document.getElementById('first-launch-diagnostics-title')?.focus();},[diagnostic]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;sequence.current++;};},[]);
+ const instance=snapshot.native.metadata?.instance;
+ const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
+ const run=async(action?:()=>Promise<unknown>,check=false)=>{
+  if(working.current||!model)return;working.current=true;const attempt=++sequence.current;const active=()=>mounted.current&&attempt===sequence.current&&model.getSnapshot().native.metadata?.instance===instance;
+  (check?setChecking:setBusy)(true);if(!check)setOperationError(null);
+  try{if(model.getSnapshot().busy)await model.refresh();if(!active())return;await action?.();if(active())await model.refresh();if(active()&&!identityFailure(model.getSnapshot()))setOperationError(null);}
+  catch(cause){if(active()){setOperationError(normalizeFailure(cause,'device_pairing'));await model.refresh();}}
+  finally{working.current=false;if(active())(check?setChecking:setBusy)(false);}
+ };
+ const problem=snapshot.deviceContextFailure?.code!=='DEVICE_CONTEXT_UNCONFIGURED'?snapshot.deviceContextFailure:null;
+ const error=admission.failure??problem??snapshot.recoveryError??snapshot.deviceError??snapshot.error??snapshot.startupReadError??(snapshot.native.error?normalizeFailure(snapshot.native.error,'bridge_startup'):null)??null;
+ const fresh=snapshot.native.state==='ready'&&snapshot.bindingRevision!==undefined&&snapshot.deviceContextFailure?.code==='DEVICE_CONTEXT_UNCONFIGURED'&&snapshot.recoveryObservation==='absent'&&snapshot.device?.state==='unbound'&&!error&&snapshot.startup?.state==='ready';
+ return <>
+  <div hidden={diagnostic}>
+   <StartupRecoveryNotice snapshot={snapshot} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>setDiagnostic(true)}/>
+   {nativeLanguageFeedback}
+   <FirstLaunchWizard view={admission.view} context={snapshot.deviceContext} refreshStatus={snapshot.refresh} completed={admission.completed} initialLoading={!fresh&&!admission.view?.recovery&&!error} busy={busy} checking={checking} error={error} operationError={operationError} begin={(hive,name)=>{onIntent(hive,name);return run(async()=>{const view=await props.client.begin(hive,name);if(model?.getSnapshot().native.metadata?.instance===instance)onReceipt(view);});}} refresh={()=>run(()=>model?.recheckStartup()??Promise.resolve(),true)} open={()=>run(()=>props.client.open())} onNavigate={onNavigate} onDiagnostics={()=>setDiagnostic(true)}/>
+  </div>
+  {diagnostic&&<main className="first-launch-content"><h1 id="first-launch-diagnostics-title" tabIndex={-1}>{t('诊断')}</h1><button onClick={returnToSetup}>{t('返回设备设置')}</button><StartupRecoveryNotice snapshot={snapshot} diagnostics onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>{}}/><NativeDiagnosticsPage client={diagnostics} instance={snapshot.native.state==='ready'?instance:undefined} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id} onReport={model?.acceptDiagnosticReport} onNavigate={returnToSetup}/></main>}
+ </>;
+}
 function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeLanguageFeedback}:{props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
  const {native,device:view}=snapshot;
  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
@@ -146,6 +175,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
 }
 export function NativeApp(props:NativeProps){
  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
+ const [firstLaunch,setFirstLaunch]=useState<FirstLaunchSession>({});
  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
  const [preferencesTrusted,setPreferencesTrusted]=useState(false);
@@ -174,9 +204,12 @@ export function NativeApp(props:NativeProps){
  },[preferences.preferences.theme]);
  useEffect(()=>{
   const coordinator=createDesktopState({openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
-  setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
+  setModel(coordinator);const off=coordinator.subscribe(()=>{const next=coordinator.getSnapshot();setFirstLaunch(previous=>observeFirstLaunch(previous,next));setSnapshot(next);});
   return()=>{off();coordinator.dispose();};
  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
- return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
+ const nativeLanguageFeedback=localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>;
+ const admission=firstLaunchAdmission(firstLaunch,snapshot);
+ if(!admission.workspace)return <NativeFirstLaunch key={snapshot.native.metadata?.instance??'starting'} props={props} snapshot={snapshot} model={model} admission={admission} onIntent={(hive,name)=>setFirstLaunch(previous=>firstLaunchIntent(previous,model?.getSnapshot()??snapshot,hive,name))} onReceipt={view=>setFirstLaunch(previous=>firstLaunchReceipt(previous,model?.getSnapshot()??snapshot,view))} onNavigate={destination=>{if(!firstLaunchAdmission(firstLaunch,model?.getSnapshot()??snapshot).completed)return;setFirstLaunch(previous=>({...previous,dismissed:previous.attempt?.operationId,knownBinding:true}));setPage(destination);}} nativeLanguageFeedback={nativeLanguageFeedback}/>;
+ return <NativeWorkspace key={`${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeLanguageFeedback={nativeLanguageFeedback}/>;
 }

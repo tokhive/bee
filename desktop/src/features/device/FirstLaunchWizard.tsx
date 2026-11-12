@@ -92,7 +92,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
  };
  const status=refreshStatus?.state==='blocked'?'设备检查已暂停，请先处理当前问题，再重新检查设备。':refreshStatus?.state==='waiting'?'前次设备检查尚未结束，结果待确认。':error?refreshStatus?.nextRetryAt?'设备检查暂未完成，等待已安排的重试。':'设备状态尚未确认，请重新检查设备。':refreshStatus?.state==='reading'||refreshStatus?.state==='scheduled'?expired?'配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。':'完成网页确认后回到 Bee，此处会自动更新。':'设备状态尚未确认，请重新检查设备。';
  const stageCopy=phase==='draining'?'正在等待旧设备完成任务和结算。':phase==='redeeming'?'正在确认设备身份…':phase==='redemption_unknown'?'尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。':phase==='creation_unknown'?'未取得原请求的配对凭据。请在 Hive 控制台核对设备记录，当前不能安全地重新生成配对码。':phase==='expired'?'Hive 已确认配对码过期。':phase==='blocked'||phase==='awaiting_owner_confirmation'?'设备绑定暂时无法继续，请查看具体原因并导出诊断。':'';
- const canCheck=phase==='creation_unknown'||phase==='redemption_unknown'||waiting&&(!!error||refreshStatus?.state==='blocked'||refreshStatus?.state==='idle');
+ const canCheck=phase==='completed'&&!complete&&failures.length>0||phase==='creation_unknown'||phase==='redemption_unknown'||waiting&&(!!error||refreshStatus?.state==='blocked'||refreshStatus?.state==='idle');
  useEffect(()=>{hiveInput.current?.focus();},[]);
  useEffect(()=>{if(!busy){submitted.current=false;setSubmitting(false);}},[busy,view,error,operationError]);
  const submit=(event:FormEvent)=>{
@@ -123,6 +123,6 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
    {phase==='saving'&&<><p role="status">{w(checking?'正在检查绑定结果并继续保存…':transactionFailure?'设备身份已确认，本机保存尚未完成。':'正在保存设备配置…')}</p>{transactionFailure&&<><p>{w('请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。')}</p><div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('继续完成绑定')}</Button></div></>}</>}
    {copied&&<p role="status">{w(copied)}</p>}{copyFailure&&<WizardFailure failure={copyFailure}/>}
   </>}
-  {!complete&&(failures.length>0||canCheck||phase==='blocked'||phase==='awaiting_owner_confirmation')&&onDiagnostics&&<div className="first-launch-actions"><Button type="button" variant="ghost" onClick={onDiagnostics}>{w('导出诊断')}</Button></div>}
+  {!complete&&(failures.length>0||canCheck||phase==='blocked'||phase==='awaiting_owner_confirmation')&&onDiagnostics&&<div className="first-launch-actions"><Button type="button" variant="ghost" onClick={onDiagnostics}>{w('查看诊断')}</Button></div>}
  </main></div>;
 }

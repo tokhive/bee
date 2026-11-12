@@ -24,6 +24,9 @@ func TestCodexFileFailureIdentifiesCheckAndPath(t *testing.T) {
 		if detail.kind != want {
 			t.Fatalf("got %q want %q", detail.kind, want)
 		}
+		if want == "missing" && !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("missing credential must preserve the file absence cause: %v", err)
+		}
 	}
 }
 func TestClaudeFailureSeparatesTokenFromExpirationWithoutLeaking(t *testing.T) {

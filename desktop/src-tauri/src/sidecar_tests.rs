@@ -541,7 +541,11 @@ async fn account_native_commands_validate_typed_requests_without_expanding_gener
     let bridge = Bridge::start(fixture("accounts"));
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
-        .manage(bridge.clone())
+        .manage({
+            let route = crate::hive_switch::CurrentBridge::default();
+            route.replace(None, bridge.clone());
+            route
+        })
         .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::account_defaults,
@@ -1070,7 +1074,11 @@ async fn supply_native_commands_require_platform_and_an_explicit_boolean() {
     let bridge = Bridge::start(fixture("supply"));
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
-        .manage(bridge.clone())
+        .manage({
+            let route = crate::hive_switch::CurrentBridge::default();
+            route.replace(None, bridge.clone());
+            route
+        })
         .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::supply_status,
@@ -1129,7 +1137,11 @@ async fn runtime_native_commands_fix_stop_reason_and_keep_internal_actions_priva
     let bridge = Bridge::start(fixture("runtime"));
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
-        .manage(bridge.clone())
+        .manage({
+            let route = crate::hive_switch::CurrentBridge::default();
+            route.replace(None, bridge.clone());
+            route
+        })
         .manage(crate::experience::StartupGate::verified())
         .manage(crate::preferences::PreferencesStore::new(
             std::env::temp_dir().join(format!(
@@ -1197,7 +1209,11 @@ async fn authorize_native_commands_bind_operation_and_keep_shell_private() {
     let bridge = Bridge::start(fixture("authorize"));
     wait(&bridge, BridgePhase::Ready).await;
     let app = tauri::test::mock_builder()
-        .manage(bridge.clone())
+        .manage({
+            let route = crate::hive_switch::CurrentBridge::default();
+            route.replace(None, bridge.clone());
+            route
+        })
         .manage(crate::experience::StartupGate::verified())
         .invoke_handler(tauri::generate_handler![
             crate::commands::authorize_start,
@@ -1658,7 +1674,11 @@ async fn pending_command_bypasses_business_queue_and_timeout_events_persist_safe
         .unwrap_err();
     assert_eq!(cause.code, "RESPONSE_TIMEOUT");
     let app = tauri::test::mock_builder()
-        .manage(bridge.clone())
+        .manage({
+            let route = crate::hive_switch::CurrentBridge::default();
+            route.replace(None, bridge.clone());
+            route
+        })
         .invoke_handler(tauri::generate_handler![
             crate::commands::bridge_pending_requests
         ])

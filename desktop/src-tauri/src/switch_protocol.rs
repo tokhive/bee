@@ -87,7 +87,7 @@ fn work(v: &Value, zero: bool) -> Result<(), BridgeError> {
     }
     Ok(())
 }
-fn request(v: &Value) -> Result<(), BridgeError> {
+pub(crate) fn request(v: &Value) -> Result<(), BridgeError> {
     fields(
         v,
         &[
@@ -112,14 +112,14 @@ fn request(v: &Value) -> Result<(), BridgeError> {
         .map_err(|e| invalid(format!("drain origin rejected: {}: {}", e.code, e.message)))?;
     Ok(())
 }
-fn seal(v: &Value, original: &Value) -> Result<(), BridgeError> {
+pub(crate) fn seal(v: &Value, original: &Value) -> Result<(), BridgeError> {
     fields(v, &["id", "request"], "seal")?;
     if !hex(text(v, "id")?, false) || v["request"] != *original || v["id"] == original["id"] {
         return Err(invalid("seal original request/action mismatch"));
     }
     request(&v["request"])
 }
-fn release(v: &Value, original: &Value) -> Result<(), BridgeError> {
+pub(crate) fn release(v: &Value, original: &Value) -> Result<(), BridgeError> {
     fields(
         v,
         &["id", "request", "mode", "expected_epoch", "expected_lease"],
@@ -136,7 +136,7 @@ fn release(v: &Value, original: &Value) -> Result<(), BridgeError> {
     }
     request(&v["request"])
 }
-fn drain(v: &Value, original: &Value) -> Result<(), BridgeError> {
+pub(crate) fn drain(v: &Value, original: &Value) -> Result<(), BridgeError> {
     fields(
         v,
         &[

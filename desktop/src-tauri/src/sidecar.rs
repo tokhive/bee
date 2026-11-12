@@ -749,6 +749,13 @@ impl Bridge {
         self.0.tracker.diagnostics.subscribe()
     }
 
+    pub(crate) fn profile_mode(&self) -> crate::profiles::ProfileMode { self.0.launch.as_ref().map(LaunchSpec::profile_mode).unwrap_or(crate::profiles::ProfileMode::Current) }
+    pub(crate) fn startup_journal(&self, fallback: &std::path::Path) -> crate::startup_recovery::RecoveryJournal {
+        match self.0.launch.as_ref().and_then(|s|s.args.windows(2).find(|v|v[0]=="--profile-dir")).map(|v|std::path::PathBuf::from(&v[1])) {
+            Some(directory)=>crate::startup_recovery::RecoveryJournal::beside(&directory.join("bee-desktop.json")),
+            None=>crate::startup_recovery::RecoveryJournal::beside(fallback),
+        }
+    }
     pub fn status(&self) -> BridgeStatus {
         self.0.status.borrow().clone()
     }

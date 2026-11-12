@@ -1475,6 +1475,14 @@ impl HiveSwitch {
                     .effective_revision;
         }
         let view = self.control(leg, bridge, "inspect").await?;
+        if bridge.profile_mode() == ProfileMode::Prepare {
+            leg.network_revision = view["network_revision"].as_u64().ok_or_else(|| {
+                error(
+                    "HIVE_SWITCH_REPLY_INVALID",
+                    "prepared child inspect network_revision is not a validated integer",
+                )
+            })?;
+        }
         Ok(view)
     }
     async fn control(
@@ -1530,6 +1538,12 @@ impl HiveSwitch {
             .proxy_for(&prefs.preferences, scope.as_deref())?
             .to_owned();
         let revision = prefs.preferences.revision;
+        let effective =
+            crate::network::decode_network_status(&bridge.network_status().await?.result)?;
+        if effective.effective_revision == revision && effective.effective_proxy == proxy {
+            leg.network_revision = revision;
+            return Ok(());
+        }
         let reply = bridge
             .runtime_configure_network(crate::runtime_protocol::RuntimeNetworkConfig {
                 revision,

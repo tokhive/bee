@@ -210,7 +210,9 @@ func (r *DesktopRuntime) switchView(state localState, revision int64) DesktopSwi
 		connection = "connected"
 		lease = r.switching.lease
 	}
-	if !connected && r.device.ProfileMode() == DesktopProfileCurrent && r.switching.socketDone == nil {
+	admittedCurrent := r.device.ProfileMode() == DesktopProfileCurrent ||
+		r.device.ProfileMode() == DesktopProfileActivate && r.switching.proof != nil && r.switching.proof.AdmissionCompleted
+	if !connected && admittedCurrent && r.switching.socketDone == nil {
 		r.mu.Lock()
 		r.syncMu.Lock()
 		if c := r.connection; c != nil && c.active && c.ctx.Err() == nil {
@@ -389,10 +391,16 @@ func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchR
 		}
 		status, err = client.Release(ctx, *input.Release)
 		if err == nil && status.State == "released" {
-			r.stopSwitchSocket()
-			r.connectionGate.lock(context.Background())
-			r.handoff = &desktopConnectionHandoff{state: state, expires: time.Now().Add(30 * time.Second)}
-			r.connectionGate.unlock()
+			// An unsealed cancellation retains the original live connection and
+			// its admitted tasks. Only a sealed connection needs a new handoff.
+			if status.Receipt != nil {
+				r.stopSwitchSocket()
+				if err = r.connectionGate.lock(ctx); err != nil {
+					return zero, fmt.Errorf("Hive switch released connection handoff gate: sealed=true: %w", err)
+				}
+				r.handoff = &desktopConnectionHandoff{state: state, expires: time.Now().Add(30 * time.Second)}
+				r.connectionGate.unlock()
+			}
 			r.switching.sealing.Store(false)
 			r.mu.Lock()
 			r.presence.shutdown = false
@@ -486,7 +494,9 @@ func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchR
 			return zero, e
 		}
 	}
-	confirmedUnsealedCancel := input.Action == "drain_status" && r.device.ProfileMode() == DesktopProfileCurrent &&
+	admittedCurrent := r.device.ProfileMode() == DesktopProfileCurrent ||
+		r.device.ProfileMode() == DesktopProfileActivate && r.switching.proof != nil && r.switching.proof.AdmissionCompleted
+	confirmedUnsealedCancel := input.Action == "drain_status" && admittedCurrent &&
 		status.Receipt == nil && input.Release != nil && input.Release.Mode == "cancel" &&
 		status.Release != nil && *status.Release == *input.Release
 	if status.State == "released" && (input.Action == "drain_release" || confirmedUnsealedCancel) {

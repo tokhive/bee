@@ -1,0 +1,1 @@
+export{a as t}from"./i18n-BAUJDNs1.js";

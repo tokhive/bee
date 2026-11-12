@@ -23,6 +23,8 @@ mod network_protocol;
 mod native_integration_tests;
 #[cfg(all(test, unix))]
 mod native_retirement_tests;
+#[cfg(all(test, unix))]
+mod native_hive_switch_tests;
 mod notification_poll;
 mod notifications;
 mod preferences;

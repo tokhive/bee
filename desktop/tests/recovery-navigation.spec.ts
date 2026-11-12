@@ -16,7 +16,7 @@ test('binding replacement isolates unsaved settings drafts',async({page})=>{
 test('source repair navigates to a settings target and returns to the same platform draft',async({page})=>{
  await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(cmd:string,args:any)=>{if(cmd==='account_detect'&&args.request.platform==='openai')throw {code:'NETWORK_APPLY_REQUIRED',message:'saved network revision=3 effective=2',details:{check:'source_read',observed_at:new Date().toISOString(),evidence:{actual:'2',required:'3'}}};return invoke(cmd,args);};});
  await nav(page,'AI 账号').click();await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();
- const directory=page.getByRole('dialog').getByLabel('自定义目录',{exact:true});await directory.fill('/tmp/unsaved-source');await directory.press('Tab');
+ await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();const directory=page.getByRole('dialog').getByLabel('读取目录',{exact:true});await directory.fill('/tmp/unsaved-source');await directory.press('Tab');
  await page.getByRole('dialog').getByRole('button',{name:'查看设置',exact:true}).first().click();
  await expect(page.getByRole('tab',{name:'网络与代理',exact:true})).toHaveAttribute('aria-selected','true');await expect(page.getByLabel('本机 HTTP 代理',{exact:true})).toBeFocused();
  await page.getByRole('button',{name:'返回原处',exact:true}).click();
@@ -24,8 +24,8 @@ test('source repair navigates to a settings target and returns to the same platf
  expect(await calls(page,'network_save_proxy')).toBe(0);expect(await calls(page,'authorize_start')).toBe(0);expect(await calls(page,'account_action')).toBe(0);
 });
 test('unknown account result remains read only across navigation and a new instance clears the old operation',async({page})=>{
- await open(page);await nav(page,'AI 账号').click();const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
- await page.evaluate(()=>{(window as any).actionUnknown=true;});await card.getByRole('button',{name:'接入',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
+ await open(page);await nav(page,'AI 账号').click();const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入账号',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{(window as any).actionUnknown=true;});await card.getByRole('button',{name:'接入账号',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
  await expect.poll(()=>calls(page,'account_action')).toBe(1);await page.keyboard.press('Escape');await nav(page,'设置').click();await nav(page,'AI 账号').click();await page.clock.runFor(10100);expect(await calls(page,'account_action')).toBe(1);
  await page.evaluate(()=>{(window as any).actionUnknown=false;(window as any).emit('c'.repeat(32));});await page.clock.runFor(100);expect(await calls(page,'account_action')).toBe(1);
 });
@@ -47,10 +47,10 @@ test('a diagnostic report survives pages and a network change off-page invalidat
 });
 
 test('a newer diagnostic identity rejection blocks account submission and runtime start',async({page})=>{
- await open(page);await nav(page,'AI 账号').click();const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+ await open(page);await nav(page,'AI 账号').click();const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(card.getByRole('button',{name:'接入账号',exact:true})).toBeEnabled();
  await page.clock.runFor(100);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot'){result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:'device_replaced'},next_action:'overview'};}return result;};});
  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);
- await expect(page.locator('.nd-issues').getByText('此设备已被替换，原设备凭据已撤销。',{exact:true})).toBeVisible();await nav(page,'AI 账号').click();await expect(card.getByRole('button',{name:'接入',exact:true})).toBeDisabled();
+ await expect(page.locator('.nd-issues').getByText('此设备已被替换，原设备凭据已撤销。',{exact:true})).toBeVisible();await nav(page,'AI 账号').click();await expect(card.getByRole('button',{name:'接入账号',exact:true})).toBeDisabled();
  expect(await calls(page,'account_action')).toBe(0);expect(await calls(page,'runtime_start')).toBe(0);
 });
 
@@ -71,12 +71,12 @@ test('Claude inline source recovery keeps its platform, drafts and return focus 
  await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_detect'&&args.request.platform==='claude'){result.result.account.candidate.error={code:'permission_denied',check:'source_read',platform:'claude',message:'Claude fixture directory read denied',evidence:{permission_denied:'true'}};w.accounts.claude=result.result.account;}return result;};});
  await nav(page,'AI 账号').click();
  for(const [platform,draft] of [['OpenAI','/tmp/openai-draft'],['Claude','/tmp/claude-draft']]){
-  await page.getByRole('button',{name:platform+' 详情',exact:true}).click();await page.getByRole('dialog').getByLabel('自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:platform+' 详情',exact:true}).click();if(platform==='OpenAI')await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByLabel(platform==='OpenAI'?'读取目录':'自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
  }
  const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.locator('.account-conditions>summary').click();await row.getByRole('button',{name:'打开读取设置',exact:true}).first().click();
  const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
- await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/openai-draft');
+ await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('读取目录',{exact:true})).toHaveValue('/tmp/openai-draft');
  for(const command of ['account_action','authorize_start','authorize_cancel','runtime_start','supply_set_paused'])expect(await calls(page,command)).toBe(0);
 });
 

@@ -51,7 +51,7 @@ for(const width of [1080,820,600])test(`compact list evidence remains read-only 
  await trigger.click();await page.getByRole('button',{name:'关闭错误详情',exact:true}).click();await expect(trigger).toBeFocused();expect(await writes(page)).toEqual(before);
  await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByText('接单保持暂停。',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- const dir=resolve(import.meta.dirname,'../../docs/desktop/evidence/2026-11-11-compact-list');mkdirSync(dir,{recursive:true});await page.screenshot({path:resolve(dir,`native-${width}.png`)});
+ const dir=resolve(import.meta.dirname,'../test-results/compact-list');mkdirSync(dir,{recursive:true});await page.screenshot({path:resolve(dir,`native-${width}.png`)});
  await page.evaluate(()=>{document.documentElement.dataset.theme='dark'});await trigger.click();await page.screenshot({path:resolve(dir,`native-error-${width}-dark.png`)});
 });
 test('unknown windows and exhausted quota do not invent values or operation failures',async({page})=>{

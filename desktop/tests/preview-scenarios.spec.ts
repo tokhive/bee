@@ -82,10 +82,10 @@ test('preview controls reject stale sessions and messages from other sources',as
 const cases:[string,string|RegExp][]=[
  ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
  ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Hive 未连接'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
- ['account-reading','正在读取已有登录'],['account-empty','未找到所选凭证来源'],['account-candidate','已有登录，尚未接入'],['account-selected','已用 3%'],['account-error','permission_denied'],['account-expired','历史数据，已过期'],['account-change','尚未核对'],
+ ['account-reading','账号状态尚未确认'],['account-empty','未找到所选凭证来源'],['account-candidate','尚未接入 Bee'],['account-selected','已用 3%'],['account-error','没有读取所选凭证来源的权限'],['account-expired','上次记录'],['account-change','尚未核对'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
  ['check-background','可接单'],['check-expired','核对中…'],['check-waiting','等待自动重试…'],['check-retrying','重试中…'],['check-recovered','可接单'],['check-sequence','可接单'],
- ['quota-normal','已用 3%'],['quota-unknown','尚未核对'],['quota-expired','历史数据，已过期'],['quota-multiple','7 日 · opus'],['quota-over','已用 120%'],
+ ['quota-normal','已用 3%'],['quota-unknown','尚未核对'],['quota-expired','上次记录'],['quota-multiple','7 日 · opus'],['quota-over','已用 120%'],
  ['confirm-login','开始官方登录'],['confirm-select','确认接入'],['confirm-change','确认更换'],['confirm-clear','确认取消接入'],['account-detail','凭证读取方式'],
 ];
 for(const [scene,copy] of cases)test('scene renders formal state without invalid data or unintended writes: '+scene,async({page})=>{
@@ -179,15 +179,15 @@ test('confirmed account actions update only the fixture and preserve pause seman
  await openScene(page,'confirm-select');
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).accounts.openai.operation?.state)).toBe('succeeded');
- await expect(card(page).getByText('正在准备账号…',{exact:true}).first()).toBeVisible();
+ await expect(card(page).locator('.oa-identity')).toContainText('b'.repeat(16));
  expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['account_action']);
- expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(true);
+ expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(false);
  await page.getByRole('button',{name:'概览',exact:true}).click();
  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
  // The explicit selection prepares service; the shared model reads it back.
- await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toBeVisible({timeout:15000});
- expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(true);
+ await expect(card(page).getByRole('button',{name:'暂停接单',exact:true})).toBeVisible({timeout:15000});
+ expect(await page.evaluate(()=>(window as unknown as {paused:{openai:boolean}}).paused.openai)).toBe(false);
  expect((await commands(page)).filter(c=>c.command==='supply_set_paused')).toEqual([]);
  expect((await commands(page)).filter(c=>['runtime_start','runtime_stop'].includes(c.command))).toEqual([]);
 });
@@ -195,8 +195,8 @@ test('confirmed account actions update only the fixture and preserve pause seman
 for(const scene of ['confirm-change','account-change'])test('confirmed changed identity cannot inherit the prior account quota: '+scene,async({page})=>{
  await openScene(page,scene);
  if(scene==='account-change'){
-  await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();
-  await page.getByRole('button',{name:'换号',exact:true}).click();
+  await page.getByRole('button',{name:'核对账号变更',exact:true}).click();
+  await page.getByRole('button',{name:'确认换号',exact:true}).click();
  }
  await page.getByRole('button',{name:'确认更换',exact:true}).click();
  await page.getByRole('button',{name:'关闭',exact:true}).click();
@@ -214,7 +214,7 @@ for(const [scene,copy] of [
  ['settings-general','通用'],['settings-network','本机 HTTP 代理'],['settings-system','通知与启动'],['settings-about','关于'],
  ['diagnostics-running','诊断进行中'],['diagnostics-results','诊断'],['diagnostics-read-failed','报告读取已暂停'],['diagnostics-export-unknown','报告下载结果未确认'],
  ['update-downloading','下载'],['update-verified','安装'],['update-unknown','安装'],['update-failed','signature'],
- ['bridge-starting','正在读取 Bee'],['bridge-failed','exit=17'],['startup-blocked','本机设备'],
+ ['bridge-starting','正在启动 Bee'],['bridge-failed','exit=17'],['startup-blocked','本机设备'],
 ] as const)test('additional formal page accepts current DTO without invalid reply: '+scene,async({page})=>{
  test.setTimeout(50000);await openScene(page,scene);await expect(page.locator('body')).toContainText(copy,{timeout:35000});
  await expect(page.locator('body')).not.toContainText('REPLY_INVALID');

@@ -1725,4 +1725,8 @@ export const en: Record<string, string> = {
   "继续等待会保留 Bee。取消切换并退出可能中断任务；未确认的取消会保留，下次启动先核对原操作。": "Continue waiting to keep Bee open. Cancelling and quitting may interrupt work. An unconfirmed cancellation is saved and checked on the next launch.",
   "取消切换并退出": "Cancel switch and quit",
   "设备已配对，未自动开始贡献。": "Device paired without automatically starting contribution.",
+  "此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。": "This notification came from Hive {origin}. Select that address in the Hive list to review it.",
+  "查看 Hive 列表": "View Hive list",
+  "关闭通知提示": "Dismiss notification message",
+  "历史 Hive 地址归一化后冲突；原始记录已保留。请联系支持核对这些记录后再切换。": "Historical Hive addresses conflict after normalization. Original records are preserved. Contact support to reconcile them before switching.",
 };

@@ -66,10 +66,21 @@ test('原生错误保留本次错误码和诊断证据', async () => {
 test('notification clicks accept only fixed native page routes',async()=>{
  globals.isTauri=true;let callback=0;
  mockIPC((command,args)=>{if(command==='plugin:event|listen'){callback=(args as any).handler;return 1;}return;});
- const pages:string[]=[];const off=await createSystemBridge().onNotification!(page=>pages.push(page));
+ const pages:unknown[]=[];const off=await createSystemBridge().onNotification!(page=>pages.push(page));
  const runtime=(window as any).__TAURI_INTERNALS__;
  for(const payload of ['accounts','settings','https://unsafe.example','overview','diagnostics'])runtime.runCallback(callback,{payload});
  assert.deepEqual(pages,['accounts','settings','overview','diagnostics']);off();
+});
+test('native notification activation preserves source and its durable ownership decision',async()=>{
+ globals.isTauri=true;let callback=0;
+ mockIPC((command,args)=>{if(command==='plugin:event|listen'){callback=(args as any).handler;return 1;}return;});
+ const received:unknown[]=[];const off=await createSystemBridge().onNotification!(activation=>received.push(activation));
+ const activation={target:{page:'accounts',source:{profile_id:'a'.repeat(32),origin:'https://a.example'}},current_profile:'b'.repeat(32),can_navigate:false};
+ (window as any).__TAURI_INTERNALS__.runCallback(callback,{payload:activation});
+ const canonicalOrigins=['https://例子.test','https://[2001:0db8:0:0:0:0:0:1]','https://127.1'];
+ const accepted=canonicalOrigins.map(origin=>({...activation,target:{...activation.target,source:{...activation.target.source,origin}}}));
+ for(const payload of [...accepted,{...activation,target:{...activation.target,page:['accounts']}},{...activation,target:{...activation.target,source:{...activation.target.source,origin:'https://user:secret@a.example'}}}]) (window as any).__TAURI_INTERNALS__.runCallback(callback,{payload});
+ assert.deepEqual(received,[activation,...accepted]);off();
 });
 
 test('pending IPC and settlement use strict bounded native-only contracts',async()=>{

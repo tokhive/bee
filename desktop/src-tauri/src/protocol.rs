@@ -282,6 +282,7 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "network_status",
             "network_test",
             "notification_snapshot",
+            "desktop_switch",
         ]
         .contains(&value),
         "platform" => ["none", "openai", "claude"].contains(&value),
@@ -807,6 +808,21 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         Some(group)
     }).collect();
     candidates.extend(login_candidates);
+    let switch_candidates: Vec<_> = candidates.iter()
+        .filter(|group| group.iter().any(|v| v == "runtime_restore"))
+        .map(|group| {
+            let mut group = group.clone();
+            group.push("desktop_switch".into());
+            group
+        }).collect();
+    for group in &switch_candidates {
+        for mode in [crate::profiles::ProfileMode::Prepare, crate::profiles::ProfileMode::Activate] {
+            candidates.push(group.iter()
+                .filter(|method| crate::switch_protocol::allowed(mode, method))
+                .cloned().collect());
+        }
+    }
+    candidates.extend(switch_candidates);
     if !candidates.contains(&metadata.capabilities) {
         let expected = candidates
             .iter()

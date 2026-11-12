@@ -129,6 +129,11 @@ func (o *DesktopAuthorizer) Start(ctx context.Context, request DesktopAuthorizeR
 	}
 	o.accounts.lifecycleMu.Lock()
 	defer o.accounts.lifecycleMu.Unlock()
+	if o.accounts.runtime != nil {
+		if err := o.accounts.runtime.switchMaintenanceBarrier(); err != nil {
+			return DesktopOperation{}, err
+		}
+	}
 	o.mu.Lock()
 	defer o.mu.Unlock()
 	if o.accounts.device != nil {

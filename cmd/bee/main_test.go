@@ -354,3 +354,67 @@ func TestHelpListsDesktopMachineEntry(t *testing.T) {
 		t.Fatalf("desktop entry missing from help: output=%q; error=%v", out, err)
 	}
 }
+
+func TestDesktopProfilePrepareRestrictsRealBridge(t *testing.T) {
+	profile, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := beeCommand(t, "desktop", "--profile-dir", profile, "--mode", "prepare")
+	in, err := cmd.StdinPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	out, err := cmd.StdoutPipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var diagnostics bytes.Buffer
+	cmd.Stderr = &diagnostics
+	if err = cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() {
+		in.Close()
+		if cmd.ProcessState == nil {
+			cmd.Process.Kill()
+			cmd.Wait()
+		}
+	}()
+	decoder := json.NewDecoder(out)
+	call := func(method string, params any) map[string]any {
+		t.Helper()
+		if err := json.NewEncoder(in).Encode(map[string]any{"protocol": 1, "id": "profile-test", "method": method, "params": params}); err != nil {
+			t.Fatal(err)
+		}
+		var frame map[string]any
+		if err := decoder.Decode(&frame); err != nil {
+			t.Fatalf("decode %s: %v diagnostics=%s", method, err, diagnostics.String())
+		}
+		return frame
+	}
+	hello := call("hello", map[string]any{})
+	caps := hello["result"].(map[string]any)["capabilities"].([]any)
+	for _, denied := range []string{"runtime_restore", "runtime_enable_presence", "runtime_start", "account_action", "authorize_start", "supply_set_paused"} {
+		for _, cap := range caps {
+			if cap == denied {
+				t.Fatalf("prepare advertised forbidden capability %s", denied)
+			}
+		}
+	}
+	got := call("runtime_restore", map[string]any{})
+	if got["error"] == nil {
+		t.Fatalf("prepare accepted restore: %v", got)
+	}
+	if got := call("device_context", map[string]any{}); got["error"] != nil {
+		t.Fatal(got)
+	}
+	if _, err := os.Stat(filepath.Join(profile, "bee-desktop.json.lock")); err != nil {
+		t.Fatalf("fixed profile lock missing: %v", err)
+	}
+	call("shutdown", map[string]any{})
+	in.Close()
+	if err := cmd.Wait(); err != nil {
+		t.Fatalf("exit: %v diagnostics=%s", err, diagnostics.String())
+	}
+}

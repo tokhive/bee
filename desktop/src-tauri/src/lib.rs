@@ -10,6 +10,7 @@ mod diagnostics_protocol;
 mod experience;
 mod startup_recovery;
 pub(crate) mod profiles;
+pub(crate) mod switch_protocol;
 mod lifecycle;
 // Native acceptance probes share the production notification locale policy.
 pub use lifecycle::{NativeLanguage, NativeLocale};

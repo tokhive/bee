@@ -2108,3 +2108,31 @@ async fn explicit_management_reconnect_reaps_old_child_and_respects_exit_freeze(
     assert_eq!(bridge.reconnect().await.unwrap_err().code,"OWNED_EXIT_PENDING");
     bridge.stop().await.unwrap();
 }
+
+#[tokio::test]
+async fn profile_prepare_blocks_runtime_restore_before_ipc() {
+ use std::io::{Read,Write};
+ let listener=std::net::TcpListener::bind("127.0.0.1:0").unwrap();listener.set_nonblocking(true).unwrap();
+ let origin=format!("http://{}",listener.local_addr().unwrap());
+ let stopped=Arc::new(AtomicBool::new(false));let stop=stopped.clone();
+ let server=std::thread::spawn(move||{while !stop.load(Ordering::SeqCst){match listener.accept(){Ok((mut stream,_))=>{stream.set_read_timeout(Some(Duration::from_secs(2))).unwrap();let mut bytes=[0;4096];let read=stream.read(&mut bytes).unwrap();let request=String::from_utf8_lossy(&bytes[..read]);assert!(request.starts_with("GET /api/bee/device-drain-capabilities HTTP/1.1"));assert!(request.to_ascii_lowercase().contains("authorization: bearer bee_"));let body=r#"{"version":1,"device_drain":1}"#;write!(stream,"HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",body.len()).unwrap();},Err(e)if e.kind()==std::io::ErrorKind::WouldBlock=>std::thread::sleep(Duration::from_millis(5)),Err(e)=>panic!("synthetic capability listener: {e}")}}});
+ let tmp=tempfile::tempdir().unwrap();let canonical=tmp.path().canonicalize().unwrap();
+ let store=crate::profiles::ProfileStore::open(canonical.join("tokhive")).unwrap();let profile=store.register(&origin).unwrap();
+ let state=serde_json::json!({"hive":origin,"name":"Synthetic Mac","credential":format!("bee_{}","b".repeat(43)),"identity":{"id":"switch-device","name":"Synthetic Mac","owner_id":"switch-owner","owner_email":"synthetic@example.com"}});
+ std::fs::write(profile.device_path(),serde_json::to_vec(&state).unwrap()).unwrap();
+ #[cfg(unix)]{use std::os::unix::fs::PermissionsExt;std::fs::set_permissions(profile.device_path(),std::fs::Permissions::from_mode(0o600)).unwrap();}
+ let source_path=std::path::PathBuf::from(env!("BEE_SOURCE_FILE"));
+ let source=BuildSource::parse(&std::fs::read(&source_path).unwrap(),env!("BEE_TARGET"),env!("BEE_REVISION"),env!("BEE_TEE_REVISION")).unwrap();
+ let program=std::path::PathBuf::from(source_path.to_str().unwrap().strip_suffix(".source.json").unwrap());
+ let spec=LaunchSpec{program,bundle:None,args:vec!["desktop".into()],source,timeout:Duration::from_secs(5)}.for_profile(&profile,crate::profiles::ProfileMode::Prepare).unwrap();
+ let bridge=Bridge::start(spec);wait(&bridge,BridgePhase::Ready).await;
+ let err=bridge.runtime_restore().await.unwrap_err();assert_eq!(err.code,"PROFILE_MODE_RESTRICTED");assert!(bridge.pending_requests().requests.is_empty());
+ let context=bridge.device_context().await.unwrap();let revision=context.result["context"]["binding_revision"].clone();
+ let reply=bridge.switch_control(serde_json::json!({"action":"capabilities","binding_revision":revision,"network_revision":0,"operation":null,"seal":null,"release":null})).await.unwrap();
+ assert_eq!(reply.result["switch"]["capabilities"],serde_json::json!({"version":1,"device_drain":1}));assert_eq!(reply.result["switch"]["maintenance_allowed"],false);
+ for (field,value) in [("profile_id","stale-profile"),("instance","stale-instance")] {
+ let mut params=serde_json::json!({"action":"inspect","profile_id":profile.id,"instance":bridge.status().metadata.unwrap().instance,"binding_revision":revision,"network_revision":0,"operation":null,"seal":null,"release":null});params[field]=serde_json::json!(value);
+ let reply=bridge.request("desktop_switch",params,Duration::from_secs(5)).await.unwrap();assert_eq!(reply.result["error"]["code"],"HIVE_SWITCH_FAILED");assert!(reply.result["error"]["message"].as_str().unwrap().contains("context changed"));
+ }
+ bridge.ping().await.unwrap();bridge.stop().await.unwrap();stopped.store(true,Ordering::SeqCst);server.join().unwrap();
+}

@@ -1,0 +1,39 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/src-tauri)
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bee-desktop` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 15.28s
+     Running unittests src/lib.rs (/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-1f903c1be3a0ddc0)
+
+running 1 test
+test hive_switch::tests::historical_conflict_blocks_target_preparation_and_keeps_current_binding ... FAILED
+
+failures:
+
+---- hive_switch::tests::historical_conflict_blocks_target_preparation_and_keeps_current_binding stdout ----
+
+thread 'hive_switch::tests::historical_conflict_blocks_target_preparation_and_keeps_current_binding' (42056213) panicked at src/hive_switch.rs:2213:82:
+called `Result::unwrap_err()` on an `Ok` value: SwitchSnapshot { profiles: ProfileIndex { version: 1, revision: 2, profiles: [ProfileEntry { id: "157346d6be1519cdc26070f19dccd753", origin: "https://a.example", raw_origin: "https://a.example", binding_revision: 1, binding_digest: Some("19718e79abf40bc67e67ec491c1144435c9d01367d07f9683ecdef6512b446e7"), blockers: [] }, ProfileEntry { id: "f050e18825aa25bca2366a7f232f19cb", origin: "https://b.example", raw_origin: "https://b.example", binding_revision: 0, binding_digest: None, blockers: ["historical_origin_conflict:https://b.example"] }], current_profile: Some("157346d6be1519cdc26070f19dccd753"), committed_operation: None, migration_id: Some("8bf32046fc5d0df67729f435426c901a"), migration_blockers: [], historical_conflicts: [HistoricalConflict { origin: "https://B.example:443/", canonical_origin: "https://b.example", source: "legacy_scope" }, HistoricalConflict { origin: "https://b.example", canonical_origin: "https://b.example", source: "legacy_scope" }] }, operation: Some(SwitchRecord { version: 1, id: "347e213aa901862b5c24522ff6771f08a07126ab7745b06d", source: SwitchLeg { profile: "157346d6be1519cdc26070f19dccd753", binding_revision: None, binding_digest: None, instance: None, process_binding_revision: None, network_revision: 0, operation: None, seal: None, release: None, status: None, pending: None, workers_stopped: false, child_reaped: false, ipc_empty: false, verified: false }, target: SwitchLeg { profile: "f050e18825aa25bca2366a7f232f19cb", binding_revision: None, binding_digest: None, instance: None, process_binding_revision: None, network_revision: 0, operation: None, seal: None, release: None, status: None, pending: None, workers_stopped: false, child_reaped: false, ipc_empty: false, verified: false }, phase: "preparing_target", source_index_operation: None, commit_revision: None, committed: false, cancel_requested: false, quit_requested: false, observation_round: 1, observation_started: Some("2026-11-12T15:53:29.400402Z"), query_failures: 0, observation_last: Some("2026-11-12T15:53:31.101201Z"), observation_blocked: false, failure: None }), observation: Observation { state: "observing", reason: None, next_query_at: Some("2026-11-12T15:53:33.101201Z") }, actions: SwitchActions { can_cancel: true, can_continue: false, can_observe: true, target_pairing: true }, current_scope: Some(CurrentScope { profile_id: "157346d6be1519cdc26070f19dccd753", instance: "d6af9a2709b853454958654f3539aa66" }), profile_identities: [] }
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    hive_switch::tests::historical_conflict_blocks_target_preparation_and_keeps_current_binding
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 357 filtered out; finished in 1.85s
+
+error: test failed, to rerun pass `--lib`

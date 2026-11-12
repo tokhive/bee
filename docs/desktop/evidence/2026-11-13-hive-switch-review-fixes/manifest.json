@@ -1,0 +1,42 @@
+{
+  "base": "98c5ded8e6fa73c5cb23d229ebb49f7190b326d4",
+  "source_commits": [
+    "d13851d",
+    "98ce163"
+  ],
+  "files": {
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/README.md": "6426b62c4351b5363780761d9a1ca26414c1757bbc0d131080ea23cf2253ed00",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/cancel-restart-green.log": "e7a2c76746c7dcc68015420d981eca184fcc8e8ff12b709968d3724571bb8892",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-conflict-dark-scrolled.png": "dbb59df5d365075225e4cfd5440644638ea1a2fe772018ae9d1ac02ad3de6bcd",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-conflict-dark.png": "6c9b8b3d8987b5de31b90f2a9c58d38e23bb6806484222c5d24dc7265909dbe1",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-conflict-light.png": "6e1c4fe328dd0c14b6b69d67539de7b856456bb209e0d7f1e0f32ee1e83786f8",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-coordinator-green.log": "4046ef01cc3b48f4b5eaefb022eb16770063bf76f147a17adb32f1fc2f140f0f",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-coordinator-red.log": "cd5ead95029031a2927f4fb57c5a1ca9a73e959e77ee0daafbc7d4fe939ddbf0",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-green.log": "2fd54025c74a29cff06bb425090a4004a2fc05be7c5cad27b85caf676a6fb221",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/history-red.log": "55139623d936ab9e25452382a3ffa1c52e74d67b0a9963ae5218282875d7f3cb",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/linux-review-final-compile.log": "7cf1a06b513990c44f2a765b35f0a40f13646f1d13356291b31d730b065885b3",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/linux-review-source-manifest.json": "9a965833e3bda8dea2a09fe106bfe5b1d3d118e0e5377118bd83750cf9e21193",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/main-frozen-conflict-light.png": "4b98937a3e06c5736be93613b0f626c2a95668ca19cc6765893aac35799ad6d2",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/main-frozen-notification-dark.png": "321125188985679ad917fb2982e7d24d7f4a54e4bea24b6e2448df4c76260f42",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/main-history-conflict-light.png": "4b98937a3e06c5736be93613b0f626c2a95668ca19cc6765893aac35799ad6d2",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/main-notification-source-dark.png": "321125188985679ad917fb2982e7d24d7f4a54e4bea24b6e2448df4c76260f42",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/main-preview-final-green.log": "7c7c262a6bb9b16043dfc5c0441946f72c726753a95929731491c8e730061bd8",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/node-final-green.log": "9e2ec1d6f2a2fb9368e0ba2c4c82760f58789f53dbd7567a9dcc18d5d425fcbc",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-activation-green.log": "91ecf68faabe7517630edf4beb6de9846df7f9e41817c162ad00a3d7c302d044",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-activation-red.log": "7811f6efe32eb0aaaa3c0c5bd1a05913573a6fcc34010263803b3331f3b95628",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-bridge-green.log": "6fc7387f43a81fd98eeaf1ee9a9650a3432567c119a46eb534bd3b2ae0205b85",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-bridge-red.log": "6875efaab92efccf85c9d7ca743610b9480986d65b38db837776688d6b267325",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-final-green.log": "42b6ac4ccbf619f5b2c8ad64f05ac2d96c0cf34811d2bb83a8bfe524caf26891",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-green.log": "8a909b0b4597e035bd4cde03cae6cb9b2e9a3f03b0606ddf87b88cb24b5e133b",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-legacy-green.log": "6461fec5262bd21f1bbfdfe8d0c1051ffd1c85ddd6d100677fa9fa6e6d1d58b0",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-legacy-red.log": "c03e2bd43ca283ae4c07c96b46fd70fb24f854d2643e9615b0f82f7faa0495b5",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-origin-red.log": "d3f2b6ed57a94c01085d4aaa1d8afde974057112cf74fa886a0758e2d8c27137",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-red.log": "c075fb96b38d689f7b71cec9835339b1097d65d1de55a6eb8f501334c1059413",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/notification-source-dark.png": "8d95a280f5238f848befe3d1413562fc1e7c7350ff2a5c68a49386c3c1272986",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/rust-affected.log": "972a3f8296ea3d220902ce4dda35b7e35af05c0033d94a53fbe61fa4aac3aa2a",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/typecheck-final.log": "0a95c62b8dcf7ce54db15de1911b6dc50d873db0bc5da93e4708bbfbf3a3b75b",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/ui-full-final-green.log": "ebcbc2caf9e3f6d5442f67332f81e39374f298edee77568284b139195b2ccc49",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/ui-green.log": "1d1a2fef0906fa291623aacd928b032fcc4a2ee057243da6192926fe743da278",
+    "docs/desktop/evidence/2026-11-13-hive-switch-review-fixes/ui-red.log": "1dd26b54c25e6659b7fb7f1ffeec7195d63b3d9b72c500b6859fdcef228af3d3"
+  }
+}

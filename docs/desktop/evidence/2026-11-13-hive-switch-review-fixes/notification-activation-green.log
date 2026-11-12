@@ -1,0 +1,26 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/src-tauri)
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bee-desktop` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 16.68s
+     Running unittests src/lib.rs (/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-1f903c1be3a0ddc0)
+
+running 1 test
+test notifications::tests::delivered_hive_notice_checks_durable_current_at_activation_and_global_routes_stay_available ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 359 filtered out; finished in 0.06s
+

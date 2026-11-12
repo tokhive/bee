@@ -1,0 +1,36 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/src-tauri)
+error[E0425]: cannot find function `activate_target` in this scope
+   --> src/notifications_tests.rs:130:13
+    |
+130 |     assert!(activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles)).can_navigate);
+    |             ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0425]: cannot find function `activate_target` in this scope
+   --> src/notifications_tests.rs:132:22
+    |
+132 |     let activation = activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles));
+    |                      ^^^^^^^^^^^^^^^ not found in this scope
+
+error[E0618]: expected function, found `notifications::Notice`
+   --> src/notifications_tests.rs:137:29
+    |
+ 99 | fn notice() -> Notice {
+    | --------------------- this function of the same name is available here, but it's shadowed by the local binding
+...
+126 |     let mut notice = notice();
+    |         ---------- `notice` has type `notifications::Notice`
+...
+137 |     assert!(activate_target(notice().target(), None).can_navigate);
+    |                             ^^^^^^--
+    |                             |
+    |                             call expression requires function
+
+error[E0425]: cannot find function `activate_target` in this scope
+   --> src/notifications_tests.rs:137:13
+    |
+137 |     assert!(activate_target(notice().target(), None).can_navigate);
+    |             ^^^^^^^^^^^^^^^ not found in this scope
+
+Some errors have detailed explanations: E0425, E0618.
+For more information about an error, try `rustc --explain E0425`.
+error: could not compile `bee-desktop` (lib test) due to 4 previous errors

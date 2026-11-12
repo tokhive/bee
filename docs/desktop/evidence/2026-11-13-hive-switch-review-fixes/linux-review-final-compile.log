@@ -1,0 +1,82 @@
+   Compiling bee-desktop v0.1.0 (/qa/source/desktop/src-tauri)
+warning: method `status` is never used
+  --> src/experience.rs:71:12
+   |
+51 | impl StartupGate {
+   | ---------------- method in this implementation
+...
+71 |     pub fn status(&self, status: BridgeStatus) -> BridgeStatus {
+   |            ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: method `startup_journal` is never used
+   --> src/profiles.rs:285:19
+    |
+257 | impl ProfileContext {
+    | ------------------- method in this implementation
+...
+285 |     pub(crate) fn startup_journal(&self) -> crate::startup_recovery::RecoveryJournal {
+    |                   ^^^^^^^^^^^^^^^
+
+warning: method `restore_current_admission` is never used
+   --> src/hive_switch.rs:747:25
+    |
+629 | impl HiveSwitch {
+    | --------------- method in this implementation
+...
+747 |     pub(crate) async fn restore_current_admission(&self) -> Result<(), BridgeError> {
+    |                         ^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: method `apply_saved` is never used
+   --> src/network.rs:446:18
+    |
+254 | impl NetworkController {
+    | ---------------------- method in this implementation
+...
+446 |     pub async fn apply_saved(
+    |                  ^^^^^^^^^^^
+
+warning: function `click_route` is never used
+   --> src/notifications.rs:553:4
+    |
+553 | fn click_route(notice: &Notice) -> String {
+    |    ^^^^^^^^^^^
+
+warning: function `parse_click_route` is never used
+   --> src/notifications.rs:568:4
+    |
+568 | fn parse_click_route(route: &str) -> Option<NotificationTarget> {
+    |    ^^^^^^^^^^^^^^^^^
+
+warning: method `restore_when_ready` is never used
+  --> src/runtime.rs:53:25
+   |
+51 | impl Bridge {
+   | ----------- method in this implementation
+52 |     // Called once at App startup, after handshake. A failed child is never restarted.
+53 |     pub(crate) async fn restore_when_ready(&self) -> Result<(), BridgeError> {
+   |                         ^^^^^^^^^^^^^^^^^^
+
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+
+warning: function `verify_startup` is never used
+   --> src/update_install.rs:191:21
+    |
+191 | pub(crate) async fn verify_startup(
+    |                     ^^^^^^^^^^^^^^
+
+warning: `bee-desktop` (lib) generated 9 warnings
+    Finished `dev` profile [unoptimized] target(s) in 36.52s

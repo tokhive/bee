@@ -1,0 +1,14 @@
+✔ 浏览器没有原生桥时明确失败，不能模拟握手成功 (1.167541ms)
+✔ 原生桥仅调用状态和 ping，订阅可重复清理 (5.820583ms)
+✔ 原生错误保留本次错误码和诊断证据 (0.458042ms)
+✔ notification clicks accept only fixed native page routes (0.560708ms)
+✔ native notification activation preserves source and its durable ownership decision (1.229708ms)
+✔ pending IPC and settlement use strict bounded native-only contracts (0.685792ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 6
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 122.110375

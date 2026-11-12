@@ -1,0 +1,31 @@
+
+> bee-desktop@0.1.0 test:preview
+> playwright test --config playwright.preview.config.ts preview-hive-switch.spec.ts
+
+[WebServer] (node:95163) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 4 workers
+
+(node:95164) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95167) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95166) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:95165) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 [chromium] › tests/preview-hive-switch.spec.ts:26:1 › historical conflict is explained and disables only the affected saved target (1.9s)
+  ✓   3 [chromium] › tests/preview-hive-switch.spec.ts:36:1 › first target pairing retains the fixed Hive origin before a device config exists (1.9s)
+  ✓   4 [chromium] › tests/preview-hive-switch.spec.ts:44:1 › saved list supports keyboard close and keeps entered URL and background operation (2.6s)
+  ✓   2 [chromium] › tests/preview-hive-switch.spec.ts:6:1 › delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available (2.9s)
+  ✓   7 [chromium] › tests/preview-hive-switch.spec.ts:58:1 › handoff progress stays visible when the ordinary source bridge is unavailable (1.4s)
+  ✓   6 [chromium] › tests/preview-hive-switch.spec.ts:54:1 › first profile gate permits pairing and preserves the entered Hive (2.1s)
+  ✓   5 [chromium] › tests/preview-hive-switch.spec.ts:50:1 › unknown and expired observation show no percent and continue the original operation (2.5s)
+  ✓   8 [chromium] › tests/preview-hive-switch.spec.ts:61:1 › target credential rejection uses dedicated recovery and keeps A identity until commit (1.5s)
+  ✓   9 [chromium] › tests/preview-hive-switch.spec.ts:66:1 › main preview includes compact switching in both overview templates and preserves focus and failure input (1.3s)
+  ✓  10 [chromium] › tests/preview-hive-switch.spec.ts:75:1 › native exit request keeps the original operation and requires an explicit decision (1.4s)
+  ✓  12 [chromium] › tests/preview-hive-switch.spec.ts:93:1 › native add rejection preserves the URL, device name and saved profiles (1.7s)
+  ✓  11 [chromium] › tests/preview-hive-switch.spec.ts:84:1 › committed B remains current with no account selection and after an account source error (2.0s)
+
+  12 passed (8.4s)

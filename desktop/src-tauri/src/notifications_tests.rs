@@ -101,7 +101,42 @@ fn notice() -> Notice {
         identity: "a".repeat(64),
         platform: NotificationPlatform::Openai,
         problem: NotificationProblem::AuthorizationRejected,
+        source: None,
     }
+}
+#[test]
+fn delivered_notification_retains_its_hive_in_body_and_activation_route() {
+    let notice: Notice = serde_json::from_value(serde_json::json!({
+        "identity":"a".repeat(64),"platform":"openai","problem":"authorization_rejected",
+        "source":{"profile_id":"1".repeat(32),"origin":"https://a.example"}
+    })).unwrap();
+    assert!(notice.body(NativeLocale::Zh).contains("Hive：https://a.example"));
+    assert!(notice.body(NativeLocale::En).contains("Hive: https://a.example"));
+    let target = serde_json::to_value(parse_click_route(&click_route(&notice))).unwrap();
+    assert_eq!(target["source"]["profile_id"], "1".repeat(32));
+    assert_eq!(target["source"]["origin"], "https://a.example");
+}
+#[test]
+fn delivered_hive_notice_checks_durable_current_at_activation_and_global_routes_stay_available() {
+    let f = Fixture::new(Permission::Granted);
+    let profiles = crate::profiles::ProfileStore::open(f.dir.join("profiles")).unwrap();
+    let a = profiles.register("https://a.example").unwrap();
+    let b = profiles.register("https://b.example").unwrap();
+    profiles.commit_current(profiles.snapshot().unwrap().revision, &a.id, &"a".repeat(48)).unwrap();
+    let global = notice().target();
+    let mut notice = notice();
+    notice.source = Some(NotificationSource { profile_id: a.id.clone(), origin: a.origin });
+    f.service().reconcile(true, &[NotificationEvent::Problem { notice: notice.clone(), eligible: true }]).unwrap();
+    let delivered_route = click_route(&notice);
+    assert!(activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles)).can_navigate);
+    profiles.commit_current(profiles.snapshot().unwrap().revision, &b.id, &"b".repeat(48)).unwrap();
+    let activation = activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles));
+    assert!(!activation.can_navigate);
+    assert_eq!(activation.current_profile.as_deref(), Some(b.id.as_str()));
+    assert_eq!(activation.target.source, notice.source);
+    assert_eq!(profiles.snapshot().unwrap().current_profile, Some(b.id));
+    assert!(activate_target(global, None).can_navigate);
+    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
 }
 fn active() -> NotificationEvent {
     NotificationEvent::Problem {
@@ -168,6 +203,16 @@ fn notifications_os_accepted_is_persistent_and_not_read() {
     let raw = std::fs::read_to_string(f.path()).unwrap();
     assert!(!raw.contains("read") && !raw.contains("seen"));
     assert_eq!(f.ledger().records[0].state, DeliveryState::Accepted);
+}
+#[test]
+fn legacy_delivered_notice_without_source_remains_suppressed_after_upgrade() {
+    let f = Fixture::new(Permission::Granted);
+    f.service().reconcile(true, &[active()]).unwrap();
+    let mut scoped = notice();
+    scoped.source = Some(NotificationSource { profile_id:"1".repeat(32), origin:"https://a.example".into() });
+    f.service().reconcile(true, &[NotificationEvent::Problem { notice: scoped, eligible: true }]).unwrap();
+    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
+    assert!(f.ledger().records[0].notice.source.is_none(), "historical delivery cannot be silently attributed");
 }
 
 #[test]
@@ -287,7 +332,7 @@ fn notifications_untrusted_fields_and_routes_are_rejected() {
         .is_err());
     assert_eq!(
         parse_click_route(&click_route(&notice())),
-        Some(NotificationPage::Accounts)
+        Some(notice().target())
     );
     assert_eq!(parse_click_route("bee.accounts.abcdef"), None);
     assert_eq!(
@@ -298,7 +343,7 @@ fn notifications_untrusted_fields_and_routes_are_rejected() {
     offline.problem = NotificationProblem::Offline;
     assert_eq!(
         parse_click_route(&click_route(&offline)),
-        Some(NotificationPage::Diagnostics)
+        Some(offline.target())
     );
     assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 0);
 }

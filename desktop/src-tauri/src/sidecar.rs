@@ -1278,6 +1278,7 @@ impl Bridge {
         let startup_network = matches!(
             method,
             "desktop_switch"
+                | "device_begin"
                 | "device_status"
                 | "device_context"
                 | "device_recovery_prepare"
@@ -1539,7 +1540,7 @@ async fn session(
                     let cause = timeout_error(request, id, fully_sent, now);
                     request.timed_out = true;
                     if let Some(details) = &cause.details {
-                        let _ = tracker.diagnostics.send(serde_json::json!({"time":details.observed_at,
+                        let _ = tracker.diagnostics.send(serde_json::json!({"instance":instance,"time":details.observed_at,
                             "level":"warning", "module":"bridge", "platform":request_platform(request),
                             "code":"request_timed_out", "evidence":details.evidence}));
                     }
@@ -1655,7 +1656,7 @@ async fn session(
                         tracker.pending.lock().unwrap().remove(&id);
                         let mut details = timeout_error(&request, &id, true, Instant::now()).details.expect("request evidence");
                         details.evidence.insert("in_flight".into(), "false".into());
-                        let _ = tracker.diagnostics.send(serde_json::json!({"time":details.observed_at,
+                        let _ = tracker.diagnostics.send(serde_json::json!({"instance":instance,"time":details.observed_at,
                             "level":"info", "module":"bridge", "platform":request_platform(&request),
                             "code":"request_settled", "evidence":details.evidence}));
                         let _ = tracker.settled.send(RequestSettled { instance: instance.clone(), id,

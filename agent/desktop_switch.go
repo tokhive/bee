@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -234,7 +235,28 @@ func (r *DesktopRuntime) switchView(state localState, revision int64) DesktopSwi
 // SwitchControl serializes the native coordinator's machine actions. It never
 // interprets missing/unknown responses as completion and never clears a guard
 // before the strict matching server seal has been durably saved.
-func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchRequest) (DesktopSwitchView, error) {
+func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchRequest) (_ DesktopSwitchView, failure error) {
+	defer func() {
+		if failure == nil {
+			return
+		}
+		var rejected *DeviceDrainHTTPError
+		var transport *deviceDrainRequestError
+		if !errors.As(failure, &rejected) && !errors.As(failure, &transport) {
+			return
+		}
+		// Keep the typed HTTP/transport evidence across private IPC. The App
+		// must classify bounded query retries without guessing from error text.
+		evidence := map[string]string{}
+		if rejected != nil {
+			evidence["http_status"] = strconv.Itoa(rejected.Status)
+		}
+		if transport != nil {
+			evidence["failure_kind"] = desktopRequestFailureCode(transport.cause)
+		}
+		failure = &DesktopFailure{Code: "HIVE_SWITCH_FAILED", Message: failure.Error(), Cause: failure,
+			Details: &DesktopFailureDetails{Check: "device_drain", ObservedAt: time.Now().UTC().Format(time.RFC3339Nano), Evidence: evidence}}
+	}()
 	r.switching.serial.Lock()
 	defer r.switching.serial.Unlock()
 	var zero DesktopSwitchView
@@ -464,7 +486,10 @@ func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchR
 			return zero, e
 		}
 	}
-	if status.State == "released" && input.Action == "drain_release" {
+	confirmedUnsealedCancel := input.Action == "drain_status" && r.device.ProfileMode() == DesktopProfileCurrent &&
+		status.Receipt == nil && input.Release != nil && input.Release.Mode == "cancel" &&
+		status.Release != nil && *status.Release == *input.Release
+	if status.State == "released" && (input.Action == "drain_release" || confirmedUnsealedCancel) {
 		r.switching.frozen.Store(false)
 		r.switching.maintenance.Store(true)
 	}

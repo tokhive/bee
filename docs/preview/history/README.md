@@ -163,3 +163,12 @@
 - 修改前主预览已完整保存在 [before-setup.html](20261112-150523-setup-error-clarity/before-setup.html)，合入前逐字节确认；来源草稿为 [已认可冻结稿](20261112-150523-setup-error-clarity/draft.html)。
 - [固定主入口](../index.html?scene=setup-form) · [完整主预览快照](20261112-152533-approved-first-launch/index.html?scene=setup-form)。新快照包含全部冻结对照依赖；仅标题与认可标记相对草稿更新，历史文件未改写。
 - 保留 481 个场景；复用此前交互验证，补查主入口正常绑定、错误浮层、完成出口和新快照。正式 App 与真实绑定接口未在本轮修改或验收。
+
+
+## 20261112-183023-add-account-wizard 三步添加 OpenAI 账号向导
+
+- 时区：Asia/Shanghai；状态：**待评审**。文本流程、线框已获用户确认，HTML 尚未纳入主预览。
+- [完整冻结稿](20261112-183023-add-account-wizard/draft.html?scene=add-platform) · [修改前主预览](20261112-183023-add-account-wizard/before-add.html)。产品资源全部内联，目录内保留四份既有冻结对照依赖。
+- 修改前草稿复用 [已认可设备向导稿](20261112-150523-setup-error-clarity/draft.html)，已核对字节一致；未改写旧历史。
+- 新增 38 个场景，共 519 个入口。选择平台、连接账号、确认接入；接入成功回到已设计的 OpenAI 卡片。官方登录和目录读取、返回、取消、失败和未知结果均可评审。
+- 浏览器验证范围与静态模拟边界见 [预览 README](../README.md)。主预览、正式应用及真实业务接口未在本轮修改。

@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"github.com/coder/websocket"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
+	"github.com/tokhive/tee/tunnel"
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/relay"
 	"net/http"

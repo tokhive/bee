@@ -130,7 +130,7 @@ jobs:
       - name: Prepare and verify canonical fixed TEE
         run: |
           node desktop/scripts/prepare-tee.mjs 2>&1 | tee desktop-ci-evidence/tee.log
-          tee_archive=$(cut -d ' ' -f1 .cache/reclaim-tee/.archive-sha256)
+          tee_archive=$(cut -d ' ' -f1 .cache/tee/.archive-sha256)
           tee_revision=$(cat TEE_REVISION)
           printf 'TEE revision=%s; archiveSHA256=%s\n' "$tee_revision" "$tee_archive" | tee desktop-ci-evidence/tee-source.log
           if [ "$tee_revision" != a687f86d781e825c04c1d84d75b41bba5d862254 ] || [ "$tee_archive" != 4bc9caad3ad2ce5de01b9983a750cee6380098fc308333c30c098fbf8e7bad38 ]; then

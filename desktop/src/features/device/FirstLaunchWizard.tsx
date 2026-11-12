@@ -16,7 +16,7 @@ export interface FirstLaunchWizardProps {
  begin:(hive:string,name:string)=>void|Promise<unknown>;
  refresh:()=>void|Promise<unknown>;open:()=>void|Promise<unknown>;
  onNavigate:(page:'accounts'|'overview')=>void;
- onDiagnostics?:()=>void;onRepair?:()=>void;
+ onDiagnostics?:()=>void;onRepair?:()=>void;onOpenHive?:()=>void|Promise<unknown>;
 }
 
 function validateHive(raw:string):string {
@@ -42,7 +42,7 @@ function WizardFailure({failure}:{failure:UiFailure}){
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */
-export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair}:FirstLaunchWizardProps){
+export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
  const [hive,setHive]=useState(view?.hive??''),[name,setName]=useState(view?.name??'Bee Desktop');
  const [fieldErrors,setFieldErrors]=useState({hive:'',name:''});
  const [submitting,setSubmitting]=useState(false),submitted=useRef(false);
@@ -117,6 +117,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
     {phase==='pending'&&<p role="status">{w(status)}</p>}
    </>}
    {stageCopy&&<p role="status">{w(stageCopy)}</p>}
+   {phase==='creation_unknown'&&onOpenHive&&<div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void onOpenHive()}>{w('打开 Hive 控制台')}</Button></div>}
    {failureNotices}
    {canCheck&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button></div>}
    {phase==='expired'&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}

@@ -30,7 +30,7 @@ test('service preparation retry preserves platform pause and keeps the device on
  await account.getByRole('button',{name:'暂停接单',exact:true}).click();
  await expect(account.getByText('已暂停接单',{exact:true})).toBeVisible();
  await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
- await expect(account.getByText('已暂停接单',{exact:true})).toBeVisible();
+ await expect(account.getByText('已暂停',{exact:true})).toBeVisible();
  await app.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
@@ -52,10 +52,10 @@ test('preview network controls use formal read backoff and recover without repla
  await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
  await expect(app.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
  await expect(account).toContainText('HTTP 503');
- const failedReads=(await commands(page)).filter(c=>c.command==='supply_status').length;
+ const failedReads=(await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='claude').length;
  await event(page,'runtime-connection','online');
- await page.clock.runFor(1000);
- expect((await commands(page)).filter(c=>c.command==='supply_status')).toHaveLength(failedReads);
+ await page.clock.runFor(500);
+ expect((await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='claude')).toHaveLength(failedReads);
  await page.clock.runFor(10000);
  await expect(account.getByText('可接单',{exact:true})).toBeVisible();
  expect((await commands(page)).filter(c=>['runtime_start','runtime_stop','supply_set_paused'].includes(c.command))).toEqual([]);

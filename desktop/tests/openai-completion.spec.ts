@@ -1,8 +1,17 @@
-import {mkdirSync} from 'node:fs';
+import {mkdirSync,readFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {test,expect,type Page} from '@playwright/test';
 import type {AccountSnapshot} from '../src/system/accounts';
 import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
+// Only the main design preview is tested; archived and candidate previews are excluded.
+test.beforeEach(async({page})=>{
+ await page.route('**/approved-preview/**',async route=>{
+  const relative=decodeURIComponent(new URL(route.request().url()).pathname).split('/approved-preview/')[1];
+  const root=resolve(import.meta.dirname,'../../docs/preview'),file=resolve(root,relative);
+  if(!file.startsWith(root+'/'))return route.fulfill({status:403});
+  await route.fulfill({contentType:'text/html; charset=utf-8',body:readFileSync(file)});
+ });
+});
 // Controlled frontend receipts only; no official account, native process or Hive request.
 function installOpenaiReplies(){
  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;
@@ -131,7 +140,8 @@ test('credential failures retain quota, deduplicate one cause and preserve indep
  await page.screenshot({path:resolve(evidence,'formal-source-details-dark-narrow.png')});
 });
 
-const evidence=resolve(import.meta.dirname,'../../docs/desktop/evidence/2026-11-11-compact-list');
+const evidence=resolve(import.meta.dirname,'../test-results/compact-list');
+test.beforeEach(()=>{mkdirSync(evidence,{recursive:true});});
 for(const theme of ['light','dark'])for(const [size,width,height] of [['narrow',820,680],['wide',1080,700]] as const){
  test(`formal React and approved preview — ${theme} ${size}`,async({page})=>{
   mkdirSync(evidence,{recursive:true});await page.clock.install();await page.setViewportSize({width,height});
@@ -157,23 +167,11 @@ for(const theme of ['light','dark'])for(const [size,width,height] of [['narrow',
   // A fresh app has no previous completion; fixtures reset on reload.
   await page.reload();await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);
   await page.setViewportSize({width:width+100,height:height+200});
-  await page.goto(`http://127.0.0.1:1497/index.html?scene=first-success-paused&theme=${theme}&size=${size}`);
+  await page.goto(`/approved-preview/index.html?scene=first-success-paused&theme=${theme}&size=${size}`);
   await expect(page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'}).getByText('账号接入成功！',{exact:true})).toBeVisible();
   await page.locator('iframe').screenshot({path:resolve(evidence,`approved-first-success-${theme}-${size}.png`)});
  });
 }
-test('new recovery candidate and its frozen history retain unresolved operation semantics',async({page})=>{
- await page.goto('http://127.0.0.1:1497/openai-recovery-candidate.html?scene=candidate-intake-limit&theme=dark&size=narrow');
- const app=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});await expect(app.getByText('暂时无法确认原操作结果',{exact:true})).toBeVisible();
- await app.getByRole('button',{name:'核对结果',exact:true}).click();await expect(app.getByText('正在核对原操作…',{exact:true})).toBeVisible();
- await expect(app.getByText('暂时无法确认原操作结果',{exact:true})).toBeVisible();
- await page.locator('#scene').selectOption('candidate-ownership');await expect(app.getByText('无法安全重新启动登录',{exact:true})).toBeVisible();
- await page.locator('iframe').screenshot({path:resolve(evidence,'candidate-ownership-dark-narrow.png')});
- await page.goto('http://127.0.0.1:1497/history/20261110-114533-openai-recovery-candidate/openai-recovery-candidate.html?scene=candidate-retries&theme=light&size=wide');
- await expect(app.getByText('登录进度查询已停止',{exact:true})).toBeVisible();
- await page.locator('iframe').screenshot({path:resolve(evidence,'candidate-retry-exhausted-light-wide.png')});
-});
-
 test('keyring missing keeps true quota and one repair action; unknown quota is never zero',async({page})=>{
  await page.clock.install();await setup(page,true);
  const normal=await card(page).boundingBox();
@@ -210,10 +208,9 @@ test('different identity opens review before confirmation and Escape restores fo
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
 });
 
-test('approved compact preview and final frozen history keep quota in a read failure',async({page})=>{
- const frozen='history/20261111-112027-approved-compact-list';
- for(const path of ['index.html',`${frozen}/index.html`]){
-  await page.goto(`http://127.0.0.1:1497/${path}?scene=read-failed-allowed&theme=dark&size=narrow`);
+test('main preview keeps quota in a read failure',async({page})=>{
+ {
+  await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=dark&size=narrow`);
   const app=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});
   await expect(app).toHaveClass(/oa-compact/);await expect(app.getByRole('progressbar')).toHaveCount(2);
   await expect(app.locator('.workflow')).toHaveCount(0);

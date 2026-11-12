@@ -138,3 +138,12 @@
 - 20261111-153542-before-session-retirement：安全结束旧会话前的完整主预览，含 OpenAI／Claude 及启动原场景；来源为当前主预览与其冻结对照依赖；状态：已认可（本轮修改前）。[打开 HTML](20261111-153542-before-session-retirement/index.html)。
 
 - 20261111-154454-session-retirement：新增 Hive 尚不支持恢复、等待原任务结束两个分支；继续恢复后回到正常账号布局，保留原账号暂停选择；来源为主预览局部同步；状态：待评审（已授权实施，视觉未另行确认）。[打开 HTML](20261111-154454-session-retirement/index.html?scene=startup-draining)。
+
+
+## 20261112-145209-first-launch-wizard 首次启动设备绑定向导
+
+- 时区：Asia/Shanghai；状态：**待评审**（文本方案已确认，HTML 视觉待评审）。
+- 修改前草稿复用 [完整旧草稿](20261111-145858-claude-compact-sync/draft.html)，主预览基线复用 [完整主预览](20261111-154454-session-retirement/index.html)，两者均已核对字节一致。
+- [本轮完整快照](20261112-145209-first-launch-wizard/draft.html?scene=setup-form)；同目录 before-setup.html 为修改前主预览，baseline.html、before-startup.html、claude-baseline.html 为冻结对照依赖。产品资源全部内联。
+- 来源：当前累计主预览，新增 17 个向导状态和 2 个绑定后入口；保留原有 462 个场景。已认可主入口未变。
+- 本轮验证及模拟边界见预览 README 的首次启动记录。

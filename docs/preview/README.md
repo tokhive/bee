@@ -180,3 +180,16 @@ Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗�
 ## 旧会话安全结束（2026-11-11）
 
 主预览增加 `startup-unsupported` 与 `startup-draining`，共 9 个启动分支。Hive 不支持时仅保留诊断；排空中“继续恢复”演示返回普通账号布局，保持接单选择。配套实现尚未部署，该预览不调用真实恢复。新增历史：[20261111-154454-session-retirement](history/20261111-154454-session-retirement/index.html?scene=startup-draining)。
+
+
+## 首次启动设备绑定向导（2026-11-12，待评审）
+
+[打开草稿](draft.html?scene=setup-form) · [完成页](draft.html?scene=setup-complete) · [保存失败](draft.html?scene=setup-save-failed) · [完整冻结版](history/20261112-145209-first-launch-wizard/draft.html?scene=setup-form)。文本方案已确认，HTML 尚待人工评审；主入口 index.html 未修改。
+
+草稿以最新主预览为基线，保留 462 个既有场景，新增 19 个入口，共 481 个。场景组“首次启动 / 设备设置”包含正常、进行中、失败和恢复状态，“首次启动 / 绑定后”复用现有账号页及概览，并预设两个平台均未接入。绑定前页面选择器禁用；绑定后可使用主页面导航。
+
+正常体验：填写任意示例 HTTP(S) 地址 → 继续绑定设备 → 打开 Hive 确认网页 → 预设确认、核对和保存 → 完成 → 前往接入 AI 账号或进入概览。不会访问所填地址、打开真实授权网页或绑定真实设备。原请求未知的 Hive 控制台为本地模拟弹窗；诊断导出为标有 simulated 的示例文件。
+
+验证：17 个向导静态起点；空地址错误及焦点；主题／尺寸保留输入；键盘提交；复制动作；正常绑定与账号页交接；创建失败重试、启动读取恢复、过期重建、保存失败续接、未知结果不重建及弹窗 Escape 返回焦点；切场景取消旧进度；重置回最后直接选择起点；浅深色 × 两尺寸；完成后的设备名称与地址传入现有概览。历史版独立打开及既有代表场景亦作检查。全部为 HTML 模拟，未验收真实配对、外部授权或服务端恢复。
+
+本轮本地评审服务使用 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview`，入口为 <http://127.0.0.1:1497/draft.html?scene=setup-form>；也可使用上文 1496 服务或直接打开 HTML。

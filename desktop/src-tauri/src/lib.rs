@@ -10,6 +10,7 @@ mod diagnostics_protocol;
 mod experience;
 mod startup_recovery;
 pub(crate) mod profiles;
+pub(crate) mod hive_switch;
 pub(crate) mod switch_protocol;
 mod lifecycle;
 // Native acceptance probes share the production notification locale policy.
@@ -69,6 +70,15 @@ pub fn run() {
             }
         })
         .invoke_handler(tauri::generate_handler![
+            commands::hive_switch_snapshot,
+            commands::hive_switch_start,
+            commands::hive_switch_observe,
+            commands::hive_switch_target_status,
+            commands::hive_switch_target_begin,
+            commands::hive_switch_target_open,
+            commands::hive_switch_target_recovery_prepare,
+            commands::hive_switch_target_recovery_confirm,
+            commands::hive_switch_target_recovery_status,
             commands::bridge_request,
             commands::bridge_status,
             commands::bridge_pending_requests,
@@ -172,57 +182,24 @@ commands::device_recovery_status,
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
             let updates=updater::setup(app.handle()).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
-            let bridge = sidecar::Bridge::bundled();
-            update_install::hold_startup(&bridge);
-            let mut statuses = bridge.subscribe();
-            let handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                while statuses.changed().await.is_ok() {
-                    let state = statuses.borrow_and_update().clone();
-                    if let Err(cause) = handle.emit_to("main", "bee://bridge-status", state) {
-                        eprintln!("deliver Bee bridge status to main window: {cause}");
-                    }
-                }
-            });
-            let mut settled = bridge.subscribe_settled();
-            let settled_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                loop {
-                    match settled.recv().await {
-                        Ok(event) => {
-                            if let Err(cause) = settled_handle.emit_to("main", "bee://request-settled", event) {
-                                eprintln!("deliver Bee request settlement to main window: {cause}");
-                            }
-                        }
-                        Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => eprintln!("Bee request settlement observer lagged; missed={count}; recover from bridge_pending_requests"),
-                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                    }
-                }
-            });
-            let mut diagnostics = bridge.subscribe_diagnostics();
-            let diagnostics_handle = app.handle().clone();
-            tauri::async_runtime::spawn(async move {
-                loop {
-                    match diagnostics.recv().await {
-                        Ok(event) => {
-                            if let Err(cause) = diagnostics_handle.state::<diagnostics_native::NativeDiagnostics>().logs.record(event) {
-                                eprintln!("persist Bee request diagnostic: {}: {}", cause.code, cause.message);
-                            }
-                        }
-                        Err(tokio::sync::broadcast::error::RecvError::Lagged(count)) => eprintln!("Bee safe diagnostic observer lagged; missed={count}"),
-                        Err(tokio::sync::broadcast::error::RecvError::Closed) => break,
-                    }
-                }
-            });
-            let restoring = bridge.clone();
-            let startup_updates=updates.clone();
+            let coordinator=hive_switch::HiveSwitch::open(app.path().config_dir()?.join("tokhive"),&app.path().app_config_dir()?).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
+            let route=coordinator.current.clone();
+            app.manage(route.clone());
+            app.manage(coordinator);
+            tauri::async_runtime::spawn(hive_switch::observe_current(app.handle().clone(),route.clone()));
             let startup_app=app.handle().clone();
+            let startup_updates=updates.clone();
             tauri::async_runtime::spawn(async move {
-                experience::startup(startup_app.clone(),restoring).await;
+                let coordinator=startup_app.state::<hive_switch::HiveSwitch>();
+                match coordinator.pending() {
+                    Ok(true)=>{if let Err(cause)=coordinator.observe(startup_app.state::<preferences::PreferencesStore>().read()).await {eprintln!("switch startup reconciliation: {}: {}",cause.code,cause.message);}},
+                    Ok(false)=>{},
+                    Err(cause)=>eprintln!("switch startup journal blocked: {}: {}",cause.code,cause.message),
+                }
+                coordinator.startup_current(startup_app.clone()).await;
                 updater::start_background(&startup_app,&startup_updates);
             });
-            tauri::async_runtime::spawn(notification_poll::run(app.handle().clone(),bridge.clone()));
-            app.manage(bridge);
+            tauri::async_runtime::spawn(notification_poll::run(app.handle().clone(),route));
             Ok(())
         })
         .build(tauri::generate_context!())
@@ -242,7 +219,8 @@ commands::device_recovery_status,
                 }
             }
             tauri::RunEvent::Exit => {
-                if let Some(bridge) = app.try_state::<sidecar::Bridge>() {
+                if let Some(route) = app.try_state::<hive_switch::CurrentBridge>() {
+                    if let Ok(bridge)=route.get() {
                     if let Err(cause) =
                         tauri::async_runtime::block_on(lifecycle::shutdown_owned(&bridge, app.try_state::<diagnostics_native::NativeDiagnostics>().as_deref().map(|diagnostics| &diagnostics.logs), || {
                             tauri_plugin_single_instance::destroy(app)
@@ -253,6 +231,8 @@ commands::device_recovery_status,
                             cause.code, cause.message
                         );
                     }
+                    }
+                    if let Some(coordinator)=app.try_state::<hive_switch::HiveSwitch>() {if let Err(cause)=tauri::async_runtime::block_on(coordinator.shutdown_target()){eprintln!("target shutdown: {}: {}",cause.code,cause.message);}}
                 }
             }
             _ => {}

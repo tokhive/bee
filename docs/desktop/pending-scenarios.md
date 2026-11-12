@@ -70,3 +70,17 @@
 ### 旧会话恢复配套实施（2026-11-11）
 
 [补充设计](designs/2026-11-11-session-retirement.md)与[Hive 补丁](integrations/hive-session-retirement/README.md)已交付。先保存原结束请求，取得真实远端证明后才结束旧本地记录；普通 Restore 再次核验且保持暂停。73 项模拟 IPC 界面场景通过，新增 Hive 不支持与排空继续恢复分支；真实 PostgreSQL／HTTP 集成验证通过。后续已在 Hive 独立分支集成，真实 Rust → Go sidecar → Hive HTTP → PostgreSQL 五场景隔离验收通过（含恢复、丢失响应、中断再继续、冲突和退出竞争），见[联调摘要](evidence/2026-11-11-startup-recovery/native-hive-integration.txt)。真实部署、账号恢复及打包原生窗口仍待验收，保留此场景。
+
+### 2026-11-12 · 设备重绑后的快照不一致（已修复）
+
+用户已切换全新本地 Hive。原生窗口显示 `RUNTIME_REPLY_INVALID`，原因为 `startup progress operation differs from runtime operation`；本机后台已停止。日志中的启动记录先成功，随后旧凭证收到 401，设备重绑完成。全新 Hive 不会同时重置 Bee 本机状态。
+
+隔离回归复现：重绑成功清空 `operation` 时仍保留旧 `startup_progress`；自动维护失败替换操作编号时也有同一缺口。修复提交 `72c6229` 在这两处同步结束旧进度；重绑结果未知或等待归属确认时保留原操作与进度，Rust 的严格校验继续拒绝不一致快照。
+
+- 红测试：重绑完成后的旧进度残留、自动维护新操作携带旧进度，均在修复前失败。
+- Go：`go vet ./agent ./desktopbridge` 与 `go test -race ./agent ./desktopbridge -run 'Test(DeviceRecovery|DesktopAutoService|DesktopRuntime|DesktopPresence|DesktopNative|Runtime)' -count=1 -timeout=600s` 通过（26.754 秒／1.511 秒）。
+- Rust：`cargo +1.94 test --locked --offline --manifest-path desktop/src-tauri/Cargo.toml --lib runtime_protocol::tests::`，8 项通过，覆盖旧编号／空操作拒绝及合法快照接受。
+- 本机开发包：由干净提交 `72c6229` 重建 sidecar 和 `Bee S1 Dev.app`；TypeScript／Vite 构建、ad-hoc 签名与 `codesign --verify --deep --strict` 通过，包内 Go 来源为该提交，`vcs.modified=false`。
+- 原生窗口：重开修复包后确认 Hive 已连接、设备已绑定，启动记录为 `succeeded`；AI 账号页可打开，无该协议错误，当前 0 个账号接入。OpenAI 本机凭证缺失、Claude 登录待处理，属于后续账号接入状态。
+
+本轮没有在真实设备上再次重绑或代用户登录；重绑的成功、结果未知与归属待确认路径由合成 Hive／临时目录测试覆盖。本次窗口检查不替代旧脏会话恢复及其他平台验收。

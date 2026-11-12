@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"time"
 
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
+	"github.com/tokhive/tee/tee"
 )
 
 // ProviderID maps a bound device to the reference protocol's lowercase identifier.
@@ -94,6 +94,10 @@ type MaintenanceTask struct {
 	Key                tee.InboxPublic `json:"key"`
 }
 
+// MaintenanceRequest is a Bee's observation of its authorization source.
+// RefreshRequired asks Hive to refresh now: Claude's profile rejected the
+// token, or OpenAI rejected the token with 401 or its usage report names a
+// plan the token does not.
 type MaintenanceRequest struct {
 	RefreshSupported   bool               `json:"refresh_supported,omitempty"`
 	RefreshRequired    bool               `json:"refresh_required,omitempty"`
@@ -116,7 +120,11 @@ type CredentialRegistration struct {
 	Envelope tee.Envelope   `json:"envelope"`
 	Codex    *Authorization `json:"codex,omitempty"`
 	Claude   *Authorization `json:"claude,omitempty"`
-	TaskID   string         `json:"task_id,omitempty"`
+	// Reseller registers an API reseller key instead of a subscription
+	// account; it carries no authorization and no maintenance task.
+	OpenAIAPI *OpenAIAPIKey `json:"openai_api,omitempty"`
+	Reseller  *ResellerKey  `json:"reseller,omitempty"`
+	TaskID    string        `json:"task_id,omitempty"`
 }
 
 type MaintenanceResponse struct {

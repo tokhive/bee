@@ -84,10 +84,10 @@ function fixture(t, links = {}) {
   return { root, source, revision, longPath };
 }
 
-test('TEE export matches git archive and the existing shell cache marker', t => {
+test('TEE export matches git archive and the deterministic cache marker', t => {
   const f = fixture(t);
   prepareTee(f);
-  const dest = join(f.root, '.cache/reclaim-tee');
+  const dest = join(f.root, '.cache/tee');
   assert.equal(readFileSync(join(dest, f.longPath), 'utf8'), 'long path from git archive\n');
   assert.equal(existsSync(join(dest, 'excluded')), false);
   const archive = spawnSync('git', ['-c', 'core.autocrlf=false', '-c', 'core.eol=lf', '-C', f.source, 'archive', f.revision]);
@@ -121,7 +121,7 @@ test('TEE archive keeps pinned blob LF bytes and canonical SHA despite CRLF Git 
 test('TEE refuses altered cache content and preserves the existing data', t => {
   const f = fixture(t);
   prepareTee(f);
-  const file = join(f.root, '.cache/reclaim-tee/go.mod');
+  const file = join(f.root, '.cache/tee/go.mod');
   writeFileSync(file, 'changed cache');
   assert.throws(() => prepareTee(f), /go\.mod.*(mismatch|不匹配)/);
   assert.equal(readFileSync(file, 'utf8'), 'changed cache');
@@ -171,7 +171,7 @@ for (const [reason, links, evidence] of [
   test(`TEE archive rejects ${reason} link targets before creating a cache`, t => {
     const f = fixture(t, links);
     assert.throws(() => prepareTee({ ...f, platform: 'win32' }), evidence);
-    assert.equal(existsSync(join(f.root, '.cache/reclaim-tee')), false);
+    assert.equal(existsSync(join(f.root, '.cache/tee')), false);
     assert.deepEqual(readdirSync(join(f.root, '.cache')), []);
   });
 }
@@ -222,7 +222,7 @@ test('TEE extraction refuses an existing destination entry without following its
 
 test('TEE link resolution refuses a missing archive target even when the existing cache supplies it', t => {
   const f = fixture(t, { 'service-link': 'missing-file' });
-  const destination = join(f.root, '.cache/reclaim-tee');
+  const destination = join(f.root, '.cache/tee');
   mkdirSync(destination, { recursive: true });
   writeFileSync(join(destination, 'missing-file'), 'untrusted cache bytes');
   assert.throws(() => prepareTee({ ...f, platform: 'win32' }), /symlink target missing.*service-link.*missing-file/);
@@ -233,9 +233,9 @@ test('TEE link resolution refuses a missing archive target even when the existin
 test('TEE refuses a symlink cache without changing its target', { skip: process.platform === 'win32' }, t => {
   const f = fixture(t);
   mkdirSync(join(f.root, '.cache'));
-  symlinkSync(f.source, join(f.root, '.cache/reclaim-tee'));
+  symlinkSync(f.source, join(f.root, '.cache/tee'));
   assert.throws(() => prepareTee(f), /(symbolic|symlink|符号链接)/);
-  assert.equal(readlinkSync(join(f.root, '.cache/reclaim-tee')), f.source);
+  assert.equal(readlinkSync(join(f.root, '.cache/tee')), f.source);
 });
 
 test('TEE rejects an invalid revision before creating a cache', t => {
@@ -321,4 +321,15 @@ test('sidecar build rejects a binary reporting a different OS or architecture', 
     if (command === '/usr/bin/otool') return 'cmd LC_BUILD_VERSION\n platform 1\n minos 13.0\n sdk 14.4\n';
     return 'bee dev windows/amd64\n';
   } }), /windows\/amd64.*darwin\/arm64/);
+});
+
+test('desktop provenance pins the maintained TEE module used by Bee', () => {
+  const root = new URL('../../', import.meta.url);
+  const module = readFileSync(new URL('go.mod', root), 'utf8');
+  const revision = readFileSync(new URL('TEE_REVISION', root), 'utf8').trim();
+  const dependency = module.match(/^\s*github\.com\/tokhive\/tee\s+v0\.0\.0-\d{14}-([a-f0-9]{12})$/m);
+  assert.ok(dependency, 'Bee must require the maintained github.com/tokhive/tee module');
+  assert.match(revision, /^[a-f0-9]{40}$/);
+  assert.equal(revision.slice(0, 12), dependency[1], 'desktop TEE provenance must identify the dependency compiled into Bee');
+  assert.doesNotMatch(module, /github\.com\/reclaimprotocol\/reclaim-tee/);
 });

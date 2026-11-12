@@ -1,15 +1,19 @@
-.PHONY: tee-deps build test app
+.PHONY: build test test-install test-menu app
 
 # Reuse an installed project-compatible Node; preflight checks the final tools.
 APP_NODE_BIN ?= $(firstword $(wildcard $(HOME)/.nvm/versions/node/v24.22.1/bin .cache/toolchains/node-v24.22.1-darwin-arm64/bin))
 
-tee-deps:
-	bash scripts/prepare-tee.sh
-
-build: tee-deps
+build:
 	go build -o bin/bee ./cmd/bee
 
-test: tee-deps
+test-install:
+	sh -n install.sh
+	python3 scripts/test-install.py
+
+test-menu:
+	python3 scripts/test-menu.py
+
+test: test-install test-menu
 	go vet ./...
 	go test -race -timeout=600s ./...
 

@@ -53,7 +53,9 @@ func (cfg *egressConfig) startSynchronization(ctx context.Context, state localSt
 					// rejected lease and a malformed response.
 					report(out, "sync_unconfirmed", name+" authorization synchronization unconfirmed; retrying; Hive will stop dispatching when the authorization synchronization deadline is reached: "+err.Error())
 				}
-				if first {
+				// A reseller key is not a platform account, so Hive has no
+				// platform readiness to report for it.
+				if first && platform != "" {
 					workers.Go(func() { reportReadiness(ctx, state, platform, out) })
 				}
 				first = false
@@ -67,7 +69,14 @@ func (cfg *egressConfig) startSynchronization(ctx context.Context, state localSt
 		start(cfg.synchronize, cfg.accountMessage, "OpenAI", "openai")
 	}
 	if cfg.Claude != nil {
+		cfg.Claude.capabilityWanted = &cfg.claudeCapabilityWanted
 		start(cfg.Claude.synchronize, cfg.Claude.message, "Claude", "claude")
+	}
+	if cfg.OpenAIAPI != nil {
+		start(cfg.synchronizeOpenAIAPI, cfg.OpenAIAPI.message, "openai_api", "")
+	}
+	if cfg.Reseller != nil {
+		start(cfg.synchronizeReseller, cfg.Reseller.message, cfg.Reseller.Reseller, "")
 	}
 	return failures, workers.Wait
 }

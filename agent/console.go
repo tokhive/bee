@@ -13,9 +13,16 @@ import (
 // console is where bee run prints its operator lines: still stdout, as
 // supervisors and tests read them there, but each line a structured record
 // with the same time, level and service fields as the log on stderr.
-type console struct{ logger *slog.Logger }
+type console struct {
+	logger *slog.Logger
+	// Optional menu presentation, called only after a successful Hive handshake.
+	onConnected func()
+}
 
 func newConsole(out io.Writer) *console {
+	if c, ok := out.(*console); ok {
+		return c
+	}
 	if logx.Readable(out) {
 		return &console{logger: slog.New(logx.Friendly(out, slog.LevelInfo))}
 	}
@@ -51,4 +58,13 @@ func notify(out io.Writer, level slog.Level, module, message string, attrs ...an
 		return
 	}
 	fmt.Fprintln(out, message)
+}
+
+// notifyConnected keeps the original runtime log and lets an interactive menu
+// emphasize connection success without interpreting rendered log text.
+func notifyConnected(out io.Writer, endpoint string) {
+	notify(out, slog.LevelInfo, "connect", "Bee connected to Hive", "endpoint", endpoint)
+	if c, ok := out.(*console); ok && c.onConnected != nil {
+		c.onConnected()
+	}
 }

@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/logx"
 	"github.com/tokhive/bee/relay"
+	"github.com/tokhive/tee/tee"
+	"github.com/tokhive/tee/tunnel"
 )
 
 type egressConfig struct {
@@ -39,6 +39,8 @@ type egressConfig struct {
 	Credential              tee.Secret        `json:"credential"`
 	Codex                   *codexSource      `json:"codex,omitempty"`
 	Claude                  *claudeSource     `json:"claude,omitempty"`
+	OpenAIAPI               *openaiAPISource  `json:"openai_api,omitempty"`
+	Reseller                *resellerSource   `json:"reseller,omitempty"`
 	Capabilities            *capabilitySource `json:"capabilities,omitempty"`
 	capabilitySequence      int64
 	accountGeneration       int64
@@ -54,8 +56,15 @@ type egressConfig struct {
 	metadataLease           string
 	metadataModels          []string
 	capabilityReportPending bool
-	pacer                   syncPacer
-	failures                *egressFailures
+	// announceReady is a capability recovery whose readiness line waits for
+	// Hive to accept the report.
+	announceReady bool
+	// capabilityWanted and claudeCapabilityWanted are Hive asking for a
+	// capability report now.
+	capabilityWanted       atomic.Bool
+	claudeCapabilityWanted atomic.Bool
+	pacer                  syncPacer
+	failures               *egressFailures
 }
 
 // useStateDirectory points the sources at a Bee-owned directory for the small
@@ -86,7 +95,7 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 	case errors.Is(err, fs.ErrNotExist):
 		return nil, fail("BEE-CONFIG-NOT-FOUND", path)
 	case err != nil:
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	case !info.Mode().IsRegular():
 		return nil, fail("BEE-CONFIG-NOT-REGULAR", path)
 	case info.Size() > 65536:
@@ -94,7 +103,7 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 	}
 	file, err := openRegularNoFollow(path)
 	if err != nil {
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	}
 	defer file.Close()
 	if err := validatePrivateFile(file); err != nil {
@@ -102,17 +111,17 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 	}
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
 	if err != nil {
-		return nil, fail("BEE-CONFIG-UNREADABLE", path)
+		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	}
 	if len(raw) > 65536 {
 		return nil, fail("BEE-CONFIG-TOO-LARGE", path)
 	}
 	cfg, err := decodeEgress(raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	if err := cfg.validate(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
 	return cfg, nil
 }
@@ -210,6 +219,16 @@ func (cfg *egressConfig) validate() error {
 	if cfg.Claude != nil && cfg.Claude.Store != claudeStoreKeychain && cfg.Claude.Store != claudeStoreFile {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
+	if cfg.OpenAIAPI != nil {
+		if err := cfg.OpenAIAPI.validate(); err != nil {
+			return err
+		}
+	}
+	if cfg.Reseller != nil {
+		if err := cfg.Reseller.validate(); err != nil {
+			return err
+		}
+	}
 	if cfg.Capabilities != nil && cfg.Codex == nil {
 		return fail("BEE-CONFIG-CAPABILITIES-SOURCE", "")
 	}
@@ -217,10 +236,21 @@ func (cfg *egressConfig) validate() error {
 		return fail("BEE-CONFIG-CAPABILITIES-URL", "")
 	}
 	if !cfg.loopbackTargets() {
+		if cfg.OpenAIAPI != nil && cfg.OpenAIAPI.LocalURL != "" {
+			return fail("BEE-CONFIG-OPENAI-API", "local_url requires loopback egress targets")
+		}
+		if cfg.OpenAIAPI != nil && !slices.Contains(cfg.Targets, "api.openai.com:443") {
+			return fail("BEE-CONFIG-TARGET-MISSING", "openai_api requires api.openai.com:443")
+		}
 		for _, platform := range platformTargets {
 			configured := platform.field == "codex" && cfg.Codex != nil || platform.field == "claude" && cfg.Claude != nil
 			if configured && !slices.Contains(cfg.Targets, platform.target) {
 				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", platform.field, platform.target)
+			}
+		}
+		if cfg.Reseller != nil {
+			if target := resellerEndpoints[cfg.Reseller.Reseller].target; !slices.Contains(cfg.Targets, target) {
+				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", "reseller", target)
 			}
 		}
 	}
@@ -231,6 +261,9 @@ func (cfg *egressConfig) validate() error {
 			return fail("BEE-CONFIG-PROXY", "")
 		}
 		official := officialTransport(address)
+		if cfg.OpenAIAPI != nil {
+			cfg.OpenAIAPI.transport = official
+		}
 		if cfg.Codex != nil {
 			cfg.Codex.transport = official
 		}
@@ -239,6 +272,9 @@ func (cfg *egressConfig) validate() error {
 		}
 		if cfg.Claude != nil {
 			cfg.Claude.transport = official
+		}
+		if cfg.Reseller != nil {
+			cfg.Reseller.transport = official
 		}
 	}
 	return nil
@@ -258,7 +294,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil
+	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {
@@ -276,7 +312,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	// part that costs a write transaction.
 	credential, sourceErr := cfg.Codex.readForMaintenance(ctx)
 	changed := sourceErr == nil && (cfg.authorization == nil || !cfg.authorization.sameAuthorization(credential))
-	if !force && sourceErr == nil && !changed && cfg.pacer.skip(time.Now()) {
+	if !force && sourceErr == nil && !changed && !capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) && cfg.pacer.skip(time.Now()) {
 		return nil
 	}
 	cfg.synchronized = nil
@@ -302,15 +338,19 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	}
 	var result beewire.MaintenanceResponse
 	revision := credential.metadata().CredentialRevision
-	stalePlan := cfg.Capabilities.wantsPlanRefresh(revision, time.Now())
+	staleToken := cfg.Capabilities.wantsRefresh(revision, time.Now())
 	err := callState(ctx, httpClient(), state, "/api/bee/maintenance", "POST",
-		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: stalePlan}, &result)
+		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: staleToken}, &result)
 	if err != nil {
 		return err
 	}
-	if stalePlan {
-		cfg.Capabilities.askedPlanRefresh(revision, time.Now())
-		slog.Info("openai plan changed; authorization refresh requested", "module", "maintenance")
+	if staleToken {
+		cfg.Capabilities.askedRefresh(revision, time.Now())
+		slog.Info("openai authorization stale; refresh requested", "module", "maintenance")
+	}
+	if result.Account.Status == "account_in_use" {
+		cfg.accountMessage(out, "account_in_use", accountStateLabels["account_in_use"]+"; new OpenAI jobs paused")
+		return nil
 	}
 	if result.Account.Status == "confirmation_required" {
 		cfg.accountMessage(out, "confirmation_required", "different OpenAI account detected; new jobs paused; run bee account-status --platform openai and explicitly confirm with bee confirm-account")
@@ -356,9 +396,14 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	cfg.accountMessage(out, "ready", "OpenAI authorization synchronized and account confirmed")
 	if cfg.Capabilities != nil && cfg.capabilitiesDue(force, changed, credential) {
 		cfg.lastCapabilityAttempt = time.Now()
+		cfg.capabilityWanted.Store(false)
 		cfg.capabilityReportPending = true
 		if err := cfg.synchronizeCapabilities(ctx, state, lease, force); err != nil {
 			return err
+		}
+		if cfg.announceReady {
+			cfg.announceReady = false
+			go reportReadiness(ctx, state, "openai", out)
 		}
 	}
 	// A cycle that handled a task leaves Hive in a state worth confirming at
@@ -380,8 +425,30 @@ func (cfg *egressConfig) capabilityInterval() time.Duration {
 	return beewire.CapabilityUsageInterval
 }
 
+// control acts on a control stream Hive opened. A platform this Bee does not
+// observe is ignored.
+func (cfg *egressConfig) control(control beewire.Control) {
+	if control.Control != beewire.ControlCapabilities {
+		egressDebug("control stream ignored: unknown control %q", control.Control)
+		return
+	}
+	slog.Info("capability report requested by Hive", "module", "sync", "platform", control.Platform)
+	switch {
+	case control.Platform == "openai" && cfg.Capabilities != nil:
+		cfg.capabilityWanted.Store(true)
+	case control.Platform == "claude" && cfg.Claude != nil:
+		cfg.claudeCapabilityWanted.Store(true)
+	}
+}
+
+// capabilityRequestDue reports whether Hive asked for a report and the last
+// attempt is far enough back to make another; until then the request waits.
+func capabilityRequestDue(wanted *atomic.Bool, lastAttempt time.Time) bool {
+	return wanted != nil && wanted.Load() && time.Since(lastAttempt) >= 10*time.Second
+}
+
 func (cfg *egressConfig) capabilitiesDue(force, changed bool, credential codexCredential) bool {
-	if force || changed || !cfg.Capabilities.retryAt.IsZero() && !time.Now().Before(cfg.Capabilities.retryAt) {
+	if force || changed || capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) || !cfg.Capabilities.retryAt.IsZero() && !time.Now().Before(cfg.Capabilities.retryAt) {
 		return true
 	}
 	return time.Since(cfg.lastCapabilityAttempt) >= 10*time.Second && (cfg.capabilityReportPending || cfg.capabilityRevision != credential.metadata().CredentialRevision || time.Since(cfg.lastCapabilitySync) >= cfg.capabilityInterval())
@@ -456,7 +523,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 // by design — the agent is not party to the session — but that leaves an
 // operator with no way to tell a whitelist miss from a dial failure, so this
 // prints a date-time stamped line to stderr when BEE_DEBUG is set (or
-// TOKHIVE_LOG_LEVEL=debug). Hosts only; never stream contents.
+// HIVE_LOG_LEVEL=debug). Hosts only; never stream contents.
 func egressDebug(format string, args ...any) {
 	if !egressDebugEnabled() {
 		return
@@ -499,10 +566,15 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 	return func(live context.Context, stream *tunnel.Stream, metadata []byte) {
 		var open struct {
 			Host string `json:"host"`
+			beewire.Control
 		}
 		if len(metadata) > 1024 || json.Unmarshal(metadata, &open) != nil {
 			egressDebug("stream rejected: unreadable open metadata (%d bytes)", len(metadata))
 			cfg.failures.report(out, failf("BEE-EGRESS-METADATA", "%d bytes", len(metadata)), "")
+			return
+		}
+		if open.Control.Control != "" {
+			cfg.control(open.Control)
 			return
 		}
 		egressDebug("stream opened for %q", open.Host)

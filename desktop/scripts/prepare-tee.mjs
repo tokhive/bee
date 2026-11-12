@@ -136,14 +136,14 @@ function compareTrees(expectedRoot, actualRoot, relative = '') {
   } else throw new Error(`TEE cache ${relative || '.'} entry type mismatch: actualMode=${right.mode}; expectedMode=${left.mode}`);
 }
 
-export function prepareTee({ root = beeRoot, source = process.env.TEE_SOURCE ?? join(root, '.cache/tee-source'), platform = process.platform } = {}) {
+export function prepareTee({ root = beeRoot, source = process.env.TEE_SOURCE ?? join(root, '.cache/tokhive-tee-source'), platform = process.platform } = {}) {
   const revision = readFileSync(join(root, 'TEE_REVISION'), 'utf8').trim();
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error(`TEE_REVISION invalid: actual=${revision}; required=40 lowercase hex characters`);
   const cache = join(root, '.cache');
-  const destination = join(cache, 'reclaim-tee');
+  const destination = join(cache, 'tee');
   if (existsSync(destination) && lstatSync(destination).isSymbolicLink()) throw new Error(`TEE cache is a symlink: path=${destination}; required=real directory; existing cache preserved`);
   mkdirSync(cache, { recursive: true });
-  if (!existsSync(source)) run('git', ['clone', '--no-checkout', 'https://github.com/openweb3/reclaim-tee.git', source], { cwd: root });
+  if (!existsSync(source)) run('git', ['clone', '--no-checkout', 'https://github.com/tokhive/tee.git', source], { cwd: root });
   run('git', ['-C', source, 'rev-parse', '--git-dir'], { cwd: root });
   try { run('git', ['-C', source, 'cat-file', '-e', `${revision}^{commit}`], { cwd: root }); }
   catch { run('git', ['-C', source, 'fetch', '--depth=1', 'origin', revision], { cwd: root }); }

@@ -8,9 +8,25 @@ const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('butto
 const calls=(page:Page)=>page.evaluate(()=>(window as any).calls as {command:string;args:any}[]);
 const writes=new Set(['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
 const phases:{[key:string]:string}={
- 'device-creation-unknown':'创建结果未知','device-redemption-unknown':'兑换结果未知','device-saving':'本机保存未完成',
  'recovery-pending':'等待网页确认','recovery-draining':'等待旧设备完成任务和结算','recovery-creation-unknown':'创建结果未知','recovery-redemption-unknown':'兑换结果未知','recovery-saving':'本机保存未完成','recovery-owner':'新设备归属与原设备不同',
 };
+for(const [scene,copy] of [
+ ['device-creation-unknown','尚无法确认配对请求结果'],
+ ['device-redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],
+ ['device-saving','设备身份已确认，本机保存尚未完成。'],
+] as const)test('unresolved first binding stays in the gate and returns from diagnostics without replay: '+scene,async({page})=>{
+ await open(page,scene);await expect(page.getByText(copy,{exact:true})).toBeVisible();
+ const operation=await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId);
+ await expect(page.getByRole('navigation')).toHaveCount(0);
+ await page.getByRole('button',{name:'查看诊断',exact:true}).click();
+ await expect(page.getByRole('heading',{level:1,name:'诊断',exact:true})).toBeFocused();
+ await expect(page.getByRole('navigation')).toHaveCount(0);
+ await page.getByRole('button',{name:'返回设备设置',exact:true}).click();
+ await expect(page.getByText(copy,{exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId)).toBe(operation);
+ expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
+ await expect(page.getByRole('button',{name:/继续绑定设备|重新生成配对码/})).toHaveCount(0);
+});
 for(const [scene,copy] of Object.entries(phases))test('unresolved device transaction survives four pages without write replay: '+scene,async({page})=>{
  await open(page,scene);await expect(page.locator('.pairing-phase')).toContainText(copy);
  for(const destination of ['AI 账号','设置','诊断','概览']){await nav(page,destination).click();await expect(page.getByRole('heading',{level:1,name:destination,exact:true})).toBeFocused();}

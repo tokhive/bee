@@ -151,7 +151,15 @@
 
 ## 20261112-150523-setup-error-clarity 向导错误详情与等待文案
 
-- 时区：Asia/Shanghai；状态：**待评审**。来源：用户要求叹号详情、明确自动等待及改进“核对设备”表述。
+- 时区：Asia/Shanghai；状态：**已认可**，用户确认“同意，更新到主预览”（2026-11-12）。来源：用户要求叹号详情、明确自动等待及改进“核对设备”表述。
 - 修改前复用 [上一轮完整快照](20261112-145209-first-launch-wizard/draft.html?scene=setup-open-failed)，已确认与修改前草稿字节一致。
 - [本轮完整快照](20261112-150523-setup-error-clarity/draft.html?scene=setup-open-failed)，含 before-setup.html、baseline.html、before-startup.html、claude-baseline.html 冻结对照依赖；原有归档未改写。
 - 验证五类错误浮层、键盘及焦点、浅深色／窗口切换、切场景关闭、继续绑定路径及历史版独立打开；481 个场景保留。仅静态模拟，未修改正式 App 或主预览。
+
+
+## 20261112-152533-approved-first-launch 首次启动向导纳入主预览
+
+- 时区：Asia/Shanghai；状态：**已认可**。确认依据：用户“同意，更新到主预览”。范围为最新设备向导、错误详情浮层、等待提示及操作名称。
+- 修改前主预览已完整保存在 [before-setup.html](20261112-150523-setup-error-clarity/before-setup.html)，合入前逐字节确认；来源草稿为 [已认可冻结稿](20261112-150523-setup-error-clarity/draft.html)。
+- [固定主入口](../index.html?scene=setup-form) · [完整主预览快照](20261112-152533-approved-first-launch/index.html?scene=setup-form)。新快照包含全部冻结对照依赖；仅标题与认可标记相对草稿更新，历史文件未改写。
+- 保留 481 个场景；复用此前交互验证，补查主入口正常绑定、错误浮层、完成出口和新快照。正式 App 与真实绑定接口未在本轮修改或验收。

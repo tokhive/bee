@@ -2,7 +2,7 @@
 
 [打开唯一主预览](index.html) · [历史版本与确认记录](history/README.md) · [维护规范](../standard/html-preview.md)
 
-整个 App 使用同一个主入口。2026-11-09 用户已认可连续流程新版，首次登录、已登录账号接入、重新登录／授权恢复、读取修复、换号及相关准备重试的步骤与完成反馈已纳入主预览。首次启动设备绑定向导及错误详情、等待文案已于 2026-11-12 认可并纳入。原有 481 个入口保留，本轮新增 15 个 Hive 切换入口，均用于静态评审，不代表全部真实接口已验收。
+整个 App 使用同一个主入口。2026-11-09 用户已认可连续流程新版，首次登录、已登录账号接入、重新登录／授权恢复、读取修复、换号及相关准备重试的步骤与完成反馈已纳入主预览。首次启动设备绑定向导及错误详情、等待文案已于 2026-11-12 认可并纳入。原有 481 个入口保留，Hive 切换现有 17 个入口（本轮增加历史冲突与旧通知来源），均用于静态评审，不代表全部真实接口已验收。
 
 页面使用模拟数据，不接真实登录或业务。[旧版 draft.html](draft.html) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
 
@@ -218,3 +218,10 @@ Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗�
 [当前主预览](index.html?scene=switch-idle&theme=light&size=narrow) · [完整冻结版](history/20261112-221434-hive-switch-interface/index.html?scene=switch-waiting) · [验证记录](../desktop/evidence/2026-11-12-hive-switch-ui/README.md)。本轮视觉状态待评审；既有已认可页面的认可记录保留。修改前复用逐字节相同的 [完整主预览](history/20261112-152533-approved-first-launch/index.html)。冻结版同时保存五个对照文件，Hive 场景的对照入口指向 before-switch.html，不依赖当前文件。
 
 浏览器已检查 OpenAI／Claude 两个概览模板、列表关闭不取消、Escape 焦点返回、错误地址保留输入、暗色与紧凑窗口，以及归档页独立打开。产品按钮按静态预设演示阶段；不接真实 Hive、不证明真实任务结束、结算、取消或原生进程退出。正式 React 组件与 mock 的验证另见上方记录。
+
+
+### 2026-11-13 Hive 切换审查修复
+
+新增待评审主预览场景：`index.html?scene=switch-history-conflict&theme=light&size=narrow`、`index.html?scene=switch-notification-source&theme=dark&size=narrow`。前者在列表解释历史归一化冲突并仅禁用受影响目标；后者保留旧通知的原 Hive，打开列表供明确选择，关闭提示后保留当前页。两者只模拟本轮正式界面的可见反馈。
+
+修改前主预览复用字节一致的 `history/20261112-221434-hive-switch-interface/`；本轮交付留版为 [完整快照](history/20261113-002455-hive-switch-review-final/index.html?scene=switch-history-conflict&theme=light&size=narrow)。以该目录为独立 HTTP 根运行，冻结对照页随包提供。正式 React mock 预览及本轮验证见 [审查修复证据](../desktop/evidence/2026-11-13-hive-switch-review-fixes/README.md)。

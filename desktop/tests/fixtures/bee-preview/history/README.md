@@ -30,3 +30,5 @@ python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录
 | 2026-11-05 18:13:34 | 对齐自动服务的交付快照，来源哈希见 SOURCE.md | 待评审；前端 mock 67 项及静态包关键动作已验证 | [迁移快照](20261105-181334-native-auto-service-preview/tests/fixtures/bee-preview/index.html) |
 
 各目录包含冻结 HTML、JavaScript、CSS、图片与模拟数据。以选中目录作为独立网站根目录运行上方 Python 命令，访问 `/tests/fixtures/bee-preview/index.html?scene=running&theme=light`；支持 scene/theme/size，开发事件另加 debug=1。冻结版本不随之后的源码修复更新。
+
+| 2026-11-12 21:52:52 Asia/Shanghai | Hive 切换前，3c713be 完整正式 mock | 修改前基线 | [完整快照](20261112-215252-before-hive-switch/tests/fixtures/bee-preview/index.html) |

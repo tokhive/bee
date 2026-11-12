@@ -4,17 +4,18 @@ import {normalizeFailure,type UiFailure} from '../../system/failures';
 import type {NavigationTarget} from '../../app/navigation';
 import type {DeviceView,DeviceRecoveryView,DeviceContext} from '../../system/device';
 import type {RefreshStatus} from '../../system/desktopState';
-import {useEffect,useRef,useState} from 'react';
+import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Dialog} from 'radix-ui';
 import {Copy,ExternalLink,RefreshCw} from 'lucide-react';
 import {Button} from '../../components/ui';
 type Decision='begin_pairing'|'adopt_owner'|'renew_expired';
 const phaseCopy={awaiting_confirmation:'等待确认后生成配对码',creating:'正在创建配对请求',creation_unknown:'创建结果未知',pending:'等待网页确认',draining:'等待旧设备完成任务和结算',redeeming:'兑换已提交，正在核对新设备身份',redemption_unknown:'兑换结果未知，正在核对新设备身份',awaiting_owner_confirmation:'新设备归属与原设备不同',saving:'新设备身份已核对，正在保存本机配置',completed:'上次重新绑定已完成，未自动开始贡献。',expired:'Hive 已确认配对码过期',blocked:'设备配对暂时无法继续'};
-export function DevicePairingPage({view,context,recovery,recoveryError,refreshStatus,busy:writing,checking=false,initialLoading=false,error,reportedFailure,operationError,begin,refresh,open,recover,onNavigate,canRefresh=true}:{
- view?:DeviceView;context?:DeviceContext;recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;refreshStatus?:RefreshStatus;busy:boolean;checking?:boolean;initialLoading?:boolean;error:UiFailure|null;reportedFailure?:UiFailure|null;operationError?:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;canRefresh?:boolean;
+export function DevicePairingPage({view,context,recovery,recoveryError,refreshStatus,busy:writing,checking=false,initialLoading=false,error,reportedFailure,operationError,begin,refresh,open,recover,onNavigate,canRefresh=true,switchControl,switchStatus,inputDraft,title}:{
+ title?:string;inputDraft?:{hive:string;name:string;setHive:(value:string)=>void;setName:(value:string)=>void};switchControl?:ReactNode;switchStatus?:ReactNode;view?:DeviceView;context?:DeviceContext;recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;refreshStatus?:RefreshStatus;busy:boolean;checking?:boolean;initialLoading?:boolean;error:UiFailure|null;reportedFailure?:UiFailure|null;operationError?:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;canRefresh?:boolean;
  begin:(hive:string,name:string)=>void;refresh:()=>void;open:()=>void;recover?:(decision:Decision,transaction?:DeviceRecoveryView)=>Promise<boolean>;
 }) {
- const [hive,setHive]=useState(''),[name,setName]=useState('Bee Desktop');
+ const [localHive,setLocalHive]=useState(''),[localName,setLocalName]=useState('Bee Desktop');
+ const hive=inputDraft?.hive??localHive,name=inputDraft?.name??localName,setHive=inputDraft?.setHive??setLocalHive,setName=inputDraft?.setName??setLocalName;
  const [now,setNow]=useState(Date.now()),[copied,setCopied]=useState(''),[copyError,setCopyError]=useState<UiFailure|null>(null);
  const [confirmation,setConfirmation]=useState<{decision:Decision;transaction?:DeviceRecoveryView}|null>(null);
  const [confirmationSubmitted,setConfirmationSubmitted]=useState(false);
@@ -29,7 +30,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
   const request=confirmation;setConfirmationSubmitted(true);
   if(await recover(request.decision,request.transaction))setConfirmation(current=>current===request?null:current);
  };
- useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
+ useEffect(()=>{if(inputDraft&&view?.state==='bound')return;if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
  const transaction=recovery??view?.recovery,credentialRecovery=!!recovery;
  const pairing=transaction?.phase==='completed'?null:transaction?.pairing??(view?.user_code&&view.verification_url&&view.expires_at?{code:view.user_code,verification_url:view.verification_url,expires_at:view.expires_at}:null);
  useEffect(()=>{if(!pairing)return;setNow(Date.now());const timer=setInterval(()=>setNow(Date.now()),1000);return()=>clearInterval(timer);},[pairing?.expires_at]);
@@ -44,13 +45,14 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
   setCopyError(null);setCopied('');try{if(!navigator.clipboard?.writeText)throw new Error('clipboard.writeText unavailable; manual selection required');await navigator.clipboard.writeText(value);setCopied(label);}catch(cause){setCopyError(normalizeFailure(cause,'clipboard_write'));}
  };
  const statusCopy=refreshStatus?.state==='waiting'?'前次核对尚未结束，结束后重试。':refreshStatus?.state==='blocked'?'设备核对已暂停，需先处理当前问题。':refreshStatus?.state==='scheduled'?'等待已安排的设备核对。':'设备状态待确认。';
- return <section ref={deviceSection} tabIndex={-1} className="native-device-summary device-pairing" aria-label={t('设备配对')}>
-  <div className="device-section-heading"><h2>{t(view?.state==='unbound'&&!error?'连接本机设备':'本机设备')}</h2>{canRefresh&&<Button variant="outline" disabled={writing||initialLoading} aria-disabled={checking||undefined} aria-busy={checking} onClick={()=>{if(!busy)refresh();}}><RefreshCw className={checking?'device-refreshing':undefined} aria-hidden="true"/>{t('重新核对设备')}</Button>}</div>
+ return <section ref={deviceSection} tabIndex={-1} className="native-device-summary device-pairing" aria-label={t(title??'设备配对')}>
+  <div className="device-section-heading"><h2>{t(title??(view?.state==='unbound'&&!error?'连接本机设备':'本机设备'))}</h2><div className="inline-actions">{switchControl}{canRefresh&&<Button variant="outline" disabled={writing||initialLoading} aria-disabled={checking||undefined} aria-busy={checking} onClick={()=>{if(!busy)refresh();}}><RefreshCw className={checking?'device-refreshing':undefined} aria-hidden="true"/>{t('重新核对设备')}</Button>}</div></div>
   {initialLoading?<div className="device-facts device-loading" role="status" aria-label={t('正在读取设备与账号状态')}>{['本机设备','归属账号','Hive'].map(label=><div key={label} aria-hidden="true"><p>{t(label)}</p><strong className="device-skeleton-line"/><small className="device-skeleton-line"/></div>)}</div>:knownIdentity?<div className="device-facts">
    <div><p>{t('本机设备')}</p><strong>{knownIdentity.name}</strong><small role="status">{t(confirmed?'设备已绑定。':'上次确认的设备，当前待核对。')}</small></div>
    <div><p>{t('归属账号')}</p><strong>{knownIdentity.owner_email}</strong><small>{t('设备所属账号')}</small></div>
    <div><p>Hive</p><strong>{view.hive}</strong><small>{t('配对不会自动开始贡献')}</small></div>
   </div>:context?.device_id?<p className="saved-device-context">{t('上次保存的设备信息')}：{context.name} · {context.hive}</p>:null}
+  {switchStatus}
   {error&&error!==reportedFailure&&<FailureNotice failure={error} check="device_status" onNavigate={onNavigate}/>}
   {recoveryError&&recoveryError!==error&&<FailureNotice failure={recoveryError} check="device_recovery_status" onNavigate={onNavigate}/>}
   {transaction||phase?<div className="device-transaction">
@@ -73,7 +75,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
    <label>{t('设备名称')}<input required maxLength={80} value={name} disabled={busy} onChange={event=>setName(event.target.value)}/></label>
    <Button disabled={busy||!hive.trim()||!name.trim()} type="submit">{t('生成配对码')}</Button>
   </form><p className="feature-note">{t('设备配置独立保存，不覆盖 CLI；已有设备的替换请在 Hive 网页核对后确认。')}</p></>:!initialLoading&&!knownIdentity&&!error&&!recoveryError?<p role="status">{t(statusCopy)}</p>:null}
-  {canRecover&&<div className="device-recovery-action"><p>{t('原凭据已明确撤销。重新绑定需再次在 Hive 网页确认，完成后贡献保持停止。')}</p><Button disabled={busy} onClick={event=>ask(event.currentTarget,'begin_pairing')}>{t('重新绑定设备')}</Button></div>}
+  {canRecover&&<div className="device-recovery-action"><p>{t((error??reportedFailure)?.code==='device_replaced'?'原凭据已明确撤销。重新绑定需再次在 Hive 网页确认，完成后贡献保持停止。':'当前 Hive 不接受原凭据。重新绑定需再次在 Hive 网页确认，完成后贡献保持停止。')}</p><Button disabled={busy} onClick={event=>ask(event.currentTarget,'begin_pairing')}>{t('重新绑定设备')}</Button></div>}
   {copied&&<p className="device-note" role="status">{t(copied)}</p>}{copyError&&<FailureNotice failure={copyError} check="clipboard_write"/>}
   <Dialog.Root open={!!confirmation} onOpenChange={value=>{if(!value)setConfirmation(null);}}><Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content" onCloseAutoFocus={event=>{event.preventDefault();const trigger=confirmationTrigger.current;(trigger?.isConnected&&!trigger.disabled?trigger:deviceSection.current)?.focus({preventScroll:true});}}>
    <Dialog.Title>{t(confirmation?.decision==='adopt_owner'?'确认采用新归属':confirmation?.decision==='renew_expired'?'重新生成配对码':'重新绑定设备')}</Dialog.Title>

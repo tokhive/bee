@@ -1,3 +1,4 @@
+import {createPreviewSwitchSession} from './switch-session.mjs';
 import {accountFixture,installAccountFixture} from '../native-accounts.mjs';
 import {getScene} from './scenarios.mjs';
 import {createPreviewDeviceSession} from './device-session.mjs';
@@ -122,11 +123,15 @@ export async function installPreviewFixture(id){
   w.__beePreviewBindingChanged({bound:true});
  };
  const original=w.__TAURI_INTERNALS__.invoke;
- const instance=(await original('bridge_status')).metadata.instance;
- deviceSession=createPreviewDeviceSession({scene:id,origin,current,instance,onConfigurationChanged:next=>{origin=next.hive;w.bindingRevision=(w.bindingRevision??1)+1;},onCompleted:finishBinding,onRevoked:()=>{bound=false;connection='rejected';revision++;}});
+ let instance=(await original('bridge_status')).metadata.instance;
+ deviceSession=createPreviewDeviceSession({scene:id==='switch-first-launch'?'device-unbound':id,origin,current,instance,onConfigurationChanged:next=>{origin=next.hive;w.bindingRevision=(w.bindingRevision??1)+1;},onCompleted:finishBinding,onRevoked:()=>{bound=false;connection='rejected';revision++;}});
  const networkSession=createPreviewNetworkSession({scene:id,origin,current,invoke:original,instance,context:()=>({...w.__beeMockRuntimeContext(),local,bound}),applyNetwork:next=>{
   w.effectiveProxy=next.proxy;w.networkRevision=next.revision;revision++;
   if(local==='running'){activeRun=crypto.randomUUID().replaceAll('-','');revision++;}
+ }});
+ const profileAccounts=new Map();
+ const switchSession=createPreviewSwitchSession({scene:id,origin,instance,original,current,onInitial:args=>deviceSession.invoke('device_begin',args),onCommit:next=>{
+  profileAccounts.set(origin,{accounts:clone(w.accounts),paused:clone(w.paused)});origin=next.hive;instance=next.instance;w.currentHiveProfile=next.profile_id;const saved=profileAccounts.get(origin);for(const platform of ['openai','claude']){w.accounts[platform]=saved?clone(saved.accounts[platform]):accountFixture(platform);w.paused[platform]=saved?.paused[platform]??false;}if(id==='switch-account-error')w.accounts.openai.candidate={...w.accounts.openai.candidate,state:'unavailable',error:{code:'source_unavailable',check:'file_read',platform:'openai',message:'B OpenAI source read rejected: permission_denied=true; current Hive remains B',evidence:{permission_denied:'true'}}};local=Object.values(w.accounts).some(account=>account.selection.state==='selected')?'running':'waiting';connection='connected';bound=true;activeRun=next.instance;revision++;w.emit(next.instance);
  }});
  const reads={openai:0,claude:0};
  w.__beePreviewActivate=()=>{reads.openai=0;reads.claude=0;};
@@ -156,6 +161,7 @@ export async function installPreviewFixture(id){
  };
  const recoveryWriteCodes={account_action:'ACCOUNT_OPERATION_FAILED',authorize_start:'AUTHORIZE_OPERATION_FAILED',runtime_start:'RUNTIME_OPERATION_FAILED',supply_set_paused:'SUPPLY_OPERATION_FAILED',network_apply_saved:'DEVICE_RECOVERY_RECHECK_REQUIRED'};
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
+  if(switchSession.handles(command))return switchSession.invoke(command,args);
   const barrier=deviceSession.writeBarrier();
   if(barrier&&Object.hasOwn(recoveryWriteCodes,command)){
    w.calls.push({command,args});

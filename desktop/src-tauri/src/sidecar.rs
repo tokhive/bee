@@ -779,9 +779,9 @@ impl Bridge {
         if reply.result.get("error").is_none() && reply.result["switch"]["mode"] != mode.argument() {
             return Err(error("HIVE_SWITCH_REPLY_INVALID", format!("switch reply mode differs: required={}", mode.argument())));
         }
-        if reply.result.get("error").is_none() && reply.result["switch"]["maintenance_allowed"] == true {
-            self.0.switch_released.store(true, Ordering::SeqCst);
-            self.0.switch_frozen.store(false, Ordering::SeqCst);
+        if reply.result.get("error").is_none() {
+            self.0.switch_released.store(reply.result["switch"]["maintenance_allowed"] == true, Ordering::SeqCst);
+            self.0.switch_frozen.store(reply.result["switch"]["frozen"] == true, Ordering::SeqCst);
         }
         Ok(reply)
     }

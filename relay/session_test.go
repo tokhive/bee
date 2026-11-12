@@ -3,7 +3,7 @@ package relay
 import (
 	"context"
 	"github.com/coder/websocket"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tunnel"
+	"github.com/tokhive/tee/tunnel"
 	"net/http"
 	"net/http/httptest"
 	"strings"

@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
+	"github.com/tokhive/tee/tee"
 )
 
 // codexHome writes a synthetic official Codex sign-in.
@@ -73,6 +73,7 @@ func writtenEgress(t *testing.T, path string) map[string]any {
 }
 
 func TestSetupWritesWhatBeeRunAccepts(t *testing.T) {
+	t.Setenv("BEE_LANG", "en")
 	home := codexHome(t, time.Now().Add(time.Hour))
 	config := filepath.Join(t.TempDir(), "bee.json")
 	out, err := runSetup(t, "--config", config, "--platform", "openai", "--codex-home", home, "--yes")

@@ -2,11 +2,6 @@
 # .github/workflows/release.yml and publishes a GitHub release.
 version: 2
 
-before:
-  hooks:
-    # The TEE client library is pinned outside the Go module proxy.
-    - bash scripts/prepare-tee.sh
-
 builds:
   - id: bee
     main: ./cmd/bee

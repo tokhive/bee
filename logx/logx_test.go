@@ -35,16 +35,20 @@ func capture(t *testing.T) func() string {
 
 func TestModuleAllowlistKeepsOnlyListedModules(t *testing.T) {
 	done := capture(t)
-	t.Setenv("TOKHIVE_LOG_LEVEL", "debug")
-	t.Setenv("TOKHIVE_LOG_MODULES", "sync, HTTP")
+	t.Setenv("HIVE_LOG_LEVEL", "debug")
+	t.Setenv("HIVE_LOG_MODULES", "sync, HTTP")
 	Setup("bee", "")
+	if !DebugOn() {
+		t.Fatal("HIVE_LOG_LEVEL did not enable debug")
+	}
+	slog.Debug("kept-debug", "module", "sync")
 	slog.Info("kept", "module", "sync")
 	slog.Info("dropped", "module", "connect")
 	slog.Info("dropped-untagged")
 	Stamp("[bee-debug]", "egress", "dropped stamp")
 	Stamp("[bee-debug]", "sync", "kept stamp")
 	out := done()
-	if !strings.Contains(out, `msg=kept`) || !strings.Contains(out, "kept stamp") {
+	if !strings.Contains(out, `msg=kept`) || !strings.Contains(out, "kept stamp") || !strings.Contains(out, "msg=kept-debug") {
 		t.Fatalf("allowlisted lines missing: %q", out)
 	}
 	for _, dropped := range []string{"dropped", "dropped stamp", "dropped-untagged"} {
@@ -59,7 +63,7 @@ func TestModuleAllowlistKeepsOnlyListedModules(t *testing.T) {
 
 func TestEmptyAllowlistKeepsEverything(t *testing.T) {
 	done := capture(t)
-	t.Setenv("TOKHIVE_LOG_MODULES", "")
+	t.Setenv("HIVE_LOG_MODULES", "")
 	Setup("hive", "")
 	slog.Info("kept", "module", "anything")
 	if out := done(); !strings.Contains(out, `msg=kept`) {

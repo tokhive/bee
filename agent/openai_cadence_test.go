@@ -13,16 +13,20 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/reclaimprotocol/reclaim-tee/tokenhive/tee"
 	"github.com/tokhive/bee/beewire"
+	"github.com/tokhive/tee/tee"
 )
 
 type openaiControlFixture struct {
 	models, usage  int
 	plan, excluded string
 	fail           bool
+	// rejected answers usage with the 401 a token upstream no longer honours.
+	rejected bool
 	// primary overrides the length of the primary window when set.
 	primary int
+	// extra are further top-level usage fields.
+	extra map[string]any
 	// versions are the client_version and User-Agent each models query sent.
 	versions [][2]string
 	// identities are the originator, version header and User-Agent each models
@@ -44,6 +48,9 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	if f.fail {
 		return claudeProfileResponse(503, `{}`), nil
 	}
+	if f.rejected {
+		return claudeProfileResponse(401, `{"error":{"code":"token_expired"}}`), nil
+	}
 	window := func(seconds int) map[string]any {
 		return map[string]any{"limit_window_seconds": seconds, "used_percent": 20, "reset_after_seconds": 3600, "reset_at": time.Now().Add(time.Hour).Unix()}
 	}
@@ -62,6 +69,9 @@ func (f *openaiControlFixture) RoundTrip(r *http.Request) (*http.Response, error
 	usage := map[string]any{"plan_type": f.plan, "rate_limit": limit}
 	if f.excluded != "" {
 		usage["additional_rate_limits"] = []any{map[string]any{"metered_feature": "base_model_inference", "limit_name": "gpt-reserve", "normal_model_slug": f.excluded}}
+	}
+	for key, value := range f.extra {
+		usage[key] = value
 	}
 	raw, _ := json.Marshal(usage)
 	return claudeProfileResponse(200, string(raw)), nil
@@ -237,6 +247,29 @@ func TestOpenAIIndependentReportIntervals(t *testing.T) {
 	if err := sync(false); err != nil {
 		t.Fatal(err)
 	}
+	// Hive asks for a report through a control stream when it holds the
+	// account out until a newer observation arrives. The next cycle makes one
+	// however recent the last, once ten seconds separate the attempts, and
+	// making it clears the request.
+	cfg.lastCapabilityAttempt, cfg.lastCapabilitySync = time.Now(), time.Now()
+	if cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("report due without being asked")
+	}
+	cfg.serveStream(io.Discard)(context.Background(), nil, []byte(`{"control":"capabilities","platform":"openai"}`))
+	if cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("an asked report skipped the ten seconds between attempts")
+	}
+	cfg.lastCapabilityAttempt = time.Now().Add(-11 * time.Second)
+	if !cfg.capabilitiesDue(false, false, *cfg.authorization) {
+		t.Fatal("asked report not due")
+	}
+	asked := len(reports)
+	if err := sync(false); err != nil {
+		t.Fatal(err)
+	}
+	if len(reports) != asked+1 || cfg.capabilityWanted.Load() {
+		t.Fatalf("asked report not made, or the request kept: reports %d after %d", len(reports), asked)
+	}
 }
 
 type failingTransport struct{}
@@ -308,6 +341,28 @@ func TestOpenAISingleWindowPlansSupply(t *testing.T) {
 	s := capabilitySource{transport: &openaiControlFixture{plan: "promax", excluded: "gpt-test-b"}}
 	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || len(got.Models) != 1 || got.Models[0] != "gpt-test-a" {
 		t.Fatalf("promax additional_rate_limits not honoured: %+v %q", got, s.failure)
+	}
+}
+
+// The usage report carries the account's paid credits, which Bee passes on, and
+// per-model availability: a model it marks unavailable is not reported.
+func TestOpenAIReportsCreditsAndDropsUnavailableModels(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	s := capabilitySource{transport: &openaiControlFixture{plan: "pro", extra: map[string]any{
+		"credits":     map[string]any{"has_credits": true, "unlimited": false, "overage_limit_reached": true, "balance": "12.5", "approx_local_messages": []int{1, 2}},
+		"model_usage": map[string]any{"gpt-test-a": map[string]any{"available": true, "available_at": nil, "credits_would_enable": false}, "gpt-test-b": map[string]any{"available": false, "available_at": nil, "credits_would_enable": true}},
+	}}}
+	got := s.observe(context.Background(), c, 1)
+	if got.Status != "ready" || len(got.Models) != 1 || got.Models[0] != "gpt-test-a" {
+		t.Fatalf("unavailable model reported: %+v %q", got, s.failure)
+	}
+	if got.Credits == nil || !got.Credits.HasCredits || got.Credits.Unlimited || !got.Credits.OverageReached {
+		t.Fatalf("credits not reported: %+v", got.Credits)
+	}
+	// A report without credits or model_usage still supplies every model.
+	s = capabilitySource{transport: &openaiControlFixture{plan: "pro"}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || got.Credits != nil || len(got.Models) != 2 {
+		t.Fatalf("plain report: %+v %q", got, s.failure)
 	}
 }
 
@@ -416,5 +471,72 @@ func TestNewerVersion(t *testing.T) {
 	}
 	if newerVersion("0.163.0", "0.163.0") {
 		t.Fatal("a release is not newer than itself")
+	}
+}
+
+// A plan changed upstream leaves the token claiming the old one; Bee asks Hive
+// for one refresh of that token, and never more than once an hour.
+func TestOpenAIStalePlanAsksForOneRefresh(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "pro", ExpiresAt: time.Now().Add(time.Hour)}
+	revision := c.metadata().CredentialRevision
+	s := &capabilitySource{transport: &openaiControlFixture{plan: "free"}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.staleToken != revision {
+		t.Fatalf("stale plan not noticed: status=%s stale=%q", got.Status, s.staleToken)
+	}
+	now := time.Now()
+	if !s.wantsRefresh(revision, now) || s.wantsRefresh("other", now) {
+		t.Fatal("refresh request does not follow the stale token")
+	}
+	s.askedRefresh(revision, now)
+	if s.wantsRefresh(revision, now.Add(2*staleRefreshInterval)) {
+		t.Fatal("the same token asked twice")
+	}
+	// The refreshed token still disagrees: it waits out the interval.
+	s.staleToken = "refreshed"
+	if s.wantsRefresh("refreshed", now.Add(time.Minute)) || !s.wantsRefresh("refreshed", now.Add(staleRefreshInterval)) {
+		t.Fatal("a token that stays stale is not limited to one request an hour")
+	}
+	// Once the plans agree, nothing is asked.
+	s.transport = &openaiControlFixture{plan: "pro"}
+	if got := s.observe(context.Background(), c, 1); got.Status != "ready" || s.staleToken != "" || s.wantsRefresh(revision, now.Add(3*staleRefreshInterval)) {
+		t.Fatalf("plans agree but a refresh is still wanted: status=%s stale=%q", got.Status, s.staleToken)
+	}
+	var none *capabilitySource
+	if none.wantsRefresh(revision, now) {
+		t.Fatal("a Bee without capability queries asked for a refresh")
+	}
+}
+
+// A plan change can also revoke the token outright: usage answers 401
+// token_expired long before the token's own expiry, and only a refresh helps.
+func TestOpenAIRejectedTokenAsksForRefresh(t *testing.T) {
+	c := codexCredential{Secret: tee.Secret{Header: "authorization", Scheme: "Bearer", Token: "synthetic-access"}, AccountID: "account", UserID: "user", Plan: "free", ExpiresAt: time.Now().Add(time.Hour)}
+	revision := c.metadata().CredentialRevision
+	s := &capabilitySource{transport: &openaiControlFixture{plan: "free", rejected: true}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || !s.wantsRefresh(revision, time.Now()) {
+		t.Fatalf("rejected token not marked stale: status=%s stale=%q", got.Status, s.staleToken)
+	}
+	// Any other failure is upstream's, and a refresh would not fix it.
+	s = &capabilitySource{transport: &openaiControlFixture{plan: "free", fail: true}}
+	if got := s.observe(context.Background(), c, 1); got.Status != "unknown" || s.staleToken != "" {
+		t.Fatalf("a 503 asked for a refresh: status=%s stale=%q", got.Status, s.staleToken)
+	}
+}
+
+// Only the observation that ends an unknown spell counts as a recovery, so
+// readiness is announced once and not on every healthy report.
+func TestCapabilityRecoveryIsReportedOnce(t *testing.T) {
+	logged := ""
+	if logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("a healthy start is not a recovery")
+	}
+	if logCapabilityFailure("openai", &logged, "stale plan") || logCapabilityFailure("openai", &logged, "other reason") {
+		t.Fatal("a failure was reported as a recovery")
+	}
+	if !logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("the recovery was not reported")
+	}
+	if logCapabilityFailure("openai", &logged, "") {
+		t.Fatal("a healthy report after the recovery was reported again")
 	}
 }

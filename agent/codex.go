@@ -150,7 +150,7 @@ func (source codexSource) readForMaintenance(ctx context.Context) (codexCredenti
 func readCodexFile(path string) ([]byte, error) {
 	info, err := os.Lstat(path)
 	if os.IsNotExist(err) {
-		return nil, &credentialError{kind: "missing", detail: path}
+		return nil, &credentialError{kind: "missing", detail: path, cause: err}
 	}
 	if err != nil {
 		return nil, &credentialError{kind: "read", detail: path, cause: err}

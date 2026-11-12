@@ -6,7 +6,7 @@
 
 **Blocked by:** 06 App 执行 A→B→A 的持久切换
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] 取消与提交串行；未知保持占位，已成功不能改成取消成功。
 - [ ] 主动退出可继续等待／取消并退出；意外崩溃继续，重启不刷新预算。

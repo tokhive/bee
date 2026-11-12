@@ -1538,6 +1538,12 @@ impl HiveSwitch {
             .proxy_for(&prefs.preferences, scope.as_deref())?
             .to_owned();
         let revision = prefs.preferences.revision;
+        let effective =
+            crate::network::decode_network_status(&bridge.network_status().await?.result)?;
+        if effective.effective_revision == revision && effective.effective_proxy == proxy {
+            leg.network_revision = revision;
+            return Ok(());
+        }
         let reply = bridge
             .runtime_configure_network(crate::runtime_protocol::RuntimeNetworkConfig {
                 revision,

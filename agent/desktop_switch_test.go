@@ -3,6 +3,8 @@ package bee
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -687,5 +689,50 @@ func TestDesktopSwitchSavedSealStopsOwnedSessionAndSurvivesRestart(t *testing.T)
 	changed.ExpectedLease = "different-lease"
 	if _, err = r.SwitchControl(context.Background(), DesktopSwitchRequest{Action: "drain_status", BindingRevision: c.BindingRevision, Operation: &changed}); err == nil {
 		t.Fatal("restart accepted changed original request")
+	}
+}
+
+func TestDesktopSwitchQueryFailureRetainsTypedHTTPAndTransportEvidence(t *testing.T) {
+	for _, status := range []int{401, 503, 0} {
+		t.Run(fmt.Sprint(status), func(t *testing.T) {
+			d := desktopSwitchDeviceFixture(t, func(w http.ResponseWriter, q *http.Request) {
+				if desktopSupplyServeIdentity(w, q) {
+					return
+				}
+				if status == 0 {
+					conn, _, err := w.(http.Hijacker).Hijack()
+					if err != nil {
+						t.Error(err)
+						return
+					}
+					conn.Close()
+					return
+				}
+				w.WriteHeader(status)
+				w.Write([]byte(`{"error":{"code":"unavailable","message":"synthetic query rejected"}}`))
+			})
+			a := NewDesktopAccounts(d)
+			defer a.Close()
+			r := NewDesktopRuntime(context.Background(), d, a)
+			defer r.Close()
+			c, err := d.Context(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = r.SwitchControl(context.Background(), DesktopSwitchRequest{Action: "capabilities", BindingRevision: c.BindingRevision})
+			var failure *DesktopFailure
+			if !errors.As(err, &failure) || failure.Code != "HIVE_SWITCH_FAILED" || failure.Details == nil {
+				t.Fatalf("typed query evidence missing: %v", err)
+			}
+			if err := failure.Details.Validate(); err != nil {
+				t.Fatal(err)
+			}
+			if status != 0 && failure.Details.Evidence["http_status"] != fmt.Sprint(status) {
+				t.Fatalf("HTTP evidence=%+v", failure.Details)
+			}
+			if status == 0 && failure.Details.Evidence["failure_kind"] != "connection_closed" {
+				t.Fatalf("transport evidence=%+v", failure.Details)
+			}
+		})
 	}
 }

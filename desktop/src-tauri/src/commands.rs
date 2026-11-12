@@ -1,7 +1,7 @@
 use crate::hive_switch::CurrentBridge;
 use crate::{
     protocol::{AccountActionRequest, AccountDetectRequest, BridgeError, SupplyPlatform},
-    sidecar::{BridgeReply, BridgeStatus},
+    sidecar::BridgeReply,
 };
 use tauri::Manager;
 
@@ -70,8 +70,24 @@ pub async fn bridge_request(
 }
 
 #[tauri::command]
-pub fn bridge_status(bridge: tauri::State<'_, CurrentBridge>) -> BridgeStatus {
-    bridge.get().map(|b|b.status()).unwrap_or_else(|cause|crate::sidecar::BridgeStatus{state:crate::sidecar::BridgePhase::Failed,metadata:None,error:Some(cause)})
+pub fn bridge_status(bridge: tauri::State<'_, CurrentBridge>) -> serde_json::Value {
+    let (status, profile_id) = match bridge.capture() {
+        Some((context, child)) => (child.status(), context.map(|c| c.id)),
+        None => (
+            crate::sidecar::BridgeStatus {
+                state: crate::sidecar::BridgePhase::Failed,
+                metadata: None,
+                error: Some(BridgeError::new(
+                    "HIVE_PROFILE_REQUIRED",
+                    "current Hive profile is unavailable".into(),
+                )),
+            },
+            None,
+        ),
+    };
+    let mut value = serde_json::to_value(status).expect("bridge status serializable");
+    value["profile_id"] = serde_json::json!(profile_id);
+    value
 }
 
 #[tauri::command]
@@ -124,11 +140,16 @@ pub async fn device_status(app: tauri::AppHandle, bridge: tauri::State<'_, Curre
 
 #[tauri::command]
 pub async fn device_begin(
+    app: tauri::AppHandle,
     coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
     hive: String,
     name: String,
 ) -> Result<BridgeReply, BridgeError> {
-    coordinator.initial_begin(hive, name).await
+    let reply = coordinator.initial_begin(hive, name).await?;
+    if reply.result["device"]["state"] == "bound" {
+        coordinator.startup_current(app).await;
+    }
+    Ok(reply)
 }
 
 #[tauri::command]
@@ -831,16 +852,21 @@ pub fn startup_status(
 #[tauri::command]
 pub async fn startup_query(
     app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
     bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
+    let _owner = coordinator.serial.lock().await;
+    require_idle_switch(&app)?;
     let bridge=bridge.get()?;
     crate::experience::query(&app,&bridge).await
 }
 #[tauri::command]
 pub async fn startup_retry(
     app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
     bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
+    let _owner = coordinator.serial.lock().await;
     require_idle_switch(&app)?;
     let bridge=bridge.get()?;
     Ok(crate::experience::retry(app,bridge.clone()).await)
@@ -848,8 +874,10 @@ pub async fn startup_retry(
 #[tauri::command]
 pub async fn startup_recheck(
     app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
     bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<crate::experience::StartupStatus, BridgeError> {
+    let _owner = coordinator.serial.lock().await;
     require_idle_switch(&app)?;
     let bridge=bridge.get()?;
     Ok(crate::experience::recheck(&app, &bridge).await)
@@ -974,4 +1002,49 @@ pub async fn hive_switch_target_open(
     coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
 ) -> Result<BridgeReply, BridgeError> {
     coordinator.target_open().await
+}
+
+#[tauri::command]
+pub async fn hive_switch_cancel(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    let snapshot = coordinator.cancel(store.read()).await?;
+    if snapshot.operation.as_ref().is_some_and(|r| r.terminal()) {
+        coordinator.startup_current(app).await;
+    }
+    Ok(snapshot)
+}
+#[tauri::command]
+pub async fn hive_switch_continue(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    let snapshot = coordinator.continue_waiting(store.read()).await?;
+    if snapshot.operation.as_ref().is_some_and(|r| r.terminal()) {
+        coordinator.startup_current(app).await;
+    }
+    Ok(snapshot)
+}
+#[tauri::command]
+pub async fn hive_switch_quit(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    store: tauri::State<'_, crate::preferences::PreferencesStore>,
+    decision: String,
+) -> Result<crate::hive_switch::SwitchSnapshot, BridgeError> {
+    match decision.as_str() {
+        "continue_waiting" => coordinator.continue_waiting(store.read()).await,
+        "cancel_and_quit" => {
+            let snapshot = coordinator.request_quit(store.read()).await?;
+            app.exit(0);
+            Ok(snapshot)
+        }
+        _ => Err(BridgeError::new(
+            "HIVE_SWITCH_QUIT_DECISION",
+            format!("quit decision={decision}; required=continue_waiting or cancel_and_quit"),
+        )),
+    }
 }

@@ -14,10 +14,10 @@
 
 TDD 记录：typed switch client、profile scope 清缓存／拒绝旧结果、首次 profile gate 与 target mock 的测试均从失败推进至通过；另以失败用例发现并修复旧 startup error 跨 Hive 覆盖及 StrictMode 初始读取丢失。
 
-- TypeScript typecheck 通过。
-- 59 项相关单元通过，覆盖 switch client、scope／startup、bridge／lifecycle 及 mock。
+- TypeScript typecheck 与正式生产 build 通过；Vite 保留已有 bundle 大小提示。
+- 最终集成上全部 342 项前端单元通过，覆盖 switch client、scope／startup、bridge／lifecycle 及 mock；原生输出字段对齐检查直接读取最终 Rust DTO。
 - 28 项 Playwright 通过，包含 9 项切换用例及既有设备／自动账号用例：列表键盘与输入、暂停／未知、首次 profile gate、交接空窗、目标恢复、退出选择、提交 B 后账号问题、失败输入，以及两份主预览模板。
-- 原生参数契约直接读取 Rust command 签名与 Serde 输入类型，校验新增 switch 参数，并保留旧 snake_case payload 拒绝负例。最终合并后结果见交付 handoff。
+- 原生参数契约直接读取 Rust command 签名与 Serde 输入类型，校验新增 switch 参数，并保留旧 snake_case payload 拒绝负例。最终集成后 64 个注册命令全部通过。
 - ego-browser 已目视检查浅深外观与窄窗口，独立打开修改前正式 bundle、交付 bundle 与主预览历史，并检查列表／Escape／修改前对照。Web guidelines 检查涉及表单标签、名称、autocomplete、焦点、长地址换行和弹层滚动。
 
 ## 可复查材料
@@ -25,6 +25,7 @@ TDD 记录：typed switch client、profile scope 清缓存／拒绝旧结果、�
 [浅色紧凑列表](formal-list-light-final.png) · [深色未知进度](formal-unknown-dark-final.png) · [主预览等待](main-waiting-light-final.png)。截图仅补充说明，完整可运行历史如下。
 
 - 正式组件修改前：[完整 frozen bundle](../../../../desktop/tests/fixtures/bee-preview/history/20261112-215252-before-hive-switch/SOURCE.md)。
+- 正式组件最终版：[完整 frozen bundle](../../../../desktop/tests/fixtures/bee-preview/history/20261112-222601-hive-switch-final/SOURCE.md)。
 - 正式组件交付初版：[完整 frozen bundle](../../../../desktop/tests/fixtures/bee-preview/history/20261112-221434-hive-switch-interface/SOURCE.md)。该版本保留于最终原生字段核对之前；最终交付另行冻结。
 - 主预览：[完整快照](../../../preview/history/20261112-221434-hive-switch-interface/index.html?scene=switch-waiting)。对照依赖全部同目录冻结。
 

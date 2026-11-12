@@ -92,3 +92,13 @@ test('switch preview keeps profile account selections across A to B to A',async 
  assert.equal(state.profiles.current_profile,initial.profiles.current_profile);assert.equal(state.operation?.phase,'succeeded');
  assert.equal((window as any).accounts.openai.selection.state,'selected');assert.equal((await createDeviceClient(call).status()).hive,'https://hive.example');
 });
+
+
+test('switch mock public fields match the final native serialized DTO definitions',async t=>{
+ const call=await preview(t,'switch-waiting');const {readFile}=await import('node:fs/promises');
+ const source=await readFile(new URL('../src-tauri/src/hive_switch.rs',import.meta.url),'utf8'),profiles=await readFile(new URL('../src-tauri/src/profiles.rs',import.meta.url),'utf8');
+ const state=await call<any>('hive_switch_snapshot');
+ const fields=(text:string,name:string)=>{const body=text.match(new RegExp('struct '+name+' \\{([\\s\\S]*?)\\n\\}'));assert.ok(body,name+' native struct must remain inspectable');return [...body[1].matchAll(/pub (\w+):/g)].map(([,name])=>name).sort();};
+ for(const [name,value]of [['SwitchSnapshot',state],['SwitchRecord',state.operation],['SwitchLeg',state.operation.source],['Observation',state.observation],['SwitchActions',state.actions],['CurrentScope',state.current_scope],['ProfileIdentity',state.profile_identities[0]]])assert.deepEqual(Object.keys(value).sort(),fields(source,name));
+ for(const [name,value]of [['ProfileIndex',state.profiles],['ProfileEntry',state.profiles.profiles[0]]])assert.deepEqual(Object.keys(value).sort(),fields(profiles,name));
+});

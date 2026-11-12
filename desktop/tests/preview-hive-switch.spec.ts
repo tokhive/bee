@@ -39,6 +39,8 @@ test('native exit request keeps the original operation and requires an explicit 
  await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any;const s=await w.__TAURI_INTERNALS__.invoke('hive_switch_snapshot');w.requestSwitchExit(s.operation.id);});
  const dialog=app.getByRole('dialog',{name:'切换 Hive 尚未结束'});await expect(dialog).toContainText('可能中断任务');await dialog.press('Escape');await expect(dialog).toBeVisible();await dialog.getByRole('button',{name:'继续等待',exact:true}).click();await expect(dialog).toHaveCount(0);
  const decisions=(await calls(page)).filter((c:any)=>c.command==='hive_switch_quit');expect(decisions.map((c:any)=>c.args.decision)).toEqual(['continue_waiting']);expect((await calls(page)).some((c:any)=>c.command==='hive_switch_start')).toBe(false);
+ await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any;const state=await w.__TAURI_INTERNALS__.invoke('hive_switch_snapshot');w.requestSwitchExit(state.operation.id);});await dialog.getByRole('button',{name:'取消切换并退出',exact:true}).click();
+ const pending=await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>(frame.contentWindow as any).__TAURI_INTERNALS__.invoke('hive_switch_snapshot'));expect(pending.operation.quit_requested).toBe(true);expect(pending.operation.cancel_requested).toBe(true);expect(pending.operation.phase).toBe('draining_source');await expect(app.getByLabel('Hive 切换进度')).not.toContainText('切换已取消');
 });
 
 test('committed B remains current with no account selection and after an account source error',async({page})=>{

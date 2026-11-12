@@ -46,15 +46,25 @@ func runCommand(ctx context.Context, args []string) error {
 	if len(args) == 0 || args[0] != "desktop" {
 		return bee.Run(ctx, args, os.Stdout)
 	}
-	if len(args) != 1 {
-		return fmt.Errorf("bee desktop received additional arguments=%d; required=0", len(args)-1)
+	if len(args) == 1 {
+		return runDesktop(ctx, os.Stdin, os.Stdout, os.Stderr)
 	}
-	return runDesktop(ctx, os.Stdin, os.Stdout, os.Stderr)
+	if len(args) != 5 || args[1] != "--profile-dir" || args[3] != "--mode" {
+		return fmt.Errorf("bee desktop received additional arguments=%d; required=0 or --profile-dir <absolute directory> --mode current|prepare|activate", len(args)-1)
+	}
+	device, err := bee.NewDesktopProfileDevice(args[2], bee.DesktopProfileMode(args[4]))
+	if err != nil {
+		return err
+	}
+	return runDesktopDevice(ctx, os.Stdin, os.Stdout, os.Stderr, device)
 }
 
 // The command owns its standard pipes. Closing them on cancellation interrupts
 // native blocked I/O; desktopbridge.Run itself never closes caller-owned streams.
 func runDesktop(ctx context.Context, in, out *os.File, diagnostics io.Writer) error {
+	return runDesktopDevice(ctx, in, out, diagnostics, bee.NewDesktopDevice())
+}
+func runDesktopDevice(ctx context.Context, in, out *os.File, diagnostics io.Writer, device *bee.DesktopDevice) error {
 	input, err := prepareDesktopPipe(in)
 	if err != nil {
 		return fmt.Errorf("prepare desktop input pipe: %w", err)
@@ -76,7 +86,6 @@ func runDesktop(ctx context.Context, in, out *os.File, diagnostics io.Writer) er
 			closed <- nil
 		}
 	}()
-	device := bee.NewDesktopDevice()
 	defer device.Close()
 	accounts := bee.NewDesktopAccounts(device)
 	defer accounts.Close()

@@ -230,6 +230,17 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 		first := true
 		prepared := false
 		for ctx.Err() == nil {
+			if !r.switchAllowsMaintenance() {
+				if pause(ctx, 100*time.Millisecond) != nil {
+					return
+				}
+				continue
+			}
+			r.switching.writes.RLock()
+			if !r.switchAllowsMaintenance() {
+				r.switching.writes.RUnlock()
+				continue
+			}
 			var err error
 			if !prepared {
 				err = r.prepareConnectionSupply(ctx, connection.state, platform, slot)
@@ -244,6 +255,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 				}
 			}
 			if ctx.Err() != nil {
+				r.switching.writes.RUnlock()
 				return
 			}
 			if err != nil {
@@ -254,6 +266,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 					case connection.failures <- err:
 					default:
 					}
+					r.switching.writes.RUnlock()
 					return
 				}
 			} else if err = r.observeSynchronizedPlatform(ctx, connection.state, platform, slot); err != nil {
@@ -261,6 +274,7 @@ func (r *DesktopRuntime) startSlotLocked(platform string, slot *desktopRuntimeSl
 			} else {
 				r.synchronizationObserved(connection, connection.run, platform, "", nil)
 			}
+			r.switching.writes.RUnlock()
 			if prepared {
 				first = false
 			}

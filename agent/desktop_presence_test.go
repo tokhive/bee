@@ -131,7 +131,10 @@ func TestDesktopPresenceAccountHandoffWaitsForRetirement(t *testing.T) {
 		}
 		defer c.CloseNow()
 		connects.Add(1)
-		<-c.CloseRead(q.Context()).Done()
+		// The /agent endpoint consumes relay bootstrap frames. CloseRead would
+  // reject that binary message with a policy close and artificially retain
+  // the fixture registry during its graceful handshake.
+  if q.URL.Path=="/api/bee/agent" {for {if _,_,err:=c.Read(q.Context());err!=nil{break}}}else{<-c.CloseRead(q.Context()).Done()}
 		// Hive's registry cleanup may lag the local socket close.
 		time.Sleep(70 * time.Millisecond)
 	})

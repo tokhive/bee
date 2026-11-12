@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
 	"slices"
 	"sync"
 	"time"
@@ -16,6 +18,7 @@ import (
 // management child. Its mutex protects observations, never network calls.
 type DesktopRuntime struct {
 	mu                    sync.Mutex
+	switching             desktopSwitchLifecycle
 	ctx                   context.Context
 	cancel                context.CancelFunc
 	workers               sync.WaitGroup
@@ -44,6 +47,11 @@ type DesktopRuntime struct {
 func NewDesktopRuntime(parent context.Context, d *DesktopDevice, a *DesktopAccounts) *DesktopRuntime {
 	ctx, cancel := context.WithCancel(parent)
 	r := &DesktopRuntime{ctx: ctx, cancel: cancel, device: d, accounts: a, slots: map[string]*desktopRuntimeSlot{}, targets: map[string]bool{}, snapshot: DesktopRuntimeSnapshot{Local: "stopped", Connection: "disconnected", Platforms: map[string]DesktopRuntimePlatform{}}}
+	if path, err := d.configPath(); err == nil {
+		if _, e := os.Lstat(filepath.Join(filepath.Dir(path), "desktop-switch-seal.json")); e == nil || !os.IsNotExist(e) {
+			r.switching.frozen.Store(true)
+		}
+	}
 	r.connectionGate = make(desktopRuntimeGate, 1)
 	for _, platform := range []string{"openai", "claude"} {
 		r.slots[platform] = &desktopRuntimeSlot{gate: make(desktopRuntimeGate, 1), control: make(desktopRuntimeGate, 1)}
@@ -135,6 +143,9 @@ func (r *DesktopRuntime) beginStart(ctx context.Context, input DesktopStartReque
 
 // Caller holds the account lifecycle and runtime admission locks together.
 func (r *DesktopRuntime) beginStartLocked(ctx context.Context, input DesktopStartRequest, restoring bool) (DesktopOperation, error) {
+	if err := r.switchMaintenanceBarrier(); err != nil {
+		return DesktopOperation{}, err
+	}
 	if err := r.device.recoveryWriteBarrier(); err != nil {
 		return DesktopOperation{}, err
 	}
@@ -415,13 +426,19 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	if err := ctx.Err(); err != nil {
 		return DesktopOperation{}, err
 	}
-	if !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change", "startup_recovery"}, input.Reason) {
+	if !slices.Contains([]string{"user_stop", "app_exit", "update", "network_change", "startup_recovery", "hive_switch"}, input.Reason) {
 		return DesktopOperation{}, fmt.Errorf("runtime stop reason outside fixed entry points")
 	}
 	r.accounts.lifecycleMu.Lock()
 	defer r.accounts.lifecycleMu.Unlock()
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	if r.switching.frozen.Load() && !slices.Contains([]string{"hive_switch", "app_exit", "update"}, input.Reason) {
+		return DesktopOperation{}, fmt.Errorf("Hive switch stop rejected: source_frozen=true reason=%s; required=matching sealed handoff or owned exit cleanup", input.Reason)
+	}
+	if input.Reason == "hive_switch" && !r.switching.sealSaved.Load() {
+		return DesktopOperation{}, fmt.Errorf("Hive switch stop rejected: durable_server_seal=false")
+	}
 	if r.closed {
 		return DesktopOperation{}, fmt.Errorf("runtime owner closed; stop rejected")
 	}
@@ -429,7 +446,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 		return DesktopOperation{}, fmt.Errorf("runtime revision changed: actual=%d expected=%d", r.snapshot.Revision, input.ExpectedRevision)
 	}
 	if r.snapshot.Local == "stopping" {
-		if input.Reason == "app_exit" || input.Reason == "update" {
+		if input.Reason == "app_exit" || input.Reason == "update" || input.Reason == "hive_switch" {
 			r.presence.shutdown = true
 			return *r.snapshot.Operation, nil
 		}
@@ -442,7 +459,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	r.snapshot.Revision++
 	r.snapshot.Local = "stopping"
 	presenceDone := r.cancelPresenceLocked()
-	if input.Reason == "app_exit" || input.Reason == "update" {
+	if input.Reason == "app_exit" || input.Reason == "update" || input.Reason == "hive_switch" {
 		r.presence.shutdown = true
 	}
 	if input.Reason == "network_change" {
@@ -465,13 +482,14 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	cancel, done := r.runCancel, r.runDone
 	controlCancel, controlDone := r.controlCancel, r.controlDone
 	accountWorkers := r.accountWorkersLocked()
+	allowClean := !r.switching.frozen.Load() || r.switching.sealSaved.Load()
 	r.workers.Add(1)
 	go func() {
 		defer r.workers.Done()
 		if presenceDone != nil {
 			<-presenceDone
 		}
-		receipt, err := r.stop(stoppedIntent, owned, cancel, done, controlCancel, controlDone, accountWorkers)
+		receipt, err := r.stop(stoppedIntent, owned, cancel, done, controlCancel, controlDone, accountWorkers, allowClean)
 		r.mu.Lock()
 		defer r.mu.Unlock()
 		r.snapshot.Revision++
@@ -493,7 +511,7 @@ func (r *DesktopRuntime) Stop(ctx context.Context, input DesktopStopRequest) (De
 	}()
 	return op, nil
 }
-func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSession, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker) (DesktopStopReceipt, error) {
+func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSession, cancel context.CancelFunc, done chan struct{}, controlCancel context.CancelFunc, controlDone chan struct{}, accountWorkers []*desktopAccountWorker, allowClean bool) (DesktopStopReceipt, error) {
 	receipt := DesktopStopReceipt{}
 	var saveErr error
 	// Cancellation must precede any device-session wait: an in-flight operation
@@ -547,6 +565,9 @@ func (r *DesktopRuntime) stop(stoppedIntent bool, owned *desktopRetiredAccountSe
 		<-done
 	}
 	receipt.WorkersStopped = loginErr == nil
+	if !allowClean {
+		return receipt, errors.Join(saveErr, loginErr, fmt.Errorf("Hive switch stop cleanup incomplete: durable_server_seal=false; workers joined but original guard remains protected"))
+	}
 	if receipt.IntentSaved && unpaired && loginErr == nil {
 		receipt.SessionClean = true
 	} else if receipt.IntentSaved && cleanable && loginErr == nil {

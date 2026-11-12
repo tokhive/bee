@@ -1,0 +1,22 @@
+✔ 浏览器没有原生桥时明确失败，不能模拟握手成功 (1.443833ms)
+✔ 原生桥仅调用状态和 ping，订阅可重复清理 (9.327416ms)
+✔ 原生错误保留本次错误码和诊断证据 (0.466375ms)
+✔ notification clicks accept only fixed native page routes (0.526458ms)
+✔ native notification activation preserves source and its durable ownership decision (1.605541ms)
+✔ pending IPC and settlement use strict bounded native-only contracts (0.949791ms)
+✔ native switch snapshot validates current scope and preserves unknown work as unknown (1.78975ms)
+✔ target pairing and recovery use dedicated native commands with original transaction revision (1.626583ms)
+✔ OS permission decoder rejects unknown and autostart never infers registration from desire (7.865375ms)
+✔ permission is requested only at explicit enable and no arbitrary notification payload is exposed (0.3625ms)
+✔ delivery failure remains observable and retry is an explicit fixed action (0.432917ms)
+✔ delivery status strictly validates every counter and preserves authoritative progress (1.943416ms)
+✔ retry receipt distinguishes accepted failures from a zero-count no-op and rejects legacy or invalid receipts (0.905667ms)
+✔ invalid status evidence describes the shape without printing arbitrary payloads (0.6035ms)
+ℹ tests 14
+ℹ suites 0
+ℹ pass 14
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 177.449041

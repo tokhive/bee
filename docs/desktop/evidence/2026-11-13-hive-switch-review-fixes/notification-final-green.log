@@ -1,0 +1,65 @@
+   Compiling bee-desktop v0.1.0 (/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/src-tauri)
+warning: associated functions `bundled`, `bundled_profile`, and `from_launch_result` are never used
+   --> src/sidecar.rs:613:19
+    |
+612 | impl Bridge {
+    | ----------- associated functions in this implementation
+613 |     pub(crate) fn bundled() -> Self {
+    |                   ^^^^^^^
+...
+617 |     pub(crate) fn bundled_profile(context: &crate::profiles::ProfileContext, mode: crate::profiles::ProfileMode) -> Self {
+    |                   ^^^^^^^^^^^^^^^
+...
+654 |     fn from_launch_result(spec: Result<LaunchSpec, BridgeError>) -> Self {
+    |        ^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `bee-desktop` (lib test) generated 1 warning
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 23.23s
+     Running unittests src/lib.rs (/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-1f903c1be3a0ddc0)
+
+running 40 tests
+test notification_poll::tests::completed_notification_checks_clear_read_errors_and_advance_exact_sequence ... ok
+test notification_poll::tests::operation_errors_are_strict_and_keep_the_specific_failure ... ok
+test notification_poll::tests::startup_and_current_management_instance_gate_every_sample ... ok
+test notification_poll::tests::delivery_outcome_failures_do_not_become_poll_read_errors ... ok
+test notification_poll::tests::preferences_failure_blocks_delivery_but_still_applies_explicit_recovery ... ok
+test notification_poll::tests::fixed_facts_validate_and_convert_only_explicit_events ... ok
+test notification_poll::tests::malformed_facts_fail_closed_without_echoing_payload ... ok
+test notifications::tests::delivered_notification_retains_its_hive_in_body_and_activation_route ... ok
+test notification_poll::tests::notification_status_ledger_read_failure_keeps_original_diagnostic ... ok
+test notifications::tests::notifications_accepted_but_commit_failed_remains_uncertain_and_suppressed ... ok
+test notifications::tests::legacy_delivered_notice_without_source_remains_suppressed_after_upgrade ... ok
+test notification_poll::tests::unconfirmed_system_language_never_changes_delivery_ledger_or_consumes_permission_and_retry ... ok
+test notifications::tests::notifications_conflicting_batch_has_no_partial_submission_or_recovery ... ok
+test notifications::tests::notifications_attempt_is_durable_before_os_and_uncertain_restart_is_suppressed ... ok
+test notification_poll::tests::notification_status_successful_read_does_not_clear_unrecovered_delivery_failure ... ok
+test notifications::tests::notifications_concurrent_retry_accepts_each_definite_failure_once ... ok
+test notifications::tests::notifications_ledger_write_failure_prevents_os_submission ... ok
+test notifications::tests::notifications_corrupt_ledger_and_identity_reuse_fail_closed ... ok
+test notifications::tests::notifications_native_constructor_is_inert_without_application_bundle ... ok
+test notifications::tests::notifications_disabled_denied_and_ineligible_do_not_submit ... ok
+test notification_poll::tests::repeated_polls_and_absent_facts_preserve_dedupe_until_explicit_recovery ... ok
+test notifications::tests::notifications_permission_query_error_is_never_invented_prompt ... ok
+test notifications::tests::delivered_hive_notice_checks_durable_current_at_activation_and_global_routes_stay_available ... ok
+test notifications::tests::notifications_only_explicit_enable_requests_prompt_permission ... ok
+test notifications::tests::notifications_os_accepted_is_persistent_and_not_read ... ok
+test notifications::tests::notifications_acceptance_and_recovery_clear_only_the_relevant_delivery_error ... ok
+test notifications::tests::notifications_failed_submit_is_not_success_and_has_no_automatic_retry ... ok
+test notifications::tests::notifications_recovery_is_saved_before_unavailable_permission_query ... ok
+test notifications::tests::notifications_explicit_recovery_allows_recurrence_even_when_disabled ... ok
+test notifications::tests::notifications_untrusted_fields_and_routes_are_rejected ... ok
+test notifications::tests::notifications_delivery_status_tracks_durable_retry_pending_and_uncertain ... ok
+test protocol::tests::experience_notification_capability_requires_complete_ordered_group ... ok
+test notifications::tests::notifications_retry_commit_failure_reports_uncertain_instead_of_previous_rejection ... ok
+test notifications::tests::notifications_permission_change_retries_definite_failure_once ... ok
+test notifications::tests::notifications_missing_unknown_duplicate_fields_and_version_preserve_original ... ok
+test notifications::tests::notifications_s1_eligibility_and_problem_identities_are_independent ... ok
+test notifications::tests::notifications_retry_does_not_revise_accepted_or_uncertain_records ... ok
+test notifications::tests::notifications_status_is_read_only_and_zero_retry_works_at_revision_limit ... ok
+test notifications::tests::notifications_timeout_stays_uncertain_across_permission_changes_and_explicit_retry ... ok
+test notifications::tests::notifications_retry_receipt_counts_only_newly_authorized_failures ... ok
+
+test result: ok. 40 passed; 0 failed; 0 ignored; 0 measured; 321 filtered out; finished in 0.57s
+

@@ -1,0 +1,11 @@
+[WebServer] (node:86059) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:86060) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓  1 [chromium] › tests/preview-hive-switch.spec.ts:6:1 › delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available (1.6s)
+  ✓  2 [chromium] › tests/preview-hive-switch.spec.ts:26:1 › historical conflict is explained and disables only the affected saved target (732ms)
+
+  2 passed (3.4s)

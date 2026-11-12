@@ -1,0 +1,84 @@
+[WebServer] (node:84947) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 2 tests using 1 worker
+
+(node:84954) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  1 [chromium] › tests/preview-hive-switch.spec.ts:6:1 › delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available (5.9s)
+(node:85094) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✘  2 [chromium] › tests/preview-hive-switch.spec.ts:26:1 › historical conflict is explained and disables only the affected saved target (5.8s)
+
+
+  1) [chromium] › tests/preview-hive-switch.spec.ts:6:1 › delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('iframe').contentFrame().getByRole('status').filter({ hasText: '此通知来自 Hive' })
+    Expected substring: "https://hive.example"
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toContainText" locator('iframe').contentFrame().getByRole('status').filter({ hasText: '此通知来自 Hive' }) with timeout 5000ms
+      - waiting for locator('iframe').contentFrame().getByRole('status').filter({ hasText: '此通知来自 Hive' })
+
+
+       9 |  const activate=(payload:unknown)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement,payload)=>(frame.contentWindow as any).emitNotification(payload),payload);
+      10 |  await activate({target:{page:'accounts',source},current_profile:'2'.repeat(32),can_navigate:false});
+    > 11 |  await expect(app.getByRole('status').filter({hasText:'此通知来自 Hive'})).toContainText('https://hive.example');
+         |                                                                       ^
+      12 |  await expect(app.getByRole('navigation').getByRole('button',{name:'概览',exact:true})).toHaveAttribute('aria-current','page');
+      13 |  await app.getByRole('button',{name:'关闭通知提示',exact:true}).click();
+      14 |  await activate({target:{page:'accounts',source},current_profile:'1'.repeat(32),can_navigate:true});
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/tests/preview-hive-switch.spec.ts:11:71
+
+    Error Context: ../.cache/bee-preview/playwright/preview-hive-switch-delive-adebd-bal-routes-remain-available-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/bee-preview/playwright/preview-hive-switch-delive-adebd-bal-routes-remain-available-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/bee-preview/playwright/preview-hive-switch-delive-adebd-bal-routes-remain-available-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2) [chromium] › tests/preview-hive-switch.spec.ts:26:1 › historical conflict is explained and disables only the affected saved target 
+
+    Error: expect(locator).toContainText(expected) failed
+
+    Locator: locator('iframe').contentFrame().getByRole('dialog', { name: '切换 Hive', exact: true }).locator('li').filter({ hasText: 'https://target-hive.example' })
+    Expected substring: "历史 Hive 地址归一化后冲突"
+    Received string:    "https://target-hive.example归属待核对historical_origin_conflict:https://target-hive.example切换到此 Hive"
+    Timeout: 5000ms
+
+    Call log:
+      - Expect "toContainText" locator('iframe').contentFrame().getByRole('dialog', { name: '切换 Hive', exact: true }).locator('li').filter({ hasText: 'https://target-hive.example' }) with timeout 5000ms
+      - waiting for locator('iframe').contentFrame().getByRole('dialog', { name: '切换 Hive', exact: true }).locator('li').filter({ hasText: 'https://target-hive.example' })
+        14 × locator resolved to <li>…</li>
+           - unexpected value "https://target-hive.example归属待核对historical_origin_conflict:https://target-hive.example切换到此 Hive"
+
+
+      29 |  await page.clock.runFor(2100);await app.getByRole('button',{name:'切换 Hive',exact:true}).click();
+      30 |  const dialog=app.getByRole('dialog',{name:'切换 Hive',exact:true}),target=dialog.locator('li').filter({hasText:'https://target-hive.example'});
+    > 31 |  await expect(target).toContainText('历史 Hive 地址归一化后冲突');
+         |                       ^
+      32 |  await expect(target.getByRole('button',{name:'切换到此 Hive'})).toBeDisabled();
+      33 |  await expect(dialog.locator('li').filter({hasText:'https://hive.example'})).toContainText('当前');
+      34 |  await expect(dialog).not.toContainText('historical_origin_conflict');
+        at /Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/tests/preview-hive-switch.spec.ts:31:23
+
+    Error Context: ../.cache/bee-preview/playwright/preview-hive-switch-histor-fead7-y-the-affected-saved-target-chromium/error-context.md
+
+    attachment #2: trace (application/zip) ─────────────────────────────────────────────────────────
+    ../.cache/bee-preview/playwright/preview-hive-switch-histor-fead7-y-the-affected-saved-target-chromium/trace.zip
+    Usage:
+
+        npx playwright show-trace ../.cache/bee-preview/playwright/preview-hive-switch-histor-fead7-y-the-affected-saved-target-chromium/trace.zip
+
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+  2 failed
+    [chromium] › tests/preview-hive-switch.spec.ts:6:1 › delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available 
+    [chromium] › tests/preview-hive-switch.spec.ts:26:1 › historical conflict is explained and disables only the affected saved target 

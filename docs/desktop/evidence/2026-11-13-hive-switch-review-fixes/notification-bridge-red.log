@@ -1,0 +1,47 @@
+✔ 浏览器没有原生桥时明确失败，不能模拟握手成功 (9.6055ms)
+✔ 原生桥仅调用状态和 ping，订阅可重复清理 (20.072875ms)
+✔ 原生错误保留本次错误码和诊断证据 (1.917916ms)
+✔ notification clicks accept only fixed native page routes (1.53ms)
+✖ native notification activation preserves source and its durable ownership decision (1.418958ms)
+✔ pending IPC and settlement use strict bounded native-only contracts (1.377875ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 5
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 207.194833
+
+✖ failing tests:
+
+test at tests/bridge.test.ts:74:1
+✖ native notification activation preserves source and its durable ownership decision (1.418958ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   {
+  -     can_navigate: false,
+  -     current_profile: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb',
+  -     target: {
+  -       page: 'accounts',
+  -       source: {
+  -         origin: 'https://a.example',
+  -         profile_id: 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+  -       }
+  -     }
+  -   }
+  - ]
+  
+      at TestContext.<anonymous> (file:///Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-hive-switch-review-fixes/desktop/tests/bridge.test.ts:80:9)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [ { target: [Object], current_profile: 'bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb', can_navigate: false } ],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

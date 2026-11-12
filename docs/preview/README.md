@@ -193,3 +193,10 @@ Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗�
 验证：17 个向导静态起点；空地址错误及焦点；主题／尺寸保留输入；键盘提交；复制动作；正常绑定与账号页交接；创建失败重试、启动读取恢复、过期重建、保存失败续接、未知结果不重建及弹窗 Escape 返回焦点；切场景取消旧进度；重置回最后直接选择起点；浅深色 × 两尺寸；完成后的设备名称与地址传入现有概览。历史版独立打开及既有代表场景亦作检查。全部为 HTML 模拟，未验收真实配对、外部授权或服务端恢复。
 
 本轮本地评审服务使用 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview`，入口为 <http://127.0.0.1:1497/draft.html?scene=setup-form>；也可使用上文 1496 服务或直接打开 HTML。
+
+
+### 向导故障详情与措辞调整（2026-11-12）
+
+[浏览器打开失败](draft.html?scene=setup-open-failed) · [到期等待](draft.html?scene=setup-expiry-check) · [继续完成绑定](draft.html?scene=setup-save-failed) · [完整快照](history/20261112-150523-setup-error-clarity/draft.html?scene=setup-open-failed)。
+
+五类故障将“查看错误详情”折叠入口改为原因旁的圆圈叹号浮层，主文案与证据保留。有效期已到时明确 Bee 正在自动确认、结果自动更新；通用设备检查沿用“重新检查设备”，保存失败按钮改为“继续完成绑定”。已验证浮层键盘开关、Escape 及焦点返回、切场景移除、浅深色／尺寸切换，以及原绑定恢复路径；历史版独立打开。

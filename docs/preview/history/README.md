@@ -147,3 +147,11 @@
 - [本轮完整快照](20261112-145209-first-launch-wizard/draft.html?scene=setup-form)；同目录 before-setup.html 为修改前主预览，baseline.html、before-startup.html、claude-baseline.html 为冻结对照依赖。产品资源全部内联。
 - 来源：当前累计主预览，新增 17 个向导状态和 2 个绑定后入口；保留原有 462 个场景。已认可主入口未变。
 - 本轮验证及模拟边界见预览 README 的首次启动记录。
+
+
+## 20261112-150523-setup-error-clarity 向导错误详情与等待文案
+
+- 时区：Asia/Shanghai；状态：**待评审**。来源：用户要求叹号详情、明确自动等待及改进“核对设备”表述。
+- 修改前复用 [上一轮完整快照](20261112-145209-first-launch-wizard/draft.html?scene=setup-open-failed)，已确认与修改前草稿字节一致。
+- [本轮完整快照](20261112-150523-setup-error-clarity/draft.html?scene=setup-open-failed)，含 before-setup.html、baseline.html、before-startup.html、claude-baseline.html 冻结对照依赖；原有归档未改写。
+- 验证五类错误浮层、键盘及焦点、浅深色／窗口切换、切场景关闭、继续绑定路径及历史版独立打开；481 个场景保留。仅静态模拟，未修改正式 App 或主预览。

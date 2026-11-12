@@ -20,6 +20,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
    if(command==='bridge_status')return status();
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance:currentInstance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1};
    if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
+   if(command==='device_context'&&options.unbound)return {instance:currentInstance,result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved device configuration'}}};
    if(command==='device_context')return {instance:currentInstance,result:{context:{hive:'https://hive.example',name:'Fixture Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:1}}};
    if(command==='preferences_read')return structuredClone({preferences,error:null});
    if(command==='preferences_save'){preferences={...args!.request!.preferences,revision:preferences.revision+1};return structuredClone({preferences,error:null});}
@@ -123,7 +124,7 @@ test('English platform controls and reason copy are complete at minimum width',a
  await page.getByRole('region',{name:'Platform accounts',exact:true}).scrollIntoViewIfNeeded();await page.screenshot({path:'../.cache/device-pairing/supply-en-860.png'});
 });
 test('unverified devices never issue supply IPC',async({page})=>{
- await fixture(page,{unbound:true});await page.goto('/');await expect(page.getByRole('heading',{name:'尚未绑定本机设备',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls)).toEqual([]);
+ await fixture(page,{unbound:true});await page.goto('/');await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls)).toEqual([]);
 });
 
 test('old in-flight platform reads cannot overwrite replacement failure or schedule another old-instance round',async({page})=>{

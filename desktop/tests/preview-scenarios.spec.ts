@@ -80,7 +80,7 @@ test('preview controls reject stale sessions and messages from other sources',as
 });
 
 const cases:[string,string|RegExp][]=[
- ['device-unbound','连接本机设备'],['device-pending','等待网页确认'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
+ ['device-unbound','设置这台设备'],['device-pending','在 Hive 网页确认设备归属'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
  ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Hive 未连接'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
  ['account-reading','账号状态尚未确认'],['account-empty','未找到所选凭证来源'],['account-candidate','尚未接入 Bee'],['account-selected','已用 3%'],['account-error','没有读取所选凭证来源的权限'],['account-expired','上次记录'],['account-change','尚未核对'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
@@ -164,15 +164,15 @@ test('automatic recovery traverses stale, failed, retrying and recovered states 
 test('preview pairing remains pending after a poll and simulated website confirmation binds the device',async({page})=>{
  await openScene(page,'device-unbound');
  await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');
- await page.getByRole('button',{name:'生成配对码',exact:true}).click();
- await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'继续绑定设备',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
  await expect.poll(async()=>(await commands(page)).filter(c=>c.command==='device_status').length).toBeGreaterThan(1);
- await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
- await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
  await page.evaluate(()=>(window as unknown as {__beePreviewApprove:()=>void}).__beePreviewApprove());
- await expect(page.getByText('设备已绑定。',{exact:true})).toBeVisible();
- expect((await commands(page)).filter(call=>writes.has(call.command))).toEqual([]);
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
+ await expect(page.getByRole('navigation')).toHaveCount(0);expect((await commands(page)).filter(call=>writes.has(call.command))).toEqual([]);
 });
 
 test('confirmed account actions update only the fixture and preserve pause semantics',async({page})=>{

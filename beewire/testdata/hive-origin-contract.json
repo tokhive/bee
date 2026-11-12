@@ -14,6 +14,8 @@
   {"input":"https://[2001:0DB8:0:0:0:0:0:1]:443","key":"https://[2001:0db8:0:0:0:0:0:1]"},
   {"input":"https://[2001:db8::1]","key":"https://[2001:db8::1]"},
   {"input":"https://例子.test:443/","key":"https://例子.test"},
+  {"input":"https://İ.TEST/","key":"https://İ.test"},
+  {"input":"https://蜂🐝.TEST/","key":"https://蜂🐝.test"},
   {"input":"https://xn--fsqu00a.test","key":"https://xn--fsqu00a.test"},
   {"input":"https://127.1:443","key":"https://127.1"},
   {"input":"https://hive.example./","key":"https://hive.example."},

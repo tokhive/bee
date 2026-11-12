@@ -6,7 +6,7 @@
 
 **Blocked by:** 03 Hive 停止新派单并查询旧任务
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] seal 确认旧连接消失、推进 epoch，固定保存原回执。
 - [ ] release 绑定原操作和当前身份／epoch／lease，取消先到时保留终结标记。

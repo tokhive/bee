@@ -133,3 +133,49 @@ func TestDeviceDrainActivationRequiresANewVerifiedConnectionLease(t *testing.T) 
 		t.Fatal(err)
 	}
 }
+
+func TestDeviceDrainCurrentFactsCannotContradictTheSameOperationsLifecycle(t *testing.T) {
+	request := drainRequest()
+	release := beewire.DeviceDrainReleaseRequest{ID: strings.Repeat("c", 48), Request: request, Mode: "cancel"}
+	status := beewire.DeviceDrainStatus{Version: 1, DeviceID: request.DeviceID, OwnerID: request.OwnerID, OperationID: request.ID, State: "released", Request: &request, Release: &release, Current: beewire.DeviceDrainCurrent{BarrierID: request.ID}}
+	if err := status.ValidateFor(request); err == nil {
+		t.Fatal("released result still holds the original barrier")
+	}
+	status.State = "draining"
+	status.Release = nil
+	status.Current.Epoch = strings.Repeat("d", 48)
+	if err := status.ValidateFor(request); err == nil {
+		t.Fatal("epoch advanced before seal was accepted")
+	}
+}
+
+func TestDeviceDrainWireRejectsMalformedOrForeignCompletionEvidence(t *testing.T) {
+	request := drainRequest()
+	seal := beewire.DeviceDrainSealRequest{ID: strings.Repeat("b", 48), Request: request}
+	status := beewire.DeviceDrainStatus{Version: 1, DeviceID: request.DeviceID, OwnerID: request.OwnerID, OperationID: request.ID, State: "sealed", Request: &request, Seal: &seal, Receipt: &beewire.DeviceDrainReceipt{Version: 1, Seal: seal, Epoch: seal.ID, ConnectionRetired: true}, Current: beewire.DeviceDrainCurrent{Epoch: seal.ID, BarrierID: request.ID}}
+	raw, _ := json.Marshal(status)
+	for _, sample := range []struct{ name, from, to string }{
+		{"missing_nested_field", `"connection_retired":true,`, ""},
+		{"null_completion_flag", `"connection_retired":true`, `"connection_retired":null`},
+		{"unfinished_connection", `"connection_retired":true`, `"connection_retired":false`},
+		{"unknown_nested_fact", `"unsettled":0`, `"unsettled":0,"complete":true`},
+		{"duplicate_nested_fact", `"executions":0`, `"executions":0,"executions":1`},
+		{"negative_count", `"executions":0`, `"executions":-1`},
+		{"fractional_count", `"executions":0`, `"executions":0.5`},
+		{"unsafe_count", `"executions":0`, `"executions":9007199254740992`},
+		{"foreign_owner", `"owner_id":"owner-1"`, `"owner_id":"owner-2"`},
+		{"unknown_state", `"state":"sealed"`, `"state":"complete"`},
+		{"altered_original_context", `https://HIVE.example:443`, `https://hive.example`},
+	} {
+		t.Run(sample.name, func(t *testing.T) {
+			bad := strings.ReplaceAll(string(raw), sample.from, sample.to)
+			got, err := beewire.DecodeDeviceDrainStatus([]byte(bad))
+			if err == nil {
+				err = got.ValidateFor(request)
+			}
+			if err == nil {
+				t.Fatal("malformed or foreign completion accepted")
+			}
+		})
+	}
+}

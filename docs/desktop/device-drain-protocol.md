@@ -39,14 +39,16 @@
 | `sealed` | 原 request、seal、不可变 receipt；release 为 null |
 | `released` | 原 request 和成功 release；未封存取消时 seal／receipt 均 null；封存后释放时两者均保留 |
 
-`current` 固定字段：`epoch`（空或 48 位 hex）、`lease`（空或公开 ID）、`barrier_id`（空或 48 位 hex）、`work`（null 或 `DeviceDrainWork`）。`DeviceDrainWork` 包含 `executions`、`unknown_terminations`、`unsettled`，均为 0..9007199254740991 的整数。null 表示缺乏可靠计数，不能推定为零。draining／ready／sealing 的 barrier_id 必须是原操作；ready 还要求已知三项为零。
+`current` 固定字段：`epoch`（空或 48 位 hex）、`lease`（空或公开 ID）、`barrier_id`（空或 48 位 hex）、`work`（null 或 `DeviceDrainWork`）。`DeviceDrainWork` 包含 `executions`、`unknown_terminations`、`unsettled`，均为 0..9007199254740991 的整数。null 表示缺乏可靠计数，不能推定为零。draining／ready／sealing 的 barrier_id 必须是原操作；ready 还要求已知三项为零。draining／ready 的 epoch 必须保持原值；sealing 只允许原值或已保存的 seal.id；released 的当前屏障不得仍是原操作，因为终态不可重建屏障。
 
 `DeviceDrainReceipt` 固定字段：`version:1`、`seal`（完整封存请求）、`epoch`（必须等于 seal.id）、`connection_retired:true`、`work`（三项为零）。回执只证明本操作原设备、用户、原上下文、旧连接注销和封存完成事实，持久保存后永不因后续动作变化。current 与回执分离：当前 epoch／lease／屏障和工作可因后续重新连接、释放或新操作变化，不能用历史回执推断当前在线、允许接单或当前无任务。
 
 服务端在最终准入同一设备锁下处理屏障、替换／退役及动作串行化，持久化屏障和取消 tombstone；seal 才推进 epoch，并确认旧连接退出后才生成回执。屏障不随进程或超时解除；平台 paused 独立。客户端严格核对身份、原 ID、原请求和动作参数；不接受另一设备、另一请求或“能力未知但身份成功”。
 
-## URL 键
+## 初次激活与错误链
 
 首次激活 B 的顺序也是 begin → 等待 ready → seal → 保存回执 → 在 seal.id 的新 epoch 建立并核验 presence 连接 → 提交当前绑定 → 用新 lease 执行 activate release。已有 B 切出屏障时优先查询并沿用原 request／receipt。无连接的新绑定不跳过 seal，也不能用空 lease 解除屏障。传输和读取失败保留可检查的原始错误链（如取消、deadline、网络错误类型），其对用户可见的 Error 文本移除凭据。
 
-`beewire/testdata/hive-origin-contract.json` 是 Go／Rust／TS 的同组契约。新键统一协议和主机大小写、默认端口、一个根 `/`；只允许远程 HTTPS 或标准回环 HTTP。域名别名、localhost／127.0.0.1、Unicode／punycode、不同 IPv6 写法和非默认端口保持不同键。原始历史上下文不因生成键而更改；冲突处置归 profile 存储任务。
+## URL 键
+
+`beewire/testdata/hive-origin-contract.json` 是 Go／Rust／TS 的同组契约。新键统一协议和主机 ASCII 大小写、默认端口、一个根 `/`；只允许远程 HTTPS 或标准回环 HTTP。非 ASCII 主机字符保留原拼写，避免三种语言的 Unicode 大小写表和 URL 解析器隐式改变上下文。域名别名、localhost／127.0.0.1、Unicode／punycode、不同 IPv6 写法和非默认端口保持不同键。原始历史上下文不因生成键而更改；冲突处置归 profile 存储任务。

@@ -136,6 +136,10 @@ impl DesktopPreferences {
         Ok(())
     }
 }
+pub fn normalize_hive_origin(origin: &str) -> Result<String, BridgeError> {
+    crate::hive_origin::normalize_hive_origin(origin)
+}
+
 pub fn validate_origin(origin: &str) -> Result<(), BridgeError> {
     let rejected = || {
         failure("PREFERENCES_ORIGIN","proxy origin must be a canonical HTTP(S) origin without path, query, fragment or credentials")

@@ -174,6 +174,7 @@ func (c *DeviceDrainClient) Release(ctx context.Context, request beewire.DeviceD
 }
 
 var drainCredentialText = regexp.MustCompile(`(?:bee_|beep_)[A-Za-z0-9_-]+`)
+var drainErrorCode = regexp.MustCompile(`^[a-z][a-z0-9_]{0,127}$`)
 
 func (c *DeviceDrainClient) safeError(err error) string {
 	return drainCredentialText.ReplaceAllString(connectionMessage(err, c.config.Credential), "[redacted]")
@@ -215,7 +216,7 @@ func (c *DeviceDrainClient) call(ctx context.Context, path, method string, input
 		}
 		_ = json.Unmarshal(raw, &envelope)
 		code := "unrecognized_code"
-		if regexp.MustCompile(`^[a-z][a-z0-9_]{0,127}$`).MatchString(envelope.Error.Code) {
+		if drainErrorCode.MatchString(envelope.Error.Code) && c.safeError(errors.New(envelope.Error.Code)) == envelope.Error.Code {
 			code = envelope.Error.Code
 		}
 		return nil, &DeviceDrainHTTPError{Status: response.StatusCode, Code: code, Body: c.safeError(errors.New(string(raw)))}

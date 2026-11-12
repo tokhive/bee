@@ -102,6 +102,19 @@ pub(crate) struct LaunchSpec {
     pub timeout: Duration,
 }
 impl LaunchSpec {
+    fn profile_mode(&self) -> crate::profiles::ProfileMode {
+        match self.args.windows(2).find(|v| v[0] == "--mode").map(|v| v[1].as_str()) {
+            Some("prepare") => crate::profiles::ProfileMode::Prepare,
+            Some("activate") => crate::profiles::ProfileMode::Activate,
+            _ => crate::profiles::ProfileMode::Current,
+        }
+    }
+    fn profile_id(&self) -> Option<String> {
+        self.args.windows(2).find(|v| v[0] == "--profile-dir")
+            .and_then(|v| std::path::Path::new(&v[1]).file_name())
+            .and_then(|v| v.to_str()).map(str::to_owned)
+    }
+
     /// The context is resolved by the App's protected index, never by WebView paths.
     /// Reconnection clones the resulting fixed argument vector.
     pub(crate) fn for_profile(
@@ -331,6 +344,7 @@ fn validate_method_result(
             "device_recovery_prepare"
             | "device_recovery_confirm"
             | "device_recovery_status"
+            | "desktop_switch"
             | "network_status"
             | "network_test"
             | "device_context" => return Ok(()),
@@ -356,6 +370,7 @@ fn validate_method_result(
         }
     }
     match request.method {
+        "desktop_switch" => crate::switch_protocol::validate(result, &request.params),
         "account_detect" | "account_snapshot" | "account_action" => {
             let platform = request_platform(request).ok_or_else(|| {
                 error(
@@ -478,6 +493,8 @@ fn unsent_rejection(request: &Request, frozen: &AtomicBool, now: Instant) -> Opt
 pub(crate) struct Inner {
     pub(crate) frozen: Arc<AtomicBool>,
     pub(crate) startup_verified: AtomicBool,
+    switch_released: AtomicBool,
+    switch_frozen: AtomicBool,
     pub(crate) exit: Mutex<crate::runtime::OwnedExitTask>,
     pub(crate) restored: AtomicBool,
     status: watch::Receiver<BridgeStatus>,
@@ -645,6 +662,8 @@ impl Bridge {
                 Self(Arc::new(Inner {
                     frozen: Arc::new(AtomicBool::new(false)),
                     startup_verified: AtomicBool::new(true),
+                    switch_released: AtomicBool::new(false),
+                    switch_frozen: AtomicBool::new(false),
                     exit: Mutex::new(Default::default()),
                     restored: AtomicBool::new(false),
                     status: state,
@@ -688,6 +707,8 @@ impl Bridge {
         Self(Arc::new(Inner {
             frozen,
             startup_verified: AtomicBool::new(true),
+            switch_released: AtomicBool::new(false),
+            switch_frozen: AtomicBool::new(false),
             exit: Mutex::new(Default::default()),
             restored: AtomicBool::new(false),
             status: status_rx,
@@ -730,6 +751,39 @@ impl Bridge {
 
     pub fn status(&self) -> BridgeStatus {
         self.0.status.borrow().clone()
+    }
+
+    /// Native coordinator only. Profile path/instance are injected from this
+    /// child owner and are never accepted from the WebView.
+    pub(crate) async fn switch_control(&self, mut params: Value) -> Result<BridgeReply, BridgeError> {
+        let mode = self.0.launch.as_ref().map(LaunchSpec::profile_mode)
+            .unwrap_or(crate::profiles::ProfileMode::Current);
+        let action = params["action"].as_str().unwrap_or("");
+        if !crate::switch_protocol::action_allowed(mode, action) {
+            return Err(error("PROFILE_MODE_RESTRICTED", format!("switch action={action} blocked in mode={}", mode.argument())));
+        }
+        let profile = self.0.launch.as_ref().and_then(LaunchSpec::profile_id)
+            .ok_or_else(|| error("HIVE_SWITCH_CONTEXT", "switch requires a fixed registered profile launch"))?;
+        let current = self.status();
+        let instance = current.metadata.as_ref()
+            .ok_or_else(|| error("BRIDGE_NOT_READY", "switch requires verified child metadata"))?.instance.clone();
+        let object = params.as_object_mut()
+            .ok_or_else(|| error("HIVE_SWITCH_CONTEXT", "switch native parameters must be object"))?;
+        object.insert("profile_id".into(), Value::String(profile));
+        object.insert("instance".into(), Value::String(instance));
+        if params["action"] == "freeze" {
+            self.0.switch_frozen.store(true, Ordering::SeqCst);
+            self.0.switch_released.store(false, Ordering::SeqCst);
+        }
+        let reply = self.request("desktop_switch", params, Duration::from_secs(15)).await?;
+        if reply.result.get("error").is_none() && reply.result["switch"]["mode"] != mode.argument() {
+            return Err(error("HIVE_SWITCH_REPLY_INVALID", format!("switch reply mode differs: required={}", mode.argument())));
+        }
+        if reply.result.get("error").is_none() {
+            self.0.switch_released.store(reply.result["switch"]["maintenance_allowed"] == true, Ordering::SeqCst);
+            self.0.switch_frozen.store(reply.result["switch"]["frozen"] == true, Ordering::SeqCst);
+        }
+        Ok(reply)
     }
 
     pub async fn ping(&self) -> Result<BridgeReply, BridgeError> {
@@ -1198,12 +1252,26 @@ impl Bridge {
         duration: Duration,
         exit_request: bool,
     ) -> Result<BridgeReply, BridgeError> {
+        let mode = self.0.launch.as_ref().map(LaunchSpec::profile_mode)
+            .unwrap_or(crate::profiles::ProfileMode::Current);
+        let released = self.0.switch_released.load(Ordering::SeqCst)
+            && mode != crate::profiles::ProfileMode::Prepare;
+        if !released && !crate::switch_protocol::allowed(mode, method) {
+            return Err(error("PROFILE_MODE_RESTRICTED", format!("desktop method={method} blocked in mode={}; required=profile capability whitelist", mode.argument())));
+        }
+        if self.0.switch_frozen.load(Ordering::SeqCst) && !exit_request
+            && matches!(method, "account_action" | "authorize_start" | "authorize_open"
+                | "runtime_start" | "runtime_restore" | "runtime_enable_presence"
+                | "runtime_stop" | "supply_set_paused" | "diagnostics_start") {
+            return Err(error("HIVE_SWITCH_FROZEN", format!("desktop method={method} blocked: source switch has frozen new writes")));
+        }
         // S2 must read the owned device/runtime and apply its saved network before
         // S3 can ask S1 to restore. The configure method has no WebView command.
         // Keep the ordinary frozen/queued-exit checks for every one of these calls.
         let startup_network = matches!(
             method,
-            "device_status"
+            "desktop_switch"
+                | "device_status"
                 | "device_context"
                 | "device_recovery_prepare"
                 | "device_recovery_confirm"
@@ -1306,6 +1374,7 @@ impl Bridge {
         // order the new supervisor must observe the exit request.
         if let Err(cause)=self.check_restore_admission(){self.0.stop.send_replace(true);return Err(cause);}
         self.0.restored.store(false,Ordering::SeqCst);
+        self.0.switch_released.store(false,Ordering::SeqCst);
         self.0.startup_verified.store(false,Ordering::SeqCst);
         self.0.status_tx.send_replace(status(BridgePhase::Starting,None,None));
         task.result=None;

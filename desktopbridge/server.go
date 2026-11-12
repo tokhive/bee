@@ -82,6 +82,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	if runner != nil && accounts == nil {
 		return errors.New("runtime bridge requires account service")
 	}
+	switcher, hasSwitch := runner.(SwitchRuntime)
+	hasSwitch = hasSwitch && switchProfileID(devices) != ""
 	recoveries, hasRecovery := devices.(DeviceRecovery)
 	contexts, hasContext := devices.(DeviceContext)
 	verifier, hasVerifier := runner.(StartupVerifier)
@@ -140,6 +142,10 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	defer stopDiagnostics()
 	diagnosticOutput := &diagnosticWriter{writer: diagnostics}
 	diagnosticSink := requestDiagnosticSink(diagnosticContext, diagnosticOutput)
+	mode := bee.DesktopProfileCurrent
+	if profile, ok := devices.(interface{ ProfileMode() bee.DesktopProfileMode }); ok {
+		mode = profile.ProfileMode()
+	}
 	var ready atomic.Bool
 	execute := func(ctx context.Context, req request, problem *protocolError, releaseID bool) (response, bool, error) {
 		if diagnostics != nil {
@@ -158,6 +164,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 			switch {
 			case req.Protocol != protocolVersion:
 				problem = rejected("VERSION_MISMATCH", "protocol=%d; required=%d", req.Protocol, protocolVersion)
+			case !bee.DesktopProfileMethodAllowed(mode, req.Method) && !(hasSwitch && switcher.SwitchMaintenanceAllowed()):
+				problem = rejected("PROFILE_MODE_RESTRICTED", "desktop method=%s blocked in mode=%s; required=profile capability whitelist", req.Method, mode)
 			case !ready.Load() && req.Method != "hello":
 				problem = rejected("NOT_READY", "hello handshake has not succeeded; required=hello before other methods")
 			case req.Method == "hello" && ready.Load():
@@ -214,12 +222,25 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasRecovery {
 					capabilities = append(capabilities, "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status")
 				}
+				if hasSwitch {
+					capabilities = append(capabilities, "desktop_switch")
+				}
+				capabilities = slices.DeleteFunc(capabilities, func(method string) bool { return !bee.DesktopProfileMethodAllowed(mode, method) })
 				answer.Result = struct {
 					Version      string   `json:"bee_version"`
 					OS           string   `json:"os"`
 					Arch         string   `json:"arch"`
 					Capabilities []string `json:"capabilities"`
 				}{version, runtime.GOOS, runtime.GOARCH, capabilities}
+			case hasSwitch && req.Method == "desktop_switch":
+				value, err := switchResult(ctx, switcher, req, instance, switchProfileID(devices))
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("HIVE_SWITCH_FAILED", err)}
+				} else {
+					answer.Result = value
+				}
 			case hasRecovery && slices.Contains([]string{"device_recovery_prepare", "device_recovery_confirm", "device_recovery_status"}, req.Method):
 				var value bee.DeviceRecoveryView
 				var err error

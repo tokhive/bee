@@ -61,6 +61,11 @@ func (a *DesktopAccounts) beginSelection(p *desktopAccountPlatform, r DesktopAcc
 func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, platform string, op desktopPendingOperation, reconcile, clearSelection, allowConfirm bool) error {
 	a.lifecycleMu.Lock()
 	defer a.lifecycleMu.Unlock()
+	if a.runtime != nil && !reconcile {
+		if err := a.runtime.switchMaintenanceBarrier(); err != nil {
+			return err
+		}
+	}
 	if a.device != nil {
 		if err := a.device.recoveryWriteBarrier(); err != nil {
 			return accountFailure(platform, "device_recovery_active", "device_recovery_admission", err.Error())

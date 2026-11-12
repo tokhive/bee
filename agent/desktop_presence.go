@@ -20,6 +20,7 @@ type desktopPresence struct {
 	shutdown  bool
 	request   DesktopPresenceRequest
 	state     localState
+	lease     string
 	cancel    context.CancelFunc
 	done      chan struct{}
 	retired   chan struct{}
@@ -38,6 +39,9 @@ func (r *DesktopRuntime) EnablePresence(ctx context.Context, input DesktopPresen
 	}
 	r.accounts.lifecycleMu.Lock()
 	defer r.accounts.lifecycleMu.Unlock()
+	if err := r.switchMaintenanceBarrier(); err != nil {
+		return err
+	}
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	if r.closed || r.presence.shutdown || r.presence.suspended {
@@ -97,7 +101,7 @@ func (r *DesktopRuntime) cancelPresenceLocked() chan struct{} {
 }
 
 func (r *DesktopRuntime) startPresenceLocked() {
-	if r.closed || !r.presence.enabled || r.presence.shutdown || r.presence.suspended || r.presence.done != nil || r.controlDone != nil || (r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" && r.snapshot.Local != "waiting") {
+	if !r.switchAllowsMaintenance() || r.closed || !r.presence.enabled || r.presence.shutdown || r.presence.suspended || r.presence.done != nil || r.controlDone != nil || (r.snapshot.Local != "stopped" && r.snapshot.Local != "failed" && r.snapshot.Local != "waiting") {
 		return
 	}
 	ctx, cancel := context.WithCancel(r.ctx)
@@ -123,6 +127,7 @@ func (r *DesktopRuntime) startPresenceLocked() {
 			if r.closed || ctx.Err() != nil || r.presence.done != done {
 				return
 			}
+			r.presence.lease = o.Lease
 			r.snapshot.Connection = o.Connection
 			r.snapshot.ConnectionDetail = o.Detail
 			r.snapshot.Revision++
@@ -144,7 +149,7 @@ func (r *DesktopRuntime) connectDesktop(ctx context.Context, state localState, c
 	inherited := r.handoff != nil && time.Now().Before(r.handoff.expires) && sameDesktopConnectionBinding(r.handoff.state, state)
 	r.handoff = nil // consume once; a failed handoff cannot lend ownership again
 	connected := false
-	err := connectObservedOwned(ctx, state, cfg, io.Discard, inherited, func(o DesktopConnectionObservation) {
+	err := connectObservedOwned(context.WithValue(ctx, desktopReconnectKey{}, func() bool { return !r.switching.sealing.Load() }), state, cfg, io.Discard, inherited, func(o DesktopConnectionObservation) {
 		connected = o.Connection == "connected"
 		observe(o)
 	})
@@ -152,4 +157,13 @@ func (r *DesktopRuntime) connectDesktop(ctx context.Context, state localState, c
 		r.handoff = &desktopConnectionHandoff{state: state, expires: time.Now().Add(30 * time.Second)}
 	}
 	return err
+}
+
+type desktopReconnectKey struct{}
+
+func desktopReconnectPermitted(ctx context.Context) bool {
+	if allowed, ok := ctx.Value(desktopReconnectKey{}).(func() bool); ok {
+		return allowed()
+	}
+	return true
 }

@@ -49,6 +49,25 @@
 
 首次激活 B 的顺序也是 begin → 等待 ready → seal → 保存回执 → 在 seal.id 的新 epoch 建立并核验 presence 连接 → 提交当前绑定 → 用新 lease 执行 activate release。已有 B 切出屏障时优先查询并沿用原 request／receipt。无连接的新绑定不跳过 seal，也不能用空 lease 解除屏障。传输和读取失败保留可检查的原始错误链（如取消、deadline、网络错误类型），其对用户可见的 Error 文本移除凭据。
 
+## 桌面后台交接边界
+
+原生核心通过 `bee desktop --profile-dir <已登记的绝对目录> --mode current|prepare|activate` 固定后台归属；目录必须已存在且没有符号链接别名。无参数的旧 `bee desktop` 保留原协议能力。prepare 只开放上下文、设备配对／恢复、只读启动核验以及设备屏障控制；activate 额外允许本地网络配置，并在协调器提交和解除屏障前禁止账号、供给与普通任务连接。Go 与 Rust 均执行能力白名单。
+
+原生专用 `desktop_switch` 不向 WebView 注册命令。固定参数为 `action`、`profile_id`、`instance`、`binding_revision`、`network_revision`、`operation`、`seal`、`release`，不用的远端参数显式为 null。Rust `Bridge::switch_control` 从固定 LaunchSpec 和已核验 hello 注入 profile／instance；Go 再核对实例、目录、设备绑定版本和原请求。绑定版本是该 Go 进程的上下文版本，App 仍须独立核对持久 profile 索引版本。
+
+| action | 后台行为 |
+| --- | --- |
+| `inspect`／`capabilities` | 返回本地交接事实／查询远端能力；inspect 不访问 Hive，可能附带原持久封存状态 |
+| `freeze` | 关闭新增账号／登录／供给／运行恢复准入，等待已准入账号动作核对；保留原运行意图和现有任务连接 |
+| `drain_begin`／`drain_status`／`drain_seal`／`drain_release` | 使用协调器已持久的原 ID 与参数，每次只发送一次；封存回执私有写入并回读成功后才可清原保护 |
+| `stop` | 仅凭匹配的持久封存证明正常结束 owned worker／登录／连接，推进本地 epoch 并保存 workers_stopped；保留运行意图 |
+| `connect` | activate／current 恢复专用；核验本地未决记录、设备身份和原 sealed 屏障，用新 epoch 连接 `/api/bee/connect` 并验证 lease／心跳；不读取官方账号来源 |
+| `commit` | App 持久索引提交成功后通知后台；与匹配的新连接或已释放证明绑定，不能代替远端 release |
+
+响应为 `{"switch":...}`，包含 mode、绑定／网络版本、epoch、lease、连接状态、冻结／维护许可、workers_stopped、seal_persisted、capabilities 和 drain。`inspect` 的历史 receipt 仅证明原封存，不推断当前远端事实。重启加载原证明仍冻结维护；查询到 released 本身不会开放维护。activate release 要求先 commit，已封存 cancel 也要求新 epoch／lease。connect／release 尝试前撤销旧 workers_stopped，防止把后续重连／释放尝试之前的退出证明用于离线切换。
+
+普通 user_stop／network_change／startup_recovery 不能绕过冻结。取消结果未知时 app_exit／update 仍正常 join owned worker，但无持久 seal 时停止结果保持失败、`StopReceipt.WorkersStopped=true`、`SessionClean=false`，原 guard 不变；这表示本地退出清理已完成，不能表示切换安全或恢复获准。`workers_stopped` 只覆盖该 Go owner 的 worker／socket，App 还须独立证明在途 IPC 已结束、子进程正常退出且已 reap，以及持久取消／退出意图，才能形成完整离线证据。
+
 ## URL 键
 
 `beewire/testdata/hive-origin-contract.json` 是 Go／Rust／TS 的同组契约。新键统一协议和主机 ASCII 大小写、默认端口、一个根 `/`；只允许远程 HTTPS 或标准回环 HTTP。非 ASCII 主机字符保留原拼写，避免三种语言的 Unicode 大小写表和 URL 解析器隐式改变上下文。域名别名、localhost／127.0.0.1、Unicode／punycode、不同 IPv6 写法和非默认端口保持不同键。原始历史上下文不因生成键而更改；冲突处置归 profile 存储任务。

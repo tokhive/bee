@@ -805,6 +805,9 @@ func (d *DesktopDevice) beginDeviceWrite(ctx context.Context) (func(), error) {
 	if d.runtime != nil {
 		d.runtime.accounts.lifecycleMu.Lock()
 		defer d.runtime.accounts.lifecycleMu.Unlock()
+		if err := d.runtime.switchMaintenanceBarrier(); err != nil {
+			return nil, err
+		}
 	}
 	s, release, err := d.acquireSession(ctx)
 	if err != nil {

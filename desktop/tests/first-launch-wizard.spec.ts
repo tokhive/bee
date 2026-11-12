@@ -197,3 +197,15 @@ test('native browser failure code and check remain available without invented ti
  await expect(page.getByRole('dialog').locator('pre')).toHaveText('BROWSER_OPEN_FAILED\ndevice_open');
  await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeEnabled();
 });
+
+test('completed binding accepts a Hive display name that differs from the saved local name while identity mismatches stay blocked',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ const renamed={...identity,name:'Hive renamed Mac'};
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({completed:true,view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:renamed}},context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2}}),{renamed,transaction});
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
+ await expect(page.getByText('Hive renamed Mac',{exact:true})).toBeVisible();
+ await page.evaluate(()=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'different-device',owner_id:'owner-1',binding_revision:2}}));
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2},view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:{...renamed,id:'different-transaction-device'}}}}),{renamed,transaction});
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
+});

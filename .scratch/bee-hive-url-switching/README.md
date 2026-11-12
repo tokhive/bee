@@ -8,7 +8,7 @@
 
 依赖：01→03→04；01+02→05；04+05→06；06→07、08；07+08→09。
 
-当前执行：01–08 已实现并合入；09 正在以两套真实 Hive、PostgreSQL、任务结算及完整原生 App 完成整体验收。Go／Rust／前端契约和界面相关检查已通过，整体验收与最终双轴审查仍待完成。Hive 草稿 PR [#307](https://github.com/tokhive/hive/pull/307) 已包含服务端生命周期；最终 Bee 依赖与验收证据将在收尾时更新。Hive 父议题 [#302](https://github.com/tokhive/hive/issues/302)，03→[#303](https://github.com/tokhive/hive/issues/303)，04→[#304](https://github.com/tokhive/hive/issues/304)。
+当前状态：01–09 均已完成，真实任务／两套 Hive／Linux 原生 App 验收及最终双轴审查已完成；审查发现均已修复。验证范围和限制见[最终交付记录](../../docs/desktop/evidence/2026-11-13-hive-switch-final-review/README.md)。Hive PR [#307](https://github.com/tokhive/hive/pull/307) 承载服务端、最终 Bee 依赖及验收证据；合并时关闭父议题 [#302](https://github.com/tokhive/hive/issues/302) 与子议题 [#303](https://github.com/tokhive/hive/issues/303)、[#304](https://github.com/tokhive/hive/issues/304)，当前不提前关闭。
 
 - [01 共享安全切换协议与地址判定](issues/01-protocol.md)
 - [02 独立 Hive 数据目录、旧数据迁移与进程归属](issues/02-profile-storage.md)

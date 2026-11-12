@@ -316,7 +316,7 @@ impl ProfileStore {
         &self.root
     }
     pub(crate) fn snapshot(&self) -> Result<ProfileIndex, BridgeError> {
-        let index: ProfileIndex =
+        let mut index: ProfileIndex =
             read_json(&self.root.join("hive-profiles.json"))?.unwrap_or_default();
         if index.version != 1 || index.revision > MAX_REVISION {
             return Err(error(
@@ -355,6 +355,22 @@ impl ProfileStore {
             || index.migration_id.as_ref().is_some_and(|id| !valid_id(id))
         {
             return Err(error("PROFILE_INDEX", "profile current/operation/migration reference rejected; required=enrolled current ID and valid operation identities"));
+        }
+        if !index.historical_conflicts.is_empty() {
+            // The migrated device binding was independently attributed. Keep
+            // that profile usable while blocking ambiguous historical targets,
+            // including entries enrolled by an earlier client version.
+            let migration: Option<MigrationRecord> = read_json(&self.root.join("profile-migration.json"))?;
+            let original = migration.as_ref()
+                .filter(|r| index.migration_id.as_deref() == Some(&r.id))
+                .and_then(|r| r.profile.as_ref());
+            for entry in &mut index.profiles {
+                if original.is_some_and(|p| p.id == entry.id) { continue; }
+                if index.historical_conflicts.iter().any(|c| c.canonical_origin == entry.origin) {
+                    let blocker = format!("historical_origin_conflict:{}", entry.origin);
+                    if !entry.blockers.contains(&blocker) { entry.blockers.push(blocker); }
+                }
+            }
         }
         Ok(index)
     }
@@ -426,13 +442,16 @@ impl ProfileStore {
         let id = identifier();
         private_dir(&self.root.join("profiles").join(&id))?;
         sync_dir(&self.root.join("profiles"))?;
+        let blockers = if index.historical_conflicts.iter().any(|c| c.canonical_origin == canonical) {
+            vec![format!("historical_origin_conflict:{canonical}")]
+        } else { vec![] };
         index.profiles.push(ProfileEntry {
             id: id.clone(),
             origin: canonical,
             raw_origin: origin.into(),
             binding_revision: 0,
             binding_digest: None,
-            blockers: vec![],
+            blockers,
         });
         index.revision += 1;
         self.save(&index)?;
@@ -1590,7 +1609,8 @@ mod tests {
         let accounts = serde_json::json!({"version":3,"revision":7,"entries":{},"scopes":{
             "original-digest-a":{"hive":"https://hive.example","owner_id":"owner","device_id":"device","pending_operations":{},"selections":{"openai":{"source":{"directory":"/official/source","store":"file"}}}},
             "original-digest-b":{"hive":"https://HIVE.example:443/","owner_id":"older","device_id":"older","pending_operations":{},"selections":{}},
-            "original-digest-c":{"hive":"https://other.example","owner_id":"other","device_id":"other","pending_operations":{},"selections":{}}
+            "original-digest-c":{"hive":"https://other.example","owner_id":"other","device_id":"other","pending_operations":{},"selections":{}},
+            "original-digest-d":{"hive":"https://OTHER.example:443/","owner_id":"older-other","device_id":"older-other","pending_operations":{},"selections":{}}
         }});
         write(
             &root.join("ai-accounts.json"),
@@ -1600,7 +1620,7 @@ mod tests {
         let store = ProfileStore::open(root.clone()).unwrap();
         let index = store.migrate_legacy(&tmp.path().join("app")).unwrap();
         assert_eq!(index.profiles.len(), 1);
-        assert_eq!(index.historical_conflicts.len(), 2);
+        assert_eq!(index.historical_conflicts.len(), 4);
         let context = store
             .context(index.current_profile.as_ref().unwrap())
             .unwrap();
@@ -1613,6 +1633,20 @@ mod tests {
             accounts["scopes"]["original-digest-a"]
         );
         assert!(index.profiles[0].blockers.is_empty());
+        let target = store.register("https://other.example/").unwrap();
+        let blocked = store.snapshot().unwrap();
+        assert_eq!(blocked.current_profile, index.current_profile);
+        assert_eq!(blocked.profiles.len(), 2, "history alone must not create connectable profiles");
+        let target_entry = blocked.profiles.iter().find(|p| p.id == target.id).unwrap();
+        assert_eq!(target_entry.blockers, vec!["historical_origin_conflict:https://other.example"]);
+        assert_eq!(store.commit_current(blocked.revision, &target.id, &"a".repeat(48)).unwrap_err().code, "PROFILE_BLOCKED");
+        // An index published by the earlier client may already contain this
+        // target with empty blockers. Its next public projection must be safe.
+        let mut old_index = blocked;
+        old_index.profiles.iter_mut().find(|p| p.id == target.id).unwrap().blockers.clear();
+        store.save(&old_index).unwrap();
+        assert!(!store.snapshot().unwrap().profiles.iter().find(|p| p.id == target.id).unwrap().blockers.is_empty());
+        assert_eq!(store.register("https://HIVE.example:443/").unwrap(), context);
         let backup = root
             .join("profile-migration-backups")
             .join(index.migration_id.unwrap())

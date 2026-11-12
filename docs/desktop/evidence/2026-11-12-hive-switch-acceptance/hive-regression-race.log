@@ -1,0 +1,1264 @@
+=== RUN   TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership
+=== RUN   TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/subscription/begin
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/auth/register status=201 duration=20ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/auth/register status=201 duration=16ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/auth/register status=201 duration=15ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/admin/plan-concurrency status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/free status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/go status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/plus status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/pro status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/prolite status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/promax status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/team status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/business status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/enterprise status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/edu status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/admin/models status=201 duration=5ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/admin/models status=201 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO bee connected module=bee device=CP74Xl31kDsU_DV5oLTRyH73Fj0J8lhj8AkmFmLr6So tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=17ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=8ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=9ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:24 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:25 INFO bee connected module=bee device=lR6HsthG6h5n56VqGhu7xu_4HsEq_dao47VwUcZb58M tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=10ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=0s
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=5ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:25 INFO bee connected module=bee device=VOPfg22CizI0KOrAiryR_cEvCYaVd3Rrn0aCIiaWu2g tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=6ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=0s
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=5ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=5ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/auth/register status=201 duration=18ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/keys status=201 duration=3ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=6ms
+2026/11/12 23:20:25 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=2ms
+2026/11/12 23:20:25 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=2ms
+2026/11/12 23:20:25 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:20:25 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=5ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=6ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=3ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=4ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=2ms
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=33ms
+2026/11/12 23:20:25 ERROR inference_failure module=inference request_id=bvRyKYsyJKIDLNFcU53ybCahyOXdCMMaryzWgZ7ZJ8k failure_code=no_supply http_status=503 request_file=logs/inference/requests/bvRyKYsyJKIDLNFcU53ybCahyOXdCMMaryzWgZ7ZJ8k.json
+2026/11/12 23:20:25 INFO http request module=http method=POST path=/v1/responses status=503 duration=37ms request_id=bvRyKYsyJKIDLNFcU53ybCahyOXdCMMaryzWgZ7ZJ8k
+2026/11/12 23:20:25 INFO bee disconnected module=bee device=CP74Xl31kDsU_DV5oLTRyH73Fj0J8lhj8AkmFmLr6So session=441ms reason="context closed" tunnel_bytes=26 heartbeat_idle=440ms tunnel_idle=440ms
+2026/11/12 23:20:25 INFO bee disconnected module=bee device=VOPfg22CizI0KOrAiryR_cEvCYaVd3Rrn0aCIiaWu2g session=179ms reason="context closed" tunnel_bytes=26 heartbeat_idle=178ms tunnel_idle=178ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=450ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=184ms
+2026/11/12 23:20:25 INFO bee disconnected module=bee device=lR6HsthG6h5n56VqGhu7xu_4HsEq_dao47VwUcZb58M session=276ms reason="context closed" tunnel_bytes=26 heartbeat_idle=275ms tunnel_idle=275ms
+2026/11/12 23:20:25 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=280ms
+=== RUN   TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/subscription/admission
+2026/11/12 23:20:36 INFO http request module=http method=POST path=/api/auth/register status=201 duration=34ms
+2026/11/12 23:20:36 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=15ms
+2026/11/12 23:20:36 INFO http request module=http method=GET path=/api/auth/me status=200 duration=3ms
+2026/11/12 23:20:36 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=171ms
+2026/11/12 23:20:36 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=33ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=3ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/auth/register status=201 duration=45ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=10ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=49ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=40ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/auth/me status=200 duration=3ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/auth/register status=201 duration=73ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=15ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=19ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=18ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=2ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/admin/plan-concurrency status=200 duration=8ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/free status=200 duration=7ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/go status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/plus status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/pro status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/prolite status=200 duration=3ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/promax status=200 duration=6ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/team status=200 duration=6ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/business status=200 duration=3ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/enterprise status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/edu status=200 duration=5ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/admin/models status=201 duration=22ms
+2026/11/12 23:20:37 INFO http request module=http method=POST path=/api/admin/models status=201 duration=12ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:37 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:38 INFO bee connected module=bee device=a2bVDHilJceXlBfLHi1StwyytooQJH60lv7P4zmJ9Fw tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=12ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=12ms
+2026/11/12 23:20:38 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=21ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:38 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=21ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:38 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=18ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=17ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO bee connected module=bee device=XioJkqi9Kr3KIeFELzp_MalN2DuhylRqai0lJHS_Qas tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=48ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=20ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=15ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=15ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO bee connected module=bee device=Ma0yS2fK_STNZHeWUZUgieNjrzeEwiQz4w-sjZIMCBE tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=30ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=18ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=6ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/auth/register status=201 duration=24ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/keys status=201 duration=6ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=11ms
+2026/11/12 23:20:39 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=8ms
+2026/11/12 23:20:39 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=5ms
+2026/11/12 23:20:39 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=7ms
+2026/11/12 23:20:39 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=9ms
+2026/11/12 23:20:39 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=11ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=6ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=9ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=7ms
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=9ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=5ms
+2026/11/12 23:20:39 INFO execution attempt dispatched module=dispatch attempt=d11e42f3f1eeee73ef14b96a32c94bba request=x6CwCFrBFFGwHRVTO5_sskF44WouMXKB9MDt36eztl0 model=synthetic-responses protocol=responses device=a2bVDHilJceXlBfLHi1StwyytooQJH60lv7P4zmJ9Fw upstream=127.0.0.1:52062/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=44ms
+2026/11/12 23:20:39 INFO execution attempt settled module=settlement attempt=d11e42f3f1eeee73ef14b96a32c94bba provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:20:39 INFO http request module=http method=POST path=/v1/responses status=200 duration=120ms request_id=x6CwCFrBFFGwHRVTO5_sskF44WouMXKB9MDt36eztl0
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/admin/calls/x6CwCFrBFFGwHRVTO5_sskF44WouMXKB9MDt36eztl0 status=200 duration=11ms
+2026/11/12 23:20:39 INFO bee disconnected module=bee device=XioJkqi9Kr3KIeFELzp_MalN2DuhylRqai0lJHS_Qas session=677ms reason="context closed" tunnel_bytes=26 heartbeat_idle=677ms tunnel_idle=677ms
+2026/11/12 23:20:39 INFO bee disconnected module=bee device=a2bVDHilJceXlBfLHi1StwyytooQJH60lv7P4zmJ9Fw session=978ms reason="context closed" tunnel_bytes=26 heartbeat_idle=977ms tunnel_idle=977ms
+2026/11/12 23:20:39 INFO bee disconnected module=bee device=Ma0yS2fK_STNZHeWUZUgieNjrzeEwiQz4w-sjZIMCBE session=440ms reason="context closed" tunnel_bytes=26 heartbeat_idle=439ms tunnel_idle=439ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=987ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=446ms
+2026/11/12 23:20:39 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=711ms
+=== RUN   TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/official_api/begin
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=22ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=6ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=10ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=19ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/auth/register status=201 duration=18ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/admin/plan-concurrency status=200 duration=3ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/free status=200 duration=3ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/go status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/plus status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/pro status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/prolite status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/promax status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/team status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/business status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/enterprise status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/edu status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/admin/models status=201 duration=6ms
+2026/11/12 23:20:49 INFO http request module=http method=POST path=/api/admin/models status=201 duration=3ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:49 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO bee connected module=bee device=1cDVA8Ywb791_i9Iud2eMSkFswu_u45VwAUnFWLKiV0 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=12ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=38ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=11ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=41ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=33ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=15ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=12ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=28ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO bee connected module=bee device=cY-UOcIfIs_ENOjk05zuoOHSOa_o5KGDc4Vo3GXcrMo tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=15ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=19ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=15ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=41ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=32ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=17ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=8ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=56ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=5ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=40ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:20:50 INFO bee connected module=bee device=AjKKn0VKNtqG7-L7ZShRLFbwbwj2qh2AOCovHg5e3FI tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=5ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=26ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=28ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=20ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=10ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=13ms
+2026/11/12 23:20:50 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/auth/register status=201 duration=24ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/keys status=201 duration=8ms
+2026/11/12 23:20:50 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=16ms
+2026/11/12 23:20:50 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=17ms
+2026/11/12 23:20:51 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=11ms
+2026/11/12 23:20:51 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=8ms
+2026/11/12 23:20:51 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=16ms
+2026/11/12 23:20:51 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:20:51 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=14ms
+2026/11/12 23:20:51 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=8ms
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=6ms
+2026/11/12 23:20:51 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=29ms
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=10ms
+2026/11/12 23:20:51 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=249ms
+2026/11/12 23:20:51 ERROR inference_failure module=inference request_id=4HCQZpJWDDPg05rW-ndkGWtgDmAg2TYBhSL70e1orS4 failure_code=no_supply http_status=503 request_file=logs/inference/requests/4HCQZpJWDDPg05rW-ndkGWtgDmAg2TYBhSL70e1orS4.json
+2026/11/12 23:20:51 INFO http request module=http method=POST path=/v1/responses status=503 duration=389ms request_id=4HCQZpJWDDPg05rW-ndkGWtgDmAg2TYBhSL70e1orS4
+2026/11/12 23:20:51 INFO bee disconnected module=bee device=cY-UOcIfIs_ENOjk05zuoOHSOa_o5KGDc4Vo3GXcrMo session=1.006s reason="context closed" tunnel_bytes=26 heartbeat_idle=1.004s tunnel_idle=1.004s
+2026/11/12 23:20:51 INFO bee disconnected module=bee device=AjKKn0VKNtqG7-L7ZShRLFbwbwj2qh2AOCovHg5e3FI session=725ms reason="context closed" tunnel_bytes=26 heartbeat_idle=724ms tunnel_idle=724ms
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=1.015s
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=744ms
+2026/11/12 23:20:51 INFO bee disconnected module=bee device=1cDVA8Ywb791_i9Iud2eMSkFswu_u45VwAUnFWLKiV0 session=1.253s reason="context closed" tunnel_bytes=26 heartbeat_idle=1.249s tunnel_idle=1.249s
+2026/11/12 23:20:51 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=1.263s
+=== RUN   TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/official_api/admission
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/auth/register status=201 duration=41ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=7ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=4ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=22ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=7ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/auth/register status=201 duration=23ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=10ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=4ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/auth/register status=201 duration=25ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=6ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=5ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=7ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/admin/plan-concurrency status=200 duration=7ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/free status=200 duration=6ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/go status=200 duration=7ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/plus status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/pro status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/prolite status=200 duration=9ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/promax status=200 duration=3ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/team status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/business status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/enterprise status=200 duration=6ms
+2026/11/12 23:21:02 INFO http request module=http method=PUT path=/api/admin/plan-concurrency/openai/edu status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/admin/models status=201 duration=9ms
+2026/11/12 23:21:02 INFO http request module=http method=POST path=/api/admin/models status=201 duration=6ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=9ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=10ms
+2026/11/12 23:21:03 INFO bee connected module=bee device=XxajqqEwkEulX9-hKGcDan-SwXsvVtlXup72nJcoRd8 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=12ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=32ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=31ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=26ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=7ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=20ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO bee connected module=bee device=Cm5F4ewcaAPw8z82x4jDWivfVhgrfSoRDz6B17NE87A tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=22ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=24ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=11ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=17ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:21:03 INFO bee connected module=bee device=bLOlH4kxp5CuTTztI2Aifgnj1HYzuHj-rPGfaRLNnSc tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=7ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=7ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=33ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=28ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/openai-api/status status=200 duration=6ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=16ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=9ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=18ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/auth/register status=201 duration=21ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/keys status=201 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=6ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=10ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=9ms
+2026/11/12 23:21:03 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=9ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=6ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=9ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=5ms
+2026/11/12 23:21:03 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=8ms
+2026/11/12 23:21:03 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=7ms
+2026/11/12 23:21:04 INFO execution attempt dispatched module=dispatch attempt=e3a5d4cad13a009df5f53734a30e8157 request=RD8lUYO66rV9SqO3nyU5MNLYwR8m3B-sh1ITri3babw model=synthetic-responses protocol=responses device=XxajqqEwkEulX9-hKGcDan-SwXsvVtlXup72nJcoRd8 upstream=127.0.0.1:52414/v1/responses streaming=true upstream_bytes=575
+2026/11/12 23:21:04 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=47ms
+2026/11/12 23:21:04 INFO execution attempt settled module=settlement attempt=e3a5d4cad13a009df5f53734a30e8157 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:04 INFO http request module=http method=POST path=/v1/responses status=200 duration=127ms request_id=RD8lUYO66rV9SqO3nyU5MNLYwR8m3B-sh1ITri3babw
+2026/11/12 23:21:04 INFO http request module=http method=GET path=/api/admin/calls/RD8lUYO66rV9SqO3nyU5MNLYwR8m3B-sh1ITri3babw status=200 duration=8ms
+2026/11/12 23:21:04 INFO bee disconnected module=bee device=XxajqqEwkEulX9-hKGcDan-SwXsvVtlXup72nJcoRd8 session=725ms reason="context closed" tunnel_bytes=26 heartbeat_idle=724ms tunnel_idle=724ms
+2026/11/12 23:21:04 INFO bee disconnected module=bee device=Cm5F4ewcaAPw8z82x4jDWivfVhgrfSoRDz6B17NE87A session=553ms reason="context closed" tunnel_bytes=13 heartbeat_idle=553ms tunnel_idle=553ms
+2026/11/12 23:21:04 INFO bee disconnected module=bee device=bLOlH4kxp5CuTTztI2Aifgnj1HYzuHj-rPGfaRLNnSc session=395ms reason="context closed" tunnel_bytes=26 heartbeat_idle=394ms tunnel_idle=394ms
+2026/11/12 23:21:04 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=402ms
+2026/11/12 23:21:04 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=739ms
+2026/11/12 23:21:04 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=558ms
+--- PASS: TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership (49.28s)
+    --- PASS: TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/subscription/begin (10.42s)
+    --- PASS: TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/subscription/admission (14.53s)
+    --- PASS: TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/official_api/begin (11.91s)
+    --- PASS: TestDeviceDrainAndFinalAdmissionHaveDeterministicOwnership/official_api/admission (12.42s)
+=== RUN   TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork
+=== RUN   TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork/unknown
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/auth/register status=201 duration=23ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=3ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=6ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=6ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=2ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/auth/register status=201 duration=22ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=5ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/auth/register status=201 duration=19ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=3ms
+2026/11/12 23:21:13 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:13 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=6ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/admin/models status=201 duration=10ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/admin/models status=201 duration=6ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO bee connected module=bee device=Ov2mAAHorbeK55Bl3vs5nbR1cR8IZPE9eVb8MFvKSeo tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=10ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=10ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=25ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=16ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=7ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=21ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO bee connected module=bee device=vejFl88Udn2ajDN8r4M68CVLZeIiKHOifE_Cg0k-uZM tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=11ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=9ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=8ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO bee connected module=bee device=NnoEW3x0NAl-DSyXMPcz6KMY3Nc7zCS_oWzMmiAmQQk tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=48ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:14 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=11ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:14 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=11ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=14ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/auth/register status=201 duration=23ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/keys status=201 duration=5ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=11ms
+2026/11/12 23:21:15 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=6ms
+2026/11/12 23:21:15 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=7ms
+2026/11/12 23:21:15 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=7ms
+2026/11/12 23:21:15 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=13ms
+2026/11/12 23:21:15 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=9ms
+2026/11/12 23:21:15 INFO execution attempt dispatched module=dispatch attempt=e46cdadaa35604068d13f1ef7898ea37 request=wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA model=synthetic-responses protocol=responses device=Ov2mAAHorbeK55Bl3vs5nbR1cR8IZPE9eVb8MFvKSeo upstream=127.0.0.1:52518/backend-api/codex/responses streaming=true upstream_bytes=332
+2026/11/12 23:21:15 ERROR inference_failure module=inference request_id=wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA attempt_id=e46cdadaa35604068d13f1ef7898ea37 failure_code=invalid_evidence upstream_status=200 receipt_error="receipt signature: invalid attested signature" upstream_response_id=resp_synthetic upstream_file=logs/inference/upstream/wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA.json request_file=logs/inference/requests/wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA.json
+2026/11/12 23:21:15 WARN execution attempt failed module=dispatch attempt=e46cdadaa35604068d13f1ef7898ea37 code=invalid_evidence stage=receipt detail="receipt signature: invalid attested signature" upstream_status=0 termination=unknown
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/v1/responses status=200 duration=76ms request_id=wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/admin/calls/wBumdOaHtgYRfYQFOyd7Q8WLC9tMsl3xgPuB3dt9kKA status=200 duration=9ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=15ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=17ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=8ms
+2026/11/12 23:21:15 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/seal status=409 duration=14ms
+2026/11/12 23:21:15 INFO bee disconnected module=bee device=vejFl88Udn2ajDN8r4M68CVLZeIiKHOifE_Cg0k-uZM session=487ms reason="context closed" tunnel_bytes=26 heartbeat_idle=486ms tunnel_idle=486ms
+2026/11/12 23:21:15 INFO bee disconnected module=bee device=NnoEW3x0NAl-DSyXMPcz6KMY3Nc7zCS_oWzMmiAmQQk session=364ms reason="context closed" tunnel_bytes=26 heartbeat_idle=363ms tunnel_idle=363ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=494ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=370ms
+2026/11/12 23:21:15 INFO bee disconnected module=bee device=Ov2mAAHorbeK55Bl3vs5nbR1cR8IZPE9eVb8MFvKSeo session=641ms reason="context closed" tunnel_bytes=26 heartbeat_idle=640ms tunnel_idle=640ms
+2026/11/12 23:21:15 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=650ms
+=== RUN   TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork/unsettled
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/auth/register status=201 duration=19ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=9ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/auth/register status=201 duration=18ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=4ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=0s
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/auth/register status=201 duration=17ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/admin/models status=201 duration=12ms
+2026/11/12 23:21:26 INFO http request module=http method=POST path=/api/admin/models status=201 duration=4ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:26 INFO bee connected module=bee device=46YNAV5_nxfrbbVZ23D5_2GFYKLC9lk_FZgBKiqMYzQ tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:26 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=11ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=40ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=12ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=7ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=10ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO bee connected module=bee device=_CA_UrqmugROiSvLeqJrgmt3U5z7Kic9X06oqQwssjk tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=9ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=0s
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=6ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=5ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=13ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO bee connected module=bee device=c8Z1OxGN_CCd4bH6bnasy_Nhk4M6UK5U2xM7jVoqv30 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=16ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=10ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=7ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/auth/register status=201 duration=17ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/keys status=201 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=5ms
+2026/11/12 23:21:27 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:21:27 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=2ms
+2026/11/12 23:21:27 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:21:27 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:21:27 INFO execution attempt dispatched module=dispatch attempt=e6c8d2a175e8c076eab52e6dd45803a3 request=38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8 model=synthetic-responses protocol=responses device=46YNAV5_nxfrbbVZ23D5_2GFYKLC9lk_FZgBKiqMYzQ upstream=127.0.0.1:52671/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:21:27 ERROR inference_failure module=inference request_id=38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8 attempt_id=e6c8d2a175e8c076eab52e6dd45803a3 failure_code=settlement_unconfirmed upstream_status=200 upstream_response_id=resp_synthetic upstream_file=logs/inference/upstream/38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8.json request_file=logs/inference/requests/38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8.json
+2026/11/12 23:21:27 WARN execution attempt failed module=dispatch attempt=e6c8d2a175e8c076eab52e6dd45803a3 code=settlement_unconfirmed stage=settlement detail="ERROR: synthetic device drain settlement fault (SQLSTATE P0001)" upstream_status=0 termination=confirmed
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/v1/responses status=200 duration=61ms request_id=38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/admin/calls/38qiAcyYyTw_fHO3I-l4G6u0xEZEBbK69M-zN3mezV8 status=200 duration=11ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=6ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/begin status=200 duration=11ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa status=200 duration=5ms
+2026/11/12 23:21:27 INFO http request module=http method=POST path=/api/bee/device-drains/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/seal status=409 duration=10ms
+2026/11/12 23:21:27 INFO bee disconnected module=bee device=c8Z1OxGN_CCd4bH6bnasy_Nhk4M6UK5U2xM7jVoqv30 session=245ms reason="context closed" tunnel_bytes=26 heartbeat_idle=244ms tunnel_idle=244ms
+2026/11/12 23:21:27 INFO bee disconnected module=bee device=46YNAV5_nxfrbbVZ23D5_2GFYKLC9lk_FZgBKiqMYzQ session=516ms reason="context closed" tunnel_bytes=26 heartbeat_idle=514ms tunnel_idle=514ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=248ms
+2026/11/12 23:21:27 INFO bee disconnected module=bee device=_CA_UrqmugROiSvLeqJrgmt3U5z7Kic9X06oqQwssjk session=343ms reason="context closed" tunnel_bytes=26 heartbeat_idle=342ms tunnel_idle=342ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=530ms
+2026/11/12 23:21:27 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=346ms
+--- PASS: TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork (25.89s)
+    --- PASS: TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork/unknown (13.45s)
+    --- PASS: TestDeviceDrainReportsRealUnknownTerminationAndUnsettledWork/unsettled (12.45s)
+=== RUN   TestMarketSelectsLowestQuoteAndAccountLoad
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/auth/register status=201 duration=24ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=5ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/auth/register status=201 duration=17ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/auth/register status=201 duration=16ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings status=201 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/devices/pairings/confirm status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/pairings/redeem status=201 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/identity status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/auth/me status=200 duration=0s
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/admin/models status=201 duration=7ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/admin/models status=201 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO bee connected module=bee device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=19ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=0s
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=8ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=8ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO bee connected module=bee device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=16ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=9ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:21:40 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=15ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:40 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=19ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:41 INFO bee connected module=bee device=nYTfR0X5bm7zzBb2MCEccEhJ_gcTdrZ2WjvFUi-nJd8 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=20ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=14ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=6ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/auth/register status=201 duration=20ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/keys status=201 duration=3ms
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/api/admin/credits status=201 duration=5ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=6ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=5ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=2ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/models status=200 duration=8ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=438b16ebf60ad0e0d40b7d8831a3d712 request=qfLewGGR8c6mUOXlv8Riz_ja7msBgotiAwzFl7xbZ5s model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=438b16ebf60ad0e0d40b7d8831a3d712 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=60ms request_id=qfLewGGR8c6mUOXlv8Riz_ja7msBgotiAwzFl7xbZ5s
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/qfLewGGR8c6mUOXlv8Riz_ja7msBgotiAwzFl7xbZ5s status=200 duration=7ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/models status=200 duration=4ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=a766fe100c31370322f7f3f5eee4b3ad request=-x3Iu5To1fth2hRNZ_h_jMYymah4XRxrADVuBpJoyHI model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=a766fe100c31370322f7f3f5eee4b3ad provider_amount=0.000068000 commission=0.000006800 buyer_amount=0.000074800 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=36ms request_id=-x3Iu5To1fth2hRNZ_h_jMYymah4XRxrADVuBpJoyHI
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/-x3Iu5To1fth2hRNZ_h_jMYymah4XRxrADVuBpJoyHI status=200 duration=5ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=8ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/models status=200 duration=7ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=86a1a96d7c8c701a22003c766b626e42 request=ACq0wL8V4nM6TxNpKaBYWvtoraHOnpVZQuX8V0nkQ-E model=synthetic-secondary protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=306
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=86a1a96d7c8c701a22003c766b626e42 provider_amount=0.000017000 commission=0.000001700 buyer_amount=0.000018700 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=30ms request_id=ACq0wL8V4nM6TxNpKaBYWvtoraHOnpVZQuX8V0nkQ-E
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/ACq0wL8V4nM6TxNpKaBYWvtoraHOnpVZQuX8V0nkQ-E status=200 duration=6ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=3ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=5ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=e8076955d8cd3252c4d072f9ad484283 request=1M6z9cMXrn3Xu2Bc9iMp5Hmjj0Q2jiyOkJ3F91B7rWU model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=328
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=6ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=104caaa8ade6640d05e2e34883384d44 request=-z9sk2CcIM9HCqatTO2IupZFtcxvLatrskYAkUqxs4s model=synthetic-secondary protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=328
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=5ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=d6e7a1eaddb166370ba76e5cc3cd3c84 request=z33_ORQj3PIIhEQIyGbeVgP5F8kQwLHd4xE-zC43t8Q model=synthetic-secondary protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=306
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=d6e7a1eaddb166370ba76e5cc3cd3c84 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=35ms request_id=z33_ORQj3PIIhEQIyGbeVgP5F8kQwLHd4xE-zC43t8Q
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/z33_ORQj3PIIhEQIyGbeVgP5F8kQwLHd4xE-zC43t8Q status=200 duration=5ms
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=104caaa8ade6640d05e2e34883384d44 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=74ms request_id=-z9sk2CcIM9HCqatTO2IupZFtcxvLatrskYAkUqxs4s
+2026/11/12 23:21:41 INFO execution attempt settled module=settlement attempt=e8076955d8cd3252c4d072f9ad484283 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:41 INFO http request module=http method=POST path=/v1/responses status=200 duration=103ms request_id=1M6z9cMXrn3Xu2Bc9iMp5Hmjj0Q2jiyOkJ3F91B7rWU
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/1M6z9cMXrn3Xu2Bc9iMp5Hmjj0Q2jiyOkJ3F91B7rWU status=200 duration=7ms
+2026/11/12 23:21:41 INFO http request module=http method=GET path=/api/admin/calls/-z9sk2CcIM9HCqatTO2IupZFtcxvLatrskYAkUqxs4s status=200 duration=5ms
+2026/11/12 23:21:41 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=0aa009b9ee01226dfb0b2901097997c7 request=ZqCscnbH302eB-tDOPRExJ83zKXAPtatBzMsVsMUodw model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=330
+2026/11/12 23:21:41 INFO execution attempt dispatched module=dispatch attempt=98499f36c42cd3a9de49bc5b3c30614b request=iN3Qj1ujl7PjS0-OOYhha_chCW62Tw8_iRiLv1QuBRA model=synthetic-secondary protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=332
+2026/11/12 23:21:42 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=5ms
+2026/11/12 23:21:42 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=22ms
+2026/11/12 23:21:42 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=4ms
+2026/11/12 23:21:43 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=15ms
+2026/11/12 23:21:43 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:21:43 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=14ms
+2026/11/12 23:21:50 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=47ms
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=12ms
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=21ms
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=7ms
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=21ms
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=14ms
+2026/11/12 23:21:51 ERROR inference_failure module=inference request_id=9NlSdRclqXuj_U6MYN7HfeYjpzBsfsO1aXGUdW4dreg failure_code=no_supply http_status=503 request_file=logs/inference/requests/9NlSdRclqXuj_U6MYN7HfeYjpzBsfsO1aXGUdW4dreg.json
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.028s request_id=9NlSdRclqXuj_U6MYN7HfeYjpzBsfsO1aXGUdW4dreg
+2026/11/12 23:21:51 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=10ms
+2026/11/12 23:21:51 INFO execution attempt dispatched module=dispatch attempt=b6225c7f8b743e3f31784e140fbd6571 request=sZdzuW24pjeHMmlpug5OyTxEXb4YetQo-1oYAZLGbbY model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:21:51 INFO execution attempt settled module=settlement attempt=b6225c7f8b743e3f31784e140fbd6571 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/v1/responses status=200 duration=41ms request_id=sZdzuW24pjeHMmlpug5OyTxEXb4YetQo-1oYAZLGbbY
+2026/11/12 23:21:51 INFO http request module=http method=GET path=/api/admin/calls/sZdzuW24pjeHMmlpug5OyTxEXb4YetQo-1oYAZLGbbY status=200 duration=5ms
+2026/11/12 23:21:51 INFO execution attempt settled module=settlement attempt=0aa009b9ee01226dfb0b2901097997c7 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:51 INFO execution attempt settled module=settlement attempt=98499f36c42cd3a9de49bc5b3c30614b provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/v1/responses status=200 duration=10.145s request_id=ZqCscnbH302eB-tDOPRExJ83zKXAPtatBzMsVsMUodw
+2026/11/12 23:21:51 INFO http request module=http method=POST path=/v1/responses status=200 duration=10.124s request_id=iN3Qj1ujl7PjS0-OOYhha_chCW62Tw8_iRiLv1QuBRA
+2026/11/12 23:21:51 INFO http request module=http method=GET path=/api/admin/calls/ZqCscnbH302eB-tDOPRExJ83zKXAPtatBzMsVsMUodw status=200 duration=7ms
+2026/11/12 23:21:51 INFO http request module=http method=GET path=/api/admin/calls/iN3Qj1ujl7PjS0-OOYhha_chCW62Tw8_iRiLv1QuBRA status=200 duration=4ms
+2026/11/12 23:21:51 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:21:51 INFO execution attempt dispatched module=dispatch attempt=d9d9868541fe98d2f43cdb0a06f8ac54 request=p3T5w0zTdUPY3wiwYhYWyGSNiYTdh967QJBzVULB6DI model=synthetic-secondary protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=329
+2026/11/12 23:21:51 INFO execution attempt dispatched module=dispatch attempt=424c14ac0352dcbd409a009a08d115f2 request=Ybf6L2tcDd8dLLK-iBDc4FmC0W3Ui3wQXNEjt2yplm4 model=synthetic-secondary protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=329
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=18ms
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=6ms
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=20ms
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=5ms
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=13ms
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=6ms
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=5gTFmC8Gt9ra_Frd8qBSccpb9fck40I2QF4SC-eUf6Y failure_code=no_supply http_status=503 request_file=logs/inference/requests/5gTFmC8Gt9ra_Frd8qBSccpb9fck40I2QF4SC-eUf6Y.json
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=zwcSFLDpE1mFVHubjTA3eJbrn-uJlsW7cxL0PfigTck failure_code=no_supply http_status=503 request_file=logs/inference/requests/zwcSFLDpE1mFVHubjTA3eJbrn-uJlsW7cxL0PfigTck.json
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.061s request_id=5gTFmC8Gt9ra_Frd8qBSccpb9fck40I2QF4SC-eUf6Y
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=xch58PF45aWOV7edhynF0IHy_FM9qebUfDljWwFVJaA failure_code=no_supply http_status=503 request_file=logs/inference/requests/xch58PF45aWOV7edhynF0IHy_FM9qebUfDljWwFVJaA.json
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.063s request_id=zwcSFLDpE1mFVHubjTA3eJbrn-uJlsW7cxL0PfigTck
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=qpCrI2f4zhua2L9bYWbScpBlb4ikC0cjXkMgkSbtopk failure_code=no_supply http_status=503 request_file=logs/inference/requests/qpCrI2f4zhua2L9bYWbScpBlb4ikC0cjXkMgkSbtopk.json
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=FdYPNAY_oKu9XaRxLuM4dIxQPCDCh-1Ngg-unxAwmOQ failure_code=no_supply http_status=503 request_file=logs/inference/requests/FdYPNAY_oKu9XaRxLuM4dIxQPCDCh-1Ngg-unxAwmOQ.json
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.066s request_id=xch58PF45aWOV7edhynF0IHy_FM9qebUfDljWwFVJaA
+2026/11/12 23:22:01 ERROR inference_failure module=inference request_id=325s75RMtQSQpcOJ5Fp_0d9u_Ctvyrl-RqT8NPJPo5E failure_code=no_supply http_status=503 request_file=logs/inference/requests/325s75RMtQSQpcOJ5Fp_0d9u_Ctvyrl-RqT8NPJPo5E.json
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.068s request_id=qpCrI2f4zhua2L9bYWbScpBlb4ikC0cjXkMgkSbtopk
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.069s request_id=325s75RMtQSQpcOJ5Fp_0d9u_Ctvyrl-RqT8NPJPo5E
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=503 duration=10.069s request_id=FdYPNAY_oKu9XaRxLuM4dIxQPCDCh-1Ngg-unxAwmOQ
+2026/11/12 23:22:01 INFO execution attempt settled module=settlement attempt=424c14ac0352dcbd409a009a08d115f2 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=200 duration=10.088s request_id=Ybf6L2tcDd8dLLK-iBDc4FmC0W3Ui3wQXNEjt2yplm4
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/Ybf6L2tcDd8dLLK-iBDc4FmC0W3Ui3wQXNEjt2yplm4 status=200 duration=6ms
+2026/11/12 23:22:01 INFO execution attempt settled module=settlement attempt=d9d9868541fe98d2f43cdb0a06f8ac54 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=200 duration=10.099s request_id=p3T5w0zTdUPY3wiwYhYWyGSNiYTdh967QJBzVULB6DI
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/p3T5w0zTdUPY3wiwYhYWyGSNiYTdh967QJBzVULB6DI status=200 duration=9ms
+2026/11/12 23:22:01 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=10ms
+2026/11/12 23:22:01 INFO execution attempt dispatched module=dispatch attempt=68c155ef4a142b7ce383e82a939197c3 request=ma8AxIXRV5S6KHHdJ77-LLJvuP-3T1G-Rxgd_mt25ec model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:01 INFO execution attempt settled module=settlement attempt=68c155ef4a142b7ce383e82a939197c3 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=200 duration=27ms request_id=ma8AxIXRV5S6KHHdJ77-LLJvuP-3T1G-Rxgd_mt25ec
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/ma8AxIXRV5S6KHHdJ77-LLJvuP-3T1G-Rxgd_mt25ec status=200 duration=5ms
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/ma8AxIXRV5S6KHHdJ77-LLJvuP-3T1G-Rxgd_mt25ec status=200 duration=5ms
+2026/11/12 23:22:01 INFO execution attempt dispatched module=dispatch attempt=f5ea05d23353372fb9c8a42ee36831d3 request=fb9aMqqjkh9Y9iGiJuVR_A458mo4-Tz1oWgKXTVCu2Q model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:01 INFO execution attempt settled module=settlement attempt=f5ea05d23353372fb9c8a42ee36831d3 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:01 INFO http request module=http method=POST path=/v1/responses status=200 duration=24ms request_id=fb9aMqqjkh9Y9iGiJuVR_A458mo4-Tz1oWgKXTVCu2Q
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/fb9aMqqjkh9Y9iGiJuVR_A458mo4-Tz1oWgKXTVCu2Q status=200 duration=5ms
+2026/11/12 23:22:01 INFO http request module=http method=GET path=/api/admin/calls/fb9aMqqjkh9Y9iGiJuVR_A458mo4-Tz1oWgKXTVCu2Q status=200 duration=6ms
+2026/11/12 23:22:01 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=5ms
+2026/11/12 23:22:01 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=26ms
+2026/11/12 23:22:01 INFO execution attempt dispatched module=dispatch attempt=3b64259d3b152dff24c1f13570b8f7e7 request=qLOulxUQsGu_xAF2hf-pVlLslNgqgtwHcBpfd2Iub0w model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=335
+2026/11/12 23:22:01 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=9ms
+2026/11/12 23:22:02 INFO execution attempt settled module=settlement attempt=3b64259d3b152dff24c1f13570b8f7e7 provider_amount=0.000068000 commission=0.000006800 buyer_amount=0.000074800 recovered=false
+2026/11/12 23:22:02 INFO http request module=http method=POST path=/v1/responses status=200 duration=81ms request_id=qLOulxUQsGu_xAF2hf-pVlLslNgqgtwHcBpfd2Iub0w
+2026/11/12 23:22:02 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=50ms
+2026/11/12 23:22:02 INFO execution attempt dispatched module=dispatch attempt=c28f339188705168ea9fa5fa1595dd38 request=mq-KGCK-Zlh-7pJw85uuKKGGvmvHxS09ygJmgZjPmUk model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:02 INFO execution attempt settled module=settlement attempt=c28f339188705168ea9fa5fa1595dd38 provider_amount=0.000068000 commission=0.000006800 buyer_amount=0.000074800 recovered=false
+2026/11/12 23:22:02 INFO http request module=http method=POST path=/v1/responses status=200 duration=67ms request_id=mq-KGCK-Zlh-7pJw85uuKKGGvmvHxS09ygJmgZjPmUk
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/admin/calls/mq-KGCK-Zlh-7pJw85uuKKGGvmvHxS09ygJmgZjPmUk status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=3ms
+2026/11/12 23:22:02 INFO execution attempt dispatched module=dispatch attempt=65b1e93fc8c441d0f284b6a9c6c972b2 request=LNVKuzc7aGzxe-DK8ZZqMVte3N-MxmHtXK76w_2Da-Y model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=332
+2026/11/12 23:22:02 INFO execution attempt dispatched module=dispatch attempt=14fdfe83bf55f57a0bd74b4ec8053318 request=-JYB3RaNERh9QUvOluwpGEdLSaFW2ti3U2UBXS5p3nk model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=331
+2026/11/12 23:22:02 INFO execution attempt settled module=settlement attempt=65b1e93fc8c441d0f284b6a9c6c972b2 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:02 INFO http request module=http method=POST path=/v1/responses status=200 duration=67ms request_id=LNVKuzc7aGzxe-DK8ZZqMVte3N-MxmHtXK76w_2Da-Y
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/admin/calls/LNVKuzc7aGzxe-DK8ZZqMVte3N-MxmHtXK76w_2Da-Y status=200 duration=6ms
+2026/11/12 23:22:02 INFO execution attempt dispatched module=dispatch attempt=481d60c8fe1dfc8b8e740cd2b3bade25 request=alIFWacVmTQPIplu3ebUuzPspGtr6UMLZ0VoNSi4edA model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:02 INFO execution attempt settled module=settlement attempt=481d60c8fe1dfc8b8e740cd2b3bade25 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:02 INFO http request module=http method=POST path=/v1/responses status=200 duration=72ms request_id=alIFWacVmTQPIplu3ebUuzPspGtr6UMLZ0VoNSi4edA
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/admin/calls/alIFWacVmTQPIplu3ebUuzPspGtr6UMLZ0VoNSi4edA status=200 duration=6ms
+2026/11/12 23:22:02 INFO execution attempt settled module=settlement attempt=14fdfe83bf55f57a0bd74b4ec8053318 provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:02 INFO http request module=http method=POST path=/v1/responses status=200 duration=112ms request_id=-JYB3RaNERh9QUvOluwpGEdLSaFW2ti3U2UBXS5p3nk
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/admin/calls/-JYB3RaNERh9QUvOluwpGEdLSaFW2ti3U2UBXS5p3nk status=200 duration=6ms
+2026/11/12 23:22:02 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:02 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=19ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=15ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:03 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=9ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/models status=200 duration=10ms
+2026/11/12 23:22:03 INFO execution attempt dispatched module=dispatch attempt=d1945b0bcaa360d87dfb26939b1e6a4f request=mRpIAjcosrZUF_d9ISULyQyg9IFNksEJ92JYrfF3KYY model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:03 INFO execution attempt settled module=settlement attempt=d1945b0bcaa360d87dfb26939b1e6a4f provider_amount=0.000068000 commission=0.000006800 buyer_amount=0.000074800 recovered=false
+2026/11/12 23:22:03 INFO http request module=http method=POST path=/v1/responses status=200 duration=25ms request_id=mRpIAjcosrZUF_d9ISULyQyg9IFNksEJ92JYrfF3KYY
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/admin/calls/mRpIAjcosrZUF_d9ISULyQyg9IFNksEJ92JYrfF3KYY status=200 duration=4ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:03 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=7ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:04 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=13ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:22:05 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=10ms
+2026/11/12 23:22:05 INFO execution attempt dispatched module=dispatch attempt=cecbfae78e3445023bbf30fc3022a089 request=SDQVSX-LAuwGhtHSbNJgxzGuFmOw-lpbKHDbvINoxaw model=synthetic-responses protocol=responses device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:05 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=5ms
+2026/11/12 23:22:05 INFO execution attempt settled module=settlement attempt=cecbfae78e3445023bbf30fc3022a089 provider_amount=0.000068000 commission=0.000006800 buyer_amount=0.000074800 recovered=false
+2026/11/12 23:22:05 INFO http request module=http method=POST path=/v1/responses status=200 duration=40ms request_id=SDQVSX-LAuwGhtHSbNJgxzGuFmOw-lpbKHDbvINoxaw
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/admin/calls/SDQVSX-LAuwGhtHSbNJgxzGuFmOw-lpbKHDbvINoxaw status=200 duration=11ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=8ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=7ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:05 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=5ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=17ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:06 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=4ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=5ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=6ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=18ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=64ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=20ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=5ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=4ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO execution attempt dispatched module=dispatch attempt=a87b5f39f0cec5c22bb41c641ddb785b request=p-4atMTzQbpJSvn0np3BcfvWaFww9avgdnA_S0KfmZ4 model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:07 INFO execution attempt settled module=settlement attempt=a87b5f39f0cec5c22bb41c641ddb785b provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/v1/responses status=200 duration=27ms request_id=p-4atMTzQbpJSvn0np3BcfvWaFww9avgdnA_S0KfmZ4
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/admin/calls/p-4atMTzQbpJSvn0np3BcfvWaFww9avgdnA_S0KfmZ4 status=200 duration=4ms
+2026/11/12 23:22:07 INFO http request module=http method=PUT path=/api/bee/platforms/openai status=200 duration=8ms
+2026/11/12 23:22:07 INFO bee disconnected module=bee device=nYTfR0X5bm7zzBb2MCEccEhJ_gcTdrZ2WjvFUi-nJd8 session=26.38s reason="context closed" tunnel_bytes=26 heartbeat_idle=1.379s tunnel_idle=26.379s
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=26.386s
+2026/11/12 23:22:07 INFO http request module=http method=PUT path=/api/provider/pricing status=200 duration=4ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/devices status=200 duration=9ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/models status=200 duration=8ms
+2026/11/12 23:22:07 INFO execution attempt dispatched module=dispatch attempt=4a5010c9e657f1d7f9e1d0cbb051c25d request=Cu6O2p6mzDfRsu_uL-jd4cHIlOXn_aPpinv4cdZeWmQ model=synthetic-responses protocol=responses device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:07 INFO execution attempt settled module=settlement attempt=4a5010c9e657f1d7f9e1d0cbb051c25d provider_amount=0.000034000 commission=0.000003400 buyer_amount=0.000037400 recovered=false
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/v1/responses status=200 duration=33ms request_id=Cu6O2p6mzDfRsu_uL-jd4cHIlOXn_aPpinv4cdZeWmQ
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/admin/calls/Cu6O2p6mzDfRsu_uL-jd4cHIlOXn_aPpinv4cdZeWmQ status=200 duration=4ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=3ms
+2026/11/12 23:22:07 INFO bee connected module=bee device=nYTfR0X5bm7zzBb2MCEccEhJ_gcTdrZ2WjvFUi-nJd8 tunnel=true version=dev platform=darwin/arm64
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=1ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/maintenance status=200 duration=8ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/credential-key status=200 duration=1ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/credentials status=201 duration=7ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/api/bee/platforms/openai/capabilities status=201 duration=7ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/account status=200 duration=2ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai/capabilities status=200 duration=1ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/bee/platforms/openai status=200 duration=7ms
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/models status=200 duration=7ms
+2026/11/12 23:22:07 INFO execution attempt dispatched module=dispatch attempt=756ed853b122cd40f8a10461f5e29448 request=9IuYSegn0EshIvcLUmZujnznb63TlSPaAubxewBfi1k model=synthetic-responses protocol=responses device=nYTfR0X5bm7zzBb2MCEccEhJ_gcTdrZ2WjvFUi-nJd8 upstream=127.0.0.1:52837/backend-api/codex/responses streaming=true upstream_bytes=305
+2026/11/12 23:22:07 INFO execution attempt settled module=settlement attempt=756ed853b122cd40f8a10461f5e29448 provider_amount=0.000003400 commission=0.000000340 buyer_amount=0.000003740 recovered=false
+2026/11/12 23:22:07 INFO http request module=http method=POST path=/v1/responses status=200 duration=37ms request_id=9IuYSegn0EshIvcLUmZujnznb63TlSPaAubxewBfi1k
+2026/11/12 23:22:07 INFO http request module=http method=GET path=/api/admin/calls/9IuYSegn0EshIvcLUmZujnznb63TlSPaAubxewBfi1k status=200 duration=4ms
+2026/11/12 23:22:08 INFO bee disconnected module=bee device=sA27HS2IGePzU4VK9maubJ4buqZhuQpGuEyPJh690n8 session=27.711s reason="context closed" tunnel_bytes=25933 heartbeat_idle=2.708s tunnel_idle=2.708s
+2026/11/12 23:22:08 INFO bee disconnected module=bee device=nYTfR0X5bm7zzBb2MCEccEhJ_gcTdrZ2WjvFUi-nJd8 session=1.071s reason="context closed" tunnel_bytes=26 heartbeat_idle=1.07s tunnel_idle=1.07s
+2026/11/12 23:22:08 INFO bee disconnected module=bee device=E08SGgqlLLXgBW2EEZgOJz1KnMchT4W3EhOkWWTZmFM session=27.84s reason="context closed" tunnel_bytes=30007 heartbeat_idle=2.838s tunnel_idle=2.838s
+2026/11/12 23:22:08 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=27.715s
+2026/11/12 23:22:08 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=1.074s
+2026/11/12 23:22:08 INFO http request module=http method=GET path=/api/bee/agent status=200 duration=27.849s
+--- PASS: TestMarketSelectsLowestQuoteAndAccountLoad (40.94s)
+PASS
+ok  	github.com/tokhive/hive/hive/internal/integration	117.937s

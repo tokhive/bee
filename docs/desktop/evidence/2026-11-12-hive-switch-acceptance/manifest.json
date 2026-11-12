@@ -1,0 +1,9 @@
+{
+  "bee": "4a1c2fce1ad32407617c22f36f805fa001b182b6",
+  "hive": "6f702763525d8e9de1ad2eda42eb3f955f81e39b",
+  "binaries": {
+    "/private/tmp/bee-hive-url-switching/native-final-race/bee-switch-native.test": "cdb97fb1a7247c707c0635ce1da38b10fe754e5faf60daacd1cdc0a06d642522",
+    "/private/tmp/bee-hive-url-switching/native-final-race/hive-switch-native.test": "504789ce53cb3be3803758be82bf729c96b8078af0fc7287159c5d49876d5a59",
+    "/private/tmp/bee-ticket05-target/debug/deps/bee_desktop_lib-1f903c1be3a0ddc0": "70fe4a1b84d24842c6577705c5ea8d7c7cdf569443547fbbdf75caf2476c4963"
+  }
+}

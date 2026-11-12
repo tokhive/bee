@@ -145,9 +145,10 @@ func connectObserved(ctx context.Context, state localState, egress *egressConfig
 
 func connectObservedOwned(ctx context.Context, state localState, egress *egressConfig, out io.Writer, owned bool, observe func(DesktopConnectionObservation)) error {
 	var lastFailure *DesktopConnectionFailure
+	var currentLease string
 	emit := func(value, retry string, next *string) {
 		if observe != nil {
-			observe(DesktopConnectionObservation{Connection: value, Detail: &DesktopConnectionDetail{Failure: lastFailure, Retry: retry, NextRetryAt: next}})
+			observe(DesktopConnectionObservation{Connection: value, Lease: currentLease, Detail: &DesktopConnectionDetail{Failure: lastFailure, Retry: retry, NextRetryAt: next}})
 		}
 	}
 	if _, ok := out.(*console); !ok {
@@ -170,6 +171,10 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 	conflicts := 0
 	rejectionReported := false
 	for {
+		if !desktopReconnectPermitted(ctx) {
+			emit("disconnected", "halted", nil)
+			return nil
+		}
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -194,6 +199,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 		metrics.connect(connectStart, err)
 		handshakeConnected := err == nil
 		if handshakeConnected {
+			currentLease = response.Header.Get("X-Bee-Lease")
 			owned = true
 			lastFailure = nil
 			emit("connected", "idle", nil)

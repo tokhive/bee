@@ -23,7 +23,7 @@ func CanonicalHiveOrigin(input string) (string, error) {
 		return reject("forbidden delimiter or whitespace present")
 	}
 	scheme, authority, ok := strings.Cut(input, "://")
-	scheme = strings.ToLower(scheme)
+	scheme = asciiOriginLower(scheme)
 	if !ok || scheme != "https" && scheme != "http" {
 		return reject("scheme check failed; required=HTTPS or loopback HTTP")
 	}
@@ -56,7 +56,7 @@ func CanonicalHiveOrigin(input string) (string, error) {
 			}
 		}
 		if host == "" || strings.IndexFunc(host, func(r rune) bool {
-			return !(unicode.IsLetter(r) || unicode.IsDigit(r) || strings.ContainsRune("-._", r))
+			return !(r > 127 || r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("-._", r))
 		}) >= 0 {
 			return reject("hostname character check failed")
 		}
@@ -74,7 +74,7 @@ func CanonicalHiveOrigin(input string) (string, error) {
 			port = ""
 		}
 	}
-	host = strings.ToLower(host)
+	host = asciiOriginLower(host)
 	if scheme == "http" && host != "localhost" {
 		ip := net.ParseIP(strings.Trim(host, "[]"))
 		if ip == nil || !ip.IsLoopback() {
@@ -85,4 +85,13 @@ func CanonicalHiveOrigin(input string) (string, error) {
 		host += ":" + port
 	}
 	return scheme + "://" + host, nil
+}
+
+func asciiOriginLower(value string) string {
+	return strings.Map(func(r rune) rune {
+		if r >= 'A' && r <= 'Z' {
+			return r + ('a' - 'A')
+		}
+		return r
+	}, value)
 }

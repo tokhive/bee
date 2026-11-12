@@ -111,6 +111,7 @@ func TestDeviceDrainClientFailsClosedAtTheHTTPBoundary(t *testing.T) {
 		{"duplicate_capability", `{"version":1,"device_drain":1,"device_drain":0}`, 200, `{}`, false},
 		{"status_404_is_not_absence", `{"version":1,"device_drain":1}`, 404, `{"error":{"code":"missing","message":"not found"}}`, false},
 		{"credential_rejection_is_not_revocation", `{"version":1,"device_drain":1}`, 401, `{"error":{"code":"invalid_device_credential","message":"authorization: Bearer bee_SECRET"}}`, false},
+		{"secret_disguised_as_code", `{"version":1,"device_drain":1}`, 403, `{"error":{"code":"bee_` + strings.Repeat("s", 43) + `","message":"rejected"}}`, false},
 		{"malformed_status", `{"version":1,"device_drain":1}`, 200, `{"version":1}`, false},
 		{"oversize_status", `{"version":1,"device_drain":1}`, 200, strings.Repeat("x", 65537), false},
 	} {
@@ -139,7 +140,7 @@ func TestDeviceDrainClientFailsClosedAtTheHTTPBoundary(t *testing.T) {
 			if writes != 0 {
 				t.Fatalf("read-only query performed %d writes", writes)
 			}
-			if strings.Contains(err.Error(), "bee_SECRET") {
+			if strings.Contains(err.Error(), "bee_") {
 				t.Fatalf("credential exposed: %v", err)
 			}
 			if sample.status == 401 {

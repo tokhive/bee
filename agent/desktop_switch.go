@@ -45,12 +45,16 @@ type DesktopSwitchView struct {
 	Drain              *beewire.DeviceDrainStatus       `json:"drain"`
 }
 type desktopSwitchSeal struct {
-	Released       bool                      `json:"released"`
-	Version        int                       `json:"version"`
-	Binding        string                    `json:"binding"`
-	OriginalEpoch  string                    `json:"original_epoch"`
-	Status         beewire.DeviceDrainStatus `json:"status"`
-	WorkersStopped bool                      `json:"workers_stopped"`
+	// Written only by the native trusted commit after the original release is
+	// confirmed. The receipt remains historical; ordinary retirement may then
+	// advance the current epoch under its own durable proof.
+	AdmissionCompleted bool                      `json:"admission_completed"`
+	Released           bool                      `json:"released"`
+	Version            int                       `json:"version"`
+	Binding            string                    `json:"binding"`
+	OriginalEpoch      string                    `json:"original_epoch"`
+	Status             beewire.DeviceDrainStatus `json:"status"`
+	WorkersStopped     bool                      `json:"workers_stopped"`
 }
 type desktopSwitchLifecycle struct {
 	writes       sync.RWMutex
@@ -113,7 +117,21 @@ func (r *DesktopRuntime) loadSwitchProof(session *desktopDeviceSession, state lo
 	if err != nil {
 		return fmt.Errorf("read saved Hive switch seal: %w", err)
 	}
-	if _, err = connectionObject(raw, "released", "version", "binding", "original_epoch", "status", "workers_stopped"); err != nil {
+	if err = uniqueAccountJSON(json.NewDecoder(strings.NewReader(string(raw)))); err != nil {
+		return fmt.Errorf("saved Hive switch seal unique JSON: %w", err)
+	}
+	var optional map[string]json.RawMessage
+	if err = json.Unmarshal(raw, &optional); err != nil {
+		return err
+	}
+	fields := []string{"released", "version", "binding", "original_epoch", "status", "workers_stopped"}
+	if value, ok := optional["admission_completed"]; ok {
+		if string(value) != "true" && string(value) != "false" {
+			return fmt.Errorf("saved Hive switch admission_completed rejected: boolean_literal=false; required=true or false")
+		}
+		fields = append(fields, "admission_completed")
+	}
+	if _, err = connectionObject(raw, fields...); err != nil {
 		return fmt.Errorf("saved Hive switch seal fields: %w", err)
 	}
 	var proof desktopSwitchSeal
@@ -134,6 +152,9 @@ func (r *DesktopRuntime) loadSwitchProof(session *desktopDeviceSession, state lo
 	if proof.Version != 1 || proof.Binding != retirementBinding(state) || proof.Status.Receipt == nil || proof.Status.Request == nil {
 		return fmt.Errorf("saved Hive switch seal rejected: version=%d binding_match=%t receipt_present=%t request_present=%t", proof.Version, proof.Binding == retirementBinding(state), proof.Status.Receipt != nil, proof.Status.Request != nil)
 	}
+	if proof.AdmissionCompleted && (!proof.Released || proof.WorkersStopped) {
+		return fmt.Errorf("saved Hive switch admission completion rejected: released=%t workers_stopped=%t; required=released and workers_stopped=false", proof.Released, proof.WorkersStopped)
+	}
 	if proof.Released != (proof.Status.State == "released") || proof.OriginalEpoch != proof.Status.Request.ExpectedEpoch || proof.WorkersStopped && state.RuntimeEpoch != proof.Status.Receipt.Epoch {
 		return fmt.Errorf("saved Hive switch seal lifecycle rejected: released_match=%t original_epoch_match=%t workers_epoch_match=%t", proof.Released == (proof.Status.State == "released"), proof.OriginalEpoch == proof.Status.Request.ExpectedEpoch, !proof.WorkersStopped || state.RuntimeEpoch == proof.Status.Receipt.Epoch)
 	}
@@ -141,7 +162,16 @@ func (r *DesktopRuntime) loadSwitchProof(session *desktopDeviceSession, state lo
 		return fmt.Errorf("saved Hive switch seal invalid: %w", err)
 	}
 	if state.RuntimeEpoch != proof.OriginalEpoch && state.RuntimeEpoch != proof.Status.Receipt.Epoch {
-		return fmt.Errorf("saved Hive switch seal epoch mismatch: original_match=false sealed_match=false")
+		if !proof.AdmissionCompleted {
+			return fmt.Errorf("saved Hive switch seal epoch mismatch: original_match=false sealed_match=false admission_completed=false")
+		}
+		retirement, e := readSessionRetirement(session)
+		if e != nil {
+			return fmt.Errorf("completed switch current epoch retirement: %w", e)
+		}
+		if retirement == nil || !retirement.Completed || retirement.Proof == nil || retirement.Binding != retirementBinding(state) || retirement.Request.ID != state.RuntimeEpoch {
+			return fmt.Errorf("completed switch current epoch rejected: matching_completed_retirement=false; historical receipt retained")
+		}
 	}
 	r.switching.initialized = true
 	r.switching.proof = &proof
@@ -149,6 +179,10 @@ func (r *DesktopRuntime) loadSwitchProof(session *desktopDeviceSession, state lo
 	r.switching.sealing.Store(!proof.Released)
 	r.switching.frozen.Store(true)
 	r.switching.maintenance.Store(false)
+	if proof.AdmissionCompleted && r.device.ProfileMode() == DesktopProfileCurrent {
+		r.switching.frozen.Store(false)
+		r.switching.maintenance.Store(true)
+	}
 	return nil
 }
 func (r *DesktopRuntime) switchClient(state localState) (*DeviceDrainClient, error) {
@@ -348,11 +382,31 @@ func (r *DesktopRuntime) SwitchControl(ctx context.Context, input DesktopSwitchR
 	case "connect":
 		return r.connectForSwitch(ctx, state, revision, input)
 	case "commit":
-		if (view.Connection != "connected" && !(r.switching.proof != nil && r.switching.proof.Released && state.RuntimeEpoch == r.switching.proof.Status.Receipt.Epoch)) || r.switching.proof == nil || r.switching.proof.Status.OperationID != input.Operation.ID {
+		if (view.Connection != "connected" && !(r.switching.proof != nil && r.switching.proof.Released && (state.RuntimeEpoch == r.switching.proof.Status.Receipt.Epoch || r.switching.proof.AdmissionCompleted))) || r.switching.proof == nil || r.switching.proof.Status.OperationID != input.Operation.ID {
 			return zero, fmt.Errorf("Hive switch trusted commit rejected: connected=%t matching_seal=%t", view.Connection == "connected", r.switching.proof != nil && r.switching.proof.Status.OperationID == input.Operation.ID)
 		}
 		r.switching.committed = input.Operation.ID
 		if r.switching.proof.Released {
+			session, end, e := r.device.acquireSession(ctx)
+			if e != nil {
+				return zero, e
+			}
+			current, currentRevision, e := session.readBinding()
+			if e != nil {
+				end()
+				return zero, e
+			}
+			if currentRevision != revision || retirementBinding(current) != retirementBinding(state) {
+				end()
+				return zero, fmt.Errorf("Hive switch admission completion binding changed: revision_match=%t identity_match=%t", currentRevision == revision, retirementBinding(current) == retirementBinding(state))
+			}
+			proof := *r.switching.proof
+			proof.AdmissionCompleted = true
+			e = r.saveSwitchProof(session, &proof)
+			end()
+			if e != nil {
+				return zero, e
+			}
 			r.switching.frozen.Store(false)
 			r.switching.maintenance.Store(true)
 		}

@@ -288,9 +288,15 @@ pub(crate) fn validate(result: &Value, params: &Value) -> Result<(), BridgeError
     }
     for n in ["binding_revision", "network_revision"] {
         safe(v, n)?;
-        if v[n] != params[n] {
+        // First pairing resets the prepared child's network configuration. This
+        // read is its only allowed way to observe the effective revision.
+        let preparation_observation = n == "network_revision"
+            && v["mode"] == "prepare"
+            && params["action"] == "inspect";
+        if v[n] != params[n] && !preparation_observation {
             return Err(invalid(format!(
-                "switch field={n} changed during coordinator action"
+                "switch field={n} changed during coordinator action: actual={} required={} action={}",
+                v[n], params[n], params["action"]
             )));
         }
     }
@@ -346,6 +352,23 @@ pub(crate) fn validate(result: &Value, params: &Value) -> Result<(), BridgeError
 mod tests {
     use super::*;
     use serde_json::json;
+    #[test]
+    fn preparation_inspect_observes_network_reset_after_first_pairing() {
+        let mut params =
+            json!({"action":"inspect","binding_revision":1,"network_revision":0,"operation":null});
+        let mut result = json!({"switch":{"mode":"prepare","binding_revision":1,"network_revision":1,"epoch":"","lease":"","connection":"disconnected","frozen":true,"maintenance_allowed":false,"workers_stopped":false,"seal_persisted":false,"capabilities":null,"drain":null}});
+        assert!(validate(&result, &params).is_ok());
+        for action in ["capabilities", "freeze", "drain_begin", "connect", "commit"] {
+            params["action"] = json!(action);
+            assert!(validate(&result, &params).is_err(), "action={action}");
+        }
+        params["action"] = json!("inspect");
+        result["switch"]["binding_revision"] = json!(2);
+        assert!(validate(&result, &params).is_err());
+        result["switch"]["binding_revision"] = json!(1);
+        result["switch"]["network_revision"] = json!(9007199254740992u64);
+        assert!(validate(&result, &params).is_err());
+    }
     #[test]
     fn inspect_accepts_strict_saved_receipt_without_new_remote_operation() {
         let op = json!({"id":"1".repeat(48),"device_id":"device","owner_id":"owner","origin":"https://hive.example","expected_epoch":"","expected_lease":""});

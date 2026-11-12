@@ -686,6 +686,7 @@ func (d *DesktopDevice) saveRecoveryIdentity(ctx context.Context, s *desktopDevi
 		rt.snapshot.Revision++
 		rt.snapshot.RunID = nil
 		rt.snapshot.Operation = nil
+		rt.snapshot.StartupProgress = nil
 		rt.snapshot.Connection = "disconnected"
 		rt.snapshot.ConnectionDetail = nil
 		rt.ownedSession = nil

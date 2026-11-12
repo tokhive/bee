@@ -36,6 +36,7 @@ func (r *DesktopRuntime) maintainSelectedAccounts() {
 		r.snapshot.ConnectionDetail = &DesktopConnectionDetail{Failure: observedConnectionFailure(failure, nil, r.presence.state, "", "synchronize"), Retry: "halted"}
 		if idErr == nil {
 			r.snapshot.Operation = &DesktopOperation{ID: id, Kind: "start", State: "failed", Revision: r.snapshot.Revision, Error: accountFailure("unknown", "automatic_maintenance_failed", "automatic_maintenance", failure.Error())}
+			r.snapshot.StartupProgress = nil
 		}
 	}
 }

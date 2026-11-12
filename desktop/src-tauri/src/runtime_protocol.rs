@@ -592,6 +592,28 @@ mod tests {
         .unwrap()
     }
     #[test]
+    fn startup_progress_requires_the_current_runtime_operation() {
+        let f = fixture();
+        let mut snapshot = f["snapshot"].clone();
+        snapshot["startup_progress"] = json!({
+            "stage":"checking_device", "operation_id":f["operation"]["id"],
+            "completed":null, "total":null
+        });
+        // A reset operation cannot retain progress from the previous device.
+        let error = validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot).unwrap_err();
+        assert_eq!(error.code, "RUNTIME_REPLY_INVALID");
+        assert!(error.message.contains("startup progress operation differs"));
+        snapshot["operation"] = f["operation"].clone();
+        validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot).unwrap();
+        // A new failed start also cannot inherit another operation's progress.
+        snapshot["operation"]["id"] = json!("b".repeat(48));
+        assert!(validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot).is_err());
+        snapshot.as_object_mut().unwrap().remove("startup_progress");
+        validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot).unwrap();
+        snapshot["operation"] = Value::Null;
+        validate_runtime_reply(&json!({"runtime":snapshot}), RuntimeReplyKind::Snapshot).unwrap();
+    }
+    #[test]
     fn legacy_stop_requires_explicit_progress_and_bounded_recovery_fields() {
         let mut valid = fixture()["snapshot"].clone();
         valid["legacy_stop"] =

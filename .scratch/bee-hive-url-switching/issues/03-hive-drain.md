@@ -6,7 +6,7 @@
 
 **Blocked by:** 01 共享安全切换协议与地址判定
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] 数据库持久化原操作；与最终准入锁一致，begin 与并发派单有确定归属。
 - [ ] 只读能力和状态查询；包含执行、未知终止、未结算；数据库实测。

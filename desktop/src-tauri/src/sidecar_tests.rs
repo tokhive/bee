@@ -3,6 +3,21 @@ use sha2::{Digest, Sha256};
 use std::sync::OnceLock;
 use tokio::time::{sleep, timeout};
 
+#[test]
+fn launch_spec_keeps_its_original_profile_and_mode_after_current_changes() {
+    let tmp=tempfile::tempdir().unwrap();
+    let store=crate::profiles::ProfileStore::open(tmp.path().join("tokhive")).unwrap();
+    let a=store.register("https://a.example").unwrap();
+    let b=store.register("https://b.example").unwrap();
+    let spec=fixture("echo").for_profile(&a,crate::profiles::ProfileMode::Prepare).unwrap();
+    let before=store.snapshot().unwrap();
+    store.commit_current(before.revision,&b.id,&"a".repeat(48)).unwrap();
+    let reconnect=spec.clone();
+    assert_eq!(reconnect.args,vec!["desktop","--profile-dir",a.directory().to_str().unwrap(),"--mode","prepare"]);
+    assert_ne!(reconnect.args[2],b.directory().to_str().unwrap());
+    assert_eq!(fixture("echo").args.len(),2);
+}
+
 #[tokio::test]
 async fn zero_byte_backpressure_preserves_unsent_cancellation_and_deadline() {
     for deadline in [false, true] {

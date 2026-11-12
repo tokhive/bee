@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="zh-CN">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Bee · 首次启动向导待评审</title>
+<title>Bee · 添加账号向导待评审</title>
 <!-- STATIC REVIEW DRAFT: shared OpenAI scenarios; existing Bee shell and Claude content retained. No real business calls. -->
 <style>
 *{box-sizing:border-box}body{margin:0;background:#edf0f3;color:#30312e;font:13px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}body.dark{background:#141619;color:#e5e4df;color-scheme:dark}.studio{padding:20px 24px 24px}.toolbar{display:flex;gap:18px;align-items:end;flex-wrap:wrap;max-width:1100px;margin:0 auto}.toolbar a{color:#805a20}.dark .toolbar a{color:#d2af75}.toolbar a:focus-visible{outline:2px solid currentColor;outline-offset:3px}.toolbar label{max-width:100%;display:flex;align-items:center;gap:8px;color:#63666b;font-size:12px}.toolbar select{min-width:0;max-width:100%}#flow{width:180px}#scene{width:300px}.dark .toolbar label,.dark .hint{color:#b4b7bb}select,button{font:inherit;color:inherit;background:#fff;border:1px solid #cfd3d8;border-radius:6px;min-height:34px;padding:5px 10px}button{cursor:pointer}.dark select,.dark button{background:#242421;border-color:#45433d}select:focus-visible,button:focus-visible{outline:2px solid #805a20;outline-offset:3px}.hint{max-width:1100px;margin:13px auto 18px;color:#62666d;min-height:21px;font-size:12px}.stage{overflow:auto;padding:2px 2px 10px}iframe{display:block;width:1080px;height:700px;margin:0 auto;border:1px solid #d4d6d9;border-radius:10px;background:white;box-shadow:0 8px 35px #2233440b}iframe.narrow{width:820px;height:680px}.dark iframe{border-color:#45433d}@media(max-width:870px){.studio{padding:14px 12px}.stage iframe{margin-left:0}.toolbar{gap:10px}}
@@ -653,6 +653,95 @@ const setupBaseOverview=overviewUpdate;
 overviewUpdate=function(){setupBaseOverview();if(!setupDevice)return;const d=overviewDoc();if(!d)return;const values=d.querySelectorAll('.device-strip dd');[setupDevice.name,'demo@example.com',setupDevice.hive].forEach((v,i)=>{if(values[i])values[i].textContent=v});const side=d.querySelector('.side-device>div');if(side?.firstChild?.nodeType===3)side.firstChild.textContent=setupDevice.name;};
 const setupBaseReset=reset;
 reset=function(payload){setupDevice=payload?.model?.freshDevice?(payload.model.deviceContext||{name:'Bee Desktop',hive:'https://hive.example'}):null;setupBaseReset(payload);if(setupDevice){const side=document.querySelector('.side-device>div');if(side?.firstChild?.nodeType===3)side.firstChild.textContent=setupDevice.name;overviewUpdate();}};
+// First-add review: a local, deterministic journey; reuse the approved account renderer.
+let addFlow=null,addEpoch=0,addTimers=new Set(),addResetting=false;
+const addStyle=document.createElement('style');
+addStyle.textContent=`
+.add-shell{max-width:700px;margin:26px auto 0;border:1px solid var(--line);border-radius:12px;background:var(--paper)}
+.add-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 28px 0}.add-top h2{font-size:17px}.add-steps{display:flex;list-style:none;margin:24px 28px 0;padding:0 0 22px;border-bottom:1px solid var(--line);gap:12px}.add-steps li{display:flex;align-items:center;gap:8px;flex:1;color:var(--muted);font-size:12px}.add-steps li:not(:last-child):after{content:'';height:1px;background:var(--line);flex:1;margin-left:4px}.add-dot{display:grid;place-items:center;width:25px;height:25px;border-radius:50%;border:1px solid var(--line);flex:none;font-size:11px}.add-steps [aria-current=step]{color:var(--ink);font-weight:600}.add-steps [aria-current=step] .add-dot{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}.add-steps .done .add-dot{color:var(--good);border-color:var(--good)}
+.add-body{padding:22px 28px;min-height:270px}.add-body h3{font-size:20px;line-height:1.45;font-weight:600;margin:0 0 10px;letter-spacing:-.2px}.add-body p{font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.8;overflow-wrap:anywhere}.add-body button{min-height:38px;padding:8px 15px}.add-platforms{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:25px}.add-platforms button{padding:20px;justify-content:start;gap:13px;text-align:left;white-space:normal}.add-platforms strong{display:block;font-size:16px}.add-platforms small{display:block;color:var(--muted);font-size:12px;font-weight:400;margin-top:3px}.add-platforms svg{width:25px;height:25px}.add-secondary{border-top:1px solid var(--line);padding-top:16px;margin-top:18px}.add-secondary p{margin-bottom:9px}.add-buttons{display:flex;gap:12px;align-items:center;margin-top:24px;flex-wrap:wrap}.add-back{margin-top:14px}.add-body h4{margin:18px 0 6px;font-size:13px;font-weight:600}.add-body label{display:block;font-size:13px;margin-bottom:8px}.add-directory{display:flex;gap:8px;align-items:center}.add-directory input{min-width:0;flex:1;padding:10px 12px;min-height:40px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);font-size:13px}.add-body .add-helper{font-size:12px;margin:9px 0 0}.add-identity{display:flex;gap:12px;align-items:center;padding:18px;background:var(--panel);border-radius:8px;margin:20px 0}.add-identity strong{display:block;font-size:15px;overflow-wrap:anywhere}.add-identity small{color:var(--muted)}.add-body .add-error{color:var(--danger)}.add-evidence{margin-top:20px;color:var(--muted);font-size:12px}.add-evidence summary{cursor:pointer}.add-evidence p{font-size:12px;margin-top:10px}.add-progress{display:flex;align-items:center;gap:9px}.add-progress svg{color:var(--accent-ink)}.add-list-actions{display:flex;gap:14px;align-items:center}.add-notice{font-size:12px;color:var(--muted);margin:16px 0}.add-picker{width:450px;border-radius:10px}.add-picker button[data-add-dir]{display:flex;justify-content:start;width:100%;margin:12px 0;white-space:normal;overflow-wrap:anywhere;text-align:left;min-height:44px}
+@media(max-width:720px){.add-top{padding:20px 18px 0}.add-steps{margin:20px 18px 0;gap:7px}.add-steps li{gap:5px;font-size:11px}.add-body{padding:24px 18px}.add-platforms{grid-template-columns:1fr}.add-directory{flex-wrap:wrap}.add-directory input{flex-basis:100%}.add-shell{margin-top:20px}.add-list-actions{flex-wrap:wrap;gap:8px}}
+`;
+document.head.append(addStyle);
+const addPicker=document.createElement('dialog');addPicker.className='add-picker';addPicker.setAttribute('aria-labelledby','add-picker-title');document.body.append(addPicker);
+function addClear(){addEpoch++;addTimers.forEach(clearTimeout);addTimers.clear();}
+function addLater(fn,ms=1000){const epoch=addEpoch;const id=setTimeout(()=>{addTimers.delete(id);if(epoch===addEpoch&&addFlow)fn()},ms);addTimers.add(id);}
+function addButton(label,action,primary=false,disabled=false){return `<button type="button" data-add="${action}" class="${primary?'primary':'quiet'}" ${disabled?'disabled':''}>${label}</button>`;}
+const addBusy=new Set(['checking','starting','opening','verifying','saving','reading','rechecking','cancelling','submitting','querying']);
+const addLoginActive=new Set(['starting','waiting','opening','opened','open-failed','timeout','cancelling','cancel-unknown']);
+function addPosition(){if(!addFlow)return;let phase=addFlow.phase;if(phase==='list')phase=oa.phase==='preparing'?'preparing':oa.phase==='prepare-failed'?'prepare-failed':oaCompletion()?(oa.paused?'success-paused':oa.phase==='quota'?'success-quota':'success'):'list';parent.postMessage({type:'bee-oa-position',scene:phase===addFlow.initialPosition?addFlow.startKey:'add-'+phase},'*');}
+function addGo(phase,extra={}){Object.assign(addFlow,{phase,...extra});addDraw();addPosition();main.querySelector('#add-title')?.focus({preventScroll:true});}
+function addError(text,evidence){return `<p class="add-error" role="alert">${text}</p><details class="add-evidence"><summary>查看错误详情</summary><p>${esc(evidence)}</p></details>`;}
+function addDraw(){
+ if(!addFlow||addFlow.phase==='list')return;
+ const w=addFlow,p=w.phase,step=p==='platform'?1:['confirm','submitting','intake-failed','unknown','querying','history-failed'].includes(p)?3:2;
+ const blocked=addBusy.has(p)||['unknown','cancel-unknown'].includes(p);
+ let content='';
+ const heading=(title,progress=false)=>`<h3 id="add-title" tabindex="-1" ${progress?'class="add-progress"':''}>${progress?icon('pulse'):''}${title}</h3>`;
+ const buttons=(html)=>`<div class="add-buttons">${html}</div>`;
+ const back=()=>`<div class="add-back">${addButton('上一步','platform')}</div>`;
+ if(p==='platform')content=heading(w.hadAccount?'添加另一个平台':'添加第一个账号')+'<p>选择要接入的平台。接入后，你可以在这里管理账号和接单。</p><div class="add-platforms"><button data-add="openai" '+(oa.selected?'disabled':'')+'>'+icon('spark')+'<span><strong>OpenAI</strong><small>'+(oa.selected?'已接入，可在账号详情中换号':'通过 Codex 连接')+'</small></span></button><button data-add="claude">'+icon('sun')+'<span><strong>Claude</strong><small>通过 Claude Code 连接</small></span></button></div>';
+ else if(p==='methods')content=heading('连接 OpenAI 账号')+'<p>'+(w.notice?esc(w.notice):'未在默认位置找到登录信息。')+'</p><h4>通过官方客户端登录</h4><p>通过 Codex 完成登录后，Bee 会自动核验账号。登录后还需确认接入。</p>'+addButton('登录 OpenAI','login',true)+'<div class="add-secondary"><p>已在其他位置登录？</p>'+addButton('设置读取位置','settings')+'</div>'+back();
+ else if(['settings','save-failed','read-failed'].includes(p))content=heading('读取已有的 OpenAI 登录信息')+'<p>选择 Codex 保存登录信息的目录。</p><form id="add-source"><label for="add-directory">读取目录</label><div class="add-directory"><input id="add-directory" name="directory" autocomplete="off" spellcheck="false" value="'+esc(w.draft)+'" placeholder="例如 /Users/you/.codex" required><button type="button" data-add="choose">选择目录</button></div><p class="add-helper">保存后将自动读取并核验账号。</p>'+(p==='save-failed'?addError('未能保存读取位置：系统拒绝写入设置文件。','保存读取目录；系统结果 EACCES；本次配置未写入。'):p==='read-failed'?addError('所选目录中未找到登录文件，请检查读取位置。','读取 '+w.saved+'/auth.json；系统结果 ENOENT；配置已保存，尚未取得登录身份。'):'')+'<div class="add-buttons"><button class="primary" type="submit">保存</button>'+addButton('返回','methods')+'</div></form>';
+ else if(['checking','saving','reading','verifying','rechecking','starting','cancelling','submitting','querying'].includes(p)){
+ const copy={checking:['正在检查本机登录…','检查完成后会自动继续。'],saving:['正在保存读取位置…','尚未开始读取或核验账号。'],reading:['正在读取登录信息…','读取位置已保存；读取成功后将自动核验。'],verifying:['正在核验账号…','核验完成后，你可以核对账号并确认接入。'],rechecking:['正在检查账号是否仍有效…','确认身份和授权未变化后，自动回到确认接入。'],starting:['正在启动 OpenAI 登录…','正在通过 Codex 获取本次官方登录链接。'],cancelling:['正在结束本次登录…','确认结束后'+(w.exitAfterCancel?'退出添加向导。':'返回连接方式选择。')],submitting:['正在接入账号…','已提交你确认的账号，正在等待接入结果。'],querying:['正在核对接入结果…','只核对已提交的操作，不重新接入。']}[p];content=heading(copy[0],true)+'<p role="status">'+copy[1]+'</p>'+(p==='starting'?buttons(addButton('取消登录','cancel-login')):'');
+ }
+ else if(['waiting','opening','opened','open-failed'].includes(p))content=heading('等待完成 OpenAI 登录')+'<p role="status">'+(p==='opened'?'已请求打开官方页面，等待授权完成后自动继续。':'请在官方页面完成授权，Bee 会自动继续。')+'</p>'+(p==='open-failed'?addError('系统未能打开浏览器，请重新打开登录页面。','打开本次有效授权链接；系统返回 launch_failed；尚未确认授权完成。'):'')+buttons(addButton(p==='opening'?'正在打开…':p==='open-failed'?'重新打开登录页面':'打开登录页面','open',true,p==='opening')+addButton('取消登录','cancel-login'));
+ else if(p==='verified')content=heading('已核验 OpenAI 账号')+addIdentity()+'<p>可以继续使用此账号，也可以更换连接方式。尚未接入 Bee。</p>'+buttons(addButton('继续使用此账号','continue',true)+addButton('更换连接方式','methods'));
+ else if(['confirm','history-failed','intake-failed'].includes(p))content=heading('确认接入 OpenAI 账号')+addIdentity()+'<p>接单会使用此账号的订阅额度。</p>'+(p==='history-failed'?addError('查询历史接单选择时连接中断。','读取该平台历史接单选择；connection_reset；无法确认是否存在历史选择，未提交接入。'):'<p>'+(w.paused?'接入后保留原有暂停选择，准备完成后仍暂停接单。':'首次接入，准备完成后将自动接单。')+'</p>')+(p==='intake-failed'?addError('接入请求被服务拒绝：当前设备没有接入权限。','接入 OpenAI 账号；HTTP 403 device_not_allowed；原操作已结束且未接入。'):'')+buttons(p==='history-failed'?addButton('重试查询','history-query',true)+addButton('返回','verified'):p==='intake-failed'?addButton('重新核对权限','retry-intake',true)+addButton('返回','verified'):addButton('确认接入','submit',true)+addButton('返回','verified'));
+ else if(p==='permission')content=heading('无法读取本机登录信息')+addError('系统拒绝访问 Codex 登录文件。','读取 /Users/demo/.codex/auth.json；系统返回 EACCES；未取得登录身份。')+'<p>请检查目录的访问权限，也可以选择其他读取位置。</p>'+buttons(addButton('设置读取位置','settings',true)+addButton('重新检查','check'));
+ else if(p==='verify-failed')content=heading('账号核验未完成')+addError('核验账号时连接中断。','查询账号身份；connection_reset；尚未取得可信身份，不可确认接入。')+buttons(addButton('重新核验','verify',true)+addButton('返回连接方式','methods'));
+ else if(p==='login-missing')content=heading('未找到 Codex')+'<p>请先安装 Codex 官方客户端，然后返回此处重试。</p><details class="add-evidence"><summary>安装指引</summary><p>通过 OpenAI 官方提供的 Codex 安装方式安装客户端，安装完成后回到 Bee。</p></details>'+buttons(addButton('重试登录','login',true)+addButton('返回','methods'));
+ else if(p==='login-failed')content=heading('无法启动官方登录')+addError('系统拒绝运行 Codex，请检查客户端的执行权限。','启动 Codex；系统返回 EACCES；未创建登录任务。')+buttons(addButton('重试登录','login',true)+addButton('返回','methods'));
+ else if(p==='timeout')content=heading('本次登录已超时')+'<p>旧登录链接已失效。重新登录前，Bee 会先确认上次登录已结束。</p>'+buttons(addButton('重新登录','restart',true)+addButton('取消登录','cancel-login'));
+ else if(p==='cancel-unknown')content=heading('尚未确认登录已结束')+'<p>本次取消请求尚无确定结果，不能启动另一轮登录。</p>'+buttons(addButton('核对登录结果','query-cancel',true));
+ else if(p==='unknown')content=heading('暂时无法确认接入结果')+addIdentity()+'<p>接入请求已发出，但未取得确定回执。核对完成前，账号不会加入已接入列表。</p>'+buttons(addButton('核对结果','query',true));
+ main.innerHTML='<div class="page-head"><h1>AI 账号</h1><span class="count">'+(oa.selected?1:0)+' 个已接入</span></div><div class="page-subtitle"><p>接入本机账号，管理平台接单。</p></div><section class="add-shell" aria-label="添加账号向导"><div class="add-top"><h2>'+(step===1?'添加账号':'添加 OpenAI 账号')+'</h2>'+(!blocked&&!(p==='platform'&&!w.hadAccount)&&!['settings','save-failed','read-failed','confirm','verified'].includes(p)?addButton('取消添加','exit'):'')+'</div><ol class="add-steps" aria-label="添加账号步骤">'+['选择平台','连接账号','确认接入'].map((label,i)=>'<li class="'+(i+1<step?'done':'')+'" '+(i+1===step?'aria-current="step"':'')+'><span class="add-dot" aria-hidden="true">'+(i+1<step?'✓':i+1)+'</span>'+label+'</li>').join('')+'</ol><div class="add-body">'+content+'</div></section><p class="privacy">'+icon('shield')+'授权信息保留在本机</p>';
+ $('#side-status').textContent=oa.selected?'已接入 1 个 AI 账号':'尚未接入 AI 账号';
+}
+function addIdentity(){return '<div class="add-identity">'+icon('spark')+'<div><small>OpenAI</small><strong>'+esc(addFlow.identity)+'</strong></div></div>';}
+function addCheck(){addClear();addGo('checking');addLater(()=>{if(addFlow.detect==='existing'){addFlow.verified=true;addGo('confirm')}else if(addFlow.detect==='permission')addGo('permission');else addGo('methods')});}
+function addVerify(){addClear();addGo('verifying');addLater(()=>{if(addFlow.verifyFails){addGo('verify-failed');return}addFlow.verified=true;addGo(addFlow.historyFails?'history-failed':'confirm')});}
+function addCancel(exit=false){addClear();addFlow.exitAfterCancel=exit;addGo('cancelling');addLater(()=>{if(addFlow.cancelUnknown){addGo('cancel-unknown');return}if(exit)addExit();else addGo('methods',{notice:'本次登录已结束。可以重新登录，或读取已有登录信息。'})});}
+function addExit(){addClear();if(oa.selected){addFlow.phase='list';render();addPosition();main.querySelector('[data-add="add"]')?.focus()}else addGo('platform');}
+function addAccepted(){addClear();addFlow.phase='list';Object.assign(oa,{selected:true,id:addFlow.identity,phase:'preparing',journey:'intake',history:addFlow.paused?'existing':'none',paused:addFlow.paused,quota:addFlow.quota||'available',result:addFlow.prepareFails?'failure':null,completionPending:false,preparationIncluded:true});Object.assign(state.accounts[0],{selected:true,candidate:true,id:oa.id,paused:oa.paused});render();addPosition();main.querySelector('.status')?.focus();oaLater(oaPrepared,1800);}
+function addList(){if(!addFlow||addFlow.phase!=='list')return;main.querySelectorAll('.account').forEach(row=>{if(row.dataset.platform==='OpenAI'?!oa.selected:!state.accounts.find(a=>a.name===row.dataset.platform)?.selected)row.remove()});const head=main.querySelector('.page-head');if(head&&!head.querySelector('[data-add="add"]')){const actions=document.createElement('div');actions.className='add-list-actions';const count=head.querySelector('.count');if(count)actions.append(count);actions.insertAdjacentHTML('beforeend',addButton('添加账号','add',true));head.append(actions)}addPosition();}
+function addAct(action){
+ const w=addFlow;if(!w)return;
+ if(action==='claude'){addClear();parent.postMessage({type:'bee-claude-review',scene:'claude-onboarding'},'*');return}
+ if(action==='openai'){w.detect=w.detect||'missing';addCheck();return}
+ if(action==='check'){w.detect='missing';addCheck();return}
+ if(action==='platform'){addClear();addGo('platform');return}
+ if(action==='methods'){addClear();addGo('methods',{notice:''});return}
+ if(action==='settings'){addGo('settings');main.querySelector('#add-directory').focus();return}
+ if(action==='verified'){addGo('verified');return}
+ if(action==='continue'){addClear();addGo('rechecking');addLater(()=>{if(w.identityChanged){w.identity='blair@example.com';w.identityChanged=false;}addGo('confirm')});return}
+ if(action==='login'){addClear();addGo('starting',{notice:''});addLater(()=>addGo(w.loginFails?'login-failed':w.clientMissing?'login-missing':'waiting'));return}
+ if(action==='open'){addClear();addGo('opening');addLater(()=>{if(w.openFails){addGo('open-failed');return}addGo('opened');addLater(addVerify,1800)},500);return}
+ if(action==='verify'){w.verifyFails=false;addVerify();return}
+ if(action==='cancel-login'){addCancel();return}
+ if(action==='query-cancel'){w.cancelUnknown=false;addCancel(w.exitAfterCancel);return}
+ if(action==='restart'){addClear();addGo('cancelling');addLater(()=>addAct('login'));return}
+ if(action==='exit'){if(addLoginActive.has(w.phase))addCancel(true);else addExit();return}
+ if(action==='add'){w.hadAccount=true;addGo('platform');return}
+ if(action==='history-query'){addClear();addGo('rechecking');addLater(()=>addGo('history-failed'));return}
+ if(action==='retry-intake'){addGo('intake-failed');main.querySelector('.add-buttons').insertAdjacentHTML('beforebegin','<p role="status">核对完成：当前设备仍无接入权限，尚未重新提交。</p>');return}
+ if(action==='submit'){addClear();addGo('submitting');addLater(()=>{if(w.intakeUnknown)addGo('unknown');else if(w.intakeFails)addGo('intake-failed');else addAccepted()});return}
+ if(action==='query'){addClear();addGo('querying');addLater(()=>{if(w.queryUnresolved)addGo('unknown');else addAccepted()});return}
+ if(action==='choose'){addPicker.innerHTML='<h2 id="add-picker-title">选择读取目录</h2><p class="muted">选择登录信息所在的目录。</p><button data-add-dir="/Users/demo/.codex">个人目录 · /Users/demo/.codex</button><button data-add-dir="/Volumes/Work/codex">工作目录 · /Volumes/Work/codex</button><div class="dialog-actions">'+addButton('取消','close-picker')+'</div>';addPicker.showModal();return}
+ if(action==='close-picker'){addPicker.close();main.querySelector('[data-add="choose"]')?.focus();return}
+}
+const addBaseGo=oaGo;oaGo=function(phase,extra={}){if(addFlow&&addFlow.phase!=='list'){Object.assign(oa,{phase,feedback:''},extra);return}addBaseGo(phase,extra)};
+const addBaseDraw=oaDraw;oaDraw=function(){if(addFlow&&addFlow.phase!=='list')return;addBaseDraw();if(addFlow?.phase==='list')addList();};
+const addBaseRender=render;render=function(...args){addBaseRender(...args);if(addFlow){if(addFlow.phase==='list')addList();else addDraw()}};
+const addBaseSync=oaSync;oaSync=function(){if(addResetting)return;if(addFlow){addPosition();return}addBaseSync()};
+const addBaseReset=reset;reset=function(payload){addClear();addFlow=null;addPicker.close();addResetting=!!payload?.model?.addWizard;addBaseReset(payload);addResetting=false;if(!payload?.model?.addWizard)return;const m=payload.model;Object.assign(state.accounts[1],{selected:false,candidate:false,error:false,expired:false,journey:null});addFlow={startKey:m.key,initialPosition:m.addPhase==='list'?(m.phase==='preparing'?'preparing':m.phase==='prepare-failed'?'prepare-failed':m.completionPending?(m.paused?'success-paused':m.phase==='quota'?'success-quota':'success'):'list'):m.addPhase,phase:m.addPhase,identity:'alex@example.com',draft:'/Users/demo/.codex',saved:'/Users/demo/.codex',paused:!!m.paused,...m.addOptions};if(['confirm','verified','history-failed','intake-failed','submitting','unknown','querying'].includes(addFlow.phase))addFlow.verified=true;Object.assign(state.accounts[0],{selected:!!oa.selected,candidate:!!oa.selected});render();addPosition();};
+document.addEventListener('input',e=>{if(addFlow&&e.target.id==='add-directory'){addFlow.draft=e.target.value;e.target.setCustomValidity('')}});
+document.addEventListener('submit',e=>{if(e.target.id!=='add-source')return;e.preventDefault();const w=addFlow;w.draft=e.target.elements.directory.value.trim();if(!w.draft){e.target.elements.directory.setCustomValidity('请输入读取目录');e.target.elements.directory.reportValidity();return}addClear();addGo('saving');addLater(()=>{if(w.saveFails){addGo('save-failed');return}w.saved=w.draft;addGo('reading');addLater(()=>{if(w.readFails&&w.saved==='/Users/demo/.codex'){addGo('read-failed');return}addVerify()})})},true);
+document.addEventListener('click',e=>{const b=e.target.closest('[data-add],[data-add-dir]');if(!b||!addFlow)return;e.preventDefault();e.stopImmediatePropagation();if(b.dataset.addDir){addFlow.draft=b.dataset.addDir;addPicker.close();addGo('settings');main.querySelector('#add-directory').focus()}else addAct(b.dataset.add)},true);
+addPicker.addEventListener('cancel',()=>main.querySelector('[data-add="choose"]')?.focus());
+const addBasePage=showAppPage;showAppPage=function(page,...args){if(addFlow&&addFlow.phase!=='list'&&addLoginActive.has(addFlow.phase)&&page!=='accounts'){toast('请先取消当前登录，确认结束后再离开。');return}addBasePage(page,...args);if(page==='accounts'&&addFlow){if(addFlow.phase==='list')addList();else addDraw()}};
+
 legacyReset('running');parent.postMessage({type:'bee-design-ready'},'*');
 </script></body></html>
 </template>
@@ -1571,6 +1660,47 @@ for(const [phase,label] of [
 ])add('setup-'+phase,'首次启动 / 设备设置',label,'empty','SETUP',{setup:phase,selected:false});
 add('setup-accounts','首次启动 / 绑定后','现有 AI 账号页 · 尚未接入','empty','SETUP',{selected:false,journey:'first',history:'none',freshDevice:true});
 add('setup-overview','首次启动 / 绑定后','现有概览 · 尚未接入账号','empty','SETUP',{selected:false,journey:'first',history:'none',freshDevice:true,overview:true});
+
+// Three-step add-account draft. Existing card scenarios stay unchanged.
+add('add-platform','添加账号 / OpenAI 向导',"选择平台 · 空账号页",'empty','ADD',{selected:false,addWizard:true,addPhase:"platform",addOptions:{}});
+add('add-checking','添加账号 / OpenAI 向导',"自动检查本机登录",'empty','ADD',{selected:false,addWizard:true,addPhase:"checking",addOptions:{}});
+add('add-methods','添加账号 / OpenAI 向导',"未找到登录 · 选择连接方式",'empty','ADD',{selected:false,addWizard:true,addPhase:"methods",addOptions:{}});
+add('add-existing','添加账号 / OpenAI 向导',"已有本机登录 · 自动检查后确认",'empty','ADD',{selected:false,addWizard:true,addPhase:"platform",addOptions:{"detect": "existing"}});
+add('add-permission','添加账号 / OpenAI 向导',"默认目录访问被拒绝",'empty','ADD',{selected:false,addWizard:true,addPhase:"permission",addOptions:{}});
+add('add-settings','添加账号 / OpenAI 向导',"设置读取位置",'empty','ADD',{selected:false,addWizard:true,addPhase:"settings",addOptions:{}});
+add('add-saving','添加账号 / OpenAI 向导',"正在保存读取位置",'empty','ADD',{selected:false,addWizard:true,addPhase:"saving",addOptions:{}});
+add('add-reading','添加账号 / OpenAI 向导',"正在读取登录信息",'empty','ADD',{selected:false,addWizard:true,addPhase:"reading",addOptions:{}});
+add('add-save-failed','添加账号 / OpenAI 向导',"保存失败 · 保留目录",'empty','ADD',{selected:false,addWizard:true,addPhase:"save-failed",addOptions:{"saveFails": true}});
+add('add-read-failed','添加账号 / OpenAI 向导',"目录中未找到登录文件",'empty','ADD',{selected:false,addWizard:true,addPhase:"read-failed",addOptions:{"readFails": true}});
+add('add-starting','添加账号 / OpenAI 向导',"正在启动官方登录",'empty','ADD',{selected:false,addWizard:true,addPhase:"starting",addOptions:{}});
+add('add-waiting','添加账号 / OpenAI 向导',"等待官方授权",'empty','ADD',{selected:false,addWizard:true,addPhase:"waiting",addOptions:{}});
+add('add-opening','添加账号 / OpenAI 向导',"正在打开登录页面",'empty','ADD',{selected:false,addWizard:true,addPhase:"opening",addOptions:{}});
+add('add-opened','添加账号 / OpenAI 向导',"已请求打开 · 等待授权",'empty','ADD',{selected:false,addWizard:true,addPhase:"opened",addOptions:{}});
+add('add-open-failed','添加账号 / OpenAI 向导',"浏览器打开失败 · 重试",'empty','ADD',{selected:false,addWizard:true,addPhase:"open-failed",addOptions:{}});
+add('add-login-missing','添加账号 / OpenAI 向导',"未安装 Codex · 安装引导",'empty','ADD',{selected:false,addWizard:true,addPhase:"login-missing",addOptions:{}});
+add('add-login-failed','添加账号 / OpenAI 向导',"启动被系统拒绝",'empty','ADD',{selected:false,addWizard:true,addPhase:"login-failed",addOptions:{}});
+add('add-timeout','添加账号 / OpenAI 向导',"登录超时 · 安全重新登录",'empty','ADD',{selected:false,addWizard:true,addPhase:"timeout",addOptions:{}});
+add('add-cancelling','添加账号 / OpenAI 向导',"正在取消本次登录",'empty','ADD',{selected:false,addWizard:true,addPhase:"cancelling",addOptions:{}});
+add('add-cancel-unknown','添加账号 / OpenAI 向导',"取消结果未知 · 核对",'empty','ADD',{selected:false,addWizard:true,addPhase:"cancel-unknown",addOptions:{}});
+add('add-verifying','添加账号 / OpenAI 向导',"正在核验账号",'empty','ADD',{selected:false,addWizard:true,addPhase:"verifying",addOptions:{}});
+add('add-verify-failed','添加账号 / OpenAI 向导',"核验连接中断",'empty','ADD',{selected:false,addWizard:true,addPhase:"verify-failed",addOptions:{}});
+add('add-verified','添加账号 / OpenAI 向导',"从确认页返回 · 保留身份",'empty','ADD',{selected:false,addWizard:true,addPhase:"verified",addOptions:{}});
+add('add-rechecking','添加账号 / OpenAI 向导',"重新检查身份有效性",'empty','ADD',{selected:false,addWizard:true,addPhase:"rechecking",addOptions:{}});
+add('add-changed','添加账号 / OpenAI 向导',"返回后身份变化 · 重新确认",'empty','ADD',{selected:false,addWizard:true,addPhase:"verified",addOptions:{"identityChanged": true}});
+add('add-confirm','添加账号 / OpenAI 向导',"确认接入 · 首次默认允许",'empty','ADD',{selected:false,addWizard:true,addPhase:"confirm",addOptions:{}});
+add('add-paused','添加账号 / OpenAI 向导',"确认接入 · 保留历史暂停",'empty','ADD',{selected:false,addWizard:true,addPhase:"confirm",addOptions:{"paused": true}});
+add('add-history-failed','添加账号 / OpenAI 向导',"历史选择查询失败 · 不默认允许",'empty','ADD',{selected:false,addWizard:true,addPhase:"history-failed",addOptions:{}});
+add('add-submitting','添加账号 / OpenAI 向导',"正在提交接入",'empty','ADD',{selected:false,addWizard:true,addPhase:"submitting",addOptions:{}});
+add('add-intake-failed','添加账号 / OpenAI 向导',"接入被拒绝 · 尚未加入列表",'empty','ADD',{selected:false,addWizard:true,addPhase:"intake-failed",addOptions:{}});
+add('add-unknown','添加账号 / OpenAI 向导',"接入结果未知 · 查询后成功",'empty','ADD',{selected:false,addWizard:true,addPhase:"unknown",addOptions:{}});
+add('add-unknown-still','添加账号 / OpenAI 向导',"接入结果未知 · 查询仍未知",'empty','ADD',{selected:false,addWizard:true,addPhase:"unknown",addOptions:{"queryUnresolved": true}});
+add('add-preparing','添加账号 / 接入后已有卡片',"接入成功 · 复用现有准备卡片","preparing",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": "intake", "id": "alex@example.com"});
+add('add-prepare-failed','添加账号 / 接入后已有卡片',"准备失败 · 账号仍在列表","prepare-failed",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": "intake", "id": "alex@example.com"});
+add('add-success','添加账号 / 接入后已有卡片',"准备完成 · 现有完成反馈","normal",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": "intake", "id": "alex@example.com", "completionPending": true});
+add('add-success-paused','添加账号 / 接入后已有卡片',"准备完成 · 保持暂停","normal",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": "intake", "id": "alex@example.com", "completionPending": true, "paused": true});
+add('add-success-quota','添加账号 / 接入后已有卡片',"准备完成 · 等待额度","quota",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": "intake", "id": "alex@example.com", "completionPending": true, "quota": "known"});
+add('add-list','添加账号 / 接入后已有卡片',"已添加列表 · 仅有 OpenAI","normal",'ADD',{"selected": true, "addWizard": true, "addPhase": "list", "journey": null, "id": "alex@example.com"});
+
 // Keep first-login states together, including the completion acknowledgement.
 function flowOf(s){return s.group;}
 const flows=[...new Set(Object.values(catalog).map(flowOf))];
@@ -1579,13 +1709,13 @@ function selectScene(key){const flow=flowOf(catalog[key]);if($('flow').value!==f
  $('flow').value=flow;$('scene').replaceChildren(...Object.values(catalog).filter(s=>flowOf(s)===flow).map(s=>new Option(s.label,s.key)));
  }$('scene').value=key;}
 const params=new URLSearchParams(location.search),aliases={recovery:'expired-paused',change:Object.values(catalog).find(s=>s.phase==='change'&&s.refs==='CHG-01').key};
-selectScene(catalog[params.get('scene')]?params.get('scene'):aliases[params.get('scene')]||'setup-form');
+selectScene(catalog[params.get('scene')]?params.get('scene'):aliases[params.get('scene')]||'add-platform');
 for(const key of ['theme','size'])if([...$(key).options].some(o=>o.value===params.get(key)))$(key).value=params.get(key);
 let selectedStart=$('scene').value,currentKey=selectedStart,handoffContext=null;
 function send(action,value){frame.contentWindow.postMessage({type:'bee-design-control',action,value},'*');}
 function remember(){const url=new URL(location.href);for(const key of ['scene','theme','size'])url.searchParams.set(key,key==='scene'?selectedStart:$(key).value);history.replaceState(null,'',url);}
 function presentation(){document.body.classList.toggle('dark',$('theme').value==='dark');frame.classList.toggle('narrow',$('size').value==='narrow');send('theme',$('theme').value);remember();hint($('scene').value);}
-function hint(key){if(key.startsWith('setup-')){$('hint').textContent='待评审 · 静态模拟 · '+catalog[key].label+'。直接选场景停留；操作按预设推进，不连接真实 Hive、不打开真实授权网页。';$('compare-old').textContent='打开修改前主预览';$('compare-old').href=location.pathname.includes('/history/')?'before-setup.html':'history/20261111-154454-session-retirement/index.html';return;}if(catalog[key].platform==='claude'){const u=new URL(location.pathname.includes('/history/')?'claude-baseline.html':'history/20261111-145858-claude-compact-sync/draft.html',location.href);u.search=new URLSearchParams({scene:key,theme:$('theme').value,size:$('size').value});$('compare-old').href=u.href;$('compare-old').textContent='打开已确认草稿';$('hint').textContent='已认可 · Claude · macOS 静态模拟 · '+catalog[key].label+'。直接选择停留；产品操作按预设推进，不会打开真实终端。';return;}
+function hint(key){if(key.startsWith('add-')){$('hint').textContent='待评审 · 静态模拟 · '+catalog[key].label+'。直接选场景停留；点击操作按预设推进，不读取真实目录、不发起官方授权。';$('compare-old').textContent='查看现有账号卡片';$('compare-old').href=(location.pathname.includes('/history/')?'before-add.html':'index.html')+'?scene=first-preparing';return;}if(key.startsWith('setup-')){$('hint').textContent='已认可 · 静态模拟 · '+catalog[key].label+'。直接选场景停留；操作按预设推进，不连接真实 Hive、不打开真实授权网页。';$('compare-old').textContent='打开修改前主预览';$('compare-old').href=location.pathname.includes('/history/')?'before-setup.html':'history/20261111-154454-session-retirement/index.html';return;}if(catalog[key].platform==='claude'){const u=new URL(location.pathname.includes('/history/')?'claude-baseline.html':'history/20261111-145858-claude-compact-sync/draft.html',location.href);u.search=new URLSearchParams({scene:key,theme:$('theme').value,size:$('size').value});$('compare-old').href=u.href;$('compare-old').textContent='打开已确认草稿';$('hint').textContent='已认可 · Claude · macOS 静态模拟 · '+catalog[key].label+'。直接选择停留；产品操作按预设推进，不会打开真实终端。';return;}
  const s=catalog[key],startup=key.startsWith('startup-'),archived=location.pathname.includes('/history/');
  const baseline=startup?'20261111-120139-before-startup-recovery':'20261111-022040-approved-overview-final';
  const oldURL=new URL(archived?(startup?'before-startup.html':'baseline.html'):'history/'+baseline+'/index.html',location.href);

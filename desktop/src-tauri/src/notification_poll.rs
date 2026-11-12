@@ -260,7 +260,9 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
     interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         interval.tick().await;
-        let Ok(bridge)=route.get() else {continue;};
+        let Some((Some(context), bridge)) = route.capture() else {
+            continue;
+        };
         let before = bridge.status();
         if before.state == BridgePhase::Stopped {
             continue;
@@ -282,17 +284,30 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
             Ok(Some(instance)) => instance.to_owned(),
             Ok(None) => continue,
             Err(error) => {
-                retain(&app, error);
+                if let Some(metadata) = before.metadata.as_ref() {
+                    let scope = crate::hive_switch::CurrentScope {
+                        profile_id: context.id.clone(),
+                        instance: metadata.instance.clone(),
+                    };
+                    route.with_scope(&scope, || retain(&app, error));
+                }
                 continue;
             }
+        };
+        let scope = crate::hive_switch::CurrentScope {
+            profile_id: context.id,
+            instance: instance.clone(),
         };
         let reply = match bridge.notification_snapshot().await {
             Ok(reply) => reply,
             Err(error) => {
-                retain(&app, error);
+                route.with_scope(&scope, || retain(&app, error));
                 continue;
             }
         };
+        if route.scope().as_ref() != Some(&scope) {
+            continue;
+        }
         let after = bridge.status();
         let startup_ready = app
             .state::<crate::experience::StartupGate>()
@@ -301,28 +316,29 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
         let snapshot = match sampled(&instance, &after, startup_ready, &reply) {
             Ok(snapshot) => snapshot,
             Err(error) => {
-                retain(&app, error);
+                route.with_scope(&scope, || retain(&app, error));
                 continue;
             }
         };
         let worker_app = app.clone();
+        let worker_route = route.clone();
+        let worker_scope = scope.clone();
         let result=tokio::task::spawn_blocking(move || {
             // Recheck immediately before disk/OS work so a delayed blocking task
             // cannot deliver a sample from a replaced management instance.
-            let status=worker_app.state::<crate::hive_switch::CurrentBridge>().get()?.status();
-            let startup_ready=worker_app.state::<crate::experience::StartupGate>().check().is_ok();
-            if ready_instance(&status,startup_ready)? != Some(instance.as_str()) {
-                return Err(BridgeError{ details: None,code:"NOTIFICATION_SAMPLE_STALE".into(),message:"notification submission blocked: management instance/startup gate changed while scheduling native reconciliation".into()});
-            }
-            let preferences=worker_app.state::<PreferencesStore>().read();
-            let service=worker_app.state::<NotificationService>();
-            apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
+            worker_route.with_scope(&worker_scope,|| {
+                let startup_ready=worker_app.state::<crate::experience::StartupGate>().check().is_ok();
+                if !startup_ready {return Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification submission blocked: startup gate changed before native reconciliation".into()));}
+                let preferences=worker_app.state::<PreferencesStore>().read();
+                let service=worker_app.state::<NotificationService>();
+                apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
+            }).unwrap_or_else(||Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification sample discarded: profile/management instance changed before native reconciliation".into())))
         }).await;
-        match result {
+        route.with_scope(&scope,||match result {
             Ok(Ok(()))=>app.state::<NotificationPollState>().complete(Ok(())),
             Ok(Err(error))=>retain(&app,error),
             Err(error)=>retain(&app,BridgeError{ details: None,code:"NOTIFICATION_WORKER_FAILED".into(),message:format!("notification native worker did not complete: cancelled={} panicked={}; future polling remains enabled",error.is_cancelled(),error.is_panic())}),
-        }
+        });
     }
 }
 

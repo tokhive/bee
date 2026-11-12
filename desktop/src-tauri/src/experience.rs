@@ -521,7 +521,17 @@ async fn resume_start_presence<R: tauri::Runtime>(
 // Pairing changes the saved binding revision. A new binding gets its own scoped
 // network preparation; an ordinary status read must never apply a saved draft.
 pub(crate) async fn observe_device<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &Bridge, result: &serde_json::Value) {
-    if app.try_state::<crate::hive_switch::HiveSwitch>().is_some_and(|c|c.pending().unwrap_or(true)){return;}
+    let coordinator = app.try_state::<crate::hive_switch::HiveSwitch>();
+    let _owner = match coordinator.as_ref() {
+        Some(c) => Some(c.serial.lock().await),
+        None => None,
+    };
+    if coordinator.as_ref().is_some_and(|c| {
+        c.pending().unwrap_or(true)
+            || !c.current.get().is_ok_and(|current| std::sync::Arc::ptr_eq(&current.0, &bridge.0))
+    }) {
+        return;
+    }
     if result["device"]["state"] != "bound" { return; }
     let gate = app.state::<StartupGate>();
     let before = gate.snapshot();

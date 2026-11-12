@@ -1,4 +1,5 @@
 import {normalizeFailure,decodeBridgeError,validFailureTime,requestMethods,retryEvidence,type UiFailure,type FailureDetails} from './failures.ts';
+import {normalizeHiveOrigin} from './hiveOrigin.ts';
 export interface BridgeError { code: string; message: string; details?:FailureDetails }
 export interface BridgeStatus {
   profile_id?:string|null;
@@ -10,6 +11,23 @@ export interface BridgeReply { protocol: 1; id: string; instance: string; result
 export interface DownloadResult { url: string; success: boolean }
 export type Unlisten = () => void;
 export type NotificationPage = 'overview'|'accounts'|'diagnostics'|'settings';
+export interface NotificationSource {profile_id:string;origin:string}
+export interface NotificationActivation {target:{page:NotificationPage;source:NotificationSource|null};current_profile:string|null;can_navigate:boolean}
+export type NotificationNavigation=NotificationPage|NotificationActivation;
+export function decodeNotificationNavigation(value:unknown):NotificationNavigation|null {
+ const pages=['overview','accounts','diagnostics','settings'];
+ if(typeof value==='string')return pages.includes(value)?value as NotificationPage:null;
+ if(!value||typeof value!=='object'||Array.isArray(value))return null;
+ const v=value as Record<string,unknown>,target=v.target as Record<string,unknown>|null;
+ const id=(v:unknown)=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
+ if(Object.keys(v).length!==3||!Object.hasOwn(v,'current_profile')||v.current_profile!==null&&!id(v.current_profile)||typeof v.can_navigate!=='boolean'||!target||typeof target!=='object'||Array.isArray(target)||Object.keys(target).length!==2||typeof target.page!=='string'||!pages.includes(target.page)||!Object.hasOwn(target,'source'))return null;
+ if(target.source!==null){
+  const source=target.source as Record<string,unknown>;
+  if(!source||typeof source!=='object'||Array.isArray(source)||Object.keys(source).length!==2||!id(source.profile_id)||typeof source.origin!=='string'||source.origin.length>2048)return null;
+  try{if(normalizeHiveOrigin(source.origin)!==source.origin)return null;}catch{return null;}
+ }
+ return structuredClone(v) as unknown as NotificationActivation;
+}
 export interface StartupProgress {stage:'connecting'|'checking_previous'|'checking_device'|'preparing_accounts'|'confirming_service';operation_id:string|null;completed:number|null;total:number|null}
 export function decodeStartupProgress(value:unknown):StartupProgress {
  const invalid=():never=>{throw new Error('STARTUP_PROGRESS_INVALID: required=real bounded stage, operation and consistent account counts');};
@@ -64,7 +82,7 @@ export interface SystemBridge {
   ping(): Promise<BridgeReply>;
   onStatus(listener: (status: BridgeStatus) => void): Promise<Unlisten>;
   onDownload(listener: (result: DownloadResult) => void): Promise<Unlisten>;
-  onNotification?(listener: (page:NotificationPage) => void):Promise<Unlisten>;
+  onNotification?(listener: (navigation:NotificationNavigation) => void):Promise<Unlisten>;
 }
 
 let nativeLocaleSequence=0;
@@ -98,7 +116,8 @@ export function createSystemBridge(): SystemBridge {
     async onNotification(listener) {
       let active=true;
       const off=await listen<unknown>('bee://notification-navigation',event=>{
-        if(active&&typeof event.payload==='string'&&['overview','accounts','diagnostics','settings'].includes(event.payload))listener(event.payload as NotificationPage);
+        const navigation=decodeNotificationNavigation(event.payload);
+        if(active&&navigation!==null)listener(navigation);
       });
       return()=>{if(active){active=false;off();}};
     },

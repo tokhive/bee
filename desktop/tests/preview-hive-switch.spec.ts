@@ -3,6 +3,36 @@ async function open(page:Page,scene:string,theme='light'){
  await page.clock.install();await page.goto('/tests/fixtures/bee-preview/index.html?scene='+scene+'&theme='+theme+'&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+100)));return page.frameLocator('iframe');
 }
 const calls=(page:Page)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).calls);
+test('delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available',async({page})=>{
+ const app=await open(page,'switch-saved');
+ const source={profile_id:'1'.repeat(32),origin:'https://hive.example'};
+ const activate=(payload:unknown)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement,payload)=>(frame.contentWindow as any).emitNotification(payload),payload);
+ await activate({target:{page:'accounts',source},current_profile:'2'.repeat(32),can_navigate:false});
+ await expect(app.getByRole('status').filter({hasText:'此通知来自 Hive'})).toContainText('https://hive.example');
+ await expect(app.getByRole('navigation').getByRole('button',{name:'概览',exact:true})).toHaveAttribute('aria-current','page');
+ await app.getByRole('button',{name:'关闭通知提示',exact:true}).click();
+ await activate({target:{page:'accounts',source},current_profile:'1'.repeat(32),can_navigate:true});
+ await expect(app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true})).toHaveAttribute('aria-current','page');
+ await activate('settings');
+ await expect(app.getByRole('navigation').getByRole('button',{name:'设置',exact:true})).toHaveAttribute('aria-current','page');
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-success&theme=dark&size=narrow');
+ await expect(page.locator('#control-status')).toHaveText('场景已就绪。');
+ await activate({target:{page:'accounts',source},current_profile:'2'.repeat(32),can_navigate:false});
+ await expect(app.getByRole('status').filter({hasText:'此通知来自 Hive'})).toContainText('https://hive.example');
+ await app.getByRole('button',{name:'查看 Hive 列表',exact:true}).click();
+ await expect(app.getByRole('dialog',{name:'切换 Hive',exact:true})).toBeVisible();
+ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_start')).toEqual([]);
+});
+test('historical conflict is explained and disables only the affected saved target',async({page})=>{
+ const app=await open(page,'switch-saved');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any,original=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const result=await original(command,args);if(command==='hive_switch_snapshot')result.profiles.profiles[1].blockers=['historical_origin_conflict:https://target-hive.example'];return result;};});
+ await page.clock.runFor(2100);await app.getByRole('button',{name:'切换 Hive',exact:true}).click();
+ const dialog=app.getByRole('dialog',{name:'切换 Hive',exact:true}),target=dialog.locator('li').filter({hasText:'https://target-hive.example'});
+ await expect(target).toContainText('历史 Hive 地址归一化后冲突');
+ await expect(target.getByRole('button',{name:'切换到此 Hive'})).toBeDisabled();
+ await expect(dialog.locator('li').filter({hasText:'https://hive.example'})).toContainText('当前');
+ await expect(dialog).not.toContainText('historical_origin_conflict');
+});
 test('first target pairing retains the fixed Hive origin before a device config exists',async({page})=>{
  const app=await open(page,'switch-target-pairing'),target=app.getByRole('region',{name:'目标 Hive 设备',exact:true});
  await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://target-hive.example');

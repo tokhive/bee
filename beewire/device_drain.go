@@ -260,9 +260,15 @@ func (s DeviceDrainStatus) Validate() error {
 		if s.State == "ready" && (s.Current.Work == nil || !s.Current.Work.Complete()) {
 			return drainCheck("ready work", s.Current.Work, "known zero executions, unknown terminations and unsettled work")
 		}
+		if s.Current.Epoch != s.Request.ExpectedEpoch {
+			return drainCheck("pre-seal epoch match", false, "original epoch until seal is accepted")
+		}
 	case "sealing":
 		if s.Seal == nil || s.Release != nil || s.Receipt != nil {
 			return drainCheck("pending seal evidence", false, "seal request with no completed receipt or release")
+		}
+		if s.Current.Epoch != s.Request.ExpectedEpoch && s.Current.Epoch != s.Seal.ID {
+			return drainCheck("pending seal epoch", false, "original epoch or persisted seal action ID")
 		}
 	case "sealed":
 		if s.Seal == nil || s.Receipt == nil || s.Release != nil {
@@ -271,6 +277,9 @@ func (s DeviceDrainStatus) Validate() error {
 	case "released":
 		if s.Release == nil {
 			return drainCheck("release evidence", false, "persisted release, including pre-begin tombstone")
+		}
+		if s.Current.BarrierID == s.OperationID {
+			return drainCheck("released current barrier", true, "original barrier absent; terminal operations cannot reopen")
 		}
 		if (s.Seal == nil) != (s.Receipt == nil) {
 			return drainCheck("released seal evidence", false, "both seal and receipt, or neither")

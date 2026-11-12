@@ -171,3 +171,25 @@
 - 修改前复用 [20261112-152533-approved-first-launch](20261112-152533-approved-first-launch/index.html)，修改前 SHA-256 与该完整基线相同。
 - [本轮主预览快照](20261112-221434-hive-switch-interface/index.html?scene=switch-waiting&theme=light&size=narrow)，新增 15 个 Hive 起点，保留此前全部场景。内联资源；baseline.html、before-setup.html、before-startup.html、claude-baseline.html 与 before-switch.html 一并冻结。
 - 已检查冻结版列表、Escape、焦点及 before-switch 对照可独立打开；正式 React／mock 与真实业务边界见 [验证记录](../../desktop/evidence/2026-11-12-hive-switch-ui/README.md)。
+
+
+## 20261113-001425 Hive 切换审查修复
+
+- 时间：2026-11-13 00:14:25 Asia/Shanghai；状态：**待评审，首轮场景留版；独立对照存在限制，见后续交付版**。
+- 修改前逐字节复用 [20261112-221434 完整主预览](20261112-221434-hive-switch-interface/index.html)，SHA-256 和依赖清单见本轮 SOURCE.md；历史资产未改写。
+- [本轮完整快照](20261113-001425-hive-switch-review-fixes/index.html?scene=switch-history-conflict&theme=light&size=narrow) 增加历史地址冲突和旧通知来源两个场景；保留原有 496 个起点、正常布局及全部对照依赖。
+- 独立静态 HTTP/ego-browser 验证来源提示、只开列表不切换、关闭提示及冲突目标禁用。仅静态模拟；正式组件的 mock 包与测试记录见 [本轮证据](../../desktop/evidence/2026-11-13-hive-switch-review-fixes/README.md)。
+
+
+## 20261113-001934 Hive 切换审查修复独立交付
+
+- 时间：2026-11-13 00:19:34 Asia/Shanghai；状态：**待评审，独立留版；最终侧栏一致性修正见后续版**。
+- [本轮完整独立快照](20261113-001934-hive-switch-review-fixes-standalone/index.html?scene=switch-history-conflict&theme=light&size=narrow) 保留 001425 的全部产品场景与布局，只让归档的旧版对照链接固定使用一并冻结的 HTML。001425 保留并追加 LIMITATION.md；修改前完整基线仍是字节一致的 20261112-221434。
+- 独立 HTTP/ego-browser 已验证冲突说明、旧通知来源、只开列表、关闭提示以及本地旧版对照 HTTP 200；来源和两个 HTML 摘要见 SOURCE.md。
+
+
+## 20261113-002455-hive-switch-review-final 最终来源一致性留版
+
+- 时间：2026-11-13 00:24:55 Asia/Shanghai；状态：**待评审，当前主静态预览交付版**。
+- [最终完整快照](20261113-002455-hive-switch-review-final/index.html?scene=switch-notification-source&theme=dark&size=narrow) 将概览侧栏地址随当前 Hive 同步，避免旧通知场景的设备区为 B、侧栏却仍固定 A。产品布局和原场景保留。
+- 复用 001934 的关键交互与独立对照验证，补丁后 main-preview 定点浏览器回归 1/1 通过；未重复人工浏览器。SOURCE.md 明确该差异、来源摘要和验证范围；001934 追加 LIMITATION.md，其余旧文件不改写。

@@ -20,12 +20,12 @@ fn error(code: &str, message: impl Into<String>) -> BridgeError {
 
 // serde may quote a corrupt value or unknown field name. Preserve its failure
 // description and expected schema, but only expose names from our fixed schema.
-fn journal_schema_reason(error: &serde_json::Error) -> String {
+pub(crate) fn journal_schema_reason(error: &serde_json::Error) -> String {
     let message = error.to_string();
     if message.starts_with("unknown field ") {
-        return "unknown field (name redacted); required=declared recovery journal schema fields".into();
+        return "unknown field (name redacted); required=declared journal schema fields".into();
     }
-    let known_fields = ["version", "attempt_id", "instance", "binding_revision", "binding_identity", "network_revision", "previous_run_id", "account_revision", "intent_running", "trigger", "previous_attempt_id", "operation_id", "phase", "failure", "code", "message", "details"];
+    let known_fields = ["version", "attempt_id", "instance", "binding_revision", "binding_identity", "network_revision", "previous_run_id", "account_revision", "intent_running", "trigger", "previous_attempt_id", "operation_id", "phase", "failure", "code", "message", "details", "id", "source", "target", "profile", "binding_digest", "process_binding_revision", "operation", "seal", "release", "status", "pending", "workers_stopped", "child_reaped", "ipc_empty", "verified", "source_index_operation", "commit_revision", "committed", "cancel_requested", "quit_requested", "observation_round", "observation_started", "query_failures", "observation_last", "observation_blocked"];
     let mut chars = message.chars().peekable();
     let mut safe = String::new();
     while let Some(character) = chars.next() {

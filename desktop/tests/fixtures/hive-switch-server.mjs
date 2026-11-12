@@ -20,6 +20,7 @@ const server=http.createServer(async(req,res)=>{
  const match=/^\/api\/bee\/device-drains\/([a-f0-9]{48})(?:\/(begin|seal|release))?$/.exec(req.url);
  if(!match)return respond(404,{error:{code:'fixture_route',message:`unexpected fixture route ${req.method} ${req.url}`}});
  const [,id,action]=match;let op=operations.get(id);
+ if(action==='begin'&&faults.begin_before_accept){faults.begin_before_accept--;req.socket.destroy();return;}
  if(!action){if(faults.status)return respond(faults.status,{error:{code:'unavailable',message:'synthetic original status query failure'}});if(op&&op.state==='draining'&&Object.values(work).every(n=>n===0))op.state='ready';if(!op)return respond(200,{version:1,device_id:identity.id,owner_id:identity.owner_id,operation_id:id,state:'absent',request:null,seal:null,release:null,receipt:null,current:{epoch,lease,barrier_id:barrier,work}});return respond(200,view(op));}
  if(action==='begin'){if(!op){op={request:body,state:Object.values(work).every(n=>n===0)?'ready':'draining'};operations.set(id,op);barrier=id;}}
  if(action==='seal'){op.seal=body;epoch=body.id;op.state='sealed';lease='';if(connected){connected.destroy();connected=null;}op.receipt={version:1,seal:body,epoch,connection_retired:true,work};}

@@ -3,6 +3,14 @@ async function open(page:Page,scene:string,theme='light'){
  await page.clock.install();await page.goto('/tests/fixtures/bee-preview/index.html?scene='+scene+'&theme='+theme+'&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+100)));return page.frameLocator('iframe');
 }
 const calls=(page:Page)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).calls);
+test('first target pairing retains the fixed Hive origin before a device config exists',async({page})=>{
+ const app=await open(page,'switch-target-pairing'),target=app.getByRole('region',{name:'目标 Hive 设备',exact:true});
+ await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://target-hive.example');
+ await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveAttribute('readonly','');
+ await target.getByRole('button',{name:'生成配对码',exact:true}).click();
+ await expect(target).toContainText('等待网页确认');
+ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_target_begin')).toHaveLength(1);
+});
 test('saved list supports keyboard close and keeps entered URL and background operation',async({page})=>{
  const app=await open(page,'switch-saved','dark'),trigger=app.getByRole('button',{name:'切换 Hive',exact:true});await trigger.click();const list=app.getByRole('dialog',{name:'切换 Hive',exact:true});
  await list.getByLabel('Hive 地址',{exact:true}).fill('https://new-hive.example');await list.getByLabel('设备名称',{exact:true}).fill('Travel Mac');await list.press('Escape');await page.clock.runFor(10);await expect(trigger).toBeFocused();await trigger.click();await expect(list.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://new-hive.example');

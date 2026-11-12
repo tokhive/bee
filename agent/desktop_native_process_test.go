@@ -13,6 +13,9 @@ import (
 var nativeBridgeAudit = flag.String("bee-native-fixture-audit", "", "controlled native integration process audit output")
 var nativeLoginFixture = flag.Bool("bee-native-login-fixture", false, "enable controlled official subprocess and browser launcher")
 var nativeHiveFixture = flag.String("bee-native-hive-fixture", "", "isolated Hive integration fixture file")
+var nativeSwitchProfile = flag.String("bee-native-switch-profile", "", "fixed isolated switch profile")
+var nativeSwitchMode = flag.String("bee-native-switch-mode", "", "fixed production profile mode")
+var nativeSwitchFixture = flag.String("bee-native-switch-fixture", "", "synthetic official endpoint descriptor")
 var nativeHiveRoot = flag.String("bee-native-hive-root", "", "persistent synthetic integration state")
 
 // The Rust integration test launches this compiled test process directly.
@@ -26,7 +29,9 @@ func TestDesktopNativeBridgeProcess(t *testing.T) {
 		var accounts *bee.DesktopAccounts
 		var runner *bee.DesktopRuntime
 		var network *bee.DesktopNetwork
-		if *nativeHiveFixture != "" {
+		if *nativeSwitchProfile != "" {
+			device, accounts, runner, network = bee.NewDesktopHiveSwitchFixture(t, *nativeSwitchProfile, *nativeSwitchMode, *nativeSwitchFixture)
+		} else if *nativeHiveFixture != "" {
 			device, accounts, runner, network = bee.NewDesktopHiveRetirementFixture(t, *nativeHiveFixture, *nativeHiveRoot)
 		} else {
 			device, accounts, runner, network = bee.NewDesktopNativeBridgeFixture(t, *nativeBridgeAudit)

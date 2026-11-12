@@ -119,7 +119,7 @@ jobs:
       - name: Locked browsers and complete desktop checks
         run: |
           unset FORCE_COLOR NO_COLOR
-          npm --prefix desktop exec -- playwright install --with-deps chromium firefox webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
+          npm --prefix desktop exec -- playwright install --with-deps chromium webkit 2>&1 | tee desktop-ci-evidence/playwright-install.log
           npm --prefix desktop test 2>&1 | tee desktop-ci-evidence/desktop-tests.log
 
       - name: Build actual native Bee and test Rust bridge

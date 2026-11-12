@@ -1,4 +1,8 @@
 export const openaiEnglish:Record<string,string>={
+  "状态": "Status",
+  "操作": "Actions",
+  "待接入账号": "Account to connect",
+  "账号状态": "Account status",
   "钥匙串中未找到 Codex 登录项": "No Codex login item found in Keychain",
   "未找到 Codex 官方客户端": "Codex official client was not found",
   "安装 Codex": "Install Codex",

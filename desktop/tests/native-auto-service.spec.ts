@@ -103,9 +103,9 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await noDailyControls(page);
   await accountsPage(page);
   await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
-  await page.getByRole('dialog').getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
   await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();
-  await expect(page.getByRole('dialog').getByRole('button',{name:'取消官方登录',exact:true})).toBeEnabled();
+  await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
   await page.evaluate(()=>{(window as any).loginComplete=true;});
   await reconcile(page);
   await expect.poll(()=>page.evaluate(()=>(window as any).accounts.openai.operation?.state)).toBe('succeeded');
@@ -113,7 +113,7 @@ test.describe('native automatic service — frontend mock contract',()=>{
   expect(await calls(page,'account_action')).toHaveLength(0);
   expect(await calls(page,'runtime_start')).toHaveLength(0);
   await page.keyboard.press('Escape');
-  await expect(card(page).getByRole('button',{name:'接入',exact:true})).toBeEnabled();
+  await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeEnabled();
   await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
   await noDailyControls(page);
  });

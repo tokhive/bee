@@ -39,7 +39,7 @@ export function DevicePairingPage({view,context,recovery,recoveryError,refreshSt
  const confirmed=!!knownIdentity&&!error;
  const phase=transaction?.phase??(view?.state==='pending'||view?.state==='draining'||view?.state==='expired'?view.state:null);
  const waiting=phase==='pending'||phase==='draining';
- const canRecover=!!recover&&!recoveryError&&(!transaction||transaction.phase==='completed')&&!!context&&['device_replaced','invalid_device_credential'].includes(error?.code??'');
+ const canRecover=!!recover&&!recoveryError&&(!transaction||transaction.phase==='completed')&&!!context&&['device_replaced','invalid_device_credential'].includes((error??reportedFailure)?.code??'');
  const copy=async(value:string,label:string)=>{
   setCopyError(null);setCopied('');try{if(!navigator.clipboard?.writeText)throw new Error('clipboard.writeText unavailable; manual selection required');await navigator.clipboard.writeText(value);setCopied(label);}catch(cause){setCopyError(normalizeFailure(cause,'clipboard_write'));}
  };

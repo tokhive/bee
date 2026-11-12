@@ -34,6 +34,7 @@ test('revoked credential recovery requires local consent, external approval and 
  await expect(page.getByRole('dialog')).toContainText('owner@example.test');await expect(page.getByRole('dialog')).toContainText('new-owner@example.test');
  await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(page.locator('.pairing-phase')).toContainText('未自动开始贡献');
+ await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
  const commands=(await calls(page)).filter(c=>writes.has(c.command));
  expect(commands.map(c=>c.command)).toEqual(['device_recovery_prepare','device_recovery_confirm','device_recovery_confirm']);
  expect(commands.filter(c=>c.command==='device_recovery_confirm').map(c=>c.args.decision)).toEqual(['begin_pairing','adopt_owner']);
@@ -42,9 +43,7 @@ test('revoked credential recovery requires local consent, external approval and 
 });
 test('saved revoked identity and missing selected source keep all pages reachable without account or runtime writes',async({page})=>{
  await open(page,'device-revoked-source-missing');await expect(page.locator('body')).toContainText('上次保存的设备信息');
- await nav(page,'AI 账号').click();const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});
- await account.locator('.account-conditions>summary').click();await expect(account.getByText('未找到所选凭证来源。',{exact:true})).toBeVisible();await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();
- await expect(page.getByRole('dialog')).toContainText('凭证读取方式');await page.keyboard.press('Escape');
+ await nav(page,'AI 账号').click();await expect(page.getByTestId('startup-recovery')).toContainText('设备');await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toHaveCount(0);
  for(const destination of ['设置','诊断','概览']){await nav(page,destination).click();await expect(page.getByRole('heading',{level:1,name:destination,exact:true})).toBeFocused();}
  expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
 });

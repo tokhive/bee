@@ -86,11 +86,15 @@ macOS 原生“编辑”菜单随应用语言切换，提供撤销、重做、�
 
 ```sh
 npm --prefix desktop ci
-npm --prefix desktop exec -- playwright install chromium firefox webkit
+npm --prefix desktop exec -- playwright install chromium webkit
 npm --prefix desktop test
 ```
 
-Linux 首次准备浏览器时使用 `playwright install --with-deps chromium firefox webkit` 安装所需系统库。`npm test` 依次执行类型检查、全量 TS 单测、工具测试、原有浏览器 E2E、正式页面模拟 IPC 测试和正式场景预览；任一组失败立即退出，尚未执行的组不视为通过。
+默认前端回归使用 Chromium 和 WebKit，分别覆盖桌面 WebView 的相关引擎行为；Playwright WebKit 不是系统 WKWebView，不能替代真实 Tauri 验收。Firefox 不属于当前桌面运行时，作为可选兼容性检查：先执行 `npm --prefix desktop exec -- playwright install firefox`，再在 `desktop` 目录执行 `BEE_E2E_FIREFOX=1 npm run test:e2e -- --project=firefox`。
+
+Linux 首次准备浏览器时使用 `playwright install --with-deps chromium webkit` 安装所需系统库。`npm test` 依次执行类型检查、全量 TS 单测、工具测试、原有浏览器 E2E、正式页面模拟 IPC 测试和正式场景预览；任一组失败立即退出，尚未执行的组不视为通过。
+
+设计预览只检查主入口 `docs/preview/index.html`，不检查候选稿和历史预览。`test:preview` 是正式 React 页面配合 mock IPC 的功能回归，不是历史设计预览检查。测试截图输出到已忽略的 `desktop/test-results/`，不覆盖已归档证据。
 
 | 单独运行 | 覆盖内容 |
 | --- | --- |

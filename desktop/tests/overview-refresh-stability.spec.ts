@@ -114,7 +114,7 @@ test('manual recheck joins an in-flight background read once without hiding its 
  await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();expect(await page.evaluate(()=>(window as any).manualRechecks)).toBe(1);await noWrites(page);
 });
 
-test('a startup checking event uses the manual button without inserting a page status paragraph',async({page})=>{
+test('a startup checking event hides stale account actions until its ready readback',async({page})=>{
  await page.addInitScript(()=>{
   const w=window as any,callbacks=new Map();let internals:any;
   Object.defineProperty(w,'__TAURI_INTERNALS__',{configurable:true,get:()=>internals,set:value=>{
@@ -139,9 +139,8 @@ test('a startup checking event uses the manual button without inserting a page s
  });
  await hold(page,'device_status');const button=page.locator('.device-section-heading button');await button.evaluate((el:HTMLButtonElement)=>el.click());
  await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
- await expect(button).toHaveAttribute('aria-busy','true');await expect(page.getByText('正在重新检查设备…',{exact:true})).toHaveCount(0);
- expect(await position(page)).toEqual(before);await expect(button).toBeFocused();
- await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();expect(await position(page)).toEqual(before);await noWrites(page);
+ await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toHaveCount(0);await noWrites(page);
+ await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toHaveCount(0);await noWrites(page);
 });
 
 test('device failure keeps the last identity during retry and a successful read confirms it again',async({page})=>{

@@ -26,6 +26,7 @@ export async function installPreviewFixture(id){
  };
  const accounts={openai:seeded('openai'),claude:accountFixture('claude')};
  accounts.claude.candidate.state='source_missing';
+ if(id==='confirm-clear'){accounts.openai.hive={...accountFixture('openai').hive};accounts.openai.authorization.state='official_identity_verified';}
  const empty=['runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
  if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state=id==='account-reading'?'not_checked':'source_missing';}
  if(['account-candidate','confirm-select'].includes(id))accounts.openai=seeded('openai',false);

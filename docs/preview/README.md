@@ -18,6 +18,8 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 
 ## 当前待评审：三步添加 OpenAI 账号（2026-11-12）
 
+最新调整：错误原因旁使用圆圈叹号打开详情浮层，替代文字折叠入口。[查看错误场景](draft.html?scene=add-permission) · [本轮冻结稿](history/20261112-190918-add-error-details/draft.html?scene=add-permission)。已检查八类错误的打开、关闭与键盘焦点。
+
 [打开添加向导](draft.html?scene=add-platform) · [读取位置表单](draft.html?scene=add-settings) · [接入后原有卡片](draft.html?scene=add-preparing) · [冻结版本](history/20261112-183023-add-account-wizard/draft.html?scene=add-platform) · [已确认流程](../desktop/add-account-design.md)
 
 文本流程已确认；HTML 待评审。使用现有 Bee 外壳，新增“选择平台 → 连接账号 → 确认接入”。空状态直接选平台；第二步提供官方登录与读取位置两条路径；读取表单底部只有“保存／返回”。接入成功后只展示已接入账号，复用既有 OpenAI 卡片，不改卡片的准备与完成反馈。

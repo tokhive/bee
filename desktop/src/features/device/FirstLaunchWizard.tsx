@@ -33,7 +33,7 @@ function WizardFailure({failure}:{failure:UiFailure}){
  const [open,setOpen]=useState(false),titleId=useId();
  const details=[failure.code,failure.check,failure.observedAt,...Object.entries(failure.evidence).map(([key,value])=>`${key}: ${safeFailureText(value)}`)].filter(Boolean).join('\n');
  useEffect(()=>setOpen(false),[details]);
- return <div className="first-launch-failure" role="alert"><p>{safeFailureText(failure.message)}{(failure.observedAt||Object.keys(failure.evidence).length>0)&&<Popover.Root open={open} onOpenChange={setOpen}>
+ return <div className="first-launch-failure" role="alert"><p>{safeFailureText(failure.message)}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
   <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
   <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
    <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>
@@ -70,7 +70,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
  useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
  useEffect(()=>{if(form&&!creating)hiveInput.current?.focus({preventScroll:true});},[form]);
  const identity=view?.identity;
- const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&context.name===view.name&&context.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id;
+ const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&context.name===view.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
  const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
  const failures=[error,operationError,transactionFailure,phaseFailure].filter((failure):failure is UiFailure=>!!failure);
  const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure}/>);

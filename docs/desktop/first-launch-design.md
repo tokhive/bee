@@ -291,4 +291,4 @@ Hive 地址沿用 `agent/client.go` 的 origin 校验：远程 HTTPS，仅回环
 3. “创建失败可重试”的 503 示例必须明确为创建前身份检查失败；已尝试创建 POST 的 503 应呈现结果未知。
 4. `save-failed` 等场景名不是协议 phase；保存错误依附原阶段，恢复许可由协议事实决定。
 
-本轮仅完成源码核对与书面合同，未运行产品测试。用户已授权按 implement-spec 实现；对应本地任务图位于 `.scratch/bee-first-launch/`，实现和验收证据另行记录。
+本节为实现前确认的合同，不作为测试通过声明。用户已授权按 implement-spec 实现；对应本地任务图位于 `.scratch/bee-first-launch/`，实际验证及未实测系统边界见[验收记录](evidence/2026-11-12-first-launch/validation.md)。

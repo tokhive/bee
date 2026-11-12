@@ -103,7 +103,7 @@ test('startup reads and actual failures block the form while the authorized pre-
  await page.evaluate(()=>window.setWizardProps({initialLoading:false,error:{code:'CONFIG_READ_DENIED',check:'device_context',observedAt:null,evidence:{},message:'read device.json: permission denied (EACCES)'}}));
  await expect(page.getByText('read device.json: permission denied (EACCES)',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'继续绑定设备',exact:true})).toHaveCount(0);
- await expect(page.getByRole('button',{name:'查看错误详情',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'查看错误详情',exact:true})).toBeEnabled();
  await page.getByRole('button',{name:'重新检查设备',exact:true}).click();
  await page.evaluate(({transaction})=>window.setWizardProps({error:null,view:{state:'pairing',hive:'https://hive.example',name:'Retry Mac',recovery:{...transaction,new_identity:null,phase:'awaiting_confirmation',failure:{code:'HTTP_UNAVAILABLE',message:'identity GET HTTP 503 before pairing creation'}}}}),{transaction});
  await expect(page.getByRole('textbox',{name:'Hive 地址',exact:true})).toHaveValue('https://hive.example');
@@ -185,4 +185,27 @@ test('copy success preserves the exact original URL and background refresh does 
  await page.getByRole('button',{name:'复制配对码',exact:true}).click();
  await expect(page.getByText('配对码已复制',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).clipboardValue)).toBe('ABCD-EFGH');
+});
+
+test('native browser failure code and check remain available without invented timestamp or extra evidence',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(view=>window.setWizardProps({view,operationError:{code:'BROWSER_OPEN_FAILED',check:'device_open',observedAt:null,evidence:{},message:'default browser open failed: OS denied launch'}}),pending);
+ await expect(page.getByRole('alert')).toContainText('default browser open failed: OS denied launch');
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('BROWSER_OPEN_FAILED');
+ await expect(page.getByRole('dialog')).toContainText('device_open');
+ await expect(page.getByRole('dialog').locator('pre')).toHaveText('BROWSER_OPEN_FAILED\ndevice_open');
+ await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeEnabled();
+});
+
+test('completed binding accepts a Hive display name that differs from the saved local name while identity mismatches stay blocked',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ const renamed={...identity,name:'Hive renamed Mac'};
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({completed:true,view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:renamed}},context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2}}),{renamed,transaction});
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
+ await expect(page.getByText('Hive renamed Mac',{exact:true})).toBeVisible();
+ await page.evaluate(()=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'different-device',owner_id:'owner-1',binding_revision:2}}));
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
+ await page.evaluate(({renamed,transaction})=>window.setWizardProps({context:{hive:'https://hive.example',name:'Work Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:2},view:{state:'bound',hive:'https://hive.example',name:'Work Mac',identity:renamed,recovery:{...transaction,phase:'completed',new_identity:{...renamed,id:'different-transaction-device'}}}}),{renamed,transaction});
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
 });

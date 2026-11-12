@@ -6,7 +6,7 @@
 
 **Blocked by:** 06 App 执行 A→B→A 的持久切换
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 - [ ] 正式界面／bridge／mock 契约齐全，UI 不猜测百分比或隐藏未知结果。
 - [ ] 暗色、窄窗口、键盘焦点和恢复路径可用；关闭面板不取消。

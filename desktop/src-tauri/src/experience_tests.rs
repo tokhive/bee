@@ -31,7 +31,7 @@ fn fixture(
     let bridge = Bridge::start(spec);
     let app = tauri::test::mock_builder()
         .manage(StartupGate::default())
-        .manage(bridge.clone())
+        .manage({let route=crate::hive_switch::CurrentBridge::default();route.replace(None,bridge.clone());route})
         .manage(PreferencesStore::new(dir.path().join("preferences.json")))
         .manage(NetworkController::default())
         .manage(
@@ -158,7 +158,8 @@ async fn saved_proxy_recheck_can_be_explicitly_applied_before_rechecking_ready()
         assert!(!before.contains("runtime_restore"));
         assert!(!before.contains("runtime_start"));
         let applied = crate::commands::network_apply_saved(
-            app.state::<Bridge>(),
+            app.handle().clone(),
+            app.state::<crate::hive_switch::CurrentBridge>(),
             store,
             app.state::<NetworkController>(),
             app.state::<StartupGate>(),

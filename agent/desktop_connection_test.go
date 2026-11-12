@@ -234,6 +234,7 @@ func TestDesktopConnectionRetryRetainsFailureUntilRecovery(t *testing.T) {
 func TestDesktopConnectionHeartbeatAndSynchronizationStages(t *testing.T) {
 	for _, syncFailure := range []bool{false, true} {
 		t.Run(fmt.Sprint(syncFailure), func(t *testing.T) {
+			closePeer := make(chan struct{})
 			hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				conn, err := websocket.Accept(w, r, nil)
 				if err != nil {
@@ -243,16 +244,20 @@ func TestDesktopConnectionHeartbeatAndSynchronizationStages(t *testing.T) {
 				if !syncFailure {
 					return
 				}
-				<-conn.CloseRead(r.Context()).Done()
+				<-closePeer
 			}))
 			defer hive.Close()
 			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 			defer cancel()
 			var cfg *egressConfig
 			if syncFailure {
-				cfg = &egressConfig{Targets: []string{}, desktopAction: func(context.Context, localState, string, io.Writer) (<-chan error, func()) {
+				cfg = &egressConfig{Targets: []string{}, desktopAction: func(live context.Context, _ localState, _ string, _ io.Writer) (<-chan error, func()) {
 					ch := make(chan error, 1)
 					ch <- fmt.Errorf("authorization sync: %w", errInboxIdentity)
+					// The fatal result is already buffered when the transport closes.
+					// Resume the connector only once both events are observable.
+					close(closePeer)
+					<-live.Done()
 					return ch, func() {}
 				}}
 			}

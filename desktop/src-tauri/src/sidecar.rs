@@ -101,6 +101,15 @@ pub(crate) struct LaunchSpec {
     pub source: BuildSource,
     pub timeout: Duration,
 }
+impl LaunchSpec {
+    /// The context is resolved by the App's protected index, never by WebView paths.
+    /// Reconnection clones the resulting fixed argument vector.
+    pub(crate) fn for_profile(mut self, context:&crate::profiles::ProfileContext, mode:crate::profiles::ProfileMode)->Result<Self,BridgeError> {
+        let directory=context.directory().to_str().filter(|_|context.directory().is_absolute()).ok_or_else(||error("PROFILE_LAUNCH_PATH","profile launch directory absolute_UTF8=false; required=registered absolute profile directory"))?;
+        self.args=vec!["desktop".into(),"--profile-dir".into(),directory.into(),"--mode".into(),mode.argument().into()];
+        Ok(self)
+    }
+}
 
 #[derive(Clone, Copy, PartialEq)]
 enum RequestPhase {

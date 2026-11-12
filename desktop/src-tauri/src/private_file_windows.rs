@@ -295,6 +295,15 @@ pub fn protected_open(path: &Path) -> io::Result<File> {
     Ok(file)
 }
 
+/// Ownership locks need a writable handle for LockFileEx while retaining the
+/// same ACL/reparse-point checks as all private state reads.
+pub fn protected_open_writable(path: &Path) -> io::Result<File> {
+    let current_user = CurrentUser::query()?;
+    let file = open(path, GENERIC_READ | GENERIC_WRITE, OPEN_EXISTING, null())?;
+    validate(&file, &current_user)?;
+    Ok(file)
+}
+
 pub fn create_private(path: &Path) -> io::Result<File> {
     let current_user = CurrentUser::query()?;
     let user = sid_text(current_user.sid())?;

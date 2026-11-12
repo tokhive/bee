@@ -229,3 +229,20 @@ for(const advancing of ['recoveryStatus','status'] as const)test(`binding is iso
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>observed.push(structuredClone(m.getSnapshot())));await tick();advance=true;await m.refresh();
  const s=m.getSnapshot();assert.equal(s.bindingRevision,2);assert.equal(s.deviceContext?.device_id,'new');assert.ok(observed.every(s=>s.bindingRevision!==2||Object.values(s.accounts).every((a:any)=>a.scope!=='old')));assert.match((advancing==='status'?s.deviceError:(s as any).recoveryError)?.message??'',/journal write permission denied/);
 });
+
+test('current Hive scope clears every source cache and rejects old profile events and delayed receipts',async t=>{
+ const f=fixture();let finish:((v:any)=>void)|undefined;
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.ok(m.getSnapshot().runtime);
+ f.deps.runtime=()=>({snapshot:()=>new Promise(resolve=>{finish=resolve;})});
+ const oldRead=m.refresh();await tick();
+ m.setCurrentScope({profile_id:'profile-b',instance:'b'});
+ assert.equal(m.getSnapshot().runtime,undefined);assert.deepEqual(m.getSnapshot().accounts,{});
+ f.emit({...ready('a'),profile_id:'profile-a'});finish?.({revision:99,network_revision:0,local:'running',platforms:{},run_id:null});await oldRead;
+ assert.equal(m.getSnapshot().runtime,undefined);assert.notEqual(m.getSnapshot().native.metadata?.instance,'a');
+});
+
+test('a delayed startup failure from the previous Hive cannot overwrite the new scope',async t=>{
+ const f=fixture();let rejectOld:((e:any)=>void)|undefined;f.deps.bridge.startupStatus=()=>new Promise((_,reject)=>{rejectOld=reject;});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();m.setCurrentScope({profile_id:'profile-b',instance:'b'});rejectOld?.({code:'RESPONSE_TIMEOUT',message:'old A startup query timed out'});await tick();assert.equal(m.getSnapshot().startupReadError,null);
+});

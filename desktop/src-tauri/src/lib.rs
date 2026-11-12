@@ -73,6 +73,9 @@ pub fn run() {
             commands::hive_switch_snapshot,
             commands::hive_switch_start,
             commands::hive_switch_observe,
+            commands::hive_switch_cancel,
+            commands::hive_switch_continue,
+            commands::hive_switch_quit,
             commands::hive_switch_target_status,
             commands::hive_switch_target_begin,
             commands::hive_switch_target_open,
@@ -199,6 +202,7 @@ commands::device_recovery_status,
                 coordinator.startup_current(startup_app.clone()).await;
                 updater::start_background(&startup_app,&startup_updates);
             });
+            tauri::async_runtime::spawn(hive_switch::run(app.handle().clone()));
             tauri::async_runtime::spawn(notification_poll::run(app.handle().clone(),route));
             Ok(())
         })
@@ -217,6 +221,9 @@ commands::device_recovery_status,
                 for url in urls {
                     lifecycle::deliver_callback(app, url.as_str());
                 }
+            }
+            tauri::RunEvent::ExitRequested { api, .. } => {
+                if lifecycle::switch_quit_prompt(app) { api.prevent_exit(); }
             }
             tauri::RunEvent::Exit => {
                 if let Some(route) = app.try_state::<hive_switch::CurrentBridge>() {

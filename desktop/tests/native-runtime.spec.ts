@@ -396,3 +396,37 @@ for(const denial of ['device','recovery'])test('Claude '+denial+' failure allows
  const cancel=loginStatus.getByRole('button',{name:'取消登录',exact:true});await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  await expect(loginStatus.getByText('本次登录已取消',{exact:true})).toBeVisible();await expect(loginStatus).toContainText('官方客户端可能已保存登录，可以检查当前登录后继续。');expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
 });
+
+test('initial account reads wait for the authoritative Hive scope and start only once',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   if(command==='hive_switch_snapshot'&&!w.initialScopeReleased){w.initialScopeRequested=true;await new Promise<void>(resolve=>{w.releaseInitialScope=()=>{w.initialScopeReleased=true;resolve();};});}
+   return invoke(command,args);
+  };
+ });
+ await page.goto('/');await expect.poll(()=>page.evaluate(()=>(window as any).initialScopeRequested)).toBe(true);
+ expect(await calls(page,'runtime_snapshot')).toHaveLength(0);expect(await calls(page,'account_snapshot')).toHaveLength(0);expect(await calls(page,'supply_status')).toHaveLength(0);
+ await page.evaluate(()=>(window as any).releaseInitialScope());
+ await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(2);
+ expect(await calls(page,'runtime_snapshot')).toHaveLength(1);
+});
+
+test('a bridge event during a pending Hive read rechecks the authoritative scope after that read',async({page})=>{
+ await setup(page);await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let held=false;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   const reply=await invoke(command,args);
+   if(command==='hive_switch_snapshot'&&!held){held=true;w.scopeReadHeld=true;await new Promise<void>(resolve=>{w.releaseScopeRead=resolve;});}
+   return reply;
+  };
+ });
+ await page.clock.runFor(2100);await expect.poll(()=>page.evaluate(()=>(window as any).scopeReadHeld)).toBe(true);
+ const before=await page.evaluate(()=>{const w=window as any;w.emit('d'.repeat(32));return w.runtimeReadCount;});
+ await page.evaluate(()=>(window as any).releaseScopeRead());
+ await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
+ expect(await calls(page,'runtime_start')).toHaveLength(0);expect(await calls(page,'account_action')).toHaveLength(0);
+});

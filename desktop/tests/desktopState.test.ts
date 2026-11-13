@@ -246,3 +246,26 @@ test('a delayed startup failure from the previous Hive cannot overwrite the new 
  const f=fixture();let rejectOld:((e:any)=>void)|undefined;f.deps.bridge.startupStatus=()=>new Promise((_,reject)=>{rejectOld=reject;});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();m.setCurrentScope({profile_id:'profile-b',instance:'b'});rejectOld?.({code:'RESPONSE_TIMEOUT',message:'old A startup query timed out'});await tick();assert.equal(m.getSnapshot().startupReadError,null);
 });
+
+test('an initial Hive scope blocks unrelated child reads before the first subscription',async t=>{
+ const f=fixture();f.deps.scope={profile_id:'profile-b',instance:'b'};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(f.calls(),0);assert.equal(m.getSnapshot().currentProfile,'profile-b');
+ f.emit({...ready('b'),profile_id:'profile-b'});await tick();
+ assert.equal(f.calls(),1);assert.equal(m.getSnapshot().native.metadata?.instance,'b');
+ f.emit({...ready('a'),profile_id:'profile-a'});await tick();assert.equal(f.calls(),1);
+});
+test('reapplying the initial confirmed Hive scope does not restart reads',async t=>{
+ const f=fixture(),scope={profile_id:'profile-a',instance:'a'};f.deps.scope=scope;
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();assert.equal(f.calls(),1);
+ m.setCurrentScope(scope);await tick();assert.equal(f.calls(),1);
+});
+test('the first ready bridge invalidates an older startup read without leaving startup locked',async t=>{
+ const f=fixture();let finishOld:((value:any)=>void)|undefined,startupReads=0;
+ f.deps.scope={profile_id:'profile-a',instance:'a'};
+ const startup={state:'ready',instance:'a',revision:1,binding_revision:1,network_revision:0};
+ f.deps.bridge.startupStatus=async()=>{if(++startupReads===1)return new Promise(resolve=>{finishOld=resolve;});return startup;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ finishOld?.(startup);await tick();
+ assert.equal(m.getSnapshot().startup?.state,'ready');assert.equal(m.getSnapshot().startupObservation,'idle');assert.equal(f.calls(),1);
+});

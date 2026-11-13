@@ -161,6 +161,7 @@ export async function installPreviewFixture(id){
  };
  const recoveryWriteCodes={account_action:'ACCOUNT_OPERATION_FAILED',authorize_start:'AUTHORIZE_OPERATION_FAILED',runtime_start:'RUNTIME_OPERATION_FAILED',supply_set_paused:'SUPPLY_OPERATION_FAILED',network_apply_saved:'DEVICE_RECOVERY_RECHECK_REQUIRED'};
  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
+  if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
   if(switchSession.handles(command))return switchSession.invoke(command,args);
   const barrier=deviceSession.writeBarrier();
   if(barrier&&Object.hasOwn(recoveryWriteCodes,command)){
@@ -172,7 +173,6 @@ export async function installPreviewFixture(id){
   if(deviceSession?.handles(command))return deviceSession.invoke(command,args);
   if(networkSession.handles(command))return networkSession.invoke(command,args);
   if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
-  if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
   if(['update_snapshot','update_check','update_download','update_install'].includes(command)&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
   if(command==='runtime_start'){
    w.calls.push({command,args});

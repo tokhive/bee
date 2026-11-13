@@ -592,11 +592,11 @@ fn parse_click_route(route: &str) -> Option<NotificationTarget> {
 
 fn validate_source(source: Option<&NotificationSource>) -> Result<(), BridgeError> {
     if let Some(source) = source {
-        if !crate::startup_recovery::digest(&source.profile_id, 32)
+        if !crate::identity_digest::digest(&source.profile_id, 32)
             || source.origin.len() > 2048
             || crate::hive_origin::normalize_hive_origin(&source.origin).ok().as_ref() != Some(&source.origin)
         {
-            return Err(failure("NOTIFICATION_INPUT", format!("notification source rejected: profile_id_valid={} origin_bytes={}; required=internal profile ID and canonical public Hive origin",crate::startup_recovery::digest(&source.profile_id,32),source.origin.len())));
+            return Err(failure("NOTIFICATION_INPUT", format!("notification source rejected: profile_id_valid={} origin_bytes={}; required=internal profile ID and canonical public Hive origin",crate::identity_digest::digest(&source.profile_id,32),source.origin.len())));
         }
     }
     Ok(())

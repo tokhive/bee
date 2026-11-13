@@ -816,9 +816,9 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
             group
         }).collect();
     for group in &switch_candidates {
-        for mode in [crate::profiles::ProfileMode::Prepare, crate::profiles::ProfileMode::Activate] {
+        for mode in [crate::profile_mode::ProfileMode::Prepare, crate::profile_mode::ProfileMode::Activate] {
             candidates.push(group.iter()
-                .filter(|method| crate::switch_protocol::allowed(mode, method))
+                .filter(|method| crate::profile_mode::allowed(mode, method))
                 .cloned().collect());
         }
     }

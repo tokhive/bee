@@ -1,0 +1,144 @@
+diff --git a/desktop/src/app/NativeApp.tsx b/desktop/src/app/NativeApp.tsx
+index 5580331..ab14151 100644
+--- a/desktop/src/app/NativeApp.tsx
++++ b/desktop/src/app/NativeApp.tsx
+@@ -153,7 +153,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
+  </AppShell>;
+ }
+ export function NativeApp(props:NativeProps){
+- const switching=useHiveSwitch(props.hiveSwitchClient);
++ const switching=useHiveSwitch(props.hiveSwitchClient,props.systemBridge);
+  const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
+  const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
+  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
+@@ -183,11 +183,14 @@ export function NativeApp(props:NativeProps){
+   const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
+   apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);
+  },[preferences.preferences.theme]);
++ const scopeReady=!props.hiveSwitchClient||switching.snapshot!==undefined;
++ const initialScope=useRef(switching.snapshot?.current_scope);initialScope.current=switching.snapshot?.current_scope;
+  useEffect(()=>{
+-  const coordinator=createDesktopState({openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
++  if(!scopeReady)return;
++  const coordinator=createDesktopState({scope:initialScope.current,openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
+   setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
+   return()=>{off();coordinator.dispose();};
+- },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
++ },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply,scopeReady]);
+  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
+  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
+  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
+diff --git a/desktop/src/features/hive/useHiveSwitch.ts b/desktop/src/features/hive/useHiveSwitch.ts
+index 4ba9bcc..06b96ed 100644
+--- a/desktop/src/features/hive/useHiveSwitch.ts
++++ b/desktop/src/features/hive/useHiveSwitch.ts
+@@ -1,12 +1,14 @@
+ import {useEffect,useRef,useState} from 'react';
++import type {SystemBridge} from '../../system/bridge';
+ import {normalizeFailure,type UiFailure} from '../../system/failures';
+ import {switchPending,type HiveSwitchClient,type HiveSwitchSnapshot} from '../../system/hiveSwitch';
+ import type {DeviceView,DeviceRecoveryView} from '../../system/device';
+-export function useHiveSwitch(client:HiveSwitchClient|undefined){
++export function useHiveSwitch(client:HiveSwitchClient|undefined,bridge?:SystemBridge){
+  const [chooserOpen,setChooserOpen]=useState(false),[hive,setHive]=useState(''),[name,setName]=useState('Bee Desktop');
+  const [snapshot,setSnapshot]=useState<HiveSwitchSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[exitOperation,setExitOperation]=useState<string|null>(null);
+  const [target,setTarget]=useState<{view?:DeviceView;recovery?:DeviceRecoveryView;error:UiFailure|null;recoveryError:UiFailure|null}>({error:null,recoveryError:null});
+  const latest=useRef(snapshot);latest.current=snapshot;
++ const scopeDirty=useRef(false);
+  const active=useRef(false),working=useRef(false),sequence=useRef(0),targetSequence=useRef(0);
+  const accept=(next:HiveSwitchSnapshot)=>{
+   const previous=latest.current;if(previous&&next.profiles.revision<previous.profiles.revision)return;
+@@ -29,15 +31,16 @@ export function useHiveSwitch(client:HiveSwitchClient|undefined){
+   if(!client||working.current)return false;working.current=true;setBusy(true);if(!options.preserveError)setError(null);const request=++sequence.current;
+   try{const next=await action();if(active.current&&request===sequence.current){accept(next);await readTarget();}return true;}
+   catch(cause){if(active.current&&request===sequence.current){const failure=normalizeFailure(cause,'hive_switch');if(options.reconcileFailure){try{const next=await client.snapshot();if(active.current&&request===sequence.current)accept(next);}catch{/* Keep the failed action's evidence; the next read will reconcile the durable record. */}}if(active.current&&request===sequence.current)setError(failure);}return false;}
+-  finally{if(request===sequence.current){working.current=false;if(active.current)setBusy(false);}}
++  finally{if(request===sequence.current){working.current=false;if(active.current){setBusy(false);if(scopeDirty.current){scopeDirty.current=false;void run(()=>client!.snapshot(),{preserveError:true});}}}}
+  };
+  const refresh=()=>run(()=>client!.snapshot());
+  useEffect(()=>{
+-  active.current=true;working.current=false;let alive=true,off:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>;
++  active.current=true;working.current=false;let alive=true,off:(()=>void)|undefined,offStatus:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>;
+   const poll=async()=>{await run(()=>latest.current?.actions.can_observe?client!.observe():client!.snapshot(),{preserveError:true});if(alive)timer=setTimeout(()=>void poll(),2000);};
++  if(client&&bridge)void bridge.onStatus(()=>{if(!alive)return;scopeDirty.current=true;if(!working.current){scopeDirty.current=false;void run(()=>client.snapshot(),{preserveError:true});}}).then(fn=>{if(alive)offStatus=fn;else fn();},cause=>{if(alive)setError(normalizeFailure(cause,'hive_switch_scope_listener'));});
+   if(client){void poll();void client.onExitRequest?.(operation=>{if(alive&&latest.current?.operation?.id===operation&&switchPending(latest.current))setExitOperation(operation);}).then(fn=>{if(alive)off=fn;else fn();},cause=>{if(alive)setError(normalizeFailure(cause,'hive_switch_exit_listener'));});}
+-  return()=>{alive=false;active.current=false;working.current=false;sequence.current++;targetSequence.current++;clearTimeout(timer);off?.();};
+- },[client]);
++  return()=>{alive=false;active.current=false;working.current=false;sequence.current++;targetSequence.current++;clearTimeout(timer);off?.();offStatus?.();scopeDirty.current=false;};
++ },[client,bridge]);
+  const targetAction=async(action:()=>Promise<unknown>)=>{
+   if(!client||working.current)return false;working.current=true;setBusy(true);setError(null);const operation=latest.current?.operation?.id,request=++sequence.current;
+   try{await action();if(active.current&&operation===latest.current?.operation?.id){await readTarget();accept(await client.snapshot());}return true;}
+diff --git a/desktop/src/system/desktopState.ts b/desktop/src/system/desktopState.ts
+index 2db16ee..9c042bf 100644
+--- a/desktop/src/system/desktopState.ts
++++ b/desktop/src/system/desktopState.ts
+@@ -16,7 +16,7 @@ export interface DesktopSnapshot {
+  refresh:RefreshStatus;accountRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;supplyRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;
+  diagnosticFailure?:UiFailure|null;
+ }
+-export interface DesktopDeps {openaiQueries?:boolean;bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
++export interface DesktopDeps {scope?:{profile_id:string;instance:string}|null;openaiQueries?:boolean;bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
+ const platforms=['openai','claude'] as const;
+ export const idleRefresh=():RefreshStatus=>({state:'idle',nextRetryAt:null,lastConfirmedAt:null});
+ const status=(previous:RefreshStatus|undefined,state:RefreshStatus['state'],nextRetryAt:string|null=null):RefreshStatus=>({...previous??idleRefresh(),state,nextRetryAt});
+@@ -24,9 +24,9 @@ const confirmed=():RefreshStatus=>({state:'idle',nextRetryAt:null,lastConfirmedA
+ const failure=(e:unknown,check='desktop_refresh')=>normalizeFailure(e,check);
+ /** The only application polling owner. A page subscription never starts another reader. */
+ export function createDesktopState(deps:DesktopDeps){
+- let state:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
++ let state:DesktopSnapshot={currentProfile:deps.scope?.profile_id,native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
+  let disposed=false,started=false,epoch=0,pendingEpoch=0,blocked=false;
+- let currentScope:{profile_id:string;instance:string}|null|undefined;
++ let currentScope=deps.scope;
+  let unlistenSettled:(()=>void)|undefined;
+  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
+  let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0;
+@@ -99,11 +99,10 @@ export function createDesktopState(deps:DesktopDeps){
+   if(currentScope!==undefined&&(native.profile_id!==undefined&&native.profile_id!==currentScope?.profile_id||native.state==='ready'&&(!currentScope||native.metadata?.instance!==currentScope.instance)))return;
+   const changed=native.metadata?.instance!==state.native.metadata?.instance||native.profile_id!==state.native.profile_id||native.state!==state.native.state;
+   if(!changed){publish({native});return;}
+-  const previousInstance=state.native.metadata?.instance??state.startup?.instance;
+-  epoch++;blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
++  epoch++;startupReading=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
+   const generation=epoch,instance=native.metadata?.instance,startup=(!instance&&native.state!=='ready'||state.startup?.instance===instance)?state.startup:undefined;
+   publish({...reset(),native,startup,busy:false});
+-  if(native.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(previousInstance&&previousInstance!==instance)void readStartup();void refresh();}});
++  if(native.state==='ready')queueMicrotask(async()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(state.startup?.instance!==instance)await readStartup();if(!disposed&&epoch===generation)void refresh();}});
+  }
+  async function readStartup(){
+   if(disposed||startupReading||!deps.bridge.startupStatus)return;
+diff --git a/desktop/tests/fixtures/bee-preview/app.mjs b/desktop/tests/fixtures/bee-preview/app.mjs
+index 368f071..fac638f 100644
+--- a/desktop/tests/fixtures/bee-preview/app.mjs
++++ b/desktop/tests/fixtures/bee-preview/app.mjs
+@@ -15,6 +15,9 @@ try{
+  step='加载正式 NativeApp';await import('/src/main.tsx');
+  window.__beePreviewActivate();
+  const {t}=await import('/src/i18n/index.ts');
++ // Select the review page only after the first authoritative binding has rendered.
++ // NativeWorkspace remounts when that scope becomes known.
++ if(scene.page!=='overview'){step='等待初始设备作用域';await until(()=>document.querySelector('.device-facts:not(.device-loading),.saved-device-context'));}
+  step=`导航 ${scene.page}`;if(scene.page!=='overview')(await until(()=>button(t({accounts:'AI 账号',diagnostics:'诊断',settings:'设置'}[scene.page])))).click();
+  await until(()=>document.querySelector('main h1'));
+  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
+diff --git a/desktop/tests/fixtures/bee-preview/fixture.mjs b/desktop/tests/fixtures/bee-preview/fixture.mjs
+index b5d0525..c2b5c77 100644
+--- a/desktop/tests/fixtures/bee-preview/fixture.mjs
++++ b/desktop/tests/fixtures/bee-preview/fixture.mjs
+@@ -161,6 +161,7 @@ export async function installPreviewFixture(id){
+  };
+  const recoveryWriteCodes={account_action:'ACCOUNT_OPERATION_FAILED',authorize_start:'AUTHORIZE_OPERATION_FAILED',runtime_start:'RUNTIME_OPERATION_FAILED',supply_set_paused:'SUPPLY_OPERATION_FAILED',network_apply_saved:'DEVICE_RECOVERY_RECHECK_REQUIRED'};
+  w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
++  if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
+   if(switchSession.handles(command))return switchSession.invoke(command,args);
+   const barrier=deviceSession.writeBarrier();
+   if(barrier&&Object.hasOwn(recoveryWriteCodes,command)){
+@@ -172,7 +173,6 @@ export async function installPreviewFixture(id){
+   if(deviceSession?.handles(command))return deviceSession.invoke(command,args);
+   if(networkSession.handles(command))return networkSession.invoke(command,args);
+   if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
+-  if(command==='bridge_status'&&id.startsWith('bridge-')){w.calls.push({command,args});return {state:id==='bridge-starting'?'starting':'failed',...(id==='bridge-failed'?{error:{code:'SIDECAR_EXITED',message:'owned QA sidecar exited; exit=17'}}:{})};}
+   if(['update_snapshot','update_check','update_download','update_install'].includes(command)&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
+   if(command==='runtime_start'){
+    w.calls.push({command,args});

@@ -27,6 +27,22 @@ mod protocol;
 #[allow(dead_code)]
 mod runtime_protocol;
 
+#[path = "../src/hive_origin.rs"]
+#[allow(dead_code)]
+mod hive_origin;
+#[path = "../src/identity_digest.rs"]
+#[allow(dead_code)]
+mod identity_digest;
+#[path = "../src/profile_mode.rs"]
+#[allow(dead_code)]
+mod profile_mode;
+#[path = "../src/profiles.rs"]
+#[allow(dead_code)]
+mod profiles;
+#[cfg(windows)]
+#[path = "../src/private_file_windows.rs"]
+mod private_file_windows;
+
 use notifications::{
     NativeNotificationAdapter, Notice, NotificationEvent, NotificationPlatform,
     NotificationProblem, NotificationService,
@@ -130,6 +146,7 @@ fn active() -> NotificationEvent {
             identity: FIXED_IDENTITY.into(),
             platform: NotificationPlatform::Openai,
             problem: NotificationProblem::AuthorizationRejected,
+            source: None,
         },
         eligible: true,
     }

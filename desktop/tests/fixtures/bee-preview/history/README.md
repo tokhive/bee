@@ -39,3 +39,12 @@ python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录
 
 | 2026-11-13 00:08:07 Asia/Shanghai | 审查修复第一次冻结，漏 iframe app.html；独立运行出现 404，原样保留 | 未通过；不能用于评审 | [中间构建](20261113-000807-hive-switch-review-fixes/tests/fixtures/bee-preview/index.html) |
 | 2026-11-13 00:10:30 Asia/Shanghai | 历史冲突说明与局部禁用；通知携带原 Hive，跨范围点击只提示并可查看列表；基线及源码差异见 SOURCE.md | 待评审；当前交付版，独立 HTTP/ego-browser 关键交互及完整切换回归 12/12 通过 | [审查修复快照](20261113-001030-hive-switch-review-fixes/tests/fixtures/bee-preview/index.html) |
+
+## main 集成验证修复（2026-11-13）
+
+当前工作预览仍为 `../index.html`；本轮最新冻结交付为 `20261113-171854-main-integration-fixes`，前文“当前交付版”为对应历史轮次记录。两版均已独立打开验证资源；本轮修复后关键交互证据和运行方式见各自 SOURCE.md。
+
+| 时间（Asia/Shanghai） | 变更与来源 | 评审状态 | 完整 HTML 快照 |
+| --- | --- | --- | --- |
+| 2026-11-13 17:04:34 | da313bc 前端基线；修改前捕获 | 修改前基线，保留已知问题 | [修复前](20261113-170434-before-main-integration-fixes/tests/fixtures/bee-preview/index.html) |
+| 2026-11-13 17:18:54 | 作用域初始化与启动观察修复；预览桥失败、页签预设修正 | 待评审；独立静态服务关键交互已验证 | [修复后](20261113-171854-main-integration-fixes/tests/fixtures/bee-preview/index.html) |

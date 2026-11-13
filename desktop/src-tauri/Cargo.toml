@@ -1,0 +1,54 @@
+[package]
+name = "bee-desktop"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.90"
+
+[lib]
+name = "bee_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "=2.7.4", features = [] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+sha2 = "=0.10.9"
+
+[dependencies]
+tauri-plugin-updater = "=2.14.0"
+reqwest = { version = "=0.13.5", default-features = false }
+rustls = { version = "=0.23.46", default-features = false, features = ["ring", "std", "tls12"] }
+semver = "=1.0.28"
+tempfile = "=3.27.0"
+time = { version = "=0.3.55", features = ["formatting", "parsing"] }
+tauri-plugin-notification = "=2.7.0"
+tauri-plugin-autostart = "=2.7.0"
+tauri-plugin-single-instance = { path = "vendor/tauri-plugin-single-instance", version = "=2.5.4" }
+tauri = { version = "=2.12.5", features = ["tray-icon"] }
+serde = { version = "=1.0.229", features = ["derive"] }
+serde_json = "=1.0.154"
+sha2 = "=0.10.9"
+tokio = { version = "=1.54.1", features = ["process", "io-util", "time", "sync", "rt-multi-thread", "macros"] }
+
+[dev-dependencies]
+tauri = { version = "=2.12.5", features = ["test"] }
+libc = "=0.2.191"
+
+[target.'cfg(unix)'.dependencies]
+libc = "=0.2.191"
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "=0.62.2", features = ["Foundation", "UI_Notifications", "Data_Xml_Dom", "Win32_System_WinRT"] }
+windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_Security_Authorization", "Win32_Storage_FileSystem", "Win32_System_Threading", "Win32_System_SystemServices"] }
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+zbus = "=5.19.0"
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "=0.6.5"
+objc2-foundation = "=0.3.2"
+objc2-user-notifications = "=0.3.2"
+block2 = "=0.6.2"
+
+[target.'cfg(target_os = "linux")'.dependencies]
+zbus = { version = "=5.19.0", features = ["blocking-api"] }

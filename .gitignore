@@ -1,2 +1,8 @@
 /bin/
 /dist/
+/.superpowers/
+/.vite/
+/desktop-ci-evidence/
+.DS_Store
+# Local desktop toolchains, immutable TEE exports and build caches.
+/.cache/

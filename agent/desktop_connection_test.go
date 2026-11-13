@@ -1,0 +1,488 @@
+package bee
+
+import (
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/coder/websocket"
+	"github.com/tokhive/bee/relay"
+	"io"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
+	"os"
+	"reflect"
+	"strconv"
+	"strings"
+	"sync/atomic"
+	"syscall"
+	"testing"
+	"time"
+)
+
+func TestDesktopConnectionSnapshotRequiresNullableDetail(t *testing.T) {
+	r := NewDesktopRuntime(context.Background(), &DesktopDevice{}, NewDesktopAccounts(nil))
+	defer r.Close()
+	s, err := r.Snapshot(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := json.Marshal(s)
+	var fields map[string]json.RawMessage
+	_ = json.Unmarshal(raw, &fields)
+	if value, ok := fields["connection_detail"]; !ok || string(value) != "null" {
+		t.Fatalf("runtime connection_detail must be present and null before observation; actual=%s", raw)
+	}
+}
+
+func TestDesktopConnectionFailureClassification(t *testing.T) {
+	for _, tc := range []struct {
+		name        string
+		err         error
+		stage, code string
+	}{
+		{"DNS", &net.DNSError{Err: "no such host", Name: "hive.test"}, "connect", "dns_failed"},
+		{"TLS", &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}}, "connect", "tls_failed"},
+		{"refused", &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}, "connect", "connection_refused"},
+		{"timeout", fmt.Errorf("handshake: %w", context.DeadlineExceeded), "connect", "timeout"},
+		{"heartbeat stalled", relay.ErrStalled, "heartbeat", "timeout"},
+		{"heartbeat closed", io.EOF, "heartbeat", "connection_closed"},
+		{"no cause", nil, "heartbeat", "connection_closed"},
+		{"sync", errors.New("authorization fingerprint changed"), "synchronize", "synchronization_failed"},
+		{"sync DNS", &net.DNSError{Err: "lookup failed", Name: "hive.test"}, "synchronize", "dns_failed"},
+		{"text not classification", errors.New("DNS TLS timeout connection refused"), "connect", "unknown_failure"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			f := observedConnectionFailure(tc.err, nil, localState{Hive: "https://hive.test"}, "/api/bee/agent", tc.stage)
+			if f.Code != tc.code || f.Stage != tc.stage || f.Message == "" || f.OccurredAt == "" {
+				t.Fatalf("failure=%+v expected=%s", f, tc.code)
+			}
+			if tc.err != nil && !strings.Contains(f.Message, tc.err.Error()) {
+				t.Fatalf("safe original cause lost: %+v", f)
+			}
+		})
+	}
+}
+func TestDesktopConnectionHTTPObservations(t *testing.T) {
+	for _, status := range []int{200, 401, 403, 409, 503} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			var requests atomic.Int32
+			hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
+				w.WriteHeader(status)
+				io.WriteString(w, `{"error":{"code":"device_replaced","token":"TOPSECRET"}}`)
+			}))
+			defer hive.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			var observations []DesktopConnectionObservation
+			err := connectObserved(ctx, localState{Hive: hive.URL, Credential: "TOPSECRET"}, nil, io.Discard, func(o DesktopConnectionObservation) {
+				observations = append(observations, o)
+				if o.Detail.Retry == "scheduled" {
+					cancel()
+				}
+			})
+			last := observations[len(observations)-1]
+			if last.Detail.Failure == nil || last.Detail.Failure.Evidence["http_status"] != strconv.Itoa(status) || last.Detail.Failure.Evidence["remote_code"] != "device_replaced" {
+				t.Fatalf("actual rejection evidence lost: %+v", last)
+			}
+			raw, _ := json.Marshal(observations)
+			var decoded DesktopConnectionDetail
+			detailRaw, _ := json.Marshal(last.Detail)
+			if e := json.Unmarshal(detailRaw, &decoded); e != nil {
+				t.Fatalf("real handshake rejection cannot cross contract: status=%d error=%v", status, e)
+			}
+			if strings.Contains(string(raw), "TOPSECRET") {
+				t.Fatalf("secret leaked: %s", raw)
+			}
+			if status == 401 || status == 403 {
+				if last.Connection != "rejected" || last.Detail.Retry != "halted" || last.Detail.NextRetryAt != nil || requests.Load() != 2 {
+					t.Fatalf("auth rejection retried: %s requests=%d err=%v", raw, requests.Load(), err)
+				}
+			} else if status == 409 {
+				if last.Connection != "occupied" || last.Detail.Failure.Code != "ownership_unconfirmed" || requests.Load() != 1 {
+					t.Fatalf("ownership retry: %s requests=%d", raw, requests.Load())
+				}
+			} else {
+				if last.Detail.Retry != "scheduled" || last.Detail.NextRetryAt == nil || requests.Load() != 1 {
+					t.Fatalf("no real retry: %s", raw)
+				}
+				next, e := time.Parse(time.RFC3339Nano, *last.Detail.NextRetryAt)
+				if e != nil || time.Until(next) > time.Second || time.Until(next) < 500*time.Millisecond {
+					t.Fatalf("retry time differs from initial timer: %v", next)
+				}
+			}
+		})
+	}
+}
+func TestDesktopConnectionSafeEvidence(t *testing.T) {
+	err := &url.Error{Op: "Get", URL: "https://user:URLSECRET@hive.test/path?token=QUERYSECRET", Err: fmt.Errorf(`Bearer BEARERSECRET credential=TOPSECRET {"token":"QUOTEDSECRET"} password='PASSWORDSECRET': %w`, syscall.ECONNREFUSED)}
+	f := observedConnectionFailure(err, nil, localState{Hive: "https://hive.test", Credential: "TOPSECRET"}, "/api/bee/agent", "connect")
+	raw, _ := json.Marshal(f)
+	for _, secret := range []string{"URLSECRET", "QUERYSECRET", "BEARERSECRET", "TOPSECRET", "QUOTEDSECRET", "PASSWORDSECRET"} {
+		if strings.Contains(string(raw), secret) {
+			t.Fatalf("secret leaked: %s", raw)
+		}
+	}
+	if f.Code != "connection_refused" || !strings.Contains(f.Message, "connection refused") {
+		t.Fatalf("safe cause lost: %+v", f)
+	}
+}
+func TestDesktopConnectionRuntimeFencesOldAndStoppingObservations(t *testing.T) {
+	run := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	r := NewDesktopRuntime(context.Background(), &DesktopDevice{}, NewDesktopAccounts(nil))
+	defer r.Close()
+	r.snapshot.RunID = &run
+	r.snapshot.Local = "running"
+	r.snapshot.Operation = &DesktopOperation{}
+	failure := observedConnectionFailure(io.EOF, nil, localState{Hive: "https://hive.test"}, "/api/bee/agent", "heartbeat")
+	failed := DesktopConnectionObservation{Connection: "reconnecting", Detail: &DesktopConnectionDetail{Failure: failure, Retry: "attempting"}}
+	r.connectionObserved(run, DesktopConnectionObservation{Connection: "connected", Detail: &DesktopConnectionDetail{Retry: "idle"}})
+	revisionB := r.snapshot.Revision
+	r.connectionObserved("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", DesktopConnectionObservation{Connection: "rejected", Detail: failed.Detail})
+	if r.snapshot.Connection != "connected" || r.snapshot.ConnectionDetail.Failure != nil || r.snapshot.Revision != revisionB {
+		t.Fatal("late run A rejection polluted connected run B")
+	}
+	r.connectionObserved(run, failed)
+	if r.snapshot.ConnectionDetail.Failure != failure || r.snapshot.Local != "running" {
+		t.Fatalf("failure missing or local changed: %+v", r.snapshot)
+	}
+	r.connectionObserved(run, DesktopConnectionObservation{Connection: "connected", Detail: &DesktopConnectionDetail{Retry: "idle"}})
+	if r.snapshot.ConnectionDetail.Failure != nil {
+		t.Fatal("recovery retained error")
+	}
+	r.snapshot.Local = "stopping"
+	revision := r.snapshot.Revision
+	r.connectionObserved(run, failed)
+	if r.snapshot.Revision != revision || r.snapshot.ConnectionDetail.Failure != nil {
+		t.Fatal("stopping accepted old callback")
+	}
+}
+
+func TestDesktopConnectionTransportFailuresReachObserver(t *testing.T) {
+	for _, tc := range []struct {
+		name, code string
+		err        error
+	}{
+		{"DNS", "dns_failed", &net.DNSError{Name: "hive.test", Err: "no such host"}},
+		{"TLS", "tls_failed", &tls.CertificateVerificationError{Err: x509.UnknownAuthorityError{}}},
+		{"refused", "connection_refused", &net.OpError{Op: "dial", Net: "tcp", Err: syscall.ECONNREFUSED}},
+		{"timeout", "timeout", context.DeadlineExceeded},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			saved := http.DefaultTransport
+			defer func() { http.DefaultTransport = saved }()
+			http.DefaultTransport = claudeTransport(func(*http.Request) (*http.Response, error) { return nil, tc.err })
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+			var last DesktopConnectionObservation
+			err := connectObserved(ctx, localState{Hive: "https://hive.test"}, nil, io.Discard, func(o DesktopConnectionObservation) {
+				last = o
+				if o.Detail.Retry == "scheduled" {
+					cancel()
+				}
+			})
+			if err != nil || last.Detail.Failure.Code != tc.code || last.Detail.Failure.Stage != "connect" {
+				t.Fatalf("typed dial failure lost: %+v err=%v", last, err)
+			}
+			requestErr := call(context.Background(), httpClient(), "https://hive.test", "/api/bee/credentials", "GET", "", nil, nil)
+			if !errors.Is(requestErr, tc.err) {
+				t.Fatalf("HTTP cause lost: %v", requestErr)
+			}
+			failure := observedConnectionFailure(requestErr, nil, localState{Hive: "https://hive.test"}, "/api/bee/agent", "synchronize")
+			if failure.Code != tc.code || failure.Evidence["path"] != "/api/bee/credentials" {
+				t.Fatalf("sync HTTP evidence lost: %+v", failure)
+			}
+		})
+	}
+}
+func TestDesktopConnectionRetryRetainsFailureUntilRecovery(t *testing.T) {
+	var calls atomic.Int32
+	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			w.WriteHeader(503)
+			return
+		}
+		conn, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		defer conn.CloseNow()
+		<-r.Context().Done()
+	}))
+	defer hive.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	var observations []DesktopConnectionObservation
+	err := connectObserved(ctx, localState{Hive: hive.URL}, nil, io.Discard, func(o DesktopConnectionObservation) {
+		observations = append(observations, o)
+		if o.Connection == "connected" {
+			cancel()
+		}
+	})
+	if err != nil || len(observations) != 4 {
+		t.Fatalf("attempts=%d err=%v", len(observations), err)
+	}
+	if observations[0].Detail.Failure != nil || observations[1].Detail.Retry != "scheduled" || observations[2].Detail.Retry != "attempting" || observations[2].Detail.NextRetryAt != nil || observations[1].Detail.Failure != observations[2].Detail.Failure || observations[3].Detail.Failure != nil {
+		t.Fatalf("failure retention differs: %+v", observations)
+	}
+}
+func TestDesktopConnectionHeartbeatAndSynchronizationStages(t *testing.T) {
+	for _, syncFailure := range []bool{false, true} {
+		t.Run(fmt.Sprint(syncFailure), func(t *testing.T) {
+			closePeer := make(chan struct{})
+			hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				conn, err := websocket.Accept(w, r, nil)
+				if err != nil {
+					return
+				}
+				defer conn.CloseNow()
+				if !syncFailure {
+					return
+				}
+				<-closePeer
+			}))
+			defer hive.Close()
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			var cfg *egressConfig
+			if syncFailure {
+				cfg = &egressConfig{Targets: []string{}, desktopAction: func(live context.Context, _ localState, _ string, _ io.Writer) (<-chan error, func()) {
+					ch := make(chan error, 1)
+					ch <- fmt.Errorf("authorization sync: %w", errInboxIdentity)
+					// The fatal result is already buffered when the transport closes.
+					// Resume the connector only once both events are observable.
+					close(closePeer)
+					<-live.Done()
+					return ch, func() {}
+				}}
+			}
+			var last DesktopConnectionObservation
+			err := connectObserved(ctx, localState{Hive: hive.URL}, cfg, io.Discard, func(o DesktopConnectionObservation) {
+				last = o
+				if o.Detail.Retry == "scheduled" {
+					cancel()
+				}
+			})
+			if last.Detail.Failure == nil {
+				t.Fatalf("no observed failure: %+v err=%v", last, err)
+			}
+			if syncFailure {
+				if err == nil || last.Detail.Failure.Stage != "synchronize" || last.Detail.Failure.Code != "synchronization_failed" || last.Detail.Retry != "halted" {
+					t.Fatalf("sync failure lost: %+v err=%v", last, err)
+				}
+			} else if err != nil || last.Detail.Failure.Stage != "heartbeat" || last.Detail.Retry != "scheduled" {
+				t.Fatalf("heartbeat failure lost: %+v err=%v", last, err)
+			}
+		})
+	}
+}
+func TestDesktopConnectionCanceledHandshakeDoesNotRaiseAlarm(t *testing.T) {
+	started := make(chan struct{})
+	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { close(started); <-r.Context().Done() }))
+	defer hive.Close()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go func() { <-started; cancel() }()
+	var observations []DesktopConnectionObservation
+	if err := connectObserved(ctx, localState{Hive: hive.URL}, nil, io.Discard, func(o DesktopConnectionObservation) { observations = append(observations, o) }); err != nil {
+		t.Fatal(err)
+	}
+	if len(observations) != 1 || observations[0].Detail.Failure != nil {
+		t.Fatalf("stop created failure: %+v", observations)
+	}
+}
+
+func TestDesktopConnectionSynchronizationObservationIsScoped(t *testing.T) {
+	run := "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+	r := NewDesktopRuntime(context.Background(), &DesktopDevice{}, NewDesktopAccounts(nil))
+	defer r.Close()
+	r.snapshot.RunID = &run
+	r.snapshot.Local = "running"
+	r.snapshot.Connection = "connected"
+	live, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	current := &desktopRuntimeConnection{ctx: live, active: true, state: localState{Hive: "https://hive.test"}}
+	r.connection = current
+	r.snapshot.Platforms["claude"] = DesktopRuntimePlatform{Supply: &DesktopSupply{Ready: true}}
+	observe := func(platform string, err error) {
+		r.synchronizationObserved(current, &run, platform, "authorization_readback", err)
+	}
+	trace := func(label string) {
+		raw, _ := json.Marshal(r.snapshot.ConnectionDetail)
+		t.Logf("transition_%s=%s", label, raw)
+	}
+	observe("openai", errors.New("openai authorization readback differs"))
+	if r.snapshot.ConnectionDetail == nil || r.snapshot.ConnectionDetail.Failure.Stage != "synchronize" || r.snapshot.ConnectionDetail.Retry != "idle" || r.snapshot.Connection != "connected" || r.snapshot.Platforms["claude"].Supply == nil {
+		t.Fatalf("sync failure misrepresented link/other platform: %+v", r.snapshot)
+	}
+	first := r.snapshot.ConnectionDetail
+	trace("openai_failed")
+	observe("claude", nil)
+	if r.snapshot.ConnectionDetail != first {
+		t.Fatal("another platform success cleared unproved recovery")
+	}
+	observe("claude", errors.New("claude supply readback HTTP 503"))
+	second := r.snapshot.ConnectionDetail
+	trace("both_failed")
+	observe("claude", nil)
+	trace("claude_recovered")
+	if r.snapshot.ConnectionDetail != first {
+		t.Fatal("recovering latest platform lost remaining openai failure")
+	}
+	observe("claude", errors.New("claude supply still unavailable"))
+	second = r.snapshot.ConnectionDetail
+	observe("openai", nil)
+	if r.snapshot.ConnectionDetail != second {
+		t.Fatal("openai recovery cleared remaining claude failure")
+	}
+	oldRun := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+	old := &desktopRuntimeConnection{ctx: live, active: true, state: current.state}
+	assertIgnored := func(label string, connection *desktopRuntimeConnection, observationRun *string) {
+		t.Helper()
+		before, snapshotErr := r.Snapshot(context.Background())
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		for _, err := range []error{nil, errors.New("late failure")} {
+			r.synchronizationObserved(connection, observationRun, "claude", "authorization_sync", err)
+		}
+		after, snapshotErr := r.Snapshot(context.Background())
+		if snapshotErr != nil {
+			t.Fatal(snapshotErr)
+		}
+		after.ObservedAt = before.ObservedAt
+		if !reflect.DeepEqual(before, after) {
+			t.Fatalf("%s changed current runtime/account revision, authorization or supply: before=%+v after=%+v", label, before, after)
+		}
+	}
+	v := r.snapshot.Platforms["claude"]
+	v.Supply = &DesktopSupply{Paused: true, Reasons: []string{"manually_paused"}}
+	r.snapshot.Platforms["claude"] = v
+	assertIgnored("old run", current, &oldRun)
+	assertIgnored("old connection", old, &run)
+	current.active = false
+	assertIgnored("inactive connection", current, &run)
+	current.active = true
+	observe("claude", nil)
+	trace("all_recovered")
+	if r.snapshot.ConnectionDetail != nil {
+		t.Fatal("same-platform recovery retained resolved failure")
+	}
+	observe("openai", errors.New("current outage"))
+	for _, phase := range []string{"stopping", "stopped"} {
+		r.snapshot.Local = phase
+		assertIgnored(phase, current, &run)
+	}
+	r.snapshot.Local = "running"
+	cancel()
+	assertIgnored("cancelled connection", current, &run)
+	r.closed = true
+	assertIgnored("closed runtime", current, &run)
+}
+
+func TestDesktopConnectionStrictDetailDecoding(t *testing.T) {
+	for _, raw := range []string{
+		`{"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{"response_body":null}},"retry":"halted","next_retry_at":null}`,
+		`{}`, `{"failure":null,"retry":"idle"}`, `{"failure":null,"retry":"scheduled","next_retry_at":null}`,
+		`{"failure":null,"retry":"idle","next_retry_at":"2026-10-26T00:00:00Z"}`,
+		`{"failure":null,"retry":"waiting","next_retry_at":null}`,
+		`{"failure":null,"retry":"idle","next_retry_at":null,"extra":true}`,
+		`{"failure":{"code":"guessed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{}},"retry":"halted","next_retry_at":null}`,
+		`{"failure":{"code":"dns_failed","stage":"proxy","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{}},"retry":"halted","next_retry_at":null}`,
+		`{"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-02-30T00:00:00Z","message":"failed","evidence":{}},"retry":"halted","next_retry_at":null}`,
+		`{"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{"authorization":"secret"}},"retry":"halted","next_retry_at":null}`,
+		`{"failure":{"code":"dns_failed","stage":"connect","occurred_at":"2026-10-26T00:00:00Z","message":"failed","evidence":{"target_origin":"https://user:secret@hive.test/"}},"retry":"halted","next_retry_at":null}`,
+	} {
+		var detail DesktopConnectionDetail
+		if err := json.Unmarshal([]byte(raw), &detail); err == nil {
+			t.Fatalf("unsafe or contradictory detail accepted: %s", raw)
+		}
+	}
+}
+
+func TestDesktopConnectionSnapshotDecodingRequiresExplicitDetail(t *testing.T) {
+	raw := `{"run_id":null,"revision":0,"network_revision":0,"observed_at":"2026-10-26T00:00:00Z","local":"stopped","connection":"disconnected","platforms":{},"operation":null,"stop_receipt":null}`
+	var snapshot DesktopRuntimeSnapshot
+	if err := json.Unmarshal([]byte(raw), &snapshot); err == nil {
+		t.Fatal("missing connection_detail accepted")
+	}
+}
+func TestDesktopConnectionSharedRequestErrorIsSafe(t *testing.T) {
+	saved := http.DefaultTransport
+	defer func() { http.DefaultTransport = saved }()
+	http.DefaultTransport = claudeTransport(func(*http.Request) (*http.Response, error) {
+		return nil, &url.Error{Op: "proxyconnect", URL: "http://user:PROXYSECRET@127.0.0.1:7890/?secret=QUERYSECRET", Err: errors.New("request credential=DEVICESECRET denied")}
+	})
+	err := call(context.Background(), httpClient(), "https://hive.test", "/api/bee/credentials", "GET", "DEVICESECRET", nil, nil)
+	if err == nil {
+		t.Fatal("transport accepted")
+	}
+	for _, secret := range []string{"PROXYSECRET", "QUERYSECRET", "DEVICESECRET"} {
+		if strings.Contains(err.Error(), secret) {
+			t.Fatalf("shared request error leaked %s", secret)
+		}
+	}
+}
+
+func TestDesktopConnectionMalformedUpgradeKeepsConnectStage(t *testing.T) {
+	hive := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusSwitchingProtocols) }))
+	defer hive.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	var last DesktopConnectionObservation
+	err := connectObserved(ctx, localState{Hive: hive.URL}, nil, io.Discard, func(o DesktopConnectionObservation) {
+		last = o
+		if o.Detail.Retry == "scheduled" {
+			cancel()
+		}
+	})
+	if err != nil || last.Detail.Failure == nil || last.Detail.Failure.Stage != "connect" || last.Detail.Failure.Code != "http_rejected" || last.Detail.Failure.Evidence["http_status"] != "101" {
+		t.Fatalf("malformed handshake misclassified: %+v err=%v", last.Detail.Failure, err)
+	}
+}
+
+// The fixture is produced by the real observer and consumed by Rust and TS.
+func TestDesktopConnectionOriginContract(t *testing.T) {
+	var cases struct {
+		Accepted []struct {
+			Hive   string                  `json:"hive"`
+			Detail DesktopConnectionDetail `json:"connection_detail"`
+		} `json:"accepted"`
+		Rejected []string `json:"rejected"`
+	}
+	raw, err := os.ReadFile("../desktopbridge/testdata/connection-origin-contract.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, &cases); err != nil {
+		t.Fatal(err)
+	}
+	for _, tc := range cases.Accepted {
+		t.Run(tc.Hive, func(t *testing.T) {
+			failure := observedConnectionFailure(errors.New("connection origin fixture"), nil, localState{Hive: tc.Hive}, "/api/bee/agent", "connect")
+			failure.OccurredAt = "2026-10-26T00:00:00Z"
+			detail := DesktopConnectionDetail{Failure: failure, Retry: "halted"}
+			got, _ := json.Marshal(detail)
+			want, _ := json.Marshal(tc.Detail)
+			if string(got) != string(want) {
+				t.Fatalf("Go observer contract changed: hive=%s actual=%s required=%s", tc.Hive, got, want)
+			}
+		})
+	}
+	for _, origin := range cases.Rejected {
+		t.Run("reject "+origin, func(t *testing.T) {
+			failure := observedConnectionFailure(io.EOF, nil, localState{Hive: "https://hive.test"}, "/api/bee/agent", "connect")
+			failure.Evidence["target_origin"] = origin
+			raw, _ := json.Marshal(DesktopConnectionDetail{Failure: failure, Retry: "halted"})
+			var detail DesktopConnectionDetail
+			if err := json.Unmarshal(raw, &detail); err == nil {
+				t.Fatalf("unsafe target_origin accepted: %q", origin)
+			}
+		})
+	}
+}

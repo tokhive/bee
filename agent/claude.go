@@ -102,13 +102,16 @@ func (source claudeKeychain) readRaw(ctx context.Context) ([]byte, error) {
 	command.Stdout, command.Stderr = &output, io.Discard
 	if err := command.Run(); err != nil {
 		if live.Err() != nil {
-			return nil, errors.New("Claude Keychain read was cancelled or timed out")
+			return nil, fmt.Errorf("Claude Keychain read context failed: %w", live.Err())
 		}
 		var exit *exec.ExitError
 		if errors.As(err, &exit) && exit.ExitCode() == 44 {
-			return nil, errClaudeKeychainMissing
+			return nil, fmt.Errorf("%w: security exit=%d", errClaudeKeychainMissing, exit.ExitCode())
 		}
-		return nil, errClaudeKeychainUnavailable
+		if errors.As(err, &exit) {
+			return nil, fmt.Errorf("%w: security exit=%d", errClaudeKeychainUnavailable, exit.ExitCode())
+		}
+		return nil, fmt.Errorf("%w: command_start=false", errClaudeKeychainUnavailable)
 	}
 	return bytes.Clone(bytes.TrimSpace(output.Bytes())), nil
 }

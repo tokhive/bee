@@ -40,7 +40,11 @@ More:
   bee confirm-account --platform P --account-fingerprint FP
   bee codex-status / bee claude-status inspect the local sign-in without contacting Hive
 
+Machine entry (no contribution or configuration access):
+  bee desktop                private versioned JSON protocol over stdin/stdout
+
 Device commands take --config PATH to use another device configuration.
+bee desktop accepts no flags or additional arguments.
 codex-status and claude-status use their own official-client directory options.
 help and version do not read device configuration.
 Run bee <command> -h for its options.
@@ -120,7 +124,7 @@ func start(ctx context.Context, args []string, out io.Writer) error {
 // supplies is taking work.
 func status(ctx context.Context, client *http.Client, configPath string, state localState, out io.Writer) error {
 	var identity beewire.Identity
-	if err := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity); err != nil {
+	if err := callState(ctx, client, state, "/api/bee/identity", "GET", nil, &identity); err != nil {
 		return err
 	}
 	fmt.Fprintf(out, "Bee:     %s\n", versionLine())
@@ -148,7 +152,7 @@ func status(ctx context.Context, client *http.Client, configPath string, state l
 	fmt.Fprintf(out, "Supply:  %s (%s)\n", strings.Join(platforms, ", "), filepath.Base(egressPath))
 	for _, platform := range platforms {
 		var supply beewire.PlatformSupply
-		if err := call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, "GET", state.Credential, nil, &supply); err != nil {
+		if err := callState(ctx, client, state, "/api/bee/platforms/"+platform, "GET", nil, &supply); err != nil {
 			fmt.Fprintf(out, "  %-7s state unknown: %v\n", platform, err)
 			continue
 		}

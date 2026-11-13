@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -74,6 +75,7 @@ func queryClaudeProfile(ctx context.Context, credential claudeCredential, transp
 		return empty, errors.New("official Claude account verification did not succeed; account identity was not confirmed")
 	}
 	raw, err := io.ReadAll(io.LimitReader(res.Body, 65537))
+	defer clear(raw)
 	if err != nil || len(raw) > 65536 {
 		return empty, errors.New("failed to read official Claude account profile or profile is too large")
 	}
@@ -86,8 +88,22 @@ func queryClaudeProfile(ctx context.Context, credential claudeCredential, transp
 			UUID string `json:"uuid"`
 		} `json:"organization"`
 	}
-	if json.Unmarshal(raw, &profile) != nil || !claudeUUID(profile.Account.UUID) || !claudeUUID(profile.Organization.UUID) || strings.TrimSpace(profile.Account.Email) == "" {
-		return empty, errors.New("official Claude account profile is missing or has an invalid format")
+	if err := json.Unmarshal(raw, &profile); err != nil {
+		var typeErr *json.UnmarshalTypeError
+		if errors.As(err, &typeErr) {
+			actual, _, _ := strings.Cut(typeErr.Value, " ")
+			return empty, fmt.Errorf("official Claude profile field type rejected: field=%s actual_type=%s byte=%d", typeErr.Field, actual, typeErr.Offset)
+		}
+		return empty, fmt.Errorf("official Claude profile JSON rejected: bytes=%d", len(raw))
+	}
+	if !claudeUUID(profile.Account.UUID) {
+		return empty, fmt.Errorf("official Claude profile account.uuid rejected: actual_type=string chars=%d; required=UUID", len(profile.Account.UUID))
+	}
+	if !claudeUUID(profile.Organization.UUID) {
+		return empty, fmt.Errorf("official Claude profile organization.uuid rejected: actual_type=string chars=%d; required=UUID", len(profile.Organization.UUID))
+	}
+	if strings.TrimSpace(profile.Account.Email) == "" {
+		return empty, errors.New("official Claude profile account.email rejected: actual=empty; required=nonempty email")
 	}
 	return claudeIdentity{account: strings.ToLower(profile.Account.UUID), organization: strings.ToLower(profile.Organization.UUID)}, nil
 }

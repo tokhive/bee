@@ -15,7 +15,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
-	"syscall"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -151,7 +150,7 @@ func (source codexSource) readForMaintenance(ctx context.Context) (codexCredenti
 func readCodexFile(path string) ([]byte, error) {
 	info, err := os.Lstat(path)
 	if os.IsNotExist(err) {
-		return nil, &credentialError{kind: "missing", detail: path}
+		return nil, &credentialError{kind: "missing", detail: path, cause: err}
 	}
 	if err != nil {
 		return nil, &credentialError{kind: "read", detail: path, cause: err}
@@ -159,25 +158,20 @@ func readCodexFile(path string) ([]byte, error) {
 	if !info.Mode().IsRegular() {
 		return nil, &credentialError{kind: "regular", detail: fmt.Sprintf("%s; mode=%s", path, info.Mode())}
 	}
-	fd, err := syscall.Open(path, syscall.O_RDONLY|syscall.O_NOFOLLOW, 0)
+	file, err := openRegularNoFollow(path)
 	if err != nil {
 		return nil, &credentialError{kind: "read", detail: path, cause: err}
 	}
-	file := os.NewFile(uintptr(fd), path)
 	defer file.Close()
-	info, err = file.Stat()
-	if err != nil {
-		return nil, &credentialError{kind: "read", detail: path, cause: err}
-	}
-	if !info.Mode().IsRegular() {
-		return nil, &credentialError{kind: "regular", detail: fmt.Sprintf("%s; mode=%s", path, info.Mode())}
-	}
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
 	if err != nil {
+		clear(raw)
 		return nil, &credentialError{kind: "read", detail: path, cause: err}
 	}
 	if len(raw) > 65536 {
-		return nil, &credentialError{kind: "size", detail: fmt.Sprintf("%s; bytes_read=%d", path, len(raw))}
+		size := len(raw)
+		clear(raw)
+		return nil, &credentialError{kind: "size", detail: fmt.Sprintf("%s; bytes_read=%d", path, size)}
 	}
 	return raw, nil
 }
@@ -204,7 +198,18 @@ func readCodexKeyring(ctx context.Context, home string) ([]byte, error) {
 	command.Stdout = &output
 	command.Stderr = io.Discard
 	if err := command.Run(); err != nil {
-		return nil, errors.New("failed to read the Codex direct Keychain; verify the directory, login mode, and system permissions, or explicitly select file storage")
+		clear(output.Bytes())
+		if live.Err() != nil {
+			return nil, fmt.Errorf("Codex Keychain read context failed: %w", live.Err())
+		}
+		var exit *exec.ExitError
+		if errors.As(err, &exit) {
+			if exit.ExitCode() == 44 {
+				return nil, fmt.Errorf("Codex Keychain item absent: security exit=%d: %w", exit.ExitCode(), os.ErrNotExist)
+			}
+			return nil, fmt.Errorf("Codex Keychain read failed: security exit=%d; verify system permissions", exit.ExitCode())
+		}
+		return nil, fmt.Errorf("Codex Keychain command could not start: %w", err)
 	}
 	return bytes.TrimSpace(output.Bytes()), nil
 }

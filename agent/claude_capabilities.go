@@ -49,7 +49,10 @@ func localClaudeVersion(ctx context.Context) string {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	command := exec.CommandContext(ctx, path, "--version")
+	// A wrapper can exit while a descendant retains its output pipes.
+	command.WaitDelay = 100 * time.Millisecond
+	out, err := command.Output()
 	if err != nil {
 		return defaultClaudeClientVersion
 	}

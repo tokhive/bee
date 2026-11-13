@@ -56,7 +56,7 @@ func (cfg *egressConfig) synchronizeOpenAIAPI(ctx context.Context, state localSt
 		// Expire supply immediately when the local file is removed, rather than
 		// waiting for the source lease to time out.
 		if s.registeredKey != "" {
-			_ = call(ctx, httpClient(), state.Hive, "/api/bee/openai-api/status", "POST", state.Credential, beewire.OpenAIAPIStatus{Lease: lease, KeyFingerprint: s.registeredKey, Models: []string{}}, nil)
+			_ = callState(ctx, httpClient(), state, "/api/bee/openai-api/status", "POST", beewire.OpenAIAPIStatus{Lease: lease, KeyFingerprint: s.registeredKey, Models: []string{}}, nil)
 		}
 		s.message(out, "source_unavailable", "OpenAI API key file unavailable; supply paused")
 		return nil
@@ -66,7 +66,7 @@ func (cfg *egressConfig) synchronizeOpenAIAPI(ctx context.Context, state localSt
 	// not leave a long-lived static key bound to an obsolete recipient.
 	if force || s.registeredLease != lease || s.registeredKey != print || time.Since(s.reportedAt) >= 10*time.Second {
 		var inbox tee.InboxPublic
-		if err = call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &inbox); err != nil {
+		if err = callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &inbox); err != nil {
 			return err
 		}
 		if sha256.Sum256(inbox.PublicKey) != inbox.KeyID || cfg.InboxKeyID != "" && hex.EncodeToString(inbox.KeyID[:]) != cfg.InboxKeyID {
@@ -76,7 +76,7 @@ func (cfg *egressConfig) synchronizeOpenAIAPI(ctx context.Context, state localSt
 		if err != nil {
 			return errInboxIdentity
 		}
-		if err = call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential, beewire.CredentialRegistration{Lease: lease, Envelope: envelope, OpenAIAPI: &beewire.OpenAIAPIKey{KeyFingerprint: print}}, nil); err != nil {
+		if err = callState(ctx, httpClient(), state, "/api/bee/credentials", "POST", beewire.CredentialRegistration{Lease: lease, Envelope: envelope, OpenAIAPI: &beewire.OpenAIAPIKey{KeyFingerprint: print}}, nil); err != nil {
 			return err
 		}
 		s.registeredLease, s.registeredKey = lease, print
@@ -110,7 +110,7 @@ func (cfg *egressConfig) synchronizeOpenAIAPI(ctx context.Context, state localSt
 			report.Ready = true
 		}
 	}
-	if err = call(ctx, httpClient(), state.Hive, "/api/bee/openai-api/status", "POST", state.Credential, report, nil); err != nil {
+	if err = callState(ctx, httpClient(), state, "/api/bee/openai-api/status", "POST", report, nil); err != nil {
 		return err
 	}
 	s.reportedAt = time.Now()

@@ -190,3 +190,12 @@
 - [主入口](../index.html?scene=add-platform) · [完整主预览快照](20261113-104743-approved-add-account/index.html?scene=add-platform)。冻结全部对照依赖，旧历史未改写。
 - 纳入三步添加 OpenAI 账号向导、仅展示已接入账号的列表及圆圈叹号错误详情；保留原有卡片和全部 519 个场景。相对来源稿仅更新标题、认可标记和旧版对照链接。
 - 复用已完成的 38 个新增场景及八类错误验证，补查主入口连续接入、错误浮层和历史版。正式应用与真实接口未在本轮修改。
+
+
+## 20261113-110233-pairing-error-actions 首次绑定异常页操作层级
+
+- 时区：Asia/Shanghai；状态：**待评审**。用户已确认文字 UI 并要求输出 HTML；尚未将本轮 HTML 纳入主预览。
+- 修改前复用 [上一轮完整稿](20261112-190918-add-error-details/draft.html?scene=setup-unknown)，原稿 SHA-256 为 `cd13fc770107263351e9c21a7315591b703722e715146f0b7d9e4fb865abd54c`，已核对字节一致。
+- [本轮完整快照](20261113-110233-pairing-error-actions/draft.html?scene=setup-unknown) · [叹号详情](20261113-110233-pairing-error-actions/draft.html?scene=setup-unknown-details&theme=dark&size=narrow)。完整内联 HTML 与所有对照依赖已冻结；`before-pairing.html` 为本轮修改前原稿，旧历史未改写。支持场景、外观、窗口参数；可在 worktree 根目录用 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview` 访问。
+- 单一主按钮、次要检查动作，诊断移入叹号详情；保留中文原因、原始错误与校验要求，新增 6 个可直接打开的子场景。原有 519 项保留，草稿共 525 项。快速切场景的旧设备定位消息不再覆盖新场景。
+- 浏览器已验证本轮受影响交互、浅深色／两种窗口、焦点与模拟导出，并在冻结后独立复查；[浅色布局](20261113-110233-pairing-error-actions/error-light.png)与[深色详情](20261113-110233-pairing-error-actions/error-details-dark.png)截图已目视检查，仅补充布局说明。主预览、正式应用及真实 Hive 协议未在本轮修改。

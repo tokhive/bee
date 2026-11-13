@@ -12,7 +12,7 @@ test('account entry reads each source once and never performs automatic writes o
  await page.getByRole('button',{name:'概览',exact:true}).click();await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  await page.waitForTimeout(500);expect(await calls(page,'account_detect')).toHaveLength(2);
  expect(await calls(page,'account_action')).toHaveLength(0);expect(await calls(page,'authorize_start')).toHaveLength(0);
- await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();const source=page.getByRole('dialog').getByLabel('读取目录');await source.fill('/tmp/new');await source.blur();expect((await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new')).toHaveLength(0);await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();
+ await page.getByRole('button',{name:'OpenAI',exact:true}).click();await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('button',{name:'更换连接方式',exact:true}).click();await page.getByRole('button',{name:'设置读取位置',exact:true}).click();const source=page.getByLabel('读取目录');await source.fill('/tmp/new');await source.blur();expect((await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new')).toHaveLength(0);await page.getByRole('button',{name:'保存',exact:true}).click();
  await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.directory==='/tmp/new'&&c.args.request.mode==='local').length).toBe(1);
 });
 test('selected matching candidate automatically reads official quota once and retains the raw percentage',async({page})=>{

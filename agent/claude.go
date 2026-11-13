@@ -154,7 +154,8 @@ func parseClaudeCredential(raw []byte) (claudeCredential, error) {
 			Refresh string   `json:"refreshToken"`
 			Expires int64    `json:"expiresAt"`
 			Scopes  []string `json:"scopes"`
-			Plan    string   `json:"subscriptionType"`
+			Plan    *string  `json:"subscriptionType"`
+			Tier    string   `json:"rateLimitTier"`
 		} `json:"claudeAiOauth"`
 	}
 	if len(raw) > 65536 {
@@ -186,16 +187,37 @@ func parseClaudeCredential(raw []byte) (claudeCredential, error) {
 		return claudeCredential{}, &credentialError{kind: "expiry", detail: fmt.Sprintf("expiresAt=%d", auth.Expires)}
 	}
 
-	credential := claudeCredential{secret: secret, expiresAt: time.UnixMilli(auth.Expires), plan: "unknown", hasRefreshToken: auth.Refresh != ""}
-	switch auth.Plan {
-	case "free", "pro", "max", "team", "enterprise":
-		credential.plan = auth.Plan
-	}
+	credential := claudeCredential{secret: secret, expiresAt: time.UnixMilli(auth.Expires), plan: claudePlan(auth.Plan, auth.Tier), hasRefreshToken: auth.Refresh != ""}
 	for _, scope := range auth.Scopes {
 		credential.hasInferenceScope = credential.hasInferenceScope || scope == "user:inference"
 		credential.hasProfileScope = credential.hasProfileScope || scope == "user:profile"
 	}
 	return credential, nil
+}
+
+// claudePlan names the market plan of a Claude Code sign-in from the
+// subscriptionType and rateLimitTier the official client stores.
+//
+// Claude Code writes subscriptionType only for the organization types it maps
+// (claude_pro, claude_max, claude_team, claude_enterprise) and leaves it null
+// for every other claude.ai organization, which is how a Free sign-in looks.
+// Ultra, the plan called Max 20x until 2026-10-30, is still stored as "max";
+// only its rate limit tier, default_claude_max_20x, tells it apart from Max.
+// A value the client does not write is "unknown", which no plan accepts.
+func claudePlan(subscription *string, tier string) string {
+	if subscription == nil || *subscription == "" {
+		return "free"
+	}
+	switch *subscription {
+	case "max":
+		if tier == "default_claude_max_20x" {
+			return "ultra"
+		}
+		return "max"
+	case "free", "pro", "team", "enterprise":
+		return *subscription
+	}
+	return "unknown"
 }
 
 func (c claudeCredential) available(now time.Time) bool {

@@ -205,7 +205,7 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 		result.Models = append([]string(nil), s.metadataModels...)
 		result.Plan = s.metadataPlan
 	}
-	windows, unrecognised, reason := parseClaudeQuota(usage, now)
+	windows, unrecognised, reason := parseClaudeQuota(usage, credential.plan, now)
 	if reason != "" {
 		return fail("/api/oauth/usage quota windows not understood: " + reason), nil
 	}
@@ -227,11 +227,12 @@ func (s *claudeCapabilitySource) observe(ctx context.Context, credential claudeC
 }
 
 // parseClaudeQuota reads the two windows that decide whether an account can
-// take work — the five hour and seven day general limits — plus the scoped
+// take work — the five hour and seven day general limits, or the seven day one
+// alone on Ultra, which has no five hour limit — plus the scoped
 // weekly windows when the account has them. It also returns the names of any
 // top-level buckets it does not know, so the operator can be told the upstream
 // grew something new.
-func parseClaudeQuota(usage map[string]json.RawMessage, now time.Time) ([]beewire.QuotaWindow, []string, string) {
+func parseClaudeQuota(usage map[string]json.RawMessage, plan string, now time.Time) ([]beewire.QuotaWindow, []string, string) {
 	if usage == nil {
 		return nil, nil, "empty response"
 	}
@@ -271,7 +272,7 @@ func parseClaudeQuota(usage map[string]json.RawMessage, now time.Time) ([]beewir
 			// be a live limit, the account simply runs into it: the upstream
 			// answers 429, the account goes into cooldown, and the attempt is
 			// not billed. The five hour and seven day windows below remain
-			// required, so a payload that stops describing those still stops the
+			// required (Ultra only the seven day one), so a payload that stops describing those still stops the
 			// supply.
 			// Only a bucket with content is worth the operator's attention: the
 			// null ones are placeholders for limits the account does not have,
@@ -292,7 +293,8 @@ func parseClaudeQuota(usage map[string]json.RawMessage, now time.Time) ([]beewir
 	} {
 		raw := usage[field.name]
 		if claudeQuotaNull(raw) {
-			if field.scope == "" {
+			// Ultra has no five-hour limit; its seven-day window still decides.
+			if field.scope == "" && !(field.name == "five_hour" && beewire.ClaudeWeeklyOnly(plan)) {
 				return nil, nil, field.name + " is missing"
 			}
 			continue

@@ -1,8 +1,8 @@
 # 首次添加 AI 账号：三步向导
 
-状态：文本流程与线框已获用户确认；2026-11-12 HTML 待评审。仅在 bee-desktop-ui worktree 维护。
+状态：文本流程与线框已获用户确认；2026-11-13 HTML 已获认可并纳入主预览。仅在 bee-desktop-ui worktree 维护。
 
-[可交互待评审稿](../preview/draft.html?scene=add-platform) · [现有主预览](../preview/index.html) · [历史索引](../preview/history/README.md)
+[可交互主预览](../preview/index.html?scene=add-platform) · [现有主预览](../preview/index.html) · [历史索引](../preview/history/README.md)
 
 ## 范围与复用
 
@@ -16,7 +16,7 @@ OpenAI 和 Claude 是平台选项，不再作为首次添加页的空账号占�
 
 - 沿用并已确认：现有 Bee 外壳、字体、浅深色语义颜色、紧凑／宽屏尺寸及账号卡片。
 - 沿用：单文件 HTML、内联 CSS 和 JavaScript，以本地定时器模拟结果；无新增依赖或版本要求。
-- HTML 使用 `docs/preview/draft.html`；视觉认可前不纳入 `index.html`。正式 React、Go、账号接口不在本轮范围。
+- HTML 已纳入 `docs/preview/index.html`；`draft.html` 保留为已认可来源稿。正式 React、Go、账号接口不在本轮范围。
 - Wokey 截图仅作为平台选择与授权区域层级参考。网站访问超时；不据截图引入设备码授权、OAuth 粘贴或新平台。
 
 ## 已确认流程
@@ -78,4 +78,4 @@ flowchart TD
 
 接入权限拒绝、历史查询失败、保存失败等预设允许重试后仍失败，不能以按钮点击伪造故障修复。目录未找到场景可通过选择预设工作目录展示恢复。真实能力验收留到正式实现。
 
-本轮浏览器验证记录见 [预览 README](../preview/README.md)。下一步评审三步向导的视觉与操作；认可后仅将认可部分纳入固定主预览，再单独推进正式实现。
+本轮浏览器验证记录见 [预览 README](../preview/README.md)。视觉与操作已获认可并纳入固定主预览；下一步单独推进正式应用实现。

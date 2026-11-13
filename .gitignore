@@ -6,3 +6,5 @@
 .DS_Store
 # Local desktop toolchains, immutable TEE exports and build caches.
 /.cache/
+# Desktop acceptance artifacts are kept locally, outside Git history.
+/docs/desktop/evidence/

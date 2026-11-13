@@ -1,0 +1,900 @@
+diff --git a/desktop/src/app/NativeApp.tsx b/desktop/src/app/NativeApp.tsx
+index ab14151..02bb8b4 100644
+--- a/desktop/src/app/NativeApp.tsx
++++ b/desktop/src/app/NativeApp.tsx
+@@ -12,6 +12,8 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
+ import {AppShell} from '../components/AppShell';
+ import {StartupRecoveryNotice} from '../components/StartupRecoveryNotice';
+ import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
++import {FirstLaunchWizard} from '../features/device/FirstLaunchWizard';
++import {observeFirstLaunch,firstLaunchIntent,firstLaunchReceipt,firstLaunchAdmission,type FirstLaunchSession} from '../system/firstLaunch';
+ import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
+ import {useAccounts} from '../features/accounts/useAccounts';
+ import {useRuntime} from '../features/lifecycle/useRuntime';
+@@ -49,6 +51,36 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
+ }
+ const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
+ const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
++function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedback,admission,onIntent,onReceipt,firstProfile=false,onScopeRefresh}:{firstProfile?:boolean;onScopeRefresh:()=>Promise<unknown>;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;admission:ReturnType<typeof firstLaunchAdmission>;onIntent:(hive:string,name:string)=>void;onReceipt:(view:DeviceView)=>void;onNavigate:(page:'accounts'|'overview')=>void;nativeLanguageFeedback:ReactNode}){
++ const [diagnostic,setDiagnostic]=useState(false),[busy,setBusy]=useState(false),[checking,setChecking]=useState(false),[operationError,setOperationError]=useState<UiFailure|null>(null);
++ const working=useRef(false),mounted=useRef(true),sequence=useRef(0);
++ const nativeUnavailable=!firstProfile&&snapshot.native.state!=='ready';
++ const returnToSetup=()=>{setDiagnostic(false);requestAnimationFrame(()=>document.querySelector<HTMLElement>(nativeUnavailable?'#first-launch-native-title':'.first-launch-wizard h1')?.focus());};
++ useEffect(()=>{if(diagnostic)document.getElementById('first-launch-diagnostics-title')?.focus();},[diagnostic]);
++ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;sequence.current++;};},[]);
++ const instance=snapshot.native.metadata?.instance;
++ // A native instance owns operation receipts; the mounted wizard owns the session draft.
++ useEffect(()=>{sequence.current++;working.current=false;setBusy(false);setChecking(false);setOperationError(null);},[instance,nativeUnavailable]);
++ const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
++ const run=async(action?:(active:()=>boolean)=>Promise<unknown>,check=false)=>{
++  if(working.current||!model)return;working.current=true;const attempt=++sequence.current;const active=()=>mounted.current&&attempt===sequence.current&&(firstProfile||model.getSnapshot().native.state==='ready')&&model.getSnapshot().native.metadata?.instance===instance;
++  (check?setChecking:setBusy)(true);if(!check)setOperationError(null);
++  try{if(model.getSnapshot().busy)await model.refresh();if(!active())return;await action?.(active);if(active())await model.refresh();if(active()&&!identityFailure(model.getSnapshot()))setOperationError(null);}
++  catch(cause){if(active()){setOperationError(normalizeFailure(cause,'device_pairing'));await model.refresh();}}
++  finally{if(attempt===sequence.current){working.current=false;if(mounted.current)(check?setChecking:setBusy)(false);}}
++ };
++ const problem=snapshot.deviceContextFailure?.code!=='DEVICE_CONTEXT_UNCONFIGURED'?snapshot.deviceContextFailure:null;
++ const error=firstProfile?null:admission.failure??problem??snapshot.recoveryError??snapshot.deviceError??snapshot.error??snapshot.startupReadError??(snapshot.native.error?normalizeFailure(snapshot.native.error,'bridge_startup'):null)??null;
++ const fresh=firstProfile||snapshot.native.state==='ready'&&snapshot.bindingRevision!==undefined&&snapshot.deviceContextFailure?.code==='DEVICE_CONTEXT_UNCONFIGURED'&&snapshot.recoveryObservation==='absent'&&snapshot.device?.state==='unbound'&&!error&&snapshot.startup?.state==='ready';
++ return <>
++  <div hidden={diagnostic}>
++   {firstProfile?null:nativeUnavailable?<main className="first-launch-content"><h1 id="first-launch-native-title" tabIndex={-1}>{snapshot.native.state==='starting'?t('正在启动 Bee…'):t('状态待核对')}</h1><StartupRecoveryNotice snapshot={snapshot} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>setDiagnostic(true)}/></main>:<StartupRecoveryNotice snapshot={snapshot} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>setDiagnostic(true)}/>}
++   {nativeLanguageFeedback}
++   <div hidden={nativeUnavailable}><FirstLaunchWizard view={firstProfile?{state:'unbound'}:admission.view} context={snapshot.deviceContext} refreshStatus={snapshot.refresh} completed={admission.completed} initialLoading={!fresh&&!admission.view?.recovery&&!error} busy={busy} checking={checking} error={error} operationError={operationError} begin={(hive,name)=>{onIntent(hive,name);return run(async active=>{const view=await props.client.begin(hive,name);if(active())onReceipt(view);await onScopeRefresh();});}} refresh={()=>run(()=>model?.recheckStartup()??Promise.resolve(),true)} open={()=>run(()=>props.client.open())} onOpenHive={()=>run(props.openHive)} onNavigate={onNavigate} onDiagnostics={()=>setDiagnostic(true)}/></div>
++  </div>
++  {diagnostic&&<main className="first-launch-content"><h1 id="first-launch-diagnostics-title" tabIndex={-1}>{t('诊断')}</h1><button onClick={returnToSetup}>{t('返回设备设置')}</button><StartupRecoveryNotice snapshot={snapshot} diagnostics onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>{}}/><NativeDiagnosticsPage client={diagnostics} instance={snapshot.native.state==='ready'?instance:undefined} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id} onReport={model?.acceptDiagnosticReport} onNavigate={returnToSetup}/></main>}
++ </>;
++}
+ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeFeedback:ReactNode}){
+  const {native,device:view}=snapshot;
+  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
+@@ -157,6 +189,7 @@ export function NativeApp(props:NativeProps){
+  const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
+  const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
+  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
++ const [firstLaunch,setFirstLaunch]=useState<FirstLaunchSession>({});
+  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
+  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
+  const [preferencesTrusted,setPreferencesTrusted]=useState(false);
+@@ -188,11 +221,15 @@ export function NativeApp(props:NativeProps){
+  useEffect(()=>{
+   if(!scopeReady)return;
+   const coordinator=createDesktopState({scope:initialScope.current,openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
+-  setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
++  setModel(coordinator);const off=coordinator.subscribe(()=>{const next=coordinator.getSnapshot();setFirstLaunch(previous=>observeFirstLaunch(previous,next));setSnapshot(next);});
+   return()=>{off();coordinator.dispose();};
+  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply,scopeReady]);
+  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
+  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
+  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
++ const nativeLanguageFeedback=localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>;
++ const admission=firstLaunchAdmission(firstLaunch,snapshot);
++ const firstProfile=!!switching.snapshot&&!switching.snapshot.profiles.current_profile&&!switchPending(switching.snapshot)&&switching.snapshot.profiles.migration_blockers.length===0;
++ if(!admission.workspace&&!switchPending(switching.snapshot))return <NativeFirstLaunch firstProfile={firstProfile} onScopeRefresh={switching.refresh} props={props} snapshot={snapshot} model={model} admission={admission} onIntent={(hive,name)=>setFirstLaunch(previous=>firstLaunchIntent(previous,model?.getSnapshot()??snapshot,hive,name))} onReceipt={view=>setFirstLaunch(previous=>firstLaunchReceipt(previous,model?.getSnapshot()??snapshot,view))} onNavigate={destination=>{if(!firstLaunchAdmission(firstLaunch,model?.getSnapshot()??snapshot).completed)return;setFirstLaunch(previous=>({...previous,dismissed:previous.attempt?.operationId,knownBinding:true}));setPage(destination);}} nativeLanguageFeedback={nativeLanguageFeedback}/>;
+  return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeFeedback={<>{notificationSource&&<div className="problem-notice" role="status"><p>{t('此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。',{origin:notificationSource.origin})}</p><div className="inline-actions"><button onClick={()=>{setPage('overview');switching.setChooserOpen(true);}}>{t('查看 Hive 列表')}</button><button aria-label={t('关闭通知提示')} onClick={()=>setNotificationSource(null)}>{t('关闭')}</button></div></div>}{localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}</>}/>;
+ }
+diff --git a/desktop/src/features/accounts/AccountErrorPopover.tsx b/desktop/src/features/accounts/AccountErrorPopover.tsx
+index dc33879..1415367 100644
+--- a/desktop/src/features/accounts/AccountErrorPopover.tsx
++++ b/desktop/src/features/accounts/AccountErrorPopover.tsx
+@@ -1,6 +1,6 @@
+ import {useEffect,useId,useState} from 'react';
+ import {Popover} from 'radix-ui';
+-import {Info} from 'lucide-react';
++import {CircleAlert} from 'lucide-react';
+ import {Button} from '../../components/ui';
+ import {presentFailure} from '../../presentation/problems';
+ import type {UiFailure} from '../../system/failures';
+@@ -12,7 +12,7 @@ export function AccountErrorPopover({errors}:{errors:UiFailure[]}){
+  const content=errors.map(error=>presentFailure(error,currentLocale()).details).join('\n\n');
+  useEffect(()=>setOpen(false),[content]);
+  return <Popover.Root open={open} onOpenChange={setOpen}>
+-  <Popover.Trigger asChild><Button type="button" variant="ghost" className="account-error-trigger" aria-label={t('查看错误详情')} title={t('查看错误详情')}><Info aria-hidden="true"/></Button></Popover.Trigger>
++  <Popover.Trigger asChild><Button type="button" variant="ghost" className="account-error-trigger" aria-label={t('查看错误详情')} title={t('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
+   <Popover.Portal><Popover.Content className="account-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
+    <header><h3 id={titleId}>{t('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={t('关闭错误详情')}>{t('关闭')}</Button></Popover.Close></header>
+    <pre>{content}</pre>
+diff --git a/desktop/src/features/accounts/AddAccountWizard.tsx b/desktop/src/features/accounts/AddAccountWizard.tsx
+new file mode 100644
+index 0000000..f39fe94
+--- /dev/null
++++ b/desktop/src/features/accounts/AddAccountWizard.tsx
+@@ -0,0 +1,98 @@
++import {useEffect,useRef,useState} from 'react';
++import {open} from '@tauri-apps/plugin-dialog';
++import {Check,FolderOpen,LoaderCircle,Sparkles} from 'lucide-react';
++import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
++import {Button} from '../../components/ui';
++import {accountConfirmationKey} from '../../system/accounts';
++import {normalizeFailure,type UiFailure} from '../../system/failures';
++import {presentFailure} from '../../presentation/problems';
++import {currentLocale,t} from '../../i18n/index';
++import {accountPending,type AccountsModel} from './useAccounts';
++import {accountActionBlock} from './accountPresentation';
++import {AccountErrorPopover} from './AccountErrorPopover';
++import {useAccountClock} from './AccountDisplay';
++import type {RuntimeModel} from '../lifecycle/useRuntime';
++import {supplyFresh,type SharedSupply} from '../supply/useSupply';
++import './add-account.css';
++
++type Props={accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply;onBack:()=>void;navigationRequest?:NavigationRequest;onNavigate?:(target:NavigationTarget)=>void};
++export function AddAccountWizard({accounts,runtime,supply,onBack,navigationRequest,onNavigate}:Props){
++ const [screen,setScreen]=useState<'connect'|'source'|'confirm'>(navigationRequest?.target.section==='source'?'source':'connect');
++ const [checking,setChecking]=useState(false),[confirmation,setConfirmation]=useState<string>(),[changed,setChanged]=useState(false);
++ const [pickerError,setPickerError]=useState<UiFailure>(),[picking,setPicking]=useState(false);
++ const [confirmedIdentity,setConfirmedIdentity]=useState<{fingerprint:string|null;plan:string|null}>();
++ const [submitted,setSubmitted]=useState(false),[kept,setKept]=useState(false);
++ const initial=useRef(false),active=useRef(true),heading=useRef<HTMLHeadingElement>(null);
++ const now=useAccountClock(accounts),view=accounts.views.openai,op=view?.operation;
++ const progress=accounts.loginProgress?.id===op?.id?accounts.loginProgress?.value:undefined;
++ const pending=accountPending(view)||op?.state==='unknown'||!!accounts.uncertain.openai||progress?.phase==='cleaning_up'||!!progress?.blocker;
++ const observing=checking||!initial.current&&!!accounts.busy.openai;
++ const busy=observing||!accounts.sourceReady||checking||accounts.sourceSaving||!!accounts.writeBusy.openai;
++ const candidate=view?.candidate;
++ const valid=!!candidate?.identity_verified&&candidate.state==='available'&&!!candidate.reference&&!!candidate.fingerprint&&!!candidate.expires_at&&Date.parse(candidate.expires_at)>now+30000&&!accounts.dirty.openai&&!accounts.errors.openai;
++ const login=pending&&op?.kind==='authorize';
++ const intake=pending&&!login;
++ const supplyCurrent=!!supply&&!supply.blocked&&supplyFresh(supply.state,'openai',now)&&!supply.state.writeBusy;
++ const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),candidate?.identity_verified,accounts.sourceFor('openai'),runtime.view?.local,runtime.view?.run_id,supply?.state.views.openai?.paused]);
++ const block=(action:'select'|'authorize')=>accountActionBlock(action,{autoService:accounts.autoService,view,platform:'openai',now:Date.now(),dirty:!!accounts.dirty.openai,busy:!!accounts.writeBusy.openai||accounts.sourceSaving||checking,unknown:!!accounts.uncertain.openai||!!accounts.readFailures.openai||op?.state==='unknown',submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults&&accounts.sourceReady,runtime:runtime.view,runtimeBlocked:!!runtime.error||runtime.uncertain||runtime.stalled});
++ const selectBlock=block('select'),loginBlock=block('authorize');
++ const confirmValid=confirmation===stamp()&&valid&&supplyCurrent&&!selectBlock&&!busy;
++ const missing=candidate?.state==='source_missing';
++ const rawError=pickerError??(screen==='source'?accounts.sourceSaveError:undefined)??(login?accounts.loginOpenError:undefined)??(login?accounts.cancelUnconfirmed.openai?.failure:undefined)??progress?.blocker??(op?.kind==='authorize'&&op.state==='failed'&&!valid?op.error:undefined)??accounts.errors.openai??(!missing?candidate?.error:undefined)??(!missing?view?.authorization.error:undefined)??(op?.kind==='authorize'&&valid?undefined:op?.error);
++ const queryError=accounts.originalAccountQuery?.error;
++ const error=rawError?normalizeFailure(rawError,'account_operation'):undefined;
++ const verify=async()=>{
++  setChecking(true);setChanged(false);setKept(false);
++  try{await accounts.verifyOpenai();}finally{if(active.current){setChecking(false);setScreen('confirm');setConfirmation(undefined);}}
++ };
++ useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
++ useEffect(()=>{
++  if(initial.current||!accounts.sourceReady||!accounts.defaults||!view||pending||accounts.busy.openai||screen==='source')return;
++  initial.current=true;void verify();
++ },[accounts.defaults,accounts.sourceReady,view,pending,accounts.busy.openai,screen]);
++ // Capture the facts actually displayed, after verification. Ordinary refreshes
++ // cannot silently replace the identity the user was about to confirm.
++ useEffect(()=>{
++  if(screen==='confirm'&&!checking&&valid&&!pending&&!confirmation){setConfirmation(stamp());setConfirmedIdentity({fingerprint:candidate!.fingerprint,plan:candidate!.plan});}
++ },[screen,checking,valid,pending,confirmation,view,supply?.state.views.openai?.paused]);
++ useEffect(()=>{if(screen==='source')document.getElementById('add-account-directory')?.focus();else heading.current?.focus();},[screen,login,intake]);
++ useEffect(()=>{
++  if(op?.kind==='authorize'&&op.state==='succeeded'&&!pending&&!kept&&screen==='connect'&&valid){setScreen('confirm');setConfirmation(undefined);}
++ },[op,pending,kept,screen,valid]);
++ const problem=error?presentFailure(error,currentLocale()):undefined;
++ const source=accounts.openaiDraft??accounts.sourceFor('openai');
++ const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
++ const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
++ const title=screen==='source'?'设置读取位置':login?progress?.phase==='cleaning_up'||accounts.cancelUnconfirmed.openai?'正在确认登录已结束…':'请在官方页面完成登录':intake?'账号操作结果待核对':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI':kept&&valid?'已保留当前账号':missing?'未找到本机 OpenAI 登录':'连接 OpenAI 账号';
++ return <section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
++  <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
++  <div className="add-account-body">
++   <Sparkles className="add-account-mark" aria-hidden="true"/>
++   <h2 ref={heading} tabIndex={-1}>{t(title)}</h2>
++   <div aria-live="polite">{checking&&<LoaderCircle className="add-account-spinner" aria-label={t('正在读取并核验账号…')}/>}</div>
++   {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
++   {problem?.action&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
++   {screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
++    <label htmlFor="add-account-directory">{t('读取目录')}</label>
++    <div className="add-account-directory"><input id="add-account-directory" name="credential-directory" autoComplete="off" spellCheck={false} value={source.directory??''} placeholder={accounts.defaults?.platforms.find(p=>p.platform==='openai')?.directory} disabled={busy||picking} onChange={e=>accounts.setOpenaiDraft({...source,directory:e.target.value||null})}/><Button type="button" variant="outline" disabled={busy||picking} onClick={()=>{setPicking(true);setPickerError(undefined);void open({directory:true,multiple:false,title:t('选择读取目录'),defaultPath:source.directory??undefined}).then(path=>{if(active.current&&typeof path==='string')accounts.setOpenaiDraft({...source,directory:path});}).catch(cause=>{if(active.current)setPickerError(normalizeFailure(cause,'directory_picker'));}).finally(()=>{if(active.current)setPicking(false);});}}><FolderOpen aria-hidden="true"/>{t('选择目录')}</Button></div>
++    <p>{t('留空使用默认目录。保存后会自动读取并核验账号。')}</p>
++    <label htmlFor="add-account-store">{t('凭证存储')}</label><select id="add-account-store" name="credential-store" value={source.store} disabled={busy} onChange={e=>accounts.setOpenaiDraft({...source,store:e.target.value})}>{accounts.defaults?.platforms.find(p=>p.platform==='openai')?.stores.filter(s=>s.supported).map(s=><option key={s.store} value={s.store}>{s.store}</option>)}</select>
++    <div className="add-account-actions"><Button type="submit" disabled={busy||picking}>{t(accounts.sourceSaving?'正在保存…':'保存')}</Button><Button type="button" variant="outline" disabled={busy||picking} onClick={()=>setScreen('connect')}>{t('返回')}</Button></div>
++   </form>:login?<>
++    <p>{t('登录后自动核验账号，再由你确认是否接入。')}</p>
++    <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t('打开登录页面')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="outline" disabled={busy||progress?.phase==='cleaning_up'} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
++   </>:intake?<><p role="status">{t('账号操作结果待核对')}</p><p>{t('只核对原操作，确认结果前不会重复接入。')}</p>{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
++    <dl><dt>{t('账号标识')}</dt><dd>{confirmedIdentity?.fingerprint?.slice(0,16)}</dd><dt>{t('套餐')}</dt><dd>{confirmedIdentity?.plan??t('尚未确认')}</dd></dl>
++    <p>{t('接单将使用该账号的订阅额度。')}</p>
++    <p>{t(!supplyCurrent?'接单选择尚未确认，请先核对，暂不能接入。':supply?.state.views.openai?.paused?'接入后保留暂停，由你决定何时恢复接单。':'接入后允许接单，账号准备完成且供给条件满足后开始。')}</p>
++    {(changed||confirmation&&confirmation!==stamp())&&<p role="alert">{t('账号、来源或接单选择已变化，请重新核验后确认。')}</p>}
++    {selectBlock&&<p>{t(selectBlock.message)}</p>}
++    <div className="add-account-actions"><Button disabled={!confirmValid||submitted} onClick={()=>{if(!confirmValid||confirmation!==stamp()||block('select')||!supply||!supplyFresh(supply.state,'openai',Date.now())){setChanged(true);return;}setSubmitted(true);accounts.action('openai','select');}}>{t('确认接入')}</Button><Button variant="outline" disabled={busy} onClick={()=>{setScreen('connect');setKept(true);setSubmitted(false);}}>{t('返回')}</Button>{(!confirmValid||submitted)&&<Button variant="ghost" disabled={busy} onClick={()=>{setSubmitted(false);void accounts.recheckCurrentOpenai();void verify();}}>{t('重新核验')}</Button>}</div>
++   </>:<>
++    <p>{t(kept&&valid?'返回不会丢失已核验的账号，继续时会再次核对。':'可以通过官方客户端登录，或设置已有登录的读取位置。')}</p>
++    {loginBlock&&<p>{t(loginBlock.message)}</p>}
++    <div className="add-account-actions">{kept&&valid?<Button disabled={busy} onClick={()=>void verify()}>{t('继续使用此账号')}</Button>:<Button disabled={!!loginBlock||busy} onClick={()=>{initial.current=true;accounts.authorize('openai');}}>{t('登录 OpenAI')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{if(kept&&valid)setKept(false);else openSource();}}>{t(kept&&valid?'更换连接方式':'设置读取位置')}</Button><Button variant="ghost" disabled={busy} onClick={onBack}>{t('返回')}</Button>{error&&<Button variant="ghost" disabled={busy} onClick={()=>void verify()}>{t('重新核验')}</Button>}</div>
++   </>}
++  </div>
++ </section>;
++}
+diff --git a/desktop/src/features/accounts/NativeAccountList.tsx b/desktop/src/features/accounts/NativeAccountList.tsx
+index 2bc8690..1a68f5d 100644
+--- a/desktop/src/features/accounts/NativeAccountList.tsx
++++ b/desktop/src/features/accounts/NativeAccountList.tsx
+@@ -14,7 +14,7 @@ import {AccountQuota,AccountCheckStatus,AccountReadHistory,useAccountClock} from
+ import {Badge,Button} from '../../components/ui';
+ import {t,formatNumber,currentLocale} from '../../i18n/index';
+ 
+-export function NativeAccountList({context,accounts,runtime,supply,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
++export function NativeAccountList({context,accounts,runtime,supply,onNavigate,navigationRequest,visiblePlatforms}:{visiblePlatforms?:('openai'|'claude')[];navigationRequest?:NavigationRequest;context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
+  const now=useAccountClock(accounts);
+  const compactList=context==='accounts'&&accounts.autoService;
+  const running=runtime.view?.local==='running'&&!runtime.error&&!runtime.uncertain;
+@@ -23,7 +23,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
+  const countCopy=confirmedPlatforms.length===platforms.length?t('{count} 个已接入',{count:formatNumber(selectedCount,currentLocale())}):selectedCount?t('已确认接入 {count} 个，其余待确认',{count:formatNumber(selectedCount,currentLocale())}):t('接入数量待确认');
+  return <section className={`native-accounts-section ${accounts.autoService?'auto-service-accounts':''}`} aria-label={t('平台账号列表')}>
+   <div className={`section-heading ${accounts.autoService&&context==='accounts'?'account-inline-check':''}`}>{!accounts.autoService&&<h2>{t('AI 账号')}</h2>}<div className="account-list-status"><AccountCheckStatus supply={supply}/>{!(accounts.autoService&&context==='accounts')&&<span>{countCopy}</span>}</div></div>
+-  <div className={`native-account-list ${compactList?'account-list-compact':''}`}>{compactList&&<div className="account-list-heading" aria-hidden="true"><span>{t('账号')}</span><span>{t('状态')}</span><span>{t('额度')}</span><span>{t('操作')}</span></div>}{platforms.map(platform=>{
++  <div className={`native-account-list ${compactList?'account-list-compact':''}`}>{compactList&&<div className="account-list-heading" aria-hidden="true"><span>{t('账号')}</span><span>{t('状态')}</span><span>{t('额度')}</span><span>{t('操作')}</span></div>}{(visiblePlatforms??platforms).map(platform=>{
+    const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
+    if(context==='accounts'&&accounts.autoService&&platform==='openai')return <OpenaiAccountCard key={platform} accounts={accounts} runtime={runtime} supply={supply} now={now} onNavigate={navigate} navigationRequest={navigationRequest}/>;
+    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];
+diff --git a/desktop/src/features/accounts/NativeAccountsPage.tsx b/desktop/src/features/accounts/NativeAccountsPage.tsx
+index 425904f..4266980 100644
+--- a/desktop/src/features/accounts/NativeAccountsPage.tsx
++++ b/desktop/src/features/accounts/NativeAccountsPage.tsx
+@@ -1,3 +1,7 @@
++import {useEffect} from 'react';
++import {Button} from '../../components/ui';
++import {AddAccountWizard} from './AddAccountWizard';
++import {platforms} from '../supply/useSupply';
+ import {FailureNotice} from '../../components/ProblemNotice';
+ import type {UiFailure} from '../../system/failures';
+ import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
+@@ -7,9 +11,21 @@ import type {SharedSupply} from '../supply/useSupply';
+ import {NativeAccountList} from './NativeAccountList';
+ import {t} from '../../i18n/index';
+ export function NativeAccountsPage({accounts,supply,deviceError,runtime,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;accounts:AccountsModel;supply:SharedSupply|undefined;deviceError:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;runtime:RuntimeModel}){
++ const adding=accounts.setupPlatform,setAdding=accounts.setSetupPlatform;
++ useEffect(()=>{const target=navigationRequest?.target;if(target?.page==='accounts'&&target.platform&&accounts.views[target.platform]?.selection.state!=='selected')setAdding(target.platform);},[navigationRequest?.sequence]);
++ const selected=platforms.filter(p=>accounts.views[p]?.selection.state==='selected');
++ useEffect(()=>{if(adding&&adding!=='choose'&&selected.includes(adding))setAdding(null);},[adding,selected.join(',')]);
++ const known=platforms.every(p=>!!accounts.views[p]);
++ const activeOpenai=accounts.views.openai?.operation&&['pending','running','reconciling','unknown'].includes(accounts.views.openai.operation.state)||accounts.uncertain.openai;
++ const setup=selected.includes('openai')&&adding==='openai'?null:adding??(!selected.length&&known?(activeOpenai?'openai':'choose'):null);
+  return <>
+   {accounts.defaultsError&&<FailureNotice failure={accounts.defaultsError} check="account_defaults" onNavigate={onNavigate}/>}
+   {deviceError&&<div className="accounts-device-problem"><FailureNotice failure={deviceError} check="device_status" onNavigate={onNavigate}/></div>}
+-  <NativeAccountList navigationRequest={navigationRequest} onNavigate={onNavigate} context="accounts" accounts={accounts} runtime={runtime} supply={supply}/>
++  {platforms.filter(p=>!accounts.views[p]&&accounts.errors[p]&&accounts.errors[p]!==accounts.defaultsError).map(p=><FailureNotice key={p} failure={accounts.errors[p]} check="account_read" onNavigate={onNavigate}/>)}
++  {!known&&<p role="status">{t('正在读取账号状态…')}</p>}
++  {accounts.autoService&&setup==='choose'?<section className="add-account" aria-label={t('添加账号')}><ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} aria-current={i===0?'step':undefined}><span>{i+1}</span>{t(label)}</li>)}</ol><h2>{t('选择要添加的平台')}</h2><p>{t('只会在列表中展示你已添加的账号。')}</p><div className="add-account-platforms">{platforms.filter(p=>!selected.includes(p)).map(p=><Button key={p} variant="outline" onClick={()=>setAdding(p)}>{p==='openai'?'OpenAI':'Claude'}</Button>)}</div>{selected.length>0&&<Button variant="outline" onClick={()=>setAdding(null)}>{t('返回')}</Button>}</section>:
++   accounts.autoService&&setup==='openai'?<AddAccountWizard accounts={accounts} runtime={runtime} supply={supply} navigationRequest={navigationRequest} onNavigate={onNavigate} onBack={()=>setAdding('choose')}/>:
++   <>{accounts.autoService&&known&&selected.length<platforms.length&&setup!=='claude'&&<div className="account-add-heading"><Button onClick={()=>setAdding('choose')}>{t('添加账号')}</Button></div>}{setup==='claude'&&!selected.includes('claude')&&<Button variant="ghost" onClick={()=>setAdding('choose')}>{t('返回')}</Button>}
++  <NativeAccountList visiblePlatforms={accounts.autoService?(setup==='claude'?[...new Set([...selected,'claude' as const])]:selected):undefined} navigationRequest={navigationRequest} onNavigate={onNavigate} context="accounts" accounts={accounts} runtime={runtime} supply={supply}/></>}
+  </>;
+ }
+diff --git a/desktop/src/features/accounts/add-account.css b/desktop/src/features/accounts/add-account.css
+new file mode 100644
+index 0000000..1bb6bfd
+--- /dev/null
++++ b/desktop/src/features/accounts/add-account.css
+@@ -0,0 +1,26 @@
++.add-account{border:1px solid var(--border,#eae7e1);border-radius:12px;padding:24px;background:var(--card,#fff);color:var(--foreground,#2c2b28)}
++[data-theme=dark] .add-account{background:#292824;color:#e5e4df;border-color:#45433d}
++.add-account-steps{display:flex;gap:24px;flex-wrap:wrap;list-style:none;padding:0;margin:0 0 32px;font-size:12px}
++.add-account-steps li{display:flex;gap:8px;align-items:center;opacity:.65}
++.add-account-steps li[aria-current]{opacity:1;font-weight:600}
++.add-account-steps li>span{border:1px solid currentColor;border-radius:50%;width:24px;height:24px;display:grid;place-items:center}
++.add-account-steps svg{width:14px;height:14px}
++.add-account-body{max-width:560px;margin:auto;padding:16px 0 24px}
++.add-account h2{font-size:19px;margin:12px 0}
++.add-account h2:focus-visible{outline:2px solid currentColor;outline-offset:4px}
++.add-account p{font-size:13px;line-height:1.8;overflow-wrap:anywhere}
++.add-account-mark{width:28px;height:28px}
++.add-account-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
++.add-account-platforms{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin:24px 0}
++.add-account-platforms .ui-button{min-height:88px;font-size:16px}
++.add-account-directory{display:flex;gap:8px;margin-top:8px}
++.add-account input{flex:1;min-width:0;padding:10px;border:1px solid var(--border,#aaa);border-radius:6px;background:transparent;color:inherit}
++.add-account label{display:block;font-size:13px;margin-top:16px}
++.add-account select{margin-top:8px;padding:8px;border:1px solid var(--border,#aaa);border-radius:6px;background:transparent;color:inherit}
++.add-account dl{display:grid;grid-template-columns:90px 1fr;gap:12px;font-size:13px;margin:24px 0}.add-account dd{margin:0;overflow-wrap:anywhere}
++.add-account-error{display:flex;gap:6px;align-items:center;color:#a24231}[data-theme=dark] .add-account-error{color:#f2a38f}
++.add-account-spinner{animation:add-account-spin 1s linear infinite;width:20px;height:20px}
++.account-add-heading{display:flex;justify-content:flex-end;margin-bottom:16px}
++@keyframes add-account-spin{to{transform:rotate(360deg)}}
++@media(prefers-reduced-motion:reduce){.add-account-spinner{animation:none}}
++@media(max-width:600px){.add-account{padding:18px}.add-account-steps{gap:12px}.add-account-directory{flex-wrap:wrap}.add-account-directory input{flex-basis:100%}}
+diff --git a/desktop/src/features/accounts/useAccounts.ts b/desktop/src/features/accounts/useAccounts.ts
+index d19401b..641db7d 100644
+--- a/desktop/src/features/accounts/useAccounts.ts
++++ b/desktop/src/features/accounts/useAccounts.ts
+@@ -16,6 +16,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
+  const [clock,setClock]=useState(0);
+  useEffect(()=>{if(!enabled||!autoRead)return;const timer=setInterval(()=>setClock(v=>v+1),10000);return()=>clearInterval(timer);},[enabled,autoRead]);
+  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
++ const [setupPlatform,setSetupPlatform]=useState<'choose'|'openai'|'claude'|null>(null);
+  const [openaiJourney,setOpenaiJourney]=useState<{kind:'first'|'intake'|'change'|'relogin'|'repair';revision:number;operationId?:string;completed?:string}>();
+  const [openaiDraft,setOpenaiDraft]=useState<AccountSource>(),[sourceSaving,setSourceSaving]=useState(false),[sourceSaveError,setSourceSaveError]=useState<UiFailure>();
+  const sourceSavingRef=useRef(false);
+@@ -240,7 +241,14 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
+   loginQuery.current=query;setLoginOpenError(undefined);void query.start();
+   return()=>{query.dispose();if(loginQuery.current===query)loginQuery.current=undefined;};
+  },[enabled,authorizer,loginID]);
+- return {recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,
++ return {setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
++  async verifyOpenai(){
++   if(!client||!savedDefaults||centralError||central.current?.sourceReady===false||writing.current.openai||sourceSavingRef.current||uncertain.openai||accountPending(latest.current.openai))return;
++   if(requests.current.openai)await requests.current.openai;
++   if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
++   await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
++   return verified.current.openai?latest.current.openai:undefined;
++  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,
+   queryLogin(){return loginQuery.current?.start();},
+   async openLoginPage(){
+    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
+@@ -249,15 +257,16 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
+    catch(cause){if(active.current)setLoginOpenError(failure(cause,'browser_opener'));}
+    finally{openingLoginRef.current=false;if(active.current)setOpeningLogin(false);}
+   },
+-  async saveOpenaiSource(){
+-   if(!openaiDraft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
++  async saveOpenaiSource(draft=openaiDraft){
++   if(!draft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
+    sourceSavingRef.current=true;setSourceSaving(true);setSourceSaveError(undefined);
+    const generation=central.current.generation?.();
+    try{
+-    const saved=await central.current.saveOpenaiSource(openaiDraft);
++    const saved=await central.current.saveOpenaiSource(draft);
+     if(!active.current||generation!==central.current?.generation?.())return;
+     sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
+     await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('openai',saved,'official');},true);
++    return true;
+    }catch(cause){if(active.current)setSourceSaveError(failure(cause,'preferences_save'));}
+    finally{sourceSavingRef.current=false;if(active.current)setSourceSaving(false);}
+   },
+diff --git a/desktop/src/features/device/FirstLaunchWizard.tsx b/desktop/src/features/device/FirstLaunchWizard.tsx
+new file mode 100644
+index 0000000..3f30637
+--- /dev/null
++++ b/desktop/src/features/device/FirstLaunchWizard.tsx
+@@ -0,0 +1,134 @@
++import {useEffect,useId,useRef,useState,type FormEvent} from 'react';
++import type {DeviceView,DeviceContext} from '../../system/device';
++import type {RefreshStatus} from '../../system/desktopState';
++import {normalizeFailure,safeOrigin,type UiFailure} from '../../system/failures';
++import {currentLocale,formatDate} from '../../i18n';
++import {presentFailure} from '../../presentation/problems';
++import {Button} from '../../components/ui';
++import {Popover} from 'radix-ui';
++import {CircleAlert} from 'lucide-react';
++import {wizardText as w} from './first-launch-copy';
++import './first-launch-wizard.css';
++
++export interface FirstLaunchWizardProps {
++ view?:DeviceView;context?:DeviceContext;refreshStatus?:RefreshStatus;
++ initialLoading?:boolean;busy:boolean;checking?:boolean;
++ error:UiFailure|null;operationError?:UiFailure|null;completed?:boolean;
++ begin:(hive:string,name:string)=>void|Promise<unknown>;
++ refresh:()=>void|Promise<unknown>;open:()=>void|Promise<unknown>;
++ onNavigate:(page:'accounts'|'overview')=>void;
++ onDiagnostics?:()=>void;onRepair?:()=>void;onOpenHive?:()=>void|Promise<unknown>;
++}
++
++function validateHive(raw:string):string {
++ if(!raw)return '请填写 Hive 地址。';
++ let url:URL;try{url=new URL(raw);}catch{return 'Hive 地址须为完整的 HTTPS 网址。';}
++ if(url.username||url.password||raw.includes('@'))return 'Hive 地址不能包含用户名或密码。';
++ if(url.pathname!=='/'||url.search||url.hash||/[?#]/.test(raw))return 'Hive 地址不能包含路径、查询参数或片段。';
++ if(url.protocol!=='https:'&&!(url.protocol==='http:'&&safeOrigin(raw.replace(/\/$/,''))))return '远程 Hive 必须使用 HTTPS；HTTP 仅限本机回环地址。';
++ if(!/^https?:\/\/[^/?#@\\\s]+\/?$/.test(raw))return 'Hive 地址须为完整的 HTTPS 网址。';
++ return '';
++}
++
++function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;manualUrlAvailable?:boolean}){
++ const [open,setOpen]=useState(false),titleId=useId();
++ const problem=presentFailure(failure,currentLocale()),details=problem.details;
++ const browserReason:Record<string,string>={BROWSER_OPEN_FAILED:'默认浏览器打开失败。',BROWSER_OPEN_TIMEOUT:'打开浏览器超时，网页打开结果尚未确认。',BROWSER_OPEN_CLEANUP_FAILED:'浏览器打开程序超时，且未能确认已结束。'};
++ const browser=browserReason[failure.code],summary=browser?w(browser):problem.summary;
++ const impact=browser&&manualUrlAvailable?w('原配对请求已保留，设备绑定仍需在 Hive 网页确认。'):problem.impact;
++ const guidance=browser&&manualUrlAvailable?'可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':failure.code==='tls_failed'?'请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':failure.code==='unavailable'?'请等待 Hive 恢复服务，再继续当前绑定步骤。':'';
++ useEffect(()=>setOpen(false),[details]);
++ return <div className="first-launch-failure" role="alert"><p>{summary}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
++  <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
++  <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
++   <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>
++  </Popover.Content></Popover.Portal>
++ </Popover.Root>}</p><p>{impact}</p>{guidance&&<p>{w(guidance)}</p>}</div>;
++}
++
++/** First-launch presentation only. The caller owns native commands and status scheduling. */
++export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
++ const [hive,setHive]=useState(view?.hive??''),[name,setName]=useState(view?.name??'Bee Desktop');
++ const [fieldErrors,setFieldErrors]=useState({hive:'',name:''});
++ const [submitting,setSubmitting]=useState(false),submitted=useRef(false);
++ const hiveInput=useRef<HTMLInputElement>(null),nameInput=useRef<HTMLInputElement>(null);
++ const title=useRef<HTMLHeadingElement>(null);
++ const [copyFailure,setCopyFailure]=useState<UiFailure|null>(null),[copied,setCopied]=useState('');
++ const copyAttempt=useRef(0),mounted=useRef(true);
++ const [now,setNow]=useState(Date.now());
++ const transaction=view?.recovery,rawPhase=transaction?.phase??view?.state;
++ const expectedState={awaiting_confirmation:'pairing',creating:'pairing',creation_unknown:'pairing',pending:'pending',draining:'draining',redeeming:'pairing',redemption_unknown:'pairing',awaiting_owner_confirmation:'pairing',saving:'pairing',completed:'bound',expired:'expired',blocked:'pairing'};
++ const rejectedPhase=!!transaction&&(transaction.old_identity!==null||rawPhase==='awaiting_owner_confirmation'||view?.state!==expectedState[transaction.phase]);
++ const required=transaction?.old_identity?'initial pairing without an old identity':rawPhase==='awaiting_owner_confirmation'?'initial pairing without owner adoption':transaction?expectedState[transaction.phase]:'';
++ const phaseFailure:UiFailure|null=rejectedPhase?{code:'FIRST_LAUNCH_PHASE_INVALID',check:'first_launch_phase',observedAt:null,evidence:{actual:`${view?.state}/${rawPhase}`,required},message:currentLocale()==='en'?`Initial pairing cannot continue: device state=${view?.state}; phase=${rawPhase}; required=${required}.`:`首次绑定无法继续：设备状态=${view?.state}；事务阶段=${rawPhase}；要求=${required}。`}:null;
++ const phase=rejectedPhase?'blocked':rawPhase;
++ const pairing=view?.recovery?.pairing??(view?.user_code&&view.verification_url&&view.expires_at?{code:view.user_code,verification_url:view.verification_url,expires_at:view.expires_at}:null);
++ const waiting=phase==='pending'||phase==='draining';
++ const scope=[view?.recovery?.operation_id,phase,pairing?.verification_url,context?.binding_revision].join('|');
++ const currentScope=useRef(scope);currentScope.current=scope;
++ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;copyAttempt.current++;};},[]);
++ const expired=!!pairing&&Date.parse(pairing.expires_at)<=now;
++ const loading=initialLoading||!view&&!error;
++ const form=!loading&&!error&&(view?.state==='unbound'||phase==='awaiting_confirmation'||phase==='creating');
++ const creating=phase==='creating'||busy||submitting;
++ const readBlocked=!loading&&!!error&&!view?.recovery&&!waiting;
++ useEffect(()=>{if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
++ useEffect(()=>{if(form&&!creating)hiveInput.current?.focus({preventScroll:true});},[form]);
++ const identity=view?.identity;
++ const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&view.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
++ const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
++ const failures=[error,operationError,transactionFailure,phaseFailure].filter((failure):failure is UiFailure=>!!failure);
++ const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure} manualUrlAvailable={!!pairing&&waiting&&!expired}/>);
++ useEffect(()=>{if(complete)title.current?.focus({preventScroll:true});},[complete]);
++ useEffect(()=>{
++  setNow(Date.now());if(!pairing)return;
++  const delay=Date.parse(pairing.expires_at)-Date.now();
++  if(delay<=0||delay>2147483647)return;
++  const timer=setTimeout(()=>setNow(Date.now()),delay+1);return()=>clearTimeout(timer);
++ },[pairing?.expires_at]);
++ useEffect(()=>{copyAttempt.current++;setCopyFailure(null);setCopied('');},[scope]);
++ const copy=async(value:string,label:string)=>{
++  const attempt=++copyAttempt.current,requestScope=scope;
++  const active=()=>mounted.current&&attempt===copyAttempt.current&&requestScope===currentScope.current;
++  setCopyFailure(null);setCopied('');try{
++   if(!navigator.clipboard?.writeText)throw new Error('clipboard.writeText unavailable; manual selection required');
++   await navigator.clipboard.writeText(value);if(active())setCopied(label);
++  }catch(cause){if(active())setCopyFailure(normalizeFailure(cause,'clipboard_write'));}
++ };
++ const status=refreshStatus?.state==='blocked'?'设备检查已暂停，请先处理当前问题，再重新检查设备。':refreshStatus?.state==='waiting'?'前次设备检查尚未结束，结果待确认。':error?refreshStatus?.nextRetryAt?'设备检查暂未完成，等待已安排的重试。':'设备状态尚未确认，请重新检查设备。':refreshStatus?.state==='reading'||refreshStatus?.state==='scheduled'?expired?'配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。':'完成网页确认后回到 Bee，此处会自动更新。':'设备状态尚未确认，请重新检查设备。';
++ const stageCopy=phase==='draining'?'正在等待旧设备完成任务和结算。':phase==='redeeming'?'正在确认设备身份…':phase==='redemption_unknown'?'尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。':phase==='creation_unknown'?'未取得原请求的配对凭据。请在 Hive 控制台核对设备记录，当前不能安全地重新生成配对码。':phase==='expired'?'Hive 已确认配对码过期。':phase==='blocked'||phase==='awaiting_owner_confirmation'?'设备绑定暂时无法继续，请查看具体原因并导出诊断。':'';
++ const canCheck=phase==='completed'&&!complete&&failures.length>0||phase==='creation_unknown'||phase==='redemption_unknown'||waiting&&(!!error||refreshStatus?.state==='blocked'||refreshStatus?.state==='idle');
++ useEffect(()=>{hiveInput.current?.focus();},[]);
++ useEffect(()=>{if(!busy){submitted.current=false;setSubmitting(false);}},[busy,view,error,operationError]);
++ const submit=(event:FormEvent)=>{
++  event.preventDefault();if(busy||submitted.current)return;
++  const address=hive.trim(),deviceName=name.trim();
++  const errors={hive:validateHive(address),name:!deviceName?'请填写设备名称。':/[\p{Cc}]/u.test(deviceName)?'设备名称不能包含控制字符。':[...deviceName].length>80?'设备名称最多为 80 个字符。':''};
++  setFieldErrors(errors);if(errors.hive||errors.name){(errors.hive?hiveInput:nameInput).current?.focus();return;}
++  submitted.current=true;setSubmitting(true);begin(address.replace(/\/$/,''),deviceName);
++ };
++ return <div className="first-launch-wizard"><a className="first-launch-skip" href="#first-launch-content">{w('跳到设备设置')}</a><header className="first-launch-brand" translate="no">Bee</header><main id="first-launch-content" className="first-launch-content">
++  <h1 ref={title} tabIndex={-1}>{w(loading?'正在检查设备…':readBlocked?'无法确认设备状态':complete?'设备已绑定':'设置这台设备')}</h1>{!loading&&!readBlocked&&<ol className="first-launch-steps" aria-label={w('设置步骤')}><li aria-current={form?'step':undefined} className={!form?'done':undefined}><span>{form?'1':'✓'}</span>{w('连接 Hive')}</li><li aria-current={!form&&!complete?'step':undefined} className={complete?'done':undefined}><span>{complete?'✓':'2'}</span>{w('绑定设备')}</li></ol>}
++  {loading?<p role="status">{w('正在读取本机配置与设备状态…')}</p>:readBlocked?<>{failureNotices}<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button>{onRepair&&<Button type="button" variant="outline" onClick={onRepair}>{w('修复当前问题')}</Button>}</div></>:complete?<><dl className="first-launch-facts"><dt>{w('设备')}</dt><dd>{identity.name}</dd><dt>{w('归属账号')}</dt><dd>{identity.owner_email}</dd><dt>Hive</dt><dd>{view.hive}</dd></dl><h2>{w('下一步：接入 AI 账号')}</h2><p>{w('接入后才能使用该账号参与贡献。')}</p><div className="first-launch-actions"><Button type="button" onClick={()=>onNavigate('accounts')}>{w('前往接入 AI 账号')}</Button><Button type="button" variant="ghost" onClick={()=>onNavigate('overview')}>{w('进入概览')}</Button></div></>:form?<form noValidate onSubmit={submit}>
++   <label htmlFor="first-launch-hive">{w('Hive 地址')}</label><input ref={hiveInput} id="first-launch-hive" name="hive" type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://hive.example…" value={hive} disabled={creating} aria-invalid={!!fieldErrors.hive} aria-describedby="first-launch-hive-help first-launch-hive-error" onChange={event=>{setHive(event.target.value);setFieldErrors(current=>({...current,hive:''}));}}/>
++   <p id="first-launch-hive-help" className="first-launch-help">{w('填写你要连接的 Hive 服务地址。')}</p><p id="first-launch-hive-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.hive)}</p>
++   <label htmlFor="first-launch-name">{w('设备名称')}</label><input ref={nameInput} id="first-launch-name" name="device-name" autoComplete="off" value={name} disabled={creating} aria-invalid={!!fieldErrors.name} aria-describedby="first-launch-name-help first-launch-name-error" onChange={event=>{setName(event.target.value);setFieldErrors(current=>({...current,name:''}));}}/>
++   <p id="first-launch-name-help" className="first-launch-help">{w('用于在 Hive 中识别这台设备。')}</p><p id="first-launch-name-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.name)}</p>
++   {failureNotices}
++   <div className="first-launch-actions"><Button type="submit" disabled={creating} aria-busy={creating}>{w(creating?'正在创建配对请求…':'继续绑定设备')}</Button></div>
++  </form>:<><h2>{w(phase==='saving'||phase==='redeeming'||phase==='redemption_unknown'?'正在完成设备绑定':phase==='creation_unknown'?'尚无法确认配对请求结果':phase==='draining'?'正在等待旧设备结束连接':phase==='blocked'||phase==='awaiting_owner_confirmation'?'设备绑定已阻塞':'在 Hive 网页确认设备归属')}</h2><dl className="first-launch-facts"><dt>Hive</dt><dd>{view?.hive}</dd><dt>{w('设备')}</dt><dd>{view?.name}</dd></dl>
++   {pairing&&waiting&&<><div className="first-launch-pair"><div><strong className="first-launch-code">{pairing.code}</strong><Button type="button" variant="outline" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button></div><p className="first-launch-help">{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p></div>
++    {!expired&&<><div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void open()}>{w('打开 Hive 确认网页')}</Button><Button type="button" variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div><p className="first-launch-url">{pairing.verification_url}</p></>}
++    {phase==='pending'&&<p role="status">{w(status)}</p>}
++   </>}
++   {stageCopy&&<p role="status">{w(stageCopy)}</p>}
++   {phase==='creation_unknown'&&onOpenHive&&<div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void onOpenHive()}>{w('打开 Hive 控制台')}</Button></div>}
++   {failureNotices}
++   {canCheck&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button></div>}
++   {phase==='expired'&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}
++   {phase==='saving'&&<><p role="status">{w(checking?'正在检查绑定结果并继续保存…':transactionFailure?'设备身份已确认，本机保存尚未完成。':'正在保存设备配置…')}</p>{transactionFailure&&<><p>{w('请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。')}</p><div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('继续完成绑定')}</Button></div></>}</>}
++   {copied&&<p role="status">{w(copied)}</p>}{copyFailure&&<WizardFailure failure={copyFailure}/>}
++  </>}
++  {!complete&&(failures.length>0||canCheck||phase==='blocked'||phase==='awaiting_owner_confirmation')&&onDiagnostics&&<div className="first-launch-actions"><Button type="button" variant="ghost" onClick={onDiagnostics}>{w('查看诊断')}</Button></div>}
++ </main></div>;
++}
+diff --git a/desktop/src/features/device/first-launch-copy.ts b/desktop/src/features/device/first-launch-copy.ts
+new file mode 100644
+index 0000000..ce4a47b
+--- /dev/null
++++ b/desktop/src/features/device/first-launch-copy.ts
+@@ -0,0 +1,57 @@
++import {currentLocale} from '../../i18n';
++
++const english:Record<string,string>={
++ '默认浏览器打开失败。':'The default browser could not be opened.',
++ '打开浏览器超时，网页打开结果尚未确认。':'Opening the browser timed out; the result is unconfirmed.',
++ '浏览器打开程序超时，且未能确认已结束。':'The browser launcher timed out and its termination could not be confirmed.',
++ '原配对请求已保留，设备绑定仍需在 Hive 网页确认。':'The original pairing request is preserved. Device binding still needs confirmation on Hive.',
++ '可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':'Copy or select the confirmation URL above and open it manually in your browser, then return to Bee after confirming.',
++ '请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':'Check the Hive address and server certificate, then continue the current binding step after fixing the issue.',
++ '请等待 Hive 恢复服务，再继续当前绑定步骤。':'Wait for Hive to become available, then continue the current binding step.',
++ '跳到设备设置':'Skip to device setup',
++ '请填写 Hive 地址。':'Enter the Hive address.',
++ 'Hive 地址须为完整的 HTTPS 网址。':'Enter a complete HTTPS URL for Hive.',
++ 'Hive 地址不能包含用户名或密码。':'The Hive address cannot contain a username or password.',
++ 'Hive 地址不能包含路径、查询参数或片段。':'The Hive address cannot contain a path, query, or fragment.',
++ '远程 Hive 必须使用 HTTPS；HTTP 仅限本机回环地址。':'Remote Hive requires HTTPS; HTTP is allowed only for loopback addresses.',
++ '请填写设备名称。':'Enter a device name.',
++ '设备名称不能包含控制字符。':'The device name cannot contain control characters.',
++ '设备名称最多为 80 个字符。':'The device name can contain at most 80 characters.',
++ '查看错误详情':'View error details','关闭错误详情':'Close error details','错误详情':'Error details','关闭':'Close',
++ '正在检查设备…':'Checking device…','无法确认设备状态':'Device status could not be confirmed','设备已绑定':'Device bound','设置这台设备':'Set up this device',
++ '设置步骤':'Setup steps','连接 Hive':'Connect to Hive','绑定设备':'Bind device',
++ '正在读取本机配置与设备状态…':'Reading local configuration and device status…',
++ '重新检查设备':'Check device again','修复当前问题':'Fix current issue',
++ '设备':'Device','归属账号':'Owner account','下一步：接入 AI 账号':'Next: connect an AI account',
++ '接入后才能使用该账号参与贡献。':'Connect an account before using it to contribute.',
++ '前往接入 AI 账号':'Connect an AI account','进入概览':'Go to overview',
++ 'Hive 地址':'Hive address','设备名称':'Device name',
++ '填写你要连接的 Hive 服务地址。':'Enter the address of the Hive service you want to connect to.',
++ '用于在 Hive 中识别这台设备。':'Used to identify this device in Hive.',
++ '正在创建配对请求…':'Creating pairing request…','继续绑定设备':'Continue to bind device',
++ '正在完成设备绑定':'Completing device binding','尚无法确认配对请求结果':'Pairing request result is not yet confirmed',
++ '正在等待旧设备结束连接':'Waiting for the previous device to disconnect','设备绑定已阻塞':'Device binding is blocked','在 Hive 网页确认设备归属':'Confirm device ownership on Hive',
++ '复制配对码':'Copy pairing code','有效期至':'Valid until','打开 Hive 确认网页':'Open Hive confirmation page',
++ '复制确认网址':'Copy confirmation URL','配对码已复制':'Pairing code copied','确认网址已复制':'Confirmation URL copied',
++ '重新生成配对码':'Generate a new pairing code','打开 Hive 控制台':'Open Hive console',
++ '正在检查绑定结果并继续保存…':'Checking binding result and continuing to save…',
++ '设备身份已确认，本机保存尚未完成。':'Device identity is confirmed; the local configuration has not been saved.',
++ '正在保存设备配置…':'Saving device configuration…',
++ '请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。':'Resolve the reported save failure, then click “Continue binding”. Bee will check the existing binding and continue saving.',
++ '继续完成绑定':'Continue binding','导出诊断':'Export diagnostics','查看诊断':'View diagnostics',
++ '设备检查已暂停，请先处理当前问题，再重新检查设备。':'Device checks are paused. Resolve the current issue, then check the device again.',
++ '前次设备检查尚未结束，结果待确认。':'The previous device check is still running; its result is not yet confirmed.',
++ '设备检查暂未完成，等待已安排的重试。':'The device check is incomplete; waiting for the scheduled retry.',
++ '配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。':'The pairing code has reached its expiry time. Bee is checking the latest status with Hive; the result will update automatically.',
++ '完成网页确认后回到 Bee，此处会自动更新。':'Return to Bee after confirming on the website. This page updates automatically.',
++ '设备状态尚未确认，请重新检查设备。':'Device status is not yet confirmed. Check the device again.',
++ '正在等待旧设备完成任务和结算。':'Waiting for the previous device to finish its tasks and settlement.',
++ '正在确认设备身份…':'Confirming device identity…',
++ '尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。':'The binding result is not yet confirmed. Bee checks only the original transaction and will not redeem again.',
++ '未取得原请求的配对凭据。请在 Hive 控制台核对设备记录，当前不能安全地重新生成配对码。':'The original pairing credentials have not been received. Check device records in the Hive console; a new pairing code cannot safely be generated yet.',
++ 'Hive 已确认配对码过期。':'Hive has confirmed that the pairing code expired.',
++ '设备绑定暂时无法继续，请查看具体原因并导出诊断。':'Device binding cannot continue. Review the specific cause and export diagnostics.',
++};
++
++/** Feature copy follows the existing application locale without modifying shared dictionaries. */
++export function wizardText(value:string):string{return currentLocale()==='en'?(english[value]??value):value;}
+diff --git a/desktop/src/features/device/first-launch-wizard.css b/desktop/src/features/device/first-launch-wizard.css
+new file mode 100644
+index 0000000..ff277d8
+--- /dev/null
++++ b/desktop/src/features/device/first-launch-wizard.css
+@@ -0,0 +1,43 @@
++.first-launch-wizard{min-height:100dvh;background:var(--paper);color:var(--ink);font-size:14px;line-height:1.6;--first-launch-danger:#a24231}
++:root[data-theme='dark'] .first-launch-wizard{--first-launch-danger:#f2a38f}
++@media(prefers-color-scheme:dark){:root:not([data-theme='light']) .first-launch-wizard{--first-launch-danger:#f2a38f}}
++.first-launch-brand{padding:22px 32px;border-bottom:1px solid var(--line);font-size:21px;font-weight:650;letter-spacing:-.5px}
++.first-launch-content{width:100%;max-width:530px;margin:32px auto;padding:0 24px 30px}
++.first-launch-content h1{font-size:25px;font-weight:600;letter-spacing:-.5px;line-height:1.4;margin:0 0 14px;text-wrap:balance}
++.first-launch-steps{display:flex;list-style:none;padding:0;margin:0 0 28px;gap:14px;align-items:center;font-size:12px;color:var(--muted)}
++.first-launch-steps li{display:flex;gap:8px;align-items:center}
++.first-launch-steps li:first-child::after{content:'';width:50px;height:1px;background:var(--line);margin-left:6px}
++.first-launch-steps li>span{width:23px;height:23px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;font-variant-numeric:tabular-nums;flex:none}
++.first-launch-steps li[aria-current='step']{color:var(--ink)}
++.first-launch-steps li[aria-current='step']>span{border-color:var(--accent-ink);color:var(--accent-ink);background:var(--accent-soft)}
++.first-launch-content label{display:block;font-weight:550;margin:20px 0 7px}
++.first-launch-content input{display:block;width:100%;border:1px solid var(--line);border-radius:6px;padding:11px 12px;background:var(--paper);color:var(--ink);font:inherit}
++.first-launch-content input::placeholder{color:var(--muted)}
++.first-launch-content input[aria-invalid='true']{border-color:var(--first-launch-danger)}
++.first-launch-content p{margin:6px 0;color:var(--muted)}
++.first-launch-content .first-launch-help,.first-launch-content .first-launch-field-error{font-size:12px;margin-top:6px}
++.first-launch-content .first-launch-field-error{color:var(--first-launch-danger)}
++.first-launch-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:26px}
++.first-launch-wizard button{font:inherit;min-height:42px;padding:8px 14px;touch-action:manipulation}
++@media(max-width:600px){.first-launch-content{margin:22px auto}.first-launch-brand{padding:18px 24px}.first-launch-actions{gap:6px}}
++.first-launch-steps li.done{color:var(--good)}
++.first-launch-content h2{font-size:17px;margin:24px 0 6px}
++.first-launch-facts{margin:20px 0;display:grid;grid-template-columns:72px minmax(0,1fr);gap:10px 14px;font-size:13px}
++.first-launch-facts dt{margin:0;color:var(--muted)}
++.first-launch-facts dd{margin:0;overflow-wrap:anywhere}
++.first-launch-pair{padding:18px 20px;background:var(--canvas);border:1px solid var(--line);border-radius:8px;margin-top:22px}
++.first-launch-pair>div{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
++.first-launch-code{font-size:26px;font-weight:600;letter-spacing:3px;font-variant-numeric:tabular-nums}
++.first-launch-content .first-launch-url{user-select:all;overflow-wrap:anywhere;font-size:12px;margin-top:12px}
++.first-launch-content h1:focus-visible{outline:2px solid var(--accent-ink);outline-offset:4px;border-radius:2px}
++.first-launch-skip{position:absolute;left:12px;top:-80px;background:var(--paper);padding:8px;color:var(--ink);z-index:1}
++.first-launch-skip:focus{top:8px}
++.first-launch-failure{margin-top:16px}
++.first-launch-content .first-launch-failure p{color:var(--first-launch-danger);overflow-wrap:anywhere}
++.first-launch-wizard .first-launch-error-trigger{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;min-height:28px;width:28px;padding:0;margin-left:3px;border:0;background:transparent;color:var(--first-launch-danger);box-shadow:none}
++.first-launch-error-trigger svg{width:16px;height:16px}
++.first-launch-error-popover{z-index:100;width:420px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;padding:16px 18px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 30px #0002;overscroll-behavior:contain;font-size:12px;line-height:1.65}
++.first-launch-error-popover header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:10px}
++.first-launch-error-popover h3{margin:0;font-size:13px}
++.first-launch-error-popover pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:0}
++@media(pointer:coarse){.first-launch-wizard .first-launch-error-trigger{width:44px;min-height:44px}}
+diff --git a/desktop/src/i18n/add-account-en.ts b/desktop/src/i18n/add-account-en.ts
+new file mode 100644
+index 0000000..fea3242
+--- /dev/null
++++ b/desktop/src/i18n/add-account-en.ts
+@@ -0,0 +1,34 @@
++export const addAccountEnglish:Record<string,string>={
++ '添加账号':'Add account',
++ '返回':'Back',
++ '添加账号步骤':'Steps to add an account',
++ '选择平台':'Choose platform',
++ '连接账号':'Connect account',
++ '选择要添加的平台':'Choose a platform to add',
++ '只会在列表中展示你已添加的账号。':'Only accounts you have added appear in the list.',
++ '正在读取账号状态…':'Reading account status…',
++ '设置读取位置':'Set credential location',
++ '正在确认登录已结束…':'Confirming login has ended…',
++ '请在官方页面完成登录':'Complete login on the official page',
++ '正在读取并核验账号…':'Reading and verifying account…',
++ '确认接入 OpenAI':'Confirm OpenAI account',
++ '已保留当前账号':'Current account retained',
++ '未找到本机 OpenAI 登录':'No local OpenAI login found',
++ '连接 OpenAI 账号':'Connect an OpenAI account',
++ '选择读取目录':'Choose credential directory',
++ '选择目录':'Choose directory',
++ '留空使用默认目录。保存后会自动读取并核验账号。':'Leave blank to use the default directory. Saving automatically reads and verifies the account.',
++ '凭证存储':'Credential store',
++ '正在保存…':'Saving…',
++ '登录后自动核验账号，再由你确认是否接入。':'After login, the account is verified automatically. You then confirm whether to add it.',
++ '只核对原操作，确认结果前不会重复接入。':'Only the original operation is checked. The account will not be submitted again while its result is unknown.',
++ '接单选择尚未确认，请先核对，暂不能接入。':'Task acceptance preference is unconfirmed. Check it before adding the account.',
++ '接入后保留暂停，由你决定何时恢复接单。':'The account will remain paused. You decide when to resume accepting tasks.',
++ '接入后允许接单，账号准备完成且供给条件满足后开始。':'Tasks are allowed after adding the account, once preparation is complete and supply conditions are met.',
++ '账号、来源或接单选择已变化，请重新核验后确认。':'The account, source or task preference changed. Verify again before confirming.',
++ '重新核验':'Verify again',
++ '返回不会丢失已核验的账号，继续时会再次核对。':'Going back retains the verified account. Continuing checks it again.',
++ '可以通过官方客户端登录，或设置已有登录的读取位置。':'Log in with the official client, or set the location of an existing login.',
++ '继续使用此账号':'Continue with this account',
++ '更换连接方式':'Change connection method',
++};
+diff --git a/desktop/src/i18n/index.ts b/desktop/src/i18n/index.ts
+index dd65593..6ba6b11 100644
+--- a/desktop/src/i18n/index.ts
++++ b/desktop/src/i18n/index.ts
+@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
+ import type { Preferences } from '../client/types';
+ import { en as sharedEnglish } from './en.ts';
+ import {openaiEnglish} from './openai-en.ts';
+-const en={...openaiEnglish,...sharedEnglish};
++import {addAccountEnglish} from './add-account-en.ts';
++const en={...openaiEnglish,...sharedEnglish,...addAccountEnglish};
+ import { zh } from './zh.ts';
+ export const missingTranslations = new Set<string>();
+ let language: 'zh' | 'en' = 'zh';
+diff --git a/desktop/src/system/accounts.ts b/desktop/src/system/accounts.ts
+index b40b3e7..edfab9a 100644
+--- a/desktop/src/system/accounts.ts
++++ b/desktop/src/system/accounts.ts
+@@ -25,7 +25,7 @@ export function accountConfirmationKey(view:AccountSnapshot|undefined,now:number
+  const operation=view?.operation;
+  return JSON.stringify([
+   view?.platform,view?.selection.state,view?.selection.fingerprint,
+-  view?.candidate.state,view?.candidate.reference,view?.candidate.fingerprint,
++  view?.candidate.state,view?.candidate.reference,view?.candidate.fingerprint,view?.candidate.identity_verified,
+   view?.candidate.source?.directory,view?.candidate.source?.store,
+   !!view?.candidate.expires_at&&Date.parse(view.candidate.expires_at)>now+30000,
+   view?.hive.state,view?.hive.fingerprint,view?.hive.pending_fingerprint,view?.hive.generation,
+diff --git a/desktop/src/system/desktopState.ts b/desktop/src/system/desktopState.ts
+index 9c042bf..004f9ca 100644
+--- a/desktop/src/system/desktopState.ts
++++ b/desktop/src/system/desktopState.ts
+@@ -8,7 +8,7 @@ import type {DiagnosticReport} from './diagnostics';
+ export interface RefreshStatus {state:'idle'|'reading'|'scheduled'|'blocked'|'waiting';nextRetryAt:string|null;lastConfirmedAt:string|null}
+ export interface DesktopSnapshot {
+  currentProfile?:string|null;native:BridgeStatus;startup?:StartupStatus;startupReadError?:UiFailure|null;startupObservation?:'active'|'stopped'|'idle';deviceContext?:DeviceContext;bindingRevision?:number;deviceContextFailure?:UiFailure;
+- recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;
++ recovery?:DeviceRecoveryView;recoveryError?:UiFailure|null;recoveryObservation?:'absent'|'present';
+  device?:DeviceView;deviceError:UiFailure|null;runtime?:RuntimeSnapshot;defaults?:AccountDefaults;
+  accounts:Partial<Record<AccountPlatform,AccountSnapshot>>;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;
+  supplies:Partial<Record<AccountPlatform,SupplyView>>;supplyErrors:Partial<Record<AccountPlatform,UiFailure>>;
+@@ -80,7 +80,7 @@ export function createDesktopState(deps:DesktopDeps){
+  }
+  const repair=()=>{for(const [key,g]of gates)if(g.terminal)gates.delete(key);blocked=false;};
+  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
+- const reset=()=>({recovery:undefined,recoveryError:null,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
++ const reset=()=>({recovery:undefined,recoveryError:null,recoveryObservation:undefined,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
+  const acceptStartup=(next:StartupStatus)=>{
+   if(currentScope!==undefined&&(!currentScope||next.instance!==currentScope.instance))return;
+   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
+@@ -160,13 +160,13 @@ export function createDesktopState(deps:DesktopDeps){
+      epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;device=undefined;
+      publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
+     }else publish({deviceContext,bindingRevision,deviceContextFailure});
+-    let recovery=state.recovery,recoveryError:UiFailure|null=state.recoveryError??null;
++    let recovery=state.recovery,recoveryError:UiFailure|null=state.recoveryError??null,recoveryObservation=state.recoveryObservation;
+     if(deps.device.recoveryStatus&&!gate('context').failures&&!laneBlocked()&&allowed('recovery'))try{
+      scopeMayHaveChanged=true;
+      const nextRecovery=await deps.device.recoveryStatus();if(!current())return;
+      if(recovery&&(recovery.operation_id===nextRecovery.operation_id&&nextRecovery.revision<recovery.revision||recovery.operation_id!==nextRecovery.operation_id&&recovery.phase!=='completed'))throw {code:'DESKTOP_STALE_RESULT',message:'recovery observation conflicts with the current transaction; actual='+nextRecovery.operation_id+':'+nextRecovery.revision+' required='+recovery.operation_id+':'+recovery.revision,details:{check:'device_recovery_status',observed_at:new Date().toISOString(),evidence:{actual:nextRecovery.operation_id+':'+nextRecovery.revision,required:recovery.operation_id+':'+recovery.revision}}};
+-     recovery=nextRecovery;recoveryError=null;succeed('recovery');
+-    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;succeed('recovery');}else {recoveryError=problem;fail('recovery',problem);await readPending();}}
++     recovery=nextRecovery;recoveryError=null;recoveryObservation='present';succeed('recovery');
++    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;recoveryObservation='absent';succeed('recovery');}else {recoveryObservation=undefined;recoveryError=problem;fail('recovery',problem);await readPending();}}
+     if(!current())return;
+     if(!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))try{scopeMayHaveChanged=true;publish({refresh:status(state.refresh,'reading')});device=await deps.device.status();deviceError=null;succeed('device');deviceObservedAt=new Date().toISOString();if(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt))publish({diagnosticFailure:null});}catch(e){if(!current())return;deviceError=failure(e,'device_status');fail('device',deviceError);await readPending();}
+     if(!current())return;
+@@ -179,13 +179,14 @@ export function createDesktopState(deps:DesktopDeps){
+      const previousBinding=bindingRevision;observeContext(local);
+ 
+      if(local.binding_revision!==previousBinding){
++      recoveryObservation=undefined;
+       epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;
+       if('failure'in local||device?.state!=='bound'||device.identity?.id!==local.device_id||device.hive!==local.hive)device=undefined;
+ 
+       publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
+      }
+     }
+-    publish({recovery,recoveryError});
++    publish({recovery,recoveryError,recoveryObservation});
+     // Runtime and defaults form the shared read. Validate all shared floors BEFORE publishing any of it.
+     let next=state.runtime,defaults=state.defaults,runtimeRead=false;
+     if(!laneBlocked()&&allowed('runtime')){
+diff --git a/desktop/src/system/firstLaunch.ts b/desktop/src/system/firstLaunch.ts
+new file mode 100644
+index 0000000..bab32e6
+--- /dev/null
++++ b/desktop/src/system/firstLaunch.ts
+@@ -0,0 +1,58 @@
++import type {DesktopSnapshot} from './desktopState';
++import type {DeviceView} from './device';
++import {normalizeFailure,type UiFailure} from './failures';
++import {currentLocale} from '../i18n';
++
++interface InitialAttempt {operationId?:string;hive:string;name:string;revision:number;view?:DeviceView}
++export interface FirstLaunchSession {instance?:string;attempt?:InitialAttempt;dismissed?:string;knownBinding?:boolean}
++const transaction=(view?:DeviceView)=>view?.recovery?.old_identity===null?view.recovery:undefined;
++const sameIdentity=(a:NonNullable<DeviceView['identity']>,b:NonNullable<DeviceView['identity']>)=>a.id===b.id&&a.name===b.name&&a.owner_id===b.owner_id&&a.owner_email===b.owner_email;
++// Bound view names follow the Hive identity; context.name is the local requested name.
++function savedIdentity(snapshot:DesktopSnapshot){
++ const {device:view,deviceContext:context}=snapshot,identity=view?.identity;
++ return !!view&&view.state==='bound'&&!!identity&&!!context&&context.binding_revision===snapshot.bindingRevision&&context.hive===view.hive&&view.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id;
++}
++/** Session state belongs above the binding-revision workspace. It contains no persistent flag. */
++export function observeFirstLaunch(previous:FirstLaunchSession,snapshot:DesktopSnapshot):FirstLaunchSession {
++ const instance=snapshot.native.metadata?.instance;
++ let session=previous.instance===instance?previous:{instance};
++ const view=snapshot.device,record=transaction(view),attempt=session.attempt;
++ if(record&&!snapshot.deviceError&&record.phase!=='completed'){
++  if(!attempt?.operationId||attempt.operationId!==record.operation_id||record.revision>=attempt.revision){
++   session={...session,attempt:{operationId:record.operation_id,revision:record.revision,hive:view!.hive!,name:view!.name!,view},dismissed:undefined};
++  }
++ }else if(record&&attempt&&record.operation_id===attempt.operationId&&record.revision>=attempt.revision&&!snapshot.deviceError){
++  session={...session,attempt:{...attempt,revision:record.revision,view}};
++ }
++ if(!session.attempt&&savedIdentity(snapshot)&&!snapshot.deviceError&&!snapshot.recoveryError)session={...session,knownBinding:true};
++ return session;
++}
++export function firstLaunchIntent(session:FirstLaunchSession,snapshot:DesktopSnapshot,hive:string,name:string):FirstLaunchSession {
++ return {...session,instance:snapshot.native.metadata?.instance,attempt:{hive,name,revision:0},dismissed:undefined};
++}
++export function firstLaunchReceipt(session:FirstLaunchSession,snapshot:DesktopSnapshot,view:DeviceView):FirstLaunchSession {
++ const record=transaction(view),attempt=session.attempt,current=transaction(snapshot.device),context=snapshot.deviceContext;
++ if(!record||!attempt||session.instance!==snapshot.native.metadata?.instance||view.hive!==attempt.hive||(view.state==='bound'?view.name!==view.identity?.name:view.name!==attempt.name)||attempt.operationId&&attempt.operationId!==record.operation_id||record.revision<attempt.revision)return session;
++ if(current&&current.operation_id!==record.operation_id||context&&(context.hive!==view.hive||context.name!==attempt.name)||context?.device_id&&record.phase!=='completed')return session;
++ return {...session,attempt:{...attempt,operationId:record.operation_id,revision:record.revision,view}};
++}
++export function firstLaunchAdmission(session:FirstLaunchSession,snapshot:DesktopSnapshot):{workspace:boolean;completed:boolean;view?:DeviceView;failure?:UiFailure}{
++ const record=transaction(snapshot.device),attempt=session.instance===snapshot.native.metadata?.instance?session.attempt:undefined;
++ const participating=!!attempt&&(!attempt.operationId||session.dismissed!==attempt.operationId);
++ const relevantError=snapshot.deviceError??snapshot.recoveryError??snapshot.deviceContextFailure??snapshot.error;
++ const associated=!!attempt?.operationId&&record?.operation_id===attempt.operationId&&record.revision>=attempt.revision&&snapshot.device?.hive===attempt.hive&&(snapshot.device.state==='bound'?snapshot.deviceContext?.name===attempt.name:snapshot.device.name===attempt.name);
++ const completed=participating&&associated&&record?.phase==='completed'&&!record.failure&&!!record.new_identity&&!!snapshot.device?.identity&&sameIdentity(record.new_identity,snapshot.device.identity)&&savedIdentity(snapshot)&&!relevantError&&snapshot.recoveryObservation==='absent';
++ let failure:UiFailure|undefined;
++ if(participating&&!snapshot.deviceError&&record&&record.operation_id===attempt?.operationId&&record.revision<attempt.revision){
++  failure=normalizeFailure({code:'FIRST_LAUNCH_STALE_RESULT',message:`${currentLocale()==='en'?'Initial pairing receipt revision regressed':'首次绑定事务回执倒退'}: operation=${record.operation_id}; actual=${record.revision}; required>=${attempt.revision}`,details:{check:'first_launch_revision',observed_at:new Date().toISOString(),evidence:{actual:String(record.revision),required:`revision>=${attempt.revision}`}}},'first_launch_revision');
++ }else if(participating&&!snapshot.deviceError&&snapshot.device?.state==='bound'&&!completed&&snapshot.recoveryObservation==='absent'&&!snapshot.recoveryError){
++  const actual=JSON.stringify({operation:record?.operation_id,revision:record?.revision,hive:snapshot.device.hive,name:snapshot.device.name,identity:snapshot.device.identity,new_identity:record?.new_identity,context:snapshot.deviceContext,binding_revision:snapshot.bindingRevision});
++  const required=JSON.stringify({operation:attempt?.operationId,minimum_revision:attempt?.revision,hive:attempt?.hive,name:attempt?.name,identity:'bound view name = Hive identity name; local context name = requested name; bound identity = transaction new identity = saved device/owner; context revision = current binding revision'});
++  failure=normalizeFailure({code:'FIRST_LAUNCH_ASSOCIATION_INVALID',message:`${currentLocale()==='en'?'Initial pairing completion evidence does not match':'首次绑定完成证据不匹配'}: actual=${actual}; required=${required}`,details:{check:'first_launch_completion',observed_at:new Date().toISOString(),evidence:{actual,required}}},'first_launch_completion');
++ }
++ const initialPending=!!record&&record.phase!=='completed';
++ const savedBound=!!snapshot.deviceContext?.device_id&&!!snapshot.deviceContext.owner_id;
++ const established=savedIdentity(snapshot)&&snapshot.recoveryObservation!==undefined||savedBound&&!!(snapshot.deviceError||snapshot.recoveryError||snapshot.startup?.state==='blocked')||session.instance===snapshot.native.metadata?.instance&&session.knownBinding&&!!(snapshot.deviceError||snapshot.recoveryError||snapshot.deviceContextFailure&&snapshot.deviceContextFailure.code!=='DEVICE_CONTEXT_UNCONFIGURED'||snapshot.native.state!=='ready'||snapshot.startup?.state==='blocked');
++ const workspace=!!snapshot.recovery||!participating&&!initialPending&&!!established;
++ return {workspace,completed:!!completed,view:participating?attempt?.view??snapshot.device:snapshot.device,failure};
++}
+diff --git a/desktop/tests/fixtures/bee-preview/app.mjs b/desktop/tests/fixtures/bee-preview/app.mjs
+index fac638f..57c440c 100644
+--- a/desktop/tests/fixtures/bee-preview/app.mjs
++++ b/desktop/tests/fixtures/bee-preview/app.mjs
+@@ -22,20 +22,24 @@ try{
+  await until(()=>document.querySelector('main h1'));
+  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
+  if(scene.page==='diagnostics'){(await until(()=>button(t('运行诊断')))).click();if(scene.id==='diagnostics-export-unknown'){(await until(()=>button(t('导出脱敏报告')))).click();(await until(()=>button(t('确认导出')))).click();}}
++ if(scene.id==='account-reading'){step='读取 OpenAI 登录';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();await until(()=>document.querySelector('.add-account h2')?.textContent.includes(t('正在读取并核验账号…')));}
+  if(scene.action){
+   if(scene.page==='accounts'){
+    step='等待正式账号来源初始化';
+    await until(()=>window.__beePreviewActivity.accountReadsStarted>0&&window.__beePreviewActivity.accountReads===0);
+    await new Promise(resolve=>requestAnimationFrame(resolve));
+   }
+-  if(['detail','clear'].includes(scene.action)){
++  if(['login','select'].includes(scene.action)){
++   step='选择 OpenAI 接入';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();
++   await until(()=>button(t(scene.action==='login'?'登录 OpenAI':'确认接入'),document.querySelector('.add-account')??document));
++  }else if(['detail','clear'].includes(scene.action)){
+    step='打开 OpenAI 详情';(await until(()=>document.querySelector('button[aria-label='+JSON.stringify(t('OpenAI 详情'))+']'))).click();
+    await until(()=>document.querySelector('.detail-sheet'));
+   }
+   if(scene.action==='change'){step='核对账号变更';(await until(()=>button(t('核对账号变更')))).click();}
+-  const names={'prepare-unknown':'重试准备',login:'登录 OpenAI',select:'接入账号',change:'确认换号',clear:'取消接入'};
++  const names={'prepare-unknown':'重试准备',change:'确认换号',clear:'取消接入'};
+   if(names[scene.action]){step=`打开正式操作 ${names[scene.action]}`;(await until(()=>button(t(names[scene.action])))).click();}
+-  if(scene.action!=='detail'&&scene.action!=='prepare-unknown')await until(()=>document.querySelector('.dialog-content'));
++  if(!['detail','prepare-unknown','login','select'].includes(scene.action))await until(()=>document.querySelector('.dialog-content'));
+   if(scene.action==='prepare-unknown')await until(()=>document.querySelector('[data-nav-section=runtime]')?.textContent.includes(t('状态待确认')));
+  }
+  window.__beePreviewReady=true;
+diff --git a/desktop/tests/fixtures/bee-preview/device-session.mjs b/desktop/tests/fixtures/bee-preview/device-session.mjs
+index f2091f2..eea07a4 100644
+--- a/desktop/tests/fixtures/bee-preview/device-session.mjs
++++ b/desktop/tests/fixtures/bee-preview/device-session.mjs
+@@ -13,6 +13,8 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
+  const w=window,isInitial=scene.startsWith('device-')&&!['device-bound','device-error','device-recovery-confirm','device-revoked-source-missing'].includes(scene);
+  let savedHive=scene==='device-unbound'||scene==='device-loading'?'':origin,name='Bee Desktop',identity=isInitial?null:{id:'dev-1',name,owner_id:'owner-1',owner_email:'owner@example.test'};
+  let revoked=['device-recovery-confirm','device-revoked-source-missing','startup-blocked'].includes(scene)||scene.startsWith('recovery-')&&scene!=='recovery-completed';
++ let hiveDisplayName=null;
++ w.__beeMockSetHiveDisplayName=value=>{hiveDisplayName=value;if(identity)identity.name=value;if(transaction?.new_identity)transaction.new_identity.name=value;};
+  let transaction=null,accepted=[],approved=false,redeemAttempted=false,pairingSequence=0,identitySequence=1;
+  const pair=()=>{const code=['ABCD-EFGH','BCDE-FGHJ','CDEF-GHJK'][pairingSequence++%3];return {code,verification_url:savedHive+'/devices/pair?code='+code,expires_at:stamp(600000)};};
+  const makeTransaction=(phase,oldIdentity)=>({operation_id:operationId(),revision:1,phase,old_identity:clone(oldIdentity),new_identity:null,pairing:null,failure:null});
+@@ -62,16 +64,16 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
+   if(['pending','draining'].includes(transaction.phase)&&Date.parse(transaction.pairing.expires_at)<=Date.now()&&!redeemAttempted){approved=false;changed('expired',{failure:null});return;}
+   if(!approved||!['pending','draining','redeeming','redemption_unknown'].includes(transaction.phase))return;
+   approved=false;redeemAttempted=true;
+-  const nextIdentity={id:'dev-'+(++identitySequence),name,owner_id:'owner-'+identitySequence,owner_email:'new-owner@example.test'};
++  const nextIdentity={id:'dev-'+(++identitySequence),name:hiveDisplayName??name,owner_id:'owner-'+identitySequence,owner_email:'new-owner@example.test'};
+   changed(transaction.old_identity&&transaction.old_identity.owner_id!==nextIdentity.owner_id?'awaiting_owner_confirmation':'saving',{new_identity:nextIdentity,failure:null});
+   if(transaction.phase==='saving')complete();
+  };
+  const device=()=>{
+   if(transaction&&!transaction.old_identity){
+    const state=transaction.phase==='completed'?'bound':['pending','draining','expired'].includes(transaction.phase)?transaction.phase:'pairing';
+-   return {state,hive:savedHive,name,...state==='bound'?{identity:clone(identity)}:{},...['pending','draining'].includes(state)?{user_code:transaction.pairing.code,verification_url:transaction.pairing.verification_url,expires_at:transaction.pairing.expires_at,poll_interval_seconds:2}:{},recovery:clone(transaction)};
++   return {state,hive:savedHive,name:state==='bound'?identity.name:name,...state==='bound'?{identity:clone(identity)}:{},...['pending','draining'].includes(state)?{user_code:transaction.pairing.code,verification_url:transaction.pairing.verification_url,expires_at:transaction.pairing.expires_at,poll_interval_seconds:2}:{},recovery:clone(transaction)};
+   }
+-  return identity?{state:'bound',hive:savedHive,name,identity:clone(identity)}:{state:'unbound'};
++  return identity?{state:'bound',hive:savedHive,name:identity.name,identity:clone(identity)}:{state:'unbound'};
+  };
+  const admission=()=>{
+   const local=w.__beeMockRuntimeLocal();
+diff --git a/desktop/tests/fixtures/bee-preview/fixture.mjs b/desktop/tests/fixtures/bee-preview/fixture.mjs
+index c2b5c77..89d2fa6 100644
+--- a/desktop/tests/fixtures/bee-preview/fixture.mjs
++++ b/desktop/tests/fixtures/bee-preview/fixture.mjs
+@@ -28,7 +28,7 @@ export async function installPreviewFixture(id){
+  const accounts={openai:seeded('openai'),claude:accountFixture('claude')};
+  accounts.claude.candidate.state='source_missing';
+  if(id==='confirm-clear'){accounts.openai.hive={...accountFixture('openai').hive};accounts.openai.authorization.state='official_identity_verified';}
+- const empty=['runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
++ const empty=['switch-first-launch','runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
+  if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state=id==='account-reading'?'not_checked':'source_missing';}
+  if(['account-candidate','confirm-select'].includes(id))accounts.openai=seeded('openai',false);
+  if(['account-change','confirm-change'].includes(id)){
+@@ -62,7 +62,7 @@ export async function installPreviewFixture(id){
+  let preparingUntil=0,staleSupply=scene.id==='accounts-auto-stale',supplyUnknownNext=false,prepareFailure=false;
+  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
+  if(id.startsWith('recovery-')||id==='device-recovery-confirm')local='stopped';
+- let bound=!(id.startsWith('device-')&&id!=='device-bound'||id.startsWith('recovery-')&&id!=='recovery-completed'||id==='startup-blocked');
++ let bound=!(id==='switch-first-launch'||id.startsWith('device-')&&id!=='device-bound'||id.startsWith('recovery-')&&id!=='recovery-completed'||id==='startup-blocked');
+  let connection=({'runtime-offline':'disconnected','runtime-disconnected':'reconnecting','runtime-connecting':'connecting','runtime-rejected':'rejected','runtime-occupied':'occupied'}[id])??(!bound?'disconnected':local==='starting'?'connecting':'connected');
+  let networkUnavailable=id==='runtime-offline',unknownNext=false;
+  let activeRun='a'.repeat(32),deviceSession=null;
+@@ -122,7 +122,7 @@ export async function installPreviewFixture(id){
+   w.bindingRevision=(w.bindingRevision??1)+1;w.networkRevision=(w.networkRevision??0)+1;w.effectiveProxy='';
+   w.__beePreviewBindingChanged({bound:true});
+  };
+- const original=w.__TAURI_INTERNALS__.invoke;
++ const original=w.__TAURI_INTERNALS__.invoke;let reportedBindingRevision=w.bindingRevision??1;
+  let instance=(await original('bridge_status')).metadata.instance;
+  deviceSession=createPreviewDeviceSession({scene:id==='switch-first-launch'?'device-unbound':id,origin,current,instance,onConfigurationChanged:next=>{origin=next.hive;w.bindingRevision=(w.bindingRevision??1)+1;},onCompleted:finishBinding,onRevoked:()=>{bound=false;connection='rejected';revision++;}});
+  const networkSession=createPreviewNetworkSession({scene:id,origin,current,invoke:original,instance,context:()=>({...w.__beeMockRuntimeContext(),local,bound}),applyNetwork:next=>{
+@@ -170,7 +170,14 @@ export async function installPreviewFixture(id){
+    if(command==='network_apply_saved')throw Object.assign(new Error(error.message),error);
+    return {instance,result:{error}};
+   }
+-  if(deviceSession?.handles(command))return deviceSession.invoke(command,args);
++  if(deviceSession?.handles(command)){
++   const result=await deviceSession.invoke(command,args);
++   if(command==='device_context'){
++    const binding=result.result?.context?.binding_revision??result.result?.binding_revision;
++    if(binding!==reportedBindingRevision){reportedBindingRevision=binding;setTimeout(async()=>{if(current())w.emitStartup(await deviceSession.invoke('startup_status'));},0);}
++   }
++   return result;
++  }
+   if(networkSession.handles(command))return networkSession.invoke(command,args);
+   if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
+   if(['update_snapshot','update_check','update_download','update_install'].includes(command)&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}
+diff --git a/desktop/tests/fixtures/native-accounts.mjs b/desktop/tests/fixtures/native-accounts.mjs
+index 331e340..90f6a30 100644
+--- a/desktop/tests/fixtures/native-accounts.mjs
++++ b/desktop/tests/fixtures/native-accounts.mjs
+@@ -166,6 +166,8 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
+  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
+  w.emitRequestSettled=request=>emit('bee://request-settled',{instance,profile_id:w.currentHiveProfile,...request});
+  w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitNotification=activation=>emit('bee://notification-navigation',activation);w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});w.requestSwitchExit=operation_id=>emit('bee://hive-switch-exit-request',{operation_id});
++ w.emitStartup=payload=>emit('bee://startup-status',payload);
++ w.emitBridgeStatus=payload=>emit('bee://bridge-status',payload);
+  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
+  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
+  const supply=p=>{const reasons=[...new Set([...(w.paused[p]?['manually_paused']:[]),...(local!=='running'||connection!=='connected'?['offline']:[]),...(accounts[p].selection.state!=='selected'?['not_configured']:[]),...(w.accountScenarios.reasons?.[p]??[])])];return {hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:reasons.length===0,reasons,checked_at:new Date().toISOString()};};

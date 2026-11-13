@@ -642,6 +642,11 @@ func (d *DesktopDevice) advanceRecovery(ctx context.Context, s *desktopDeviceSes
 	}
 }
 func (d *DesktopDevice) acceptRecoveryIdentity(ctx context.Context, s *desktopDeviceSession, r *desktopRecoveryRecord, identity beewire.Identity) error {
+	// Initial continuation may only save its already verified identity. Check
+	// before validation so malformed observations cannot erase that commitment.
+	if r.Purpose == "initial_pairing" && r.NewIdentity != nil && identity != *r.NewIdentity {
+		return fmt.Errorf("new device identity changed while continuing protected save: phase=%s device_id_match=%t owner_id_match=%t name_match=%t owner_email_match=%t; required=original verified identity; adoption blocked", r.Phase, identity.ID == r.NewIdentity.ID, identity.OwnerID == r.NewIdentity.OwnerID, identity.Name == r.NewIdentity.Name, identity.OwnerEmail == r.NewIdentity.OwnerEmail)
+	}
 	if err := validateDesktopIdentity(localState{Hive: r.Hive, Credential: r.Credential, Pairing: r.Pairing}, identity); err != nil {
 		return r.change(s, "redemption_unknown", err)
 	}

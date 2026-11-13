@@ -193,3 +193,43 @@
 - 时间：2026-11-13 00:24:55 Asia/Shanghai；状态：**待评审，当前主静态预览交付版**。
 - [最终完整快照](20261113-002455-hive-switch-review-final/index.html?scene=switch-notification-source&theme=dark&size=narrow) 将概览侧栏地址随当前 Hive 同步，避免旧通知场景的设备区为 B、侧栏却仍固定 A。产品布局和原场景保留。
 - 复用 001934 的关键交互与独立对照验证，补丁后 main-preview 定点浏览器回归 1/1 通过；未重复人工浏览器。SOURCE.md 明确该差异、来源摘要和验证范围；001934 追加 LIMITATION.md，其余旧文件不改写。
+
+## 20261112-183023-add-account-wizard 三步添加 OpenAI 账号向导
+
+- 时区：Asia/Shanghai；状态：**待评审**。文本流程、线框已获用户确认，HTML 尚未纳入主预览。
+- [完整冻结稿](20261112-183023-add-account-wizard/draft.html?scene=add-platform) · [修改前主预览](20261112-183023-add-account-wizard/before-add.html)。产品资源全部内联，目录内保留四份既有冻结对照依赖。
+- 修改前草稿复用 [已认可设备向导稿](20261112-150523-setup-error-clarity/draft.html)，已核对字节一致；未改写旧历史。
+- 新增 38 个场景，共 519 个入口。选择平台、连接账号、确认接入；接入成功回到已设计的 OpenAI 卡片。官方登录和目录读取、返回、取消、失败和未知结果均可评审。
+- 浏览器验证范围与静态模拟边界见 [预览 README](../README.md)。主预览、正式应用及真实业务接口未在本轮修改。
+
+
+## 20261112-190918-add-error-details 添加向导错误详情叹号入口
+
+- 时区：Asia/Shanghai；状态：**已认可**（2026-11-13 用户确认“好的，更新到主预览”）。认可范围包括三步添加向导及叹号错误详情。
+- 修改前复用 [上一轮完整稿](20261112-183023-add-account-wizard/draft.html)，已确认字节一致。
+- [本轮完整快照](20261112-190918-add-error-details/draft.html?scene=add-permission)；依赖随同冻结，旧历史未改写。
+- 八类错误的证据入口统一为原因后方的圆圈叹号，点击打开详情浮层；保留原始错误证据与可访问名称。场景数量与业务流程不变。
+- 浏览器验证八类错误打开、浮层边界、Escape 关闭及焦点返回、浅深色切换和切场景关闭；主预览及正式应用未修改。
+
+
+## 20261113-104743-approved-add-account 添加账号向导纳入主预览
+
+- 时区：Asia/Shanghai；状态：**已认可**。用户确认“好的，更新到主预览”。
+- 修改前主预览复用 [完整基线](20261112-190918-add-error-details/before-add.html)，合入前已逐字节核对。来源为 [已认可草稿](20261112-190918-add-error-details/draft.html)。
+- [主入口](../index.html?scene=add-platform) · [完整主预览快照](20261113-104743-approved-add-account/index.html?scene=add-platform)。冻结全部对照依赖，旧历史未改写。
+- 纳入三步添加 OpenAI 账号向导、仅展示已接入账号的列表及圆圈叹号错误详情；保留原有卡片和全部 519 个场景。相对来源稿仅更新标题、认可标记和旧版对照链接。
+- 复用已完成的 38 个新增场景及八类错误验证，补查主入口连续接入、错误浮层和历史版。正式应用与真实接口未在本轮修改。
+
+
+## 20261113-110233-pairing-error-actions 首次绑定异常页操作层级
+
+- 时区：Asia/Shanghai；状态：**待评审**。用户已确认文字 UI 并要求输出 HTML；尚未将本轮 HTML 纳入主预览。
+- 修改前复用 [上一轮完整稿](20261112-190918-add-error-details/draft.html?scene=setup-unknown)，原稿 SHA-256 为 `cd13fc770107263351e9c21a7315591b703722e715146f0b7d9e4fb865abd54c`，已核对字节一致。
+- [本轮完整快照](20261113-110233-pairing-error-actions/draft.html?scene=setup-unknown) · [叹号详情](20261113-110233-pairing-error-actions/draft.html?scene=setup-unknown-details&theme=dark&size=narrow)。完整内联 HTML 与所有对照依赖已冻结；`before-pairing.html` 为本轮修改前原稿，旧历史未改写。支持场景、外观、窗口参数；可在 worktree 根目录用 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview` 访问。
+- 单一主按钮、次要检查动作，诊断移入叹号详情；保留中文原因、原始错误与校验要求，新增 6 个可直接打开的子场景。原有 519 项保留，草稿共 525 项。快速切场景的旧设备定位消息不再覆盖新场景。
+- 浏览器已验证本轮受影响交互、浅深色／两种窗口、焦点与模拟导出，并在冻结后独立复查；[浅色布局](20261113-110233-pairing-error-actions/error-light.png)与[深色详情](20261113-110233-pairing-error-actions/error-details-dark.png)截图已目视检查，仅补充布局说明。主预览、正式应用及真实 Hive 协议未在本轮修改。
+
+
+## 20261113-180820 桌面功能统一集成
+
+当前工作预览仍为 `../index.html`；本轮最新冻结版为 [静态主预览合并快照](20261113-180820-combined-integration/index.html)。合并 Hive 切换、首次启动及账号接入；保留两边原有历史记录，上文“当前版”均为历史轮次。状态：待评审，已独立验证本轮关键交互；来源与运行方法见快照 SOURCE.md。

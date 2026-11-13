@@ -166,6 +166,8 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
  w.emitRequestSettled=request=>emit('bee://request-settled',{instance,profile_id:w.currentHiveProfile,...request});
  w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitNotification=activation=>emit('bee://notification-navigation',activation);w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});w.requestSwitchExit=operation_id=>emit('bee://hive-switch-exit-request',{operation_id});
+ w.emitStartup=payload=>emit('bee://startup-status',payload);
+ w.emitBridgeStatus=payload=>emit('bee://bridge-status',payload);
  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
  const supply=p=>{const reasons=[...new Set([...(w.paused[p]?['manually_paused']:[]),...(local!=='running'||connection!=='connected'?['offline']:[]),...(accounts[p].selection.state!=='selected'?['not_configured']:[]),...(w.accountScenarios.reasons?.[p]??[])])];return {hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:reasons.length===0,reasons,checked_at:new Date().toISOString()};};

@@ -48,3 +48,12 @@ python3 -m http.server 1492 --bind 127.0.0.1 --directory '<选中的历史目录
 | --- | --- | --- | --- |
 | 2026-11-13 17:04:34 | da313bc 前端基线；修改前捕获 | 修改前基线，保留已知问题 | [修复前](20261113-170434-before-main-integration-fixes/tests/fixtures/bee-preview/index.html) |
 | 2026-11-13 17:18:54 | 作用域初始化与启动观察修复；预览桥失败、页签预设修正 | 待评审；独立静态服务关键交互已验证 | [修复后](20261113-171854-main-integration-fixes/tests/fixtures/bee-preview/index.html) |
+
+
+## 20261113-180820 桌面功能统一集成
+
+当前工作预览仍为 `../index.html`；本轮最新冻结版为 [正式组件合并快照](20261113-180820-combined-integration/tests/fixtures/bee-preview/index.html)。合并 Hive 切换、首次启动及账号接入；保留两边原有历史记录，上文“当前版”均为历史轮次。状态：待评审，已独立验证本轮关键交互；来源与运行方法见快照 SOURCE.md。
+
+## 20261113-181800 最终合并快照
+
+时间：2026-11-13 18:18:09 Asia/Shanghai。当前工作预览仍为 `../index.html`。本轮最终交付为[完整冻结预览](20261113-181800-combined-final/tests/fixtures/bee-preview/index.html)，来源、校验值和运行方法见 SOURCE.md。状态：待评审，独立 HTTP 关键场景已验证。补齐账号读取等待及失败证据；上方 180820 为本轮中间版，保留原样。

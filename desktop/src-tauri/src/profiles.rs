@@ -46,7 +46,7 @@ fn identifier() -> String {
         .into()
 }
 fn valid_id(id: &str) -> bool {
-    crate::startup_recovery::digest(id, 32)
+    crate::identity_digest::digest(id, 32)
 }
 fn normalize(origin: &str) -> Result<String, BridgeError> {
     crate::preferences::normalize_hive_origin(origin)
@@ -239,21 +239,7 @@ pub(crate) struct ProfileContext {
     pub origin: String,
     directory: PathBuf,
 }
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum ProfileMode {
-    Current,
-    Prepare,
-    Activate,
-}
-impl ProfileMode {
-    pub(crate) fn argument(self) -> &'static str {
-        match self {
-            Self::Current => "current",
-            Self::Prepare => "prepare",
-            Self::Activate => "activate",
-        }
-    }
-}
+pub(crate) use crate::profile_mode::ProfileMode;
 impl ProfileContext {
     pub(crate) fn directory(&self) -> &Path {
         &self.directory
@@ -281,9 +267,6 @@ impl ProfileContext {
     }
     pub(crate) fn device_path(&self) -> PathBuf {
         self.directory.join("bee-desktop.json")
-    }
-    pub(crate) fn startup_journal(&self) -> crate::startup_recovery::RecoveryJournal {
-        crate::startup_recovery::RecoveryJournal::beside(&self.device_path())
     }
 }
 
@@ -339,7 +322,7 @@ impl ProfileStore {
                 || entry
                     .binding_digest
                     .as_ref()
-                    .is_some_and(|id| !crate::startup_recovery::digest(id, 64))
+                    .is_some_and(|id| !crate::identity_digest::digest(id, 64))
             {
                 return Err(error("PROFILE_INDEX",format!("profile index entry rejected: id_valid={} binding_revision={}; required=unique internal ID/canonical origin and bounded binding metadata",valid_id(&entry.id),entry.binding_revision)));
             }
@@ -351,7 +334,7 @@ impl ProfileStore {
             || index
                 .committed_operation
                 .as_ref()
-                .is_some_and(|id| !crate::startup_recovery::digest(id, 48))
+                .is_some_and(|id| !crate::identity_digest::digest(id, 48))
             || index.migration_id.as_ref().is_some_and(|id| !valid_id(id))
         {
             return Err(error("PROFILE_INDEX", "profile current/operation/migration reference rejected; required=enrolled current ID and valid operation identities"));
@@ -529,7 +512,7 @@ impl ProfileStore {
         if index.revision != expected || expected >= MAX_REVISION {
             return Err(error("PROFILE_REVISION_CONFLICT",format!("profile revision actual={} expected={expected}; reread persisted current profile",index.revision)));
         }
-        if !crate::startup_recovery::digest(operation, 48) {
+        if !crate::identity_digest::digest(operation, 48) {
             return Err(error(
                 "PROFILE_OPERATION",
                 "profile commit operation_valid=false; required=48 lowercase hex characters",
@@ -1003,7 +986,7 @@ impl ProfileStore {
                 || p.binding_revision > MAX_REVISION
                 || p.binding_digest
                     .as_ref()
-                    .is_some_and(|d| !crate::startup_recovery::digest(d, 64))
+                    .is_some_and(|d| !crate::identity_digest::digest(d, 64))
         });
         if record.version != 1
             || !valid_id(&record.id)
@@ -1015,8 +998,8 @@ impl ProfileStore {
                     || !["root", "startup"].contains(&f.source.as_str())
                     || !legacy_name(&f.name, f.source == "startup")
                     || f.name.contains(['/', '\\'])
-                    || !crate::startup_recovery::digest(&f.sha256, 64)
-                    || !crate::startup_recovery::digest(&f.active_sha256, 64)
+                    || !crate::identity_digest::digest(&f.sha256, 64)
+                    || !crate::identity_digest::digest(&f.active_sha256, 64)
                     || f.bytes > LIMIT
             })
         {

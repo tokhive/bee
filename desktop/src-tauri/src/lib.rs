@@ -1,3 +1,5 @@
+mod identity_digest;
+mod profile_mode;
 pub mod authorize_protocol;
 mod autostart;
 pub mod build_source;

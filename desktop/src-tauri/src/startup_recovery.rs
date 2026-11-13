@@ -8,12 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 pub(crate) use crate::runtime_protocol::RecoveryProgress;
-pub(crate) fn digest(value: &str, length: usize) -> bool {
-    value.len() == length
-        && value
-            .bytes()
-            .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
-}
+pub(crate) use crate::identity_digest::digest;
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError::new(code, message.into())
 }
@@ -494,5 +489,11 @@ mod tests {
         assert_eq!(std::fs::read(&j.path).unwrap(), before);
         assert!(!bridge.0.restored.load(std::sync::atomic::Ordering::SeqCst));
         bridge.stop().await.unwrap();
+    }
+}
+
+impl crate::profiles::ProfileContext {
+    pub(crate) fn startup_journal(&self) -> RecoveryJournal {
+        RecoveryJournal::beside(&self.device_path())
     }
 }

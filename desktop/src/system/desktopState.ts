@@ -16,7 +16,7 @@ export interface DesktopSnapshot {
  refresh:RefreshStatus;accountRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;supplyRefresh:Partial<Record<AccountPlatform,RefreshStatus>>;
  diagnosticFailure?:UiFailure|null;
 }
-export interface DesktopDeps {openaiQueries?:boolean;bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
+export interface DesktopDeps {scope?:{profile_id:string;instance:string}|null;openaiQueries?:boolean;bridge:SystemBridge;device:DeviceClient;runtime:RuntimeFactory;accounts?:AccountFactory;supply?:SupplyFactory;intervalMs?:number;random?:()=>number}
 const platforms=['openai','claude'] as const;
 export const idleRefresh=():RefreshStatus=>({state:'idle',nextRetryAt:null,lastConfirmedAt:null});
 const status=(previous:RefreshStatus|undefined,state:RefreshStatus['state'],nextRetryAt:string|null=null):RefreshStatus=>({...previous??idleRefresh(),state,nextRetryAt});
@@ -24,9 +24,9 @@ const confirmed=():RefreshStatus=>({state:'idle',nextRetryAt:null,lastConfirmedA
 const failure=(e:unknown,check='desktop_refresh')=>normalizeFailure(e,check);
 /** The only application polling owner. A page subscription never starts another reader. */
 export function createDesktopState(deps:DesktopDeps){
- let state:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
+ let state:DesktopSnapshot={currentProfile:deps.scope?.profile_id,native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
  let disposed=false,started=false,epoch=0,pendingEpoch=0,blocked=false;
- let currentScope:{profile_id:string;instance:string}|null|undefined;
+ let currentScope=deps.scope;
  let unlistenSettled:(()=>void)|undefined;
  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
  let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0;
@@ -99,11 +99,10 @@ export function createDesktopState(deps:DesktopDeps){
   if(currentScope!==undefined&&(native.profile_id!==undefined&&native.profile_id!==currentScope?.profile_id||native.state==='ready'&&(!currentScope||native.metadata?.instance!==currentScope.instance)))return;
   const changed=native.metadata?.instance!==state.native.metadata?.instance||native.profile_id!==state.native.profile_id||native.state!==state.native.state;
   if(!changed){publish({native});return;}
-  const previousInstance=state.native.metadata?.instance??state.startup?.instance;
-  epoch++;blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
+  epoch++;startupReading=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
   const generation=epoch,instance=native.metadata?.instance,startup=(!instance&&native.state!=='ready'||state.startup?.instance===instance)?state.startup:undefined;
   publish({...reset(),native,startup,busy:false});
-  if(native.state==='ready')queueMicrotask(()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(previousInstance&&previousInstance!==instance)void readStartup();void refresh();}});
+  if(native.state==='ready')queueMicrotask(async()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(state.startup?.instance!==instance)await readStartup();if(!disposed&&epoch===generation)void refresh();}});
  }
  async function readStartup(){
   if(disposed||startupReading||!deps.bridge.startupStatus)return;

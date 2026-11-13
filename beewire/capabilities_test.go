@@ -60,12 +60,40 @@ func TestCapabilityPlatformWindowsAndModelScopes(t *testing.T) {
 		}
 	}
 	c.Windows = []QuotaWindow{five, week}
-	for _, plan := range []string{"max", "team", "enterprise"} {
+	for _, plan := range []string{"free", "max", "ultra", "team", "enterprise"} {
 		c.Plan = plan
 		if !c.ValidFor("claude", now) {
 			t.Fatal("known Claude plan rejected", plan)
 		}
 	}
+	for _, plan := range []string{"", "unknown", "max20x", "plus"} {
+		c.Plan = plan
+		if c.ValidFor("claude", now) {
+			t.Fatal("unknown Claude plan accepted", plan)
+		}
+	}
+	// Ultra has no five-hour limit: its weekly window alone is enough, with
+	// or without scoped weekly windows, while every other plan needs both.
+	scoped := QuotaWindow{Scope: "sonnet", Seconds: 604800, UsedPercent: &used, ResetAt: now.Add(time.Hour)}
+	for _, windows := range [][]QuotaWindow{{week}, {week, scoped}, {five, week}} {
+		c.Plan, c.Windows = "ultra", windows
+		if !c.ValidFor("claude", now) {
+			t.Fatalf("Ultra windows rejected: %+v", windows)
+		}
+	}
+	for _, plan := range []string{"free", "pro", "max", "team", "enterprise"} {
+		c.Plan, c.Windows = plan, []QuotaWindow{week}
+		if c.ValidFor("claude", now) {
+			t.Fatal("weekly-only window accepted for", plan)
+		}
+	}
+	for _, windows := range [][]QuotaWindow{{five}, {scoped}, {five, scoped}} {
+		c.Plan, c.Windows = "ultra", windows
+		if c.ValidFor("claude", now) {
+			t.Fatalf("Ultra accepted without its weekly window: %+v", windows)
+		}
+	}
+	c.Plan, c.Windows = "max", []QuotaWindow{five, week}
 	c.Windows = append(c.Windows, week)
 	if c.ValidFor("claude", now) {
 		t.Fatal("duplicate window accepted")

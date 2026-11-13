@@ -91,9 +91,11 @@ func ValidClientVersion(version string) bool { return clientVersion.MatchString(
 // predate Claude reporting a release.
 func ValidCodexClientVersion(version string) bool { return ValidClientVersion(version) }
 
+// Claude's plans follow the names Anthropic sells since 2026-10-30: Free, Pro,
+// Max (formerly Max 5x), Ultra (formerly Max 20x), Team and Enterprise.
 var subscriptionPlans = map[string][]string{
 	"openai": {"free", "go", "plus", "pro", "prolite", "promax", "team", "business", "enterprise", "edu"},
-	"claude": {"pro", "max", "team", "enterprise"},
+	"claude": {"free", "pro", "max", "ultra", "team", "enterprise"},
 }
 
 // SubscriptionPlans lists the plans a ready capability report may name for a
@@ -111,6 +113,12 @@ var openAISingleWindow = map[string]int{"pro": 604800, "prolite": 604800, "proma
 // OpenAISingleWindow returns the length in seconds of the only quota window an
 // OpenAI plan reports, or 0 when the plan reports two windows.
 func OpenAISingleWindow(plan string) int { return openAISingleWindow[plan] }
+
+// ClaudeWeeklyOnly reports whether a Claude plan may report its general
+// seven-day window without the five-hour one. Ultra has no five-hour limit,
+// so its usage response leaves five_hour null; every other Claude plan
+// reports both.
+func ClaudeWeeklyOnly(plan string) bool { return plan == "ultra" }
 
 // KnownPlan reports whether plan is one SubscriptionPlans lists for platform.
 func KnownPlan(platform, plan string) bool {
@@ -167,7 +175,11 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 			return false
 		}
 	} else {
-		if len(c.Windows) < 2 || len(c.Windows) > 5 {
+		least := 2
+		if ClaudeWeeklyOnly(c.Plan) {
+			least = 1
+		}
+		if len(c.Windows) < least || len(c.Windows) > 5 {
 			return false
 		}
 		if !KnownPlan(platform, c.Plan) {
@@ -193,7 +205,7 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 			scopes[window.Scope] = true
 		}
 	}
-	return platform != "claude" || windows[18000] && windows[604800]
+	return platform != "claude" || windows[604800] && (windows[18000] || ClaudeWeeklyOnly(c.Plan))
 }
 
 func (c Capabilities) Reason(now time.Time, model string) string {

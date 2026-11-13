@@ -10,3 +10,8 @@ mod network;
 mod preferences;
 #[path = "../src/authorize_protocol.rs"]
 mod authorize_protocol;
+
+#[path = "../src/hive_origin.rs"]
+mod hive_origin;
+#[path = "../src/profile_mode.rs"]
+mod profile_mode;

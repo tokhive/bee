@@ -153,7 +153,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  </AppShell>;
 }
 export function NativeApp(props:NativeProps){
- const switching=useHiveSwitch(props.hiveSwitchClient);
+ const switching=useHiveSwitch(props.hiveSwitchClient,props.systemBridge);
  const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
  const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
@@ -183,11 +183,14 @@ export function NativeApp(props:NativeProps){
   const media=window.matchMedia('(prefers-color-scheme: dark)');const apply=()=>{document.documentElement.dataset.theme=preferences.preferences.theme==='system'?(media.matches?'dark':'light'):preferences.preferences.theme;};
   apply();media.addEventListener('change',apply);return()=>media.removeEventListener('change',apply);
  },[preferences.preferences.theme]);
+ const scopeReady=!props.hiveSwitchClient||switching.snapshot!==undefined;
+ const initialScope=useRef(switching.snapshot?.current_scope);initialScope.current=switching.snapshot?.current_scope;
  useEffect(()=>{
-  const coordinator=createDesktopState({openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
+  if(!scopeReady)return;
+  const coordinator=createDesktopState({scope:initialScope.current,openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
   setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
   return()=>{off();coordinator.dispose();};
- },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
+ },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply,scopeReady]);
  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);

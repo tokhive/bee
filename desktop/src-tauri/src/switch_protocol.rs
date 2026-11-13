@@ -5,27 +5,7 @@ use serde_json::Value;
 fn invalid(message: impl Into<String>) -> BridgeError {
     BridgeError::new("HIVE_SWITCH_REPLY_INVALID", message.into())
 }
-pub(crate) fn allowed(mode: ProfileMode, method: &str) -> bool {
-    if mode == ProfileMode::Current {
-        return true;
-    }
-    matches!(
-        method,
-        "hello"
-            | "ping"
-            | "shutdown"
-            | "device_context"
-            | "device_status"
-            | "device_begin"
-            | "device_recovery_prepare"
-            | "device_recovery_confirm"
-            | "device_recovery_status"
-            | "runtime_inspect_recovery"
-            | "runtime_verify"
-            | "desktop_switch"
-    ) || mode == ProfileMode::Activate
-        && matches!(method, "runtime_configure_network" | "network_status")
-}
+pub(crate) use crate::profile_mode::allowed;
 pub(crate) fn action_allowed(mode: ProfileMode, action: &str) -> bool {
     mode != ProfileMode::Prepare || !matches!(action, "connect" | "commit" | "stop")
 }

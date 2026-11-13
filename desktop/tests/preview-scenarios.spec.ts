@@ -108,9 +108,9 @@ for(const [scene,copy] of cases)test('scene renders formal state without invalid
 
 test('review selector covers approved groups and preserves scene when theme or size changes',async({page})=>{
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light&size=normal');
- await expect(page.locator('#scene optgroup')).toHaveCount(11);
- expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['账户目标交互（mock）','设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
- await expect(page.locator('#scene option')).toHaveCount(83);
+ await expect(page.locator('#scene optgroup')).toHaveCount(12);
+ expect(await page.locator('#scene optgroup').evaluateAll(groups=>groups.map(group=>(group as HTMLOptGroupElement).label))).toEqual(['Hive 切换','账户目标交互（mock）','设备绑定','设备恢复','设置与诊断','跨页组合','贡献运行','AI 账号','接单条件','自动核对','额度报告','确认与详情']);
+ await expect(page.locator('#scene option')).toHaveCount(95);
  await expect(page.locator('#scene option[value="confirm-stop"]')).toHaveCount(0);
  for(const scene of ['runtime-no-accounts','runtime-accounts-unconfirmed','confirm-change'])await expect(page.locator('#scene option[value="'+scene+'"]')).toHaveCount(1);
  await page.locator('#scene').selectOption('confirm-change');

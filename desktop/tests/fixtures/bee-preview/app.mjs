@@ -15,6 +15,9 @@ try{
  step='加载正式 NativeApp';await import('/src/main.tsx');
  window.__beePreviewActivate();
  const {t}=await import('/src/i18n/index.ts');
+ // Select the review page only after the first authoritative binding has rendered.
+ // NativeWorkspace remounts when that scope becomes known.
+ if(scene.page!=='overview'){step='等待初始设备作用域';await until(()=>document.querySelector('.device-facts:not(.device-loading),.saved-device-context'));}
  step=`导航 ${scene.page}`;if(scene.page!=='overview')(await until(()=>button(t({accounts:'AI 账号',diagnostics:'诊断',settings:'设置'}[scene.page])))).click();
  await until(()=>document.querySelector('main h1'));
  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}

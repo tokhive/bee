@@ -10,14 +10,15 @@ test.beforeEach(async({page})=>{
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();
   const instance='b'.repeat(32);let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
   runtime.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:any)=>{
+   if(command==='hive_switch_snapshot')return {profile_identities:[],profiles:{version:1,revision:1,profiles:[{id:'1'.repeat(32),origin:'https://hive.example',raw_origin:'https://hive.example',binding_revision:1,binding_digest:null,blockers:[]}],current_profile:'1'.repeat(32),committed_operation:null,migration_id:null,migration_blockers:[],historical_conflicts:[]},operation:null,observation:{state:'idle',reason:null,next_query_at:null},actions:{can_cancel:false,can_continue:false,can_observe:false,target_pairing:false},current_scope:{profile_id:'1'.repeat(32),instance:instance}};
    if(command==='runtime_snapshot')return {instance,result:{runtime:{...((window as any).runtimeOverride??passiveRuntime),observed_at:new Date().toISOString()}}};
    runtime.deviceCalls.push(command);
    ((window as any).deviceRequests??=[]).push({command,args});
-   if(command==='plugin:event|listen') {if(args.event==='bee://bridge-status'&&location.search.includes('stale-status'))setTimeout(()=>callbacks.get(args!.handler)?.({payload:{state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}}}),20);return args.handler;}
+   if(command==='plugin:event|listen') {if(args.event==='bee://bridge-status'&&location.search.includes('stale-status'))setTimeout(()=>callbacks.get(args!.handler)?.({payload:{state:'ready',profile_id:'1'.repeat(32),metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}}}),20);return args.handler;}
    if(command==='plugin:event|unlisten')return;
    if(command==='bridge_status'&&location.search.includes('stale-status'))return new Promise((_,reject)=>setTimeout(()=>{(window as unknown as {initialRejected:boolean}).initialRejected=true;reject(new Error('old status read failed'));},100));
    if(command==='bridge_pending_requests')return {instance,requests:[]};
-   if(command==='bridge_status')return {state:'ready',metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}};
+   if(command==='bridge_status')return {state:'ready',profile_id:'1'.repeat(32),metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance}};
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1};
    if(command==='preferences_read')return {preferences,error:null};
    if(command==='preferences_save'){preferences={...args.request.preferences,revision:preferences.revision+1};return {preferences,error:null};}
@@ -245,7 +246,7 @@ for(const kind of ['initial_pairing','credential_recovery'] as const)test(`compl
  await page.goto('/');const device=page.getByRole('region',{name:'设备配对'});
  const assertCompleted=async()=>{
   await expect(device.getByText('设备已绑定。',{exact:true})).toBeVisible();
-  await expect(device.locator('.pairing-phase')).toContainText('已完成');
+  await expect(device.locator('.pairing-phase')).toContainText(kind==='initial_pairing'?'设备已配对':'已完成');
   await expect(device.locator('.device-pairing-grid,.device-url')).toHaveCount(0);
   await expect(device).not.toContainText('完成网页确认后，请回到 Bee。');
   await expect(device).not.toContainText('等待 Hive 核对是否过期');

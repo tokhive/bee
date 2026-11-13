@@ -20,7 +20,7 @@ func TestClaudeUsageRecordedOn20261011(t *testing.T) {
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 10, 11, 3, 0, 0, 0, time.UTC)
-	windows, unrecognised, reason := parseClaudeQuota(usage, now)
+	windows, unrecognised, reason := parseClaudeQuota(usage, "pro", now)
 	if reason != "" {
 		t.Fatalf("recorded payload refused: %s", reason)
 	}
@@ -29,5 +29,34 @@ func TestClaudeUsageRecordedOn20261011(t *testing.T) {
 	}
 	if len(unrecognised) != 0 {
 		t.Fatalf("null placeholders reported as new buckets: %v", unrecognised)
+	}
+}
+
+// Ultra has no five-hour limit, so its usage response leaves five_hour null.
+// Only Ultra may omit it; on any other plan a missing five-hour window still
+// stops supply.
+func TestClaudeUltraHasNoFiveHourWindow(t *testing.T) {
+	raw, err := os.ReadFile("testdata/claude-usage-2026-10-11.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var usage map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &usage); err != nil {
+		t.Fatal(err)
+	}
+	usage["five_hour"] = json.RawMessage("null")
+	now := time.Date(2026, 10, 11, 3, 0, 0, 0, time.UTC)
+	windows, _, reason := parseClaudeQuota(usage, "ultra", now)
+	if reason != "" || len(windows) != 1 || windows[0].Seconds != 604800 || *windows[0].UsedPercent != 24 {
+		t.Fatalf("Ultra weekly-only payload: %q %+v", reason, windows)
+	}
+	for _, plan := range []string{"free", "pro", "max", "team", "enterprise"} {
+		if _, _, reason := parseClaudeQuota(usage, plan, now); reason != "five_hour is missing" {
+			t.Fatalf("%s without a five-hour window: %q", plan, reason)
+		}
+	}
+	usage["seven_day"] = json.RawMessage("null")
+	if _, _, reason := parseClaudeQuota(usage, "ultra", now); reason != "seven_day is missing" {
+		t.Fatalf("Ultra without a seven-day window: %q", reason)
 	}
 }

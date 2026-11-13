@@ -91,6 +91,49 @@ func claudeSample(expires time.Time) []byte {
 	return raw
 }
 
+// TestClaudeCredentialPlan covers what Claude Code stores for each plan:
+// subscriptionType is null for a Free sign-in, and Ultra (Max 20x until
+// 2026-10-30) is "max" with the 20x rate limit tier.
+func TestClaudeCredentialPlan(t *testing.T) {
+	for _, test := range []struct {
+		name         string
+		subscription any
+		tier         any
+		want         string
+	}{
+		{"free null", nil, nil, "free"},
+		{"free omitted", "omit", "omit", "free"},
+		{"free empty", "", "", "free"},
+		{"pro", "pro", "default_claude_pro", "pro"},
+		{"max", "max", "default_claude_max_5x", "max"},
+		{"max without tier", "max", nil, "max"},
+		{"ultra", "max", "default_claude_max_20x", "ultra"},
+		{"team", "team", nil, "team"},
+		{"team premium seat", "team", "default_claude_max_5x", "team"},
+		{"enterprise", "enterprise", nil, "enterprise"},
+		{"unrecognised", "claude_platinum", nil, "unknown"},
+		{"20x tier on another plan", "pro", "default_claude_max_20x", "pro"},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var stored map[string]map[string]any
+			_ = json.Unmarshal(claudeSample(time.Now().Add(time.Hour)), &stored)
+			oauth := stored["claudeAiOauth"]
+			for field, value := range map[string]any{"subscriptionType": test.subscription, "rateLimitTier": test.tier} {
+				if value == "omit" {
+					delete(oauth, field)
+				} else {
+					oauth[field] = value
+				}
+			}
+			raw, _ := json.Marshal(stored)
+			credential, err := parseClaudeCredential(raw)
+			if err != nil || credential.plan != test.want {
+				t.Fatalf("plan %q, want %q (%v)", credential.plan, test.want, err)
+			}
+		})
+	}
+}
+
 func TestClaudeCredentialShapeAndPrivacy(t *testing.T) {
 	expires := time.Now().Add(time.Hour).Truncate(time.Millisecond)
 	credential, err := parseClaudeCredential(claudeSample(expires))

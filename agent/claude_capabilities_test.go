@@ -659,3 +659,33 @@ func TestClaudeUnknownCapabilitiesNameTheirReason(t *testing.T) {
 		})
 	}
 }
+
+// TestClaudeUltraReportsWeeklyOnly pins that an Ultra sign-in, whose usage
+// response has no five-hour window, reports ready with its weekly window,
+// while the same response from a Max sign-in still fails closed.
+func TestClaudeUltraReportsWeeklyOnly(t *testing.T) {
+	usage := claudeExpandedQuotaFixture()
+	usage["five_hour"] = nil
+	transport := claudeTransport(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Path == "/v1/models" {
+			return claudeProfileResponse(200, claudeModelsFixture), nil
+		}
+		raw, _ := json.Marshal(usage)
+		return claudeProfileResponse(200, string(raw)), nil
+	})
+	credential, _ := parseClaudeCredential(claudeSample(time.Now().Add(time.Hour)))
+	credential.plan = "ultra"
+	ultra, err := (&claudeCapabilitySource{}).observe(context.Background(), credential, "account-ultra", 1, transport)
+	if err != nil || ultra.Status != "ready" || ultra.Plan != "ultra" || !ultra.ValidFor("claude", time.Now()) {
+		t.Fatalf("Ultra without a five-hour window: status=%s plan=%s err=%v", ultra.Status, ultra.Plan, err)
+	}
+	for _, window := range ultra.Windows {
+		if window.Seconds == 18000 {
+			t.Fatalf("Ultra reported a five-hour window: %+v", ultra.Windows)
+		}
+	}
+	credential.plan = "max"
+	if maxReport, _ := (&claudeCapabilitySource{}).observe(context.Background(), credential, "account-max", 1, transport); maxReport.Status == "ready" {
+		t.Fatal("Max without a five-hour window reported ready")
+	}
+}

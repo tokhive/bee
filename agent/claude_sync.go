@@ -43,6 +43,7 @@ type claudeSource struct {
 	metadataLease      string
 	pacer              syncPacer
 	reportedAuth       beewire.Authorization
+	synchronized       *desktopSynchronizationReceipt
 	// suspended is the last unavailable source this Bee told Hive about: why,
 	// on which connection, and when. See unavailableReportInterval.
 	suspended struct {
@@ -152,13 +153,14 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	if !force && err == nil && auth == source.reportedAuth && !capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) && source.pacer.skip(time.Now()) {
 		return nil
 	}
+	source.synchronized = nil
 	path := "/api/bee/platforms/claude/account"
 	// The previous cycle's response already carried the account version this
 	// one has to claim, so the read is only for a cycle that has none.
 	observed, known := source.pacer.expected()
 	source.pacer.unsettled()
 	if !known {
-		if readErr := call(ctx, httpClient(), state.Hive, path, "GET", state.Credential, nil, &observed); readErr != nil {
+		if readErr := callState(ctx, httpClient(), state, path, "GET", nil, &observed); readErr != nil {
 			return readErr
 		}
 	}
@@ -166,7 +168,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		return errors.New("Hive returned an unexpected platform for the Claude account")
 	}
 	stop := func(reason error) error {
-		if err := call(ctx, httpClient(), state.Hive, path+"/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); err != nil {
+		if err := callState(ctx, httpClient(), state, path+"/source", "PUT", map[string]string{"lease": lease}, nil); err != nil {
 			return err
 		}
 		source.suspended.reason, source.suspended.lease, source.suspended.at = reason.Error(), lease, time.Now()
@@ -182,7 +184,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	}
 	var result beewire.MaintenanceResponse
 	input := beewire.MaintenanceRequest{Lease: lease, Claude: &auth, ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshSupported: source.maintenance != nil && credential.hasRefreshToken, RefreshRequired: profileRejected}
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential, input, &result); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/maintenance", "POST", input, &result); err != nil {
 		return err
 	}
 	if result.Account.Platform != "claude" {
@@ -207,7 +209,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 			return errors.New("invalid Hive Claude authorization maintenance task binding")
 		}
 		var key tee.InboxPublic
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &key); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
 			return err
 		}
 		if !validClaudeMaintenanceKey(key) {
@@ -249,7 +251,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		var registered struct {
 			Generation int64 `json:"account_generation"`
 		}
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential, upload, &registered); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/credentials", "POST", upload, &registered); err != nil {
 			var failure *apiFailure
 			if errors.As(err, &failure) && failure.Code == "invalid_claude_authorization" {
 				return stop(errClaudeExpired)
@@ -287,7 +289,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 			report.ReuseMetadata = true
 			report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 		}
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/claude/capabilities", "POST", state.Credential, report, nil); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/platforms/claude/capabilities", "POST", report, nil); err != nil {
 			var failure *apiFailure
 			if errors.As(err, &failure) && failure.Code == "capability_metadata_required" {
 				source.metadataReportedAt = time.Time{}
@@ -311,5 +313,6 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		source.reportedAuth = auth
 		source.pacer.settled(result.Account, time.Now(), source.capabilityWorkAt())
 	}
+	source.synchronized = &desktopSynchronizationReceipt{lease: lease, generation: result.Account.Generation, fingerprint: auth.AccountFingerprint, revision: auth.CredentialRevision}
 	return nil
 }

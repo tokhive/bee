@@ -1,0 +1,10 @@
+.startup-recovery-notice{margin-bottom:16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:13px}
+.startup-recovery-main{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.startup-recovery-main h2{margin:0 0 4px;font-size:14px;font-weight:600;line-height:1.4;text-wrap:balance}
+.startup-recovery-main p{margin:0;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
+.startup-recovery-notice details{margin-top:8px}.startup-recovery-notice summary{cursor:pointer;line-height:1.8}
+.startup-recovery-notice pre{font:inherit;font-size:12px;white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto}
+.startup-recovery-notice small{display:block;margin-top:8px;color:var(--muted)}
+.startup-recovery-notice small button{margin-left:8px}.startup-diagnostic-hint{color:var(--muted)}
+.startup-recovery-main>div:first-child{min-width:0}.startup-recovery-result{margin:0 0 12px;font-size:13px;color:var(--muted)}
+@media(max-width:700px){.startup-recovery-main{flex-wrap:wrap;gap:10px}}

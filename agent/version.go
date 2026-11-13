@@ -10,9 +10,9 @@ import (
 // recorded instead.
 var Version = "dev"
 
-// buildVersion is Version, or for a source build "dev+<commit>", with
-// "-dirty" when the tree had local changes.
-func buildVersion() string {
+// BuildVersion is Version, or for a source build "dev+<commit>", with
+// "-dirty" when the tree had local changes. CLI and desktop metadata share it.
+func BuildVersion() string {
 	// The commit is Bee's only when Bee is the main module; built through
 	// Hive's workspace, Go records Hive's.
 	info, ok := debug.ReadBuildInfo()
@@ -43,11 +43,11 @@ func buildVersion() string {
 // versionLine is what bee version prints and bee run logs first, so a
 // report from a provider says which build it came from.
 func versionLine() string {
-	return "bee " + buildVersion() + " " + runtime.GOOS + "/" + runtime.GOARCH
+	return "bee " + BuildVersion() + " " + runtime.GOOS + "/" + runtime.GOARCH
 }
 
 // userAgent identifies this build to Hive on every request and on the
 // connection, so the console can show which Bees run an old release.
 func userAgent() string {
-	return "tokhive-bee/" + buildVersion() + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"
+	return "tokhive-bee/" + BuildVersion() + " (" + runtime.GOOS + "/" + runtime.GOARCH + ")"
 }

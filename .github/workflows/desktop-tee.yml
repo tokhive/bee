@@ -1,0 +1,39 @@
+name: Desktop native TEE probe
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/bee-desktop-p0]
+    paths:
+      - .github/workflows/desktop-tee.yml
+      - desktop/scripts/**
+      - desktop/tests/**
+      - TEE_REVISION
+
+permissions:
+  contents: read
+
+jobs:
+  windows-tee:
+    name: Windows x64 Node tooling and real pinned TEE
+    runs-on: windows-2022
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          architecture: x64
+      - name: Report native runtime
+        shell: pwsh
+        run: |
+          node -e 'console.log(JSON.stringify({os:process.platform,arch:process.arch,node:process.version})); if(process.platform!=="win32" || process.arch!=="x64") process.exit(1)'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git --version --build-options
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Verify Node tooling
+        run: node --test desktop/tests/tooling.test.mjs
+      - name: Verify real pinned TEE on native Windows
+        run: node --test desktop/tests/tee-real.test.mjs

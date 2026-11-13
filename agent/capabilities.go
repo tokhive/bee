@@ -13,7 +13,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -146,7 +145,11 @@ func codexOnPath(ctx context.Context) string {
 	}
 	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
-	out, err := exec.CommandContext(ctx, path, "--version").Output()
+	command := exec.CommandContext(ctx, path, "--version")
+	// A wrapper can exit while a descendant retains its output pipes.
+	// Bound pipe cleanup as well as the directly owned process.
+	command.WaitDelay = 100 * time.Millisecond
+	out, err := command.Output()
 	if err != nil {
 		return ""
 	}
@@ -159,12 +162,13 @@ func codexOnPath(ctx context.Context) string {
 }
 
 // cachedCodexVersion is the release recorded in models_cache.json, empty
-// when there is none to read.
+// when there is no regular file to read. Auxiliary metadata must not block
+// official account checks on a FIFO or follow a replaced symlink.
 func cachedCodexVersion(home string) string {
 	if home == "" {
 		return ""
 	}
-	file, err := os.Open(filepath.Join(home, "models_cache.json"))
+	file, err := openRegularNoFollow(filepath.Join(home, "models_cache.json"))
 	if err != nil {
 		return ""
 	}
@@ -202,6 +206,9 @@ func newerVersion(a, b string) bool {
 	return preA > preB
 }
 
+// officialCapabilityQueryTimeout bounds one Codex models or usage read, including the response body.
+const officialCapabilityQueryTimeout = 10 * time.Minute
+
 // query fetches one official endpoint into target. It returns why it failed,
 // empty on success, the time a 429 asked to be left alone until, and whether
 // upstream rejected the token itself.
@@ -227,7 +234,9 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	req.Header.Set("Originator", "codex_cli_rs")
 	req.Header.Set("Version", s.version)
 	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version+codexFallbackUserAgentSuffix)
-	client := &http.Client{Transport: s.transport, Timeout: 5 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	// The models catalog is hundreds of kilobytes. A slow link needs more than a
+	// minute; 5 seconds returns a truncated body that cannot be decoded.
+	client := &http.Client{Transport: s.transport, Timeout: officialCapabilityQueryTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
 		return capabilityTransportFailure(err), time.Time{}, false
@@ -517,7 +526,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 	if err != nil || !current.sameAuthorization(credential) {
 		// Do not publish a query from a source that changed while the requests ran.
 		cfg.authorization = nil
-		return call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil)
+		return callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil)
 	}
 	fingerprint := sha256.Sum256([]byte(credential.AccountID + "\x00" + credential.UserID))
 	revision := sha256.Sum256([]byte(credential.Secret.Token))
@@ -526,7 +535,7 @@ func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state loca
 		report.ReuseMetadata = true
 		report.Plan, report.Models, report.MetadataObservedAt, report.ClientVersion = "", nil, time.Time{}, ""
 	}
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/capabilities", "POST", state.Credential, report, nil); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/capabilities", "POST", report, nil); err != nil {
 		var failure *apiFailure
 		if errors.As(err, &failure) && failure.Code == "capability_metadata_required" {
 			cfg.metadataReportedAt = time.Time{}

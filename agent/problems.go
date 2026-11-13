@@ -26,7 +26,7 @@ var problems = map[string]problem{
 	},
 	"BEE-CONFIG-PERMISSIONS": {
 		"egress configuration is readable or writable by other users",
-		"run chmod 600 on the file; it must be accessible only to the user running Bee",
+		privateFilePermissionFix,
 	},
 	"BEE-CONFIG-UNREADABLE": {
 		"egress configuration cannot be read",
@@ -118,7 +118,7 @@ var problems = map[string]problem{
 	},
 	"BEE-DEVICE-CONFIG": {
 		"the Bee device configuration cannot be used",
-		"configuration kept; fix the reported JSON, path or access issue (chmod 600), then start again",
+		"configuration kept; fix the reported JSON or path issue; " + privateFilePermissionFix + "; then start again",
 	},
 	"BEE-DEVICE-NOT-PAIRED": {
 		"this Bee is not paired with Hive",

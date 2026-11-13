@@ -1,0 +1,11 @@
+{
+  "svg": {
+    "path": "../../src/assets/app-icon-dark.svg",
+    "sha256": "198cad802e7dcaa73978e35327416852f60c371849163080e7b5de64236a3488"
+  },
+  "png": {
+    "path": "source-1024.png",
+    "sha256": "6bc3ab67560b67791b1d7ee39ce863d3b02037fa4e8e4f7e888a5598a9944e48"
+  },
+  "source": "工作区 logos/export/，2026-10-22；SVG 对照已批准中文基线校验"
+}

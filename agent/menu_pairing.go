@@ -41,7 +41,7 @@ func (m *managementMenu) pairingWithNext(offerNext bool) error {
 				return e
 			}
 			var identity beewire.Identity
-			if e = call(m.ctx, httpClient(), device.Hive, "/api/bee/identity", "GET", device.Credential, nil, &identity); e != nil {
+			if e = callState(m.ctx, httpClient(), device, "/api/bee/identity", "GET", nil, &identity); e != nil {
 				return fmt.Errorf(m.text("Verify device (configuration kept): %w", "验证设备（已保留配置）：%w"), e)
 			}
 			fmt.Fprintf(m.out, m.text("Pairing valid: %s (%s)\n", "配对有效：%s（%s）\n"), identity.Name, identity.OwnerEmail)

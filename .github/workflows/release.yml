@@ -1,4 +1,6 @@
 name: Release
+# CLI tags keep their existing publication behavior. Bee desktop candidates and
+# controlled signing are opt-in in desktop.yml; this workflow never ships them.
 on:
   push:
     tags: ["v*"]

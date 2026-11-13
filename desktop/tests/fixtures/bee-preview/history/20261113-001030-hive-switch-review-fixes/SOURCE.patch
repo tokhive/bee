@@ -1,0 +1,983 @@
+diff --git a/desktop/src-tauri/src/hive_switch.rs b/desktop/src-tauri/src/hive_switch.rs
+index 5df7b01..d4a8177 100644
+--- a/desktop/src-tauri/src/hive_switch.rs
++++ b/desktop/src-tauri/src/hive_switch.rs
+@@ -195,14 +195,15 @@ impl SwitchJournal {
+             error(
+                 "HIVE_SWITCH_JOURNAL_INVALID",
+                 format!(
+-                    "switch journal unique JSON rejected: category={:?} line={} column={}",
++                    "switch journal unique JSON rejected: {}; category={:?} line={} column={}; original preserved",
++                    crate::startup_recovery::journal_schema_reason(&e),
+                     e.classify(),
+                     e.line(),
+                     e.column()
+                 ),
+             )
+         })?;
+-        let record:SwitchRecord=serde_json::from_value(value).map_err(|e|error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch journal JSON rejected: category={:?} line={} column={}; original preserved",e.classify(),e.line(),e.column())))?;
++        let record:SwitchRecord=serde_json::from_value(value).map_err(|e|error("HIVE_SWITCH_JOURNAL_INVALID",format!("switch journal JSON rejected: {}; category={:?} line={} column={}; original preserved",crate::startup_recovery::journal_schema_reason(&e),e.classify(),e.line(),e.column())))?;
+         Self::validate(&record)?;
+         Ok(Some(record))
+     }
+@@ -354,7 +355,16 @@ impl SwitchJournal {
+                 }
+                 for (a, b) in [(&old.source, &r.source), (&old.target, &r.target)] {
+                     if let Some(action) = a.pending.as_deref() {
++                        let cancelling_absent_begin = (r.cancel_requested || r.quit_requested)
++                            && action == "drain_begin"
++                            && b.pending.as_deref() == Some("drain_release")
++                            && b.status.as_ref().is_some_and(|s| s["state"] == "absent")
++                            && b.release.as_ref().is_some_and(|release| {
++                                release["mode"] == "cancel"
++                                    && Some(&release["request"]) == a.operation.as_ref()
++                            });
+                         if b.pending.as_deref() != Some(action)
++                            && !cancelling_absent_begin
+                             && (b.pending.is_some()
+                                 || b.status.as_ref().is_none_or(|s| !b.resolves(action, s)))
+                         {
+@@ -1128,6 +1138,10 @@ impl HiveSwitch {
+                 "target Hive already owns the current profile",
+             ));
+         }
++        let entry = index.profiles.iter().find(|p| p.id == target.id).unwrap();
++        if !entry.blockers.is_empty() {
++            return Err(error("HIVE_SWITCH_BINDING_BLOCKED", format!("target profile={} blockers={:?}; reconcile preserved original records before preparing this Hive", target.id, entry.blockers)));
++        }
+         let mut r = SwitchRecord::new(source, target.id);
+         r.source_index_operation = index.committed_operation;
+         r.observation_round = 1;
+@@ -1572,6 +1586,24 @@ impl HiveSwitch {
+             // A single absent read is never permission to replay an uncertain write.
+             let resolved = leg.resolves(leg.pending.as_deref().unwrap(), status);
+             if !resolved {
++                if (record.cancel_requested || record.quit_requested)
++                    && leg.pending.as_deref() == Some("drain_begin")
++                    && status["state"] == "absent"
++                {
++                    // Absence cannot authorize a begin replay. Cancellation is
++                    // a different action: persist its original-ID tombstone
++                    // obligation atomically before replacing the pending begin.
++                    leg.status = Some(status.clone());
++                    leg.release = Some(json!({"id":id(),"request":leg.operation,"mode":"cancel","expected_epoch":status["current"]["epoch"],"expected_lease":status["current"]["lease"]}));
++                    leg.pending = Some("drain_release".into());
++                    self.journal.save(record)?;
++                    let leg = if target { &mut record.target } else { &mut record.source };
++                    let released = self.control(leg, bridge, "drain_release").await?;
++                    leg.status = Some(released["drain"].clone());
++                    leg.pending = None;
++                    self.journal.save(record)?;
++                    return Ok(released);
++                }
+                 return Err(error(
+                     "HIVE_SWITCH_RESULT_UNCONFIRMED",
+                     format!(
+@@ -2172,6 +2204,28 @@ mod tests {
+         crate::preferences::private_write(&context.device_path(),&serde_json::to_vec(&json!({"hive":context.origin,"name":"Synthetic Mac","credential":format!("bee_{}","b".repeat(43)),"identity":{"id":"synthetic-device","name":"Synthetic Mac","owner_id":"synthetic-owner","owner_email":"synthetic@example.com"}})).unwrap()).unwrap();
+     }
+     #[tokio::test]
++    async fn historical_conflict_blocks_target_preparation_and_keeps_current_binding() {
++        let tmp = tempfile::tempdir().unwrap();
++        let root = tmp.path().canonicalize().unwrap();
++        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
++        private_write(&profiles.root().join("bee-desktop.json"), br#"{"hive":"https://a.example","name":"A","credential":"synthetic","identity":{"id":"device","owner_id":"owner"}}"#).unwrap();
++        private_write(&profiles.root().join("ai-accounts.json"), br#"{"version":3,"revision":1,"entries":{},"scopes":{"one":{"hive":"https://b.example","owner_id":"one","device_id":"one","pending_operations":{}},"two":{"hive":"https://B.example:443/","owner_id":"two","device_id":"two","pending_operations":{}}}}"#).unwrap();
++        let index = profiles.migrate_legacy(&root.join("app")).unwrap();
++        let source = index.current_profile.unwrap();
++        let c = HiveSwitch::from_store(profiles, real_launch()).unwrap();
++        let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
++        let cause = c.start("https://b.example".into(), "B".into(), prefs).await.unwrap_err();
++        assert_eq!(cause.code, "HIVE_SWITCH_BINDING_BLOCKED");
++        assert!(cause.message.contains("historical_origin_conflict:https://b.example"));
++        let snapshot = c.snapshot().unwrap();
++        assert!(snapshot.operation.is_none());
++        assert_eq!(snapshot.profiles.current_profile.as_deref(), Some(source.as_str()));
++        assert!(snapshot.profiles.profiles.iter().find(|p| p.id == source).unwrap().blockers.is_empty());
++        assert!(snapshot.profiles.profiles.iter().any(|p| p.origin == "https://b.example" && !p.blockers.is_empty()));
++        assert!(c.target.lock().await.is_none());
++        c.current.get().unwrap().stop().await.unwrap();
++    }
++    #[tokio::test]
+     async fn real_go_children_handoff_with_index_commit_before_target_release() {
+         let a_server = Server::start();
+         let b_server = Server::start();
+@@ -2742,8 +2796,9 @@ mod tests {
+     }
+ 
+     #[tokio::test]
+-    async fn recorded_unsent_source_can_cancel_but_unknown_begin_absence_never_authorizes_a_new_write(
++    async fn cancelling_unsent_or_lost_begin_fences_late_begin_with_one_original_release(
+     ) {
++        let _ = rustls::crypto::ring::default_provider().install_default();
+         for unknown in [false, true] {
+             let server = Server::start();
+             let tmp = tempfile::tempdir().unwrap();
+@@ -2777,6 +2832,11 @@ mod tests {
+             c.control(&mut r.source, &source, "freeze").await.unwrap();
+             let prefs =
+                 crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
++            if unknown {
++                let waiting = c.continue_waiting(prefs.clone()).await.unwrap().operation.unwrap();
++                assert_eq!(waiting.source.pending.as_deref(), Some("drain_begin"));
++                assert!(audit(&server).await.as_array().unwrap().iter().all(|e| e["method"] != "POST"), "absence without cancellation must not authorize a write");
++            }
+             let result = c.cancel(prefs).await.unwrap().operation.unwrap();
+             let writes = audit(&server)
+                 .await
+@@ -2786,19 +2846,70 @@ mod tests {
+                 .filter(|e| e["method"] == "POST")
+                 .cloned()
+                 .collect::<Vec<_>>();
+-            if unknown {
+-                assert!(!result.terminal());
+-                assert_eq!(result.source.pending.as_deref(), Some("drain_begin"));
+-                assert!(writes.is_empty(), "{writes:?}");
+-            } else {
+-                assert_eq!(result.phase, "cancelled", "{result:?}");
+-                assert_eq!(writes.len(), 1);
+-                assert!(writes[0]["path"].as_str().unwrap().ends_with("/release"));
+-            }
++            assert_eq!(result.phase, "cancelled", "{result:?}");
++            assert_eq!(writes.len(), 1);
++            assert!(writes[0]["path"].as_str().unwrap().ends_with("/release"));
++            assert_eq!(writes[0]["body"]["request"], r.source.operation.clone().unwrap());
++            let late = reqwest::Client::builder().no_proxy().build().unwrap()
++                .post(format!("{}/api/bee/device-drains/{}/begin", server.1, r.source.operation.as_ref().unwrap()["id"].as_str().unwrap()))
++                .body(serde_json::to_vec(&r.source.operation).unwrap()).send().await.unwrap().bytes().await.unwrap();
++            let late: Value = serde_json::from_slice(&late).unwrap();
++            assert_eq!(late["state"], "released");
++            assert_eq!(late["current"]["barrier_id"], "");
+             source.stop().await.unwrap();
+         }
+     }
+ 
++    #[tokio::test]
++    async fn lost_begin_cancellation_survives_lost_release_and_restart_on_either_leg() {
++        for target in [false, true] {
++            let a_server = Server::start();
++            let b_server = Server::start();
++            let failing = if target { &b_server } else { &a_server };
++            configure(failing, json!({"faults":{"begin_before_accept":1,"release":1}})).await;
++            let tmp = tempfile::tempdir().unwrap();
++            let root = tmp.path().canonicalize().unwrap();
++            let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
++            let a = profiles.register(&a_server.1).unwrap();
++            let b = profiles.register(&b_server.1).unwrap();
++            bind(&a); bind(&b);
++            profiles.commit_current(profiles.snapshot().unwrap().revision, &a.id, &id()).unwrap();
++            let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
++            let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
++            let started = c.start(b.origin, "Mac".into(), prefs.clone()).await.unwrap().operation.unwrap();
++            let leg = if target { &started.target } else { &started.source };
++            assert_eq!(leg.pending.as_deref(), Some("drain_begin"), "{started:?}");
++            let operation = leg.operation.clone().unwrap();
++            let cancelling = c.cancel(prefs.clone()).await.unwrap().operation.unwrap();
++            let leg = if target { &cancelling.target } else { &cancelling.source };
++            assert_eq!(leg.pending.as_deref(), Some("drain_release"), "{cancelling:?}");
++            let release = leg.release.clone().unwrap();
++            assert_eq!(release["request"], operation);
++            assert!(!cancelling.terminal());
++            c.current.get().unwrap().stop().await.unwrap();
++            c.shutdown_target().await.unwrap();
++            drop(c);
++            let resumed = HiveSwitch::from_store(profiles, real_launch()).unwrap();
++            let done = resumed.continue_waiting(prefs).await.unwrap().operation.unwrap();
++            assert_eq!(done.phase, "cancelled", "{done:?}");
++            let leg = if target { &done.target } else { &done.source };
++            assert_eq!(leg.release, Some(release.clone()));
++            let writes = audit(failing).await.as_array().unwrap().iter()
++                .filter(|e| e["method"] == "POST" && e["path"].as_str().is_some_and(|p| p.ends_with("/release")))
++                .cloned().collect::<Vec<_>>();
++            assert_eq!(writes.len(), 1, "{writes:?}");
++            assert_eq!(writes[0]["body"], release);
++            let late = reqwest::Client::builder().no_proxy().build().unwrap()
++                .post(format!("{}/api/bee/device-drains/{}/begin", failing.1, operation["id"].as_str().unwrap()))
++                .body(serde_json::to_vec(&operation).unwrap()).send().await.unwrap().bytes().await.unwrap();
++            let late: Value = serde_json::from_slice(&late).unwrap();
++            assert_eq!(late["state"], "released");
++            assert_eq!(late["current"]["barrier_id"], "");
++            resumed.current.get().unwrap().stop().await.unwrap();
++            resumed.shutdown_target().await.unwrap();
++        }
++    }
++
+     async fn audit(server: &Server) -> Value {
+         let response = reqwest::Client::builder()
+             .no_proxy()
+@@ -3042,7 +3153,21 @@ mod tests {
+         let mut value = serde_json::to_value(&r).unwrap();
+         value.as_object_mut().unwrap().remove("commit_revision");
+         private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
+-        assert!(SwitchJournal::new(path.clone()).load().is_err());
++        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
++        assert!(cause.message.contains("missing field `commit_revision`"), "{cause:?}");
++        assert_eq!(protected_read_bounded(&path, 1_048_576).unwrap(), serde_json::to_vec(&value).unwrap());
++        value = serde_json::to_value(&r).unwrap();
++        value["committed"] = json!("bee_synthetic-secret-value");
++        private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
++        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
++        assert!(cause.message.contains("invalid type: string") && cause.message.contains("expected a boolean"), "{cause:?}");
++        assert!(!cause.message.contains("synthetic-secret"));
++        value = serde_json::to_value(&r).unwrap();
++        value["bee_synthetic-secret-field"] = json!(true);
++        private_write(&path, &serde_json::to_vec(&value).unwrap()).unwrap();
++        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
++        assert!(cause.message.contains("unknown field"), "{cause:?}");
++        assert!(!cause.message.contains("synthetic-secret"));
+         let mut forged = r.clone();
+         forged.phase = "succeeded".into();
+         assert!(SwitchJournal::new(dir.path().join("forged.json"))
+@@ -3054,6 +3179,8 @@ mod tests {
+             1,
+         );
+         private_write(&path, duplicate.as_bytes()).unwrap();
+-        assert!(SwitchJournal::new(path).load().is_err());
++        let cause = SwitchJournal::new(path.clone()).load().unwrap_err();
++        assert!(cause.message.contains("duplicate JSON field"), "{cause:?}");
++        assert_eq!(protected_read_bounded(&path, 1_048_576).unwrap(), duplicate.as_bytes());
+     }
+ }
+diff --git a/desktop/src-tauri/src/lib.rs b/desktop/src-tauri/src/lib.rs
+index 5ee0c69..8475f5a 100644
+--- a/desktop/src-tauri/src/lib.rs
++++ b/desktop/src-tauri/src/lib.rs
+@@ -143,9 +143,11 @@ commands::device_recovery_status,
+             app.manage(native_language.clone());
+             app.manage(diagnostics_native::NativeDiagnostics::new(app.path().app_log_dir()?.join("safe-diagnostics")));
+             let notify_handle = app.handle().clone();
+-            let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |page| {
++            let adapter = notifications::NativeNotificationAdapter::new(app.config().identifier.clone(), std::sync::Arc::new(move |target| {
++                let coordinator = notify_handle.try_state::<hive_switch::HiveSwitch>();
++                let activation = notifications::activate_target(target, coordinator.as_ref().map(|c| c.profiles.as_ref()));
+                 lifecycle::dispatch(&notify_handle,lifecycle::WindowEvent::Reopen);
+-                if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",page){eprintln!("notification navigation delivery failed: {cause}");}
++                if let Err(cause)=notify_handle.emit_to("main","bee://notification-navigation",activation){eprintln!("notification navigation delivery failed: {cause}");}
+             }),native_language);
+             app.manage(notifications::NotificationService::new(app.path().config_dir()?.join("tokhive/notification-delivery.json"),std::sync::Arc::new(adapter)));
+             let config = app.config().app.windows.first().ok_or_else(|| {
+diff --git a/desktop/src-tauri/src/notification_poll.rs b/desktop/src-tauri/src/notification_poll.rs
+index e9d701c..36a6716 100644
+--- a/desktop/src-tauri/src/notification_poll.rs
++++ b/desktop/src-tauri/src/notification_poll.rs
+@@ -153,6 +153,7 @@ fn events(snapshot: Snapshot) -> Vec<NotificationEvent> {
+                         identity: fact.identity,
+                         platform: fact.platform,
+                         problem: fact.problem,
++                        source: None,
+                     },
+                     eligible: fact.eligible,
+                 })
+@@ -206,12 +207,19 @@ fn apply_localized(
+     snapshot: Snapshot,
+     preferences: PreferencesSnapshot,
+     locale: Option<crate::lifecycle::NativeLocale>,
++    source: Option<crate::notifications::NotificationSource>,
+     reconcile: impl FnOnce(bool, &[NotificationEvent]) -> Result<Vec<DeliveryOutcome>, BridgeError>,
+ ) -> Result<(), BridgeError> {
+     if locale.is_none() {
+         return Ok(());
+     }
+-    apply(snapshot, preferences, reconcile)
++    apply(snapshot, preferences, |enabled, events| {
++        let events = events.iter().cloned().map(|mut event| {
++            if let NotificationEvent::Problem { notice, .. } = &mut event { notice.source = source.clone(); }
++            event
++        }).collect::<Vec<_>>();
++        reconcile(enabled, &events)
++    })
+ }
+ fn safe_code(code: &str) -> &str {
+     // A shape check alone would still log caller-controlled uppercase data.
+@@ -295,7 +303,7 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
+             }
+         };
+         let scope = crate::hive_switch::CurrentScope {
+-            profile_id: context.id,
++            profile_id: context.id.clone(),
+             instance: instance.clone(),
+         };
+         let reply = match bridge.notification_snapshot().await {
+@@ -331,7 +339,7 @@ pub async fn run(app: tauri::AppHandle, route: crate::hive_switch::CurrentBridge
+                 if !startup_ready {return Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification submission blocked: startup gate changed before native reconciliation".into()));}
+                 let preferences=worker_app.state::<PreferencesStore>().read();
+                 let service=worker_app.state::<NotificationService>();
+-                apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),|enabled,events|service.reconcile(enabled,events))
++                apply_localized(snapshot,preferences,worker_app.state::<std::sync::Arc<crate::lifecycle::NativeLanguage>>().current(),Some(crate::notifications::NotificationSource{profile_id:context.id,origin:context.origin}),|enabled,events|service.reconcile(enabled,events))
+             }).unwrap_or_else(||Err(BridgeError::new("NOTIFICATION_SAMPLE_STALE","notification sample discarded: profile/management instance changed before native reconciliation".into())))
+         }).await;
+         route.with_scope(&scope,||match result {
+diff --git a/desktop/src-tauri/src/notification_poll_tests.rs b/desktop/src-tauri/src/notification_poll_tests.rs
+index ff2a0e8..632791c 100644
+--- a/desktop/src-tauri/src/notification_poll_tests.rs
++++ b/desktop/src-tauri/src/notification_poll_tests.rs
+@@ -290,21 +290,29 @@ fn unconfirmed_system_language_never_changes_delivery_ledger_or_consumes_permiss
+     active["notifications"]["facts"][0]["active"] = json!(true);
+     active["notifications"]["facts"][0]["eligible"] = json!(true);
+     let reconcile = |enabled, events: &[NotificationEvent]| service.reconcile(enabled, events);
+-    apply_localized(decode(&active).unwrap(), prefs(true), None, reconcile).unwrap();
++    apply_localized(decode(&active).unwrap(), prefs(true), None, None, reconcile).unwrap();
+     assert!(!path.exists());
+     assert_eq!(adapter.0.load(Ordering::SeqCst), 0);
++    let source = crate::notifications::NotificationSource {
++        profile_id: "1".repeat(32),
++        origin: "https://a.example".into(),
++    };
+     apply_localized(
+         decode(&active).unwrap(),
+         prefs(true),
+         Some(crate::lifecycle::NativeLocale::Zh),
++        Some(source.clone()),
+         reconcile,
+     )
+     .unwrap();
+     let before = std::fs::read(&path).unwrap();
++    let ledger: serde_json::Value = serde_json::from_slice(&before).unwrap();
++    assert_eq!(ledger["records"][0]["notice"]["source"], serde_json::to_value(&source).unwrap());
+     apply_localized(
+         decode(&active).unwrap(),
+         prefs(true),
+         Some(crate::lifecycle::NativeLocale::En),
++        Some(source),
+         reconcile,
+     )
+     .unwrap();
+diff --git a/desktop/src-tauri/src/notifications.rs b/desktop/src-tauri/src/notifications.rs
+index 3b6edb4..139fb0c 100644
+--- a/desktop/src-tauri/src/notifications.rs
++++ b/desktop/src-tauri/src/notifications.rs
+@@ -42,6 +42,38 @@ pub struct Notice {
+     pub identity: String,
+     pub platform: NotificationPlatform,
+     pub problem: NotificationProblem,
++    #[serde(default)]
++    pub source: Option<NotificationSource>,
++}
++#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
++#[serde(deny_unknown_fields)]
++pub struct NotificationSource {
++    pub profile_id: String,
++    pub origin: String,
++}
++#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
++pub struct NotificationTarget {
++    pub page: NotificationPage,
++    pub source: Option<NotificationSource>,
++}
++#[derive(Clone, Debug, Serialize)]
++pub(crate) struct NotificationActivation {
++    pub target: NotificationTarget,
++    pub current_profile: Option<String>,
++    pub can_navigate: bool,
++}
++pub(crate) fn activate_target(target: NotificationTarget, profiles: Option<&crate::profiles::ProfileStore>) -> NotificationActivation {
++    // Read the durable owner at OS activation, independent of a delayed UI
++    // snapshot or the management process that originally submitted the notice.
++    let current_profile = match profiles.map(|p| p.snapshot()).transpose() {
++        Ok(snapshot) => snapshot.and_then(|p| p.current_profile),
++        Err(cause) => {
++            eprintln!("notification activation current profile read failed: {}: {}", cause.code, cause.message);
++            None
++        }
++    };
++    let can_navigate = target.source.as_ref().is_none_or(|source| current_profile.as_deref() == Some(&source.profile_id));
++    NotificationActivation { target, current_profile, can_navigate }
+ }
+ #[derive(Clone, Debug)]
+ pub enum NotificationEvent {
+@@ -237,12 +269,16 @@ impl NotificationService {
+         for event in events {
+             let identity = match event {
+                 NotificationEvent::Problem { notice, .. } => {
++                    validate_source(notice.source.as_ref())?;
+                     if ledger
+                         .records
+                         .iter()
+-                        .any(|r| r.notice.identity == notice.identity && r.notice != *notice)
++                        .any(|r| r.notice.identity == notice.identity
++                            && (r.notice.platform != notice.platform
++                                || r.notice.problem != notice.problem
++                                || r.notice.source.is_some() && r.notice.source != notice.source))
+                     {
+-                        return Err(failure("NOTIFICATION_IDENTITY","stable notification identity reused for different platform/problem; original ledger preserved"));
++                        return Err(failure("NOTIFICATION_IDENTITY","stable notification identity reused for different platform/problem/source; original ledger preserved"));
+                     }
+                     &notice.identity
+                 }
+@@ -385,6 +421,7 @@ fn validate_ledger(ledger: &Ledger) -> Result<(), BridgeError> {
+     let mut identities = HashSet::new();
+     for record in &ledger.records {
+         validate_identity(&record.notice.identity)?;
++        validate_source(record.notice.source.as_ref())?;
+         let code_valid = record.error_code.as_ref().is_some_and(|s| {
+             !s.is_empty()
+                 && s.len() <= 64
+@@ -475,7 +512,18 @@ impl Notice {
+             NotificationPlatform::Claude => "Bee · Claude",
+         }
+     }
+-    fn body(&self, locale: NativeLocale) -> &'static str {
++    fn body(&self, locale: NativeLocale) -> String {
++        let text = self.problem_body(locale);
++        match &self.source {
++            Some(source) if locale == NativeLocale::Zh => format!("Hive：{}\n{text}", source.origin),
++            Some(source) => format!("Hive: {}\n{text}", source.origin),
++            None => text.into(),
++        }
++    }
++    fn target(&self) -> NotificationTarget {
++        NotificationTarget { page: self.page(), source: self.source.clone() }
++    }
++    fn problem_body(&self, locale: NativeLocale) -> &'static str {
+         if locale == NativeLocale::Zh {
+             return match self.problem {
+                 NotificationProblem::AuthorizationRejected => {
+@@ -503,26 +551,57 @@ impl Notice {
+     }
+ }
+ fn click_route(notice: &Notice) -> String {
+-    format!(
++    let mut route = format!(
+         "bee.{}.{}",
+         match notice.page() {
+             NotificationPage::Accounts => "accounts",
+             NotificationPage::Diagnostics => "diagnostics",
+         },
+         notice.identity
+-    )
++    );
++    if let Some(source) = &notice.source {
++        let origin = source.origin.bytes().map(|b| format!("{b:02x}")).collect::<String>();
++        route.push_str(&format!(".{}.{origin}", source.profile_id));
++    }
++    route
+ }
+-fn parse_click_route(route: &str) -> Option<NotificationPage> {
+-    let (page, identity) = route.strip_prefix("bee.")?.split_once('.')?;
++fn parse_click_route(route: &str) -> Option<NotificationTarget> {
++    let mut parts = route.strip_prefix("bee.")?.split('.');
++    let page = parts.next()?;
++    let identity = parts.next()?;
+     validate_identity(identity).ok()?;
+-    match page {
+-        "accounts" => Some(NotificationPage::Accounts),
+-        "diagnostics" => Some(NotificationPage::Diagnostics),
+-        _ => None,
+-    }
++    let page = match page {
++        "accounts" => NotificationPage::Accounts,
++        "diagnostics" => NotificationPage::Diagnostics,
++        _ => return None,
++    };
++    let source = match parts.next() {
++        None => None,
++        Some(profile_id) => {
++            let encoded = parts.next()?;
++            if encoded.len() > 4096 || encoded.len() % 2 != 0 || !encoded.is_ascii() { return None; }
++            let bytes = (0..encoded.len()).step_by(2).map(|i| u8::from_str_radix(&encoded[i..i+2], 16)).collect::<Result<Vec<_>,_>>().ok()?;
++            let source = NotificationSource { profile_id: profile_id.into(), origin: String::from_utf8(bytes).ok()? };
++            validate_source(Some(&source)).ok()?;
++            Some(source)
++        }
++    };
++    if parts.next().is_some() { return None; }
++    Some(NotificationTarget { page, source })
+ }
+ 
+-type Navigate = Arc<dyn Fn(NotificationPage) + Send + Sync>;
++fn validate_source(source: Option<&NotificationSource>) -> Result<(), BridgeError> {
++    if let Some(source) = source {
++        if !crate::startup_recovery::digest(&source.profile_id, 32)
++            || source.origin.len() > 2048
++            || crate::hive_origin::normalize_hive_origin(&source.origin).ok().as_ref() != Some(&source.origin)
++        {
++            return Err(failure("NOTIFICATION_INPUT", format!("notification source rejected: profile_id_valid={} origin_bytes={}; required=internal profile ID and canonical public Hive origin",crate::startup_recovery::digest(&source.profile_id,32),source.origin.len())));
++        }
++    }
++    Ok(())
++}
++type Navigate = Arc<dyn Fn(NotificationTarget) + Send + Sync>;
+ pub struct NativeNotificationAdapter {
+     inner: native::Adapter,
+     language: Arc<NativeLanguage>,
+@@ -550,6 +629,7 @@ impl NotificationAdapter for NativeNotificationAdapter {
+     }
+     fn submit(&self, notice: &Notice) -> Result<SubmissionReceipt, SubmissionFailure> {
+         validate_identity(&notice.identity).map_err(SubmissionFailure::rejected)?;
++        validate_source(notice.source.as_ref()).map_err(SubmissionFailure::rejected)?;
+         let locale=self.language.current().ok_or_else(||SubmissionFailure::rejected(failure("NATIVE_LOCALE_UNCONFIRMED","notification submission requires confirmed App language; no OS submission performed")))?;
+         self.inner.submit(notice, locale)
+     }
+@@ -694,7 +774,7 @@ mod native {
+             let center = self.center().map_err(SubmissionFailure::rejected)?;
+             let content = UNMutableNotificationContent::new();
+             content.setTitle(&NSString::from_str(notice.title()));
+-            content.setBody(&NSString::from_str(notice.body(locale)));
++            content.setBody(&NSString::from_str(&notice.body(locale)));
+             let request = UNNotificationRequest::requestWithIdentifier_content_trigger(
+                 &NSString::from_str(&click_route(notice)),
+                 &content,
+@@ -750,7 +830,7 @@ mod linux_native {
+     };
+     const DEST: &str = "org.freedesktop.Notifications";
+     const PATH: &str = "/org/freedesktop/Notifications";
+-    type Routes = Arc<Mutex<HashMap<u32, (String, NotificationPage, Instant)>>>;
++    type Routes = Arc<Mutex<HashMap<u32, (String, NotificationTarget, Instant)>>>;
+     #[derive(Clone)]
+     struct Bus {
+         connection: Connection,
+@@ -959,7 +1039,7 @@ mod linux_native {
+             if id == 0 {
+                 return Err(SubmissionFailure::uncertain(failure("NOTIFICATION_SUBMISSION_UNCERTAIN","Notify receipt server_id=0; required=positive server identifier; OS acceptance unknown")));
+             }
+-            routes.insert(id, (owner, notice.page(), Instant::now()));
++            routes.insert(id, (owner, notice.target(), Instant::now()));
+             Ok(SubmissionReceipt::Accepted)
+         }
+     }
+@@ -1117,7 +1197,7 @@ mod native {
+             let _apartment = Apartment::enter()?;
+             let notifier = self.notifier()?;
+             let document = XmlDocument::new().map_err(|e| win_error("XmlDocument.new", e))?;
+-            // All text comes from fixed enums, and the route contains only a hex digest.
++            // Text uses fixed copy and a validated public origin; routes use hex.
+             let xml=format!("<toast launch=\"{}\"><visual><binding template=\"ToastGeneric\"><text>{}</text><text>{}</text></binding></visual></toast>",click_route(notice),notice.title(),notice.body(locale));
+             document
+                 .LoadXml(&HSTRING::from(xml))
+@@ -1151,7 +1231,7 @@ mod native {
+                 .map_err(|e| win_error("ToastNotification.SetExpirationTime", e))?;
+             let route = click_route(notice);
+             let navigate = self.navigate.clone();
+-            let page = notice.page();
++            let target = notice.target();
+             let routes = Arc::downgrade(&self.toasts);
+             let activated_route = route.clone();
+             toast
+@@ -1163,7 +1243,7 @@ mod native {
+                             }
+                         }
+                         let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+-                            navigate(page)
++                            navigate(target.clone())
+                         }));
+                         Ok(())
+                     },
+diff --git a/desktop/src-tauri/src/notifications_tests.rs b/desktop/src-tauri/src/notifications_tests.rs
+index f80e178..e7cae40 100644
+--- a/desktop/src-tauri/src/notifications_tests.rs
++++ b/desktop/src-tauri/src/notifications_tests.rs
+@@ -101,8 +101,43 @@ fn notice() -> Notice {
+         identity: "a".repeat(64),
+         platform: NotificationPlatform::Openai,
+         problem: NotificationProblem::AuthorizationRejected,
++        source: None,
+     }
+ }
++#[test]
++fn delivered_notification_retains_its_hive_in_body_and_activation_route() {
++    let notice: Notice = serde_json::from_value(serde_json::json!({
++        "identity":"a".repeat(64),"platform":"openai","problem":"authorization_rejected",
++        "source":{"profile_id":"1".repeat(32),"origin":"https://a.example"}
++    })).unwrap();
++    assert!(notice.body(NativeLocale::Zh).contains("Hive：https://a.example"));
++    assert!(notice.body(NativeLocale::En).contains("Hive: https://a.example"));
++    let target = serde_json::to_value(parse_click_route(&click_route(&notice))).unwrap();
++    assert_eq!(target["source"]["profile_id"], "1".repeat(32));
++    assert_eq!(target["source"]["origin"], "https://a.example");
++}
++#[test]
++fn delivered_hive_notice_checks_durable_current_at_activation_and_global_routes_stay_available() {
++    let f = Fixture::new(Permission::Granted);
++    let profiles = crate::profiles::ProfileStore::open(f.dir.join("profiles")).unwrap();
++    let a = profiles.register("https://a.example").unwrap();
++    let b = profiles.register("https://b.example").unwrap();
++    profiles.commit_current(profiles.snapshot().unwrap().revision, &a.id, &"a".repeat(48)).unwrap();
++    let global = notice().target();
++    let mut notice = notice();
++    notice.source = Some(NotificationSource { profile_id: a.id.clone(), origin: a.origin });
++    f.service().reconcile(true, &[NotificationEvent::Problem { notice: notice.clone(), eligible: true }]).unwrap();
++    let delivered_route = click_route(&notice);
++    assert!(activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles)).can_navigate);
++    profiles.commit_current(profiles.snapshot().unwrap().revision, &b.id, &"b".repeat(48)).unwrap();
++    let activation = activate_target(parse_click_route(&delivered_route).unwrap(), Some(&profiles));
++    assert!(!activation.can_navigate);
++    assert_eq!(activation.current_profile.as_deref(), Some(b.id.as_str()));
++    assert_eq!(activation.target.source, notice.source);
++    assert_eq!(profiles.snapshot().unwrap().current_profile, Some(b.id));
++    assert!(activate_target(global, None).can_navigate);
++    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
++}
+ fn active() -> NotificationEvent {
+     NotificationEvent::Problem {
+         notice: notice(),
+@@ -169,6 +204,16 @@ fn notifications_os_accepted_is_persistent_and_not_read() {
+     assert!(!raw.contains("read") && !raw.contains("seen"));
+     assert_eq!(f.ledger().records[0].state, DeliveryState::Accepted);
+ }
++#[test]
++fn legacy_delivered_notice_without_source_remains_suppressed_after_upgrade() {
++    let f = Fixture::new(Permission::Granted);
++    f.service().reconcile(true, &[active()]).unwrap();
++    let mut scoped = notice();
++    scoped.source = Some(NotificationSource { profile_id:"1".repeat(32), origin:"https://a.example".into() });
++    f.service().reconcile(true, &[NotificationEvent::Problem { notice: scoped, eligible: true }]).unwrap();
++    assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 1);
++    assert!(f.ledger().records[0].notice.source.is_none(), "historical delivery cannot be silently attributed");
++}
+ 
+ #[test]
+ fn notifications_failed_submit_is_not_success_and_has_no_automatic_retry() {
+@@ -287,7 +332,7 @@ fn notifications_untrusted_fields_and_routes_are_rejected() {
+         .is_err());
+     assert_eq!(
+         parse_click_route(&click_route(&notice())),
+-        Some(NotificationPage::Accounts)
++        Some(notice().target())
+     );
+     assert_eq!(parse_click_route("bee.accounts.abcdef"), None);
+     assert_eq!(
+@@ -298,7 +343,7 @@ fn notifications_untrusted_fields_and_routes_are_rejected() {
+     offline.problem = NotificationProblem::Offline;
+     assert_eq!(
+         parse_click_route(&click_route(&offline)),
+-        Some(NotificationPage::Diagnostics)
++        Some(offline.target())
+     );
+     assert_eq!(f.adapter.submissions.load(Ordering::SeqCst), 0);
+ }
+diff --git a/desktop/src-tauri/src/profiles.rs b/desktop/src-tauri/src/profiles.rs
+index e6c72ae..6189c8a 100644
+--- a/desktop/src-tauri/src/profiles.rs
++++ b/desktop/src-tauri/src/profiles.rs
+@@ -316,7 +316,7 @@ impl ProfileStore {
+         &self.root
+     }
+     pub(crate) fn snapshot(&self) -> Result<ProfileIndex, BridgeError> {
+-        let index: ProfileIndex =
++        let mut index: ProfileIndex =
+             read_json(&self.root.join("hive-profiles.json"))?.unwrap_or_default();
+         if index.version != 1 || index.revision > MAX_REVISION {
+             return Err(error(
+@@ -356,6 +356,22 @@ impl ProfileStore {
+         {
+             return Err(error("PROFILE_INDEX", "profile current/operation/migration reference rejected; required=enrolled current ID and valid operation identities"));
+         }
++        if !index.historical_conflicts.is_empty() {
++            // The migrated device binding was independently attributed. Keep
++            // that profile usable while blocking ambiguous historical targets,
++            // including entries enrolled by an earlier client version.
++            let migration: Option<MigrationRecord> = read_json(&self.root.join("profile-migration.json"))?;
++            let original = migration.as_ref()
++                .filter(|r| index.migration_id.as_deref() == Some(&r.id))
++                .and_then(|r| r.profile.as_ref());
++            for entry in &mut index.profiles {
++                if original.is_some_and(|p| p.id == entry.id) { continue; }
++                if index.historical_conflicts.iter().any(|c| c.canonical_origin == entry.origin) {
++                    let blocker = format!("historical_origin_conflict:{}", entry.origin);
++                    if !entry.blockers.contains(&blocker) { entry.blockers.push(blocker); }
++                }
++            }
++        }
+         Ok(index)
+     }
+     fn save(&self, index: &ProfileIndex) -> Result<(), BridgeError> {
+@@ -426,13 +442,16 @@ impl ProfileStore {
+         let id = identifier();
+         private_dir(&self.root.join("profiles").join(&id))?;
+         sync_dir(&self.root.join("profiles"))?;
++        let blockers = if index.historical_conflicts.iter().any(|c| c.canonical_origin == canonical) {
++            vec![format!("historical_origin_conflict:{canonical}")]
++        } else { vec![] };
+         index.profiles.push(ProfileEntry {
+             id: id.clone(),
+             origin: canonical,
+             raw_origin: origin.into(),
+             binding_revision: 0,
+             binding_digest: None,
+-            blockers: vec![],
++            blockers,
+         });
+         index.revision += 1;
+         self.save(&index)?;
+@@ -1590,7 +1609,8 @@ mod tests {
+         let accounts = serde_json::json!({"version":3,"revision":7,"entries":{},"scopes":{
+             "original-digest-a":{"hive":"https://hive.example","owner_id":"owner","device_id":"device","pending_operations":{},"selections":{"openai":{"source":{"directory":"/official/source","store":"file"}}}},
+             "original-digest-b":{"hive":"https://HIVE.example:443/","owner_id":"older","device_id":"older","pending_operations":{},"selections":{}},
+-            "original-digest-c":{"hive":"https://other.example","owner_id":"other","device_id":"other","pending_operations":{},"selections":{}}
++            "original-digest-c":{"hive":"https://other.example","owner_id":"other","device_id":"other","pending_operations":{},"selections":{}},
++            "original-digest-d":{"hive":"https://OTHER.example:443/","owner_id":"older-other","device_id":"older-other","pending_operations":{},"selections":{}}
+         }});
+         write(
+             &root.join("ai-accounts.json"),
+@@ -1600,7 +1620,7 @@ mod tests {
+         let store = ProfileStore::open(root.clone()).unwrap();
+         let index = store.migrate_legacy(&tmp.path().join("app")).unwrap();
+         assert_eq!(index.profiles.len(), 1);
+-        assert_eq!(index.historical_conflicts.len(), 2);
++        assert_eq!(index.historical_conflicts.len(), 4);
+         let context = store
+             .context(index.current_profile.as_ref().unwrap())
+             .unwrap();
+@@ -1613,6 +1633,20 @@ mod tests {
+             accounts["scopes"]["original-digest-a"]
+         );
+         assert!(index.profiles[0].blockers.is_empty());
++        let target = store.register("https://other.example/").unwrap();
++        let blocked = store.snapshot().unwrap();
++        assert_eq!(blocked.current_profile, index.current_profile);
++        assert_eq!(blocked.profiles.len(), 2, "history alone must not create connectable profiles");
++        let target_entry = blocked.profiles.iter().find(|p| p.id == target.id).unwrap();
++        assert_eq!(target_entry.blockers, vec!["historical_origin_conflict:https://other.example"]);
++        assert_eq!(store.commit_current(blocked.revision, &target.id, &"a".repeat(48)).unwrap_err().code, "PROFILE_BLOCKED");
++        // An index published by the earlier client may already contain this
++        // target with empty blockers. Its next public projection must be safe.
++        let mut old_index = blocked;
++        old_index.profiles.iter_mut().find(|p| p.id == target.id).unwrap().blockers.clear();
++        store.save(&old_index).unwrap();
++        assert!(!store.snapshot().unwrap().profiles.iter().find(|p| p.id == target.id).unwrap().blockers.is_empty());
++        assert_eq!(store.register("https://HIVE.example:443/").unwrap(), context);
+         let backup = root
+             .join("profile-migration-backups")
+             .join(index.migration_id.unwrap())
+diff --git a/desktop/src-tauri/src/startup_recovery.rs b/desktop/src-tauri/src/startup_recovery.rs
+index 0a3415e..0081f50 100644
+--- a/desktop/src-tauri/src/startup_recovery.rs
++++ b/desktop/src-tauri/src/startup_recovery.rs
+@@ -20,12 +20,12 @@ fn error(code: &str, message: impl Into<String>) -> BridgeError {
+ 
+ // serde may quote a corrupt value or unknown field name. Preserve its failure
+ // description and expected schema, but only expose names from our fixed schema.
+-fn journal_schema_reason(error: &serde_json::Error) -> String {
++pub(crate) fn journal_schema_reason(error: &serde_json::Error) -> String {
+     let message = error.to_string();
+     if message.starts_with("unknown field ") {
+-        return "unknown field (name redacted); required=declared recovery journal schema fields".into();
++        return "unknown field (name redacted); required=declared journal schema fields".into();
+     }
+-    let known_fields = ["version", "attempt_id", "instance", "binding_revision", "binding_identity", "network_revision", "previous_run_id", "account_revision", "intent_running", "trigger", "previous_attempt_id", "operation_id", "phase", "failure", "code", "message", "details"];
++    let known_fields = ["version", "attempt_id", "instance", "binding_revision", "binding_identity", "network_revision", "previous_run_id", "account_revision", "intent_running", "trigger", "previous_attempt_id", "operation_id", "phase", "failure", "code", "message", "details", "id", "source", "target", "profile", "binding_digest", "process_binding_revision", "operation", "seal", "release", "status", "pending", "workers_stopped", "child_reaped", "ipc_empty", "verified", "source_index_operation", "commit_revision", "committed", "cancel_requested", "quit_requested", "observation_round", "observation_started", "query_failures", "observation_last", "observation_blocked"];
+     let mut chars = message.chars().peekable();
+     let mut safe = String::new();
+     while let Some(character) = chars.next() {
+diff --git a/desktop/src/app/NativeApp.tsx b/desktop/src/app/NativeApp.tsx
+index 10be315..5580331 100644
+--- a/desktop/src/app/NativeApp.tsx
++++ b/desktop/src/app/NativeApp.tsx
+@@ -28,7 +28,7 @@ import type {AccountFactory} from '../system/accounts';
+ import type {RuntimeFactory} from '../system/runtime';
+ import type {AuthorizeFactory} from '../system/authorize';
+ import type {SupplyFactory} from '../system/supply';
+-import type {SystemBridge} from '../system/bridge';
++import type {SystemBridge,NotificationSource} from '../system/bridge';
+ import type {Page} from '../client/types';
+ import {t,useLanguage} from '../i18n/index';
+ 
+@@ -49,7 +49,7 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
+ }
+ const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
+ const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
+-function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeLanguageFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeLanguageFeedback:ReactNode}){
++function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeFeedback:ReactNode}){
+  const {native,device:view}=snapshot;
+  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
+  const [recovery,setRecovery]=useState<RecoveryContext|null>(null);
+@@ -144,7 +144,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
+   {showSharedProblem&&page!=='overview'&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
+   {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}
+   {error&&page!=='overview' &&<FailureNotice failure={error} check="device_status" onNavigate={navigate}/>}
+-  {nativeLanguageFeedback}
++  {nativeFeedback}
+   {(!ready&&(firstProfile||switchingPending)||switchingPending&&page!=='overview')&&<div data-nav-section="device" tabIndex={-1}><DevicePairingPage inputDraft={switching} switchControl={switchControl} switchStatus={switchStatus} view={firstProfile?{state:'unbound'}:undefined} busy={busy} error={error} begin={beginDevice} refresh={()=>void switching.refresh()} canRefresh={false} open={()=>{}}/></div>}
+   {ready&&page==='overview'&&<NativeOverviewPage inputDraft={switching} switchControl={switchControl} switchStatus={switchStatus} canRefresh={!startupReadOnly||!!snapshot.recovery} showAccounts={!startupReadOnly} presentation={presentation} onNavigate={navigate} accounts={accounts} runtime={runtime} supply={sharedSupply} view={view} context={snapshot.deviceContext} recovery={snapshot.recovery} recoveryError={snapshot.recoveryError} refreshStatus={snapshot.refresh} recover={recover} operationError={error} busy={busy} checking={checking} initialLoading={!view&&!snapshot.recovery&&!sharedProblem&&!snapshot.recoveryError&&!snapshot.refresh.lastConfirmedAt} error={startupReadOnly?null:error??sharedProblem} reportedFailure={snapshot.startup?.failure} begin={beginDevice} refresh={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false,true)} open={()=>void run(()=>snapshot.recovery?props.client.recoveryOpen():props.client.open())}/>}
+   {ready&&!startupReadOnly&&page==='accounts'&&<NativeAccountsPage navigationRequest={navigationRequest} onNavigate={navigate} runtime={runtime} accounts={accounts} supply={sharedSupply} deviceError={error||(showSharedProblem?null:snapshot.deviceError)}/>}
+@@ -154,6 +154,8 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
+ }
+ export function NativeApp(props:NativeProps){
+  const switching=useHiveSwitch(props.hiveSwitchClient);
++ const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
++ const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
+  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
+  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
+  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
+@@ -188,6 +190,6 @@ export function NativeApp(props:NativeProps){
+  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply]);
+  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
+  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
+- useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(active)setPage(next);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
+- return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeLanguageFeedback={localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}/>;
++ useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
++ return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeFeedback={<>{notificationSource&&<div className="problem-notice" role="status"><p>{t('此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。',{origin:notificationSource.origin})}</p><div className="inline-actions"><button onClick={()=>{setPage('overview');switching.setChooserOpen(true);}}>{t('查看 Hive 列表')}</button><button aria-label={t('关闭通知提示')} onClick={()=>setNotificationSource(null)}>{t('关闭')}</button></div></div>}{localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}</>}/>;
+ }
+diff --git a/desktop/src/features/hive/HiveSwitchControls.tsx b/desktop/src/features/hive/HiveSwitchControls.tsx
+index 11cc53d..06a12ee 100644
+--- a/desktop/src/features/hive/HiveSwitchControls.tsx
++++ b/desktop/src/features/hive/HiveSwitchControls.tsx
+@@ -17,7 +17,7 @@ export function HiveSwitchChooser({model,view}:{model:HiveSwitchModel;view?:Devi
+  return <Popover.Root open={model.chooserOpen} onOpenChange={model.setChooserOpen}><Popover.Trigger asChild><Button ref={trigger} variant="outline">{t('切换 Hive')}</Button></Popover.Trigger><Popover.Portal><Popover.Content className="hive-switch-popover" sideOffset={8} collisionPadding={16} aria-labelledby="hive-switch-title" onCloseAutoFocus={event=>{if(!trigger.current?.isConnected){event.preventDefault();document.querySelector<HTMLElement>('[data-nav-section=device]')?.focus();}}}>
+   <div className="hive-switch-heading"><h3 id="hive-switch-title">{t('切换 Hive')}</h3><Popover.Close asChild><Button variant="ghost" aria-label={t('关闭 Hive 列表')}>{t('关闭')}</Button></Popover.Close></div>
+   <p className="device-note">{t('各 Hive 保留自己的账号选择。切换成功且满足条件后，允许接单的平台可能开始接单。')}</p>
+-  <ul className="hive-profile-list">{snapshot.profiles.profiles.map(profile=>{const current=profile.id===snapshot.profiles.current_profile,identity=snapshot.profile_identities.find(i=>i.profile_id===profile.id);return <li key={profile.id}><div><strong>{profile.origin}</strong><small>{current&&view?.identity?t('当前归属：{owner}',{owner:view.identity.owner_email}):identity?t('上次归属：{owner}',{owner:identity.owner_email}):t('归属待核对')}</small>{profile.blockers.length>0&&<small className="hive-profile-blocker">{profile.blockers.join('；')}</small>}</div>{current?<span className="badge">{t('当前')}</span>:<Button variant="outline" disabled={busy||pending||profile.blockers.length>0} onClick={()=>void model.start(profile.origin,model.name)}>{t('切换到此 Hive')}</Button>}</li>;})}</ul>
++  <ul className="hive-profile-list">{snapshot.profiles.profiles.map(profile=>{const current=profile.id===snapshot.profiles.current_profile,identity=snapshot.profile_identities.find(i=>i.profile_id===profile.id);return <li key={profile.id}><div><strong>{profile.origin}</strong><small>{current&&view?.identity?t('当前归属：{owner}',{owner:view.identity.owner_email}):identity?t('上次归属：{owner}',{owner:identity.owner_email}):t('归属待核对')}</small>{profile.blockers.length>0&&<small className="hive-profile-blocker">{profile.blockers.map(blocker=>blocker.startsWith('historical_origin_conflict:')?t('历史 Hive 地址归一化后冲突；原始记录已保留。请联系支持核对这些记录后再切换。'):blocker).join('；')}</small>}</div>{current?<span className="badge">{t('当前')}</span>:<Button variant="outline" disabled={busy||pending||profile.blockers.length>0} onClick={()=>void model.start(profile.origin,model.name)}>{t('切换到此 Hive')}</Button>}</li>;})}</ul>
+   <form className="hive-add-form" onSubmit={event=>{event.preventDefault();if(!busy&&!pending)void model.start(model.hive.trim(),model.name.trim());}}><h4>{t('添加 Hive')}</h4><label>{t('Hive 地址')}<input type="url" name="hive" autoComplete="url" autoCapitalize="none" spellCheck={false} required value={model.hive} placeholder="https://hive.example" disabled={busy||pending} onChange={event=>model.setHive(event.target.value)}/></label><label>{t('设备名称')}<input name="device_name" autoComplete="off" required maxLength={80} value={model.name} disabled={busy||pending} onChange={event=>model.setName(event.target.value)}/></label><Button type="submit" disabled={busy||pending||!model.hive.trim()||!model.name.trim()}>{t('保存并准备切换')}</Button></form>
+   {pending&&<p className="device-note">{t('已有切换正在进行。关闭此列表后仍会继续。')}</p>}{model.error&&<FailureNotice failure={model.error} check="hive_switch"/>}
+  </Popover.Content></Popover.Portal></Popover.Root>;
+diff --git a/desktop/src/i18n/en.ts b/desktop/src/i18n/en.ts
+index 5b58ad1..3430399 100644
+--- a/desktop/src/i18n/en.ts
++++ b/desktop/src/i18n/en.ts
+@@ -1725,4 +1725,8 @@ export const en: Record<string, string> = {
+   "继续等待会保留 Bee。取消切换并退出可能中断任务；未确认的取消会保留，下次启动先核对原操作。": "Continue waiting to keep Bee open. Cancelling and quitting may interrupt work. An unconfirmed cancellation is saved and checked on the next launch.",
+   "取消切换并退出": "Cancel switch and quit",
+   "设备已配对，未自动开始贡献。": "Device paired without automatically starting contribution.",
++  "此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。": "This notification came from Hive {origin}. Select that address in the Hive list to review it.",
++  "查看 Hive 列表": "View Hive list",
++  "关闭通知提示": "Dismiss notification message",
++  "历史 Hive 地址归一化后冲突；原始记录已保留。请联系支持核对这些记录后再切换。": "Historical Hive addresses conflict after normalization. Original records are preserved. Contact support to reconcile them before switching.",
+ };
+diff --git a/desktop/src/system/bridge.ts b/desktop/src/system/bridge.ts
+index 90ded83..2e86fb2 100644
+--- a/desktop/src/system/bridge.ts
++++ b/desktop/src/system/bridge.ts
+@@ -1,4 +1,5 @@
+ import {normalizeFailure,decodeBridgeError,validFailureTime,requestMethods,retryEvidence,type UiFailure,type FailureDetails} from './failures.ts';
++import {normalizeHiveOrigin} from './hiveOrigin.ts';
+ export interface BridgeError { code: string; message: string; details?:FailureDetails }
+ export interface BridgeStatus {
+   profile_id?:string|null;
+@@ -10,6 +11,23 @@ export interface BridgeReply { protocol: 1; id: string; instance: string; result
+ export interface DownloadResult { url: string; success: boolean }
+ export type Unlisten = () => void;
+ export type NotificationPage = 'overview'|'accounts'|'diagnostics'|'settings';
++export interface NotificationSource {profile_id:string;origin:string}
++export interface NotificationActivation {target:{page:NotificationPage;source:NotificationSource|null};current_profile:string|null;can_navigate:boolean}
++export type NotificationNavigation=NotificationPage|NotificationActivation;
++export function decodeNotificationNavigation(value:unknown):NotificationNavigation|null {
++ const pages=['overview','accounts','diagnostics','settings'];
++ if(typeof value==='string')return pages.includes(value)?value as NotificationPage:null;
++ if(!value||typeof value!=='object'||Array.isArray(value))return null;
++ const v=value as Record<string,unknown>,target=v.target as Record<string,unknown>|null;
++ const id=(v:unknown)=>typeof v==='string'&&/^[a-f0-9]{32}$/.test(v);
++ if(Object.keys(v).length!==3||!Object.hasOwn(v,'current_profile')||v.current_profile!==null&&!id(v.current_profile)||typeof v.can_navigate!=='boolean'||!target||typeof target!=='object'||Array.isArray(target)||Object.keys(target).length!==2||typeof target.page!=='string'||!pages.includes(target.page)||!Object.hasOwn(target,'source'))return null;
++ if(target.source!==null){
++  const source=target.source as Record<string,unknown>;
++  if(!source||typeof source!=='object'||Array.isArray(source)||Object.keys(source).length!==2||!id(source.profile_id)||typeof source.origin!=='string'||source.origin.length>2048)return null;
++  try{if(normalizeHiveOrigin(source.origin)!==source.origin)return null;}catch{return null;}
++ }
++ return structuredClone(v) as unknown as NotificationActivation;
++}
+ export interface StartupProgress {stage:'connecting'|'checking_previous'|'checking_device'|'preparing_accounts'|'confirming_service';operation_id:string|null;completed:number|null;total:number|null}
+ export function decodeStartupProgress(value:unknown):StartupProgress {
+  const invalid=():never=>{throw new Error('STARTUP_PROGRESS_INVALID: required=real bounded stage, operation and consistent account counts');};
+@@ -64,7 +82,7 @@ export interface SystemBridge {
+   ping(): Promise<BridgeReply>;
+   onStatus(listener: (status: BridgeStatus) => void): Promise<Unlisten>;
+   onDownload(listener: (result: DownloadResult) => void): Promise<Unlisten>;
+-  onNotification?(listener: (page:NotificationPage) => void):Promise<Unlisten>;
++  onNotification?(listener: (navigation:NotificationNavigation) => void):Promise<Unlisten>;
+ }
+ 
+ let nativeLocaleSequence=0;
+@@ -98,7 +116,8 @@ export function createSystemBridge(): SystemBridge {
+     async onNotification(listener) {
+       let active=true;
+       const off=await listen<unknown>('bee://notification-navigation',event=>{
+-        if(active&&typeof event.payload==='string'&&['overview','accounts','diagnostics','settings'].includes(event.payload))listener(event.payload as NotificationPage);
++        const navigation=decodeNotificationNavigation(event.payload);
++        if(active&&navigation!==null)listener(navigation);
+       });
+       return()=>{if(active){active=false;off();}};
+     },
+diff --git a/desktop/tests/bridge.test.ts b/desktop/tests/bridge.test.ts
+index dae83fe..2ae854d 100644
+--- a/desktop/tests/bridge.test.ts
++++ b/desktop/tests/bridge.test.ts
+@@ -66,11 +66,22 @@ test('原生错误保留本次错误码和诊断证据', async () => {
+ test('notification clicks accept only fixed native page routes',async()=>{
+  globals.isTauri=true;let callback=0;
+  mockIPC((command,args)=>{if(command==='plugin:event|listen'){callback=(args as any).handler;return 1;}return;});
+- const pages:string[]=[];const off=await createSystemBridge().onNotification!(page=>pages.push(page));
++ const pages:unknown[]=[];const off=await createSystemBridge().onNotification!(page=>pages.push(page));
+  const runtime=(window as any).__TAURI_INTERNALS__;
+  for(const payload of ['accounts','settings','https://unsafe.example','overview','diagnostics'])runtime.runCallback(callback,{payload});
+  assert.deepEqual(pages,['accounts','settings','overview','diagnostics']);off();
+ });
++test('native notification activation preserves source and its durable ownership decision',async()=>{
++ globals.isTauri=true;let callback=0;
++ mockIPC((command,args)=>{if(command==='plugin:event|listen'){callback=(args as any).handler;return 1;}return;});
++ const received:unknown[]=[];const off=await createSystemBridge().onNotification!(activation=>received.push(activation));
++ const activation={target:{page:'accounts',source:{profile_id:'a'.repeat(32),origin:'https://a.example'}},current_profile:'b'.repeat(32),can_navigate:false};
++ (window as any).__TAURI_INTERNALS__.runCallback(callback,{payload:activation});
++ const canonicalOrigins=['https://例子.test','https://[2001:0db8:0:0:0:0:0:1]','https://127.1'];
++ const accepted=canonicalOrigins.map(origin=>({...activation,target:{...activation.target,source:{...activation.target.source,origin}}}));
++ for(const payload of [...accepted,{...activation,target:{...activation.target,page:['accounts']}},{...activation,target:{...activation.target,source:{...activation.target.source,origin:'https://user:secret@a.example'}}}]) (window as any).__TAURI_INTERNALS__.runCallback(callback,{payload});
++ assert.deepEqual(received,[activation,...accepted]);off();
++});
+ 
+ test('pending IPC and settlement use strict bounded native-only contracts',async()=>{
+  const {decodePendingRequests,decodeRequestSettled}=await import('../src/system/bridge.ts');
+diff --git a/desktop/tests/fixtures/hive-switch-server.mjs b/desktop/tests/fixtures/hive-switch-server.mjs
+index 9d32c2e..e4f50b2 100644
+--- a/desktop/tests/fixtures/hive-switch-server.mjs
++++ b/desktop/tests/fixtures/hive-switch-server.mjs
+@@ -20,6 +20,7 @@ const server=http.createServer(async(req,res)=>{
+  const match=/^\/api\/bee\/device-drains\/([a-f0-9]{48})(?:\/(begin|seal|release))?$/.exec(req.url);
+  if(!match)return respond(404,{error:{code:'fixture_route',message:`unexpected fixture route ${req.method} ${req.url}`}});
+  const [,id,action]=match;let op=operations.get(id);
++ if(action==='begin'&&faults.begin_before_accept){faults.begin_before_accept--;req.socket.destroy();return;}
+  if(!action){if(faults.status)return respond(faults.status,{error:{code:'unavailable',message:'synthetic original status query failure'}});if(op&&op.state==='draining'&&Object.values(work).every(n=>n===0))op.state='ready';if(!op)return respond(200,{version:1,device_id:identity.id,owner_id:identity.owner_id,operation_id:id,state:'absent',request:null,seal:null,release:null,receipt:null,current:{epoch,lease,barrier_id:barrier,work}});return respond(200,view(op));}
+  if(action==='begin'){if(!op){op={request:body,state:Object.values(work).every(n=>n===0)?'ready':'draining'};operations.set(id,op);barrier=id;}}
+  if(action==='seal'){op.seal=body;epoch=body.id;op.state='sealed';lease='';if(connected){connected.destroy();connected=null;}op.receipt={version:1,seal:body,epoch,connection_retired:true,work};}
+diff --git a/desktop/tests/fixtures/native-accounts.mjs b/desktop/tests/fixtures/native-accounts.mjs
+index e49349a..331e340 100644
+--- a/desktop/tests/fixtures/native-accounts.mjs
++++ b/desktop/tests/fixtures/native-accounts.mjs
+@@ -165,7 +165,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
+  const status=()=>({state:'ready',profile_id:w.currentHiveProfile,metadata:{bee_version:'dev',os:'darwin',arch:'arm64',instance,capabilities:['runtime_inspect_recovery']}});
+  const emit=(event,payload)=>{for(const [handler,name]of subscriptions)if(name===event)callbacks.get(handler)?.({payload});};
+  w.emitRequestSettled=request=>emit('bee://request-settled',{instance,profile_id:w.currentHiveProfile,...request});
+- w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});w.requestSwitchExit=operation_id=>emit('bee://hive-switch-exit-request',{operation_id});
++ w.emit=id=>{instance=id;emit('bee://bridge-status',status());};w.emitNotification=activation=>emit('bee://notification-navigation',activation);w.emitDownload=(url,success)=>emit('bee://download-finished',{url,success});w.requestSwitchExit=operation_id=>emit('bee://hive-switch-exit-request',{operation_id});
+  w.downloadListenerCount=()=>[...subscriptions.values()].filter(name=>name==='bee://download-finished').length;
+  w.__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:(_event,id)=>{subscriptions.delete(id);callbacks.delete(id);}};
+  const supply=p=>{const reasons=[...new Set([...(w.paused[p]?['manually_paused']:[]),...(local!=='running'||connection!=='connected'?['offline']:[]),...(accounts[p].selection.state!=='selected'?['not_configured']:[]),...(w.accountScenarios.reasons?.[p]??[])])];return {hive:'https://hive.example',device_id:'dev-1',platform:p,paused:w.paused[p],ready:reasons.length===0,reasons,checked_at:new Date().toISOString()};};
+diff --git a/desktop/tests/preview-hive-switch.spec.ts b/desktop/tests/preview-hive-switch.spec.ts
+index fb27003..5fc333b 100644
+--- a/desktop/tests/preview-hive-switch.spec.ts
++++ b/desktop/tests/preview-hive-switch.spec.ts
+@@ -3,6 +3,36 @@ async function open(page:Page,scene:string,theme='light'){
+  await page.clock.install();await page.goto('/tests/fixtures/bee-preview/index.html?scene='+scene+'&theme='+theme+'&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+100)));return page.frameLocator('iframe');
+ }
+ const calls=(page:Page)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).calls);
++test('delivered A notification cannot navigate B or a stale A UI snapshot and global routes remain available',async({page})=>{
++ const app=await open(page,'switch-saved');
++ const source={profile_id:'1'.repeat(32),origin:'https://hive.example'};
++ const activate=(payload:unknown)=>page.locator('iframe').evaluate((frame:HTMLIFrameElement,payload)=>(frame.contentWindow as any).emitNotification(payload),payload);
++ await activate({target:{page:'accounts',source},current_profile:'2'.repeat(32),can_navigate:false});
++ await expect(app.getByRole('status').filter({hasText:'此通知来自 Hive'})).toContainText('https://hive.example');
++ await expect(app.getByRole('navigation').getByRole('button',{name:'概览',exact:true})).toHaveAttribute('aria-current','page');
++ await app.getByRole('button',{name:'关闭通知提示',exact:true}).click();
++ await activate({target:{page:'accounts',source},current_profile:'1'.repeat(32),can_navigate:true});
++ await expect(app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true})).toHaveAttribute('aria-current','page');
++ await activate('settings');
++ await expect(app.getByRole('navigation').getByRole('button',{name:'设置',exact:true})).toHaveAttribute('aria-current','page');
++ await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-success&theme=dark&size=narrow');
++ await expect(page.locator('#control-status')).toHaveText('场景已就绪。');
++ await activate({target:{page:'accounts',source},current_profile:'2'.repeat(32),can_navigate:false});
++ await expect(app.getByRole('status').filter({hasText:'此通知来自 Hive'})).toContainText('https://hive.example');
++ await app.getByRole('button',{name:'查看 Hive 列表',exact:true}).click();
++ await expect(app.getByRole('dialog',{name:'切换 Hive',exact:true})).toBeVisible();
++ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_start')).toEqual([]);
++});
++test('historical conflict is explained and disables only the affected saved target',async({page})=>{
++ const app=await open(page,'switch-saved');
++ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any,original=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const result=await original(command,args);if(command==='hive_switch_snapshot')result.profiles.profiles[1].blockers=['historical_origin_conflict:https://target-hive.example'];return result;};});
++ await page.clock.runFor(2100);await app.getByRole('button',{name:'切换 Hive',exact:true}).click();
++ const dialog=app.getByRole('dialog',{name:'切换 Hive',exact:true}),target=dialog.locator('li').filter({hasText:'https://target-hive.example'});
++ await expect(target).toContainText('历史 Hive 地址归一化后冲突');
++ await expect(target.getByRole('button',{name:'切换到此 Hive'})).toBeDisabled();
++ await expect(dialog.locator('li').filter({hasText:'https://hive.example'})).toContainText('当前');
++ await expect(dialog).not.toContainText('historical_origin_conflict');
++});
+ test('first target pairing retains the fixed Hive origin before a device config exists',async({page})=>{
+  const app=await open(page,'switch-target-pairing'),target=app.getByRole('region',{name:'目标 Hive 设备',exact:true});
+  await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://target-hive.example');

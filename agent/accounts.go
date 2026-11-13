@@ -105,7 +105,7 @@ func accountControl(ctx context.Context, state localState, platform, fingerprint
 
 func readPlatformAccount(ctx context.Context, state localState, p string) (beewire.PlatformAccount, error) {
 	var account beewire.PlatformAccount
-	if e := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/"+p+"/account", "GET", state.Credential, nil, &account); e != nil {
+	if e := callState(ctx, httpClient(), state, "/api/bee/platforms/"+p+"/account", "GET", nil, &account); e != nil {
 		return account, e
 	}
 	if account.Platform != p {
@@ -117,7 +117,7 @@ func readPlatformAccount(ctx context.Context, state localState, p string) (beewi
 func submitAccountConfirmation(ctx context.Context, state localState, platform, fingerprint, confirmationID string) (beewire.PlatformAccount, error) {
 	var account beewire.PlatformAccount
 	input := map[string]string{"account_fingerprint": fingerprint, "confirmation_id": confirmationID}
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/"+platform+"/account/confirm", "POST", state.Credential, input, &account); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/platforms/"+platform+"/account/confirm", "POST", input, &account); err != nil {
 		return account, fmt.Errorf("account confirmation result unconfirmed; query account status again: %w", err)
 	}
 	if account.Platform != platform || account.AccountFingerprint != fingerprint {

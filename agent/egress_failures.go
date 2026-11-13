@@ -106,7 +106,7 @@ func (f *egressFailures) forward(ctx context.Context, state localState) {
 			continue
 		}
 		send, cancel := context.WithTimeout(ctx, 5*time.Second)
-		err := call(send, httpClient(), state.Hive, "/api/bee/events", "POST", state.Credential, beewire.SupplyEventReport{Events: batch}, nil)
+		err := callState(send, httpClient(), state, "/api/bee/events", "POST", beewire.SupplyEventReport{Events: batch}, nil)
 		cancel()
 		if err != nil {
 			continue

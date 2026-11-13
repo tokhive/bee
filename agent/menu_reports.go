@@ -24,7 +24,7 @@ func (m *managementMenu) status() error {
 	}
 	m.field("Hive", "市场地址", device.Hive)
 	var identity beewire.Identity
-	if e = call(m.ctx, httpClient(), device.Hive, "/api/bee/identity", "GET", device.Credential, nil, &identity); e != nil {
+	if e = callState(m.ctx, httpClient(), device, "/api/bee/identity", "GET", nil, &identity); e != nil {
 		m.note("Account readiness could not be queried because device verification failed.", "设备验证失败，账号接单状态暂时无法查询。")
 		return e
 	}
@@ -57,7 +57,7 @@ func (m *managementMenu) status() error {
 }
 func (m *managementMenu) showPlatform(device localState, p string) error {
 	var supply beewire.PlatformSupply
-	if e := call(m.ctx, httpClient(), device.Hive, "/api/bee/platforms/"+p, "GET", device.Credential, nil, &supply); e != nil {
+	if e := callState(m.ctx, httpClient(), device, "/api/bee/platforms/"+p, "GET", nil, &supply); e != nil {
 		return e
 	}
 	if supply.Platform != p {

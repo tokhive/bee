@@ -65,6 +65,14 @@ func httpClient() *http.Client {
 }
 
 func call(ctx context.Context, client *http.Client, origin, path, method, secret string, input, output any) error {
+	return callWithEpoch(ctx, client, origin, path, method, secret, "", input, output)
+}
+
+func callState(ctx context.Context, client *http.Client, state localState, path, method string, input, output any) error {
+	return callWithEpoch(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, input, output)
+}
+
+func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
@@ -80,6 +88,9 @@ func call(ctx context.Context, client *http.Client, origin, path, method, secret
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
 	req.Header.Set("User-Agent", userAgent())
+	if epoch != "" {
+		req.Header.Set(beewire.RuntimeEpochHeader, epoch)
+	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
 	}
@@ -89,8 +100,8 @@ func call(ctx context.Context, client *http.Client, origin, path, method, secret
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		slog.Warn("Hive request failed", "module", "request", "method", method, "path", path, "error", err.Error())
-		return errors.New("failed to connect to Hive")
+		slog.Warn("Hive request failed", "module", "request", "method", method, "path", path, "error", connectionMessage(err, secret))
+		return &connectionRequestFailure{cause: err, origin: origin, path: path, credential: secret}
 	}
 	defer response.Body.Close()
 	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
@@ -102,11 +113,13 @@ func call(ctx context.Context, client *http.Client, origin, path, method, secret
 		}
 		_ = decoder.Decode(&result)
 		slog.Debug("Hive request rejected", "module", "request", "method", method, "path", path, "status", response.StatusCode, "code", result.Error.Code, "duration_ms", time.Since(started).Milliseconds())
-		return &apiFailure{Status: response.StatusCode, Code: result.Error.Code}
+		return &connectionRequestFailure{cause: &apiFailure{Status: response.StatusCode, Code: result.Error.Code}, origin: origin, path: path, credential: secret}
 	}
 	slog.Debug("Hive request", "module", "request", "method", method, "path", path, "status", response.StatusCode, "duration_ms", time.Since(started).Milliseconds())
-	if output != nil && decoder.Decode(output) != nil {
-		return errors.New("invalid Hive response format")
+	if output != nil {
+		if err := decoder.Decode(output); err != nil {
+			return &connectionRequestFailure{cause: fmt.Errorf("decode Hive response: %w", err), origin: origin, path: path, credential: secret}
+		}
 	}
 	return nil
 }
@@ -123,6 +136,21 @@ func pause(ctx context.Context, duration time.Duration) error {
 }
 
 func connect(ctx context.Context, state localState, egress *egressConfig, out io.Writer) error {
+	return connectObserved(ctx, state, egress, out, nil)
+}
+
+func connectObserved(ctx context.Context, state localState, egress *egressConfig, out io.Writer, observe func(DesktopConnectionObservation)) error {
+	return connectObservedOwned(ctx, state, egress, out, false, observe)
+}
+
+func connectObservedOwned(ctx context.Context, state localState, egress *egressConfig, out io.Writer, owned bool, observe func(DesktopConnectionObservation)) error {
+	var lastFailure *DesktopConnectionFailure
+	var currentLease string
+	emit := func(value, retry string, next *string) {
+		if observe != nil {
+			observe(DesktopConnectionObservation{Connection: value, Lease: currentLease, Detail: &DesktopConnectionDetail{Failure: lastFailure, Retry: retry, NextRetryAt: next}})
+		}
+	}
 	if _, ok := out.(*console); !ok {
 		// The console's handler serialises its own writes, and notify needs
 		// to see it unwrapped to print records rather than bare lines.
@@ -143,6 +171,10 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 	conflicts := 0
 	rejectionReported := false
 	for {
+		if !desktopReconnectPermitted(ctx) {
+			emit("disconnected", "halted", nil)
+			return nil
+		}
 		if ctx.Err() != nil {
 			return nil
 		}
@@ -150,17 +182,27 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			metrics.reconnect()
 		}
 		attempted = true
+		if owned {
+			emit("reconnecting", "attempting", nil)
+		} else {
+			emit("connecting", "attempting", nil)
+		}
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
-		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}}
+		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}
 		if egress != nil {
 			header.Set(beewire.ControlsHeader, beewire.ControlCapabilities)
 		}
 		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: header})
 		cancel()
 		metrics.connect(connectStart, err)
-		if err == nil {
+		handshakeConnected := err == nil
+		if handshakeConnected {
+			currentLease = response.Header.Get("X-Bee-Lease")
+			owned = true
+			lastFailure = nil
+			emit("connected", "idle", nil)
 			delay, conflicts = time.Second, 0
 			notifyConnected(out, endpoint)
 			var live context.Context
@@ -170,20 +212,25 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			if egress != nil {
 				session := egress.start(beeSession(ctx), conn, out)
 				live, end, moved = session.Context, session.Close, session.Moved
-				go egress.failures.forward(live, state)
+				forwardDone := make(chan struct{})
+				go func() { defer close(forwardDone); egress.failures.forward(live, state) }()
+				finish := func() { session.Close(); session.Wait(); <-forwardDone }
+				end = finish
 				if egress.dynamicAuthorization() {
 					var wait func()
 					syncFailures, wait = egress.startSynchronization(live, state, response.Header.Get("X-Bee-Lease"), out)
-					end = func() { session.Close(); wait() }
+					end = func() { finish(); wait() }
 				} else {
 					err = egress.register(live, state, response.Header.Get("X-Bee-Lease"))
 				}
 				if err != nil {
+					lastFailure = observedConnectionFailure(err, nil, state, path, "synchronize")
 					end()
 					conn.CloseNow()
 					metrics.disconnect()
 					var failure *apiFailure
 					if errors.Is(err, errInboxIdentity) || errors.Is(err, errCodexExpired) || errors.Is(err, errCodexAuthorization) || errors.As(err, &failure) && failure.Status >= 400 && failure.Status < 500 && failure.Status != 409 && failure.Status != 429 {
+						emit("disconnected", "halted", nil)
 						if replacedDevice(err, out) {
 							return nil
 						}
@@ -198,13 +245,14 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				end = func() {}
 			}
 			liveness := relay.NewLiveness(conn, moved)
-			for live.Err() == nil {
+			var syncErr error
+			for live.Err() == nil && syncErr == nil {
 				if egress != nil && !egress.dynamicAuthorization() && !rejectionReported {
 					statusCtx, stopStatus := context.WithTimeout(live, 5*time.Second)
 					var status struct {
 						Status string `json:"status"`
 					}
-					statusErr := call(statusCtx, httpClient(), state.Hive, "/api/bee/supply-status", "GET", state.Credential, nil, &status)
+					statusErr := callState(statusCtx, httpClient(), state, "/api/bee/supply-status", "GET", nil, &status)
 					stopStatus()
 					if statusErr == nil && status.Status == "codex_authorization_rejected" {
 						notify(out, slog.LevelError, "connect", "upstream rejected Codex authorization; supply stopped; update the official login and restart Bee, then have the operator verify and restart Hive to restore supply")
@@ -215,6 +263,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				err = liveness.Check(live)
 				metrics.ping(pingStart, err)
 				if err != nil {
+					lastFailure = observedConnectionFailure(err, nil, state, path, "heartbeat")
 					slog.Warn("Hive connection lost", "module", "connect", "error", err.Error())
 					break
 				}
@@ -228,15 +277,8 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				// account source — simply never fires.
 				timer := time.NewTimer(heartbeatInterval)
 				select {
-				case syncErr := <-syncFailures:
+				case syncErr = <-syncFailures:
 					timer.Stop()
-					conn.CloseNow()
-					end()
-					slog.Error("authorization synchronization failed", "module", "sync", "error", syncErr.Error())
-					if replacedDevice(syncErr, out) {
-						return nil
-					}
-					return syncErr
 				case <-timer.C:
 				case <-live.Done():
 					timer.Stop()
@@ -245,8 +287,33 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			conn.CloseNow()
 			metrics.disconnect()
 			end()
+			// Join synchronization before choosing a reconnect. The transport
+			// may close at the same time a worker queues a terminal failure;
+			// that failure must still halt instead of becoming a heartbeat retry.
+			if syncErr == nil {
+				select {
+				case syncErr = <-syncFailures:
+				default:
+				}
+			}
+			if syncErr != nil {
+				if ctx.Err() == nil {
+					lastFailure = observedConnectionFailure(syncErr, nil, state, path, "synchronize")
+					emit("disconnected", "halted", nil)
+				}
+				slog.Error("authorization synchronization failed", "module", "sync", "error", syncErr.Error())
+				if replacedDevice(syncErr, out) {
+					return nil
+				}
+				return syncErr
+			}
 		} else if response != nil && (response.StatusCode == 401 || response.StatusCode == 403) {
-			identityErr := call(ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, nil)
+			if ctx.Err() != nil {
+				return nil
+			}
+			lastFailure = observedConnectionFailure(err, response, state, path, "connect")
+			emit("rejected", "halted", nil)
+			identityErr := callState(ctx, httpClient(), state, "/api/bee/identity", "GET", nil, nil)
 			if replacedDevice(identityErr, out) {
 				return nil
 			}
@@ -255,12 +322,35 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		if ctx.Err() != nil {
 			return nil
 		}
+		if observe != nil && response != nil && response.StatusCode == http.StatusConflict && (!owned || conflicts >= conflictRetries) {
+			lastFailure = observedConnectionFailure(err, response, state, path, "connect")
+			lastFailure.Code = "ownership_unconfirmed"
+			lastFailure.Evidence["owned_session"] = fmt.Sprint(owned)
+			lastFailure.Evidence["consecutive_conflicts"] = fmt.Sprint(conflicts + 1)
+			emit("occupied", "halted", nil)
+			return fmt.Errorf("Hive connection ownership unconfirmed: HTTP 409 owned_session=%t consecutive_conflicts=%d", owned, conflicts+1)
+		}
+		if !handshakeConnected {
+			lastFailure = observedConnectionFailure(err, response, state, path, "connect")
+		} else if lastFailure == nil {
+			lastFailure = observedConnectionFailure(err, nil, state, path, "heartbeat")
+		}
 		if err != nil {
 			notify(out, slog.LevelWarn, "connect", "connection lost; reconnecting", "error", err.Error(), "retry_delay", delay.String())
 		} else {
 			notify(out, slog.LevelInfo, "connect", "connection lost; reconnecting", "retry_delay", delay.String())
 		}
-		if pause(ctx, delay) != nil {
+		deadline := time.Now().Add(delay)
+		timer := time.NewTimer(time.Until(deadline))
+		next := deadline.UTC().Format(time.RFC3339Nano)
+		emit("reconnecting", "scheduled", &next)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return nil
+		case <-timer.C:
+		}
+		if ctx.Err() != nil {
 			return nil
 		}
 		// Hive refuses a reconnect as a duplicate while it still holds a

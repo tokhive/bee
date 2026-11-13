@@ -1,0 +1,966 @@
+diff --git a/hive/internal/controller/bee_connection.go b/hive/internal/controller/bee_connection.go
+index 271818a..60a29c0 100644
+--- a/hive/internal/controller/bee_connection.go
++++ b/hive/internal/controller/bee_connection.go
+@@ -50,7 +50,11 @@ func (s *Controller) ConnectBee(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 	err := s.market.ConnectBee(r.Context(), identity, beeBuild(r), beeControls(r), r.URL.Path == "/api/bee/agent", func(lease string) (*websocket.Conn, error) {
+ 		w.Header().Set("X-Bee-Lease", lease)
+-		return websocket.Accept(w, r, nil)
++		conn, err := websocket.Accept(w, r, nil)
++		if release, ok := r.Context().Value(runtimeAdmissionContextKey{}).(func()); ok {
++			release()
++		}
++		return conn, err
+ 	})
+ 	if err != nil {
+ 		middleware.WriteError(w, err)
+diff --git a/hive/internal/controller/runtime_recovery.go b/hive/internal/controller/runtime_recovery.go
+new file mode 100644
+index 0000000..153dacc
+--- /dev/null
++++ b/hive/internal/controller/runtime_recovery.go
+@@ -0,0 +1,47 @@
++package controller
++
++import (
++	"context"
++	"github.com/tokhive/bee/beewire"
++	"github.com/tokhive/hive/hive/internal/middleware"
++	"net/http"
++	"strings"
++)
++
++type runtimeAdmissionContextKey struct{}
++
++func (s *Controller) RuntimeFence(next http.Handler) http.Handler {
++	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		connection := r.URL.Path == "/api/bee/agent" || r.URL.Path == "/api/bee/connect"
++		if !strings.HasPrefix(r.URL.Path, "/api/bee/") || strings.HasPrefix(r.URL.Path, "/api/bee/pairings") || strings.HasPrefix(r.URL.Path, "/api/bee/runtime-recovery/") || r.Method == http.MethodGet && !connection {
++			next.ServeHTTP(w, r)
++			return
++		}
++		identity, ok := s.currentDevice(w, r)
++		if !ok {
++			return
++		}
++		release, err := s.market.BeginRuntimeRequest(r.Context(), identity, r.Header.Get(beewire.RuntimeEpochHeader))
++		if err != nil {
++			middleware.WriteError(w, err)
++			return
++		}
++		defer release()
++		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), runtimeAdmissionContextKey{}, release)))
++	})
++}
++func (s *Controller) RuntimeRecovery(w http.ResponseWriter, r *http.Request) {
++	identity, ok := s.currentDevice(w, r)
++	if !ok {
++		return
++	}
++	var input *beewire.RuntimeRecoveryRequest
++	if r.Method == http.MethodPost {
++		input = &beewire.RuntimeRecoveryRequest{}
++		if !middleware.DecodeJSON(w, r, input) {
++			return
++		}
++	}
++	result, err := s.market.RuntimeRecovery(r.Context(), identity, r.PathValue("operation"), input)
++	middleware.Reply(w, result, err)
++}
+diff --git a/hive/internal/integration/runtime_recovery_native_test.go b/hive/internal/integration/runtime_recovery_native_test.go
+new file mode 100644
+index 0000000..a7b61c3
+--- /dev/null
++++ b/hive/internal/integration/runtime_recovery_native_test.go
+@@ -0,0 +1,224 @@
++package integration_test
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"io"
++	"net/http"
++	"net/http/httptest"
++	"os"
++	"os/exec"
++	"path/filepath"
++	"strings"
++	"sync"
++	"sync/atomic"
++	"testing"
++	"time"
++
++	"github.com/jackc/pgx/v5/pgxpool"
++	"github.com/tokhive/bee/beewire"
++	hive "github.com/tokhive/hive/hive/internal/app"
++	"github.com/tokhive/tee/tee"
++)
++
++// Rust owns the real Go management subprocess. Hive owns its actual router,
++// Market and isolated PostgreSQL schema. Faults are injected outside production
++// code; no production account, official endpoint or shared config is involved.
++func TestRuntimeRecoveryNativeDesktop(t *testing.T) {
++	rust := os.Getenv("BEE_RETIREMENT_RUST_TEST_BINARY")
++	if rust == "" || os.Getenv("BEE_NATIVE_BRIDGE_TEST_BINARY") == "" {
++		t.Skip("BEE_RETIREMENT_RUST_TEST_BINARY and BEE_NATIVE_BRIDGE_TEST_BINARY required")
++	}
++	for _, scenario := range []string{"success", "lost_response", "draining_restart", "conflict", "exit_race"} {
++		t.Run(scenario, func(t *testing.T) {
++			dsn := database(t)
++			key, err := tee.GenerateInboxKey()
++			if err != nil {
++				t.Fatal(err)
++			}
++			pub := key.Public()
++			app, err := hive.New(context.Background(), hive.Config{DatabaseURL: dsn, PublicURL: "http://hive.test", PasswordCost: testPasswordCost, InboxPublic: &pub})
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(app.Close)
++			pool, err := pgxpool.New(context.Background(), dsn)
++			if err != nil {
++				t.Fatal(err)
++			}
++			t.Cleanup(pool.Close)
++			var entered, posts, dropped, pauseWrites, agentConnections atomic.Int32
++			var mu sync.Mutex
++			var original *beewire.RuntimeRecoveryRequest
++			release := make(chan struct{})
++			var releaseOnce sync.Once
++			t.Cleanup(func() { releaseOnce.Do(func() { close(release) }) })
++			s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, q *http.Request) {
++				if strings.HasPrefix(q.URL.Path, "/__fixture/") {
++					switch strings.TrimPrefix(q.URL.Path, "/__fixture/") {
++					case "release":
++						releaseOnce.Do(func() { close(release) })
++					case "complete":
++						if _, err := pool.Exec(q.Context(), `UPDATE execution_attempts SET state='failed',upstream_termination='confirmed',finished_at=clock_timestamp() WHERE id='native-attempt'`); err != nil {
++							t.Error(err)
++							w.WriteHeader(500)
++							return
++						}
++					}
++					json.NewEncoder(w).Encode(map[string]any{"post_entered": entered.Load() > 0})
++					return
++				}
++				if q.URL.Path == "/api/bee/agent" {
++					agentConnections.Add(1)
++				}
++				if q.Method == "PUT" && (q.URL.Path == "/api/bee/platforms/openai" || q.URL.Path == "/api/bee/platforms/claude") {
++					// Decode only to count pause writes; preserve the exact body.
++					var body json.RawMessage
++					if err := json.NewDecoder(q.Body).Decode(&body); err != nil {
++						t.Error(err)
++						return
++					}
++					q.Body.Close()
++					q.Body = io.NopCloser(bytes.NewReader(body))
++					var v struct {
++						Paused *bool `json:"paused"`
++					}
++					if err := json.Unmarshal(body, &v); err != nil {
++						t.Error(err)
++						return
++					}
++					if v.Paused != nil {
++						pauseWrites.Add(1)
++					}
++				}
++				if q.Method == "POST" && strings.HasPrefix(q.URL.Path, "/api/bee/runtime-recovery/") {
++					var input beewire.RuntimeRecoveryRequest
++					if err := json.NewDecoder(q.Body).Decode(&input); err != nil {
++						t.Error(err)
++						return
++					}
++					raw, _ := json.Marshal(input)
++					q.Body = io.NopCloser(bytes.NewReader(raw))
++					mu.Lock()
++					if original != nil {
++						a, _ := json.Marshal(original)
++						if string(a) != string(raw) {
++							t.Error("native retry changed the original request")
++						}
++					} else {
++						original = &input
++					}
++					mu.Unlock()
++					posts.Add(1)
++					entered.Store(1)
++					if scenario == "exit_race" {
++						select {
++						case <-release:
++						case <-q.Context().Done():
++							return
++						}
++					}
++					if scenario == "lost_response" && dropped.CompareAndSwap(0, 1) {
++						recorder := httptest.NewRecorder()
++						app.ServeHTTP(recorder, q)
++						if recorder.Code != 200 {
++							t.Errorf("fault injected before successful Hive commit: status=%d body=%s", recorder.Code, recorder.Body.String())
++						}
++						conn, _, err := w.(http.Hijacker).Hijack()
++						if err != nil {
++							t.Error(err)
++							return
++						}
++						conn.Close()
++						return
++					}
++				}
++				app.ServeHTTP(w, q)
++			}))
++			t.Cleanup(func() { releaseOnce.Do(func() { close(release) }); s.Close() })
++			owner := registerBuyer(t, s, "native@example.test")
++			secret := bindBee(t, s, owner)
++			status, _, identity := request(t, client(t), "GET", s.URL+"/api/bee/identity", nil, secret)
++			if status != 200 {
++				t.Fatal(status, identity)
++			}
++			for platform, paused := range map[string]bool{"openai": true, "claude": false} {
++				status, _, data := request(t, client(t), "PUT", s.URL+"/api/bee/platforms/"+platform, map[string]bool{"paused": paused}, secret)
++				if status != 200 {
++					t.Fatal(status, data)
++				}
++			}
++			pauseWrites.Store(0)
++			if scenario == "draining_restart" {
++				for _, sql := range []string{
++					`INSERT INTO api_keys(id,user_id,name,prefix,token_hash) VALUES('native-key',$1,'fixture','test','test')`,
++					`INSERT INTO models(id,platform,protocol,synthetic) VALUES('native-model','openai','responses',true)`,
++					`INSERT INTO model_versions(model_id,version,name,cache_mode,prices,enabled,source_url,source_note) VALUES('native-model',1,'fixture','none','{}',true,'https://example.test','fixture')`,
++					`INSERT INTO buyer_requests(id,buyer_id,api_key_id,model_id) VALUES('native-request',$1,'native-key','native-model')`,
++					`INSERT INTO execution_attempts(id,request_id,provider_id,device_id,model_id,model_version,prices,supply_factor,commission_rate,job_hash,state) VALUES('native-attempt','native-request',$1,$2,'native-model',1,'{}',0.1,0.1,decode('00','hex'),'running')`,
++				} {
++					var args []any
++					if strings.Contains(sql, "$1") {
++						args = append(args, identity["owner_id"])
++					}
++					if strings.Contains(sql, "$2") {
++						args = append(args, identity["id"])
++					}
++					if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
++						t.Fatal(err)
++					}
++				}
++			}
++			fixture := filepath.Join(t.TempDir(), "fixture.json")
++			raw, _ := json.Marshal(map[string]any{"hive": s.URL, "credential": secret, "identity": identity, "scenario": scenario})
++			if err := os.WriteFile(fixture, raw, 0600); err != nil {
++				t.Fatal(err)
++			}
++			ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
++			defer cancel()
++			command := exec.CommandContext(ctx, rust, "native_retirement_tests::native_retirement_through_real_hive", "--exact", "--ignored", "--nocapture")
++			command.Env = append(os.Environ(), "BEE_RUNTIME_HIVE_FIXTURE="+fixture)
++			output, err := command.CombinedOutput()
++			if err != nil {
++				t.Fatalf("native scenario=%s exit=%v\n%s", scenario, err, output)
++			}
++			t.Log(string(output))
++			if pauseWrites.Load() != 0 {
++				t.Fatalf("recovery rewrote pause choice: writes=%d", pauseWrites.Load())
++			}
++			if posts.Load() == 0 {
++				t.Fatal("native path never reached actual Hive retirement")
++			}
++			if scenario == "lost_response" && (dropped.Load() != 1 || posts.Load() != 1) {
++				t.Fatalf("lost reply not reconciled by original GET: dropped=%d posts=%d", dropped.Load(), posts.Load())
++			}
++			for platform, paused := range map[string]bool{"openai": true, "claude": false} {
++				status, _, data := request(t, client(t), "GET", s.URL+"/api/bee/platforms/"+platform, nil, secret)
++				if status != 200 || data["paused"] != paused {
++					t.Fatal("pause choice changed", platform, status, data)
++				}
++			}
++			if scenario == "conflict" || scenario == "exit_race" {
++				if agentConnections.Load() != 0 {
++					t.Fatal("blocked startup opened contribution connection")
++				}
++			}
++			mu.Lock()
++			id := original.ID
++			mu.Unlock()
++			status, _, data := request(t, client(t), "GET", s.URL+"/api/bee/runtime-recovery/"+id, nil, secret)
++			want := "retired"
++			if scenario == "conflict" {
++				want = "draining"
++			}
++			if status != 200 || data["state"] != want {
++				t.Fatal("unexpected final remote proof", status, data)
++			}
++			status, _, data = request(t, client(t), "PUT", s.URL+"/api/bee/platforms/openai", map[string]bool{"paused": false}, secret)
++			if status != 409 {
++				t.Fatal("old epoch still writable", status, data)
++			}
++		})
++	}
++}
+diff --git a/hive/internal/integration/runtime_recovery_test.go b/hive/internal/integration/runtime_recovery_test.go
+new file mode 100644
+index 0000000..bbcecb6
+--- /dev/null
++++ b/hive/internal/integration/runtime_recovery_test.go
+@@ -0,0 +1,264 @@
++package integration_test
++
++import (
++	"context"
++	"github.com/coder/websocket"
++	"github.com/jackc/pgx/v5/pgxpool"
++	"github.com/tokhive/bee/beewire"
++	"net/http"
++	"strings"
++	"testing"
++	"time"
++)
++
++func TestRuntimeRecoveryFencesOldRequestsPreservesPauseAndSurvivesRestart(t *testing.T) {
++	dsn := database(t)
++	s := start(t, dsn)
++	owner := registerBuyer(t, s, "retirement@example.test")
++	secret := bindBee(t, s, owner)
++	status, _, identity := request(t, client(t), "GET", s.URL+"/api/bee/identity", nil, secret)
++	if status != 200 {
++		t.Fatal(status, identity)
++	}
++	device, ownerID := identity["id"].(string), identity["owner_id"].(string)
++	pool, err := pgxpool.New(context.Background(), dsn)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pool.Close()
++	prepID, fp := strings.Repeat("a", 48), strings.Repeat("b", 64)
++	status, _, data := request(t, client(t), "PUT", s.URL+"/api/bee/platforms/openai", map[string]any{"preparation": map[string]string{"id": prepID, "action": "begin", "account_fingerprint": fp}}, secret)
++	if status != 200 {
++		t.Fatal(status, data)
++	}
++	for p, paused := range map[string]bool{"openai": true, "claude": false} {
++		status, _, data = request(t, client(t), "PUT", s.URL+"/api/bee/platforms/"+p, map[string]bool{"paused": paused}, secret)
++		if status != 200 {
++			t.Fatal(status, data)
++		}
++	}
++	input := beewire.RuntimeRecoveryRequest{ID: strings.Repeat("c", 48), PreviousRunID: strings.Repeat("d", 32), AccountRevision: strings.Repeat("e", 64), Preparations: map[string]beewire.RuntimeRecoveryPreparation{"openai": {ID: prepID, Fingerprint: fp}}}
++	socketCtx, cancelSocket := context.WithTimeout(context.Background(), 5*time.Second)
++	defer cancelSocket()
++	oldConnection, _, err := websocket.Dial(socketCtx, strings.Replace(s.URL, "http://", "ws://", 1)+"/api/bee/connect", &websocket.DialOptions{HTTPHeader: http.Header{"Authorization": []string{"Bearer " + secret}}})
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer oldConnection.CloseNow()
++	endpoint := s.URL + "/api/bee/runtime-recovery/" + input.ID
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 200 || data["state"] != "retired" || data["connection_retired"] != true || data["preparations_retired"] != true || data["epoch"] != input.ID {
++		t.Fatal(status, data)
++	}
++	if _, _, err = oldConnection.Read(socketCtx); err == nil {
++		t.Fatal("old connection remained open after retirement proof")
++	}
++	for _, epoch := range []string{"", strings.Repeat("f", 48)} {
++		status, _, data = request(t, client(t), "PUT", s.URL+"/api/bee/platforms/openai", map[string]bool{"paused": false}, secret, map[string]string{beewire.RuntimeEpochHeader: epoch})
++		if status != 409 {
++			t.Fatalf("late old request admitted: %d %v", status, data)
++		}
++	}
++	var paused bool
++	var current *string
++	var cancelled bool
++	if err = pool.QueryRow(context.Background(), `SELECT paused,preparation_id FROM provider_platform_controls WHERE user_id=$1 AND platform='openai'`, ownerID).Scan(&paused, &current); err != nil || !paused || current != nil {
++		t.Fatal("retirement changed pause or retained barrier", err, paused, current)
++	}
++	if err = pool.QueryRow(context.Background(), `SELECT cancelled FROM provider_supply_preparations WHERE user_id=$1 AND platform='openai' AND id=$2`, ownerID, prepID).Scan(&cancelled); err != nil || !cancelled {
++		t.Fatal("preparation not retired", err)
++	}
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 200 || data["state"] != "retired" {
++		t.Fatal("original replay", status, data)
++	}
++	altered := input
++	altered.AccountRevision = strings.Repeat("f", 64)
++	status, _, data = request(t, client(t), "POST", endpoint, altered, secret)
++	if status != 409 {
++		t.Fatal("changed original request accepted", status, data)
++	}
++	s.Close()
++	restarted := start(t, dsn)
++	status, _, data = request(t, client(t), "PUT", restarted.URL+"/api/bee/platforms/openai", map[string]bool{"paused": false}, secret)
++	if status != 409 {
++		t.Fatal("restart accepted legacy request", status, data)
++	}
++	status, _, data = request(t, client(t), "PUT", restarted.URL+"/api/bee/platforms/claude", map[string]bool{"paused": false}, secret, map[string]string{beewire.RuntimeEpochHeader: input.ID})
++	if status != 200 {
++		t.Fatal("successor request rejected", status, data)
++	}
++	if device == "" {
++		t.Fatal("fixture identity absent")
++	}
++}
++func TestRuntimeRecoveryWaitsForAlreadyAdmittedSupplyWrite(t *testing.T) {
++	dsn := database(t)
++	s := start(t, dsn)
++	owner := registerBuyer(t, s, "drain@example.test")
++	secret := bindBee(t, s, owner)
++	_, _, identity := request(t, client(t), "GET", s.URL+"/api/bee/identity", nil, secret)
++	ownerID := identity["owner_id"].(string)
++	pool, err := pgxpool.New(context.Background(), dsn)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pool.Close()
++	_, err = pool.Exec(context.Background(), `INSERT INTO provider_platform_controls(user_id,platform,paused) VALUES($1,'openai',false)`, ownerID)
++	if err != nil {
++		t.Fatal(err)
++	}
++	tx, err := pool.Begin(context.Background())
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer tx.Rollback(context.Background())
++	if _, err = tx.Exec(context.Background(), `SELECT 1 FROM provider_platform_controls WHERE user_id=$1 AND platform='openai' FOR UPDATE`, ownerID); err != nil {
++		t.Fatal(err)
++	}
++	oldDone := make(chan int, 1)
++	go func() {
++		status, _, _ := request(t, client(t), "PUT", s.URL+"/api/bee/platforms/openai", map[string]bool{"paused": true}, secret)
++		oldDone <- status
++	}()
++	deadline := time.Now().Add(3 * time.Second)
++	for {
++		var blocked bool
++		if err = pool.QueryRow(context.Background(), `SELECT EXISTS(SELECT 1 FROM pg_stat_activity WHERE wait_event_type='Lock' AND query LIKE '%INSERT INTO provider_platform_controls%' AND query NOT LIKE '%pg_stat_activity%')`).Scan(&blocked); err != nil {
++			t.Fatal(err)
++		}
++		if blocked {
++			break
++		}
++		if time.Now().After(deadline) {
++			t.Fatal("old supply write did not reach held row")
++		}
++		time.Sleep(time.Millisecond)
++	}
++	input := beewire.RuntimeRecoveryRequest{ID: strings.Repeat("a", 48), PreviousRunID: strings.Repeat("b", 32), AccountRevision: strings.Repeat("c", 64), Preparations: map[string]beewire.RuntimeRecoveryPreparation{}}
++	retirementDone := make(chan map[string]any, 1)
++	go func() {
++		status, _, data := request(t, client(t), "POST", s.URL+"/api/bee/runtime-recovery/"+input.ID, input, secret)
++		if status != 200 {
++			t.Error(status, data)
++		}
++		retirementDone <- data
++	}()
++	select {
++	case <-retirementDone:
++		t.Fatal("retirement passed already admitted write")
++	case <-time.After(20 * time.Millisecond):
++	}
++	if err = tx.Commit(context.Background()); err != nil {
++		t.Fatal(err)
++	}
++	if status := <-oldDone; status != 200 {
++		t.Fatal(status)
++	}
++	if data := <-retirementDone; data["state"] != "retired" {
++		t.Fatal(data)
++	}
++	_, _, data := request(t, client(t), "GET", s.URL+"/api/bee/platforms/openai", nil, secret)
++	if data["paused"] != true {
++		t.Fatal("lost latest pause", data)
++	}
++}
++
++func TestRuntimeRecoveryKeepsUnfinishedWorkAndOriginalPreparationBlocked(t *testing.T) {
++	dsn := database(t)
++	s := start(t, dsn)
++	owner := registerBuyer(t, s, "unfinished@example.test")
++	secret := bindBee(t, s, owner)
++	_, _, identity := request(t, client(t), "GET", s.URL+"/api/bee/identity", nil, secret)
++	ownerID, device := identity["owner_id"].(string), identity["id"].(string)
++	pool, err := pgxpool.New(context.Background(), dsn)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pool.Close()
++	exec := func(sql string, args ...any) {
++		t.Helper()
++		if _, err := pool.Exec(context.Background(), sql, args...); err != nil {
++			t.Fatal(err)
++		}
++	}
++	exec(`INSERT INTO api_keys(id,user_id,name,prefix,token_hash) VALUES('key',$1,'fixture','test','test')`, ownerID)
++	exec(`INSERT INTO models(id,platform,protocol,synthetic) VALUES('fixture','openai','responses',true)`)
++	exec(`INSERT INTO model_versions(model_id,version,name,cache_mode,prices,enabled,source_url,source_note) VALUES('fixture',1,'fixture','none','{}',true,'https://example.test','fixture')`)
++	exec(`INSERT INTO buyer_requests(id,buyer_id,api_key_id,model_id) VALUES('request',$1,'key','fixture')`, ownerID)
++	exec(`INSERT INTO execution_attempts(id,request_id,provider_id,device_id,model_id,model_version,prices,supply_factor,commission_rate,job_hash,state) VALUES('attempt','request',$1,$2,'fixture',1,'{}',0.1,0.1,decode('00','hex'),'running')`, ownerID, device)
++	prepID, fp := strings.Repeat("a", 48), strings.Repeat("b", 64)
++	status, _, data := request(t, client(t), "PUT", s.URL+"/api/bee/platforms/openai", map[string]any{"preparation": map[string]string{"id": prepID, "action": "begin", "account_fingerprint": fp}}, secret)
++	if status != 200 {
++		t.Fatal(status, data)
++	}
++	input := beewire.RuntimeRecoveryRequest{ID: strings.Repeat("c", 48), PreviousRunID: strings.Repeat("d", 32), AccountRevision: strings.Repeat("e", 64), Preparations: map[string]beewire.RuntimeRecoveryPreparation{"openai": {ID: prepID, Fingerprint: fp}}}
++	endpoint := s.URL + "/api/bee/runtime-recovery/" + input.ID
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 200 || data["state"] != "draining" || data["unfinished"] != true || data["preparations_retired"] != false {
++		t.Fatal("unfinished work was certified retired", status, data)
++	}
++	var barrier *string
++	if err = pool.QueryRow(context.Background(), `SELECT preparation_id FROM provider_platform_controls WHERE user_id=$1 AND platform='openai'`, ownerID).Scan(&barrier); err != nil || barrier == nil || *barrier != prepID {
++		t.Fatal("unfinished work released original barrier", err)
++	}
++	next := input
++	next.ID = strings.Repeat("f", 48)
++	next.PreviousEpoch = input.ID
++	status, _, data = request(t, client(t), "POST", s.URL+"/api/bee/runtime-recovery/"+next.ID, next, secret)
++	if status != 409 {
++		t.Fatal("new operation replaced pending retirement", status, data)
++	}
++	exec(`UPDATE execution_attempts SET state='failed',upstream_termination='unknown',finished_at=clock_timestamp()`)
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 200 || data["state"] != "draining" {
++		t.Fatal("unknown upstream ending released session", status, data)
++	}
++	exec(`UPDATE execution_attempts SET upstream_termination='confirmed'`)
++	wrong := input
++	wrong.Preparations = map[string]beewire.RuntimeRecoveryPreparation{"openai": {ID: strings.Repeat("f", 48), Fingerprint: fp}}
++	status, _, data = request(t, client(t), "POST", endpoint, wrong, secret)
++	if status != 409 {
++		t.Fatal("recovery changed original preparation", status, data)
++	}
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 200 || data["state"] != "retired" {
++		t.Fatal("confirmed ending did not resume original retirement", status, data)
++	}
++}
++
++func TestRuntimeRecoveryRejectsPreparationFingerprintConflictWithoutReleasingBarrier(t *testing.T) {
++	dsn := database(t)
++	server := start(t, dsn)
++	owner := registerBuyer(t, server, "conflict@example.test")
++	secret := bindBee(t, server, owner)
++	_, _, identity := request(t, client(t), "GET", server.URL+"/api/bee/identity", nil, secret)
++	prepID, fp := strings.Repeat("a", 48), strings.Repeat("b", 64)
++	status, _, data := request(t, client(t), "PUT", server.URL+"/api/bee/platforms/openai", map[string]any{"preparation": map[string]string{"id": prepID, "action": "begin", "account_fingerprint": fp}}, secret)
++	if status != 200 {
++		t.Fatal(status, data)
++	}
++	input := beewire.RuntimeRecoveryRequest{ID: strings.Repeat("c", 48), PreviousRunID: strings.Repeat("d", 32), AccountRevision: strings.Repeat("e", 64), Preparations: map[string]beewire.RuntimeRecoveryPreparation{"openai": {ID: prepID, Fingerprint: strings.Repeat("f", 64)}}}
++	endpoint := server.URL + "/api/bee/runtime-recovery/" + input.ID
++	status, _, data = request(t, client(t), "POST", endpoint, input, secret)
++	if status != 409 {
++		t.Fatal("conflicting preparation certified retired", status, data)
++	}
++	status, _, data = request(t, client(t), "GET", endpoint, nil, secret)
++	if status != 200 || data["state"] != "draining" || data["preparations_retired"] != false {
++		t.Fatal(status, data)
++	}
++	pool, err := pgxpool.New(context.Background(), dsn)
++	if err != nil {
++		t.Fatal(err)
++	}
++	defer pool.Close()
++	var barrier *string
++	if err = pool.QueryRow(context.Background(), `SELECT preparation_id FROM provider_platform_controls WHERE user_id=$1 AND platform='openai'`, identity["owner_id"]).Scan(&barrier); err != nil || barrier == nil || *barrier != prepID {
++		t.Fatal("conflict released original barrier", err, barrier)
++	}
++	var cancelled bool
++	if err = pool.QueryRow(context.Background(), `SELECT cancelled FROM provider_supply_preparations WHERE user_id=$1 AND platform='openai' AND id=$2`, identity["owner_id"], prepID).Scan(&cancelled); err != nil || cancelled {
++		t.Fatal("conflict cancelled original preparation", err, cancelled)
++	}
++}
+diff --git a/hive/internal/repository/migrations/068_runtime_recovery.sql b/hive/internal/repository/migrations/068_runtime_recovery.sql
+new file mode 100644
+index 0000000..7f002d2
+--- /dev/null
++++ b/hive/internal/repository/migrations/068_runtime_recovery.sql
+@@ -0,0 +1,12 @@
++CREATE TABLE bee_runtime_epochs (
++ device_id text PRIMARY KEY REFERENCES bee_devices(id),
++ epoch text NOT NULL DEFAULT '',
++ pending_id text
++);
++CREATE TABLE bee_runtime_recoveries (
++ device_id text NOT NULL REFERENCES bee_devices(id),
++ id text NOT NULL,
++ request jsonb NOT NULL,
++ phase text NOT NULL CHECK (phase IN ('draining','retired')),
++ PRIMARY KEY(device_id,id)
++);
+diff --git a/hive/internal/router/router.go b/hive/internal/router/router.go
+index 4bf5777..2b3b5c3 100644
+--- a/hive/internal/router/router.go
++++ b/hive/internal/router/router.go
+@@ -139,6 +139,8 @@ func New(c *controller.Controller, market *service.Market, origin string, proxie
+ 	mux.HandleFunc("POST /api/bee/pairings", pairing.Wrap(c.StartPairing))
+ 	mux.HandleFunc("GET /api/bee/pairings", c.PollPairing)
+ 	mux.HandleFunc("POST /api/bee/pairings/redeem", c.RedeemPairing)
++	mux.HandleFunc("GET /api/bee/runtime-recovery/{operation}", c.RuntimeRecovery)
++	mux.HandleFunc("POST /api/bee/runtime-recovery/{operation}", c.RuntimeRecovery)
+ 	mux.HandleFunc("GET /api/bee/identity", c.DeviceIdentity)
+ 	mux.HandleFunc("GET /api/bee/connect", c.ConnectBee)
+ 	mux.HandleFunc("GET /api/bee/agent", c.ConnectBee)
+@@ -157,7 +159,7 @@ func New(c *controller.Controller, market *service.Market, origin string, proxie
+ 	mux.HandleFunc("POST /api/devices/pairings/inspect", attempts.Wrap(c.InspectPairing))
+ 	mux.HandleFunc("POST /api/devices/pairings/confirm", attempts.Wrap(c.ConfirmPairing))
+ 	mux.HandleFunc("/", c.Console)
+-	return middleware.SecurityHeaders(middleware.AccessLog(middleware.Audit(market, middleware.CheckOrigin(origin, mux))))
++	return middleware.SecurityHeaders(middleware.AccessLog(middleware.Audit(market, middleware.CheckOrigin(origin, c.RuntimeFence(mux)))))
+ }
+ 
+ // responsesWebSocket answers Codex's Responses-over-WebSocket handshake with
+diff --git a/hive/internal/service/candidate_facts.go b/hive/internal/service/candidate_facts.go
+index 20eb29e..982a384 100644
+--- a/hive/internal/service/candidate_facts.go
++++ b/hive/internal/service/candidate_facts.go
+@@ -176,7 +176,7 @@ func readCandidateFacts(ctx context.Context, q repository.Querier, results []can
+ 	}
+ 	facts := make([]candidateFacts, len(pending))
+ 	rows, err := q.Query(ctx, `SELECT c.ord,
+- COALESCE(d.revoked_at IS NULL AND NOT EXISTS(
++ COALESCE(d.revoked_at IS NULL AND NOT EXISTS(SELECT 1 FROM bee_runtime_epochs e WHERE e.device_id=d.id AND e.pending_id IS NOT NULL) AND NOT EXISTS(
+   SELECT 1 FROM bee_pairings p WHERE p.replaces_device_id=d.id AND p.owner_id IS NOT NULL AND p.redeemed_at IS NULL AND p.expires_at>clock_timestamp()),false),
+  (SELECT count(*) FROM execution_attempts a JOIN models m ON m.id=a.model_id WHERE a.provider_id=c.owner AND (CASE WHEN m.platform='anthropic' THEN 'claude' ELSE m.platform END)=c.platform AND `+strings.ReplaceAll(orphanedSlotFilter, "$budget", "$5")+` AND (a.account_fingerprint IS NULL OR a.account_fingerprint=c.fingerprint)),
+  COALESCE((SELECT paused FROM provider_platform_controls WHERE user_id=c.owner AND platform=c.platform),false),
+diff --git a/hive/internal/service/device_replacement.go b/hive/internal/service/device_replacement.go
+index 2bee359..ced3346 100644
+--- a/hive/internal/service/device_replacement.go
++++ b/hive/internal/service/device_replacement.go
+@@ -32,7 +32,7 @@ func (s *Market) replacementProgress(ctx context.Context, device string) (*devic
+ 
+ func deviceAccepting(ctx context.Context, q rowQuery, device string) (bool, error) {
+ 	var accepting bool
+-	err := q.QueryRow(ctx, `SELECT d.revoked_at IS NULL AND NOT EXISTS(
++	err := q.QueryRow(ctx, `SELECT d.revoked_at IS NULL AND NOT EXISTS(SELECT 1 FROM bee_runtime_epochs e WHERE e.device_id=d.id AND e.pending_id IS NOT NULL) AND NOT EXISTS(
+  SELECT 1 FROM bee_pairings p WHERE p.replaces_device_id=d.id AND p.owner_id IS NOT NULL AND p.redeemed_at IS NULL AND p.expires_at>clock_timestamp())
+  FROM bee_devices d WHERE d.id=$1`, device).Scan(&accepting)
+ 	if errors.Is(err, pgx.ErrNoRows) {
+diff --git a/hive/internal/service/market.go b/hive/internal/service/market.go
+index 5ecfe6b..c869eb9 100644
+--- a/hive/internal/service/market.go
++++ b/hive/internal/service/market.go
+@@ -43,6 +43,7 @@ type MarketOptions struct {
+ }
+ 
+ type Market struct {
++	runtimeGates        sync.Map
+ 	relayEvents         relayEvents
+ 	catalogCache        *catalogcache.Cache
+ 	codexCatalogs       codexCatalogs
+diff --git a/hive/internal/service/runtime_recovery.go b/hive/internal/service/runtime_recovery.go
+new file mode 100644
+index 0000000..172aea9
+--- /dev/null
++++ b/hive/internal/service/runtime_recovery.go
+@@ -0,0 +1,264 @@
++package service
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"fmt"
++	"reflect"
++	"sync"
++
++	"github.com/jackc/pgx/v5"
++	"github.com/tokhive/bee/beewire"
++	domain "github.com/tokhive/hive/hive/internal/model"
++	"golang.org/x/sync/semaphore"
++)
++
++const runtimeGateCapacity int64 = 1 << 20
++
++type runtimeRequestGate struct{ permits *semaphore.Weighted }
++
++func newRuntimeRequestGate() *runtimeRequestGate {
++	return &runtimeRequestGate{semaphore.NewWeighted(runtimeGateCapacity)}
++}
++func (g *runtimeRequestGate) acquire(ctx context.Context, exclusive bool) error {
++	n := int64(1)
++	if exclusive {
++		n = runtimeGateCapacity
++	}
++	return g.permits.Acquire(ctx, n)
++}
++func (g *runtimeRequestGate) release(exclusive bool) {
++	n := int64(1)
++	if exclusive {
++		n = runtimeGateCapacity
++	}
++	g.permits.Release(n)
++}
++func (s *Market) runtimeGate(device string) *runtimeRequestGate {
++	g, _ := s.runtimeGates.LoadOrStore(device, newRuntimeRequestGate())
++	return g.(*runtimeRequestGate)
++}
++
++// Bee's connection registry has one Market owner. Hold shared admission until
++// an HTTP mutation finishes, or until a WebSocket has registered its connection.
++// Retirement drains these permits, persists the epoch, then joins that connection.
++func (s *Market) BeginRuntimeRequest(ctx context.Context, identity beewire.Identity, epoch string) (func(), error) {
++	g := s.runtimeGate(identity.ID)
++	if err := g.acquire(ctx, false); err != nil {
++		return nil, err
++	}
++	var once sync.Once
++	release := func() { once.Do(func() { g.release(false) }) }
++	var current string
++	var pending *string
++	err := s.pool.QueryRow(ctx, `SELECT epoch,pending_id FROM bee_runtime_epochs WHERE device_id=$1`, identity.ID).Scan(&current, &pending)
++	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
++		release()
++		return nil, fmt.Errorf("read runtime epoch before mutation: %w", err)
++	}
++	if current != epoch || pending != nil {
++		release()
++		return nil, domain.Fail(409, "runtime_retired", fmt.Sprintf("runtime request rejected: epoch_match=%t retirement_pending=%t; use the original retirement operation", current == epoch, pending != nil))
++	}
++	return release, nil
++}
++
++func validateRuntimeRecoveryRequest(v beewire.RuntimeRecoveryRequest) error {
++	if !preparationHex(v.ID, 24) || v.PreviousEpoch != "" && !preparationHex(v.PreviousEpoch, 24) || !preparationHex(v.PreviousRunID, 16) || !preparationHex(v.AccountRevision, 32) || v.Preparations == nil || len(v.Preparations) > 2 {
++		return domain.Fail(400, "invalid_runtime_recovery", "runtime retirement requires original operation, epoch, run, account revision and explicit preparation map")
++	}
++	for p, v := range v.Preparations {
++		if p != "openai" && p != "claude" || v.ID != "" && !preparationHex(v.ID, 24) || !preparationHex(v.Fingerprint, 32) {
++			return domain.Fail(400, "invalid_runtime_recovery", "runtime retirement preparation requires known platform, original ID and account fingerprint")
++		}
++	}
++	return nil
++}
++func (s *Market) RuntimeRecovery(ctx context.Context, identity beewire.Identity, id string, input *beewire.RuntimeRecoveryRequest) (domain.Result, error) {
++	if !preparationHex(id, 24) {
++		return domain.Result{}, domain.Fail(400, "invalid_runtime_recovery", "runtime retirement ID requires 48 lowercase hex characters")
++	}
++	if input == nil {
++		result, err := s.runtimeRecoveryResult(ctx, identity, id)
++		return domain.Result{Status: 200, Data: result}, err
++	}
++	if err := validateRuntimeRecoveryRequest(*input); err != nil {
++		return domain.Result{}, err
++	}
++	if input.ID != id {
++		return domain.Result{}, domain.Fail(400, "invalid_runtime_recovery", "runtime retirement path and body IDs differ")
++	}
++	g := s.runtimeGate(identity.ID)
++	if err := g.acquire(ctx, true); err != nil {
++		return domain.Result{}, err
++	}
++	defer g.release(true)
++	// This transaction fences every later old write. It remains pending across
++	// disconnects and restarts, so a dropped response cannot reopen old admission.
++	tx, err := s.pool.Begin(ctx)
++	if err != nil {
++		return domain.Result{}, err
++	}
++	defer tx.Rollback(ctx)
++	var active bool
++	if err = tx.QueryRow(ctx, `SELECT revoked_at IS NULL FROM bee_devices WHERE id=$1 AND user_id=$2 FOR NO KEY UPDATE`, identity.ID, identity.OwnerID).Scan(&active); err != nil {
++		return domain.Result{}, err
++	}
++	if !active {
++		return domain.Result{}, domain.Fail(401, "device_replaced", "runtime retirement requires original active device")
++	}
++	if _, err = tx.Exec(ctx, `INSERT INTO bee_runtime_epochs(device_id,epoch) VALUES($1,'') ON CONFLICT DO NOTHING`, identity.ID); err != nil {
++		return domain.Result{}, err
++	}
++	var epoch string
++	var pending *string
++	if err = tx.QueryRow(ctx, `SELECT epoch,pending_id FROM bee_runtime_epochs WHERE device_id=$1 FOR UPDATE`, identity.ID).Scan(&epoch, &pending); err != nil {
++		return domain.Result{}, err
++	}
++	var raw []byte
++	var phase string
++	err = tx.QueryRow(ctx, `SELECT request,phase FROM bee_runtime_recoveries WHERE device_id=$1 AND id=$2`, identity.ID, id).Scan(&raw, &phase)
++	if err == nil {
++		var saved beewire.RuntimeRecoveryRequest
++		if err = json.Unmarshal(raw, &saved); err != nil {
++			return domain.Result{}, err
++		}
++		if !reflect.DeepEqual(saved, *input) {
++			return domain.Result{}, domain.Fail(409, "runtime_recovery_conflict", "original retirement parameters differ; original operation retained")
++		}
++		if phase == "retired" {
++			if err = tx.Commit(ctx); err != nil {
++				return domain.Result{}, err
++			}
++			result, err := s.runtimeRecoveryResult(ctx, identity, id)
++			return domain.Result{Status: 200, Data: result}, err
++		}
++		if pending == nil || *pending != id || epoch != id {
++			return domain.Result{}, domain.Fail(409, "runtime_recovery_conflict", "original pending retirement does not own current epoch; evidence retained")
++		}
++	} else if errors.Is(err, pgx.ErrNoRows) {
++		if pending != nil || epoch != input.PreviousEpoch {
++			return domain.Result{}, domain.Fail(409, "runtime_recovery_conflict", fmt.Sprintf("retirement predecessor rejected: epoch_match=%t pending=%t; reconcile original ID", epoch == input.PreviousEpoch, pending != nil))
++		}
++		raw, _ = json.Marshal(input)
++		if _, err = tx.Exec(ctx, `INSERT INTO bee_runtime_recoveries(device_id,id,request,phase) VALUES($1,$2,$3,'draining')`, identity.ID, id, raw); err != nil {
++			return domain.Result{}, err
++		}
++		if _, err = tx.Exec(ctx, `UPDATE bee_runtime_epochs SET epoch=$2,pending_id=$2 WHERE device_id=$1`, identity.ID, id); err != nil {
++			return domain.Result{}, err
++		}
++	} else {
++		return domain.Result{}, err
++	}
++	if err = tx.Commit(ctx); err != nil {
++		return domain.Result{}, err
++	}
++	s.bees.mu.Lock()
++	entry := s.bees.live[identity.ID]
++	if entry != nil {
++		entry.cancel()
++	}
++	s.bees.mu.Unlock()
++	if entry != nil {
++		select {
++		case <-entry.done:
++		case <-ctx.Done():
++			return domain.Result{}, fmt.Errorf("original runtime connection has not joined: operation=%s: %w", id, ctx.Err())
++		}
++	}
++	unfinished, err := deviceHasUnfinished(ctx, s.pool, identity.ID, s.executionBudget)
++	if err != nil {
++		return domain.Result{}, err
++	}
++	if !unfinished {
++		if err = s.finishRuntimeRetirement(ctx, identity, *input); err != nil {
++			return domain.Result{}, err
++		}
++	}
++	result, err := s.runtimeRecoveryResult(ctx, identity, id)
++	return domain.Result{Status: 200, Data: result}, err
++}
++func (s *Market) runtimeRecoveryResult(ctx context.Context, identity beewire.Identity, id string) (beewire.RuntimeRecoveryResult, error) {
++	result := beewire.RuntimeRecoveryResult{Version: 1, DeviceID: identity.ID, OwnerID: identity.OwnerID, State: "absent"}
++	var raw []byte
++	err := s.pool.QueryRow(ctx, `SELECT r.request,r.phase,e.epoch FROM bee_runtime_recoveries r JOIN bee_runtime_epochs e USING(device_id) WHERE r.device_id=$1 AND r.id=$2`, identity.ID, id).Scan(&raw, &result.State, &result.Epoch)
++	if errors.Is(err, pgx.ErrNoRows) {
++		return result, nil
++	}
++	if err != nil {
++		return result, err
++	}
++	if err = json.Unmarshal(raw, &result.Request); err != nil {
++		return result, err
++	}
++	if result.State == "retired" {
++		result.ConnectionRetired = true
++		result.PreparationsRetired = true
++		return result, nil
++	}
++	s.bees.mu.Lock()
++	result.ConnectionRetired = s.bees.live[identity.ID] == nil
++	s.bees.mu.Unlock()
++	result.Unfinished, err = deviceHasUnfinished(ctx, s.pool, identity.ID, s.executionBudget)
++	return result, err
++}
++func (s *Market) finishRuntimeRetirement(ctx context.Context, identity beewire.Identity, input beewire.RuntimeRecoveryRequest) error {
++	tx, err := s.pool.Begin(ctx)
++	if err != nil {
++		return err
++	}
++	defer tx.Rollback(ctx)
++	var epoch string
++	var pending *string
++	if err = tx.QueryRow(ctx, `SELECT epoch,pending_id FROM bee_runtime_epochs WHERE device_id=$1 FOR UPDATE`, identity.ID).Scan(&epoch, &pending); err != nil {
++		return err
++	}
++	if epoch != input.ID || pending == nil || *pending != input.ID {
++		return domain.Fail(409, "runtime_recovery_conflict", "retirement no longer owns device epoch; original evidence retained")
++	}
++	for _, platform := range []string{"openai", "claude"} {
++		if _, err = tx.Exec(ctx, `INSERT INTO provider_platform_controls(user_id,platform) VALUES($1,$2) ON CONFLICT DO NOTHING`, identity.OwnerID, platform); err != nil {
++			return err
++		}
++		var current *string
++		if err = tx.QueryRow(ctx, `SELECT preparation_id FROM provider_platform_controls WHERE user_id=$1 AND platform=$2 FOR UPDATE`, identity.OwnerID, platform).Scan(&current); err != nil {
++			return err
++		}
++		selected, exists := input.Preparations[platform]
++		if current != nil && (!exists || *current != selected.ID) {
++			return domain.Fail(409, "runtime_preparation_conflict", fmt.Sprintf("retirement preparation differs: platform=%s selected=%t id_match=false; original barrier retained", platform, exists))
++		}
++		account, err := scanAccount(tx.QueryRow(ctx, accountSelect+` FOR SHARE`, identity.OwnerID, platform))
++		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
++			return err
++		}
++		if err == nil && exists && (account.PendingFingerprint != "" || account.AccountFingerprint != "" && account.AccountFingerprint != selected.Fingerprint) {
++			return domain.Fail(409, "runtime_account_conflict", fmt.Sprintf("retirement account differs: platform=%s pending=%t fingerprint_match=%t; original operation must be reconciled", platform, account.PendingFingerprint != "", account.AccountFingerprint == selected.Fingerprint))
++		}
++		if current == nil {
++			continue
++		}
++		var device, fingerprint string
++		var completed, cancelled bool
++		if err = tx.QueryRow(ctx, `SELECT device_id,account_fingerprint,completed,cancelled FROM provider_supply_preparations WHERE user_id=$1 AND platform=$2 AND id=$3 FOR UPDATE`, identity.OwnerID, platform, *current).Scan(&device, &fingerprint, &completed, &cancelled); err != nil {
++			return err
++		}
++		if device != identity.ID || fingerprint != selected.Fingerprint || completed || cancelled {
++			return domain.Fail(409, "runtime_preparation_conflict", fmt.Sprintf("retirement preparation ownership rejected: platform=%s device_match=%t fingerprint_match=%t terminal=%t; barrier retained", platform, device == identity.ID, fingerprint == selected.Fingerprint, completed || cancelled))
++		}
++		if _, err = tx.Exec(ctx, `UPDATE provider_supply_preparations SET cancelled=true WHERE user_id=$1 AND platform=$2 AND id=$3`, identity.OwnerID, platform, *current); err != nil {
++			return err
++		}
++		if _, err = tx.Exec(ctx, `UPDATE provider_platform_controls SET preparation_id=NULL WHERE user_id=$1 AND platform=$2 AND preparation_id=$3`, identity.OwnerID, platform, *current); err != nil {
++			return err
++		}
++	}
++	if _, err = tx.Exec(ctx, `UPDATE bee_runtime_recoveries SET phase='retired' WHERE device_id=$1 AND id=$2 AND phase='draining'`, identity.ID, input.ID); err != nil {
++		return err
++	}
++	if _, err = tx.Exec(ctx, `UPDATE bee_runtime_epochs SET pending_id=NULL WHERE device_id=$1 AND pending_id=$2`, identity.ID, input.ID); err != nil {
++		return err
++	}
++	return tx.Commit(ctx)
++}
+diff --git a/hive/internal/service/runtime_recovery_test.go b/hive/internal/service/runtime_recovery_test.go
+new file mode 100644
+index 0000000..58ef2ae
+--- /dev/null
++++ b/hive/internal/service/runtime_recovery_test.go
+@@ -0,0 +1,42 @@
++package service
++
++import (
++	"context"
++	"testing"
++	"time"
++)
++
++func TestRuntimeRecoveryGateDrainsAdmittedWritesAndRejectsLateAdmission(t *testing.T) {
++	g := newRuntimeRequestGate()
++	if err := g.acquire(context.Background(), false); err != nil {
++		t.Fatal(err)
++	}
++	entered := make(chan struct{})
++	done := make(chan struct{})
++	go func() {
++		close(entered)
++		if err := g.acquire(context.Background(), true); err != nil {
++			t.Error(err)
++			return
++		}
++		close(done)
++	}()
++	<-entered
++	select {
++	case <-done:
++		t.Fatal("retirement passed an admitted write")
++	case <-time.After(15 * time.Millisecond):
++	}
++	g.release(false)
++	select {
++	case <-done:
++	case <-time.After(time.Second):
++		t.Fatal("retirement did not drain original write")
++	}
++	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Millisecond)
++	defer cancel()
++	if err := g.acquire(ctx, false); err == nil {
++		t.Fatal("old request admitted during retirement")
++	}
++	g.release(true)
++}

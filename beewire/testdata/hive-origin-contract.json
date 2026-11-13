@@ -1,0 +1,34 @@
+{
+ "accepted": [
+  {"input":"https://HIVE.example:443/","key":"https://hive.example"},
+  {"input":"HTTPS://HIVE.example/","key":"https://hive.example"},
+  {"input":"https://hive.example","key":"https://hive.example"},
+  {"input":"https://HIVE.example:8443/","key":"https://hive.example:8443"},
+  {"input":"https://hive.example:0443","key":"https://hive.example"},
+  {"input":"http://LOCALHOST:80/","key":"http://localhost"},
+  {"input":"http://127.0.0.1:80","key":"http://127.0.0.1"},
+  {"input":"http://127.42.0.9:8080/","key":"http://127.42.0.9:8080"},
+  {"input":"http://[::1]:80/","key":"http://[::1]"},
+  {"input":"http://[0:0:0:0:0:0:0:1]/","key":"http://[0:0:0:0:0:0:0:1]"},
+  {"input":"http://[::ffff:127.0.0.1]:80","key":"http://[::ffff:127.0.0.1]"},
+  {"input":"https://[2001:0DB8:0:0:0:0:0:1]:443","key":"https://[2001:0db8:0:0:0:0:0:1]"},
+  {"input":"https://[2001:db8::1]","key":"https://[2001:db8::1]"},
+  {"input":"https://例子.test:443/","key":"https://例子.test"},
+  {"input":"https://İ.TEST/","key":"https://İ.test"},
+  {"input":"https://蜂🐝.TEST/","key":"https://蜂🐝.test"},
+  {"input":"https://xn--fsqu00a.test","key":"https://xn--fsqu00a.test"},
+  {"input":"https://127.1:443","key":"https://127.1"},
+  {"input":"https://hive.example./","key":"https://hive.example."},
+  {"input":"https://hive_alias.example/","key":"https://hive_alias.example"}
+ ],
+ "rejected": [
+  "", "hive.example", "ftp://hive.example", "http://hive.example", "http://127.evil.example",
+  "http://127.1", "http://2130706433", "http://127.000.000.001", "http://[::ffff:192.0.2.1]",
+  "https://user:secret@hive.example", "https://@hive.example", "https://hive.example/path",
+  "https://hive.example/..", "https://hive.example/%2f", "https://hive.example//",
+  "https://hive.example?", "https://hive.example?token=secret", "https://hive.example#", "https://hive.example#fragment",
+  "https://hive.example\\path", "https://hive.example\n", " https://hive.example", "https://hive.example:0",
+  "https://hive.example:65536", "https://hive.example:", "https://hive.example:port", "https://[fe80::1%25eth0]",
+  "https:///hive.example", "https://hive.example/%", "https://hive%2eexample"
+ ]
+}

@@ -48,6 +48,12 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 
 func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
+	if command == "desktop-login-terminal" {
+		return desktopLoginTerminal(ctx, args[1:], os.Stdin, out)
+	}
+	if command == "desktop-login-supervisor" {
+		return desktopLoginSupervisor(ctx, args[1:])
+	}
 	if command == "install-handoff" {
 		return installHandoff(ctx, args[1:], out)
 	}
@@ -210,7 +216,7 @@ func login(ctx context.Context, client *http.Client, path string, state localSta
 
 func loginWithUI(ctx context.Context, client *http.Client, path string, state localState, out io.Writer, ui installUI) error {
 	var identity beewire.Identity
-	err := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err := callState(ctx, client, state, "/api/bee/identity", "GET", nil, &identity)
 	if err == nil {
 		return finishLoginWithUI(path, state, identity, out, ui)
 	}
@@ -270,7 +276,7 @@ func loginWithUI(ctx context.Context, client *http.Client, path string, state lo
 			}
 		}
 		// The credential was persisted before exchange, so an uncertain response is recoverable.
-		if identityErr := call(ctx, client, state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity); identityErr == nil {
+		if identityErr := callState(ctx, client, state, "/api/bee/identity", "GET", nil, &identity); identityErr == nil {
 			return finishLoginWithUI(path, state, identity, out, ui)
 		}
 		if err != nil {

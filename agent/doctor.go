@@ -254,7 +254,7 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 
 func checkHive(ctx context.Context, report *doctorReport, state localState) bool {
 	var identity beewire.Identity
-	err := call(ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+	err := callState(ctx, httpClient(), state, "/api/bee/identity", "GET", nil, &identity)
 	if err != nil {
 		report.problem("hive", "", "fail", hiveProblem(err))
 		return false
@@ -282,7 +282,7 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 	path := "/api/bee/platforms/" + platform
 	var account beewire.PlatformAccount
 	explained := ""
-	if err := call(ctx, httpClient(), state.Hive, path+"/account", "GET", state.Credential, nil, &account); err != nil {
+	if err := callState(ctx, httpClient(), state, path+"/account", "GET", nil, &account); err != nil {
 		// The supply query would fail the same way; say it once.
 		report.problem("account", platform, "fail", hiveProblem(err))
 		report.skip("supply", platform, "account_failed")
@@ -307,19 +307,31 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 		}
 	}
 	var supply beewire.PlatformSupply
-	if err := call(ctx, httpClient(), state.Hive, path, "GET", state.Credential, nil, &supply); err != nil {
+	if err := callState(ctx, httpClient(), state, path, "GET", nil, &supply); err != nil {
 		report.problem("supply", platform, "fail", hiveProblem(err))
 		return
 	}
-	if supply.Ready {
+	report.Checks = append(report.Checks, doctorSupplyChecks(platform, supply, explained)...)
+}
+
+// doctorSupplyChecks is shared by CLI doctor and desktop diagnostics. It only
+// interprets a supplied observation; it never reads credentials or changes state.
+func doctorSupplyChecks(platform string, supply beewire.PlatformSupply, explained string) []check {
+	var report doctorReport
+	if supply.Ready && !supply.Paused && len(supply.Reasons) == 0 {
 		report.pass("supply", platform, "taking new work")
-		return
+		return report.Checks
+	}
+	if supply.Ready || len(supply.Reasons) == 0 {
+		report.add(check{Name: "supply", Platform: platform, Status: "fail", Code: "supply_result_unconfirmed", Detail: fmt.Sprintf("supply observation is unconfirmed: ready=%t paused=%t reasons_count=%d", supply.Ready, supply.Paused, len(supply.Reasons))})
+		return report.Checks
 	}
 	for _, reason := range supply.Reasons {
 		if reason != explained {
 			report.reason("supply", platform, reason)
 		}
 	}
+	return report.Checks
 }
 
 func shortFingerprint(fingerprint string) string {

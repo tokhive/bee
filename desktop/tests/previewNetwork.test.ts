@@ -1,0 +1,101 @@
+import assert from 'node:assert/strict';
+import {test,type TestContext} from 'node:test';
+import {invoke} from '@tauri-apps/api/core';
+import {createPreferencesClient} from '../src/system/preferences.ts';
+import {createNetworkClient} from '../src/system/network.ts';
+import {createRuntimeClient} from '../src/system/runtime.ts';
+import {createDiagnosticsClient,decodeDiagnosticReport} from '../src/system/diagnostics.ts';
+import {installPreviewFixture} from './fixtures/bee-preview/fixture.mjs';
+import {applyPreviewEvent} from './fixtures/bee-preview/control.mjs';
+async function preview(t:TestContext,scene='settings-network'){
+ const previous=['window','location','isTauri'].map(key=>[key,Object.getOwnPropertyDescriptor(globalThis,key)] as const);
+ Object.defineProperty(globalThis,'window',{configurable:true,value:{parent:{postMessage(){}}}});
+ Object.defineProperty(globalThis,'location',{configurable:true,value:{origin:'http://preview.test',search:''}});
+ Object.defineProperty(globalThis,'isTauri',{configurable:true,value:true});
+ t.after(()=>{for(const [key,descriptor]of previous){if(descriptor)Object.defineProperty(globalThis,key,descriptor);else Reflect.deleteProperty(globalThis,key);}});
+ await installPreviewFixture(scene);
+ const w=window as any,instance=(await invoke<any>('bridge_status')).metadata.instance;
+ return {network:createNetworkClient(invoke),preferences:createPreferencesClient(invoke),runtime:createRuntimeClient(invoke,instance),instance,control:(action:string,value:string)=>applyPreviewEvent({session:w.__beePreviewSession,action,value,...(action==='diagnostics-result'?{reportId:w.__beeMockDiagnosticContext?.().reportId}:{})})};
+}
+test('actual preview proxy saves reject stale revisions and applying shares current runtime diagnostic context',async t=>{
+ const {network,preferences,runtime,instance}=await preview(t);
+ const before=await preferences.read();
+ const saved=await network.saveProxy({proxy:'http://127.0.0.1:7890',origin:null,expectedRevision:before.preferences.revision});
+ assert.equal(saved.error,null);
+ await assert.rejects(()=>network.saveProxy({proxy:'http://127.0.0.1:8888',origin:null,expectedRevision:before.preferences.revision}),/PREFERENCES_REVISION_CONFLICT|proxy save rejected/);
+ assert.deepEqual(await preferences.read(),saved);
+ const pending=await network.snapshot();assert.equal(pending.saved_proxy,'http://127.0.0.1:7890');assert.equal(pending.effective_proxy,'');assert.equal(pending.pending_restart,true);
+ const applied=await network.applySaved(true);assert.equal(applied.error,null);assert.equal(applied.pending_restart,false);
+ const running=await runtime.snapshot();assert.equal(running.network_revision,applied.effective_revision);
+ const diagnostics=createDiagnosticsClient(invoke,instance,applied.effective_revision,running.run_id,1);
+ const report=await diagnostics.start();assert.equal(report.network_revision,applied.effective_revision);
+ assert.equal(report.run_id,running.run_id);assert.equal(report.binding_revision,1);
+});
+test('cancelling the current diagnostic report remains terminal on later reads',async t=>{
+ const {runtime,instance}=await preview(t,'diagnostics-running'),state=await runtime.snapshot();
+ const diagnostics=createDiagnosticsClient(invoke,instance,state.network_revision,state.run_id,1);
+ const report=await diagnostics.start();assert.equal(report.state,'running');
+ const cancelled=await diagnostics.cancel(report.id);assert.equal(cancelled.state,'cancelled');
+ assert.deepEqual(await diagnostics.snapshot(report.id),cancelled);
+});
+test('network failures preserve saved and effective settings and unknown apply is resolved by reading',async t=>{
+ const {network,preferences,runtime,control}=await preview(t);
+ const initial=await preferences.read();
+ control('network-fault','save');
+ await assert.rejects(()=>network.saveProxy({proxy:'http://127.0.0.1:7890',origin:null,expectedRevision:0}),error=>error instanceof Error&&'code'in error&&error.code==='PREFERENCES_WRITE_FAILED');
+ assert.deepEqual(await preferences.read(),initial);
+ control('network-fault','none');
+ await network.saveProxy({proxy:'http://127.0.0.1:7890',origin:null,expectedRevision:0});
+ control('network-fault','apply');
+ const failed=await network.applySaved(true);assert.equal(failed.error?.code,'NETWORK_RUNTIME_UNCONFIRMED');
+ assert.equal(failed.effective_proxy,'');assert.equal(failed.saved_proxy,'http://127.0.0.1:7890');
+ control('network-fault','unknown');
+ await assert.rejects(()=>network.applySaved(true),/RESPONSE_TIMEOUT.*submitted=true/);
+ const confirmed=await network.snapshot();assert.equal(confirmed.error,null);assert.equal(confirmed.pending_restart,false);assert.equal(confirmed.effective_proxy,'http://127.0.0.1:7890');
+ assert.equal((await runtime.snapshot()).network_revision,confirmed.effective_revision);
+});
+test('diagnostic reads recover the original report through the common simulated result control',async t=>{
+ const {runtime,instance,control}=await preview(t,'diagnostics-running'),state=await runtime.snapshot();
+ const diagnostics=createDiagnosticsClient(invoke,instance,state.network_revision,state.run_id,1),started=await diagnostics.start();
+ control('diagnostics-result','read-failed');
+ await assert.rejects(()=>diagnostics.snapshot(started.id),/REPORT_READ_FAILED.*report_id=/);
+ assert.equal(diagnostics.getSnapshot()!.id,started.id);
+ assert.equal(diagnostics.getSession().read,'paused');
+ control('diagnostics-result','completed');
+ const completed=await diagnostics.snapshot(started.id);
+ assert.equal(completed.id,started.id);assert.equal(completed.state,'completed');
+ assert.equal(diagnostics.getSession().read,'idle');
+ assert.equal((await invoke<any>('diagnostics_snapshot',{id:'f'.repeat(48)})).result.error.code,'DIAGNOSTICS_OPERATION_FAILED');
+});
+test('applying a new network context invalidates the old diagnostic report and a new report uses the new run',async t=>{
+ const {network,preferences,runtime,instance,control}=await preview(t),initial=await runtime.snapshot();
+ const diagnostics=createDiagnosticsClient(invoke,instance,0,initial.run_id,1),old=await diagnostics.start();
+ await network.saveProxy({proxy:'http://127.0.0.1:7890',origin:null,expectedRevision:(await preferences.read()).preferences.revision});
+ await network.applySaved(true);
+ const state=await runtime.snapshot();assert.notEqual(state.run_id,old.run_id);
+ assert.throws(()=>control('diagnostics-result','completed'),error=>error instanceof Error&&'code'in error&&error.code==='PREVIEW_DIAGNOSTIC_CONTEXT_CHANGED');
+ await assert.rejects(async()=>decodeDiagnosticReport(await invoke('diagnostics_snapshot',{id:old.id}),instance),/context changed/);
+ diagnostics.setContext(state.network_revision,state.run_id,1);
+ assert.equal(diagnostics.getSnapshot(),null);
+ const latest=await diagnostics.start();assert.notEqual(latest.id,old.id);assert.equal(latest.run_id,state.run_id);assert.equal(latest.network_revision,state.network_revision);
+});
+test('a late original report cannot replace a newer report after the runtime context changes',async t=>{
+ const {runtime,instance}=await preview(t,'diagnostics-running'),initial=await runtime.snapshot();
+ const diagnostics=createDiagnosticsClient(invoke,instance,0,initial.run_id,1),old=await diagnostics.start();
+ const w=window as any;w.diagnosticDelay=50;
+ const late=diagnostics.snapshot(old.id);let settled=false;void late.then(()=>{settled=true;},()=>{settled=true;});
+ await new Promise(resolve=>setTimeout(resolve,5));assert.equal(settled,false);
+ await runtime.stop(initial.revision);const state=await runtime.snapshot();
+ diagnostics.setContext(state.network_revision,state.run_id,1);w.diagnosticDelay=0;
+ const latest=await diagnostics.start();
+ await assert.rejects(late,/context changed while request was pending/);
+ assert.deepEqual(diagnostics.getSnapshot(),latest);
+});
+test('a delayed completion event for an older diagnostic cannot complete the current report',async t=>{
+ const {runtime,instance}=await preview(t,'diagnostics-running'),state=await runtime.snapshot();
+ const diagnostics=createDiagnosticsClient(invoke,instance,0,state.run_id,1),old=await diagnostics.start();
+ await diagnostics.cancel(old.id);
+ const latest=await diagnostics.start(),w=window as any;
+ assert.throws(()=>applyPreviewEvent({session:w.__beePreviewSession,action:'diagnostics-result',value:'completed',reportId:old.id}),error=>error instanceof Error&&'code'in error&&error.code==='PREVIEW_DIAGNOSTIC_STALE');
+ assert.equal((await diagnostics.snapshot(latest.id)).state,'running');
+});

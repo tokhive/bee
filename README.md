@@ -69,6 +69,8 @@ make build        # builds bin/bee
 
 Bee depends on the TEE client library [`github.com/tokhive/tee`](https://github.com/tokhive/tee) as an ordinary Go module, pinned in `go.mod`. You can also build with plain `go build -o bin/bee ./cmd/bee`.
 
+For the macOS desktop development App, run `make app`. It prepares dependencies and builds the native Bee, frontend, and Tauri bundle. See the [desktop build guide](desktop/README.md#一键构建-macos-app) for toolchain requirements and the output path.
+
 The examples below call `bee`; with a source build, put `bin/bee` on your `PATH` or call it as `./bin/bee`.
 
 To run the tests:
@@ -286,3 +288,5 @@ docs/        error code reference
 ## License
 
 [MIT](LICENSE)
+
+The desktop development client supports verified device pairing, read-only OpenAI/Claude login and account observations, and shared per-platform Hive pause/resume controls. Login detection is explicit; resume does not start contribution. Account selection, account changes and removal await runtime ownership and drain/detach support. See the [account guide](docs/desktop/ai-accounts.md) and [supply guide](docs/desktop/supply-control.md) for behavior, local Mac package evidence and remaining native checks.

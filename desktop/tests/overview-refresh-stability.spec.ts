@@ -158,7 +158,7 @@ test('device failure keeps the last identity during retry and a successful read 
  await expect(button).toBeEnabled();await expect(failure).toHaveCount(0);await expect(page.locator('.device-facts small').first()).toHaveText('设备已绑定。');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeEnabled();await noWrites(page);
 });
 
-test('initial device loading has a static three-column skeleton which never returns during refresh',async({page})=>{
+test('first device read stays in startup checking and confirmed overview never returns to a skeleton during refresh',async({page})=>{
  await page.addInitScript(()=>{
   const w=window as any;let internals:any;
   Object.defineProperty(w,'__TAURI_INTERNALS__',{configurable:true,get:()=>internals,set:value=>{
@@ -172,14 +172,13 @@ test('initial device loading has a static three-column skeleton which never retu
   }});
  });
  await scene(page,'running');await expect.poll(()=>page.evaluate(()=>(window as any).initialDeviceHeld)).toBe(true);
- const skeleton=page.locator('.device-loading');await expect(skeleton).toBeVisible();await expect(skeleton.locator(':scope > div')).toHaveCount(3);
- await expect(skeleton).toHaveAttribute('role','status');await expect(skeleton).toHaveAccessibleName('正在读取设备与账号状态');
- expect(await skeleton.evaluate(el=>getComputedStyle(el).animationName)).toBe('none');
- const height=(await skeleton.boundingBox())!.height;
+ const skeleton=page.locator('.device-loading');await expect(skeleton).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'正在检查设备…',exact:true})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);
+ await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).releaseInitialDevice());await expect(page.locator('.device-facts strong').first()).toHaveText('Bee Desktop');
- await expect(skeleton).toHaveCount(0);expect(Math.abs((await page.locator('.device-facts').boundingBox())!.height-height)).toBeLessThanOrEqual(4);
+ await expect(skeleton).toHaveCount(0);await focusAndScroll(page);const before=await position(page);
  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
- await expect(skeleton).toHaveCount(0);await expect(page.locator('.device-facts strong').first()).toHaveText('Bee Desktop');await page.evaluate(()=>(window as any).releaseRefresh());await noWrites(page);
+ await expect(skeleton).toHaveCount(0);await expect(page.locator('.device-facts strong').first()).toHaveText('Bee Desktop');expect(await position(page)).toEqual(before);await page.evaluate(()=>(window as any).releaseRefresh());await noWrites(page);
 });
 
 for(const command of ['account_snapshot','supply_status'])test(`${command} failure and historical facts persist during retry, then recover`,async({page})=>{

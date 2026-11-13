@@ -45,12 +45,12 @@ async function setup(page:Page,selected=false){
  if(selected){openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};openai.hive={...openai.hive,state:'ready',fingerprint:'b'.repeat(64),generation:1};openai.authorization={...openai.authorization,state:'synchronized',fingerprint:'b'.repeat(64)};}
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{openai,claude},runtimeEnabled:true,scenarios:{autoService:true}})});(${installOpenaiReplies.toString()})();`});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
- await expect(card(page).getByRole('button',{name:'OpenAI 详情'})).toBeVisible();
+ if(selected)await expect(card(page).getByRole('button',{name:'OpenAI 详情'})).toBeVisible();
+ else {if(await page.getByRole('button',{name:'OpenAI',exact:true}).count())await page.getByRole('button',{name:'OpenAI',exact:true}).click();await expect(page.getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();}
 }
 async function writes(page:Page){return page.evaluate(()=>(window as any).calls.filter((c:any)=>['account_action','authorize_start','authorize_cancel','supply_set_paused','runtime_start'].includes(c.command)));}
 test('real React intake completion survives navigation; finish sends no business write; new fault wins',async({page})=>{
- await setup(page);await card(page).getByRole('button',{name:'接入账号',exact:true}).click();
- await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
+ await setup(page);await page.getByRole('button',{name:'确认接入',exact:true}).click();
  await expect(card(page).getByRole('status')).toHaveText('账号接入成功！');
  await expect(card(page).locator('.oa-steps .done')).toHaveCount(2);
  const before=await writes(page);
@@ -76,7 +76,7 @@ test('source draft survives navigation and failed save; successful settings are 
  expect(await writes(page)).toEqual([]);
 });
 test('open and exhausted queries retain the original login without starting another process',async({page})=>{
- await page.clock.install();await setup(page);
+ await page.clock.install();await setup(page,true);
  await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
  await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
  await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
@@ -93,27 +93,26 @@ test('open and exhausted queries retain the original login without starting anot
 
 test('account reconciliation stops after 60 seconds and manual checks never replay the action',async({page})=>{
  await page.clock.install();await setup(page);await page.evaluate(()=>(window as any).actionPending=true);
- await card(page).getByRole('button',{name:'接入账号',exact:true}).click();
- await page.getByRole('dialog').getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card(page).getByRole('status')).toHaveText('账号操作结果待核对');
+ await page.getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('status')).toHaveText('账号操作结果待核对');
  const id=await page.evaluate(()=>(window as any).accounts.openai.operation.id);
  await page.clock.runFor(61000);
- await expect(card(page).getByText('自动核对已达 60 秒，尚未确认原操作结果。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByText('自动核对已达 60 秒，尚未确认原操作结果。',{exact:true})).toBeVisible();
  const reads=()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_snapshot'&&c.args.platform==='openai').length);
  const stopped=await reads();await page.clock.runFor(5000);expect(await reads()).toBe(stopped);
- await card(page).getByRole('button',{name:'核对结果',exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
+ await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'核对结果',exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
  await expect.poll(reads).toBe(stopped+1);
  const calls=await page.evaluate(()=>(window as any).calls);
  expect(calls.filter((c:any)=>c.command==='account_action')).toHaveLength(1);
  expect(calls.filter((c:any)=>c.command==='account_snapshot'&&c.args.platform==='openai').every((c:any)=>c.args.refresh===false)).toBe(true);
  expect(await page.evaluate(()=>(window as any).accounts.openai.operation.id)).toBe(id);
- await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.operation.id='f'.repeat(48);a.operation.revision=++a.revision;});
  await page.clock.runFor(11000);
- await expect(card(page).getByText('本轮查询已停止，尚未确认原操作结果。',{exact:true})).toBeVisible();
- await card(page).getByText('查看核对记录',{exact:true}).click();
- await expect(card(page)).toContainText('required='+id);
- await expect(card(page)).toContainText('actual='+'f'.repeat(48));
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByText('本轮查询已停止，尚未确认原操作结果。',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('required='+id);
+ await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('actual='+'f'.repeat(48));
 });
 
 test('credential failures retain quota, deduplicate one cause and preserve independent faults and pause',async({page})=>{
@@ -145,16 +144,15 @@ test.beforeEach(()=>{mkdirSync(evidence,{recursive:true});});
 for(const theme of ['light','dark'])for(const [size,width,height] of [['narrow',820,680],['wide',1080,700]] as const){
  test(`formal React and approved preview — ${theme} ${size}`,async({page})=>{
   mkdirSync(evidence,{recursive:true});await page.clock.install();await page.setViewportSize({width,height});
-  await setup(page);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();
-  await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
-  await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
-  await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
-  await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+  await setup(page);await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();
+  await page.getByRole('button',{name:'更换连接方式',exact:true}).click();
+  await page.getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+  await expect(page.getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
   await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'succeeded-same'});});await page.clock.runFor(11000);
   await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
   await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
-  await expect(card(page).getByRole('button',{name:'接入账号',exact:true})).toBeVisible();
-  await card(page).getByRole('button',{name:'接入账号',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认接入'}).click();
+  if(await page.getByRole('button',{name:'OpenAI',exact:true}).count())await page.getByRole('button',{name:'OpenAI',exact:true}).click();
+  await page.getByRole('button',{name:'确认接入',exact:true}).click();
   await expect(card(page).getByRole('status')).toHaveText('账号接入成功！');
   await expect(card(page).locator('.oa-steps .done')).toHaveCount(4);
   await page.evaluate(theme=>{document.documentElement.dataset.theme=theme;},theme);

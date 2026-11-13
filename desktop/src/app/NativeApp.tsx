@@ -12,6 +12,8 @@ import {useCallback,useEffect,useMemo,useRef,useState,type ReactNode} from 'reac
 import {AppShell} from '../components/AppShell';
 import {StartupRecoveryNotice} from '../components/StartupRecoveryNotice';
 import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
+import {FirstLaunchWizard} from '../features/device/FirstLaunchWizard';
+import {observeFirstLaunch,firstLaunchIntent,firstLaunchReceipt,firstLaunchAdmission,type FirstLaunchSession} from '../system/firstLaunch';
 import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
 import {useAccounts} from '../features/accounts/useAccounts';
 import {useRuntime} from '../features/lifecycle/useRuntime';
@@ -49,6 +51,36 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
+function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedback,admission,onIntent,onReceipt,firstProfile=false,onScopeRefresh}:{firstProfile?:boolean;onScopeRefresh:()=>Promise<unknown>;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;admission:ReturnType<typeof firstLaunchAdmission>;onIntent:(hive:string,name:string)=>void;onReceipt:(view:DeviceView)=>void;onNavigate:(page:'accounts'|'overview')=>void;nativeLanguageFeedback:ReactNode}){
+ const [diagnostic,setDiagnostic]=useState(false),[busy,setBusy]=useState(false),[checking,setChecking]=useState(false),[operationError,setOperationError]=useState<UiFailure|null>(null);
+ const working=useRef(false),mounted=useRef(true),sequence=useRef(0);
+ const nativeUnavailable=!firstProfile&&snapshot.native.state!=='ready';
+ const returnToSetup=()=>{setDiagnostic(false);requestAnimationFrame(()=>document.querySelector<HTMLElement>(nativeUnavailable?'#first-launch-native-title':'.first-launch-wizard h1')?.focus());};
+ useEffect(()=>{if(diagnostic)document.getElementById('first-launch-diagnostics-title')?.focus();},[diagnostic]);
+ useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;sequence.current++;};},[]);
+ const instance=snapshot.native.metadata?.instance;
+ // A native instance owns operation receipts; the mounted wizard owns the session draft.
+ useEffect(()=>{sequence.current++;working.current=false;setBusy(false);setChecking(false);setOperationError(null);},[instance,nativeUnavailable]);
+ const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
+ const run=async(action?:(active:()=>boolean)=>Promise<unknown>,check=false)=>{
+  if(working.current||!model)return;working.current=true;const attempt=++sequence.current;const active=()=>mounted.current&&attempt===sequence.current&&(firstProfile||model.getSnapshot().native.state==='ready')&&model.getSnapshot().native.metadata?.instance===instance;
+  (check?setChecking:setBusy)(true);if(!check)setOperationError(null);
+  try{if(model.getSnapshot().busy)await model.refresh();if(!active())return;await action?.(active);if(active())await model.refresh();if(active()&&!identityFailure(model.getSnapshot()))setOperationError(null);}
+  catch(cause){if(active()){setOperationError(normalizeFailure(cause,'device_pairing'));await model.refresh();}}
+  finally{if(attempt===sequence.current){working.current=false;if(mounted.current)(check?setChecking:setBusy)(false);}}
+ };
+ const problem=snapshot.deviceContextFailure?.code!=='DEVICE_CONTEXT_UNCONFIGURED'?snapshot.deviceContextFailure:null;
+ const error=firstProfile?null:admission.failure??problem??snapshot.recoveryError??snapshot.deviceError??snapshot.error??snapshot.startupReadError??(snapshot.native.error?normalizeFailure(snapshot.native.error,'bridge_startup'):null)??null;
+ const fresh=firstProfile||snapshot.native.state==='ready'&&snapshot.bindingRevision!==undefined&&snapshot.deviceContextFailure?.code==='DEVICE_CONTEXT_UNCONFIGURED'&&snapshot.recoveryObservation==='absent'&&snapshot.device?.state==='unbound'&&!error&&snapshot.startup?.state==='ready';
+ return <>
+  <div hidden={diagnostic}>
+   {firstProfile?null:nativeUnavailable?<main className="first-launch-content"><h1 id="first-launch-native-title" tabIndex={-1}>{snapshot.native.state==='starting'?t('正在启动 Bee…'):t('状态待核对')}</h1><StartupRecoveryNotice snapshot={snapshot} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>setDiagnostic(true)}/></main>:<StartupRecoveryNotice snapshot={snapshot} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>setDiagnostic(true)}/>}
+   {nativeLanguageFeedback}
+   <div hidden={nativeUnavailable}><FirstLaunchWizard view={firstProfile?{state:'unbound'}:admission.view} context={snapshot.deviceContext} refreshStatus={snapshot.refresh} completed={admission.completed} initialLoading={!fresh&&!admission.view?.recovery&&!error} busy={busy} checking={checking} error={error} operationError={operationError} begin={(hive,name)=>{onIntent(hive,name);return run(async active=>{const view=await props.client.begin(hive,name);if(active())onReceipt(view);await onScopeRefresh();});}} refresh={()=>run(()=>model?.recheckStartup()??Promise.resolve(),true)} open={()=>run(()=>props.client.open())} onOpenHive={()=>run(props.openHive)} onNavigate={onNavigate} onDiagnostics={()=>setDiagnostic(true)}/></div>
+  </div>
+  {diagnostic&&<main className="first-launch-content"><h1 id="first-launch-diagnostics-title" tabIndex={-1}>{t('诊断')}</h1><button onClick={returnToSetup}>{t('返回设备设置')}</button><StartupRecoveryNotice snapshot={snapshot} diagnostics onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>{}}/><NativeDiagnosticsPage client={diagnostics} instance={snapshot.native.state==='ready'?instance:undefined} bindingRevision={snapshot.bindingRevision??0} networkRevision={snapshot.runtime?.network_revision??0} runId={snapshot.runtime?.run_id} onReport={model?.acceptDiagnosticReport} onNavigate={returnToSetup}/></main>}
+ </>;
+}
 function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferencesReady,onSaved,nativeFeedback,switching}:{switching:HiveSwitchModel;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;page:Page;setPage:(page:Page)=>void;preferences:PreferencesSnapshot;preferencesReady:boolean;onSaved:(v:PreferencesSnapshot)=>void;nativeFeedback:ReactNode}){
  const {native,device:view}=snapshot;
  const [navigationRequest,setNavigationRequest]=useState<NavigationRequest>(()=>{const target={page};return {target:validNavigationTarget(target)?target:{page:'overview'},sequence:0};});
@@ -157,6 +189,7 @@ export function NativeApp(props:NativeProps){
  const currentProfile=useRef(switching.snapshot?.profiles.current_profile);currentProfile.current=switching.snapshot?.profiles.current_profile;
  const [notificationSource,setNotificationSource]=useState<NotificationSource|null>(null);
  const [snapshot,setSnapshot]=useState<DesktopSnapshot>(initial),[model,setModel]=useState<DesktopState>(),[page,setPage]=useState<Page>('overview');
+ const [firstLaunch,setFirstLaunch]=useState<FirstLaunchSession>({});
  const [preferences,setPreferences]=useState<PreferencesSnapshot>({preferences:defaultPreferences(),error:null});
  const preferencesRevision=useRef(preferences.preferences.revision);preferencesRevision.current=preferences.preferences.revision;
  const [preferencesTrusted,setPreferencesTrusted]=useState(false);
@@ -188,11 +221,15 @@ export function NativeApp(props:NativeProps){
  useEffect(()=>{
   if(!scopeReady)return;
   const coordinator=createDesktopState({scope:initialScope.current,openaiQueries:true,bridge:props.systemBridge,device:props.client,runtime:props.runtimeFactory,accounts:props.accountFactory,supply:props.supply});
-  setModel(coordinator);const off=coordinator.subscribe(()=>setSnapshot(coordinator.getSnapshot()));
+  setModel(coordinator);const off=coordinator.subscribe(()=>{const next=coordinator.getSnapshot();setFirstLaunch(previous=>observeFirstLaunch(previous,next));setSnapshot(next);});
   return()=>{off();coordinator.dispose();};
  },[props.systemBridge,props.client,props.runtimeFactory,props.accountFactory,props.supply,scopeReady]);
  const currentScope=JSON.stringify(switching.snapshot?.current_scope);
  useEffect(()=>{if(switching.snapshot)model?.setCurrentScope(switching.snapshot.current_scope);},[model,currentScope]);
  useEffect(()=>{let active=true,off:(()=>void)|undefined;void props.systemBridge.onNotification?.(next=>{if(!active)return;if(typeof next==='string'){setNotificationSource(null);setPage(next);return;}const source=next.target.source;if(!next.can_navigate||source&&(source.profile_id!==next.current_profile||source.profile_id!==currentProfile.current)){setNotificationSource(source);return;}setNotificationSource(null);setPage(next.target.page);}).then(dispose=>{if(active)off=dispose;else dispose();},cause=>console.error('Notification navigation registration failed',cause));return()=>{active=false;off?.();};},[props.systemBridge]);
+ const nativeLanguageFeedback=localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>;
+ const admission=firstLaunchAdmission(firstLaunch,snapshot);
+ const firstProfile=!!switching.snapshot&&!switching.snapshot.profiles.current_profile&&!switchPending(switching.snapshot)&&switching.snapshot.profiles.migration_blockers.length===0;
+ if(!admission.workspace&&!switchPending(switching.snapshot))return <NativeFirstLaunch firstProfile={firstProfile} onScopeRefresh={switching.refresh} props={props} snapshot={snapshot} model={model} admission={admission} onIntent={(hive,name)=>setFirstLaunch(previous=>firstLaunchIntent(previous,model?.getSnapshot()??snapshot,hive,name))} onReceipt={view=>setFirstLaunch(previous=>firstLaunchReceipt(previous,model?.getSnapshot()??snapshot,view))} onNavigate={destination=>{if(!firstLaunchAdmission(firstLaunch,model?.getSnapshot()??snapshot).completed)return;setFirstLaunch(previous=>({...previous,dismissed:previous.attempt?.operationId,knownBinding:true}));setPage(destination);}} nativeLanguageFeedback={nativeLanguageFeedback}/>;
  return <NativeWorkspace switching={switching} key={`${switching.snapshot?.profiles.current_profile??'no-profile'}:${switching.snapshot?.profiles.revision??0}:${snapshot.native.metadata?.instance??'starting'}:${snapshot.bindingRevision??0}`} props={props} snapshot={snapshot} model={model} page={page} setPage={setPage} preferences={preferences} preferencesReady={preferencesTrusted} onSaved={acceptPreferences} nativeFeedback={<>{notificationSource&&<div className="problem-notice" role="status"><p>{t('此通知来自 Hive {origin}。请在 Hive 列表中选择该地址后核对。',{origin:notificationSource.origin})}</p><div className="inline-actions"><button onClick={()=>{setPage('overview');switching.setChooserOpen(true);}}>{t('查看 Hive 列表')}</button><button aria-label={t('关闭通知提示')} onClick={()=>setNotificationSource(null)}>{t('关闭')}</button></div></div>}{localeFailure&&<div><FailureNotice failure={localeFailure} check="native_locale_sync"/><button disabled={localeReading} onClick={()=>void retryNativeLanguage()}>{t('重新同步原生语言')}</button></div>}</>}/>;
 }

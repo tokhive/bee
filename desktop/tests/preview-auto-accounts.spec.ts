@@ -38,14 +38,16 @@ test('account preview prevents events before their prerequisites and clears stal
  await page.locator('#event-kind').selectOption('account-refresh');
  await expect(page.locator('#control-status')).toBeEmpty();
 });
+const wizard=(app:FrameLocator)=>app.getByRole('region',{name:'添加账号',exact:true});
+async function chooseOpenAI(app:FrameLocator){await wizard(app).getByRole('button',{name:'OpenAI',exact:true}).click();}
 async function settle(page:Page){await page.clock.runFor(11000);}
 test('unconnected accounts keep login first when the Hive connection needs attention',async({page})=>{
  const app=await open(page,'empty');
  await event(page,'runtime-connection','connecting');await settle(page);
- await expect(status(app)).toHaveText('未找到所选凭证来源。');
- await expect(card(app)).not.toContainText('Hive 未看到');
- await expect(card(app).getByRole('button',{name:'查看连接',exact:true})).toHaveCount(0);
- await expect(card(app).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
+ await chooseOpenAI(app);
+ await expect(wizard(app)).not.toContainText('Hive 未看到');
+ await expect(wizard(app).getByRole('button',{name:'查看连接',exact:true})).toHaveCount(0);
+ await expect(wizard(app).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
 });
 
 test('selected accounts inspect connection evidence and preserve pause after recovery',async({page})=>{
@@ -75,9 +77,9 @@ async function relogin(app:FrameLocator){
 
 test('candidate connects, prepares automatically, resumes and pauses without a global start',async({page})=>{
  const app=await open(page);
- await expect(status(app)).toHaveText('尚未接入 Bee');
- await card(app).getByRole('button',{name:'接入账号',exact:true}).click();
- const dialog=app.getByRole('dialog');
+ await chooseOpenAI(app);
+ await expect(card(app)).toHaveCount(0);
+ const dialog=wizard(app);
  await expect(dialog).toContainText('订阅额度');
  await dialog.getByRole('button',{name:'确认接入',exact:true}).click();
  await settle(page);
@@ -203,8 +205,8 @@ test('lost resume receipt is reconciled without replaying the write',async({page
 test('lost connect receipt preserves one operation and the latest intake choice',async({page})=>{
  const app=await open(page);
  await event(page,'account-operation-result','unknown-next');
- await card(app).getByRole('button',{name:'接入账号',exact:true}).click();
- await app.getByRole('dialog').getByRole('button',{name:'确认接入'}).click();
+ await chooseOpenAI(app);
+ await wizard(app).getByRole('button',{name:'确认接入',exact:true}).click();
  await settle(page);
  await expect(status(app)).toHaveText('可接单');
  expect(await calls(page,'account_action')).toHaveLength(1);
@@ -249,16 +251,15 @@ test('account acceptance guides first login without configuring external events'
  await expect(page.locator('#simulation-details')).not.toHaveAttribute('open','');
  await expect(page.locator('#guide-text')).toContainText('登录 OpenAI');
  await expect(page.locator('#guide-action')).toBeHidden();
- await card(app).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
- await app.getByRole('dialog').getByRole('button',{name:'开始官方登录'}).click();
+ await chooseOpenAI(app);
+ await wizard(app).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await expect(page.locator('#guide-action')).toHaveText('模拟登录成功');
  await page.locator('#guide-action').click();
  await settle(page);
- await expect(status(app)).toHaveText('已识别账号，请确认是否接入');
+ await expect(wizard(app).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await expect(page.locator('#guide-action')).toBeHidden();
  await expect(page.locator('#guide-text')).toContainText('接入');
- await card(app).getByRole('button',{name:'接入账号',exact:true}).click();
- await app.getByRole('dialog').getByRole('button',{name:'确认接入'}).click();
+ await wizard(app).getByRole('button',{name:'确认接入',exact:true}).click();
  await settle(page);
  await expect(status(app)).toHaveText('账号接入成功！');
  await card(app).getByRole('button',{name:'完成',exact:true}).click();

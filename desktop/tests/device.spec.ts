@@ -1,12 +1,13 @@
 import {readFileSync} from 'node:fs';
 const passiveRuntime={...JSON.parse(readFileSync(new URL('../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,local:'stopped',connection:'disconnected',operation:null,stop_receipt:null};
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 test.beforeEach(async({page})=>{
  await page.addInitScript((passiveRuntime)=>{
   const runtime=window as unknown as {isTauri:boolean;__TAURI_INTERNALS__:unknown;deviceStage:string;deviceCalls:string[]};
   (window as unknown as {__TAURI_EVENT_PLUGIN_INTERNALS__:unknown}).__TAURI_EVENT_PLUGIN_INTERNALS__={unregisterListener:()=>{}};
-  runtime.isTauri=true;runtime.deviceStage='unbound';runtime.deviceCalls=[];
+  runtime.isTauri=true;runtime.deviceStage='bound';runtime.deviceCalls=[];
+  (window as any).deviceContext={hive:'https://hive.example',name:'My Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:1};
   let callback=1;const callbacks=new Map<number,(value:unknown)=>void>();
   const instance='b'.repeat(32);let preferences={version:1,revision:0,language:'system',theme:'system',notifications_enabled:false,autostart_desired:false,proxies:[]};
   runtime.__TAURI_INTERNALS__={transformCallback:(fn:(value:unknown)=>void)=>{const id=callback++;callbacks.set(id,fn);return id;},unregisterCallback:()=>{},invoke:async(command:string,args?:any)=>{
@@ -54,24 +55,26 @@ test.beforeEach(async({page})=>{
   }};
  },passiveRuntime);
 });
+async function initial(page:Page,query=''){
+ await page.goto('/tests/fixtures/first-launch-integration.html'+query);
+ await page.waitForFunction(()=>(window as any).__firstLaunchReady);
+}
 test('normal native build pairs and verifies without demo balances or starting supply',async({page})=>{
- await page.setViewportSize({width:860,height:600});await page.goto('/');
- await expect(page.getByRole('heading',{name:'连接本机设备'})).toBeVisible();
- await expect(page.getByText('演示数据',{exact:true})).toHaveCount(0);
- await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');
- await page.getByLabel('设备名称',{exact:true}).fill('My Mac');
- await page.getByRole('button',{name:'生成配对码'}).click();
- await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
- await expect(page.getByText('完成网页确认后，请回到 Bee。')).toBeVisible();
- await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
- await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
- await expect(page.getByText('real@example.test',{exact:true})).toBeVisible({timeout:10000});
- await expect(page.getByText('设备已绑定。')).toBeVisible();
- await expect(page.getByRole('button',{name:'收益',exact:true})).toHaveCount(0);
- await expect(page.getByText('设备 ID',{exact:true})).toHaveCount(0);
- await expect(page.locator('.device-facts>div')).toHaveCount(3);
- expect(await page.evaluate(()=> (window as unknown as {deviceCalls:string[]}).deviceCalls.some(c=>['runtime_start','runtime_stop','account_action','supply_set_paused','device_recovery_prepare','device_recovery_confirm'].includes(c)))).toBe(false);
+ await page.setViewportSize({width:860,height:600});await initial(page);
+ await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeVisible();
+ await expect(page.getByRole('navigation')).toHaveCount(0);await expect(page.getByText('演示数据',{exact:true})).toHaveCount(0);
+ await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');await page.getByLabel('设备名称',{exact:true}).fill('My Mac');
+ await page.getByRole('button',{name:'继续绑定设备',exact:true}).click();
+ await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(page.getByText('完成网页确认后回到 Bee，此处会自动更新。',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
+ await page.evaluate(()=>(window as any).__beePreviewApprove());
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeFocused({timeout:15000});
+ await expect(page.getByText('new-owner@example.test',{exact:true})).toBeVisible();await expect(page.getByText('My Mac',{exact:true})).toBeVisible();
+ await expect(page.getByRole('navigation')).toHaveCount(0);await expect(page.getByRole('button',{name:'收益',exact:true})).toHaveCount(0);
+ await expect(page.getByText('设备 ID',{exact:true})).toHaveCount(0);await expect(page.locator('.first-launch-facts dt')).toHaveCount(3);
+ for(const command of ['runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused','device_recovery_prepare','device_recovery_confirm'])expect(await deviceCalls(page,command)).toHaveLength(0);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.getByRole('button',{name:'进入概览',exact:true}).click();await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();
 });
 test('failed verification blocks success and remains retryable',async({page})=>{
  await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
@@ -99,21 +102,31 @@ test('retrying a failed bound-device check does not revive cached success',async
 test('an old native status rejection cannot overwrite a newer ready event',async({page})=>{
  await page.goto('/?fixture=stale-status');
  await expect.poll(()=>page.evaluate(()=>Boolean((window as unknown as {initialRejected:boolean}).initialRejected))).toBe(true);
- await expect(page.getByRole('heading',{name:'连接本机设备'})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'本机设备',exact:true})).toBeVisible();
 });
 
-test('opening after website confirmation consumes the latest bound result',async({page})=>{
- await page.goto('/');await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');
- await page.getByRole('button',{name:'生成配对码'}).click();await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
- await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
- await page.getByRole('button',{name:'打开 Hive 确认网页'}).click();
- await expect(page.getByText('设备已绑定。')).toBeVisible();await expect(page.getByRole('alert')).toHaveCount(0);
+test('opening after website confirmation consumes the latest bound result without claiming browser launch',async({page})=>{
+ await initial(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as any).__beePreviewApprove());await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
+ await expect(page.getByText('浏览器已打开',{exact:true})).toHaveCount(0);await expect(page.getByRole('alert')).toHaveCount(0);
+ expect(await deviceCalls(page,'device_open')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+});
+
+test('Hive expiry discovered while opening replaces the stale website action without creating another pairing',async({page})=>{
+ const base=new Date('2026-11-12T00:00:00Z');await page.clock.install({time:base});await page.clock.pauseAt(new Date(base.getTime()+1000));
+ await initial(page,'?scene=device-pending');const button=page.getByRole('button',{name:'打开 Hive 确认网页',exact:true});await expect(button).toBeEnabled();
+ await page.clock.setFixedTime(new Date(base.getTime()+601000));await button.click();
+ await expect(page.getByText('Hive 已确认配对码过期。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();await expect(button).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);await expect(page.getByText('浏览器已打开',{exact:true})).toHaveCount(0);
+ expect(await deviceCalls(page,'device_open')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 
 test('English device entry and settings have complete translations',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
  await expect(page.getByText('Saved for this system user and retained after restarting.')).toBeVisible();
- await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Connect this device'})).toBeVisible();
+ await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'This device',exact:true})).toBeVisible();
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
 });
 
@@ -137,7 +150,7 @@ test('diagnostics preserve runtime operation and platform authorization failure 
  await expect(evidence).toContainText('source_read');await expect(evidence).toContainText('/fixture/source');
 });
 
-const deviceCalls=(page:any,command:string)=>page.evaluate((command:string)=>(window as any).deviceCalls.filter((c:string)=>c===command),command);
+const deviceCalls=(page:Page,command:string)=>page.evaluate((command:string)=>{const w=window as any;return w.__firstLaunchReady?w.calls.filter((c:any)=>c.command===command):w.deviceCalls.filter((c:string)=>c===command);},command);
 const recoveryView=(phase:string)=>({operation_id:'d'.repeat(48),revision:4,phase,old_identity:{id:'old-1',name:'My Mac',owner_id:'old-owner',owner_email:'old@example.test'},new_identity:['saving','completed','awaiting_owner_confirmation'].includes(phase)?{id:'new-1',name:'New Mac',owner_id:'new-owner',owner_email:'new@example.test'}:null,pairing:['pending','draining','redeeming','redemption_unknown','expired'].includes(phase)?{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'}:null,failure:null});
 test('a completed recovery permits another revoked identity only after confirmation with a new operation',async({page})=>{
  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.nextRecoveryOperation='e'.repeat(48);w.deviceFailure={code:'device_replaced',message:'current device GET identity HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};},recoveryView('completed'));
@@ -267,27 +280,27 @@ test('a historical completed recovery yields preparation guidance to current acc
  expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);
 });
 test('initial device facts stay unknown until the first read finishes',async({page})=>{
- await page.addInitScript(()=>{(window as any).deviceHold=true;});await page.goto('/');
- await expect(page.getByText('正在读取设备与账号状态',{exact:true}).first()).toBeVisible();
- await expect(page.getByRole('button',{name:'生成配对码',exact:true})).toHaveCount(0);
- await expect(page.getByRole('heading',{name:'连接本机设备',exact:true})).toHaveCount(0);
- await page.evaluate(()=>{const w=window as any;w.deviceHold=false;w.releaseDevice();});
- await expect(page.getByRole('button',{name:'生成配对码',exact:true})).toBeVisible();
- await expect(page.getByRole('region',{name:'准备贡献'})).toBeVisible();
+ await initial(page,'?hold=device_status');
+ await expect(page.getByRole('heading',{name:'正在检查设备…',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'继续绑定设备',exact:true})).toHaveCount(0);await expect(page.getByRole('navigation')).toHaveCount(0);
+ await page.evaluate(()=>(window as any).__firstLaunchTest.release('device_status'));
+ await expect(page.getByRole('button',{name:'继续绑定设备',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'准备贡献'})).toHaveCount(0);
 });
 test('pairing copy feedback and failed browser opening retain the same request',async({page,context})=>{
- await context.grantPermissions(['clipboard-read','clipboard-write']);await page.goto('/');
- await page.getByLabel('Hive 地址',{exact:true}).fill('https://hive.example');await page.getByRole('button',{name:'生成配对码',exact:true}).click();
+ await context.grantPermissions(['clipboard-read','clipboard-write']);await initial(page,'?scene=device-pending');
+ const operation=await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId);
  await page.getByRole('button',{name:'复制配对码',exact:true}).click();await expect(page.getByText('配对码已复制',{exact:true})).toBeVisible();
- await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('clipboard permission denied');}}});(window as any).openFailure=true;});
+ await page.evaluate(()=>{Object.defineProperty(navigator,'clipboard',{configurable:true,value:{writeText:async()=>{throw new Error('clipboard permission denied');}}});const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_open'){w.calls.push({command,args});throw {code:'BROWSER_OPEN_FAILED',message:'open failed; OS denied browser launch'};}return invoke(command,args);};});
  await page.getByRole('button',{name:'复制确认网址',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'clipboard permission denied'})).toBeVisible();
  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();await expect(page.getByText('https://hive.example/devices/pair?code=ABCD-EFGH',{exact:true})).toBeVisible();
- await expect(page.getByRole('alert').filter({hasText:'OS denied browser launch'})).toBeVisible();expect(await deviceCalls(page,'device_begin')).toHaveLength(1);
+ const browserFailure=page.getByRole('alert').filter({hasText:'默认浏览器打开失败。'});await expect(browserFailure).toBeVisible();
+ await browserFailure.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('open failed; OS denied browser launch');await page.keyboard.press('Escape');
+ expect(await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId)).toBe(operation);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
-for(const [phase,copy] of [['creation_unknown','创建结果未知'],['draining','等待旧设备完成任务和结算'],['redeeming','兑换已提交，正在核对新设备身份'],['redemption_unknown','兑换结果未知，正在核对新设备身份'],['saving','新设备身份已核对，正在保存本机配置']] as const)test(`initial pairing presents ${phase} from its durable transaction`,async({page})=>{
- const recovery={...recoveryView(phase),old_identity:null};if(phase==='saving')recovery.failure={code:'DEVICE_RECOVERY_BLOCKED',message:'atomic save permission denied'} as any;
- await page.addInitScript(recovery=>{(window as any).deviceOverride={state:['draining'].includes(recovery.phase)?'draining':'pairing',hive:'https://hive.example',name:'My Mac',...(recovery.phase==='draining'?{user_code:recovery.pairing!.code,verification_url:recovery.pairing!.verification_url,expires_at:recovery.pairing!.expires_at,poll_interval_seconds:2}:{}),recovery};},recovery);
- await page.goto('/');await expect(page.getByText(phase==='saving'?'本机保存未完成，需重新核对':copy,{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+for(const [phase,copy] of [['creation-unknown','尚无法确认配对请求结果'],['draining','正在等待旧设备完成任务和结算。'],['redeeming','正在确认设备身份…'],['redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],['saving','设备身份已确认，本机保存尚未完成。']] as const)test(`initial pairing presents ${phase} from its durable transaction`,async({page})=>{
+ await initial(page,'?scene=device-'+phase);await expect(page.getByText(copy,{exact:true})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);
+ const action=page.getByRole('button',{name:phase==='saving'?'继续完成绑定':'重新检查设备',exact:true});
+ if(['creation-unknown','redemption-unknown','saving'].includes(phase))await action.click();else await expect(action).toHaveCount(0);
  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
 });
 test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
@@ -312,11 +325,12 @@ test('adopting a different owner requires its own current revision confirmation'
  await expect(page.getByText('上次重新绑定已完成，未自动开始贡献。',{exact:true})).toBeVisible();expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);expect(await deviceCalls(page,'account_action')).toHaveLength(0);
 });
 test('local expiry waits for Hive confirmation before offering another pairing request',async({page})=>{
- await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
- await page.addInitScript(()=>{(window as any).deviceOverride={state:'pending',hive:'https://hive.example',name:'My Mac',user_code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:new Date(Date.now()+500).toISOString(),poll_interval_seconds:2};});
- await page.goto('/');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await page.clock.runFor(1001);
- await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeDisabled();await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toHaveCount(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
- await page.evaluate(()=>{(window as any).deviceOverride.state='expired';});await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+ await page.clock.install();await initial(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke,expiry=new Date(Date.now()+500).toISOString();w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='device_status'&&reply.result?.device?.recovery){const view=reply.result.device;view.expires_at=expiry;view.recovery.pairing.expires_at=expiry;if(w.hiveExpired){view.state='expired';view.recovery.phase='expired';}}return reply;};});
+ await page.clock.runFor(2100);await expect(page.getByText('配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toHaveCount(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+ await page.evaluate(()=>{(window as any).hiveExpired=true;});
+ await page.clock.runFor(2100);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 test('a stale owner dialog cannot submit after the coordinator sees a newer transaction revision',async({page})=>{
  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');

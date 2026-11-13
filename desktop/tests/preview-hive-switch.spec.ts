@@ -52,7 +52,7 @@ test('unknown and expired observation show no percent and continue the original 
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-unknown&theme=dark&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await expect(progress).toContainText('结果待核对');await expect(progress).toContainText('任务和结算数量待核对');expect(await progress.textContent()).not.toMatch(/\d+%/);
 });
 test('first profile gate permits pairing and preserves the entered Hive',async({page})=>{
- const app=await open(page,'switch-first-launch'),device=app.getByRole('region',{name:'设备配对',exact:true});await expect(app.getByTestId('startup-recovery')).toHaveCount(0);await device.getByLabel('Hive 地址',{exact:true}).fill('https://first-hive.example');await device.getByLabel('设备名称',{exact:true}).fill('First Mac');await device.getByRole('button',{name:'生成配对码',exact:true}).click();await page.clock.runFor(2100);await expect(device).toContainText('等待网页确认');await expect(device).toContainText('https://first-hive.example');
+ const app=await open(page,'switch-first-launch'),device=app.locator('.first-launch-wizard');await expect(app.getByTestId('startup-recovery')).toHaveCount(0);await device.getByLabel('Hive 地址',{exact:true}).fill('https://first-hive.example');await device.getByLabel('设备名称',{exact:true}).fill('First Mac');await device.getByRole('button',{name:'继续绑定设备',exact:true}).click();await page.clock.runFor(2100);await expect(device).toContainText('在 Hive 网页确认设备归属');await expect(device).toContainText('https://first-hive.example');
  expect((await calls(page)).filter((c:any)=>c.command==='device_begin')).toHaveLength(1);
 });
 test('handoff progress stays visible when the ordinary source bridge is unavailable',async({page})=>{
@@ -92,4 +92,22 @@ test('committed B remains current with no account selection and after an account
 
 test('native add rejection preserves the URL, device name and saved profiles',async({page})=>{
  const app=await open(page,'switch-saved');await app.getByRole('button',{name:'切换 Hive',exact:true}).click();const list=app.getByRole('dialog',{name:'切换 Hive',exact:true});await list.getByLabel('Hive 地址',{exact:true}).fill('https://target.example/path');await list.getByLabel('设备名称',{exact:true}).fill('Road Mac');await list.getByRole('button',{name:'保存并准备切换'}).click();await expect(list).toContainText('Hive address rejected');await page.clock.runFor(2200);await expect(list).toContainText('Hive address rejected');await expect(list.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://target.example/path');await expect(list.getByLabel('设备名称',{exact:true})).toHaveValue('Road Mac');expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_start')).toHaveLength(1);
+});
+
+test('first Hive setup uses the wizard before a native child exists and retains the pairing flow',async({page})=>{
+ const app=await open(page,'switch-first-launch');
+ await expect(app.getByLabel('Hive 地址',{exact:true})).toBeVisible();
+ await expect(app.getByRole('navigation')).toHaveCount(0);
+ expect((await calls(page)).filter((c:any)=>['device_begin','account_action','runtime_start'].includes(c.command))).toEqual([]);
+ await app.getByLabel('Hive 地址',{exact:true}).fill('https://first-hive.example');
+ await app.getByRole('button',{name:'继续绑定设备',exact:true}).click();
+ await page.clock.runFor(2500);
+ await expect(app.getByRole('navigation')).toHaveCount(0);
+ await expect(app.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).__beePreviewApprove());
+ await page.clock.runFor(5000);
+ await expect(app.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible();
+ await app.getByRole('button',{name:'进入概览',exact:true}).click();
+ await expect(app.getByRole('button',{name:'切换 Hive',exact:true})).toBeVisible();
+ expect((await calls(page)).filter((c:any)=>c.command==='device_begin')).toHaveLength(1);
 });

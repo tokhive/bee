@@ -14,13 +14,13 @@ async function external(page:Page,action:string,value:string,platform='openai'){
  await page.getByRole('button',{name:'应用模拟条件',exact:true}).click();
  await expect(page.locator('#control-status')).not.toHaveText('正在更新模拟条件…');
 }
+const wizard=(app:FrameLocator)=>app.getByRole('region',{name:'添加账号',exact:true});
+async function chooseOpenAI(app:FrameLocator){await wizard(app).getByRole('button',{name:'OpenAI',exact:true}).click();}
 async function startOpenAI(app:FrameLocator){
- await card(app).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
- const confirmation=app.getByRole('dialog').last();
- await expect(confirmation).toContainText('由你确认是否接入 Bee');
- await confirmation.getByRole('button',{name:'开始官方登录',exact:true}).click();
- await expect(card(app).getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
- await expect(card(app)).toContainText('正在获取登录链接');
+ if(await wizard(app).getByRole('button',{name:'OpenAI',exact:true}).count())await chooseOpenAI(app);
+ await wizard(app).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await expect(wizard(app).getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
+ await expect(wizard(app)).toContainText('请在官方页面完成登录');
 }
 async function calls(page:Page,command:string){return page.locator('iframe').evaluate((el:HTMLIFrameElement,command)=>(el.contentWindow as any).calls.filter((call:any)=>call.command===command),command);}
 
@@ -30,13 +30,10 @@ test('preview login creates a candidate and requires explicit connection before 
  await external(page,'login-result','succeeded');
  await expect(page.locator('#control-status')).toContainText('仅生成候选，尚未接入');
  await page.clock.runFor(10100);
- await expect(card(app)).toContainText('已识别账号，请确认是否接入');
+ await expect(wizard(app).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  expect(await calls(page,'account_action')).toHaveLength(0);
- await card(app).getByRole('button',{name:'接入账号',exact:true}).click();
- const confirmation=app.getByRole('dialog');
- await expect(confirmation).toContainText('完成后保留你的最新接单选择');
- await expect(confirmation.getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
- await confirmation.getByRole('button',{name:'确认接入',exact:true}).click();await page.clock.runFor(11000);
+ await expect(wizard(app)).toContainText('接入后保留暂停');
+ await wizard(app).getByRole('button',{name:'确认接入',exact:true}).click();await page.clock.runFor(11000);
  await expect(card(app)).toContainText('账号接入成功！');
  await app.getByRole('button',{name:'概览',exact:true}).click();
  await expect(card(app).getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
@@ -49,14 +46,14 @@ test('preview failed login recovers in the same account flow and cancellation pr
  await startOpenAI(app);
  await external(page,'login-result','failed');
  await page.clock.runFor(10100);
- await expect(card(app)).toContainText('未找到所选凭证来源');
- await card(app).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(app.locator('.account-error-popover pre')).toContainText('official login process failed: exit_code=1');await page.keyboard.press('Escape');
+ await expect(wizard(app).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
+ await wizard(app).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(app.locator('.account-error-popover pre')).toContainText('official login process failed: exit_code=1');await page.keyboard.press('Escape');
  await startOpenAI(app);
- await card(app).getByRole('button',{name:'取消登录',exact:true}).click();
- await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).accounts.openai.operation.state)).toBe('cancelled');await expect(card(app).getByRole('button',{name:'取消登录',exact:true})).toHaveCount(0);
+ await wizard(app).getByRole('button',{name:'取消登录',exact:true}).click();
+ await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).accounts.openai.operation.state)).toBe('cancelled');await expect(wizard(app).getByRole('button',{name:'取消登录',exact:true})).toHaveCount(0);
  await external(page,'login-result','succeeded');
  await expect(page.locator('#control-status')).toContainText('PREVIEW_LOGIN_STALE');
- await expect(card(app).getByRole('button',{name:'接入账号',exact:true})).toHaveCount(0);
+ await expect(wizard(app).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);
  expect(await calls(page,'authorize_start')).toHaveLength(2);
  expect(await calls(page,'authorize_cancel')).toHaveLength(1);
  expect(await calls(page,'account_action')).toHaveLength(0);
@@ -87,21 +84,26 @@ test('preview source conditions can recover through the formal source editor wit
  await page.locator('#event-kind').selectOption('account-source');
  await page.locator('#event-store').selectOption('file');
  await external(page,'account-source','denied');
- await card(app).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
- const detail=app.getByRole('dialog');await detail.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
+ await chooseOpenAI(app);
+ const detail=wizard(app);await detail.getByRole('button',{name:'设置读取位置',exact:true}).click();
  await detail.getByLabel('读取目录').fill('/tmp/codex');
- await detail.getByLabel('读取目录').press('Enter');
+ await detail.getByRole('button',{name:'保存',exact:true}).click();
  await expect(detail).toContainText('没有读取所选凭证来源的权限');
+ await detail.getByRole('button',{name:'设置读取位置',exact:true}).click();
  await external(page,'account-source','available');
  await detail.getByLabel('读取目录').fill('');
- await detail.getByLabel('读取目录').press('Enter');
- await detail.getByRole('button',{name:'关闭',exact:true}).click();await expect(card(app).getByRole('button',{name:'接入账号',exact:true})).toBeEnabled();await expect(card(app)).toContainText('尚未接入 Bee');
+ await detail.getByRole('button',{name:'保存',exact:true}).click();
+ await expect(detail).toContainText('账号、来源或接单选择已变化');
+ await detail.getByRole('button',{name:'重新核验',exact:true}).click();
+ await expect(detail.getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ await expect(card(app)).toHaveCount(0);
  expect(await calls(page,'authorize_start')).toHaveLength(0);
  expect(await calls(page,'account_action')).toHaveLength(0);
 });
 
 test('preview Claude login controls follow its current operation and preserve the inline confirmation',async({page})=>{
  const app=await open(page);
+ await wizard(app).getByRole('button',{name:'Claude',exact:true}).click();
  await card(app,'Claude').getByRole('button',{name:'登录 Claude',exact:true}).click();
  const login=card(app,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
  await expect(login).toBeFocused();

@@ -24,7 +24,7 @@ async function completeReport(page:Page){
 
 test('four native pages share one poller; diagnostics starts only on click and survives navigation',async({page})=>{
  await setup(page);expect(await page.getByRole('navigation').getByRole('button').allTextContents()).toEqual(['概览','AI 账号','诊断','设置']);
- await nav(page,'AI 账号').click();await expect.poll(async()=>(await calls(page,'account_detect')).length).toBe(2);await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toBeEnabled();
+ await nav(page,'AI 账号').click();await expect.poll(async()=>(await calls(page,'account_detect')).length).toBe(2);await expect(page.getByRole('button',{name:'OpenAI',exact:true})).toBeEnabled();
  await nav(page,'概览').click();const before=await calls(page,'runtime_snapshot');
  for(const name of ['AI 账号','诊断','设置','概览','诊断'])await nav(page,name).click();
  await expect(page.getByText('尚未运行诊断',{exact:true})).toBeVisible();expect(await calls(page,'diagnostics_start')).toEqual([]);expect(await calls(page,'diagnostic_logs')).toEqual([]);
@@ -49,11 +49,13 @@ test('safe logs load manually with module/platform/level filters and native curs
 
 test('management startup failure keeps safe native logs accessible without enabling diagnostics',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let failed=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command==='bridge_status'&&failed)return {state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}};if(command==='startup_retry'){w.calls.push({command,args});failed=false;w.emit('b'.repeat(32));return invoke('startup_status');}return invoke(command,args);};});
  await page.goto('/');await expect(page.getByRole('alert')).toHaveCount(1);const failure=page.getByTestId('startup-recovery');await expect(failure).toContainText('SIDECAR_EXIT');await failure.getByText('错误详情',{exact:true}).click();await expect(failure).toContainText('owned management child exited: status=1');
- await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
+ await failure.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('navigation')).toHaveCount(0);await expect(page.getByRole('button',{name:'运行诊断',exact:true})).toBeDisabled();
  await tab(page,'安全日志').click();await page.getByRole('button',{name:'刷新日志',exact:true}).click();await expect(page.getByTestId('native-diagnostic-logs')).toContainText('hive_identity_verified');
  expect((await calls(page,'diagnostic_logs')).length).toBe(1);expect(await calls(page,'diagnostics_start')).toEqual([]);
+ await page.getByRole('button',{name:'返回设备设置',exact:true}).click();await expect(page.getByRole('heading',{name:'状态待核对',exact:true})).toBeFocused();
+ await failure.getByRole('button',{name:'重新连接',exact:true}).click();await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();expect(await calls(page,'startup_retry')).toHaveLength(1);
 });
 
 test('failed preference save keeps the saved appearance; recovery and English copy stay usable',async({page})=>{
@@ -274,7 +276,7 @@ test('denied notifications and unknown autostart remain distinct without request
 
 test('about shows a missing Bee version as unread while retaining the real build version',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='bridge_status'?Promise.resolve({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}}):invoke(command,args);});
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{const reply=await invoke(command,args);if(command==='bridge_status')reply.metadata.bee_version='';return reply;};});
  await page.goto('/');await nav(page,'设置').click();await tab(page,'关于').click();
  await expect(page.locator('.ns-core-version')).toContainText('尚未读取');await expect(page.getByRole('heading',{name:'Bee 0.1.0',exact:true})).toBeVisible();
 });
@@ -667,7 +669,7 @@ for(const blocked of [true,false])test(`device read failure ${blocked?'during bl
  }else{
   await expect(notice).toHaveCount(0);await expect(page.getByRole('alert')).toContainText('GET identity HTTP 503');await expect(recheck).toBeEnabled();
   await page.evaluate(()=>{(window as any).deviceReadFailure=null;});await recheck.click();
-  await expect(page.getByRole('alert')).toHaveCount(0);await expect(recheck).toHaveCount(0);await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toBeVisible();
+  await expect(page.getByRole('alert')).toHaveCount(0);await expect(recheck).toHaveCount(0);await expect(page.getByRole('button',{name:'OpenAI',exact:true})).toBeVisible();
  }
 });
 
@@ -749,7 +751,7 @@ for(const capabilities of [undefined,[]])test(`legacy recovery capability ${capa
 
 test('explicit OpenAI supply recheck clears a terminal GET gate without replaying a write',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{autoService:true},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
- await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.supplyAccessDenied=true;
+ await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.accounts.openai.selection={...w.accounts.openai.selection,state:'selected',fingerprint:'b'.repeat(64)};w.supplyAccessDenied=true;
   w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
    const result=await invoke(command,args);
    if(command==='supply_status'&&args.platform==='openai'&&w.supplyAccessDenied)throw {code:'SUPPLY_OPERATION_FAILED',message:'GET supply HTTP 403 access denied',details:{check:'supply_status',observed_at:new Date().toISOString(),evidence:{failure_kind:'http_rejected',http_status:'403',method:'GET'}}};

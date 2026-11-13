@@ -16,6 +16,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [clock,setClock]=useState(0);
  useEffect(()=>{if(!enabled||!autoRead)return;const timer=setInterval(()=>setClock(v=>v+1),10000);return()=>clearInterval(timer);},[enabled,autoRead]);
  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
+ const [setupPlatform,setSetupPlatform]=useState<'choose'|'openai'|'claude'|null>(null);
  const [openaiJourney,setOpenaiJourney]=useState<{kind:'first'|'intake'|'change'|'relogin'|'repair';revision:number;operationId?:string;completed?:string}>();
  const [openaiDraft,setOpenaiDraft]=useState<AccountSource>(),[sourceSaving,setSourceSaving]=useState(false),[sourceSaveError,setSourceSaveError]=useState<UiFailure>();
  const sourceSavingRef=useRef(false);
@@ -240,7 +241,14 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   loginQuery.current=query;setLoginOpenError(undefined);void query.start();
   return()=>{query.dispose();if(loginQuery.current===query)loginQuery.current=undefined;};
  },[enabled,authorizer,loginID]);
- return {recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,
+ return {setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
+  async verifyOpenai(){
+   if(!client||!savedDefaults||centralError||central.current?.sourceReady===false||writing.current.openai||sourceSavingRef.current||uncertain.openai||accountPending(latest.current.openai))return;
+   if(requests.current.openai)await requests.current.openai;
+   if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
+   await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
+   return verified.current.openai?latest.current.openai:undefined;
+  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,
   queryLogin(){return loginQuery.current?.start();},
   async openLoginPage(){
    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
@@ -249,15 +257,16 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    catch(cause){if(active.current)setLoginOpenError(failure(cause,'browser_opener'));}
    finally{openingLoginRef.current=false;if(active.current)setOpeningLogin(false);}
   },
-  async saveOpenaiSource(){
-   if(!openaiDraft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
+  async saveOpenaiSource(draft=openaiDraft){
+   if(!draft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
    sourceSavingRef.current=true;setSourceSaving(true);setSourceSaveError(undefined);
    const generation=central.current.generation?.();
    try{
-    const saved=await central.current.saveOpenaiSource(openaiDraft);
+    const saved=await central.current.saveOpenaiSource(draft);
     if(!active.current||generation!==central.current?.generation?.())return;
     sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
     await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('openai',saved,'official');},true);
+    return true;
    }catch(cause){if(active.current)setSourceSaveError(failure(cause,'preferences_save'));}
    finally{sourceSavingRef.current=false;if(active.current)setSourceSaving(false);}
   },

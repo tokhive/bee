@@ -25,7 +25,7 @@ export function accountConfirmationKey(view:AccountSnapshot|undefined,now:number
  const operation=view?.operation;
  return JSON.stringify([
   view?.platform,view?.selection.state,view?.selection.fingerprint,
-  view?.candidate.state,view?.candidate.reference,view?.candidate.fingerprint,
+  view?.candidate.state,view?.candidate.reference,view?.candidate.fingerprint,view?.candidate.identity_verified,
   view?.candidate.source?.directory,view?.candidate.source?.store,
   !!view?.candidate.expires_at&&Date.parse(view.candidate.expires_at)>now+30000,
   view?.hive.state,view?.hive.fingerprint,view?.hive.pending_fingerprint,view?.hive.generation,

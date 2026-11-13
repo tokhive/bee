@@ -28,7 +28,7 @@ export async function installPreviewFixture(id){
  const accounts={openai:seeded('openai'),claude:accountFixture('claude')};
  accounts.claude.candidate.state='source_missing';
  if(id==='confirm-clear'){accounts.openai.hive={...accountFixture('openai').hive};accounts.openai.authorization.state='official_identity_verified';}
- const empty=['runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
+ const empty=['switch-first-launch','runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
  if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state=id==='account-reading'?'not_checked':'source_missing';}
  if(['account-candidate','confirm-select'].includes(id))accounts.openai=seeded('openai',false);
  if(['account-change','confirm-change'].includes(id)){
@@ -62,7 +62,7 @@ export async function installPreviewFixture(id){
  let preparingUntil=0,staleSupply=scene.id==='accounts-auto-stale',supplyUnknownNext=false,prepareFailure=false;
  let unknown=false,revision=1,runtimeOperation=null,stopReceipt=null;
  if(id.startsWith('recovery-')||id==='device-recovery-confirm')local='stopped';
- let bound=!(id.startsWith('device-')&&id!=='device-bound'||id.startsWith('recovery-')&&id!=='recovery-completed'||id==='startup-blocked');
+ let bound=!(id==='switch-first-launch'||id.startsWith('device-')&&id!=='device-bound'||id.startsWith('recovery-')&&id!=='recovery-completed'||id==='startup-blocked');
  let connection=({'runtime-offline':'disconnected','runtime-disconnected':'reconnecting','runtime-connecting':'connecting','runtime-rejected':'rejected','runtime-occupied':'occupied'}[id])??(!bound?'disconnected':local==='starting'?'connecting':'connected');
  let networkUnavailable=id==='runtime-offline',unknownNext=false;
  let activeRun='a'.repeat(32),deviceSession=null;
@@ -122,7 +122,7 @@ export async function installPreviewFixture(id){
   w.bindingRevision=(w.bindingRevision??1)+1;w.networkRevision=(w.networkRevision??0)+1;w.effectiveProxy='';
   w.__beePreviewBindingChanged({bound:true});
  };
- const original=w.__TAURI_INTERNALS__.invoke;
+ const original=w.__TAURI_INTERNALS__.invoke;let reportedBindingRevision=w.bindingRevision??1;
  let instance=(await original('bridge_status')).metadata.instance;
  deviceSession=createPreviewDeviceSession({scene:id==='switch-first-launch'?'device-unbound':id,origin,current,instance,onConfigurationChanged:next=>{origin=next.hive;w.bindingRevision=(w.bindingRevision??1)+1;},onCompleted:finishBinding,onRevoked:()=>{bound=false;connection='rejected';revision++;}});
  const networkSession=createPreviewNetworkSession({scene:id,origin,current,invoke:original,instance,context:()=>({...w.__beeMockRuntimeContext(),local,bound}),applyNetwork:next=>{
@@ -170,7 +170,14 @@ export async function installPreviewFixture(id){
    if(command==='network_apply_saved')throw Object.assign(new Error(error.message),error);
    return {instance,result:{error}};
   }
-  if(deviceSession?.handles(command))return deviceSession.invoke(command,args);
+  if(deviceSession?.handles(command)){
+   const result=await deviceSession.invoke(command,args);
+   if(command==='device_context'){
+    const binding=result.result?.context?.binding_revision??result.result?.binding_revision;
+    if(binding!==reportedBindingRevision){reportedBindingRevision=binding;setTimeout(async()=>{if(current())w.emitStartup(await deviceSession.invoke('startup_status'));},0);}
+   }
+   return result;
+  }
   if(networkSession.handles(command))return networkSession.invoke(command,args);
   if(command==='preferences_read'||command==='preferences_save'){const result=await original(command,args);if(!result.error)w.__beePreviewPreferences?.(result.preferences);return result;}
   if(['update_snapshot','update_check','update_download','update_install'].includes(command)&&id.startsWith('update-')){w.calls.push({command,args});return {operation_id:'preview-update',revision:3,state:id==='update-downloading'?'downloading':id==='update-verified'?'verified':id==='update-unknown'?'installing':'failed',current_version:'0.1.0',target_version:'0.2.0',checked_at:stamp(-3000),downloaded_bytes:1234567890,total_bytes:id==='update-downloading'?null:2147483648,release_notes:'Upstream release notes: '+('A long source note with package verification details. '.repeat(long?30:2)),error:id==='update-failed'?{code:'UPDATE_SIGNATURE_FAILED',message:'signature verification rejected QA package',details:{check:'update_download',observed_at:stamp(0),evidence:{source_type:'minisign',actual:'signature mismatch'}}}:null};}

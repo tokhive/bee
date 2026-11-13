@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -31,34 +32,8 @@ type refreshJournal struct {
 }
 
 func privateReplace(path string, raw []byte) error {
-	file, err := os.CreateTemp(filepath.Dir(path), ".bee-save-*")
-	if err != nil {
-		return errRefreshRecovery
-	}
-	defer os.Remove(file.Name())
-	defer file.Close()
-	if err = file.Chmod(0600); err == nil {
-		_, err = file.Write(raw)
-	}
-	if err == nil {
-		err = file.Sync()
-	}
-	if closeErr := file.Close(); err == nil {
-		err = closeErr
-	}
-	if err == nil {
-		err = os.Rename(file.Name(), path)
-	}
-	if err != nil {
-		return errRefreshRecovery
-	}
-	dir, err := os.Open(filepath.Dir(path))
-	if err != nil {
-		return errRefreshRecovery
-	}
-	defer dir.Close()
-	if dir.Sync() != nil {
-		return errRefreshRecovery
+	if err := writePrivateFile(path, raw, ".bee-save-*"); err != nil {
+		return fmt.Errorf("%w: %w", errRefreshRecovery, err)
 	}
 	return nil
 }

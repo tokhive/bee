@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 
@@ -84,7 +83,7 @@ func doctorFixture(t *testing.T, hive string, expires time.Time) (config, egress
 	egress = filepath.Join(directory, "egress.json")
 	cfg, _ := json.Marshal(map[string]any{"targets": []string{"chatgpt.com:443"}, "codex": map[string]string{"home": directory, "store": "file"}})
 	for path, raw := range map[string][]byte{config: state, filepath.Join(directory, "auth.json"): auth, egress: cfg} {
-		if err := os.WriteFile(path, raw, 0600); err != nil {
+		if err := writePrivateFixture(path, raw); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -143,7 +142,7 @@ func TestDoctorRunsBesideALockedConfiguration(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer lock.Close()
-	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+	if err := lockDoctorTestFile(lock); err != nil {
 		t.Fatal(err)
 	}
 	if report, err := runDoctor(t, "--config", config, "--egress-config", egress); err != nil || !report.OK {

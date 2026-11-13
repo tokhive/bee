@@ -1,0 +1,57 @@
+name: Desktop protected files on Windows
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [feat/bee-desktop-p0]
+    paths:
+      - .github/workflows/desktop-security.yml
+      - agent/**
+      - go.mod
+      - go.sum
+      - TEE_REVISION
+      - desktop/scripts/**
+
+permissions:
+  contents: read
+
+jobs:
+  windows-security:
+    name: Windows x64 protected files and locks
+    runs-on: windows-2022
+    timeout-minutes: 20
+    env:
+      GOTOOLCHAIN: local
+      CGO_ENABLED: '0'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.22.1
+          architecture: x64
+      - uses: actions/setup-go@v5
+        with:
+          go-version: 1.27.3
+          cache: false
+      - name: Check actual native runtime
+        run: |
+          node -e 'console.log(JSON.stringify({os:process.platform,arch:process.arch,node:process.version})); if(process.platform!=="win32" || process.arch!=="x64") process.exit(1)'
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          go version
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $target = go env GOOS GOARCH
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $target
+          if (($target -join '/') -ne 'windows/amd64') { throw "Native Go target mismatch: actual=$($target -join '/'); required=windows/amd64" }
+      - name: Prepare canonical pinned TEE
+        run: node desktop/scripts/prepare-tee.mjs
+      - name: Protected file and process-lock behavior
+        run: go test ./agent -run 'Test.*(PrivateFile|StateLock|Codex|ClaudeStore)' -count=1 -v
+      - name: Go vet
+        run: go vet ./...
+      - name: Full Go regression
+        run: go test ./... -count=1
+      - name: Build actual Windows Bee
+        run: go build -trimpath -o bee-windows-test.exe ./cmd/bee

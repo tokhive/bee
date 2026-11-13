@@ -1,0 +1,127 @@
+import {formatDate,formatNumber,currentLocale} from '../../i18n/index';
+import {FailureNotice} from '../../components/ProblemNotice';
+import {normalizeFailure,type UiFailure} from '../../system/failures';
+import {useCallback, useEffect, useRef, useState,useSyncExternalStore} from 'react';
+import {Dialog} from 'radix-ui';
+import {t} from '../../i18n';
+import './native-update.css';
+import type {UpdateClient, UpdateInstallRequest, UpdateSnapshot, UpdateState} from '../../system/updater';
+import {UpdateResultSupersededError} from '../../system/updater';
+
+const activeStates: readonly UpdateState[] = ['checking','downloading','stopping','installing'];
+const labels: Record<UpdateState,string> = {
+  idle:'尚未检查更新', checking:'正在检查更新…', current:'当前版本已是最新', available:'发现可用更新',
+  downloading:'正在下载并验证更新…', verified:'更新已下载并通过签名验证', stopping:'正在停止 Bee，准备安装…',
+  installing:'正在安装更新…', failed:'更新操作失败',
+};
+const readableBytes=(bytes:number)=>{const unit=bytes>=1024**3?3:bytes>=1024**2?2:1;return `${formatNumber(bytes/1024**unit,currentLocale(),{maximumFractionDigits:1})} ${['B','KiB','MiB','GiB'][unit]}`;};
+const failure=(cause:unknown)=>normalizeFailure(cause,'update_operation');
+
+/** Mount inside the S2 native settings page; this component never changes runtime or preferences. */
+export function NativeUpdateControls({client, currentVersion, platform, pollIntervalMs = 1000}: {client: UpdateClient; currentVersion?: string; platform?: string; pollIntervalMs?: number}) {
+  const session=useSyncExternalStore(client.subscribe,client.getSession);
+  const snapshot=session.snapshot;
+  const [error, setError] = useState<UiFailure|null>(null);
+  const [busy, setBusy] = useState(false);
+  const [confirmation, setConfirmation] = useState<UpdateInstallRequest | null>(null);
+  const mounted = useRef(false);
+  const working = useRef(false);
+  const reading = useRef<{client:UpdateClient}|null>(null);
+  const serial = useRef(0);
+  const prepareButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
+  const run = useCallback(async (operation: () => Promise<UpdateSnapshot>): Promise<boolean> => {
+    if (working.current) return false;
+    working.current = true;
+    const request = ++serial.current;
+    setBusy(true); setError(null);
+    try {
+      await operation();
+      return mounted.current && request === serial.current;
+    } catch (cause) {
+      if (mounted.current && request === serial.current && !(cause instanceof UpdateResultSupersededError)) setError(failure(cause));
+      return false;
+    } finally {
+      if (mounted.current && request === serial.current) {working.current = false; setBusy(false);}
+    }
+  }, []);
+  const readBackground = useCallback(async () => {
+    if (working.current || reading.current?.client === client) return;
+    const request = serial.current;
+    const pending = {client};
+    reading.current = pending;
+    try {await client.snapshot();}
+    catch (cause) {
+      if (mounted.current && request === serial.current && !(cause instanceof UpdateResultSupersededError)) setError(failure(cause));
+    } finally {if (reading.current === pending) reading.current = null;}
+  }, [client]);
+  useEffect(() => {
+    mounted.current = true; working.current = false;
+    setConfirmation(null); setBusy(false);
+    void readBackground();
+    return () => {mounted.current = false; serial.current++;};
+  }, [client, readBackground]);
+  useEffect(() => {
+    if (!snapshot || busy || session.busy || error || session.error) return;
+    // Rust schedules automatic checks. Read-only polling also observes a check
+    // started in the background while this page was idle or current.
+    const timer = setInterval(() => void readBackground(), pollIntervalMs);
+    return () => clearInterval(timer);
+  }, [snapshot, busy, session.busy, error,session.error, pollIntervalMs, readBackground]);
+  const active = snapshot && activeStates.includes(snapshot.state);
+  const diagnostic = error || session.error || snapshot?.error;
+  const held=!!snapshot?.error&&['UPDATE_RECOVERY_PENDING','UPDATE_INSTALL_FAILED','UPDATE_EXIT_UNPROVEN','UPDATE_STATE_WRITE_UNCERTAIN','UPDATE_RECOVERY_UNPROVEN','UPDATE_MARKER_MISSING'].includes(snapshot.error.code);
+  const verified = snapshot?.state === 'verified' && !diagnostic && !!snapshot.operation_id && !!snapshot.target_version;
+  const receipt = snapshot ? `${snapshot.operation_id}:${snapshot.revision}` : '';
+  const installable = verified && !session.uncertain && session.attemptedInstall !== receipt;
+  const readOnly=!!error||!!session.error||!!session.uncertain||held;
+  const action = readOnly ? '重新读取更新状态' : installable ? '安装更新…' : verified ? '重新检查更新' : snapshot?.state === 'available' ? '下载更新' : '检查更新';
+  return <section className="native-update" aria-label={t('应用更新')}>
+    <div className="nu-version-row">
+      <div><h3>Bee {snapshot?.current_version ?? currentVersion ?? '…'}</h3><div className="nu-platform">{platform ?? t('当前安装版本')}</div></div>
+      <button ref={prepareButton} className={installable ? 'primary' : undefined} disabled={busy || session.busy || (!readOnly && !!active) || (!snapshot && !readOnly)} onClick={() => {
+        if (readOnly) {void run(() => client.snapshot());return;}
+        if (installable) {setConfirmation({operation_id:snapshot.operation_id!,expected_revision:snapshot.revision,confirmed:true});return;}
+        void run(() => snapshot?.state === 'available' ? client.download() : client.check());
+      }}>{t(action)}</button>
+    </div>
+    <div className="nu-state-row" aria-live="polite">
+      <span className={`nu-status-dot${snapshot?.state === 'current' || verified ? ' nu-status-good' : ''}`} aria-hidden="true"/>
+      <span><span>{diagnostic ? t('更新操作需要核对') : snapshot ? t(labels[snapshot.state]) : t('正在读取更新状态…')}</span>{snapshot?.target_version && <span className="nu-target"> · {snapshot.target_version}</span>}</span>
+    </div>
+    {session.uncertain&&<p role="status">{t(session.uncertain==='install'?'安装请求回执尚未确认；只核对原更新，不会再次提交安装。':'更新请求回执尚未确认；只读取原操作状态，不会重复提交。')}</p>}
+    {snapshot?.state === 'downloading' && <div className="nu-progress">
+      <progress aria-label={t('更新下载进度')} {...(snapshot.total_bytes !== null && snapshot.total_bytes > 0 ? {max:snapshot.total_bytes,value:snapshot.downloaded_bytes} : {})}/>
+      <span>{snapshot.total_bytes === null
+        ? t('已接收 {bytes} 字节；总大小未知', {bytes:formatNumber(snapshot.downloaded_bytes,currentLocale())})
+        : t('已接收 {bytes} / {total} 字节', {bytes:formatNumber(snapshot.downloaded_bytes,currentLocale()),total:formatNumber(snapshot.total_bytes,currentLocale())})}{snapshot.downloaded_bytes>=1024&&` (${readableBytes(snapshot.downloaded_bytes)}${snapshot.total_bytes===null?'':` / ${readableBytes(snapshot.total_bytes)}`})`}</span>
+      <span>{t('只有签名验证通过后才能安装。')}</span>
+    </div>}
+    {snapshot?.checked_at && <div className="nu-checked">{t('最后检查时间')}：<time dateTime={snapshot.checked_at}>{formatDate(snapshot.checked_at,currentLocale())}</time></div>}
+    {snapshot?.release_notes && <details className="nu-details" aria-label={t('发布说明')}>
+      <summary>{t('发布说明')}</summary><div className="nu-note">{t('以下内容来自上游发布说明，保留发布者原文。')}</div><p>{snapshot.release_notes}</p>
+    </details>}
+    {diagnostic && <FailureNotice failure={diagnostic} check="update_operation"/>}
+    <div className="nu-note">{t('检查和下载不会退出 Bee。安装需要你确认退出，可能中断正在处理的任务。')}</div>
+    <Dialog.Root open={confirmation !== null} onOpenChange={open => {if (!open) setConfirmation(null);}}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="dialog-overlay"/>
+        <Dialog.Content className="dialog-content nu-install-dialog" aria-busy={busy}
+          onOpenAutoFocus={event => {event.preventDefault();cancelButton.current?.focus();}}
+          onCloseAutoFocus={event => {event.preventDefault();prepareButton.current?.focus();}}>
+          <Dialog.Title>{t('退出 Bee 并安装更新？')}</Dialog.Title>
+          <Dialog.Description>{t('退出并安装可能中断正在处理的任务。确认后 Bee 将停止并交给安装程序；安装结果将在重新启动后核验。')}</Dialog.Description>
+          <div className="dialog-actions">
+            <Dialog.Close asChild><button ref={cancelButton}>{t('取消')}</button></Dialog.Close>
+            <button className="primary" disabled={busy || !confirmation} onClick={() => {
+              if (!confirmation) return;
+              const request = confirmation;
+              setConfirmation(null);
+              void run(() => client.install(request));
+            }}>{t('退出并安装')}</button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  </section>;
+}

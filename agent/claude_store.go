@@ -5,11 +5,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"syscall"
 )
 
 // Claude Code keeps its sign-in in the macOS Keychain, and on every other
@@ -88,27 +88,18 @@ func (store claudeStore) read(ctx context.Context) (claudeCredential, error) {
 type claudeFile struct{ path string }
 
 func (file claudeFile) readRaw(context.Context) ([]byte, error) {
-	info, err := os.Lstat(file.path)
+	opened, err := openRegularNoFollow(file.path)
 	if errors.Is(err, os.ErrNotExist) {
-		return nil, errClaudeFileMissing
+		return nil, fmt.Errorf("%w: %w", errClaudeFileMissing, err)
 	}
-	if err != nil || !info.Mode().IsRegular() {
-		// Claude Code itself refuses a symbolic link here.
-		return nil, errClaudeFileUnavailable
-	}
-	fd, err := syscall.Open(file.path, syscall.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	if err != nil {
-		return nil, errClaudeFileUnavailable
+		return nil, fmt.Errorf("%w: %w", errClaudeFileUnavailable, err)
 	}
-	opened := os.NewFile(uintptr(fd), file.path)
 	defer opened.Close()
-	if info, err = opened.Stat(); err != nil || !info.Mode().IsRegular() {
-		return nil, errClaudeFileUnavailable
-	}
 	var raw credentialBuffer
 	if _, err = io.Copy(&raw, opened); err != nil {
 		clear(raw.Bytes())
-		return nil, errClaudeFileUnavailable
+		return nil, fmt.Errorf("%w: %w", errClaudeFileUnavailable, err)
 	}
 	defer clear(raw.Bytes())
 	return bytes.Clone(bytes.TrimSpace(raw.Bytes())), nil

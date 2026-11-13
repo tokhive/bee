@@ -1,0 +1,990 @@
+[
+  {
+    "id": "S01",
+    "scene": "bridge-starting",
+    "scope": "T4a/T5；首次打开、管理进程启动中",
+    "expectation": "加载有对象；无未绑定、零账号或可接单的提前结论",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "S02",
+    "scene": "device-bound",
+    "scope": "T5/T6；管理进程可通信、启动检查通过",
+    "expectation": "进入四页并按真实缺项引导",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "S03",
+    "scene": "bridge-failed",
+    "scope": "T4a/T9；管理进程缺失、崩溃、被占用",
+    "expectation": "说明失败环节；可用日志和菜单恢复入口；不假造重启按钮",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "S04",
+    "scene": "startup-blocked",
+    "scope": "T4a/T4b；身份／网络前置检查受阻",
+    "expectation": "四页可达、本地读取可用、Hive 写入受保护",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "S05",
+    "scene": "bridge-failed",
+    "scope": "T4a/T9；配置损坏、版本／协议／签名不符",
+    "expectation": "保留文件和证据，禁止自动贡献，不当作首次使用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "S06",
+    "scene": "startup-blocked",
+    "scope": "T5/T10；旧启动事件迟到、新实例接管 UI",
+    "expectation": "清除旧可操作依据、保留语言导航，不接受旧成功",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D01",
+    "scene": "device-unbound",
+    "scope": "T6；真正未绑定，输入 Hive／名称",
+    "expectation": "就地校验；有效输入才生成配对，保留草稿",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D02",
+    "scene": "device-creating",
+    "scope": "T4b/T6；正在创建配对、重复点击",
+    "expectation": "单个动作；明确进度，重复点击不新增远端请求",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D03",
+    "scene": "device-pending",
+    "scope": "T6；pending、打开网页／复制",
+    "expectation": "主按钮明显；打开／复制失败保留原配对和手动路径",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D04",
+    "scene": "device-draining",
+    "scope": "T4b/T6；draining，等待替换旧设备",
+    "expectation": "单独解释 Hive 正在等待的条件；不承诺任务完成时间，不自动强制替换",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D05",
+    "scene": "device-expired",
+    "scope": "T4b/T6；本地有效期结束、Hive 确认过期",
+    "expectation": "到期只读核对；确认终态且无未知写入才允许重新生成",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D06",
+    "scene": "device-bound",
+    "scope": "T4b/T6；网页批准、兑换、身份回读成功",
+    "expectation": "验证身份并保存，贡献保持停止，进入账号步骤",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D07",
+    "scene": "device-creation-unknown",
+    "scope": "T4b/T10；创建／兑换响应丢失、写盘失败、重启",
+    "expectation": "续查同一操作；无明确未提交证明不重建／重兑",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D08",
+    "scene": "device-error",
+    "scope": "T4/T6；绑定有效但临时核对失败／身份不一致",
+    "expectation": "保留上次信息，明确未知／拒绝，不出现首次绑定表单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "D09",
+    "scene": "recovery-owner",
+    "scope": "T4b/T10；撤销后重绑，同／不同所有者",
+    "expectation": "本机确认＋网页确认；新归属再确认，旧选择与运行意图隔离",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A01",
+    "scene": "account-reading",
+    "scope": "T5/T7；两平台初次读取／一平台迟缓",
+    "expectation": "分平台加载；已确认设备、运行和另一平台仍可见",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A02",
+    "scene": "account-empty",
+    "scope": "T7；真正未找到官方登录",
+    "expectation": "明确哪个客户端、下一步登录；不假称已接入",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A03",
+    "scene": "account-error",
+    "scope": "T4/T7；所选文件缺失、权限拒绝、解析失败",
+    "expectation": "区分具体失败，定位读取位置；修复后自动读取",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A04",
+    "scene": "account-detail",
+    "scope": "T7/T10；文件／Keychain／Keyring／auto 不支持或有冲突",
+    "expectation": "显示实际支持限制及可选读取方式，不自动改来源",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A05",
+    "scene": "account-candidate",
+    "scope": "T7；候选有效、尚未接入",
+    "expectation": "显示平台及可核对身份，提供明确接入确认",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A06",
+    "scene": "account-expired",
+    "scope": "T5/T7；候选过期／离提交期限过近",
+    "expectation": "说明待重新读取，刷新候选后重新确认，不留下无原因禁用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A07",
+    "scene": "account-change",
+    "scope": "T5/T7；来源修改、候选变化、旧读取迟到",
+    "expectation": "保留草稿；旧回调不覆盖新来源，不自动换号",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "A08",
+    "scene": "check-waiting",
+    "scope": "T3/T7；官方查询失败、retry_at／授权维护失败",
+    "expectation": "本地候选与远端查询分开；实际调度才显示等待，不反复弹系统权限",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L01",
+    "scene": "confirm-login",
+    "scope": "T4/T7；官方客户端缺失／不支持版本",
+    "expectation": "明确缺项及支持版本指引，不显示空泛登录失败",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L02",
+    "scene": "confirm-login",
+    "scope": "T5/T7；运行中请求登录",
+    "expectation": "明确需停止贡献，直接定位停止入口",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L03",
+    "scene": "confirm-login",
+    "scope": "T7/T10；启动官方登录，等待用户／回到 Bee",
+    "expectation": "说明在何处完成，等待与超时可区分，完成后核对所选来源",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L04",
+    "scene": "confirm-login",
+    "scope": "T7/T10；用户取消、超时、进程启动失败",
+    "expectation": "只结束本次创建的进程；取消失败／未知不说已取消",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L05",
+    "scene": "account-error",
+    "scope": "T7/T10；官方退出成功但来源未变化／身份不符",
+    "expectation": "不能仅按退出码报登录成功；保留候选及具体原因",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "L06",
+    "scene": "account-candidate",
+    "scope": "T5/T7/T10；取消与成功竞态、页面离开／重启",
+    "expectation": "迟到成功不自动接入；关闭面板不是取消登录",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W01",
+    "scene": "confirm-select",
+    "scope": "T7；确认接入",
+    "expectation": "说明账号及平台暂停影响；接入后仍停止／暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W02",
+    "scene": "confirm-change",
+    "scope": "T7；确认换号",
+    "expectation": "当前／目标身份可核对，完成后暂停，不继承旧额度",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W03",
+    "scene": "confirm-clear",
+    "scope": "T7；取消尚未注册的本地选择",
+    "expectation": "明确取消对象和边界；已注册账号不伪造完整移除功能",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W04",
+    "scene": "confirm-change",
+    "scope": "T5/T7；弹窗期间候选／revision／运行条件变化",
+    "expectation": "提交前重新验证；过时确认失效并解释，不静默无反应",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W05",
+    "scene": "check-waiting",
+    "scope": "T7/T10；暂停／换号提交未知、远端成功本地保存失败",
+    "expectation": "保存原操作，查询指纹＋代次，不重复写入／恢复接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "W06",
+    "scene": "account-detail",
+    "scope": "T5/T7；关闭弹窗／离页／重启、另一平台操作",
+    "expectation": "原操作可继续核对，另一平台事实不丢失，不创建替代操作",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R01",
+    "scene": "runtime-no-accounts",
+    "scope": "T5/T6；没有账号／账号未确认时开始贡献",
+    "expectation": "具体禁用原因与账号入口；不将未知显示零账号",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R02",
+    "scene": "runtime-connecting",
+    "scope": "T3/T6；开始贡献、首次连接、重复点击",
+    "expectation": "一次启动，连接中不等于可接单；开始不解除暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R03",
+    "scene": "running",
+    "scope": "T5/T6/T7/T10；运行连接正常、平台部分可用",
+    "expectation": "主状态基于平台；两平台分别有受控请求实际返回，暂停阻止新派发、停止后不可继续接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R04",
+    "scene": "runtime-disconnected",
+    "scope": "T3/T4/T6；DNS/TLS/拒绝/超时/5xx、心跳或同步失败",
+    "expectation": "本次具体原因、真实退避、恢复后剩余阻塞",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R05",
+    "scene": "runtime-occupied",
+    "scope": "T3/T4b/T6；401/403、409占用、持续冲突",
+    "expectation": "区分授权与所有权；停止不适用的重试，不自动抢占",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R06",
+    "scene": "confirm-stop",
+    "scope": "T6/T9；停止、取消停止确认、停止部分成功",
+    "expectation": "workers/intent/session 逐项证据；保存失败不声称下次保持停止",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "R07",
+    "scene": "runtime-unknown",
+    "scope": "T3/T5/T10；启停结果未知、旧 run 迟到",
+    "expectation": "只读核对原操作；失效回执不能解锁新操作",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P01",
+    "scene": "check-expired",
+    "scope": "T5/T7；无报告、过期、读取失败／正在读取",
+    "expectation": "显示新鲜度及真实调度，不能继续可接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P02",
+    "scene": "supply-paused",
+    "scope": "T7；手动暂停／恢复；全部暂停仍有别的阻塞",
+    "expectation": "恢复仅解除暂停，不承诺立即接单，展示独立问题",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P03",
+    "scene": "supply-partial",
+    "scope": "T5/T7；一平台失败、另一平台正常／慢请求",
+    "expectation": "失败和加载局部化，正常平台保持可见",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P04",
+    "scene": "supply-blocked",
+    "scope": "T1/T2/T7；not_configured及五个新细分原因",
+    "expectation": "区分本机未接入、Hive未注册、市场未开放、供给未启用、设备受限、账号未准入",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P05",
+    "scene": "supply-blocked",
+    "scope": "T1/T2/T7；banned、device_draining、offline、model_unavailable、authorization_unavailable、capabilities_unknown、plan_not_configured",
+    "expectation": "按原准入事实逐码解释；管理员问题不让用户循环登录",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P06",
+    "scene": "quota-over",
+    "scope": "T3/T7；rate_limited、quota_unknown、quota_exhausted、concurrency_full",
+    "expectation": "可证明的恢复条件和时间；无根据不倒计时",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P07",
+    "scene": "account-change",
+    "scope": "T4/T7；Codex／Claude 的 source_unavailable、confirmation_required、authorization_rejected",
+    "expectation": "两平台分别定位来源／换号确认／登录；不混为市场未开放",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "P08",
+    "scene": "quota-multiple",
+    "scope": "T1/T2/T7/T10；多额度窗口、未知、过期、超过100%；旧Hive兼容",
+    "expectation": "保留原值与时间；旧原因不猜测，矛盾响应失败关闭",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N01",
+    "scene": "settings-general",
+    "scope": "T4/T8/T9；语言主题读取／保存成功或失败",
+    "expectation": "UI按已确认偏好更新；错误可重读，切语言更新已有提示",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N02",
+    "scene": "settings-network",
+    "scope": "T8；代理草稿、无效输入、测试成功／失败",
+    "expectation": "就地校验，保留输入；测试不保存、不代表 Hive 可达",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N03",
+    "scene": "settings-network",
+    "scope": "T8；代理保存但未应用，重启应用",
+    "expectation": "区分保存／生效；停止、配置、恢复各阶段独立反馈",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N04",
+    "scene": "settings-network",
+    "scope": "T8/T10；应用部分失败／响应未知、导航／重启",
+    "expectation": "先读当前revision及运行状态，不能重复“停止并重启”",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N05",
+    "scene": "settings-system",
+    "scope": "T8/T9；通知拒绝／未询问／未知、发送失败",
+    "expectation": "偏好≠系统授权≠投递成功；有真实设置路径及显式重试",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "N06",
+    "scene": "settings-system",
+    "scope": "T8/T9；自启期望与实际登记不同／查询失败",
+    "expectation": "分别显示，不假成功；重新核对而非自动改用户选择",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G01",
+    "scene": "diagnostics-results",
+    "scope": "T8；未运行、显式开始、部分检查／全部通过",
+    "expectation": "导航不启动诊断；完成≠全通过≠可接单",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G02",
+    "scene": "diagnostics-read-failed",
+    "scope": "T8；诊断进行中读失败／临时中断",
+    "expectation": "原报告可重读，说明查询停滞；不永久“进行中”",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G03",
+    "scene": "diagnostics-running",
+    "scope": "T8/T10；取消／取消未知、报告超时／跳过",
+    "expectation": "保留已返回事实；按实际回执确认取消，不重建报告",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G04",
+    "scene": "diagnostics-results",
+    "scope": "T4a/T5/T8；离开再返回、换绑定／网络／run",
+    "expectation": "同一报告可继续；旧上下文不污染概览",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G05",
+    "scene": "diagnostics-results",
+    "scope": "T8；日志未读／空／过滤／加载更多／轮转",
+    "expectation": "明确各状态，旧过滤响应丢弃，不主动读取全部日志",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "G06",
+    "scene": "diagnostics-export-unknown",
+    "scope": "T8/T10；导出范围、取消、失败／完成／下载未知",
+    "expectation": "真实下载回执；未知给核对位置，不重复导出",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "U01",
+    "scene": "settings-about",
+    "scope": "T9；idle/checking/current/available、后台失败",
+    "expectation": "只读检查不影响贡献；可显式重试，有当前版本",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "U02",
+    "scene": "update-downloading",
+    "scope": "T9；下载中、总大小未知、网络／磁盘／签名失败",
+    "expectation": "不假100%，验证通过才安装，原版本可用",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "U03",
+    "scene": "update-verified",
+    "scope": "T9；verified，打开／取消／过时安装确认",
+    "expectation": "默认取消焦点，确认绑定精确版本／revision",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "U04",
+    "scene": "update-unknown",
+    "scope": "T9/T10；stopping/installing、回执丢失、停止不完整",
+    "expectation": "不重复安装，不说已成功；查原操作／可信包恢复",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "U05",
+    "scene": "update-failed",
+    "scope": "T4a/T9/T10；重启核验成功／失败、数据迁移失败",
+    "expectation": "核对包、设备、选择和运行意图；不绕过完整性或丢暂停",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "X01",
+    "scene": "running",
+    "scope": "T9/T10；关窗、菜单／托盘重开、第二次启动",
+    "expectation": "保持当前运行，回到同一窗口，不启动第二套贡献",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "X02",
+    "scene": "confirm-stop",
+    "scope": "T9/T10；退出、停止超时／强制回收",
+    "expectation": "区分停止贡献与退出意图，只处理本App进程",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "X03",
+    "scene": "stopped",
+    "scope": "T9/T10；正常重开、异常退出／断电后重开",
+    "expectation": "正常按既有意图核验；不洁会话保持停止",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "X04",
+    "scene": "device-bound",
+    "scope": "T5/T9/T10；通知点击、登录返回、无托盘环境",
+    "expectation": "定位当前可用页／窗口，旧事件不自动提交或启动",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "C01",
+    "scene": "account-detail",
+    "scope": "T5/T8；跨四页修复、返回、未保存草稿",
+    "expectation": "保留平台、目标、草稿与操作；返回焦点正确",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "C02",
+    "scene": "device-pending",
+    "scope": "T6–T10；860×600／常规尺寸，长URL／错误／标识",
+    "expectation": "主操作可发现、纵向可滚动、无横向溢出；同尺寸对照原布局，暂停／恢复保留右侧额度区下方靠右",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "C03",
+    "scene": "settings-general",
+    "scope": "T4/T6–T10；中英、明暗、系统语言不同",
+    "expectation": "全部可达路径本地化；技术原文只在合适详情",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "C04",
+    "scene": "confirm-change",
+    "scope": "T5/T6–T10；键盘、Escape、屏幕阅读、减少动态效果",
+    "expectation": "正确名称、焦点、状态播报；轮询不抢焦点",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  },
+  {
+    "id": "C05",
+    "scene": "recovery-owner",
+    "scope": "T4b/T5/T10；双击、导航、旧实例／revision、身份变化、结果未知组合",
+    "expectation": "显式操作只提交一次；读取恢复不得变成写入重放",
+    "layer": "正式组件＋模拟IPC；仅此画面的布局，不替代整行业务或原生验收",
+    "viewport": {
+      "width": 860,
+      "height": 600
+    },
+    "locale": "zh",
+    "theme": "light"
+  }
+]

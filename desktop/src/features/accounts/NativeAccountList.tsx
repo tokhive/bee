@@ -14,7 +14,7 @@ import {AccountQuota,AccountCheckStatus,AccountReadHistory,useAccountClock} from
 import {Badge,Button} from '../../components/ui';
 import {t,formatNumber,currentLocale} from '../../i18n/index';
 
-export function NativeAccountList({context,accounts,runtime,supply,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
+export function NativeAccountList({context,accounts,runtime,supply,onNavigate,navigationRequest,visiblePlatforms}:{visiblePlatforms?:('openai'|'claude')[];navigationRequest?:NavigationRequest;context:'overview'|'accounts';onNavigate?:(target:NavigationTarget)=>void;accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply}){
  const now=useAccountClock(accounts);
  const compactList=context==='accounts'&&accounts.autoService;
  const running=runtime.view?.local==='running'&&!runtime.error&&!runtime.uncertain;
@@ -23,7 +23,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
  const countCopy=confirmedPlatforms.length===platforms.length?t('{count} 个已接入',{count:formatNumber(selectedCount,currentLocale())}):selectedCount?t('已确认接入 {count} 个，其余待确认',{count:formatNumber(selectedCount,currentLocale())}):t('接入数量待确认');
  return <section className={`native-accounts-section ${accounts.autoService?'auto-service-accounts':''}`} aria-label={t('平台账号列表')}>
   <div className={`section-heading ${accounts.autoService&&context==='accounts'?'account-inline-check':''}`}>{!accounts.autoService&&<h2>{t('AI 账号')}</h2>}<div className="account-list-status"><AccountCheckStatus supply={supply}/>{!(accounts.autoService&&context==='accounts')&&<span>{countCopy}</span>}</div></div>
-  <div className={`native-account-list ${compactList?'account-list-compact':''}`}>{compactList&&<div className="account-list-heading" aria-hidden="true"><span>{t('账号')}</span><span>{t('状态')}</span><span>{t('额度')}</span><span>{t('操作')}</span></div>}{platforms.map(platform=>{
+  <div className={`native-account-list ${compactList?'account-list-compact':''}`}>{compactList&&<div className="account-list-heading" aria-hidden="true"><span>{t('账号')}</span><span>{t('状态')}</span><span>{t('额度')}</span><span>{t('操作')}</span></div>}{(visiblePlatforms??platforms).map(platform=>{
    const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
    if(context==='accounts'&&accounts.autoService&&platform==='openai')return <OpenaiAccountCard key={platform} accounts={accounts} runtime={runtime} supply={supply} now={now} onNavigate={navigate} navigationRequest={navigationRequest}/>;
    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];

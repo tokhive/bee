@@ -18,9 +18,23 @@ python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 
 固定访问地址：<http://127.0.0.1:1497/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
 
-## 待评审：设备重新绑定完整交互（2026-11-16）
+## 待评审：概览内设备绑定修复（2026-11-16）
 
-### 后续重审（四项调整已确认，待更新 HTML）
+[概览正常态](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与影响告知](draft.html?scene=rebind-pair&theme=dark&size=narrow) · [启动恢复](draft.html?scene=rebind-config) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-175535-inline-binding-repair/draft.html?scene=rebind-device)。
+
+本轮落实用户确认的四项重审结论：取消独立设备页；概览设备区更多菜单提供“修复设备绑定”；检查、恢复反馈、配对码和等待进度在设备区原地展开；确需替换设备时，在前往 Hive 网页确认之前提示“重新绑定完成后，需要重新接入 AI 账号。”。首次启动无法进入概览时复用恢复内容，取消仍需弹窗确认。正常检查仅给出简短结果，不重置绑定、不影响原接单选择。
+
+沿用原概览和账号模型，返回 AI 账号页保留原状态；绑定故障以独立条件说明暂不可贡献，正常绑定检查不引入这个阻塞。替换结果确认完成后才进入空账号状态。HTTP 503 重试后重新检查原绑定，不直接新建配对。保留已有主预览的 Hive 切换实现和 17 个起点；修复与切换进行中避免混用两个操作，切换完成后修复使用当前 Hive。
+
+草稿共 588 个直接入口，其中 46 个修复相关入口复用同一内容组件，17 个 Hive 切换入口来自已认可主预览。旧 `rebind-device` 链接现打开概览设备区，页面下拉不再列出独立“设备”页；左下角恢复原有身份展示。旧服务故障链接继续映射到对应修复状态。
+
+验证包括修复入口与正常结果、网页确认到完成及空账号页、取消、HTTP 503 重试、主题尺寸保留输入、概览／账号往返保留暂停与配对码、直接进行中场景停留、切场景取消旧操作、Hive 切换入口及深浅色紧凑布局。全部为页面内模拟，不证明正式应用或 Hive 业务验收。`index.html` 和正式代码未修改；本轮 HTML 待视觉与交互评审。
+
+修改前复用字节一致的 `20261116-165613-rebind-interaction`；新完整留版为 `20261116-175535-inline-binding-repair`，包括全部对照 HTML。
+
+## 历史讨论：独立设备页与重新绑定交互（2026-11-16，已被上方方案替代）
+
+### 后续重审（四项调整已确认，已落实至上方候选稿）
 
 用户已确认两项调整：取消本稿新增的独立设备页，复用概览设备区承载设备资料和低频恢复入口，保留已有“切换 Hive”；常驻恢复入口改名“修复设备绑定”，确需网页重新确认归属时显示“请重新绑定”和“重新绑定 Hive”。普通连接故障仍提供与原因匹配的处理入口，如“重试连接”。
 
@@ -28,11 +42,11 @@ python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 
 此前已确认的恢复边界继续适用：网页打开不等于用户批准，必须核对配对码并明确确认；确认后显示当前实际等待阶段，停止自动核对时提供“继续核对”，不重新获取配对码；关闭页面不等于取消。取消结果须经确认，取消不自动恢复旧设备接单，也不撤回已完成处理；绑定已经完成则展示完成结果。本机保存失败只继续保存。替换完成后引导重新接入 AI 账号，不自动开始贡献；恢复原绑定则保留账号及接单选择。
 
-恢复机制文档中的“重新绑定 Hive”仍指包含优先恢复原绑定的完整流程；以上是面向用户的动作名称、展示位置与告知时机调整，不改变恢复机制。目前 HTML 仍是下面记录的上一轮待评审稿，尚未落实这四项调整。下一步按已确认方向更新草稿，视觉效果仍需评审。
+恢复机制文档中的“重新绑定 Hive”仍指包含优先恢复原绑定的完整流程；以上是面向用户的动作名称、展示位置与告知时机调整，不改变恢复机制。这四项调整已落实至上方候选稿；下面保留上一轮 HTML 的交付记录，便于与冻结版对照。
 
 ### 上一轮 HTML 交付记录
 
-[正常设备页](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与配对码](draft.html?scene=rebind-pair&size=narrow) · [停止核对](draft.html?scene=rebind-paused) · [取消确认](draft.html?scene=rebind-cancel-dialog) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device)。
+[正常设备页](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-fault&size=narrow) · [网页确认与配对码](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-pair&size=narrow) · [停止核对](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-paused) · [取消确认](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-cancel-dialog) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device)。
 
 依据本会话已确认线框制作；HTML 仍待视觉与交互评审，尚未纳入主预览或正式应用。正常设备页把「重新绑定 Hive」放入右上角更多菜单，绑定故障和配置损坏时直接提供入口。沿用页面内状态提示，不将错误堆到窗口顶部。37 个新增直接入口，加上 9 个旧服务故障链接兼容映射，草稿共 571 个入口；旧故障方案保留在历史快照。
 

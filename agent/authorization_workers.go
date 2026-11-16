@@ -75,6 +75,9 @@ func (cfg *egressConfig) startSynchronization(ctx context.Context, state localSt
 	if cfg.OpenAIAPI != nil {
 		start(cfg.synchronizeOpenAIAPI, cfg.OpenAIAPI.message, "openai_api", "")
 	}
+	if cfg.ClaudeAPI != nil {
+		start(cfg.synchronizeClaudeAPI, cfg.ClaudeAPI.message, "claude_api", "")
+	}
 	if cfg.Reseller != nil {
 		start(cfg.synchronizeReseller, cfg.Reseller.message, cfg.Reseller.Reseller, "")
 	}

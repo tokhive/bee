@@ -20,6 +20,12 @@ export interface FirstLaunchWizardProps {
  onDiagnostics?:()=>void;onRepair?:()=>void;onOpenHive?:()=>void|Promise<unknown>;
 }
 
+/** Hive offered to a new device; builds for another Hive set VITE_DEFAULT_HIVE. */
+export const DEFAULT_HIVE=import.meta.env.VITE_DEFAULT_HIVE||'https://console.tokhive.ai';
+
+/** Reads a bare host such as console.tokhive.ai as an HTTPS address. */
+function typedHive(raw:string):string {return raw&&!raw.includes('://')?`https://${raw}`:raw;}
+
 function validateHive(raw:string):string {
  if(!raw)return '请填写 Hive 地址。';
  let url:URL;try{url=new URL(raw);}catch{return 'Hive 地址须为完整的 HTTPS 网址。';}
@@ -48,7 +54,7 @@ function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;man
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */
 export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
- const [hive,setHive]=useState(view?.hive??''),[name,setName]=useState(view?.name??'Bee Desktop');
+ const [hive,setHive]=useState(view?.hive||DEFAULT_HIVE),[name,setName]=useState(view?.name??'Bee Desktop');
  const [fieldErrors,setFieldErrors]=useState({hive:'',name:''});
  const [submitting,setSubmitting]=useState(false),submitted=useRef(false);
  const hiveInput=useRef<HTMLInputElement>(null),nameInput=useRef<HTMLInputElement>(null);
@@ -102,7 +108,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
  useEffect(()=>{if(!busy){submitted.current=false;setSubmitting(false);}},[busy,view,error,operationError]);
  const submit=(event:FormEvent)=>{
   event.preventDefault();if(busy||submitted.current)return;
-  const address=hive.trim(),deviceName=name.trim();
+  const address=typedHive(hive.trim()),deviceName=name.trim();
   const errors={hive:validateHive(address),name:!deviceName?'请填写设备名称。':/[\p{Cc}]/u.test(deviceName)?'设备名称不能包含控制字符。':[...deviceName].length>80?'设备名称最多为 80 个字符。':''};
   setFieldErrors(errors);if(errors.hive||errors.name){(errors.hive?hiveInput:nameInput).current?.focus();return;}
   submitted.current=true;setSubmitting(true);begin(address.replace(/\/$/,''),deviceName);
@@ -111,7 +117,7 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
   <h1 ref={title} tabIndex={-1}>{w(loading?'正在检查设备…':readBlocked?'无法确认设备状态':complete?'设备已绑定':'设置这台设备')}</h1>{!loading&&!readBlocked&&<ol className="first-launch-steps" aria-label={w('设置步骤')}><li aria-current={form?'step':undefined} className={!form?'done':undefined}><span>{form?'1':'✓'}</span>{w('连接 Hive')}</li><li aria-current={!form&&!complete?'step':undefined} className={complete?'done':undefined}><span>{complete?'✓':'2'}</span>{w('绑定设备')}</li></ol>}
   {loading?<p role="status">{w('正在读取本机配置与设备状态…')}</p>:readBlocked?<>{failureNotices}<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button>{onRepair&&<Button type="button" variant="outline" onClick={onRepair}>{w('修复当前问题')}</Button>}</div></>:complete?<><dl className="first-launch-facts"><dt>{w('设备')}</dt><dd>{identity.name}</dd><dt>{w('归属账号')}</dt><dd>{identity.owner_email}</dd><dt>Hive</dt><dd>{view.hive}</dd></dl><h2>{w('下一步：接入 AI 账号')}</h2><p>{w('接入后才能使用该账号参与贡献。')}</p><div className="first-launch-actions"><Button type="button" onClick={()=>onNavigate('accounts')}>{w('前往接入 AI 账号')}</Button><Button type="button" variant="ghost" onClick={()=>onNavigate('overview')}>{w('进入概览')}</Button></div></>:form?<form noValidate onSubmit={submit}>
    <label htmlFor="first-launch-hive">{w('Hive 地址')}</label><input ref={hiveInput} id="first-launch-hive" name="hive" type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://hive.example…" value={hive} disabled={creating} aria-invalid={!!fieldErrors.hive} aria-describedby="first-launch-hive-help first-launch-hive-error" onChange={event=>{setHive(event.target.value);setFieldErrors(current=>({...current,hive:''}));}}/>
-   <p id="first-launch-hive-help" className="first-launch-help">{w('填写你要连接的 Hive 服务地址。')}</p><p id="first-launch-hive-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.hive)}</p>
+   <p id="first-launch-hive-help" className="first-launch-help">{w('默认连接 TokHive 官方 Hive，也可以改为其他 Hive 地址。')}</p><p id="first-launch-hive-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.hive)}</p>
    <label htmlFor="first-launch-name">{w('设备名称')}</label><input ref={nameInput} id="first-launch-name" name="device-name" autoComplete="off" value={name} disabled={creating} aria-invalid={!!fieldErrors.name} aria-describedby="first-launch-name-help first-launch-name-error" onChange={event=>{setName(event.target.value);setFieldErrors(current=>({...current,name:''}));}}/>
    <p id="first-launch-name-help" className="first-launch-help">{w('用于在 Hive 中识别这台设备。')}</p><p id="first-launch-name-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.name)}</p>
    {failureNotices}

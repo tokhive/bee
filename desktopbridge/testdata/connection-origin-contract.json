@@ -1,0 +1,176 @@
+{
+  "accepted": [
+    {
+      "hive": "https://HIVE.test",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://HIVE.test"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "https://hive.test:443",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://hive.test:443"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "http://localhost:80",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "http://localhost:80"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "https://HIVE.test:8443",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://HIVE.test:8443"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "https://[2001:0DB8:0:0:0:0:0:1]:443",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://[2001:0DB8:0:0:0:0:0:1]:443"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "http://[0:0:0:0:0:0:0:1]:80",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "http://[0:0:0:0:0:0:0:1]:80"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "http://[::ffff:127.0.0.1]:80",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "http://[::ffff:127.0.0.1]:80"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "https://例子.test:443",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://例子.test:443"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    },
+    {
+      "hive": "https://127.1:443",
+      "connection_detail": {
+        "failure": {
+          "code": "unknown_failure",
+          "stage": "connect",
+          "occurred_at": "2026-10-26T00:00:00Z",
+          "message": "connection origin fixture",
+          "evidence": {
+            "path": "/api/bee/agent",
+            "target_origin": "https://127.1:443"
+          }
+        },
+        "retry": "halted",
+        "next_retry_at": null
+      }
+    }
+  ],
+  "rejected": [
+    "https://user:secret@hive.test",
+    "https://@hive.test",
+    "https://hive.test/",
+    "https://hive.test/path",
+    "https://hive.test/..",
+    "https://hive.test?token=secret",
+    "https://hive.test?",
+    "https://hive.test#fragment",
+    "https://hive.test#",
+    "https://hive.test\\path",
+    "https://hive.test\n",
+    "http://127.evil.example",
+    "http://127.1",
+    "http://2130706433",
+    "http://127.000.000.001",
+    "http://LOCALHOST",
+    "http://[::ffff:192.0.2.1]"
+  ]
+}

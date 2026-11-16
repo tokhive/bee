@@ -3,8 +3,6 @@ package bee
 import (
 	"context"
 	"net/http"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 )
@@ -19,10 +17,7 @@ func TestLocalClaudeVersion(t *testing.T) {
 	directory := t.TempDir()
 	install := func(output string) {
 		t.Helper()
-		script := "#!/bin/sh\nprintf '%s\\n' '" + output + "'\n"
-		if err := os.WriteFile(filepath.Join(directory, "claude"), []byte(script), 0o755); err != nil {
-			t.Fatal(err)
-		}
+		installVersionTestClient(t, directory, "claude", output)
 	}
 	t.Setenv("PATH", directory)
 	if got := localClaudeVersion(context.Background()); got != defaultClaudeClientVersion {

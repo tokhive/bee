@@ -112,7 +112,7 @@ func (cfg *egressConfig) synchronizeReseller(ctx context.Context, state localSta
 		return nil
 	}
 	status := source.observe(ctx, key, keyPrint)
-	err = call(ctx, httpClient(), state.Hive, "/api/bee/resellers/"+source.Reseller+"/status", "POST", state.Credential, status, nil)
+	err = callState(ctx, httpClient(), state, "/api/bee/resellers/"+source.Reseller+"/status", "POST", status, nil)
 	var failure *apiFailure
 	if errors.As(err, &failure) && failure.Code == "stale_reseller_key" {
 		// Another registration replaced this one; register again next cycle.
@@ -141,7 +141,7 @@ func (cfg *egressConfig) synchronizeReseller(ctx context.Context, state localSta
 
 func (cfg *egressConfig) registerReseller(ctx context.Context, state localState, lease, key, keyPrint string) error {
 	var inbox tee.InboxPublic
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &inbox); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &inbox); err != nil {
 		return err
 	}
 	hash := sha256.Sum256(inbox.PublicKey)
@@ -153,7 +153,7 @@ func (cfg *egressConfig) registerReseller(ctx context.Context, state localState,
 		return errInboxIdentity
 	}
 	upload := beewire.CredentialRegistration{Lease: lease, Envelope: envelope, Reseller: &beewire.ResellerKey{Reseller: cfg.Reseller.Reseller, KeyFingerprint: keyPrint}}
-	return call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential, upload, nil)
+	return callState(ctx, httpClient(), state, "/api/bee/credentials", "POST", upload, nil)
 }
 
 // observe asks the reseller what it makes of the key: the models it lists and
@@ -246,7 +246,7 @@ func (source *resellerSource) resumeCharges(ctx context.Context, state localStat
 		return nil
 	}
 	var stored beewire.ResellerChargesStored
-	err := call(ctx, httpClient(), state.Hive, "/api/bee/resellers/"+source.Reseller+"/charges/latest", "GET", state.Credential, nil, &stored)
+	err := callState(ctx, httpClient(), state, "/api/bee/resellers/"+source.Reseller+"/charges/latest", "GET", nil, &stored)
 	var failure *apiFailure
 	switch {
 	case errors.As(err, &failure) && failure.Status == http.StatusNotFound:
@@ -318,7 +318,7 @@ func (source *resellerSource) reportCharges(ctx context.Context, state localStat
 		if !report.Valid() {
 			return errors.New("the reseller's billing records do not fit the report format")
 		}
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/resellers/"+source.Reseller+"/charges", "POST", state.Credential, report, nil); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/resellers/"+source.Reseller+"/charges", "POST", report, nil); err != nil {
 			return err
 		}
 	}

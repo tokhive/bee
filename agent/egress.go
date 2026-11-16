@@ -30,6 +30,9 @@ import (
 )
 
 type egressConfig struct {
+	desktop                 *DesktopRuntime
+	desktopAction           func(context.Context, localState, string, io.Writer) (<-chan error, func())
+	synchronized            *desktopSynchronizationReceipt
 	ConnectProxy            string            `json:"connect_proxy,omitempty"`
 	Targets                 []string          `json:"targets"`
 	InboxKeyID              string            `json:"inbox_key_id"`
@@ -95,16 +98,17 @@ func readEgress(ctx context.Context, path string) (*egressConfig, error) {
 		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	case !info.Mode().IsRegular():
 		return nil, fail("BEE-CONFIG-NOT-REGULAR", path)
-	case info.Mode().Perm()&0077 != 0:
-		return nil, failf("BEE-CONFIG-PERMISSIONS", "%s has mode %04o", path, info.Mode().Perm())
 	case info.Size() > 65536:
 		return nil, fail("BEE-CONFIG-TOO-LARGE", path)
 	}
-	file, err := os.Open(path)
+	file, err := openRegularNoFollow(path)
 	if err != nil {
 		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
 	}
 	defer file.Close()
+	if err := validatePrivateFile(file); err != nil {
+		return nil, fail("BEE-CONFIG-PERMISSIONS", err.Error())
+	}
 	raw, err := io.ReadAll(io.LimitReader(file, 65537))
 	if err != nil {
 		return nil, failCause("BEE-CONFIG-UNREADABLE", fmt.Errorf("read %s: %w", path, err))
@@ -290,7 +294,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil
+	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {
@@ -311,19 +315,20 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if !force && sourceErr == nil && !changed && !capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) && cfg.pacer.skip(time.Now()) {
 		return nil
 	}
+	cfg.synchronized = nil
 	// The previous cycle's response already carried the account version this
 	// one has to claim, so the read is only for a cycle that has none.
 	observed, known := cfg.pacer.expected()
 	cfg.pacer.unsettled()
 	if !known {
-		if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account", "GET", state.Credential, nil, &observed); err != nil {
+		if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account", "GET", nil, &observed); err != nil {
 			return err
 		}
 	}
 	if sourceErr != nil {
 		cfg.authorization = nil
 		if force || cfg.lastAccountState != "source_unavailable" || time.Since(cfg.lastRegistration) >= 10*time.Second {
-			if err := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); err != nil {
+			if err := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); err != nil {
 				return err
 			}
 			cfg.lastRegistration = time.Now()
@@ -334,7 +339,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	var result beewire.MaintenanceResponse
 	revision := credential.metadata().CredentialRevision
 	staleToken := cfg.Capabilities.wantsRefresh(revision, time.Now())
-	err := call(ctx, httpClient(), state.Hive, "/api/bee/maintenance", "POST", state.Credential,
+	err := callState(ctx, httpClient(), state, "/api/bee/maintenance", "POST",
 		beewire.MaintenanceRequest{Lease: lease, Codex: credential.metadata(), ExpectedGeneration: observed.Generation, ExpectedRevision: observed.CredentialRevision, RefreshRequired: staleToken}, &result)
 	if err != nil {
 		return err
@@ -365,7 +370,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 		credential, err = cfg.Codex.executeMaintenance(ctx, *task)
 		if err != nil {
 			cfg.authorization = nil
-			if stopErr := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); stopErr != nil {
+			if stopErr := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); stopErr != nil {
 				return stopErr
 			}
 			cfg.accountMessage(out, "maintenance_wait", "new OpenAI jobs paused; waiting for official Codex authorization recovery: "+err.Error())
@@ -377,7 +382,7 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 			var failure *apiFailure
 			if errors.Is(err, errCodexExpired) || errors.As(err, &failure) && failure.Code == "invalid_codex_authorization" {
 				cfg.authorization = nil
-				if stopErr := call(ctx, httpClient(), state.Hive, "/api/bee/platforms/openai/account/source", "PUT", state.Credential, map[string]string{"lease": lease}, nil); stopErr != nil {
+				if stopErr := callState(ctx, httpClient(), state, "/api/bee/platforms/openai/account/source", "PUT", map[string]string{"lease": lease}, nil); stopErr != nil {
 					return stopErr
 				}
 				cfg.accountMessage(out, "maintenance_wait", "OpenAI authorization expired during synchronization; waiting for a new authorization maintenance task")
@@ -407,6 +412,8 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if result.Task == nil && cfg.authorization != nil && !cfg.capabilityReportPending {
 		cfg.pacer.settled(result.Account, time.Now(), cfg.capabilityWorkAt())
 	}
+	auth := credential.metadata()
+	cfg.synchronized = &desktopSynchronizationReceipt{lease: lease, generation: cfg.accountGeneration, fingerprint: auth.AccountFingerprint, revision: auth.CredentialRevision}
 	return nil
 }
 
@@ -473,7 +480,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 		codex = &metadata
 	}
 	var key tee.InboxPublic
-	if err := call(ctx, httpClient(), state.Hive, "/api/bee/credential-key", "GET", state.Credential, nil, &key); err != nil {
+	if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
 		return err
 	}
 	hash := sha256.Sum256(key.PublicKey)
@@ -498,7 +505,7 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 	var registered struct {
 		Generation int64 `json:"account_generation"`
 	}
-	err = call(ctx, httpClient(), state.Hive, "/api/bee/credentials", "POST", state.Credential,
+	err = callState(ctx, httpClient(), state, "/api/bee/credentials", "POST",
 		struct {
 			Lease    string                      `json:"lease"`
 			Envelope tee.Envelope                `json:"envelope"`
@@ -577,6 +584,9 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 				allowed = true
 				break
 			}
+		}
+		if cfg.desktop != nil {
+			allowed = cfg.desktop.allowsTarget(open.Host)
 		}
 		if !allowed {
 			egressDebug("stream rejected: %q is not in the target allowlist %v", open.Host, cfg.Targets)

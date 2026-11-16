@@ -54,7 +54,7 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 	sample["preserved"] = map[string]any{"value": "unrelated"}
 	raw, _ := json.Marshal(sample)
 	authPath := filepath.Join(directory, "auth.json")
-	if err := os.WriteFile(authPath, raw, 0600); err != nil {
+	if err := writePrivateFixture(authPath, raw); err != nil {
 		t.Fatal(err)
 	}
 	fresh := codexSample(time.Now().Add(time.Hour))
@@ -65,7 +65,8 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 		expectedTokens = sample["tokens"].(map[string]any)
 	}
 	blocked := scenario == "response_lost" || scenario == "account_changed" || scenario == "partial_write" || scenario == "save_failure"
-	defer os.Chmod(directory, 0700)
+	releaseWriteBlock := func() {}
+	defer func() { releaseWriteBlock() }()
 	var refreshes, uploads atomic.Int32
 	oauth := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		refreshes.Add(1)
@@ -100,9 +101,7 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 			os.WriteFile(authPath, []byte(`{"tokens":`), 0600)
 		}
 		if scenario == "save_failure" {
-			if os.Chmod(directory, 0500) != nil {
-				t.Error("write failure fixture unavailable")
-			}
+			releaseWriteBlock = preventTestReplacement(t, directory, authPath)
 		}
 		if scenario == "concurrent_bees" {
 			time.Sleep(150 * time.Millisecond)
@@ -207,14 +206,14 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 		egress, _ = json.Marshal(map[string]any{"targets": []string{"chatgpt.com:443"}, "inbox_key_id": strings.Repeat("0", 64), "codex": map[string]string{"home": directory, "store": "file"}})
 	}
 	configPath, egressPath := filepath.Join(directory, "bee.json"), filepath.Join(directory, "egress.json")
-	if os.WriteFile(configPath, config, 0600) != nil || os.WriteFile(egressPath, egress, 0600) != nil {
+	if writePrivateFixture(configPath, config) != nil || writePrivateFixture(egressPath, egress) != nil {
 		t.Fatal("fixture write failed")
 	}
 	var output bytes.Buffer
 	var concurrent chan error
 	if scenario == "concurrent_bees" {
 		otherConfig := filepath.Join(directory, "other-bee.json")
-		if os.WriteFile(otherConfig, config, 0600) != nil {
+		if writePrivateFixture(otherConfig, config) != nil {
 			t.Fatal("other Bee configuration failed")
 		}
 		concurrent = make(chan error, 1)
@@ -247,8 +246,8 @@ func testCodexMaintenance(t *testing.T, scenario string) {
 	if err != nil || refreshes.Load() != expectedRefreshes || uploads.Load() != expectedUploads && !(scenario == "concurrent_bees" && uploads.Load() >= 2) {
 		t.Fatalf("refresh/retry failed: refresh=%d upload=%d error=%v output=%s", refreshes.Load(), uploads.Load(), err, output.String())
 	}
-	info, _ := os.Stat(authPath)
-	if info.Mode().Perm() != 0600 || strings.Contains(output.String(), "refresh-secret") {
-		t.Fatal("credential permissions or redaction failed")
+	assertPrivateFixture(t, authPath)
+	if strings.Contains(output.String(), "refresh-secret") {
+		t.Fatal("credential redaction failed")
 	}
 }

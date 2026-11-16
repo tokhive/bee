@@ -114,7 +114,5 @@ func TestClaudeRefreshSavesToTheCredentialsFile(t *testing.T) {
 	if err != nil || !bytes.Contains(raw, []byte("synthetic-claude-new-refresh")) || !bytes.Contains(raw, []byte("preserved-in-official-store")) {
 		t.Fatalf("file after refresh: %v", err)
 	}
-	if info, _ := os.Lstat(path); info.Mode().Perm() != 0600 {
-		t.Fatalf("file mode %v", info.Mode().Perm())
-	}
+	assertPrivateTestFile(t, path)
 }

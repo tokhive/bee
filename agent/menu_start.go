@@ -110,7 +110,7 @@ func (m *managementMenu) prepareStartPairing(state localState) (bool, error) {
 	if state.Identity != nil {
 		m.ui.status(m.out, "⏳", "33", "Checking device pairing…", "正在验证设备配对…")
 		var identity beewire.Identity
-		err := call(m.ctx, httpClient(), state.Hive, "/api/bee/identity", "GET", state.Credential, nil, &identity)
+		err := callState(m.ctx, httpClient(), state, "/api/bee/identity", "GET", nil, &identity)
 		if err == nil {
 			return true, nil
 		}

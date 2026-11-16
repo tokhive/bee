@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -197,8 +196,8 @@ func TestClaudeRuntimeConfigurationAndIndependentWorkers(t *testing.T) {
 			}
 			raw, _ := json.Marshal(cfg)
 			path := filepath.Join(t.TempDir(), "egress.json")
-			if os.WriteFile(path, raw, 0600) != nil {
-				t.Fatal("write fixture")
+			if err := writeTestPrivateFile(path, raw, 0600); err != nil {
+				t.Fatalf("write private egress fixture: %v", err)
 			}
 			_, err := readEgress(context.Background(), path)
 			if (err == nil) != test.valid {

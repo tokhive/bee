@@ -5,13 +5,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
+
+	"golang.org/x/net/http/httpproxy"
 )
 
 // officialTransport carries Bee's own HTTPS to the official hosts — capability
@@ -20,19 +22,23 @@ import (
 // tunnel and these requests. An HTTPS_PROXY that is set keeps its meaning,
 // NO_PROXY included. Requests to Hive never use this transport.
 func officialTransport(connectProxy string) http.RoundTripper {
-	if connectProxy == "" || os.Getenv("HTTPS_PROXY") != "" || os.Getenv("https_proxy") != "" {
-		return nil
-	}
-	proxy := &url.URL{Scheme: "http", Host: connectProxy}
+	proxy, _ := officialProxyPolicy(connectProxy)
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.Proxy = func(req *http.Request) (*url.URL, error) {
-		// Loopback fixtures stand in for the official hosts in tests.
-		if ip := net.ParseIP(req.URL.Hostname()); ip != nil && ip.IsLoopback() || req.URL.Hostname() == "localhost" {
-			return nil, nil
-		}
-		return proxy, nil
+		return proxy(req.URL)
 	}
 	return transport
+}
+
+func officialProxyPolicy(connectProxy string) (func(*url.URL) (*url.URL, error), bool) {
+	// Capture this revision's environment instead of ProxyFromEnvironment's
+	// process-wide cache. NO_PROXY applies equally to the dedicated fallback.
+	policy := httpproxy.FromEnvironment()
+	environment := policy.HTTPSProxy != ""
+	if policy.HTTPSProxy == "" && connectProxy != "" {
+		policy.HTTPSProxy = "http://" + connectProxy
+	}
+	return policy.ProxyFunc(), environment
 }
 
 func localConnectProxy(raw string) (string, error) {
@@ -53,7 +59,12 @@ type proxyError struct {
 	cause   error
 }
 
-func (e proxyError) Error() string { return e.message }
+func (e proxyError) Error() string {
+	if e.cause != nil {
+		return e.message + ": " + e.cause.Error()
+	}
+	return e.message
+}
 func (e proxyError) Unwrap() error { return e.cause }
 
 type bufferedProxyConn struct {
@@ -99,8 +110,11 @@ func (cfg *egressConfig) dialEgress(ctx context.Context, target string) (net.Con
 	}
 	reader := bufio.NewReader(io.LimitReader(conn, 32<<10))
 	response, err := http.ReadResponse(reader, req)
-	if err != nil || response.StatusCode != http.StatusOK {
+	if err != nil {
 		return nil, proxyError{"egress proxy did not establish a tunnel", err}
+	}
+	if response.StatusCode != http.StatusOK {
+		return nil, proxyError{fmt.Sprintf("egress proxy CONNECT returned HTTP status=%d; required=200", response.StatusCode), nil}
 	}
 	// Preserve any bytes read past the bounded CONNECT headers before lifting the limit.
 	pending, _ := reader.Peek(reader.Buffered())

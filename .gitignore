@@ -1,2 +1,19 @@
 /bin/
 /dist/
+/.superpowers/
+/.vite/
+/desktop-ci-evidence/
+.DS_Store
+# Local desktop toolchains, immutable TEE exports and build caches.
+/.cache/
+# Desktop acceptance artifacts are kept locally, outside Git history.
+/docs/desktop/evidence/
+
+/docs/superpowers/
+
+/.scratch/
+
+# Historical previews live in the independent Bee development archive.
+/docs/preview/history/
+/desktop/tests/fixtures/bee-preview/history/
+/docs/preview/overview-layout-options/history/

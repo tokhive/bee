@@ -21,7 +21,7 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 	if method == "PUT" {
 		result, err = updatePlatformSupply(ctx, client, state, platform, command == "pause")
 	} else {
-		err = call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, method, state.Credential, input, &result)
+		err = callState(ctx, client, state, "/api/bee/platforms/"+platform, method, input, &result)
 		if err == nil && result.Platform != platform {
 			err = fmt.Errorf("Hive returned platform %q; expected %q", result.Platform, platform)
 		}
@@ -73,7 +73,7 @@ var supplyReasonLabels = map[string]string{
 
 func updatePlatformSupply(ctx context.Context, client *http.Client, state localState, platform string, paused bool) (beewire.PlatformSupply, error) {
 	var result beewire.PlatformSupply
-	err := call(ctx, client, state.Hive, "/api/bee/platforms/"+platform, "PUT", state.Credential, map[string]bool{"paused": paused}, &result)
+	err := callState(ctx, client, state, "/api/bee/platforms/"+platform, "PUT", map[string]bool{"paused": paused}, &result)
 	if err != nil {
 		return result, fmt.Errorf("operation result unconfirmed: %w; query bee supply-status --platform %s before retrying", err, platform)
 	}

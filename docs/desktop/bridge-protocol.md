@@ -1,0 +1,293 @@
+# Bee 桌面私有管理协议
+
+`bee desktop` 是桌面壳与本次创建的 Bee 子进程之间的机器入口，不能附加参数。启动、`hello`、`ping` 不读取设备配置、不连接 Hive；显式设备命令使用独立的受保护配置并访问 Hive 现有设备 API。管理入口本身不读取 CLI 配置、不自动启动贡献、不开放监听端口；运行由固定命令及原生自动维护管理，前端不调度生命周期。其他 CLI 命令仍走原入口。此协议可用不代表 Bee 已具备接单条件。
+
+## 帧与关联
+
+- stdin 接收请求，stdout 只输出响应；诊断写入 stderr，父进程须持续消费两个输出管道。
+- 每个输入和输出帧是一个 UTF-8 JSON 对象，以 `\n` 结束；换行前最多 1,048,576 字节。分段读取和多个帧合并写入均支持。编码后的输出同样检查上限，防止 JSON 字符串转义扩大响应。
+- 请求字段必须恰好为 `protocol`（整数 1）、`id`（非空字符串）、`method`（字符串）和 `params`（对象）。`device_begin` 的 params 必须恰好包含非空字符串 `hive`、`name`；`supply_status` 恰好含枚举 `platform`（openai/claude），`supply_set_paused` 恰好含该 `platform` 和显式 boolean `paused`。账号、运行与官方登录参数见下表；其余基础方法 params 必须为空。未知字段、重复 JSON 字段、缺失字段和不合法的 JSON 类型均拒绝。
+- 每次 `Run` 创建新的随机 128 位 `instance`；一次会话内保持一致。父进程用 `id` 关联请求，用 `instance` 区分重新启动的管理实例。
+- 相同 ID 的前一响应尚未完整写入时，返回 `DUPLICATE_ID`，不执行重复操作。父进程应为每次请求生成新 ID。
+- ID 及版本号属于公开元数据，不能放入凭证。协议错误不回显完整请求、未知字段名、未知方法值或 JSON 解析器引用的载荷字节；JSON 语法错误报告字节位置和帧长度。
+- 输入超过上限或在 EOF 时缺少终止换行，会尽力发送错误帧后结束本次会话。完整但不合法的请求返回错误后可继续接收下一帧。空输入直接正常结束。
+
+## 握手与允许的操作
+
+先发送：
+
+```json
+{"protocol":1,"id":"hello-1","method":"hello","params":{}}
+```
+
+响应示例（版本和实例以实际运行值为准）：
+
+```json
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","authorize_progress","authorize_open","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_inspect_recovery","runtime_reconcile_recovery","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
+```
+
+版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供示例所列 **34 项**有序能力（包含设备在线、上下文核验与设备恢复）。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
+
+| 请求 method | result | 含义 |
+| --- | --- | --- |
+| `ping` | `{"alive":true}` | 管理进程仍响应，不表示已连接 Hive 或开始贡献 |
+| `shutdown` | `{"stopped":true}` | 停止接受后续输入，写完已接收的响应后退出；父进程仍须等待并回收本次子进程 |
+| `device_status` | `{"device":DeviceView}` | 核验独立设备状态；未配置时返回 unbound；已配置时可轮询、兑换或核验原设备身份 |
+| `supply_status` | `{"supply":DesktopSupply}` | 重新核验设备归属并只读查询指定平台 |
+| `supply_set_paused` | `{"supply":DesktopSupply}` | 明确设置目标 paused，并 GET 回读核对；失败不重试 PUT |
+| `device_begin` | `{"device":DeviceView}` | 使用 `{"hive":"https://hive.example","name":"Bee Desktop"}` 开始或继续配对；禁止改换已保存的 Hive |
+
+账号命令参数必须精确匹配以下字段；同样拒绝未知、重复、缺失、null 错用或错误类型：
+
+| 请求 method | params | result／边界 |
+| --- | --- | --- |
+| `account_defaults` | `{}` | `{"defaults":DesktopAccountDefaults}`；不打开官方凭证或连接 Hive |
+| `account_detect` | `platform,directory,store,mode` | `{"account":DesktopAccountSnapshot}`；平台 openai/claude；directory 必须显式 null 或非空绝对路径（≤4096 UTF-8 字节，无控制字符）；OpenAI store 为 auto/file/keyring，Claude 为 file/keychain；mode 为 local/official |
+| `account_snapshot` | `platform,refresh` | `{"account":DesktopAccountSnapshot}`；refresh 显式 boolean，false 只返回公开快照，true 核对 Hive，并在许可时只读核对原登录维护 |
+| `account_action` | `platform,revision,candidate_ref,action,confirmed` | `{"account":DesktopAccountSnapshot}`；revision 为非负安全整数，candidate_ref 为当前随机引用，action 为 select/confirm_change/remove/clear_selection，confirmed 必须为 boolean；false 是合法参数但业务拒绝；select／clear_selection／confirm_change 已接通；已注册账号 remove 仍不可用 |
+
+Tauri `account_detect`／`account_action` 的 invoke 参数为 `{request:{…}}`；defaults 为 `{}`，snapshot 为 `{platform,refresh}`。Rust typed 命令与 Go 双重校验；generic `bridge_request` 仍只开放 ping。公开 DTO 与只读、缓存、提醒及功能依赖说明见[AI 账号观察](ai-accounts.md)。
+
+贡献使用下述固定 `runtime_start`；官方授权使用下述 authorize 三项固定动作，不存在资金或任意 Shell 操作。成功响应含 `result`，协议失败以 `error` 取代 `result`：
+
+```json
+{"protocol":1,"id":"ping-1","instance":"0d957c72d63b4c06ae544c10f4c549799","error":{"code":"NOT_READY","message":"hello handshake has not succeeded; required=hello before other methods"}}
+```
+
+设备、供给和账号业务失败返回 `result.error`；账号沿用 `ACCOUNT_OPERATION_FAILED` 及现有 `AccountError`。设备／供给的实际 HTTP 请求失败保留具体领域码（例如 `device_replaced`）或网络分类码，只有没有结构化原因的旧边界继续使用 `DEVICE_OPERATION_FAILED`／`SUPPLY_OPERATION_FAILED`。失败后管道和 ping 仍可用。协议、来源、实例或已发送请求的传输失败仍使桥失效。
+
+所有私有 `protocolError`／Rust `BridgeError`／TS `BridgeError` 均支持可选 `details`，旧 `{code,message}` 错误仍有效。有详情时必须为 `{check,observed_at,evidence}` 对象，不接受 null、未知字段或重复字段；check 为 1–80 字符的小写公开标识，observed_at 为有效 UTC RFC3339，最多允许本机当前时间后 5 秒。evidence 的基础字符串键为 `target_origin,path,http_status,remote_code,response_body,source_type,actual,required`，另允许下文列明的请求重试证据；逐值限制 32,768 UTF-8 字节，并验证公开 origin、路径、状态与代码格式。不得将任意异常对象序列化为证据。
+
+```json
+{"error":{"code":"unavailable","message":"GET /api/bee/identity: HTTP 503; response_body=…","details":{"check":"device_identity","observed_at":"2026-10-30T12:00:00Z","evidence":{"target_origin":"https://hive.example","path":"/api/bee/identity","http_status":"503","remote_code":"unavailable","response_body":"{\"error\":{\"code\":\"unavailable\",\"message\":\"maintenance\"}}"}}}}
+```
+
+Go `DesktopFailure` 只用于设备／供给请求边界，内部 Cause 支持 Unwrap 且不序列化；既有配对过期、撤销、写入结果未知的 typed cause 判断继续有效。HTTP 正文仅投影公开 `error.code/message`，过滤凭据、配对令牌、Bearer、秘密赋值及 URL 用户信息、query、fragment，不传完整敏感响应。非公开 JSON／正文超限时报告实际观察长度与限额或投影要求，明确注明省略；HTTP 读取仍最多观察 65,537 字节并以 65,536 为限额。消息限额为 32,768 字节。TS 状态存储未翻译的 `UiFailure`，由呈现层按 App 语言显示具体原因、影响、已证实的处理入口和同一提示中的安全原始证据；未知码不猜原因。
+
+`DeviceView` 包含 `state`（unbound/pending/draining/expired/bound；共同事务另支持 pairing，见下文）及适用的 `hive`、`name`、`verification_url`、`user_code`、`expires_at`、`poll_interval_seconds`、公开 `identity`。身份字段为 `id/name/owner_id/owner_email`。凭证和配对令牌只留在 Go；配置路径固定为 `UserConfigDir()/tokhive/bee-desktop.json`，不接受前端传入路径。兑换结果未知时保留原事务和凭证，先重新核验身份，禁止用新事务覆盖。
+
+Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只在 pending/draining 时打开同 Hive 的 `/devices/pair?code=…`；若恰好已绑定或过期，直接返回最新状态。系统启动器最长等待 5 秒，超时回收自有启动器并报告打开结果未确认。浏览器确认后须手动回到 Bee，没有账号自动回跳。
+
+Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最长 10 秒；OpenAI official 检测及官方能力查询最多 10 分钟，仍服从调用方取消。Rust 普通请求排队最多 15 秒，首次写出字节后再计算执行预算，普通业务为 15 秒、`account_detect` 为 10 分钟、ping 为原有 5 秒。握手、明确退出与更新继续遵守既有整体期限。
+
+未发送的超时请求返回 `REQUEST_QUEUE_TIMEOUT` 并移除，不会迟发。已发送超时返回 `RESPONSE_TIMEOUT`，保留 Ready、owned Bee 和原请求；部分帧继续剩余字节，不重放或交错。原请求继续占用既有最多 16 项预算及平台通道／共享屏障，直到真实回复。迟到成功或合法业务失败仍严格校验并消费，但不再交给已经超时的调用方；未知／重复 ID、错误实例、非法回复、真实进程退出与管道损坏仍终止会话。
+
+本地 Tauri 命令 `bridge_pending_requests` 返回 `{instance,requests:[{id,method,platform}]}`，只列已超时仍在途的请求，不向 Go 发探测。完成事件 `bee://request-settled` 携带 `{instance,id,method,platform}`，不包含业务结果；无平台时为 null。前端先等待原请求结束，再按资源使用 2/4/8/16/30 秒退避（抖动为基准的 80%–100%）；成功恢复正常 10 秒核对。事件丢失通过本地在途回读补偿。有效 429 Retry-After 可延长等待，认证／TLS／非法数据或未知失败停止该资源自动重试。写命令不自动重放。
+
+超时证据增加 `request_id,method,platform,phase,queue_ms,execution_ms,fully_sent,in_flight`；HTTP 证据增加 `method,phase,elapsed_ms,retry_after_seconds,failure_kind`。所有值仍为经过封闭枚举或非负整数验证的字符串，无平台证据为 `none`。请求阶段日志通过有界队列输出固定 `BEE_DESKTOP_EVENT` 前缀；Rust 仅接纳已知事件及严格白名单，拒绝重复字段，拥堵可丢日志但不阻塞业务。原始 stderr 不作为安全日志转发。详见[重试设计](../superpowers/specs/2026-11-03-desktop-request-retry-design.md)。
+
+请求含有唯一有效 ID 时，未知字段或重复非 ID 字段的错误仍关联原 ID。无法可靠解码请求信封、重复 ID 字段有歧义，或编码后的响应超过上限时，错误响应的 `id` 为空字符串。输出超长只发送小型 `FRAME_TOO_LARGE` 错误帧并终止会话；父进程应将这种响应作为协议错误处理，不能据此完成某个正常请求。
+
+## 取消与资源所有权
+
+首次设备业务访问由共享桌面会话获取 `bee-desktop.json` 的跨进程锁，持有至管理进程结束。配对、供给、账号查询复用该会话；配置互斥只保护本地读写，网络等待不持有它。配对事务单独串行，不阻塞另一平台供给查询。管理入口关闭会话前等待现有操作退出；关闭后不得重新打开。CLI 的配置文件及锁生命周期不变。
+
+`desktopbridge.Run(ctx, in, out, diagnostics, version)` 不关闭外部传入的流；返回前会等待自己创建的响应写入 goroutine 结束。输入 EOF 正常结束，context 取消保留 `context.Canceled` / `context.DeadlineExceeded`，底层读写错误保留错误链。响应队列有界，只允许一个输出写入者，避免响应交错和无界积压。
+
+通用 `io.Reader` / `io.Writer` 没有中断方法。**调用方必须在取消时解除正在阻塞的 Read / Write**；单独取消 context 不能保证唤醒任意外部流。这里不通过遗留读取 goroutine 假装已经退出。
+
+命令入口拥有其标准管道：Unix 将继承的管道复制为 close-on-exec、非阻塞描述符，并注册 Go runtime poller；取消时关闭自有输入和输出，唤醒空闲读取和堵塞写入。普通文件不修改描述符标志。Windows 保留 Go 标准管道关闭行为，其既有原生验收进度以 P0 验证记录为准；本次设备增量未新增 Windows 原生证据。输出失败也会触发命令入口取消并回收本次资源。
+
+关闭、EOF、信号和错误路径均不枚举系统进程，不查杀外部 Bee。同时回收 owned 贡献与官方登录进程；不等待 Hive 在途任务完成。
+
+## S1 运行交接契约
+
+公共数据定义在 `agent/desktop_runtime_types.go`；跨语言样本为 `desktopbridge/testdata/runtime-contract.json`。S1-T3 已接通运行查询、开始、停止及内部网络配置；S1-T4 已接通官方登录；S1-T6 接通仅供 Rust 启动生命周期调用的 runtime_restore。
+
+Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-login-contract.md)对应 `authorize_progress`／`authorize_open`；仅实现扩展接口时在 `authorize_cancel` 后按顺序声明这两项 capability。`authorize_start/status/cancel` 请求及 `{operation}` 返回保持不变；静态样本不能代替真实登录验收。
+
+| 数据／动作 | 固定字段及语义 |
+| --- | --- |
+| `DesktopNetworkConfig` | revision、connect_proxy；默认0/空代理；只允许可信Rust内部配置 |
+| `DesktopOperation` | id、kind（select/clear_selection/start/stop/confirm_change/authorize）、platform（null或openai/claude）、state（pending/running/reconciling/succeeded/failed/cancelled；authorize 另允许 unknown）、revision、error；id是本机动作引用，不是Hive confirmation_id |
+| `DesktopRuntimeSnapshot` | run_id（可空，本次贡献运行）、revision、network_revision、observed_at、local（stopped/starting/waiting/running/stopping/failed）、connection（disconnected/connecting/connected/reconnecting/rejected/occupied）、connection_detail（必填可空）、platforms、operation、stop_receipt、legacy_stop（必填可空）、startup_progress（可选，见启动恢复扩展）。桥envelope的instance仍为管理进程实例 |
+| platforms | 按平台索引；每项含account（既有账号快照）、supply（既有供给或null，null表示未获得可信读回）、selection_revision。不用空供给冒充正常/可接单 |
+| `runtime_start` | expected_revision、resume_platforms；仅本次用户明确允许恢复的平台 |
+| `runtime_stop` | expected_revision、reason（user_stop/app_exit/update/network_change）；reason由固定Rust入口生成；网页只可明确停止 |
+| `runtime_snapshot` | 无参数；长操作的operation和receipt通过快照核对，不能持续占用普通请求 |
+| `runtime_configure_network` / `runtime_restore` | 仅Rust内部使用，generic bridge_request继续只允许ping；恢复必须核对保存意图和新鲜暂停状态 |
+| `DesktopStopReceipt` | workers_stopped、intent_saved、session_clean；仅证明Go本机运行，还需Rust证明管理进程已wait/reap与配置锁释放 |
+| `authorize_start` | platform、source（directory/store）、expected_revision；不接收程序或命令参数 |
+| `authorize_status` / `authorize_cancel` | operation_id；返回DesktopOperation，取消不能撤销已完成的官方登录 |
+
+新数值修订使用非负JS安全整数，时间为UTC RFC3339，状态枚举封闭；旧instance/run_id/revision不能覆盖新结果。未知值和结果未确认时保持不可恢复。
+
+账号文件v3保留提醒entries和scopes（SHA256键由Hive origin、owner、device构造）。每scope包含明确身份、selections、pending_operations、runtime_intent、session及一次转换记录legacy_stop；不保存token。严格兼容旧v1/v2，首次写入升级前分别原样保存到受保护`.v1.bak`或`.v2.bak`；备份失败、未知字段/版本、身份范围不一致、损坏及保护失败均不覆盖原件。读取不会自动升级。运行必须先保存活动会话，只有可信结束才标clean；active与clean不能同时为真。
+
+## 验证命令
+
+### S2 诊断、网络与后台问题事实
+
+下表属于 Go sidecar 的固定能力；参数同样拒绝未知、重复、缺失及错类型字段。日志、普通偏好和 OS 适配由 Rust 提供，不增加 Go 任意文件／Shell 入口。
+
+| 请求 method | params | result／边界 |
+| --- | --- | --- |
+| `diagnostics_start` | `{}` | `{report:DesktopDiagnosticReport}`；显式启动异步检查，复用 S1 会话、已选来源和有效网络；不读默认 `bee.json`，不配对、续期、暂停、同步或启动贡献 |
+| `diagnostics_snapshot` | `{id}` | `{report:DesktopDiagnosticReport}`；id 为当前实例保留的 48 位小写十六进制报告引用；只读已有结果，不重跑 |
+| `diagnostics_cancel` | `{id}` | `{report:DesktopDiagnosticReport}`；取消当前检查并保留部分结果；终态报告不回退为运行中 |
+| `network_status` | `{}` | `{network:{effective_revision,effective_proxy,paths}}`；仅内存中的实际生效策略，不访问设备配置或网络；没有 Rust 保存值 |
+| `network_test` | `{proxy}` | `{network_test:{observed_at,checks}}`；proxy 必须显式字符串；只测试本机代理 CONNECT 和两个固定官方只读 GET，不接收端点、账号或凭证 |
+| `notification_snapshot` | `{}` | `{notifications:{facts,observed_at,network_revision}}`；仅供 Rust 后台调度，读取 S1 公开问题及持久提醒门禁；不刷新官方／Hive，不消费应用内 Notify 脉冲，也不写提醒记录 |
+
+对应业务错误分别为 `DIAGNOSTICS_OPERATION_FAILED`、`NETWORK_OPERATION_FAILED`、`NOTIFICATIONS_OPERATION_FAILED`，位于 `result.error`；错误参数为 envelope 的 `INVALID_REQUEST`。业务错误及未知报告不破坏后续 ping。
+
+`DesktopDiagnosticReport` 精确字段为 `id,instance,run_id,network_revision,started_at,finished_at,state,checks`。id 为 48 位小写十六进制，instance 为当前管理进程 32 位引用，run_id 为 S1 运行引用或 null；修订为非负 JS 安全整数，时间为 UTC RFC3339。state 为 running/completed/cancelled；running 的 finished_at 为 null，终态必须有完成时间。每实例最多保留 8 份，至多一份正在运行。
+
+每项检查为 `id,platform,status,observed_at,code,evidence,next_action`。全局 device/runtime/hive/proxy 的 platform 为 null；每个平台各有 source/authorization/quota/capabilities/account/supply，共 16 项。status 为 pass/warning/fail/skipped，code 和 evidence 使用公开白名单；未知检查不转成通过。next_action 仅 overview/accounts/diagnostics/settings，不是命令或 URL。前端按 instance、run_id、network_revision 拒绝过期上下文；切页不新建报告。
+
+`paths` 精确字段为 relay/official/hive/official_login：relay 为 direct/local_proxy；official 为 `openai=<path>;claude=<path>`，每项 path 为 direct/environment_proxy/local_proxy；Hive 固定 process_environment，官方登录固定 official_client。只公开路径类别，不回显环境代理原文。测试 checks 固定依次为 local_proxy/openai_read_only/claude_read_only，每项含 id/status/message/path/http_status；status 为 ok/failed/skipped，HTTP 状态为整数或 null。401/403/429 只能证明收到 HTTP 响应，不能证明账号、额度或贡献可用。
+
+通知 facts 最多 8 项，每项为 `identity,platform,problem,active,eligible,recovered`：identity 为 64 位不透明摘要，problem 仅 authorization_rejected/confirmation_required/offline/quota_exhausted。eligible 必须同时 active，recovered 不可同时 active；来源、邮箱、完整账号指纹及自定义通知正文不进入此通道。Rust 持有独立 OS 提交去重记录，提交已接受不等于用户已读。
+
+### S2 Rust typed 命令
+
+以下是 WebView invoke 契约；未注明时参数为空对象，multiword 参数由 Tauri 使用 camelCase。generic `bridge_request` 继续只允许 ping。
+
+| 命令 | invoke 参数／返回 |
+| --- | --- |
+| `preferences_read` / `preferences_save` | `{}` / `{request:{expected_revision,preferences}}`；返回 `{preferences,error}`；preferences 为 version:1、revision、language(system/zh/en)、theme(system/light/dark)、notifications_enabled、autostart_desired、proxies |
+| `diagnostics_start` / `diagnostics_snapshot` / `diagnostics_cancel` | `{}` / `{id}` / `{id}`；返回原管理桥 envelope，由 Rust 与 TS 双重核验报告 |
+| `diagnostic_logs` | `{query:{cursor,limit,module,platform,level}}`；返回 `{entries,next_cursor,truncated}`；limit 为 1..200，其余过滤项或 cursor 可为 null |
+| `diagnostics_export` | `{reportId,includeLogs}`；返回 `product,app_version,bee_version,os,arch,report,logs,truncated,truncated_sections`；报告须属于当前实例，页面选择范围后复用下载完成／取消／失败回执 |
+| `network_test` / `network_snapshot` | `{proxy}` 返回 Go envelope；`{}` 返回 `{saved_revision,effective_revision,saved_proxy,effective_proxy,paths,pending_restart,error}` |
+| `network_save_proxy` / `network_apply_saved` | `{proxy,origin,expectedRevision}` 保存并返回偏好快照，origin 为未配对草稿的 canonical origin 或 null；`{confirmed:true}` 明确确认可能中断任务后应用，返回网络快照 |
+| `notification_permission` / `notification_enable` | 查询 / 用户明确触发请求权限；返回 granted/denied/prompt，普通保存偏好不申请权限 |
+| `notification_delivery_status` / `notification_retry` | 查询返回 `{error,retryable_count,pending_count,uncertain_count,check_sequence}`，分别表示当前故障、可重试数、已安排数、结果未知数及本次 App 已完成的后台检查序号；主动重试返回 `{retryable_count}`（本次接受数，零项不写入账本）。已接受和结果未知的提交不会重发，不清除 S1 问题 |
+| `autostart_status` / `autostart_set` | `{}` / `{enabled}`；返回 `{desired,registered,error}`；registered 可为 null，登记失败不能按 desired 宣称成功 |
+| `hive_open` | 不接受 URL 参数；由已保存 canonical origin 打开站点根地址，不携带凭证或配对码 |
+
+proxies 每项为 `{origin,device_scope,connect_proxy}`，device_scope 为 null 时仅未配对草稿；核验设备后才关联范围。专用代理仅空值或无认证、显式回环 IP 的 HTTP 地址和合法端口（允许根路径 `/`），不支持 SOCKS、localhost 名称、远端主机、认证、其他路径或 query。保存与生效分离，运行中保存显示 pending_restart；应用时复用 S1 停止证明、内部配置和保存意图恢复，不能解除原暂停或未决换号。
+
+普通偏好位于当前 OS 用户配置目录 `tokhive/desktop-preferences.json`，不导入 demo localStorage；默认语言／主题跟随系统，通知及自启关闭。OS 提交记录另存 `tokhive/notification-delivery.json`。安全诊断日志位于 App 日志目录 safe-diagnostics，每份最多 5 MiB、最多 3 份；仅记录固定结构的公开证据，不复制原始 stderr。导出在 Rust 组装且最多 5 MiB，以 truncated/truncated_sections 显式标记截断，沿用 1 MiB sidecar 帧限制。
+
+### 安全只读 smoke
+
+Node 24 下可执行 `node desktop/scripts/smoke-accounts.mjs <Bee绝对路径>` 以及 `node desktop/scripts/smoke-experience.mjs <Bee绝对路径> [证据目录]`。当前两脚本静态列表仍为 29 项，缺少 `runtime_enable_presence`，须同步后才能用于当前完整构建；这项差异登记在[验收状态](acceptance.md)。前者只取默认来源及 refresh:false 公开快照，后者另核对 S1 内存快照、网络策略、参数拒绝、未知报告业务错误及 owned 子进程回收，不执行配对／检测凭证／恢复／贡献／有效网络测试。
+
+体验脚本以独立临时工作目录运行：Linux 将子进程 XDG_CONFIG_HOME、Windows 将 APPDATA 指向空临时目录，才额外执行未配对诊断及空通知快照，只允许产生临时配置锁。macOS 的 Go `os.UserConfigDir()` 不使用 XDG_CONFIG_HOME，因此脚本明确跳过会打开设备会话的命令；不重定向 HOME，不读取用户的 `~/Library/Application Support/tokhive`。JSON 证据记录覆盖、跳过、二进制 SHA256 与正常退出；协议 smoke、浏览器 fixture 均不替代 doctor 真实配对路径、实际代理、日志下载或原生 OS 通知／自启／窗口验收。
+
+### Go 协议回归
+
+从 Bee 实施检出运行：
+
+```sh
+go test ./desktopbridge ./cmd/bee -count=1
+go test -race ./desktopbridge ./cmd/bee -count=1
+go run ./cmd/bee version
+go run ./cmd/bee help
+```
+
+协议测试覆盖分段/合并帧、帧长度边界、错误输入、重复未完成 ID、实例关联、版本不匹配、流所有权、取消和底层 I/O 错误。命令测试创建真实测试子进程，验证握手、拒绝贡献操作、shutdown、父输入 EOF、空闲输入/堵塞输出时的中断、CLI 帮助与版本一致，以及工作目录配置样本未改变。
+
+本次设备配对的自动测试与实际子进程证据来自 macOS arm64；交叉编译不替代 Windows/Linux 的行为测试。设备增量的使用、验证及原生图形缺口见[设备配对说明](device-pairing.md)。既有 P0 三端进度仍以 [当前验收状态](acceptance.md)为准，不能用本增量宣称三端产品已通过。
+
+供给公开字段、暂停持久语义、前端串行刷新和未知写结果处理见[平台状态与暂停恢复说明](supply-control.md)。`DesktopSupply` 精确字段为 `hive/device_id/platform/paused/ready/reasons/checked_at`；凭证不进入前端。`checked_at` 为 UTC RFC3339。`ready` 当且仅当原因数组为空，`paused` 当且仅当含 `manually_paused`；两平台原因不能串线。PUT 后 GET 回读失败或目标值不符均报告结果未确认，重新核对仅 GET。
+
+### S1 接入操作（已实现）
+
+`account_action.select` 异步返回 `account.operation`，通过 `account_snapshot` 轮询。选择前持久记录意图、暂停该平台并读回，再保存来源；成功状态为 `selection.state=selected`，不代表已经注册或贡献。`operation` 必须存在，可为 null；账号操作 kind 为 select／clear_selection／confirm_change／authorize，state 为 pending／running／reconciling／succeeded／failed／cancelled；仅 authorize 的原中断结果另允许 unknown。
+
+`clear_selection` 只清除尚未注册且未运行的本地选择，使用当前快照 revision 与 confirmed=true；candidate_ref 可以是空字符串，不要求官方凭证仍有效。select／confirm_change 继续要求当前候选引用。完整移除仍不可用。若暂停已证实、Hive 身份/代次未变而官方来源发生变化，原接入操作以失败结束并保持暂停，允许用户重新检测确认；无法确认暂停或 Hive 归属时保留未决操作，刷新只查询、不重发 PUT。
+
+
+### 原生自动服务增量（2026-11-05）
+
+`DesktopAccountSnapshot.login_maintenance` 和 `DesktopRuntimeSnapshot.legacy_stop` 均为必需 nullable 字段；运行 local 增加 waiting。维护包含原 authorize operation、phase、source、started_at、can_recheck、error；原操作 unknown 仅表示原登录终态无法证明，维护 restored 不改变它。跨进程原维护只通过账号快照核对，不将旧 ID 冒充当前实例的 status/cancel job。
+
+旧停止转换 can_recheck 允许继续用户已批准的原迁移，已 submitted 只 GET；未提交步骤重验后可首次提交。登录维护 can_recheck 只读核验原过程，不重放暂停／登录。完整枚举、恢复保护与前端变更边界见[原生自动服务接口](native-auto-service.md#前端接口变更)。Go／Rust／TS 及模拟响应同步严格拒绝缺失／未知字段。
+
+### S1-T3 真实运行与同步屏障
+
+`runtime_snapshot` 返回 `{runtime:DesktopRuntimeSnapshot}`；`runtime_start`／`runtime_stop`／`runtime_restore` 返回 `{operation:DesktopOperation}`；`runtime_configure_network` 返回 `{configured:true}`。业务错误为 `RUNTIME_OPERATION_FAILED`，不使管理桥失效。前端调用分别为 `{}`、`{request:{expected_revision,resume_platforms}}`、`{expectedRevision}`；停止理由由 Rust 固定为 `user_stop`，内部理由及代理配置不开放为网页命令。
+
+`connection_detail` 为 `null` 或 `{failure,retry,next_retry_at}`，三个字段均必填。`retry` 为 `idle|attempting|scheduled|halted`；仅 `scheduled` 必须有实际核心等待定时器的 UTC RFC3339 `next_retry_at`，其余必须为 null。时间已过去的快照只表示上次观察，桌面不据此发起重试。
+
+`failure` 可空；非空时严格包含 `code,stage,occurred_at,message,evidence`。`code` 固定为 `dns_failed|tls_failed|connection_refused|timeout|http_rejected|connection_closed|synchronization_failed|ownership_unconfirmed|unknown_failure`；`stage` 为 `connect|heartbeat|synchronize`；`occurred_at` 为本次失败的 UTC RFC3339 时间。分类只依赖实际错误类型、HTTP 响应与所属调用环节，不解析日志或英文句子。`message` 保留脱敏原因链，最多32768字节；超限明确报告实际字节数和限额。
+
+`evidence` 是字符串映射，键仅允许 `target_origin,path,http_status,remote_code,response_body,owned_session,consecutive_conflicts`，每值最多32768字节。origin 只包含 `http(s)://authority`，不得带凭据、路径（包括根路径 `/`）、查询、片段、反斜杠或空白；HTTPS 允许远端主机，HTTP 仅允许原始主机为 `localhost` 或标准回环 IP（包括 IPv4 映射的 IPv6 回环）。证据保留 Go 生产者的原始主机大小写、显式默认端口及合法 IPv6／国际域名拼写，消费者不得要求 WHATWG 规范化结果与原文相等；不改写绑定及身份配置。三层共享 `desktopbridge/testdata/connection-origin-contract.json`，Go 验证其中详情由真实观察函数产生，Rust／TS 直接消费。path 仅为固定 Bee API 路径。当前生产者只提取 Hive 已知公开错误码，不复制可能包含凭据／账号数据的任意响应正文，也不从 HTTP 401/403 推断远端领域码。缺少远端码时保留实际 HTTP 状态与脱敏底层错误。Go、Rust、TS 同步拒绝未知字段、枚举、无效日期及重试／时间矛盾。
+
+等待和下一次尝试保留最近失败，确认连接后清除，主动停止立即清除。详情跟随外层 run_id/revision，旧运行、旧连接和停止中的回调不能覆盖当前状态。非终端的平台同步失败使用 `retry=idle`，不改 WebSocket 的 connected 状态，不清除其他平台供给；另一平台同步成功也不能证明该错误恢复。现有平台读取／重试及核心退避策略不变。无底层错误的连接结束只报告连接已结束，不猜断线原因。CLI 的 nil 观察者仍沿用原有重连及409处理。
+
+真实 Go 连接与授权维护运行于管理子进程。同步回执核对当前连接租约、账号指纹、代次和凭证修订，并与持久选择／run_id核对；手动恢复同样核验。来源切换先取消并等待原平台维护，再启用新来源，成功仍保持暂停。一个平台失败不阻塞另一个平台；首次409停止，不抢占连接。
+
+手动暂停的修订优先于正在准备的开始请求。重连为每个平台登记可取消的启动等待器，慢暂停不会永久漏启维护。停止即使保存失败也取消并等待授权维护、转发处理和失败上报退出；receipt如实报告，不能替代 Rust 对管理子进程的 wait/reap。普通窗口关闭仍沿用原有后台行为。
+
+### 官方登录动作（S1-T4）
+
+`authorize_start` 参数必须是 `{platform,source:{directory,store},expected_revision}`；`authorize_status`／`authorize_cancel` 必须是 `{operation_id}`。所有返回 `{operation:DesktopOperation}`，业务错误为 `AUTHORIZE_OPERATION_FAILED`。Go 严格拒绝 source 内外的未知、重复、缺失字段；directory 必须明确为 null 或绝对目录，修订必须为非负安全整数，operation_id 必须为当前管理实例拥有的 48 位小写十六进制引用。
+
+Tauri 调用分别为 `{request:{…}}`、`{operationId}`、`{operationId}`，只提供这三个固定命令。启动返回 pending，后续查状态；账号快照也包含同一平台操作。status／cancel 的 ID 必须与回执相同，前端拒绝旧 instance、修订倒退和跨平台回执。取消请求本身可能仍返回 running，回收完成后才返回 cancelled。真实登录的十分钟期限不占用桥请求；版本和 help 探测各五秒，输出不进入桥。支持范围及尚未完成的真实登录验收见 [AI 账号管理](ai-accounts.md)。
+
+`account_action.confirm_change` 返回原有账号 operation；持久操作 ID 独立于私有 Hive confirmation_id。确认提交前保持原候选 revision，确认后按目标指纹及严格下一代 generation 核对。submitted 之后不会重发 confirm POST；尚未提交的未决操作只有再次显式确认可继续，快照刷新不会代替该确认。成功前完成实际同步，平台仍暂停；临时连接不能转发贡献请求。
+
+
+### S1-T6 恢复与退出
+
+Rust 在管理进程 ready 后先只读核对资格和原持久尝试；通过后才提交本次 `runtime_restore({})`，失败不自动循环。管理连接确定失败时可人工受控重连，旧 owned Child 必须先回收。Go 在返回开始操作前保存本次活动会话，自动恢复核验已选账号及正常结束证据；无账号为 waiting，旧停止意图按一次性迁移处理；恢复时重新核验设备、来源、授权和 Hive 暂停状态。同身份官方 token 更新可以重新同步，手动暂停和换号后暂停不被恢复覆盖。
+
+`runtime-session` 是设备配置同目录的受保护恢复标记，仅保存本次 run 或 `clean`，不含凭证。在读取 `ai-accounts.json` 前保存它，使账号文件本身不可读／不可写时仍保留未完成恢复的证据。本轮启动恢复不接管上次非 clean 标记；必须取得旧 worker／远端准备保护退役证明后另行处理，不能通过普通开始或删除记录绕过启动准入。用户停止的内存意图不会被随后 app_exit 覆盖；只有当前实例持有的会话证明可以标 clean。保存失败仍回收本机 worker，返回未确认结果；无法在整个存储介质不可写时保证持久记录新的停止操作，不能把该情况报告成功。
+
+`Bridge::prepare_owned_exit(OwnedExitReason::{AppExit,Update})` 冻结新请求及尚未发送的排队操作，核对同 instance、run_id、stop operation 和修订的停止回执，最多等待12秒后仍必须回收 owned Child。调用方取消不会取消该清理任务。仅保存意图、会话clean和Child wait/reap均被证实后返回四项为真的 `OwnedExitReceipt`；配置锁随该子进程退出释放。更新准备不释放 App 单实例，普通退出在回收后才释放。该回执不代表 Hive 在途任务已排空。
+
+账号换号待核对状态中，`operation.error.code=confirmation_not_submitted` 表示持久阶段证明确认 POST 尚未提交；界面可以在来源候选仍新鲜、修订一致且用户再次确认时继续原操作。其他 reconciling／结果未知状态只允许查询，不能重新确认。错误码为跨语言结构化字段，界面不解析英文错误文案判断提交状态。
+
+### 用户确认的设备恢复（T4b）
+
+新增有序 capabilities：`device_recovery_prepare`、`device_recovery_confirm`、`device_recovery_status`，排列在 `device_context`／`runtime_verify` 之后。prepare/status 的 params 必须为 `{}`；confirm 必须且只能包含 `{operation_id,expected_revision,decision}`，operation_id 为48位小写十六进制、expected_revision 为正安全整数，decision 为 `begin_pairing|adopt_owner|renew_expired`。重复字段、null、未知字段及不合法阶段在写入前拒绝。
+
+成功返回 `{recovery:DeviceRecoveryView}`，失败返回现有 `{error:{code,message,details?}}`。DeviceRecoveryView 的7个必填字段是 `operation_id,revision,phase,old_identity,new_identity,pairing,failure`，后四者按下述规则可为null。身份摘要严格为 `{id,name,owner_id,owner_email}`；pairing严格为 `{code,verification_url,expires_at}`，URL只能为已保存同源 Hive 的 `/devices/pair?code=<code>`；failure复用结构化错误及安全证据。绝不返回配对token或新旧设备凭据。URL只供显式 `device_open` 使用，不记录到日志。
+
+phase 固定为 `awaiting_confirmation|creating|creation_unknown|pending|draining|redeeming|redemption_unknown|awaiting_owner_confirmation|saving|completed|expired|blocked`。pending/draining/redeeming/redemption_unknown 必须有原pairing；awaiting_owner_confirmation/saving/completed 必须有已验证new_identity。redeeming/redemption_unknown仅证明已记录兑换尝试及尚待身份核对，不能声称已观察到更细的网络阶段。saving已有可信new_identity和必要owner确认，但本地配置保存／核验或事务收尾尚未完成。阶段不是新的供给ready事实。
+
+prepare只保存待确认记录，不创建配对；begin_pairing只适用于awaiting_confirmation，adopt_owner只适用于awaiting_owner_confirmation，renew_expired只适用于Hive明确确认过期且没有未决兑换的expired。已经接受的相同三元确认请求只返回现状；旧revision、其他decision、冲突事务明确拒绝。Status只查询／首次兑换已获网页批准的原事务／保存结果，不创建配对、不重放未知POST。不同owner在重启后仍须明确确认。
+
+首次配对继续使用 `device_begin`／`device_status`，不调用三条恢复命令。DeviceView新增可选 `recovery:DeviceRecoveryView`，仅表示purpose=initial_pairing的同一事务，old_identity必须为null。兼容状态pending/draining/expired/bound分别要求phase为pending/draining/expired/completed；bound.identity必须与completed.new_identity相同。其他阶段使用新增 `state:'pairing'`，此状态必须有合法recovery，且不能伪装成bound。pending/draining的顶层code／URL／expiry必须与事务pairing完全一致，事务URL必须与顶层hive同源；未知字段／敏感字段／矛盾组合均拒绝。公开阶段用于解释当前事实，不能按message猜测。
+
+两个目的共用固定配置目录下的0600原子文件 `bee-desktop-recovery.json`，不改变CLI localState schema。创建／兑换尝试标记在POST前持久化；未知结果只查询原token／新credential身份。无token创建未知保留阻塞，现有Hive协议不能取回raw token；人工核对／导出入口不等于恢复已完成。旧redeeming按未知处理，缺少创建标记的旧残留不能当作未发送。Poll approved不证明先前未知兑换未提交；本机时间不证明远端过期。
+
+恢复与运行启动、账号写入、官方登录、供给写入、网络应用共用核心admission屏障；进程锁仍只归管理进程所有，不持普通状态mutex等待网络。旧scope未决账号操作、未退出worker或不干净运行guard必须先按原机制核对，不能清空以便重绑。新设备不会继承旧选择、运行意图、内存来源或已应用代理；旧scope原记录保留。恢复完成保持stopped，StartupGate仍需显式startup_recheck；重查不Restore，不清更新完整性门禁。没有token的未知创建仍存在协议与人工闭环验收缺口。
+
+凭据恢复的显式网页打开同样复用无URL参数的 Tauri `device_open`，TS以 `recoveryOpen()` 接收严格 `{recovery}`（首次配对的 `open()` 仍接收 DeviceView）。仅旧凭据明确撤销、恢复事务仍为 pending/draining、前后本机context一致且配对URL与固定当前Hive同源时打开原事务；保留更新/数据完整性和owned-exit保护。阶段或上下文变化明确拒绝，失败不清除事务，前端可保留已显示的原配对URL。completed重复status只有仍匹配已显式核验的实例/绑定/网络时保留ready，活跃事务及绑定变化仍要求startup_recheck，绝不runtime_restore。
+
+
+## 2026-11-03 最终组合验收
+
+以 `TEST_BEE_BIN` 显式选择最终桌面 Bee，在非 root Linux 的临时 `XDG_CONFIG_HOME` 中执行 JSONL 私有桥；未改 HOME、未启动完整 GUI。真实 Hive/PostgreSQL 用独立 schema。首次身份 503、断连、超时分别校验 `unavailable`、`connection_closed`、`timeout`，同时严格核对 `device_identity`、该次 observed_at、目标 origin/path 及适用的 HTTP 公开响应证据。
+
+创建/兑换提交后的响应丢失以数据库增量及真实 POST 次数证明；两个重启期间只续查原事务，保存失败保留旧配置与已验证日志，最终恢复仍停止。无 token 的创建未知安全阻止第二次创建，但当前协议不能查回 token，人工恢复闭环仍待完成。详见[台账](interaction-clarity-validation.md)及 `t10-linux-broker-race-v6.log`。
+
+原生 `native_locale_sync` 成功回执严格为 null，locale/revision/sequence 由偏好同步调用携带。旧测试替身已补该回执，不能把缺少命令产生的语言同步警告解释为设备配对失败。
+
+最终核心连接使用相同外部二进制，经真实HTTP核对401/403/409/503/EOF；另外在Docker internal网络与专属临时数据库里真实upgrade后断socket及listener，观察connection_refused与实际next_retry_at，再恢复listener，确认同run重新connected、手动暂停保持且resume PUT=0，最后完整停止回执。`t10-linux-runtime-isolated-v9.log/json`保存网络inspect与无默认路由证据；这些连接事实不证明官方账号维护或上游请求已通过。Hive验收提交为`bf05ea6`＋`d0e979b`，gitlink仍为`ab8140a`。
+
+
+### 启动恢复只读准入与本地记录（2026-11-11）
+
+`runtime_inspect_recovery` 是可选 Go capability，有序排列在 `device_context` 后、`runtime_verify` 前；参数为 `{}`，只供 Rust 启动协调器使用。返回：
+
+```json
+{"recovery":{"state":"eligible","binding_revision":1,"previous_run_id":null,"account_revision":"cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc","intent_running":true,"failure":null}}
+```
+
+`state` 为 `eligible|idle|blocked`；仅 blocked 带 `{code,message}` failure。`previous_run_id` 是 32 位小写十六进制或 null；`account_revision` 是已保存账号 scope 的规范 JSON SHA256 或 null；eligible 要求原意图有效且范围摘要存在。检查在 Go lifecycle／runtime／设备会话锁内读取，产生本次预留、worker 和外部请求前完成；资格不能替代实际 Restore 的再校验。未声明能力时不提交恢复。
+
+Rust 新增固定 Tauri 命令 `startup_query({})`、`startup_retry({})`，保留 `startup_status({})`、`startup_recheck({})`。query 只核对原记录与当前资格，读取失败独立返回，保留最初 startup.failure；retry 串行进入连接与启动准入，结果未知时不得换 ID 重做。已核验的同一 ready 实例重复 retry 返回现有结果。业务 recheck 不恢复运行意图或清除升级标记。
+
+StartupStatus 保留 `state/failure/instance/binding_revision/network_revision/observed_at/revision`，增加 `can_retry`、`recovering` 和可选 `progress:{stage,operation_id,completed,total}`。stage 为 connecting／checking_previous／checking_device／preparing_accounts／confirming_service；operation_id 为 48 位小写十六进制或 null；计数成对存在，仅 preparing_accounts 可用，`0 <= completed <= total <= 2` 且 total 非零。Go runtime 快照可选 `startup_progress`，必须绑定当前 operation；失败准备不计入 completed。Rust／TS 严格解码，不用计时器推进阶段或估算百分比。
+
+`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。没有运行真实用户账号恢复；[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+
+
+### 旧会话安全结束扩展（2026-11-11）
+
+新增可选 Go capability `runtime_reconcile_recovery`，在 `runtime_inspect_recovery` 后；固定空参数 `{}`，仅供 Rust 启动协调使用，前端无直接透传入口。返回相同 recovery 结构。它会产生远端结束会话的副作用，不能归为只读检查：先保存原请求，再查／推进同一 Hive 操作；不启动 relay、不上传凭据、不修改暂停。退出／升级准入在调用前后仍复核。
+
+RecoveryInspection 增可选 `binding_identity`（64 位小写 hex，原设备绑定 SHA-256，不含会话代）和 `retirement_id`（48 位小写 hex）。后者仅在持久结束证明与当前完整退休 scope、设备和 epoch 一致时返回。普通状态检查不会签发证明。
+
+Go 私有原子文件 `desktop-session-retirement.json` 保存原 scope、原 guard、设备绑定摘要、请求和 proof，完成后保留；新结束操作先归档至 `desktop-session-retirement-<id>.json`。任何部分保存中断均沿用同 ID、同 proof 继续，未完成记录继续阻塞普通 Restore。
+
+Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要的旧未知记录继续阻塞。
+
+Hive 未支持时返回 `RECOVERY_SERVER_UNSUPPORTED`；任务未排空为 `RECOVERY_REMOTE_DRAINING`，原回执待核对为 `RECOVERY_RETIREMENT_UNCONFIRMED`，明确 HTTP 拒绝为 `RECOVERY_RETIREMENT_CONFLICT`，本地原记录损坏为 `RECOVERY_RETIREMENT_INVALID`。排空／未知时显示“继续恢复”，仍使用原操作；不支持、冲突或损坏时保留诊断，隐藏无效核对入口。查询不会清除继续恢复资格。
+
+Hive HTTP 结构、迁移与部署顺序见[配套补丁](integrations/hive-session-retirement/README.md)。设备配置新增可选 `runtime_epoch`；旧客户端严格解码与降级限制同见该文档。上文“凭据恢复不改变 CLI localState”只指设备配对恢复扩展，本次会话隔离会增加该字段。

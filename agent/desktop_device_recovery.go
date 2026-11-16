@@ -125,7 +125,7 @@ func readDesktopRecovery(s *desktopDeviceSession) (*desktopRecoveryRecord, error
 }
 func validateDesktopRecovery(r desktopRecoveryRecord) error {
 	origin, err := hiveOrigin(r.Hive)
-	if err != nil || origin != r.Hive || r.Version != 1 || !slices.Contains([]string{"initial_pairing", "credential_recovery"}, r.Purpose) || !desktopHexID(r.OperationID, 24) || !desktopSafeRevision(r.Revision) || r.Revision < 1 || !desktopSafeRevision(r.BindingRevision) || !slices.Contains(desktopRecoveryPhases, r.Phase) || !deviceCredentialPattern.MatchString(r.Credential) || r.Accepted == nil || len(r.Accepted) > 128 {
+	if err != nil || origin != r.Hive || r.Version != 1 || !slices.Contains([]string{"initial_pairing", "credential_recovery", "local_recovery"}, r.Purpose) || !desktopHexID(r.OperationID, 24) || !desktopSafeRevision(r.Revision) || r.Revision < 1 || !desktopSafeRevision(r.BindingRevision) || !slices.Contains(desktopRecoveryPhases, r.Phase) || !deviceCredentialPattern.MatchString(r.Credential) || r.Accepted == nil || len(r.Accepted) > 128 {
 		return errors.New("recovery record metadata rejected; required=version 1, canonical Hive, safe revisions, known purpose/phase and protected credential")
 	}
 	if strings.TrimSpace(r.Name) == "" || utf8.RuneCountInString(r.Name) > 80 || strings.IndexFunc(r.Name, unicode.IsControl) >= 0 {
@@ -185,7 +185,7 @@ func validateDesktopRecovery(r desktopRecoveryRecord) error {
 		return errors.New("recovery adoption phase lacks verified new identity")
 	}
 	for _, a := range r.Accepted {
-		if a.OperationID != r.OperationID || a.ExpectedRevision < 1 || a.ExpectedRevision >= r.Revision || !slices.Contains([]string{"begin_pairing", "adopt_owner", "renew_expired"}, a.Decision) {
+		if a.OperationID != r.OperationID || a.ExpectedRevision < 1 || a.ExpectedRevision >= r.Revision || !slices.Contains([]string{"begin_pairing", "adopt_owner", "renew_expired", "continue_checking", "restart_pairing", "cancel_pairing"}, a.Decision) {
 			return errors.New("recovery accepted confirmation metadata rejected")
 		}
 	}
@@ -415,7 +415,7 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 	if err != nil {
 		return DeviceRecoveryView{}, err
 	}
-	if r == nil || r.Purpose != "credential_recovery" {
+	if r == nil {
 		if decision == nil {
 			return DeviceRecoveryView{}, recoveryFailure("DEVICE_RECOVERY_NONE", "device_recovery_status", errors.New("no credential recovery transaction exists; prepare explicitly first"))
 		}
@@ -435,22 +435,39 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 		return DeviceRecoveryView{}, err
 	}
 	defer finish()
-	if err = d.recoveryOldScope(s, r.OldIdentity, r.Hive); err != nil {
-		return DeviceRecoveryView{}, err
+	if r.Purpose != "local_recovery" {
+		if err = d.recoveryOldScope(s, r.OldIdentity, r.Hive); err != nil {
+			return DeviceRecoveryView{}, err
+		}
 	}
 	if err = d.checkRecoveryBinding(s, r); err != nil {
 		return DeviceRecoveryView{}, err
 	}
 	if decision != nil {
+		if r.Failure != nil && r.Failure.Code == "RECOVERY_EVIDENCE_UNRESOLVED" {
+			return DeviceRecoveryView{}, errors.New("unattributed original recovery requires administrator verification; new writes remain blocked")
+		}
 		if slices.Contains(r.Accepted, *decision) {
 			return r.view(), nil
 		}
 		if decision.OperationID != r.OperationID || decision.ExpectedRevision != r.Revision {
 			return DeviceRecoveryView{}, fmt.Errorf("recovery confirmation revision conflict: actual=%d expected=%d operation_match=%t", r.Revision, decision.ExpectedRevision, decision.OperationID == r.OperationID)
 		}
-		allowed := decision.Decision == "begin_pairing" && r.Phase == "awaiting_confirmation" || decision.Decision == "adopt_owner" && r.Phase == "awaiting_owner_confirmation" || decision.Decision == "renew_expired" && r.Phase == "expired" && !r.RedeemAttempted
+		protocolDecision := (decision.Decision == "renew_expired" && r.Phase == "expired" && !r.RedeemAttempted) || slices.Contains([]string{"continue_checking", "restart_pairing", "cancel_pairing"}, decision.Decision) && r.Phase != "saving" && r.Phase != "completed" && r.Phase != "awaiting_owner_confirmation"
+		allowed := protocolDecision || decision.Decision == "begin_pairing" && r.Phase == "awaiting_confirmation" || decision.Decision == "adopt_owner" && r.Phase == "awaiting_owner_confirmation" || decision.Decision == "renew_expired" && r.Phase == "expired" && !r.RedeemAttempted
 		if !allowed {
 			return DeviceRecoveryView{}, fmt.Errorf("recovery decision rejected: phase=%s; decision must match the authorized stage", r.Phase)
+		}
+		if protocolDecision {
+			r.Accepted = append(r.Accepted, *decision)
+			r.Revision++
+			if err = saveDesktopRecovery(s, r); err != nil {
+				return DeviceRecoveryView{}, err
+			}
+			if err = d.pairingDecision(ctx, s, r, decision.Decision); err != nil {
+				return DeviceRecoveryView{}, err
+			}
+			return r.view(), nil
 		}
 		if decision.Decision == "adopt_owner" {
 			r.ConfirmedOwner = r.NewIdentity.OwnerID
@@ -487,6 +504,33 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 }
 func (d *DesktopDevice) checkRecoveryBinding(s *desktopDeviceSession, r *desktopRecoveryRecord) error {
 	state, err := s.read()
+	if r.Phase != "completed" {
+		raw, e := readDesktopAccountBytes(filepath.Join(filepath.Dir(s.path), "bee-recovery-source.json"))
+		if e == nil {
+			var marker map[string]string
+			if json.Unmarshal(raw, &marker) == nil && len(marker) == 2 && marker["operation_id"] == r.OperationID {
+				digest, e := recoveryFileDigest(s.path)
+				if e == nil && digest == marker["source_digest"] {
+					return nil
+				}
+			}
+		} else if !errors.Is(e, os.ErrNotExist) {
+			return e
+		}
+	}
+	if r.Purpose == "local_recovery" && r.Phase != "completed" {
+		if err == nil && r.NewIdentity != nil && state.Credential == r.Credential && state.Identity != nil && *state.Identity == *r.NewIdentity && state.Hive == r.Hive {
+			return nil
+		}
+		digest, e := recoveryFileDigest(s.path)
+		if e != nil {
+			return e
+		}
+		if digest == r.OldBinding {
+			return nil
+		}
+		return errors.New("recovery original configuration changed; current files retained")
+	}
 	if err != nil {
 		return err
 	}
@@ -524,31 +568,20 @@ func (d *DesktopDevice) sendRecoveryPairing(ctx context.Context, s *desktopDevic
 	if err := d.checkRecoveryBinding(s, r); err != nil {
 		return err
 	}
-	state := localState{Hive: r.Hive, Name: r.Name, Credential: r.Credential}
-	sum := sha256.Sum256([]byte(r.Credential))
-	var pair beewire.Pairing
-	err := desktopCall(ctx, state, "/api/bee/pairings", http.MethodPost, "", beewire.StartPairing{Name: r.Name, CredentialHash: hex.EncodeToString(sum[:])}, &pair)
-	if err == nil {
-		err = validateDesktopPairing(state, pair, true)
-	}
-	if err != nil {
-		return r.change(s, "creation_unknown", err)
-	}
-	r.Pairing = &pair
-	if err = r.change(s, "pending", nil); err != nil {
-		return err
-	}
-	if r.Purpose == "initial_pairing" {
-		state.Pairing = &pair
-		if err = s.save(state); err != nil {
-			return err
-		}
-	}
-	return nil
+	return d.sendProtocolPairing(ctx, s, r)
 }
 func (d *DesktopDevice) advanceRecovery(ctx context.Context, s *desktopDeviceSession, r *desktopRecoveryRecord) error {
 	if err := d.checkRecoveryBinding(s, r); err != nil {
 		return err
+	}
+	if p, e := readPairingProtocol(s, r); e != nil {
+		return e
+	} else if p != nil && r.Phase != "saving" && r.Phase != "completed" && r.Phase != "awaiting_owner_confirmation" {
+		return d.advancePairingProtocol(ctx, s, r, p)
+	} else if p == nil && r.Phase != "saving" && r.Phase != "completed" && r.Phase != "awaiting_owner_confirmation" {
+		if decision := latestProtocolDecision(r); decision != nil {
+			return d.pairingDecision(ctx, s, r, decision.Decision)
+		}
 	}
 	if slices.Contains([]string{"awaiting_confirmation", "awaiting_owner_confirmation", "completed", "blocked", "expired"}, r.Phase) {
 		return nil
@@ -558,17 +591,7 @@ func (d *DesktopDevice) advanceRecovery(ctx context.Context, s *desktopDeviceSes
 		return d.saveRecoveryIdentity(ctx, s, r)
 	}
 	if r.CreateAttempted && r.Pairing == nil {
-		// No request or new observation occurred. Preserve the original failure
-		// (including its timestamp) instead of replacing it on every read.
-		if r.Phase == "creation_unknown" && r.Failure != nil {
-			return nil
-		}
-		r.Phase = "creation_unknown"
-		r.Revision++
-		if r.Failure == nil {
-			r.fail(errors.New("pairing creation result unknown without token; verify the original request in the Hive console and export diagnostics; existing protocol cannot retrieve its token"))
-		}
-		return saveDesktopRecovery(s, r)
+		return d.observeLegacyPairing(ctx, s, r)
 	}
 	if !r.CreateAttempted {
 		return r.change(s, "blocked", errors.New("pairing creation was not authorized by a current explicit confirmation; no POST sent"))
@@ -677,6 +700,15 @@ func (d *DesktopDevice) saveRecoveryIdentity(ctx context.Context, s *desktopDevi
 	if r.NewIdentity == nil || identity != *r.NewIdentity || r.ConfirmedOwner != identity.OwnerID {
 		return errors.New("new device identity changed before protected save; adoption blocked")
 	}
+	if r.Purpose == "local_recovery" {
+		protocol, err := readPairingProtocol(s, r)
+		if err != nil {
+			return err
+		}
+		if err = retirePairingRecoveryGuard(s, r, protocol); err != nil {
+			return r.change(s, "saving", recoveryFailure("PAIRING_ADMIN_REQUIRED", "recovery_old_runtime", err))
+		}
+	}
 	state.Identity = &identity
 	if err := s.save(state); err != nil {
 		return err
@@ -759,12 +791,10 @@ func (d *DesktopDevice) initialRecoveryOperate(ctx context.Context, s *desktopDe
 		}
 	}
 	if r.Phase == "expired" && begin && !r.RedeemAttempted {
-		r.Pairing = nil
-		r.CreateAttempted = false
-		r.Phase = "creating"
-		if err := r.change(s, "creating", nil); err != nil {
+		if err := d.pairingDecision(ctx, s, r, "renew_expired"); err != nil {
 			return DeviceView{}, err
 		}
+		return initialRecoveryView(r, state), nil
 	}
 	if !r.CreateAttempted && begin {
 		if err := d.createRecoveryPairing(ctx, s, r); err != nil {

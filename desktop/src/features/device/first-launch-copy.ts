@@ -51,6 +51,21 @@ const english:Record<string,string>={
  '未取得原请求的配对凭据。请在 Hive 控制台核对设备记录，当前不能安全地重新生成配对码。':'The original pairing credentials have not been received. Check device records in the Hive console; a new pairing code cannot safely be generated yet.',
  'Hive 已确认配对码过期。':'Hive has confirmed that the pairing code expired.',
  '设备绑定暂时无法继续，请查看具体原因并导出诊断。':'Device binding cannot continue. Review the specific cause and export diagnostics.',
+ "等待 Hive 核对旧设备的任务、结算和遗留操作": "Waiting for Hive to check the old device’s tasks, settlement and unfinished operations",
+ "Bee 保留了原请求，正在核对 Hive。重新配对会先结束旧申请，再生成新码。": "Bee kept the original request and is checking with Hive. Pairing again closes that request before generating a new code.",
+ "Bee 沿原请求核对结果；网页已批准不代表本机已经保存。": "Bee checks the original request. Web approval does not confirm that this device has saved the result.",
+ "继续核对原请求": "Continue checking original request",
+ "重新配对": "Pair again",
+ "取消本次重绑": "Cancel this rebinding",
+ "确认取消重绑": "Confirm cancellation",
+ "确认重新配对": "Confirm pairing again",
+ "取消后 Bee 停止后续替换；Hive 保留已完成的旧操作处理，旧设备不会自动恢复接单。": "Cancellation stops further replacement. Hive keeps completed recovery work, and the old device does not automatically accept new tasks.",
+ "Bee 先向 Hive 确认结束旧申请。若旧绑定已经成功，Bee 会恢复原成功结果，不再生成新码。": "Bee first confirms closure of the original request with Hive. If binding already succeeded, Bee restores that result.",
+ "重新绑定 Hive": "Rebind Hive",
+ "确认原 Hive 地址。Bee 会先验证能否恢复原凭据；无法恢复时，再由你在 Hive 网页确认旧设备。剩余本地记录会保留，贡献保持停止。": "Confirm the original Hive address. Bee first tries to restore valid credentials. If that fails, confirm the old device on Hive. Remaining local records are preserved and contribution stays stopped.",
+ "正在核对恢复…": "Checking recovery…",
+ "核对并准备恢复": "Check and prepare recovery",
+ "Hive 无法确认上方任务的完成或结算证据。请将任务编号和失败原因交给 Hive 管理员核查；证据补齐后，再继续核对原请求。重绑可能一直受阻。": "Hive cannot verify completion or settlement evidence for these tasks. Give their IDs and failure details to the Hive administrator. Continue checking the original request once evidence is restored. Rebinding may remain blocked.",
 };
 
 /** Feature copy follows the existing application locale without modifying shared dictionaries. */

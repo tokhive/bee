@@ -95,6 +95,7 @@ pub fn run() {
  commands::startup_retry,
  commands::startup_query,
  commands::device_context,
+commands::device_recovery_start,
 commands::device_recovery_prepare,
 commands::device_recovery_confirm,
 commands::device_recovery_status,

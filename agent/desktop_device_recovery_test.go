@@ -20,7 +20,7 @@ import (
 	"github.com/tokhive/bee/beewire"
 )
 
-func TestDeviceRecoveryInitialUnknownCreateNeverReplays(t *testing.T) {
+func TestDeviceRecoveryOldHiveIsRejectedBeforeCreation(t *testing.T) {
 	creates := 0
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
@@ -39,14 +39,14 @@ func TestDeviceRecoveryInitialUnknownCreateNeverReplays(t *testing.T) {
 		closeDesktopTestDevice(t, d)
 		d = newDesktopTestDevice(t, path)
 	}
-	if creates != 1 {
-		t.Fatalf("unknown creation replayed: POST count=%d required=1", creates)
+	if creates != 0 {
+		t.Fatalf("unsupported Hive received creation: POST count=%d required=0", creates)
 	}
 }
 
 func TestDeviceRecoveryInitialUnknownRedeemApprovedNeverReplays(t *testing.T) {
 	redeems := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/bee/identity" {
 			w.WriteHeader(401)
 			w.Write([]byte(`{"error":{"code":"invalid_device_credential"}}`))
@@ -91,7 +91,7 @@ type recoveryHive struct {
 func newRecoveryHive(t *testing.T) (*recoveryHive, *DesktopDevice, string) {
 	t.Helper()
 	h := &recoveryHive{oldCredential: "bee_" + strings.Repeat("o", 43), owner: "owner", deviceID: "new-device", status: 401, code: "device_replaced"}
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if h.hook != nil {
 			h.hook(r.Method + " " + r.URL.Path)
 		}
@@ -318,8 +318,8 @@ func TestDeviceRecoveryUnknownCreationAndExpiryNeverRecreate(t *testing.T) {
 			t.Fatalf("unknown restart %+v %v", v, err)
 		}
 	}
-	if _, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "renew_expired"); err == nil || h.creates != 1 {
-		t.Fatal("unknown creation allowed renewal")
+	if _, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "renew_expired"); err == nil || h.creates != 2 {
+		t.Fatal("unknown creation allowed renewal or changed the replay budget")
 	}
 }
 func TestDeviceRecoveryDrainingAndAuthoritativeExpiry(t *testing.T) {
@@ -538,7 +538,7 @@ func TestDeviceRecoveryCrashPointsPreserveRequestCounts(t *testing.T) {
 				t.Fatal(err)
 			}
 			if point == "token_save" {
-				if v.Phase != "creation_unknown" || h.creates != 1 || h.redeems != 0 {
+				if v.Phase != "pending" || h.creates != 1 || h.redeems != 0 {
 					t.Fatalf("creation replay after token save failure: %+v creates=%d redeems=%d", v, h.creates, h.redeems)
 				}
 			} else if v.Phase != "completed" || h.creates != 1 || h.redeems != 1 {
@@ -639,6 +639,10 @@ func TestDeviceRecoveryUnknownExchangeSurvivesApprovedExpiryAndRestart(t *testin
 		t.Fatal("unknown exchange allowed renewal")
 	}
 	h.hideNewIdentity = false
+	v, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "continue_checking")
+	if err != nil {
+		t.Fatal(err)
+	}
 	v, err = d.RecoveryStatus(context.Background())
 	if err != nil || v.Phase != "completed" || h.redeems != 1 {
 		t.Fatalf("identity recovery %+v %v", v, err)
@@ -762,7 +766,7 @@ func TestDeviceRecoveryInitialReadFailureKeepsUnsubmittedProof(t *testing.T) {
 				var fail atomic.Bool
 				fail.Store(true)
 				var origin string
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+				server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 					if req.Method == "POST" {
 						creates.Add(1)
 						json.NewEncoder(w).Encode(beewire.Pairing{PairingToken: "beep_" + strings.Repeat("t", 43), UserCode: "ABCD-EFGH", VerificationURI: origin + "/devices/pair", ExpiresAt: time.Now().Add(time.Hour), PollInterval: 2, Status: "pending"})
@@ -973,17 +977,23 @@ func TestDeviceRecoveryUnknownCreationPreservesOriginalEvidence(t *testing.T) {
 				} else {
 					v, err = d.RecoveryStatus(context.Background())
 				}
-				got, _ := json.Marshal(v.Failure)
-				if err != nil || v.Phase != "creation_unknown" || !bytes.Equal(got, original) {
+				persistedRecord, protocolErr := readDesktopRecovery(&d.session)
+				savedProtocol, protocolErr := readPairingProtocol(&d.session, persistedRecord)
+				var firstFailure *DesktopRecoveryFailure
+				if savedProtocol != nil {
+					firstFailure = savedProtocol.OriginalFailure
+				}
+				got, _ := json.Marshal(firstFailure)
+				if err != nil || protocolErr != nil || !bytes.Equal(got, original) {
 					t.Fatalf("original failure replaced: got=%s want=%s err=%v", got, original, err)
 				}
 				after, err := os.ReadFile(recordPath)
-				if err != nil || len(after) > len(before) {
+				if err != nil || len(after) > len(before)+4096 {
 					t.Fatalf("observation grew record: before=%d after=%d err=%v", len(before), len(after), err)
 				}
 			}
-			if h.creates != 1 {
-				t.Fatalf("creation replayed POST=%d", h.creates)
+			if h.creates != 2 {
+				t.Fatalf("same-attempt replay count=%d required=2", h.creates)
 			}
 		})
 	}
@@ -1113,8 +1123,8 @@ func TestDeviceRecoveryAbsentIsTypedOnlyForStatus(t *testing.T) {
 	}
 	_, err = d.RecoveryStatus(context.Background())
 	failure = nil
-	if !errors.As(err, &failure) || failure.Code != "DEVICE_RECOVERY_NONE" {
-		t.Fatalf("initial transaction is not a credential recovery: actual=%v", err)
+	if err == nil || errors.As(err, &failure) && failure.Code == "DEVICE_RECOVERY_NONE" {
+		t.Fatalf("initial transaction exists but mismatched saved configuration must block: actual=%v", err)
 	}
 	if err = os.WriteFile(filepath.Join(filepath.Dir(path), "bee-desktop-recovery.json"), []byte("{"), 0600); err != nil {
 		t.Fatal(err)

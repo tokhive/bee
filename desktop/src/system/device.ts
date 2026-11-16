@@ -15,9 +15,11 @@ export interface DeviceContext {hive:string;name:string;device_id:string|null;ow
 export interface DeviceContextFailure {binding_revision:number;failure:UiFailure}
 export type DeviceRecoveryPhase='awaiting_confirmation'|'creating'|'creation_unknown'|'pending'|'draining'|'redeeming'|'redemption_unknown'|'awaiting_owner_confirmation'|'saving'|'completed'|'expired'|'blocked';
 export interface DeviceRecoveryView {operation_id:string;revision:number;phase:DeviceRecoveryPhase;old_identity:DeviceIdentity|null;new_identity:DeviceIdentity|null;pairing:{code:string;verification_url:string;expires_at:string}|null;failure:{code:string;message:string;details?:{check:string;observed_at:string;evidence:Record<string,string>}}|null}
+export type RecoveryDecision='begin_pairing'|'adopt_owner'|'renew_expired'|'continue_checking'|'restart_pairing'|'cancel_pairing';
 export interface DeviceClient {
+ recoveryStart?(hive:string,name:string):Promise<DeviceRecoveryView>;
  recoveryPrepare():Promise<DeviceRecoveryView>;
- recoveryConfirm(operation_id:string,expected_revision:number,decision:'begin_pairing'|'adopt_owner'|'renew_expired'):Promise<DeviceRecoveryView>;
+ recoveryConfirm(operation_id:string,expected_revision:number,decision:RecoveryDecision):Promise<DeviceRecoveryView>;
  recoveryStatus():Promise<DeviceRecoveryView>;
  recoveryOpen():Promise<DeviceRecoveryView>;
  context?():Promise<DeviceContext|DeviceContextFailure>;
@@ -59,7 +61,6 @@ export function decodeDeviceReply(reply: unknown): DeviceView {
   }
   if(view.recovery!==undefined){
    const r=decodeDeviceRecoveryReply({result:{recovery:view.recovery}});
-   if(r.old_identity!==null)return invalid('initial pairing cannot contain an old binding');
    const expected=r.phase==='completed'?'bound':r.phase==='pending'?'pending':r.phase==='draining'?'draining':r.phase==='expired'?'expired':'pairing';
    if(view.state!==expected)return invalid('initial pairing state conflicts with transaction phase');
    if(view.state==='bound'&&['id','name','owner_id','owner_email'].some(k=>(view.identity as Record<string,unknown>)[k] !== (r.new_identity as unknown as Record<string,unknown>)?.[k]))return invalid('initial pairing identity differs from completed transaction');
@@ -82,6 +83,7 @@ export function decodeDeviceContext(reply:unknown):DeviceContext {
 }
 export function createDeviceClient(invoke: DeviceInvoke): DeviceClient {
   return {
+    async recoveryStart(hive,name){return decodeDeviceRecoveryReply(await invoke('device_recovery_start',{hive,name}));},
     async recoveryPrepare(){return decodeDeviceRecoveryReply(await invoke('device_recovery_prepare'));},
     async recoveryConfirm(operation_id,expected_revision,decision){return decodeDeviceRecoveryReply(await invoke('device_recovery_confirm',{operationId:operation_id,expectedRevision:expected_revision,decision}));},
     async recoveryStatus(){return decodeDeviceRecoveryReply(await invoke('device_recovery_status'));},

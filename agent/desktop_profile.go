@@ -61,7 +61,7 @@ func DesktopProfileMethodAllowed(mode DesktopProfileMode, method string) bool {
 		return true
 	}
 	switch method {
-	case "hello", "ping", "shutdown", "device_context", "device_status", "device_begin", "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status", "runtime_inspect_recovery", "runtime_verify", "desktop_switch":
+	case "hello", "ping", "shutdown", "device_context", "device_status", "device_begin", "device_recovery_start", "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status", "runtime_inspect_recovery", "runtime_verify", "desktop_switch":
 		return true
 	case "runtime_configure_network", "network_status":
 		return mode == DesktopProfileActivate

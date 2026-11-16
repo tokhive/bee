@@ -70,6 +70,7 @@ test('all registered native commands receive frontend arguments matching the Rus
   };
   const instance='b'.repeat(32), id='a'.repeat(48);
   const device=createDeviceClient(invoke);
+  await sample(()=>device.recoveryStart!('https://hive.example','Test Mac'));
   for (const action of [()=>device.status(),()=>device.begin('https://hive.example','Test Mac'),()=>device.open(),()=>device.context!(),()=>device.recoveryPrepare(),()=>device.recoveryStatus(),()=>device.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);
   const switching=createHiveSwitchClient(invoke);
   for(const action of [()=>switching.snapshot(),()=>switching.start('https://target.example','Target Mac'),()=>switching.observe(),()=>switching.cancel(),()=>switching.continue(),()=>switching.quit('continue_waiting'),()=>switching.target.status(),()=>switching.target.begin('','Target Mac'),()=>switching.target.open(),()=>switching.target.recoveryPrepare(),()=>switching.target.recoveryStatus(),()=>switching.target.recoveryConfirm(id,1,'begin_pairing')]) await sample(action);

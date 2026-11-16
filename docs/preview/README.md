@@ -18,6 +18,20 @@ python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
 
 固定访问地址：<http://127.0.0.1:1496/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
 
+## 待评审：首次启动服务故障与身份核对（2026-11-16）
+
+[打开本轮待评审稿](draft.html?scene=setup-service-blocked&theme=dark&size=narrow) · [Hive 已恢复但身份未确认](draft.html?scene=setup-service-available) · [当前主预览](index.html?scene=setup-unknown) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-154817-setup-service-failure/draft.html?scene=setup-service-blocked)。
+
+用户同意先补组合故障预览，再按认可结果同步主预览与正式实现。本轮 HTML 待评审。工作入口是当前 Bee checkout 的 `docs/preview/draft.html`；下方早期 worktree 限定为历史记录。主预览 `index.html` 保持原内容。
+
+故障统一放入居中的设备设置内容区，主状态为“绑定结果待确认”；分别保留 HTTP 503 和设备身份不足以应用网络设置的事实。一个主要按钮打开 Hive 控制台，次要操作检查原绑定结果。叹号详情保留两项证据、独立启动状态核对及诊断入口。Hive 可访问不代表绑定已确认，不生成新配对码、不开始贡献。
+
+在原草稿 525 个入口上新增 9 个可直接选择的子场景，共 534 个：服务不可用、检查绑定中、检查后仍不可用、服务恢复但身份未确认、错误详情、启动核对中、启动核对后身份未确认、控制台、诊断。此前草稿内容保留；它与主预览的场景集合不同，后续纳入主预览时只合入本轮认可部分。
+
+已在浏览器验证新增入口、两种窗口尺寸（820 × 680、1080 × 700）、浅深色、无横向溢出、叹号和 Escape 焦点返回、外观/尺寸切换保留详情、原绑定及启动核对、控制台返回、诊断返回与模拟 JSON 导出、重置和切场景取消旧检查；原配对网址异常入口作定点回归。历史稿独立打开复查。全部为静态预设，不访问真实 Hive，不代表真实故障修复或恢复流程验收。
+
+启动当前预览：在 Bee 根目录运行 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview`，打开 <http://127.0.0.1:1497/draft.html?scene=setup-service-blocked&theme=dark&size=narrow>。产品资源全部内联；冻结稿带齐本轮对照 HTML，早期版本的进一步历史跳转可能需要档案库 15500 服务。
+
 ## 待评审：首次绑定异常页操作层级（2026-11-13）
 
 [打开本轮待评审稿](draft.html?scene=setup-unknown&theme=light&size=wide) · [直接查看叹号详情](draft.html?scene=setup-unknown-details&theme=dark&size=narrow) · [本轮完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261113-110233-pairing-error-actions/draft.html?scene=setup-unknown)。用户已确认文字布局；本轮 HTML 待评审，主预览继续使用已认可版本。

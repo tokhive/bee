@@ -352,7 +352,7 @@ class MenuTest(unittest.TestCase):
         self.assertIn('🐝', out)
         code, out = self.terminal([], args=['help'])
         self.assertEqual(code, 0, out)
-        self.assertIn('bee start --hive URL', out)
+        self.assertIn('bee start [--hive URL]', out)
         self.assertNotIn('请选择 [', out)
 
     def test_menu_requires_both_input_and_output_terminals(self):
@@ -366,7 +366,7 @@ class MenuTest(unittest.TestCase):
                                         stderr=subprocess.PIPE, timeout=5)
                 self.assertEqual(result.returncode, 0, result.stderr)
                 if terminal_input:
-                    self.assertIn(b'bee start --hive URL', result.stdout)
+                    self.assertIn(b'bee start [--hive URL]', result.stdout)
         finally:
             os.close(master)
             os.close(slave)
@@ -375,7 +375,7 @@ class MenuTest(unittest.TestCase):
         for args in ([], ['help'], ['--help']):
             result = subprocess.run([self.binary] + args, env=self.env, input='', text=True, capture_output=True, timeout=5)
             self.assertEqual(result.returncode, 0, result.stderr)
-            self.assertIn('bee start --hive URL', result.stdout)
+            self.assertIn('bee start [--hive URL]', result.stdout)
 
 if __name__ == '__main__':
     unittest.main(verbosity=2)

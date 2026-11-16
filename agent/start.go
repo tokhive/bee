@@ -20,7 +20,7 @@ Interactive management:
   bee                       open the numbered management menu in a terminal
 
 Get started (run it again any time to start Bee):
-  bee start --hive URL       pair this machine, choose the accounts to supply, and run
+  bee start [--hive URL]     pair this machine, choose the accounts to supply, and run
 
 Everyday:
   bee status                 what Bee is connected to and whether each account takes work
@@ -30,7 +30,7 @@ Everyday:
   bee version                show this build
 
 The steps bee start runs for you:
-  bee login --hive URL       pair this machine with your Hive account
+  bee login [--hive URL]     pair this machine with your Hive account
   bee setup                  find the subscriptions signed in here and choose which to supply
   bee run                    stay connected and serve work
 
@@ -58,7 +58,7 @@ func start(ctx context.Context, args []string, out io.Writer) error {
 	flags := flag.NewFlagSet("bee start", flag.ContinueOnError)
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file")
-	origin := flags.String("hive", "", "Hive address, as shown on the Hive's Devices page; needed only the first time")
+	origin := flags.String("hive", "", "Hive address, needed only the first time (default "+DefaultHive+")")
 	name := flags.String("name", "", "device name shown in Hive (default: this machine's host name)")
 	yes := flags.Bool("yes", false, "supply every account found without asking")
 	if err := flags.Parse(args); err != nil {
@@ -77,6 +77,7 @@ func start(ctx context.Context, args []string, out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	*origin = hiveInput(*origin)
 	if *origin != "" && state.Hive != "" {
 		want, err := hiveOrigin(*origin)
 		if err != nil {
@@ -93,7 +94,7 @@ func start(ctx context.Context, args []string, out io.Writer) error {
 			hive = state.Hive
 		}
 		if hive == "" {
-			return fail("BEE-START-HIVE", "")
+			hive = DefaultHive
 		}
 		fmt.Fprint(out, "\nStep 1 of 3: pair this machine with Hive\n\n")
 		login := []string{"login", "--config", *configPath, "--hive", hive}

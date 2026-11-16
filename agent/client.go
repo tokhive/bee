@@ -46,6 +46,19 @@ func (e *apiFailure) Error() string {
 	return fmt.Sprintf("Hive request failed (HTTP %d)", e.Status)
 }
 
+// DefaultHive is the Hive a new device pairs with when no address is given.
+// Builds for another Hive override it: -ldflags "-X main.defaultHive=https://hive.example".
+var DefaultHive = "https://console.tokhive.ai"
+
+// hiveInput turns a typed Hive address into a URL, reading a bare host as HTTPS.
+func hiveInput(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw != "" && !strings.Contains(raw, "://") {
+		return "https://" + raw
+	}
+	return raw
+}
+
 func hiveOrigin(raw string) (string, error) {
 	u, err := url.Parse(raw)
 	if err != nil || u.Host == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Opaque != "" || (u.Path != "" && u.Path != "/") {

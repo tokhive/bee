@@ -20,6 +20,12 @@ python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 
 ## 待评审：设备重新绑定完整交互（2026-11-16）
 
+### 后续重审（讨论中）
+
+用户已确认两项调整：取消本稿新增的独立设备页，复用概览设备区承载设备资料和低频恢复入口，保留已有“切换 Hive”；常驻恢复入口改名“修复设备绑定”，确需网页重新确认归属时显示“请重新绑定”和“重新绑定 Hive”。普通连接故障仍提供与原因匹配的处理入口，如“重试连接”。
+
+恢复机制文档中的“重新绑定 Hive”仍指包含优先恢复原绑定的完整流程；以上是面向用户的动作名称与展示时机调整，不改变恢复机制。目前 HTML 仍是下面记录的上一轮待评审稿，尚未落实这两项调整；接下来讨论恢复内容的承载方式与替换影响的告知时机。
+
 [正常设备页](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与配对码](draft.html?scene=rebind-pair&size=narrow) · [停止核对](draft.html?scene=rebind-paused) · [取消确认](draft.html?scene=rebind-cancel-dialog) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device)。
 
 依据本会话已确认线框制作；HTML 仍待视觉与交互评审，尚未纳入主预览或正式应用。正常设备页把「重新绑定 Hive」放入右上角更多菜单，绑定故障和配置损坏时直接提供入口。沿用页面内状态提示，不将错误堆到窗口顶部。37 个新增直接入口，加上 9 个旧服务故障链接兼容映射，草稿共 571 个入口；旧故障方案保留在历史快照。

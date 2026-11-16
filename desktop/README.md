@@ -138,3 +138,7 @@ npm --prefix desktop run tauri -- dev
 固定依赖、目标架构、内置 Bee 来源、包签名及更新来源由构建和发布脚本校验。开发包使用 ad-hoc 签名；发布需另外满足平台签名、公证、可信更新及干净安装验证，见[发布说明](../docs/desktop/release.md)。
 
 [桌面 CI](../.github/workflows/desktop.yml)和 hosted 工作流分别记录实际运行环境；不能用交叉编译、模拟 IPC、Xvfb 或不同源码版本的结果代替最终三端系统验收。未完成项目统一列在[验收状态](../docs/desktop/acceptance.md)。
+
+## 历史预览与开发档案
+
+旧版静态设计、组件冻结包、证据及阶段计划由独立 `bee-design-archive` 仓库保存；日常开发与测试继续使用本目录现有源码和 fixture。见[归档入口与备份](../docs/preview/archive.md)。

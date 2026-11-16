@@ -6,19 +6,33 @@
 
 整个 App 使用同一个主入口。2026-11-09 用户已认可连续流程新版，首次登录、已登录账号接入、重新登录／授权恢复、读取修复、换号及相关准备重试的步骤与完成反馈已纳入主预览。首次启动设备绑定向导及错误详情、等待文案已于 2026-11-12 认可并纳入。三步添加 OpenAI 账号向导及叹号错误详情已于 2026-11-13 认可并纳入。同时保留 Hive 切换的 17 个入口；当前 536 个入口用于静态评审，不代表全部真实接口已验收。
 
-页面使用模拟数据，不接真实登录或业务。[当前待评审稿 draft.html](draft.html?scene=setup-unknown) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
+页面使用模拟数据，不接真实登录或业务。[当前待评审稿 draft.html](draft.html?scene=rebind-device) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
 
-本轮按用户要求仅在 `bee-desktop-ui` worktree 维护；本 worktree 的 `docs/preview/index.html` 是当前工作入口。
+当前开发 worktree：`/Users/dayong/.codex/worktrees/bee-setup-failure-preview/bee`，分支 `codex/bee-setup-failure-preview`。本轮只更新待评审稿；`index.html` 仍为既有已认可主预览。下方其它 worktree 和旧端口属于历史记录。
 
 在本 worktree 根目录运行：
 
 ```sh
-python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
+python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 ```
 
-固定访问地址：<http://127.0.0.1:1496/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
+固定访问地址：<http://127.0.0.1:1497/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
 
-## 待评审：首次启动服务故障与身份核对（2026-11-16）
+## 待评审：设备重新绑定完整交互（2026-11-16）
+
+[正常设备页](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与配对码](draft.html?scene=rebind-pair&size=narrow) · [停止核对](draft.html?scene=rebind-paused) · [取消确认](draft.html?scene=rebind-cancel-dialog) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device)。
+
+依据本会话已确认线框制作；HTML 仍待视觉与交互评审，尚未纳入主预览或正式应用。正常设备页把「重新绑定 Hive」放入右上角更多菜单，绑定故障和配置损坏时直接提供入口。沿用页面内状态提示，不将错误堆到窗口顶部。37 个新增直接入口，加上 9 个旧服务故障链接兼容映射，草稿共 571 个入口；旧故障方案保留在历史快照。
+
+本轮包括原绑定正常／恢复、缺少地址、配对码与有效期、原请求继续核对、Hive 网页明确确认、旧任务与结算等待、停止自动核对、替换与保存、取消确认及未知结果、绑定已提交后的取消核对、完成后重新接入 AI 账号。HTTP 503 提供重试连接；只有明确兼容性证据才提示更新 Bee 或升级 Hive；记录缺失提供管理员处理与诊断出口。正常往返设备页保留原账号页面及暂停状态，替换成功进入现有空账号页。
+
+所有操作都是固定模拟数据；Hive 网页在模态窗口中模拟，需输入配对码并明确确认。确认网址只使用 Hive 同源 `/devices/pair`，不承诺自动填码。更新检查预设为暂无兼容版本；不连接真实更新服务。网页、诊断与剪贴板仅包含示例数据。关闭网页弹窗继续原请求；预览页刷新按 URL 场景起点恢复，不能据此宣称真实应用重启持久化已验收。
+
+验证：46 个相关直接入口能渲染且无横向溢出；9 个直接选中的进行中阶段保持静态。浏览器演练正常检查、错误配对码校验、网页明确确认到替换完成、取消终态、继续保存、确认前换码／确认后续查、账号页往返仍暂停、切场景取消旧任务；检查主题与尺寸保留弹窗输入、菜单键盘与焦点、深浅色紧凑布局。主预览和正式代码未修改。
+
+修改前复用字节一致的 `20261116-154817-setup-service-failure`；交付版本冻结至 `20261116-165613-rebind-interaction`，含全部对照 HTML。来源为本节上方标明的 worktree 与分支。
+
+## 历史讨论：首次启动服务故障与身份核对（2026-11-16，已被上方方案替代）
 
 [打开本轮待评审稿](draft.html?scene=setup-service-blocked&theme=dark&size=narrow) · [Hive 已恢复但身份未确认](draft.html?scene=setup-service-available) · [当前主预览](index.html?scene=setup-unknown) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-154817-setup-service-failure/draft.html?scene=setup-service-blocked)。
 

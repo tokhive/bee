@@ -3,8 +3,9 @@ package bee
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
-	"path/filepath"
+	"path"
 	"slices"
 	"strconv"
 	"strings"
@@ -12,7 +13,11 @@ import (
 )
 
 func observeDesktopAuthorizationGroup(group int) (desktopAuthorizationGroupStatus, error) {
-	entries, err := os.ReadDir("/proc")
+	return observeDesktopAuthorizationProcGroup(group, os.DirFS("/proc"), syscall.Getpgid)
+}
+
+func observeDesktopAuthorizationProcGroup(group int, proc fs.FS, getpgid func(int) (int, error)) (desktopAuthorizationGroupStatus, error) {
+	entries, err := fs.ReadDir(proc, ".")
 	if err != nil {
 		return desktopAuthorizationGroupStatus{}, err
 	}
@@ -22,7 +27,7 @@ func observeDesktopAuthorizationGroup(group int) (desktopAuthorizationGroupStatu
 		if err != nil || pid <= 0 {
 			continue
 		}
-		actual, err := syscall.Getpgid(pid)
+		actual, err := getpgid(pid)
 		if errors.Is(err, syscall.ESRCH) {
 			continue
 		}
@@ -32,8 +37,10 @@ func observeDesktopAuthorizationGroup(group int) (desktopAuthorizationGroupStatu
 		if actual != group {
 			continue
 		}
-		raw, err := os.ReadFile(filepath.Join("/proc", entry.Name(), "stat"))
-		if errors.Is(err, os.ErrNotExist) {
+		raw, err := fs.ReadFile(proc, path.Join(entry.Name(), "stat"))
+		// The process can exit after Getpgid or after opening its proc file.
+		// Linux may report either ENOENT or ESRCH for the vanished proc entry.
+		if errors.Is(err, os.ErrNotExist) || errors.Is(err, syscall.ESRCH) {
 			continue
 		}
 		if err != nil {

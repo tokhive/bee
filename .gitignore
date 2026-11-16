@@ -8,3 +8,7 @@
 /.cache/
 # Desktop acceptance artifacts are kept locally, outside Git history.
 /docs/desktop/evidence/
+
+/docs/superpowers/
+
+/.scratch/

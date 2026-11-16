@@ -33,15 +33,16 @@ type egressConfig struct {
 	desktop                 *DesktopRuntime
 	desktopAction           func(context.Context, localState, string, io.Writer) (<-chan error, func())
 	synchronized            *desktopSynchronizationReceipt
-	ConnectProxy            string            `json:"connect_proxy,omitempty"`
-	Targets                 []string          `json:"targets"`
-	InboxKeyID              string            `json:"inbox_key_id"`
-	Credential              tee.Secret        `json:"credential"`
-	Codex                   *codexSource      `json:"codex,omitempty"`
-	Claude                  *claudeSource     `json:"claude,omitempty"`
-	OpenAIAPI               *openaiAPISource  `json:"openai_api,omitempty"`
-	Reseller                *resellerSource   `json:"reseller,omitempty"`
-	Capabilities            *capabilitySource `json:"capabilities,omitempty"`
+	ConnectProxy            string             `json:"connect_proxy,omitempty"`
+	Targets                 []string           `json:"targets"`
+	InboxKeyID              string             `json:"inbox_key_id"`
+	Credential              tee.Secret         `json:"credential"`
+	Codex                   *codexSource       `json:"codex,omitempty"`
+	Claude                  *claudeSource      `json:"claude,omitempty"`
+	OpenAIAPI               *openaiAPISource   `json:"openai_api,omitempty"`
+	ClaudeAPI               *officialAPISource `json:"claude_api,omitempty"`
+	Reseller                *resellerSource    `json:"reseller,omitempty"`
+	Capabilities            *capabilitySource  `json:"capabilities,omitempty"`
 	capabilitySequence      int64
 	accountGeneration       int64
 	authorization           *codexCredential
@@ -87,6 +88,17 @@ var errCodexAuthorization = errors.New("Codex authorization unavailable")
 var platformTargets = []struct{ field, target string }{
 	{"codex", "chatgpt.com:443"},
 	{"claude", "api.anthropic.com:443"},
+}
+
+// officialAPIs lists the official Platform keys this Bee contributes.
+func (cfg *egressConfig) officialAPIs() []*officialAPISource {
+	sources := []*officialAPISource{}
+	for _, source := range []*officialAPISource{cfg.OpenAIAPI, cfg.ClaudeAPI} {
+		if source != nil {
+			sources = append(sources, source)
+		}
+	}
+	return sources
 }
 
 func readEgress(ctx context.Context, path string) (*egressConfig, error) {
@@ -220,7 +232,13 @@ func (cfg *egressConfig) validate() error {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
 	if cfg.OpenAIAPI != nil {
-		if err := cfg.OpenAIAPI.validate(); err != nil {
+		cfg.OpenAIAPI.platform = &openaiAPI
+	}
+	if cfg.ClaudeAPI != nil {
+		cfg.ClaudeAPI.platform = &claudeAPI
+	}
+	for _, source := range cfg.officialAPIs() {
+		if err := source.validate(); err != nil {
 			return err
 		}
 	}
@@ -236,11 +254,14 @@ func (cfg *egressConfig) validate() error {
 		return fail("BEE-CONFIG-CAPABILITIES-URL", "")
 	}
 	if !cfg.loopbackTargets() {
-		if cfg.OpenAIAPI != nil && cfg.OpenAIAPI.LocalURL != "" {
-			return fail("BEE-CONFIG-OPENAI-API", "local_url requires loopback egress targets")
-		}
-		if cfg.OpenAIAPI != nil && !slices.Contains(cfg.Targets, "api.openai.com:443") {
-			return fail("BEE-CONFIG-TARGET-MISSING", "openai_api requires api.openai.com:443")
+		for _, source := range cfg.officialAPIs() {
+			p := source.spec()
+			if source.LocalURL != "" {
+				return fail(p.code, "local_url requires loopback egress targets")
+			}
+			if !slices.Contains(cfg.Targets, p.target) {
+				return fail("BEE-CONFIG-TARGET-MISSING", p.name+" requires "+p.target)
+			}
 		}
 		for _, platform := range platformTargets {
 			configured := platform.field == "codex" && cfg.Codex != nil || platform.field == "claude" && cfg.Claude != nil
@@ -261,8 +282,8 @@ func (cfg *egressConfig) validate() error {
 			return fail("BEE-CONFIG-PROXY", "")
 		}
 		official := officialTransport(address)
-		if cfg.OpenAIAPI != nil {
-			cfg.OpenAIAPI.transport = official
+		for _, source := range cfg.officialAPIs() {
+			source.transport = official
 		}
 		if cfg.Codex != nil {
 			cfg.Codex.transport = official
@@ -294,7 +315,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil
+	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

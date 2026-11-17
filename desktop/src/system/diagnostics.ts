@@ -1,5 +1,5 @@
 import {retryEvidence} from './failures.ts';
-import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
+import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotExecuted,type UiFailure} from './failures.ts';
 import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
@@ -125,7 +125,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();if(session.start!=='idle'||cached?.state==='running')invalid(`diagnostic start blocked: start=${session.start} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=++reportGeneration;cached=null;reading=null;update({...emptySession(),start:'pending'});
    try{const r=await request('diagnostics_start',{});update({start:'idle'});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotSent(failure)?'idle':'unknown',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotExecuted(failure)?'idle':'unknown',failure});}throw cause;}
   },
   async snapshot(id){
    owned();digest(id,48,'report id');if(!cached||cached.id!==id)invalid('snapshot requires the original cached report ID');
@@ -139,7 +139,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();digest(id,48,'report id');if(!cached||cached.id!==id||cached.state!=='running'||session.cancel!=='idle')invalid(`diagnostic cancel blocked: cancel=${session.cancel} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=reportGeneration;update({cancel:'pending',failure:null});
    try{const r=await request('diagnostics_cancel',{id},id);update({cancel:r.state==='running'?'unknown':'idle',read:r.state==='running'?'paused':'idle',failure:null});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotSent(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotExecuted(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
   },
   async logs(query){object(query,['cursor','limit','module','platform','level'],'log query');cursor(query.cursor);if(!Number.isInteger(query.limit)||query.limit<1||query.limit>200)invalid('log query limit requires 1..200');enumValue(query.module,[null,...modules],'log query module');enumValue(query.platform,[null,'openai','claude'],'log query platform');enumValue(query.level,[null,...levels],'log query level');const generation=epoch;const page=decodeLogPage(await invoke('diagnostic_logs',{query}));current(generation);return page;},
   export:exportPayload,

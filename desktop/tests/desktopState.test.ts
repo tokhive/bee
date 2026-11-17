@@ -287,3 +287,38 @@ test('the first ready bridge invalidates an older startup read without leaving s
  finishOld?.(startup);await tick();
  assert.equal(m.getSnapshot().startup?.state,'ready');assert.equal(m.getSnapshot().startupObservation,'idle');assert.equal(f.calls(),1);
 });
+
+test('recovery observation and runtime refresh continue while one advancement is in flight',async t=>{
+ const f=fixture();let advances=0,observations=0,finish!:()=>void;
+ const recovery={operation_id:'a'.repeat(48),revision:1,phase:'pending',old_identity:null,new_identity:null,pairing:null,failure:null};
+ f.deps.device.recoveryStatus=async()=>{observations++;return recovery;};
+ f.deps.device.recoveryAdvance=async()=>{advances++;await new Promise<void>(resolve=>{finish=resolve;});return recovery;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(advances,1);assert.ok(f.calls()>0);assert.equal(m.getSnapshot().busy,false);
+ const before=f.calls();await m.refresh();assert.ok(f.calls()>before);assert.ok(observations>=2);assert.equal(advances,1);
+ finish();await tick();
+});
+
+test('a recovery observation failure stays local and cannot overwrite startup readiness',async t=>{
+ const f=fixture();f.deps.bridge.startupStatus=async()=>({state:'ready',instance:'a',revision:1});
+ f.deps.device.recoveryStatus=async()=>{throw {code:'REQUEST_QUEUE_TIMEOUT',message:'recovery query did not send'};};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().startup?.state,'ready');assert.equal(m.getSnapshot().recoveryError?.code,'REQUEST_QUEUE_TIMEOUT');assert.ok(f.calls()>0);
+});
+
+for(const change of ['binding','transaction','absent'] as const)test('recovery advancement error cannot leak after '+change,async t=>{
+ const f=fixture();let binding=1,advanceFails=true;
+ let recovery:any={operation_id:'a'.repeat(48),revision:1,phase:'completed',old_identity:null,new_identity:null,pairing:null,failure:null};
+ f.deps.device.context=async()=>({binding_revision:binding,hive:'https://hive.example',device_id:'device',owner_id:'owner'});
+ f.deps.bridge.startupStatus=async()=>({state:'blocked',instance:'a',revision:1,binding_revision:binding});
+ f.deps.device.recoveryStatus=async()=>{if(!recovery)throw {code:'DEVICE_RECOVERY_NONE',message:'no recovery'};return recovery;};
+ f.deps.device.recoveryAdvance=async()=>{if(advanceFails)throw {code:'RECOVERY_FIXTURE_BLOCKED',message:'original operation blocked'};return recovery;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().recoveryError?.code,'RECOVERY_FIXTURE_BLOCKED');
+ advanceFails=false;
+ if(change==='binding')binding++;
+ if(change==='transaction')recovery={...recovery,operation_id:'b'.repeat(48)};
+ if(change==='absent')recovery=null;
+ await m.refresh();await tick();
+ assert.equal(m.getSnapshot().recoveryError,null);
+});

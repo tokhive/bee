@@ -31,7 +31,9 @@ func TestCodexLoginBridgeExtensionsAreOptionalAndAcceptOnlyOperationID(t *testin
 	var out bytes.Buffer
 	params := `{"operation_id":"` + strings.Repeat("a", 48) + `"}`
 	input := hello + supplyRequest("progress", "authorize_progress", params) + supplyRequest("open", "authorize_open", params) + supplyRequest("bad", "authorize_open", strings.TrimSuffix(params, "}")+`,"url":"PRIVATE_SECRET"}`)
-	if err := desktopbridge.RunWithAuthorization(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithAuthorization(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

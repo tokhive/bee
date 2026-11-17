@@ -223,3 +223,31 @@ test('a received reconciling account action retains its owner until the same ter
  await page.evaluate(async()=>{const w=window as any,a=w.data.openai;a.operation={...a.operation,state:'succeeded',revision:++a.revision};await w.coordinated.refresh();});
  await expect.poll(()=>page.evaluate(()=>(window as any).model.uncertain.openai)).toBe(false);expect(await page.evaluate(()=>(window as any).counts.action)).toBe(1);
 });
+
+test('busy OpenAI observation shows progress and leaves other navigation usable',async({page})=>{
+ const openai=accountFixture('openai') as any;openai.selection={...openai.selection,state:'selected',fingerprint:'b'.repeat(64)};
+ const claude=accountFixture('claude') as any;claude.selection={...claude.selection,state:'selected',fingerprint:'c'.repeat(64)};
+ await page.clock.install();
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai,claude}});
+ await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page)).toBeVisible();
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.busyObservation=true;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   const result=await invoke(command,args);
+   const account=command==='account_snapshot'&&args.platform==='openai'?result.result.account:command==='runtime_snapshot'?result.result.runtime.platforms.openai.account:undefined;
+   if(account&&w.busyObservation){account.authorization={state:'unconfirmed',fingerprint:null,observed_at:null,error:{code:'operation_pending',check:'platform_operation',platform:'openai',message:'OpenAI observation held by controlled fixture',evidence:{}}};account.candidate.reference=null;for(const f of Object.values(account.features) as any[]){f.available=false;f.reason='platform_operation_pending';}}
+   return result;
+  };
+ });
+ await page.clock.runFor(10500);
+ await expect(card(page).getByText('正在核验账号…',{exact:true}).first()).toBeVisible();
+ await expect(card(page)).toContainText('正在读取最新账号状态，完成后自动更新。');
+ await expect(card(page).getByRole('button',{name:'查看错误详情'})).toHaveCount(0);
+ await expect(card(page).getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await page.getByRole('button',{name:'Claude 详情',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'设置',exact:true}).click();await expect(page.getByRole('heading',{name:'设置',exact:true})).toBeVisible();
+ expect(await calls(page,'account_action')).toHaveLength(0);
+ await page.evaluate(()=>{(window as any).busyObservation=false;});await page.clock.runFor(10500);
+ await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page)).not.toContainText('正在读取最新账号状态，完成后自动更新。');
+});

@@ -193,3 +193,11 @@ test('retry evidence accepts fixed native and HTTP facts and rejects malformed a
  assert.deepEqual(decodeBridgeError(base),base);
  for(const [key,value]of Object.entries({request_id:'shell-00',method:'DELETE',platform:'any',phase:'finished',queue_ms:'-1',execution_ms:'1.5',fully_sent:'yes',in_flight:'unknown',retry_after_seconds:'2147483648',failure_kind:'connection_failed'}))assert.throws(()=>decodeBridgeError({...base,details:{...base.details,evidence:{...base.details.evidence,[key]:value}}}),/rejected/);
 });
+
+test('resource conflict identifies an unexecuted attempt without claiming no pipe bytes were sent',()=>{
+ const failure=normalizeFailure({code:'REQUEST_RESOURCE_BUSY',message:'method=account_action conflicts with unfinished method=account_detect resource=openai; request not executed'},'account_action');
+ const problem=presentFailure(failure,'zh');
+ assert.equal(problem.summary,'已有冲突操作正在进行，本次操作未执行。');
+ assert.match(problem.details,/account_detect/);
+ assert.match(problem.impact,/状态查询仍可继续/);
+});

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"strings"
 	"testing"
 
 	bee "github.com/tokhive/bee/agent"
@@ -29,7 +28,9 @@ func TestSessionRetirementBridgeKeepsStrictParamsAndDoesNotStartRuntime(t *testi
 	defer accounts.Close()
 	var output bytes.Buffer
 	input := hello + request("retire", "runtime_reconcile_recovery") + supplyRequest("bad", "runtime_reconcile_recovery", `{"force":true}`) + request("ping", "ping")
-	if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &output, io.Discard, "test", &startupContextDevice{}, accounts, runner); err != nil {
+	if err := runSequentialFrames(t, input, &output, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", &startupContextDevice{}, accounts, runner)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, output.String())

@@ -245,3 +245,51 @@ func TestDesktopAccountsUnknownPlanIsNullInPublicDTO(t *testing.T) {
 		t.Fatalf("unknown plan public candidate=%+v", snapshot.Candidate)
 	}
 }
+
+func TestDesktopSnapshotRemainsReadableWhilePlatformIsBusy(t *testing.T) {
+	a := NewDesktopAccounts(nil)
+	defer a.Close()
+	_, release, err := a.acquire(context.Background(), "openai")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	snapshot, err := a.Snapshot(ctx, "openai", false)
+	if err != nil {
+		t.Fatalf("status waited for the platform operation: %v", err)
+	}
+	if snapshot.Features.Select.Available || snapshot.Authorization.State != "unconfirmed" {
+		t.Fatalf("busy observation advertised write readiness: %+v", snapshot)
+	}
+}
+
+func TestBusyRuntimeSnapshotKeepsPublishedAccountAndSelectionTogether(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "bee-desktop.json"))
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	r := NewDesktopRuntime(context.Background(), d, a)
+	defer r.Close()
+	p, release, err := a.acquire(context.Background(), "openai")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	p.snapshot.Revision = 7
+	p.selected = &desktopAccountSelection{Revision: 3}
+	p.publish()
+	// An in-flight change must not mix its unpublished selection with the old account.
+	p.snapshot.Revision = 8
+	p.selected.Revision = 4
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	snapshot, err := r.Snapshot(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := snapshot.Platforms["openai"]
+	if got.Account.Revision != 7 || got.SelectionRevision != 3 || got.Account.Authorization.State != "unconfirmed" {
+		t.Fatalf("busy observation mixed account and selection: %+v", got)
+	}
+}

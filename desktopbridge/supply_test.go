@@ -55,7 +55,9 @@ func TestSupplyCapabilitiesAreOptionalAndOrdered(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var out bytes.Buffer
-			if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello), &out, io.Discard, "test", tc.device); err != nil {
+			if err := runSequentialFrames(t, hello, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+				return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", tc.device)
+			}); err != nil {
 				t.Fatal(err)
 			}
 			var result struct {
@@ -82,7 +84,9 @@ func TestSupplyStrictParameters(t *testing.T) {
 			t.Run(method+p, func(t *testing.T) {
 				d := &fakeSupply{}
 				var out bytes.Buffer
-				if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("x", method, p)+request("p", "ping")), &out, io.Discard, "test", d); err != nil {
+				if err := runSequentialFrames(t, hello+supplyRequest("x", method, p)+request("p", "ping"), &out, func(inputStream io.Reader, outputStream io.Writer) error {
+					return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", d)
+				}); err != nil {
 					t.Fatal(err)
 				}
 				frames := replies(t, out.String())
@@ -157,7 +161,9 @@ func TestSupplyParameterErrorsIdentifyTheObservedJSONTypeWithoutPayload(t *testi
 		t.Run(tc.name, func(t *testing.T) {
 			d := &fakeSupply{}
 			var out bytes.Buffer
-			if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(hello+supplyRequest("e", tc.method, tc.params)+request("p", "ping")), &out, io.Discard, "test", d); err != nil {
+			if err := runSequentialFrames(t, hello+supplyRequest("e", tc.method, tc.params)+request("p", "ping"), &out, func(inputStream io.Reader, outputStream io.Writer) error {
+				return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", d)
+			}); err != nil {
 				t.Fatal(err)
 			}
 			frames := replies(t, out.String())

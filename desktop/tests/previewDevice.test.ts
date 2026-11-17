@@ -68,18 +68,18 @@ test('credential recovery validates confirmations and replays accepted decisions
  assert.equal(prepared.phase,'awaiting_confirmation');
  for(const [id,revision,decision]of [[prepared.operation_id,prepared.revision,'adopt_owner'],['f'.repeat(48),prepared.revision,'begin_pairing'],[prepared.operation_id,prepared.revision-1,'begin_pairing']] as const){
   await assert.rejects(()=>device.recoveryConfirm(id,revision,decision));
-  assert.deepEqual(await device.recoveryStatus(),prepared);
+  assert.deepEqual(await device.recoveryAdvance!(),prepared);
  }
  const pending=await device.recoveryConfirm(prepared.operation_id,prepared.revision,'begin_pairing');
  assert.equal(pending.phase,'pending');
  assert.equal(pending.operation_id,prepared.operation_id);
  assert.deepEqual(await device.recoveryConfirm(prepared.operation_id,prepared.revision,'begin_pairing'),pending);
  await assert.rejects(()=>device.recoveryConfirm(pending.operation_id,pending.revision,'adopt_owner'));
- const stable=await device.recoveryStatus();
+ const stable=await device.recoveryAdvance!();
  assert.equal(stable.phase,'pending');assert.deepEqual(stable.pairing,pending.pairing);
  approve();
  assert.equal((await device.context!() as any).device_id,prepared.old_identity!.id);
- const owner=await device.recoveryStatus();assert.equal(owner.phase,'awaiting_owner_confirmation');
+ const owner=await device.recoveryAdvance!();assert.equal(owner.phase,'awaiting_owner_confirmation');
  assert.deepEqual(await device.recoveryConfirm(prepared.operation_id,prepared.revision,'begin_pairing'),owner);
  const completed=await device.recoveryConfirm(owner.operation_id,owner.revision,'adopt_owner');
  assert.equal(completed.phase,'completed');
@@ -101,17 +101,17 @@ test('recovery preparation rejects a valid credential and unresolved account wor
  await installPreviewFixture('device-recovery-confirm');
  (window as any).accounts.openai.operation={id:'f'.repeat(48),state:'running'};
  await assert.rejects(()=>device.recoveryPrepare(),/pending.*openai/);
- await assert.rejects(()=>device.recoveryStatus(),/no credential recovery transaction/);
+ await assert.rejects(()=>device.recoveryAdvance!(),/no credential recovery transaction/);
 });
 
 test('each seeded recovery phase rejects decisions from another phase and preserves the original transaction',async t=>{
  await preview(t);
  const scenes=['recovery-pending','recovery-draining','recovery-creation-unknown','recovery-redemption-unknown','recovery-owner','recovery-saving','recovery-completed'];
  for(const scene of scenes){
-  await installPreviewFixture(scene);const device=createDeviceClient(invoke),before=await device.recoveryStatus();
+  await installPreviewFixture(scene);const device=createDeviceClient(invoke),before=await device.recoveryAdvance!();
   const invalid=before.phase==='awaiting_owner_confirmation'?'begin_pairing':'adopt_owner';
   await assert.rejects(()=>device.recoveryConfirm(before.operation_id,before.revision,invalid),/recovery decision rejected/,scene);
-  const after=await device.recoveryStatus();
+  const after=await device.recoveryAdvance!();
   assert.equal(after.operation_id,before.operation_id,scene);assert.equal(after.phase,before.phase,scene);assert.deepEqual(after.pairing,before.pairing,scene);
  }
 });
@@ -119,8 +119,8 @@ test('each seeded recovery phase rejects decisions from another phase and preser
 test('renewing a remotely expired pairing preserves its operation and accepted renewal can be replayed',async t=>{
  const {device}=await preview(t,'recovery-pending');
  t.mock.timers.enable({apis:['Date'],now:Date.now()});
- const pending=await device.recoveryStatus();t.mock.timers.tick(600001);
- const expired=await device.recoveryStatus();assert.equal(expired.phase,'expired');
+ const pending=await device.recoveryAdvance!();t.mock.timers.tick(600001);
+ const expired=await device.recoveryAdvance!();assert.equal(expired.phase,'expired');
  await assert.rejects(()=>device.recoveryConfirm(expired.operation_id,expired.revision,'begin_pairing'));
  const renewed=await device.recoveryConfirm(expired.operation_id,expired.revision,'renew_expired');
  assert.equal(renewed.phase,'pending');assert.equal(renewed.operation_id,pending.operation_id);
@@ -132,19 +132,19 @@ test('unknown creation cannot be approved or recreated and unknown redemption on
  await preview(t);
  for(const scene of ['device-creation-unknown','recovery-creation-unknown']){
   await installPreviewFixture(scene);const device=createDeviceClient(invoke),initial=scene.startsWith('device-');
-  const before=initial?(await device.status()).recovery!:await device.recoveryStatus();
+  const before=initial?(await device.status()).recovery!:await device.recoveryAdvance!();
   const w=window as any;
   assert.throws(()=>applyPreviewEvent({session:w.__beePreviewSession,action:'device-approval',value:'approve',...w.__beeMockDeviceContext()}),/creation_unknown/);
   if(initial)assert.deepEqual((await device.begin('https://hive.example','Bee Desktop')).recovery,before);
   else await assert.rejects(()=>device.recoveryConfirm(before.operation_id,before.revision,'renew_expired'));
-  assert.deepEqual(initial?(await device.status()).recovery:await device.recoveryStatus(),before);
+  assert.deepEqual(initial?(await device.status()).recovery:await device.recoveryAdvance!(),before);
  }
  for(const scene of ['device-redemption-unknown','recovery-redemption-unknown']){
   await installPreviewFixture(scene);const device=createDeviceClient(invoke),initial=scene.startsWith('device-');
-  const before=initial?(await device.status()).recovery!:await device.recoveryStatus(),w=window as any;
-  assert.equal((initial?(await device.status()).recovery!:await device.recoveryStatus()).operation_id,before.operation_id);
+  const before=initial?(await device.status()).recovery!:await device.recoveryAdvance!(),w=window as any;
+  assert.equal((initial?(await device.status()).recovery!:await device.recoveryAdvance!()).operation_id,before.operation_id);
   applyPreviewEvent({session:w.__beePreviewSession,action:'device-approval',value:'approve',...w.__beeMockDeviceContext()});
-  const after=initial?(await device.status()).recovery!:await device.recoveryStatus();
+  const after=initial?(await device.status()).recovery!:await device.recoveryAdvance!();
   assert.equal(after.operation_id,before.operation_id);assert.equal(after.phase,initial?'completed':'awaiting_owner_confirmation');
   assert.deepEqual(after.pairing,before.pairing);
   assert.equal((w.calls as any[]).filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm'].includes(c.command)).length,0);
@@ -186,7 +186,7 @@ test('custom Hive recovery retires old proxy and diagnostic scopes while preserv
  await assert.rejects(()=>device.status(),/device_replaced/);
  const prepared=await device.recoveryPrepare();
  await device.recoveryConfirm(prepared.operation_id,prepared.revision,'begin_pairing');approve();
- const owner=await device.recoveryStatus();
+ const owner=await device.recoveryAdvance!();
  await device.recoveryConfirm(owner.operation_id,owner.revision,'adopt_owner');
  const latest=await device.context!();assert.ok('device_id'in latest);
  assert.equal(latest.hive,'https://design-hive.example');assert.notEqual(latest.device_id,first.device_id);
@@ -227,9 +227,9 @@ test('seeded pending and draining pairings continue the original operation after
  await preview(t);
  for(const scene of ['device-pending','device-draining','recovery-pending','recovery-draining']){
   await installPreviewFixture(scene);const device=createDeviceClient(invoke),initial=scene.startsWith('device-'),w=window as any;
-  const before=initial?(await device.status()).recovery!:await device.recoveryStatus();
+  const before=initial?(await device.status()).recovery!:await device.recoveryAdvance!();
   applyPreviewEvent({session:w.__beePreviewSession,action:'device-approval',value:'approve',...w.__beeMockDeviceContext()});
-  const after=initial?(await device.status()).recovery!:await device.recoveryStatus();
+  const after=initial?(await device.status()).recovery!:await device.recoveryAdvance!();
   assert.equal(after.operation_id,before.operation_id);assert.equal(after.phase,initial?'completed':'awaiting_owner_confirmation');
   assert.equal((w.calls as any[]).filter(c=>['device_begin','device_recovery_prepare','device_recovery_confirm'].includes(c.command)).length,0);
  }
@@ -238,9 +238,9 @@ test('seeded pending and draining pairings continue the original operation after
 test('recoveryOpen keeps pending and draining original transactions available without a device write',async t=>{
  await preview(t);
  for(const scene of ['recovery-pending','recovery-draining']){
-  await installPreviewFixture(scene);const device=createDeviceClient(invoke),before=await device.recoveryStatus();
+  await installPreviewFixture(scene);const device=createDeviceClient(invoke),before=await device.recoveryAdvance!();
   assert.deepEqual(await device.recoveryOpen(),before);
-  assert.deepEqual(await device.recoveryStatus(),before);
+  assert.deepEqual(await device.recoveryAdvance!(),before);
   assert.equal((window as any).calls.filter((c:any)=>['device_begin','device_recovery_prepare','device_recovery_confirm'].includes(c.command)).length,0);
  }
 });
@@ -249,15 +249,15 @@ test('recoveryOpen rejects every non-browser phase with its explicit failure and
  await preview(t);
  for(const scene of ['device-recovery-confirm','recovery-owner','recovery-completed','recovery-creation-unknown','recovery-redemption-unknown','recovery-saving']){
   await installPreviewFixture(scene);const device=createDeviceClient(invoke);
-  const before=scene==='device-recovery-confirm'?await device.recoveryPrepare():await device.recoveryStatus();
+  const before=scene==='device-recovery-confirm'?await device.recoveryPrepare():await device.recoveryAdvance!();
   await assert.rejects(()=>device.recoveryOpen(),error=>error instanceof Error&&'code'in error&&error.code==='DEVICE_RECOVERY_OPEN_PHASE'&&error.message.includes('phase='+before.phase),scene);
-  assert.deepEqual(await device.recoveryStatus(),before,scene);
+  assert.deepEqual(await device.recoveryAdvance!(),before,scene);
  }
  await installPreviewFixture('recovery-pending');const device=createDeviceClient(invoke);
  t.mock.timers.enable({apis:['Date'],now:Date.now()});t.mock.timers.tick(600001);
- const expired=await device.recoveryStatus();assert.equal(expired.phase,'expired');
+ const expired=await device.recoveryAdvance!();assert.equal(expired.phase,'expired');
  await assert.rejects(()=>device.recoveryOpen(),error=>error instanceof Error&&'code'in error&&error.code==='DEVICE_RECOVERY_OPEN_PHASE');
- assert.deepEqual(await device.recoveryStatus(),expired);
+ assert.deepEqual(await device.recoveryAdvance!(),expired);
 });
 
 test('every unresolved initial or recovery transaction blocks cross-domain writes and preserves original work',async t=>{
@@ -266,7 +266,7 @@ test('every unresolved initial or recovery transaction blocks cross-domain write
  for(const scene of scenes){
   await installPreviewFixture(scene);const w=window as any,instance=(await invoke<any>('bridge_status')).metadata.instance;
   const device=createDeviceClient(invoke),account=createAccountClient(invoke,instance),authorize=createAuthorizeClient(invoke,instance),runtime=createRuntimeClient(invoke,instance),network=createNetworkClient(invoke);
-  const transaction=scene==='device-recovery-confirm'?await device.recoveryPrepare():scene.startsWith('recovery-')?await device.recoveryStatus():(await device.status()).recovery!;
+  const transaction=scene==='device-recovery-confirm'?await device.recoveryPrepare():scene.startsWith('recovery-')?await device.recoveryAdvance!():(await device.status()).recovery!;
   const originalAccount=await account.snapshot('openai',false),originalRuntime=await runtime.snapshot(),originalPause=structuredClone(w.paused),originalPreferences=await createPreferencesClient(invoke).read(),originalNetwork=await network.snapshot();
   const context=await device.context!();assert.ok('device_id'in context);
   const supply=createSupplyClient(invoke,{hive:context.hive,deviceId:context.device_id??'unbound'});
@@ -278,7 +278,7 @@ test('every unresolved initial or recovery transaction blocks cross-domain write
   assert.deepEqual(await account.snapshot('openai',false),originalAccount,scene);
   assert.deepEqual(w.paused,originalPause,scene);assert.deepEqual(await createPreferencesClient(invoke).read(),originalPreferences,scene);assert.deepEqual(await network.snapshot(),originalNetwork,scene);
   const after=await runtime.snapshot();for(const key of ['local','connection','revision','network_revision','run_id','operation'] as const)assert.deepEqual(after[key],originalRuntime[key],scene+':'+key);
-  const unchanged=scene==='device-recovery-confirm'||scene.startsWith('recovery-')?await device.recoveryStatus():(await device.status()).recovery;
+  const unchanged=scene==='device-recovery-confirm'||scene.startsWith('recovery-')?await device.recoveryAdvance!():(await device.status()).recovery;
   assert.deepEqual(unchanged,transaction,scene);
   // Detect refreshes a candidate without admitting a write worker; the Go API
   // permits it during recovery, unlike selection and official login creation.
@@ -294,7 +294,7 @@ test('completed first pairing and recovery release the cross-domain barrier for 
   const device=createDeviceClient(invoke),account=createAccountClient(invoke,instance),authorize=createAuthorizeClient(invoke,instance),runtime=createRuntimeClient(invoke,instance),network=createNetworkClient(invoke);
   if(scene==='device-recovery-confirm'){const ready=await device.recoveryPrepare();await device.recoveryConfirm(ready.operation_id,ready.revision,'begin_pairing');}
   applyPreviewEvent({session:w.__beePreviewSession,action:'device-approval',value:'approve',...w.__beeMockDeviceContext()});
-  if(scene==='device-pending')await device.status();else{const owner=await device.recoveryStatus();await device.recoveryConfirm(owner.operation_id,owner.revision,'adopt_owner');}
+  if(scene==='device-pending')await device.status();else{const owner=await device.recoveryAdvance!();await device.recoveryConfirm(owner.operation_id,owner.revision,'adopt_owner');}
   const candidate=await account.detect({platform:'openai',directory:null,store:'file',mode:'official'});
   const selected=await account.action({platform:'openai',revision:candidate.revision,candidate_ref:candidate.candidate.reference!,action:'select',confirmed:true});assert.equal(selected.selection.state,'selected');
   t.mock.timers.tick(601);

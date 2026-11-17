@@ -36,11 +36,11 @@ export function createDesktopState(deps:DesktopDeps){
  let deviceObservedAt:string|null=null,diagnosticObservedAt:string|null=null;
  const listeners=new Set<()=>void>();
  const publish=(next:Partial<DesktopSnapshot>)=>{if(disposed)return;state={...state,...next};listeners.forEach(fn=>fn());};
- type Resource='context'|'device'|'recovery'|'runtime'|`account:${AccountPlatform}`|`supply:${AccountPlatform}`;
+ type Resource='context'|'device'|'recovery'|'recoveryAdvance'|'runtime'|`account:${AccountPlatform}`|`supply:${AccountPlatform}`;
  type Gate={failures:number;at:number;terminal:boolean;waiting?:string};
- const gates=new Map<Resource,Gate>();let nativePending:PendingRequest[]=[];let automaticRound=false;
+ const gates=new Map<Resource,Gate>();let nativePending:PendingRequest[]=[];let automaticRound=false;let advancing=false;let advancementError:UiFailure|null=null;
  const gate=(key:Resource)=>{let g=gates.get(key);if(!g){g={failures:0,at:0,terminal:false};gates.set(key,g);}return g;};
- const laneBlocked=(platform?:AccountPlatform)=>nativePending.some(r=>!platform||r.platform===null||!['account_detect','account_snapshot','supply_status'].includes(r.method)||r.platform===platform);
+ const laneBlocked=(platform?:AccountPlatform)=>nativePending.some(r=>!['ping','device_context','device_recovery_snapshot','runtime_snapshot','network_status','network_test','authorize_status','authorize_progress','authorize_cancel','authorize_open','diagnostics_snapshot','diagnostics_cancel','account_defaults'].includes(r.method)&&(!platform||r.platform===null||r.platform===platform));
  const allowed=(key:Resource)=>{const g=gate(key);return !g.terminal&&!g.waiting&&(!g.failures&&!automaticRound||Date.now()>=g.at);};
  const limited=(g:Gate)=>deps.openaiQueries&&['account:openai','supply:openai'].some(k=>gates.get(k as Resource)===g);
  const backoff=(g:Gate,problem?:UiFailure)=>{if(limited(g)){delete g.waiting;if(g.failures>3){g.terminal=true;return;}g.at=Date.now()+[1000,2000,4000][g.failures-1];return;}const delay=[2000,4000,8000,16000,30000][Math.min(g.failures-1,4)];g.at=Date.now()+Math.max(Math.round(delay*(0.8+0.2*(deps.random??Math.random)())),Number(problem?.evidence.retry_after_seconds??0)*1000);delete g.waiting;};
@@ -48,7 +48,7 @@ export function createDesktopState(deps:DesktopDeps){
  const fail=(key:Resource,problem:UiFailure)=>{
   const g=gate(key);g.failures++;
   const kind=problem.evidence.failure_kind??problem.code,http=problem.evidence.http_status;
-  g.terminal=!!http&&['401','403'].includes(http)||!(['timeout','dns_temporary','connection_closed','connection_refused','REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED','RESPONSE_TIMEOUT','deadline'].includes(kind)||['http_rejected','rate_limited'].includes(kind)&&['429','502','503','504'].includes(http));
+  g.terminal=!!http&&['401','403'].includes(http)||!(['timeout','dns_temporary','connection_closed','connection_refused','REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED','REQUEST_RESOURCE_BUSY','RESPONSE_TIMEOUT','deadline'].includes(kind)||['http_rejected','rate_limited'].includes(kind)&&['429','502','503','504'].includes(http));
   if(problem.code==='RESPONSE_TIMEOUT'&&problem.evidence.in_flight==='true'&&problem.evidence.request_id){
    g.terminal=false;g.waiting=problem.evidence.request_id;g.at=0;
    if(!nativePending.some(r=>r.id===g.waiting))nativePending.push({id:g.waiting,method:problem.evidence.method??'runtime_snapshot',platform:problem.evidence.platform==='openai'||problem.evidence.platform==='claude'?problem.evidence.platform:null});
@@ -57,7 +57,7 @@ export function createDesktopState(deps:DesktopDeps){
  const resourceStatus=(key:Resource,previous:RefreshStatus|undefined,normalAt?:number):RefreshStatus=>{
   const g=gate(key),platform=key.includes(':')?key.split(':')[1] as AccountPlatform:undefined;
   if(g.terminal||platform&&(gate('context').terminal||gate('device').terminal||gate('recovery').terminal))return status(previous,'blocked');
-  if(g.waiting||laneBlocked(platform))return status(previous,'waiting');
+  if(g.waiting||!['context','recovery','runtime'].includes(key)&&!(key==='account:openai'&&deps.openaiQueries)&&laneBlocked(platform))return status(previous,'waiting');
   if(g.failures)return status(previous,'scheduled',new Date(g.at).toISOString());
   return status(previous,'scheduled',g.at?new Date(g.at).toISOString():normalAt?new Date(normalAt).toISOString():null);
  };
@@ -99,7 +99,7 @@ export function createDesktopState(deps:DesktopDeps){
   if(currentScope!==undefined&&(native.profile_id!==undefined&&native.profile_id!==currentScope?.profile_id||native.state==='ready'&&(!currentScope||native.metadata?.instance!==currentScope.instance)))return;
   const changed=native.metadata?.instance!==state.native.metadata?.instance||native.profile_id!==state.native.profile_id||native.state!==state.native.state;
   if(!changed){publish({native});return;}
-  epoch++;startupReading=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
+  epoch++;startupReading=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
   const generation=epoch,instance=native.metadata?.instance,startup=(!instance&&native.state!=='ready'||state.startup?.instance===instance)?state.startup:undefined;
   publish({...reset(),native,startup,busy:false});
   if(native.state==='ready')queueMicrotask(async()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(state.startup?.instance!==instance)await readStartup();if(!disposed&&epoch===generation)void refresh();}});
@@ -153,24 +153,25 @@ export function createDesktopState(deps:DesktopDeps){
      deviceContextFailure='failure'in local?local.failure:undefined;
      if(deviceContextFailure&&deviceContextFailure.code!=='DEVICE_CONTEXT_UNCONFIGURED')deviceError=deviceContextFailure;
     };
-    if(deps.device.context&&!laneBlocked()&&allowed('context'))try{observeContext(await deps.device.context());succeed('context');}
+    if(deps.device.context&&allowed('context'))try{observeContext(await deps.device.context());succeed('context');}
     catch(e){deviceContextFailure=deviceError=failure(e,'device_context');fail('context',deviceError);await readPending();}
     if(!current())return;
     if(state.bindingRevision!==undefined&&bindingRevision!==state.bindingRevision){
-     epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;device=undefined;
+     epoch++;generation=epoch;pendingEpoch=generation;gates.clear();advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;device=undefined;
      publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
     }else publish({deviceContext,bindingRevision,deviceContextFailure});
     let recovery=state.recovery,recoveryError:UiFailure|null=state.recoveryError??null,recoveryObservation=state.recoveryObservation;
-    if(deps.device.recoveryStatus&&!gate('context').failures&&!laneBlocked()&&allowed('recovery'))try{
+    if(deps.device.recoveryStatus&&!gate('context').failures&&allowed('recovery'))try{
      scopeMayHaveChanged=true;
      const nextRecovery=await deps.device.recoveryStatus();if(!current())return;
      if(recovery&&(recovery.operation_id===nextRecovery.operation_id&&nextRecovery.revision<recovery.revision||recovery.operation_id!==nextRecovery.operation_id&&recovery.phase!=='completed'))throw {code:'DESKTOP_STALE_RESULT',message:'recovery observation conflicts with the current transaction; actual='+nextRecovery.operation_id+':'+nextRecovery.revision+' required='+recovery.operation_id+':'+recovery.revision,details:{check:'device_recovery_status',observed_at:new Date().toISOString(),evidence:{actual:nextRecovery.operation_id+':'+nextRecovery.revision,required:recovery.operation_id+':'+recovery.revision}}};
-     recovery=nextRecovery;recoveryError=null;recoveryObservation='present';succeed('recovery');
-    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;recoveryObservation='absent';succeed('recovery');}else {recoveryObservation=undefined;recoveryError=problem;fail('recovery',problem);await readPending();}}
+     if(recovery?.operation_id!==nextRecovery.operation_id){advancementError=null;gates.delete('recoveryAdvance');}
+     recovery=nextRecovery;recoveryError=advancementError;recoveryObservation='present';succeed('recovery');
+    }catch(e){if(!current())return;const problem=failure(e,'device_recovery_status');if(problem.code==='DEVICE_RECOVERY_NONE'){recovery=undefined;recoveryError=null;advancementError=null;gates.delete('recoveryAdvance');recoveryObservation='absent';succeed('recovery');}else {recoveryObservation=undefined;recoveryError=problem;fail('recovery',problem);await readPending();}}
     if(!current())return;
-    if(!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))try{scopeMayHaveChanged=true;publish({refresh:status(state.refresh,'reading')});device=await deps.device.status();deviceError=null;succeed('device');deviceObservedAt=new Date().toISOString();if(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt))publish({diagnosticFailure:null});}catch(e){if(!current())return;deviceError=failure(e,'device_status');fail('device',deviceError);await readPending();}
+    if(!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))try{scopeMayHaveChanged=true;publish({refresh:status(state.refresh,'reading')});device=await deps.device.status();deviceError=null;succeed('device');deviceObservedAt=new Date().toISOString();if(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt))publish({diagnosticFailure:null});}catch(e){if(!current())return;const problem=failure(e,'device_status');if(problem.code!=='REQUEST_RESOURCE_BUSY')deviceError=problem;fail('device',problem);await readPending();}
     if(!current())return;
-    // Both status methods can save the active configuration before their final receipt fails.
+    // Device status or background recovery advancement can save configuration before its receipt.
     // Re-observe local scope on success AND failure before publishing any subsequent scoped fact.
     if(deps.device.context&&scopeMayHaveChanged&&!gate('context').failures&&!laneBlocked()){
      let local:Awaited<ReturnType<NonNullable<DeviceClient['context']>>>;
@@ -179,17 +180,28 @@ export function createDesktopState(deps:DesktopDeps){
      const previousBinding=bindingRevision;observeContext(local);
 
      if(local.binding_revision!==previousBinding){
-      recoveryObservation=undefined;
-      epoch++;generation=epoch;pendingEpoch=generation;gates.clear();runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;
+      recoveryObservation=undefined;if(recoveryError===advancementError)recoveryError=null;
+      epoch++;generation=epoch;pendingEpoch=generation;gates.clear();advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;
       if('failure'in local||device?.state!=='bound'||device.identity?.id!==local.device_id||device.hive!==local.hive)device=undefined;
 
       publish({...reset(),deviceContext,bindingRevision,deviceContextFailure,startup:undefined,refresh:status(undefined,'reading')});
      }
     }
     publish({recovery,recoveryError,recoveryObservation});
+    // Observe first. Advancing an existing approved transaction has a separate
+    // owner and must never keep runtime/account observations waiting for HTTP.
+    if(recovery&&deps.device.recoveryAdvance&&!advancing&&allowed('recoveryAdvance')
+       &&(recovery.phase!=='completed'||startupUnverified())&&!laneBlocked()){
+     advancing=true;const operationId=recovery.operation_id,advanceEpoch=epoch;const ownsAdvance=()=>!disposed&&epoch===advanceEpoch&&state.native.metadata?.instance===instance&&state.recovery?.operation_id===operationId;
+     void deps.device.recoveryAdvance().then(()=>{
+      if(ownsAdvance()){advancementError=null;succeed('recoveryAdvance');}
+     },cause=>{
+      if(ownsAdvance()){advancementError=failure(cause,'device_recovery_status');fail('recoveryAdvance',advancementError);publish({recoveryError:advancementError});}
+     }).finally(()=>{advancing=false;});
+    }
     // Runtime and defaults form the shared read. Validate all shared floors BEFORE publishing any of it.
     let next=state.runtime,defaults=state.defaults,runtimeRead=false;
-    if(!laneBlocked()&&allowed('runtime')){
+    if(allowed('runtime')){
      try{[next,defaults]=await Promise.all([runtime.snapshot(),!state.defaults&&accounts&&!startupUnverified()?accounts.defaults():Promise.resolve(state.defaults)]);succeed('runtime');runtimeRead=true;}
      catch(e){const problem=failure(e,'runtime_snapshot');fail('runtime',problem);publish({error:problem});await readPending();}
     }
@@ -219,7 +231,7 @@ export function createDesktopState(deps:DesktopDeps){
     const supply=device?.state==='bound'&&device.hive&&device.identity?deps.supply?.({hive:device.hive,deviceId:device.identity.id}):undefined;
     await Promise.all(platforms.map(async platform=>{
      const readAccount=async()=>{
-      if(laneBlocked(platform)||!allowed(`account:${platform}`))return;
+      if((!(deps.openaiQueries&&platform==='openai')&&laneBlocked(platform))||!allowed(`account:${platform}`))return;
       if(!accounts){
        const account=next.platforms[platform]?.account;
        if(account)publish({accounts:{...state.accounts,[platform]:account},accountRefresh:{...state.accountRefresh,[platform]:confirmed()}});
@@ -280,7 +292,7 @@ export function createDesktopState(deps:DesktopDeps){
  return {
   setCurrentScope(scope:{profile_id:string;instance:string}|null){
    if(currentScope!==undefined&&JSON.stringify(currentScope)===JSON.stringify(scope))return;
-   currentScope=scope;epoch++;startupReading=false;startupFailures=0;blocked=false;gates.clear();nativePending=[];runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);clearTimeout(startupTimer);
+   currentScope=scope;epoch++;startupReading=false;startupFailures=0;blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);clearTimeout(startupTimer);
    publish({...reset(),currentProfile:scope?.profile_id??null,native:{state:'starting'},startup:undefined,startupReadError:null,busy:false});
    const generation=epoch;
    if(scope)void deps.bridge.status().then(v=>{if(!disposed&&generation===epoch){accept(v);void readStartup();}},cause=>{if(!disposed&&generation===epoch)publish({error:failure(cause,'bridge_status')});});

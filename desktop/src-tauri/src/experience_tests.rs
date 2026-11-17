@@ -1298,7 +1298,9 @@ async fn late_start_presence_requires_original_context_and_live_admission() {
         if change != "stopped" {
             bridge.0.frozen.store(false, Ordering::SeqCst);
             bridge.ping().await.unwrap();
-            assert!(bridge.pending_requests().requests.is_empty());
+            tokio::time::timeout(std::time::Duration::from_secs(2),async {
+                while !bridge.pending_requests().requests.is_empty() { tokio::task::yield_now().await; }
+            }).await.expect("original start did not settle after release");
             bridge.stop().await.unwrap();
         }
     }
@@ -1441,6 +1443,23 @@ async fn startup_never_replays_unknown_attempt_without_matching_retirement_proof
         assert_eq!(saved.phase, "unknown");
         assert_eq!(saved.attempt_id, original.attempt_id);
         assert_eq!(saved.failure.unwrap().message, "original receipt lost");
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn pure_recovery_observation_bypasses_startup_mutation_lock_and_preserves_readiness() {
+    for code in ["DEVICE_RECOVERY_NONE", "REQUEST_QUEUE_TIMEOUT", "RESPONSE_TIMEOUT"] {
+        let (dir, bridge, app) = fixture(serde_json::json!({"recovery_error":code}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state,"ready");
+        let gate=app.state::<StartupGate>();
+        let before=serde_json::to_value(gate.snapshot()).unwrap();
+        let _held=gate.serial.lock().await;
+        let result=tokio::time::timeout(std::time::Duration::from_secs(1),observe_device_recovery(app.handle(),&bridge)).await.unwrap();
+        assert_eq!(result.unwrap_err().code,code);
+        assert_eq!(serde_json::to_value(gate.snapshot()).unwrap(),before);
+        let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(!calls.contains("device_recovery_status"));
         bridge.stop().await.unwrap();
     }
 }

@@ -1,6 +1,6 @@
 import {FailureNotice} from '../../components/ProblemNotice';
 import {settingsTabForSection,type NavigationRequest,type NavigationTarget} from '../../app/navigation';
-import {normalizeFailure,requestNotSent,type UiFailure} from '../../system/failures';
+import {normalizeFailure,requestNotExecuted,type UiFailure} from '../../system/failures';
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {LoaderCircle} from 'lucide-react';
 import {Tabs} from 'radix-ui';
@@ -185,13 +185,13 @@ export function NativeSettingsPage({preferences,preferencesClient,notificationsC
   control.networkRead++;patchDraft({proxySave:'pending',saveFailure:null,saveReadConfirmed:false});
   const origin=hive??draftOrigin.trim();
   try{const value=await networkClient.saveProxy({proxy,origin:origin||null,expectedRevision:prefs.revision});if(!current())return;acceptPreferences(value);patchDraft({proxySave:'confirmed',savedProxy:{value:proxy,revision:value.preferences.revision},dirty:false,notice:'代理配置已保存。'});if(!paired)setProxy(draftProxy(value.preferences,origin));await refreshNetwork();}
-  catch(cause){if(current()){const fail=normalizeFailure(cause,'network_save_proxy');patchDraft({proxySave:requestNotSent(fail)?'failed':'unknown',saveFailure:fail});}}
+  catch(cause){if(current()){const fail=normalizeFailure(cause,'network_save_proxy');patchDraft({proxySave:requestNotExecuted(fail)?'failed':'unknown',saveFailure:fail});}}
  });}
  async function applySaved(){await run('apply',async()=>{
   if(draftRef.current.applyState==='unknown')return;
   control.networkRead++;patchDraft({applyState:'pending',applyFailure:null});
   try{const actual=await networkClient.applySaved(true);if(!current())return;setProxyValue(actual);patchDraft({applyState:actual.error?'failed':'confirmed',applyFailure:actual.error?normalizeFailure(actual.error,'network_apply'):null});}
-  catch(cause){if(!current())return;const fail=normalizeFailure(cause,'network_apply');patchDraft({applyState:requestNotSent(fail)?'failed':'unknown',applyFailure:fail});}
+  catch(cause){if(!current())return;const fail=normalizeFailure(cause,'network_apply');patchDraft({applyState:requestNotExecuted(fail)?'failed':'unknown',applyFailure:fail});}
   if(current())await Promise.allSettled([refreshNetwork(),refreshRuntime()]);
  });}
  const applyFailure=currentDraft.applyFailure,networkReadError=currentDraft.networkReadError;

@@ -837,6 +837,16 @@ pub(crate) async fn apply_saved_network(
 #[path = "experience_tests.rs"]
 mod tests;
 
+// Pure observation neither takes the startup mutation lock nor changes its gate.
+pub(crate) async fn observe_device_recovery<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>, bridge: &Bridge,
+) -> Result<crate::sidecar::BridgeReply, BridgeError> {
+    crate::update_install::verify_recovery_read(
+        &app.state::<crate::updater::UpdateManager>(), app.state::<PreferencesStore>().read(),
+    )?;
+    bridge.device_recovery_snapshot().await
+}
+
 // Recovery is available during an identity block. It retains package/update
 // checks and serializes against startup results; completion never restores intent.
 pub(crate) async fn recover_device<R: tauri::Runtime>(
@@ -874,6 +884,10 @@ pub(crate) async fn recover_device<R: tauri::Runtime>(
     } else {
         bridge.device_recovery_status().await
     };
+    if status_only && result.as_ref().is_err_and(|cause| matches!(cause.code.as_str(),
+        "REQUEST_RESOURCE_BUSY" | "REQUEST_QUEUE_TIMEOUT" | "REQUEST_NOT_QUEUED" | "REQUEST_NOT_SENT")) {
+        return result;
+    }
     // A successful status read with no transaction observes no recovery change.
     // It neither revokes established readiness nor unlocks a blocked/checking gate.
     if status_only

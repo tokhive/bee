@@ -86,6 +86,7 @@ func decodeAuthorizeParams(req request, raw json.RawMessage) (request, *protocol
 	if e := (bee.DesktopAccountDetectRequest{Platform: req.Authorize.Platform, Directory: req.Authorize.Source.Directory, Store: req.Authorize.Source.Store, Mode: "local"}).Validate(); e != nil {
 		return req, rejected("INVALID_REQUEST", "%s", e)
 	}
+	req.Platform = req.Authorize.Platform
 	return req, nil
 }
 func authorizeResult(ctx context.Context, service Authorizer, req request) (any, error) {

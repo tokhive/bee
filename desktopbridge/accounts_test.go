@@ -31,7 +31,9 @@ func TestAccountsStrictParametersAndFailureIsolation(t *testing.T) {
 		t.Run(tc.method+tc.params, func(t *testing.T) {
 			var out bytes.Buffer
 			input := hello + supplyRequest("a", tc.method, tc.params) + request("p", "ping")
-			if err := desktopbridge.RunWithAccounts(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil)); err != nil {
+			if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+				return desktopbridge.RunWithAccounts(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil))
+			}); err != nil {
 				t.Fatal(err)
 			}
 			frames := replies(t, out.String())
@@ -65,7 +67,9 @@ func TestAccountsFixedMethodsAndOrderedCapabilities(t *testing.T) {
 func TestDesktopAccountActionClearDoesNotRequireCandidate(t *testing.T) {
 	var out bytes.Buffer
 	input := hello + supplyRequest("clear", "account_action", `{"platform":"openai","revision":0,"candidate_ref":"","action":"clear_selection","confirmed":true}`) + request("p", "ping")
-	if err := desktopbridge.RunWithAccounts(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil)); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithAccounts(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil))
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

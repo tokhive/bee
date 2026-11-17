@@ -25,7 +25,9 @@ func TestDeviceBusinessFailureDoesNotBreakManagement(t *testing.T) {
 	d := &fakeDevice{}
 	var out bytes.Buffer
 	input := hello + request("d", "device_status") + request("p", "ping") + `{"protocol":1,"id":"b","method":"device_begin","params":{"hive":"https://hive.example","name":"Mac"}}` + "\n" + request("s", "shutdown")
-	if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(input), &out, io.Discard, "test", d); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", d)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())
@@ -38,7 +40,9 @@ func TestDeviceBeginStrictParameters(t *testing.T) {
 		d := &fakeDevice{}
 		var out bytes.Buffer
 		input := hello + `{"protocol":1,"id":"b","method":"device_begin","params":` + params + "}\n" + request("p", "ping")
-		if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(input), &out, io.Discard, "test", d); err != nil {
+		if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", d)
+		}); err != nil {
 			t.Fatal(err)
 		}
 		frames := replies(t, out.String())
@@ -70,7 +74,9 @@ func TestDeviceRecoveryBridgeStrictCommands(t *testing.T) {
 	for i, params := range []string{`{}`, `{"operation_id":"a","expected_revision":1,"decision":"begin_pairing"}`, `{"operation_id":"` + strings.Repeat("a", 48) + `","expected_revision":1,"decision":"begin_pairing","decision":"adopt_owner"}`} {
 		input += `{"protocol":1,"id":"bad` + string(rune('0'+i)) + `","method":"device_recovery_confirm","params":` + params + "}\n"
 	}
-	if err := desktopbridge.RunWithDevices(context.Background(), strings.NewReader(input), &out, io.Discard, "test", d); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithDevices(context.Background(), inputStream, outputStream, io.Discard, "test", d)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

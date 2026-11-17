@@ -234,7 +234,7 @@ test('retry A waits for the original request then recovers without changing Hive
  await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toBeVisible();
  await expect(page.getByText('Hive 已连接',{exact:true})).toBeVisible();
  const runtimeReads=(await calls(page,'runtime_snapshot')).length;
- await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBe(runtimeReads);
+ await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBeGreaterThan(runtimeReads);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'概览',exact:true}).click();await expect(card).toBeVisible();
  await page.evaluate(()=>{const w=window as any;w.retryFailure=false;w.pendingRequests=[];w.emitRequestSettled(w.retryRequest);});
  await expect(page.getByText('等待自动重试…',{exact:true})).toBeVisible();

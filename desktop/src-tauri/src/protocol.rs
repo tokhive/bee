@@ -256,7 +256,7 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "device_recovery_start",
             "device_recovery_prepare",
             "device_recovery_confirm",
-            "device_recovery_status",
+            "device_recovery_status", "device_recovery_snapshot",
             "account_defaults",
             "account_detect",
             "account_snapshot",
@@ -788,6 +788,13 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(recovery_candidates);
+    let recovery_observation_candidates: Vec<_> = candidates.iter().filter_map(|group| {
+        let index = group.iter().position(|method| method == "device_recovery_status")?;
+        let mut group = group.clone();
+        group.insert(index+1, "device_recovery_snapshot".into());
+        Some(group)
+    }).collect();
+    candidates.extend(recovery_observation_candidates);
     let presence_candidates: Vec<_> = candidates
         .iter()
         .filter_map(|group| {

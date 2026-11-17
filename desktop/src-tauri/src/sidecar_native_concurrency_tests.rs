@@ -144,7 +144,10 @@ async fn exercise_native_reads() {
         let sources = tempfile::tempdir().unwrap();
         synthetic_sources(sources.path());
         let mut proxy = ControlledProxy::start(slow);
-        let bridge = Bridge::start(native_spec());
+        let profile_root = tempfile::tempdir().unwrap();
+        let profiles = crate::profiles::ProfileStore::open(profile_root.path().join("tokhive")).unwrap();
+        let profile = profiles.register("https://hive.example").unwrap();
+        let bridge = Bridge::start(native_spec().for_profile(&profile, crate::profiles::ProfileMode::Current).unwrap());
         wait(&bridge, BridgePhase::Ready).await;
         let instance = bridge.status().metadata.unwrap().instance;
         let mut slow_request = None;
@@ -191,6 +194,20 @@ async fn exercise_native_reads() {
                     Err(format!("unexpected first platform: {p}"))
                 }
             })?;
+            // Exercise both real schedulers and the platform's internal gate,
+            // while a real HTTP CONNECT remains held by the local fixture.
+            for (method, params) in [
+                ("runtime_snapshot",serde_json::json!({})),
+                ("account_snapshot",serde_json::json!({"platform":slow,"refresh":false})),
+                ("device_recovery_snapshot",serde_json::json!({})),
+                ("ping",serde_json::json!({})),
+            ] {
+                let reply = timeout(Duration::from_millis(800), bridge.request(method,params,Duration::from_secs(3))).await
+                    .map_err(|_|format!("{method} waited for held {slow} CONNECT"))?
+                    .map_err(|e|format!("{method} response: {e:?}"))?;
+                if method == "device_recovery_snapshot" && reply.result["error"]["code"] != "DEVICE_RECOVERY_NONE" { return Err(format!("pure recovery read changed fixture: {:?}", reply.result)); }
+                if method == "account_snapshot" && reply.result["account"]["features"]["select"]["available"] != false { return Err("busy account snapshot advertised write readiness".into()); }
+            }
             let prepared_ms = preparing.elapsed().as_millis();
             let waiting_for_fast = Instant::now();
             let second = timeout(

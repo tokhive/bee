@@ -1,5 +1,5 @@
 import type {RefreshStatus} from '../../system/desktopState';
-import {requestNotSent,type UiFailure} from '../../system/failures';
+import {requestNotExecuted,type UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -65,7 +65,9 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
    if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
    const resolved=resolution&&runtime!==resolution.previous&&resolution.generation===coordinated?.generation?.();
-   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
+   // Busy observations change availability without changing persisted account revision.
+   const busyObservationChanged=observationChanged&&next.revision===revisions.current[p]&&(next.authorization.error?.code==='operation_pending'||latest.current[p]?.authorization.error?.code==='operation_pending');
+   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||busyObservationChanged||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
    const minimum=unconfirmedRevisions.current[p];
    const receipt=resolution?.operation,observed=next.operation;
    const ownedTerminal=!!resolved&&!!receipt&&observed?.id===receipt.id&&observed.kind===receipt.kind&&observed.platform===p&&['succeeded','failed','cancelled'].includes(observed.state)&&next.revision>=Math.max(receipt.revision,revisions.current[p])&&observed.revision>=receipt.revision;
@@ -109,7 +111,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     }catch(cause){if(current()){
      const problem=failure(cause,cancel?'authorize_cancel':'account_operation');
      verified.current[platform]=false;setErrors(v=>({...v,[platform]:problem}));
-     if(write&&!requestNotSent(problem)){
+     if(write&&!requestNotExecuted(problem)){
       localUnconfirmed.current[platform]=local;unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));
       const owned=receiptOperation??(cancel?latest.current[platform]?.operation:undefined);
       pauseCentral?.();
@@ -307,7 +309,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     try{receipt=await authorizer.cancel(id);}
     catch(cause){
      const problem=failure(cause,'authorize_cancel');
-     if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation&&!requestNotSent(problem))setCancelUnconfirmed(v=>({...v,[platform]:{operationId:id,failure:problem}}));
+     if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation&&!requestNotExecuted(problem))setCancelUnconfirmed(v=>({...v,[platform]:{operationId:id,failure:problem}}));
      throw cause;
     }
     return refreshCentral?receipt:client.snapshot(platform,false);

@@ -400,6 +400,30 @@ func (d *DesktopDevice) RecoveryPrepare(ctx context.Context) (DeviceRecoveryView
 func (d *DesktopDevice) RecoveryConfirm(ctx context.Context, id string, revision int64, decision string) (DeviceRecoveryView, error) {
 	return d.recoveryOperate(ctx, &desktopRecoveryDecision{id, revision, decision})
 }
+
+// RecoverySnapshot reads the atomically persisted record without acquiring the
+// pairing gate or advancing any transaction. Completion is not startup approval:
+// callers must still revalidate the binding before admitting business writes.
+func (d *DesktopDevice) RecoverySnapshot(ctx context.Context) (DeviceRecoveryView, error) {
+	s, release, err := d.acquireSession(ctx)
+	if err != nil {
+		return DeviceRecoveryView{}, err
+	}
+	defer release()
+	r, err := readDesktopRecovery(s)
+	if err != nil {
+		return DeviceRecoveryView{}, err
+	}
+	// Initial pairing remains owned by Status and DeviceView.Recovery. A local
+	// recovery may have no old identity, so distinguish by purpose, not identity.
+	if r == nil || r.Purpose == "initial_pairing" {
+		return DeviceRecoveryView{}, recoveryFailure("DEVICE_RECOVERY_NONE", "device_recovery_snapshot", errors.New("no device recovery transaction exists; prepare explicitly first"))
+	}
+	return r.view(), nil
+}
+
+// RecoveryStatus is the legacy advancement command. Observation uses
+// RecoverySnapshot; keep this command explicit at the polling owner.
 func (d *DesktopDevice) RecoveryStatus(ctx context.Context) (DeviceRecoveryView, error) {
 	return d.recoveryOperate(ctx, nil)
 }

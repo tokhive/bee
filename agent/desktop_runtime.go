@@ -93,20 +93,14 @@ func (r *DesktopRuntime) Snapshot(ctx context.Context) (DesktopRuntimeSnapshot, 
 	}
 	s.ObservedAt = time.Now().UTC().Format(time.RFC3339Nano)
 	for _, platform := range []string{"openai", "claude"} {
-		p, release, err := r.accounts.acquire(ctx, platform)
+		observation, err := r.accounts.snapshotObservation(ctx, platform, false)
 		if err != nil {
 			return s, err
 		}
-		if _, err := r.accounts.loadLoginMaintenance(ctx, p, platform); err != nil {
-			p.snapshot.Authorization = DesktopAccountFact{State: "unconfirmed", Error: accountFailure(platform, "login_journal_unconfirmed", "login_maintenance_journal", err.Error())}
-		}
 		v := s.Platforms[platform]
-		v.Account = accountSnapshotCopy(p.snapshot)
-		if p.selected != nil {
-			v.SelectionRevision = p.selected.Revision
-		}
+		v.Account = observation.snapshot
+		v.SelectionRevision = observation.selectionRevision
 		s.Platforms[platform] = v
-		release()
 	}
 	return s, nil
 }

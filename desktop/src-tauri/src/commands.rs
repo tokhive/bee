@@ -894,6 +894,14 @@ pub async fn device_recovery_prepare(
     crate::experience::recover_device(&app, &bridge, None, true).await
 }
 #[tauri::command]
+pub async fn device_recovery_snapshot(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, CurrentBridge>,
+) -> Result<BridgeReply, BridgeError> {
+    crate::experience::observe_device_recovery(&app, &bridge.get()?).await
+}
+
+#[tauri::command]
 pub async fn device_recovery_status(
     app: tauri::AppHandle,
     bridge: tauri::State<'_, CurrentBridge>,

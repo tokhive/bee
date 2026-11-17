@@ -8,6 +8,7 @@ if (mode === 'exit') process.exit(9);
 if (mode === 'diagnostic-exit') {
   process.stderr.write('management initialization failed: E42 Authorization=MARKER-A Cookie=MARKER-C token=MARKER-T confirmation_id=MARKER-I /Users/MARKER-P model_input=MARKER-IN model_output=MARKER-OUT\n', () => process.exit(9));
 }
+let fragmentedOutput=Promise.resolve();
 let exitSnapshot;
 let startupOperation=null,startupRuntimeRevision;
 let bootstrapProxy='',bootstrapRevision=0;
@@ -45,6 +46,7 @@ input.on('line', line => {
       case 'device_status': reply(config.rejected?{error:{code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',target_origin:'https://hive.example'}}}}:config.unbound?{device:{state:'unbound'}}:{device:{state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.com'}}});return;
       case 'device_recovery_prepare':
       case 'device_recovery_confirm':
+      case 'device_recovery_snapshot':
       case 'device_recovery_status': {
         const keys=Object.keys(request.params).sort().join(',');
         if(keys!==(request.method==='device_recovery_confirm'?'decision,expected_revision,operation_id':''))throw new Error('invalid recovery params');
@@ -205,7 +207,9 @@ input.on('line', line => {
   if (mode === 'slow-device' && request.method === 'device_status') {
     setTimeout(() => process.stdout.write(reply), 800);
   } else if (mode === 'split') {
-    process.stdout.write(reply.slice(0, 7));
-    setTimeout(() => process.stdout.write(reply.slice(7)), 15);
+    fragmentedOutput=fragmentedOutput.then(()=>new Promise(resolve=>{
+      process.stdout.write(reply.slice(0,7));
+      setTimeout(()=>{process.stdout.write(reply.slice(7));resolve();},15);
+    }));
   } else process.stdout.write(reply);
 });

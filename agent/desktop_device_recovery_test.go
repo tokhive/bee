@@ -1135,3 +1135,81 @@ func TestDeviceRecoveryAbsentIsTypedOnlyForStatus(t *testing.T) {
 		t.Fatalf("corrupt recovery record cannot be absent: %v", err)
 	}
 }
+
+func TestRecoverySnapshotDoesNotWaitForOrAdvancePairing(t *testing.T) {
+	d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "device.json"))
+	s, release, err := d.recoverySession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	_ = s
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	_, err = d.RecoverySnapshot(ctx)
+	if err == nil || !strings.Contains(err.Error(), "DEVICE_RECOVERY_NONE") {
+		t.Fatalf("read waited for pairing or attempted recovery: %v", err)
+	}
+}
+
+func TestRecoveryObservationCannotRedeemApprovedPairing(t *testing.T) {
+	h, d, _ := newRecoveryHive(t)
+	v, err := d.RecoveryPrepare(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "begin_pairing")
+	if err != nil {
+		t.Fatal(err)
+	}
+	h.approved = true
+	s, release, err := d.recoverySession(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer release()
+	before, err := os.ReadFile(recoveryPath(s))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	observed, err := d.RecoverySnapshot(ctx)
+	if err != nil || observed.Phase != v.Phase || observed.Revision != v.Revision {
+		t.Fatalf("snapshot advanced or waited: %+v %v", observed, err)
+	}
+	after, err := os.ReadFile(recoveryPath(s))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(before, after) || h.redeems != 0 {
+		t.Fatalf("observation changed record or redeemed: redeems=%d", h.redeems)
+	}
+}
+
+func TestRecoverySnapshotDistinguishesInitialPairingFromLocalRecovery(t *testing.T) {
+	for _, purpose := range []string{"initial_pairing", "local_recovery"} {
+		t.Run(purpose, func(t *testing.T) {
+			d := newDesktopTestDevice(t, filepath.Join(t.TempDir(), "bee-desktop.json"))
+			s, release, err := d.acquireSession(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			record := &desktopRecoveryRecord{Version: 1, Purpose: purpose, OperationID: strings.Repeat("a", 48), Revision: 1, Phase: "awaiting_confirmation", Hive: "https://hive.example", Name: "Mac", Credential: "bee_" + strings.Repeat("n", 43), Accepted: []desktopRecoveryDecision{}}
+			err = saveDesktopRecovery(s, record)
+			release()
+			if err != nil {
+				t.Fatal(err)
+			}
+			view, err := d.RecoverySnapshot(context.Background())
+			if purpose == "initial_pairing" {
+				var failure *DesktopFailure
+				if !errors.As(err, &failure) || failure.Code != "DEVICE_RECOVERY_NONE" {
+					t.Fatalf("initial pairing must stay on device status: %+v %v", view, err)
+				}
+			} else if err != nil || view.OperationID != record.OperationID {
+				t.Fatalf("local recovery without old identity must remain observable: %+v %v", view, err)
+			}
+		})
+	}
+}

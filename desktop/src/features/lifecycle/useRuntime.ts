@@ -1,5 +1,5 @@
 import type {RefreshStatus} from '../../system/desktopState';
-import {requestNotSent,type UiFailure} from '../../system/failures';
+import {requestNotExecuted,type UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
@@ -61,7 +61,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
     if(central.current?.snapshot?.().busy)await refreshCentral();
     if(!current())return;await refreshCentral();if(current())observe();
    }else{const observed=await client.snapshot();if(current()){latest.current=observed;verified.current=true;setView(observed);setError(null);}}
-  }catch(cause){if(current()){const problem=failure(cause,'runtime_operation');verified.current=false;resolution.current={previous:latest.current};if(!requestNotSent(problem))central.current?.pause?.();setError(problem);setUncertain(!requestNotSent(problem));}}
+  }catch(cause){if(current()){const problem=failure(cause,'runtime_operation');verified.current=false;resolution.current={previous:latest.current};if(!requestNotExecuted(problem))central.current?.pause?.();setError(problem);setUncertain(!requestNotExecuted(problem));}}
   finally{writing.current=false;if(active.current)setBusy(false);}
  };
  return {view,error,startBlocked:!!coordinated?.identityError,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error||coordinated?.refreshStatus?.state==='waiting'&&!!coordinated.refreshStatus.lastConfirmedAt&&Date.now()-Date.parse(coordinated.refreshStatus.lastConfirmedAt)>30000,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,

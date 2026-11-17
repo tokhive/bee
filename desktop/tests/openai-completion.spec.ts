@@ -206,6 +206,25 @@ test('different identity opens review before confirmation and Escape restores fo
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
 });
 
+test('login maintenance requiring a different account keeps the explicit change review reachable',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{
+  const w=window as any,a=w.accounts.openai;a.revision++;
+  a.candidate.fingerprint='c'.repeat(64);
+  a.operation={id:'e'.repeat(48),kind:'authorize',platform:'openai',state:'succeeded',revision:a.revision,error:null};
+  a.login_maintenance={operation:a.operation,phase:'confirmation_required',source:{directory:null,store:'file'},started_at:new Date().toISOString(),can_recheck:true,error:null};
+  a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};
+  w.paused.openai=true;
+ });await page.clock.runFor(11000);
+ await expect(card(page).getByRole('button',{name:'核对账号变更',exact:true})).toBeVisible();
+ await expect(card(page).locator('.oa-actions').getByRole('button',{name:'核对维护结果',exact:true})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('bbbbbbbbbbbbbbbb');await expect(page.getByRole('dialog')).toContainText('cccccccccccccccc');
+ await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();
+ await expect(page.getByRole('dialog').last().getByRole('heading')).toHaveText('确认更换 OpenAI 账号');
+ expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
 test('main preview keeps quota in a read failure',async({page})=>{
  {
   await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=dark&size=narrow`);

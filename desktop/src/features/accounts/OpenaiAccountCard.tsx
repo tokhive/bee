@@ -142,7 +142,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
     {(!progress||progress.actions.cancel)&&progress?.phase!=='verifying'&&!cleaning&&<Button variant="outline" disabled={!!accounts.writeBusy.openai} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}
     {query?.phase==='stopped'&&<Button variant="outline" onClick={()=>void accounts.queryLogin()}>{t('刷新登录进度')}</Button>}
    </>:intakeUnconfirmed?<Button disabled={accounts.originalAccountQuery?.phase==='reading'} onClick={()=>void accounts.queryOriginalAccount()}>{t(accounts.originalAccountQuery?.phase==='reading'?'正在核对…':'核对结果')}</Button>
-   :maintenance?.can_recheck?<Button disabled={!!accounts.busy.openai||!!accounts.writeBusy.openai||!!progress?.recheck_in_flight} onClick={()=>accounts.refresh('openai')}>{t('核对维护结果')}</Button>
+   :maintenance?.can_recheck&&!(different&&maintenance.phase==='confirmation_required')?<Button disabled={!!accounts.busy.openai||!!accounts.writeBusy.openai||!!progress?.recheck_in_flight} onClick={()=>accounts.refresh('openai')}>{t('核对维护结果')}</Button>
    :sourceProblem?<Button onClick={()=>{setPanel('settings');setDetails(true);}}>{t('修改凭证读取设置')}</Button>
    :problem?.code==='expired'?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
    :problem?.code==='client_missing'?<><Button onClick={()=>{setPanel('install');setDetails(true);}}>{t('查看安装说明')}</Button><OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重试"/></>

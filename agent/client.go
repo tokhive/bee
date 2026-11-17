@@ -223,11 +223,20 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			var syncFailures <-chan error
 			var moved func() uint64
 			if egress != nil {
-				session := egress.start(beeSession(ctx), conn, out)
+				// The session ends a moment after ctx, not with it: a Bee
+				// that is stopping tells Hive so first (leave), and only then
+				// is the tunnel torn down. Ending both at once would close
+				// the connection before the close frame could be written.
+				sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(beeSession(ctx)))
+				session := egress.start(sessionCtx, conn, out)
+				stopLeaving := context.AfterFunc(ctx, func() {
+					leave(conn, beewire.CloseStopping)
+					stopSession()
+				})
 				live, end, moved = session.Context, session.Close, session.Moved
 				forwardDone := make(chan struct{})
 				go func() { defer close(forwardDone); egress.failures.forward(live, state) }()
-				finish := func() { session.Close(); session.Wait(); <-forwardDone }
+				finish := func() { stopLeaving(); session.Close(); session.Wait(); stopSession(); <-forwardDone }
 				end = finish
 				if egress.dynamicAuthorization() {
 					var wait func()
@@ -259,6 +268,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			}
 			liveness := relay.NewLiveness(conn, moved)
 			var syncErr error
+			stalled := false
 			for live.Err() == nil && syncErr == nil {
 				if egress != nil && !egress.dynamicAuthorization() && !rejectionReported {
 					statusCtx, stopStatus := context.WithTimeout(live, 5*time.Second)
@@ -276,6 +286,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 				err = liveness.Check(live)
 				metrics.ping(pingStart, err)
 				if err != nil {
+					stalled = errors.Is(err, relay.ErrStalled)
 					lastFailure = observedConnectionFailure(err, nil, state, path, "heartbeat")
 					slog.Warn("Hive connection lost", "module", "connect", "error", err.Error())
 					break
@@ -297,7 +308,16 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 					timer.Stop()
 				}
 			}
-			conn.CloseNow()
+			// A Bee that ends the connection itself says why first. With a
+			// tunnel, end() closes whatever the goodbye left open.
+			switch {
+			case egress != nil && stalled:
+				leave(conn, beewire.CloseStalled)
+			case egress != nil && syncErr != nil && live.Err() == nil:
+				leave(conn, beewire.CloseSyncFailed)
+			default:
+				conn.CloseNow()
+			}
 			metrics.disconnect()
 			end()
 			// Join synchronization before choosing a reconnect. The transport
@@ -386,6 +406,30 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 
 // heartbeatInterval is the pause between liveness checks of the connection.
 const heartbeatInterval = 5 * time.Second
+
+// leaveGrace bounds how long a Bee waits for Hive to take its goodbye. Over a
+// working link the exchange takes a round trip; over a stalled one it never
+// completes, and the reconnect that follows must not wait on it.
+var leaveGrace = time.Second
+
+// leave ends the connection with a close frame naming why (beewire's close
+// codes), so Hive records a Bee that stopped or gave up on a silent link as
+// that, rather than as a connection that merely ended. It returns once Hive
+// has answered or leaveGrace has passed; in the second case the connection is
+// still open, and closing the tunnel session is what ends it.
+func leave(conn *websocket.Conn, code int) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = conn.Close(websocket.StatusCode(code), beewire.CloseReason(code))
+	}()
+	timer := time.NewTimer(leaveGrace)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+}
 
 // conflictRetries refusals as a duplicate, conflictRetryDelay apart, outlast
 // the time Hive takes to give up on a dead connection.

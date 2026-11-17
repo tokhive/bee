@@ -67,7 +67,7 @@ test('a successful account write still requires a verified read when central rea
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,native=w.__TAURI_INTERNALS__,invoke=native.invoke;native.invoke=async(command:string,args:unknown)=>{const result=await invoke(command,args);if(command==='account_action')w.deviceFail=true;return result;};});
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card(page).locator('.oa-title')).toContainText('接入账号未完成');
+ await expect(card(page).locator('.oa-title')).toContainText('503');
  await page.evaluate(()=>{(window as any).deviceFail=false;});await reconcile(page);
  await expect(card(page).getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toHaveLength(1);
 });
@@ -147,7 +147,7 @@ test('account change remains paused and a platform failure leaves the other plat
 test('only proven unsubmitted confirmation can continue after reconciliation',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.candidate.identity_verified=true;a.revision++;a.operation={id:'c'.repeat(48),kind:'confirm_change',platform:'openai',state:'reconciling',revision:a.revision,error:{code:'confirmation_unknown',check:'account_change_submission',platform:'openai',message:'confirmation outcome unknown',evidence:{}}};});
- await reconcile(page);await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeDisabled();await page.keyboard.press('Escape');expect(await calls(page,'account_action')).toEqual([]);
+ await reconcile(page);await expect(card(page).getByRole('button',{name:'核对结果',exact:true})).toBeVisible();await expect(card(page).getByRole('button',{name:'核对账号变更',exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toEqual([]);
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.revision++;a.operation.revision=a.revision;a.operation.error.code='confirmation_not_submitted';a.operation.error.message='confirmation was not submitted';});
  await reconcile(page);await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();await accountCompleted(page,'confirm_change');expect(await calls(page,'account_action')).toHaveLength(1);
 });

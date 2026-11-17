@@ -323,13 +323,23 @@ pub(crate) async fn verify_recheck(
     bridge: &crate::sidecar::Bridge,
     preferences: crate::preferences::PreferencesSnapshot,
 ) -> Result<(), BridgeError> {
+    verify_recovery_read(manager, preferences)?;
+    bridge.verify_local_startup().await?;
+    Ok(())
+}
+
+// Observing a recovery transaction must remain possible while an account
+// operation is in flight. Package/preferences guards still apply to the read.
+pub(crate) fn verify_recovery_read(
+    manager: &UpdateManager,
+    preferences: crate::preferences::PreferencesSnapshot,
+) -> Result<(), BridgeError> {
     if let Some(cause) = preferences.error {
         return Err(cause);
     }
     if manager.has_pending()? {
         return Err(error("UPDATE_RECOVERY_PENDING","pending update recovery has not proven all required startup evidence; device recheck cannot restore runtime intent or clear the update marker"));
     }
-    bridge.verify_local_startup().await?;
     Ok(())
 }
 

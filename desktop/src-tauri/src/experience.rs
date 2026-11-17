@@ -679,14 +679,21 @@ pub(crate) async fn recover_device<R: tauri::Runtime>(
     let gate = app.state::<StartupGate>();
     let _serial = gate.serial.lock().await;
     let store = app.state::<PreferencesStore>();
-    crate::update_install::verify_recheck(
-        &app.state::<crate::updater::UpdateManager>(),
-        bridge,
-        store.read(),
-    )
-    .await?;
-    let before = gate.snapshot();
     let status_only = !prepare && decision.is_none();
+    if status_only {
+        crate::update_install::verify_recovery_read(
+            &app.state::<crate::updater::UpdateManager>(),
+            store.read(),
+        )?;
+    } else {
+        crate::update_install::verify_recheck(
+            &app.state::<crate::updater::UpdateManager>(),
+            bridge,
+            store.read(),
+        )
+        .await?;
+    }
+    let before = gate.snapshot();
     if !status_only {
         gate.checking(bridge.status().metadata.map(|v| v.instance));
         emit(app, &gate);

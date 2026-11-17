@@ -288,9 +288,10 @@ export function createDesktopState(deps:DesktopDeps){
   async observeStartup(){const next=await (deps.bridge.startupQuery?.()??deps.bridge.startupStatus?.());if(next)acceptStartup(next);},
   async retryStartup(){if(!deps.bridge.startupRetry)return;const next=await deps.bridge.startupRetry();acceptStartup(next);if(next.state==='ready'){repair();await refresh();}},
   async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refresh();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refresh();acceptStartup(next);},
-  recheckOpenaiReads(){
-   if(pending)return pending;
-   if(laneBlocked('openai'))return Promise.resolve();
+  async recheckOpenaiReads(){
+   const generation=epoch;
+   if(pending)await pending;
+   if(disposed||epoch!==generation||laneBlocked('openai'))return;
    for(const key of ['account:openai','supply:openai'] as Resource[])gates.delete(key);
    return refresh();
   },

@@ -23,6 +23,24 @@ test('OpenAI reads are pure and stop after 1/2/4 retries while Claude keeps its 
  t.mock.timers.tick(20000);await tick();assert.equal(reads.filter(r=>r.platform==='openai').length,4);assert.ok(reads.filter(r=>r.platform==='claude').every(r=>r.refresh));
 });
 test('one coordinator shares snapshots across subscriptions without page-triggered reads',async()=>{const f=fixture();const m=createDesktopState(f.deps);let updates=0;const off=m.subscribe(()=>updates++);await tick();const calls=f.calls();const second=m.subscribe(()=>updates++);await tick();assert.equal(f.calls(),calls);await Promise.all([m.refresh(),m.refresh()]);assert.equal(f.calls(),calls+1);assert.ok(updates>0);off();second();m.dispose();await m.refresh();assert.equal(f.calls(),calls+1);});
+test('manual OpenAI recheck waits for an active round then retries blocked reads',async t=>{
+ const f=fixture();let failed=true,release!:()=>void;
+ f.deps.openaiQueries=true;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string,refresh:boolean)=>{
+  if(platform==='openai'){assert.equal(refresh,false);if(failed)throw {code:'HTTP_403',message:'account observation blocked: HTTP 403'};}
+  return {platform,revision:1,issues:[]};
+ }});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().accountRefresh.openai?.state,'blocked');
+ f.deps.runtime=()=>({snapshot:async()=>{await new Promise<void>(resolve=>{release=resolve;});return {...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}};}});
+ const active=m.refresh();await tick();
+ failed=false;const retry=m.recheckOpenaiReads();
+ f.deps.runtime=()=>({snapshot:async()=>({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}})});
+ release();await Promise.all([active,retry]);
+ assert.equal(m.getSnapshot().accountErrors.openai,undefined);
+ assert.ok(m.getSnapshot().accountRefresh.openai?.lastConfirmedAt);
+});
 test('old child and network revision results never replace current state',async()=>{const f=fixture();const m=createDesktopState(f.deps);m.subscribe(()=>{});await tick();f.set(runtime(3));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.set(runtime(2));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.emit(ready('b'));await tick();assert.equal(m.getSnapshot().native.metadata?.instance,'b');m.dispose();});
 test('coordinator refreshes stopped account and supply observations once for all pages',async t=>{
  const f=fixture();let accountReads=0,supplyReads=0;

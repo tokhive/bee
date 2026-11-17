@@ -179,7 +179,7 @@ test('central account readback below a successful receipt remains blocked with r
  const card=page.getByRole('region',{name:/^(OpenAI 账号|添加账号)$/});await expect(card.getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_action'){w.accounts.openai.revision=result.result.account.revision-1;w.regressAccount=true;}if(command==='account_snapshot'&&args.platform==='openai'&&w.regressAccount)result.result.account.revision=w.accounts.openai.revision;return result;};});
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card.locator('.oa-title')).toContainText('接入账号未完成');expect(await calls(page,'account_action')).toHaveLength(1);
+ await expect(card.locator('.oa-title')).toContainText('暂时无法确认接入结果');expect(await calls(page,'account_action')).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
  const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');const problem=evidence.accounts.openai;expect(problem.code).toBe('DESKTOP_STALE_RESULT');expect(problem.message).toMatch(/account revision.*actual=.*required>=/);
 });

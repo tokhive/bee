@@ -21,6 +21,7 @@
 .openai-account .done .oa-step-dot{color:var(--oa-good);border-color:var(--oa-good)}
 .openai-account .current .oa-step-dot{color:var(--oa-accent);border-color:var(--oa-accent);background:var(--oa-soft)}
 .openai-account .failed .oa-step-dot{color:var(--oa-danger);border-color:var(--oa-danger)}
+.openai-account .oa-steps .failed{color:var(--oa-danger)}
 .openai-account .oa-with-steps{margin-top:0;min-height:72px}
 .openai-account .oa-actions{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0 43px;min-height:34px}
 .openai-account:has(.oa-steps) .oa-actions{margin-top:8px}
@@ -52,6 +53,7 @@
 
 .account-inline-check:has(.account-list-status:empty){display:none}
 .account-page-count{font-size:12px;color:var(--muted)}
+.account-heading-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
 .openai-account .oa-icon{background:var(--surface-soft,#f8f7f4)}
 [data-theme=dark] .openai-account .oa-icon{background:#292824}
 

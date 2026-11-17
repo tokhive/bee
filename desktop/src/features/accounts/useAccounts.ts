@@ -228,7 +228,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(snapshot.operation?.id!==id)throw {code:'ACCOUNT_ORIGINAL_UNAVAILABLE',message:'Original account operation record changed: actual='+(snapshot.operation?.id??'missing')+'; required='+id,details:{check:'account_original_query',observed_at:new Date().toISOString(),evidence:{actual:snapshot.operation?.id??'missing',required:id}}};
    return snapshot;
   },settled:s=>!!s.operation&&['succeeded','failed','cancelled'].includes(s.operation.state),retryable:cause=>['RESPONSE_TIMEOUT','REQUEST_NOT_SENT','CONNECTION_LOST'].includes(failure(cause).code),publish:state=>{
-   setOriginalAccountQuery(state);if(state.value&&active.current){publish('openai',state.value);if(state.phase==='settled')setUncertain(v=>({...v,openai:false}));}
+   setOriginalAccountQuery(state);if(state.value&&active.current){publish('openai',state.value);if(state.phase==='settled'){setUncertain(v=>({...v,openai:false}));central.current?.recordReceipt?.('openai',state.value.revision);void central.current?.recheckOpenaiReads?.();}}
   }});
   originalAccountReader.current=query;void query.start();
   return()=>{query.dispose();if(originalAccountReader.current===query)originalAccountReader.current=undefined;};

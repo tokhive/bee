@@ -752,6 +752,28 @@ async fn business_recheck_never_fabricates_pending_update_runtime_evidence() {
     bridge.stop().await.unwrap();
 }
 
+#[test]
+fn recovery_observation_retains_preferences_and_pending_update_guards() {
+    let (dir, manager, request) = ready();
+    let path = dir.path().join("preferences.json");
+    let preferences = crate::preferences::PreferencesStore::new(path.clone());
+    verify_recovery_read(&manager, preferences.read()).unwrap();
+    std::fs::write(&path, "invalid preferences").unwrap();
+    let original = preferences.read().error.unwrap();
+    assert_eq!(
+        verify_recovery_read(&manager, preferences.read()).unwrap_err().code,
+        original.code
+    );
+    assert_eq!(std::fs::read_to_string(&path).unwrap(), "invalid preferences");
+    let clean = crate::preferences::PreferencesStore::new(dir.path().join("clean.json"));
+    prepare_install(&manager, &request).unwrap();
+    assert_eq!(
+        verify_recovery_read(&manager, clean.read()).unwrap_err().code,
+        "UPDATE_RECOVERY_PENDING"
+    );
+    assert!(manager.has_pending().unwrap());
+}
+
 #[tokio::test]
 async fn business_recheck_after_restore_failure_and_clean_stop_preserves_pending_evidence() {
     for pending in [false, true] {

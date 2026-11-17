@@ -321,6 +321,39 @@ async fn network_recovery_keeps_update_identity_data_and_owned_exit_protections(
 }
 
 #[tokio::test]
+async fn recovery_observation_during_account_operation_does_not_reverify_startup() {
+    for phase in [None, Some("completed")] {
+        let (dir, bridge, app) = fixture(serde_json::json!({}));
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let gate = app.state::<StartupGate>();
+        let before = serde_json::to_value(gate.snapshot()).unwrap();
+        let config = if let Some(phase) = phase {
+            serde_json::json!({"bad_data":true,"recovery_phase":phase})
+        } else {
+            serde_json::json!({"bad_data":true,"recovery_error":"DEVICE_RECOVERY_NONE"})
+        };
+        std::fs::write(dir.path().join("context.json"), config.to_string()).unwrap();
+        let calls_path = dir.path().join("context.json.calls");
+        let calls_before = std::fs::read_to_string(&calls_path).unwrap();
+        let result = recover_device(app.handle(), &bridge, None, false).await;
+        if phase.is_some() {
+            assert_eq!(result.unwrap().result["recovery"]["phase"], "completed");
+        } else {
+            assert_eq!(result.unwrap_err().code, "DEVICE_RECOVERY_NONE");
+        }
+        assert_eq!(serde_json::to_value(gate.snapshot()).unwrap(), before);
+        let calls = std::fs::read_to_string(calls_path).unwrap();
+        let new_calls = &calls[calls_before.len()..];
+        assert!(!new_calls.contains("runtime_verify"));
+        assert!(!new_calls.contains("runtime_restore"));
+        assert!(!new_calls.contains("runtime_start"));
+        // Explicit recovery mutations still require full startup verification.
+        assert_eq!(recover_device(app.handle(), &bridge, None, true).await.unwrap_err().code, "STARTUP_DATA_INVALID");
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
 async fn absent_device_recovery_status_preserves_startup_and_network_scope() {
     for state in ["ready", "blocked", "checking"] {
         let (dir, bridge, app) =

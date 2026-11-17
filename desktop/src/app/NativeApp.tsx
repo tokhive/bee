@@ -15,7 +15,7 @@ import {StartupRecoveryNotice} from '../components/StartupRecoveryNotice';
 import {NativeOverviewPage} from '../features/overview/NativeOverviewPage';
 import {FirstLaunchWizard} from '../features/device/FirstLaunchWizard';
 import {observeFirstLaunch,firstLaunchIntent,firstLaunchReceipt,firstLaunchAdmission,type FirstLaunchSession} from '../system/firstLaunch';
-import {NativeAccountsPage} from '../features/accounts/NativeAccountsPage';
+import {NativeAccountsPage,NativeAccountHeadingActions} from '../features/accounts/NativeAccountsPage';
 import {useAccounts} from '../features/accounts/useAccounts';
 import {useRuntime} from '../features/lifecycle/useRuntime';
 import {useSupply} from '../features/supply/useSupply';
@@ -188,7 +188,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const sharedProblem=snapshot.error??identityFailure(snapshot)??null;
  const showSharedProblem=ready&&!startupReadOnly&&!!sharedProblem&&sharedProblem!==snapshot.startup?.failure;
  useEffect(()=>{diagnostics.setContext(snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0);},[diagnostics,snapshot.runtime?.network_revision,snapshot.runtime?.run_id,snapshot.bindingRevision]);
- return <AppShell autoService={props.autoService} desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={view?.identity?.name??snapshot.deviceContext?.name} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={props.autoService&&page==='accounts'?<span className="account-page-count">{!startupReadOnly&&Object.values(accounts.views).length===2&&!Object.keys(accounts.readFailures).some(key=>accounts.readFailures[key as 'openai'|'claude'])?t('{count} 个已接入',{count:Object.values(accounts.views).filter(account=>account.selection.state==='selected').length}):t('接入数量待确认')}</span>:<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
+ return <AppShell autoService={props.autoService} desktopStatus={presentation} navigationRequest={navigationRequest} page={page} onNavigate={navigatePage} demo={false} deviceMode deviceName={view?.identity?.name??snapshot.deviceContext?.name} hive={view?.hive??snapshot.deviceContext?.hive} connected={!snapshot.error&&!runtime.error&&!runtime.uncertain&&runtime.view?.connection==='connected'} debug={props.autoService&&page==='accounts'?<NativeAccountHeadingActions accounts={accounts} readOnly={startupReadOnly}/>:<button disabled={!snapshot.deviceContext?.hive||busy} onClick={()=>void run(props.openHive)}>{t('打开 Hive 控制台')}</button>}>
   {!firstProfile&&!switchingPending&&<StartupRecoveryNotice snapshot={snapshot} diagnostics={page==='diagnostics'} onQuery={()=>model?.observeStartup()??Promise.resolve()} onRetry={()=>model?.retryStartup()??Promise.resolve()} onDiagnostics={()=>navigate({page:'diagnostics'})}/>}
   {showSharedProblem&&page!=='overview'&&<div><FailureNotice failure={sharedProblem} check="startup_check" onNavigate={navigate}/><button disabled={busy||snapshot.busy} onClick={()=>void run(()=>model?.recheckStartup()??Promise.resolve(),false)}>{t('重新检查设备')}</button></div>}
   {recovery&&<button className="recovery-return" onClick={returnFromRecovery}>{t('返回原处')}</button>}

@@ -29,6 +29,7 @@ export const addAccountEnglish:Record<string,string>={
  '请在官方页面完成登录':'Complete login on the official page',
  '正在读取并核验账号…':'Reading and verifying account…',
  '确认接入 OpenAI':'Confirm OpenAI account',
+ '登录成功，尚未接入 Bee':'Signed in successfully. Not yet added to Bee.',
  '已保留当前账号':'Current account retained',
  '未找到本机 OpenAI 登录':'No local OpenAI login found',
  '连接 OpenAI 账号':'Connect an OpenAI account',

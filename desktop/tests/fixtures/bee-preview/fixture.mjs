@@ -19,15 +19,15 @@ export async function installPreviewFixture(id){
  const phase=value=>{if(!current())return;w.__beePreviewPhase=value;w.parent.postMessage({type:'bee-preview-phase',session:w.__beePreviewSession,scene:scene.id,phase:value},location.origin);};
  const seeded=(platform,selected=true)=>{
   const a=accountFixture(platform),fingerprint=(platform==='openai'?'b':'c').repeat(64);
-  a.candidate={...a.candidate,state:'available',reference:(platform==='openai'?'a':'d').repeat(48),source:{directory:null,store:platform==='claude'?'keychain':'file'},fingerprint,plan:platform==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:stamp(0)};
+  a.candidate={...a.candidate,state:'available',reference:(platform==='openai'?'a':'d').repeat(48),source:{directory:null,store:platform==='claude'?'keychain':'file'},fingerprint,plan:platform==='openai'?'plus':'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:platform==='claude',observed_at:stamp(0)};
   if(selected){a.selection={...a.selection,state:'selected',fingerprint,observed_at:stamp(0)};a.hive={...a.hive,state:'ready',fingerprint,generation:1};}
-  a.authorization={...a.authorization,state:selected?'synchronized':'official_identity_verified',fingerprint,observed_at:stamp(0)};
+  a.authorization={...a.authorization,state:selected?'synchronized':platform==='claude'?'official_identity_verified':'local_structure_only',fingerprint,observed_at:stamp(0)};
   a.capabilities[0]={...a.capabilities[0],status:'ready',plan:a.candidate.plan,observed_at:stamp(0),metadata_observed_at:stamp(0),valid_until:stamp(3600000),windows:[{scope:'',seconds:18000,used_percent:3,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:2,reset_at:'2099-01-01T00:00:00Z'}]};
   return a;
  };
  const accounts={openai:seeded('openai'),claude:accountFixture('claude')};
  accounts.claude.candidate.state='source_missing';
- if(id==='confirm-clear'){accounts.openai.hive={...accountFixture('openai').hive};accounts.openai.authorization.state='official_identity_verified';}
+ if(id==='confirm-clear'){accounts.openai.hive={...accountFixture('openai').hive};accounts.openai.authorization.state='local_structure_only';}
  const empty=['switch-first-launch','runtime-no-accounts','runtime-accounts-unconfirmed','account-empty','account-reading','confirm-login'].includes(id);
  if(empty){accounts.openai=accountFixture('openai');accounts.openai.candidate.state=id==='account-reading'?'not_checked':'source_missing';}
  if(['account-candidate','confirm-select'].includes(id))accounts.openai=seeded('openai',false);
@@ -215,7 +215,7 @@ export async function installPreviewFixture(id){
   if(command==='runtime_snapshot'){
    for(const [platform,preparation] of preparingAccounts)if(Date.now()>=preparation.deadline){
     preparingAccounts.delete(platform);const account=w.accounts[platform];
-    if(account.revision===preparation.revision&&account.authorization.state==='preparing'&&account.selection.fingerprint===preparation.fingerprint){account.authorization.state=local==='running'&&connection==='connected'?'synchronized':'official_identity_verified';if(account.authorization.state==='synchronized')account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};account.revision++;}
+    if(account.revision===preparation.revision&&account.authorization.state==='preparing'&&account.selection.fingerprint===preparation.fingerprint){account.authorization.state=local==='running'&&connection==='connected'?'synchronized':platform==='claude'?'official_identity_verified':'local_structure_only';if(account.authorization.state==='synchronized')account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};account.revision++;}
    }
    if(autoService&&preparingUntil&&Date.now()>=preparingUntil){local=prepareFailure?'failed':'running';preparingUntil=0;revision++;}
    w.calls.push({command,args});
@@ -237,7 +237,7 @@ export async function installPreviewFixture(id){
    if(id==='account-reading'&&p==='openai')return hold();
    const reply=await original(command,args);
    const account=w.accounts[p];
-   if(autoService&&local==='running'&&connection==='connected'&&account.selection.state==='selected'&&account.candidate.identity_verified&&account.candidate.fingerprint===account.selection.fingerprint&&!account.candidate.error&&!preparingAccounts.has(p)&&!['pending','running','reconciling'].includes(account.operation?.state)){account.authorization.state='synchronized';account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};if(reply.result?.account)reply.result.account=clone(account);}
+   if(autoService&&local==='running'&&connection==='connected'&&account.selection.state==='selected'&&(p==='openai'||account.candidate.identity_verified)&&account.candidate.fingerprint===account.selection.fingerprint&&!account.candidate.error&&!preparingAccounts.has(p)&&!['pending','running','reconciling'].includes(account.operation?.state)){account.authorization.state='synchronized';account.hive={...account.hive,state:'ready',fingerprint:account.selection.fingerprint,generation:1};if(reply.result?.account)reply.result.account=clone(account);}
    return reply;
   }
   if(['supply_status','supply_set_paused'].includes(command)){

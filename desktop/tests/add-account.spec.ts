@@ -160,3 +160,48 @@ test('a terminal login receipt cannot bypass cleanup that is still in progress',
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  await page.evaluate(()=>(window as any).cleaning=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
 });
+
+
+test('a successful native OpenAI login offers intake without a Claude identity flag',async({page})=>{
+ await page.clock.install();await setup(page,true,true);
+ await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await page.evaluate(()=>{
+  const w=window as any;
+  w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'succeeded'});
+ });
+ expect(await page.evaluate(()=>(window as any).accounts.openai.candidate.identity_verified)).toBe(false);
+ await page.clock.runFor(11000);
+ await expect(wizard(page).getByRole('heading')).toHaveText('确认接入 OpenAI');
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ expect(await page.evaluate(()=>(window as any).accounts.openai.candidate.identity_verified)).toBe(false);
+ await expect(wizard(page)).toContainText('登录成功，尚未接入 Bee');
+ await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
+ await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toEqual([]);
+});
+
+
+test('an existing OpenAI local candidate remains selectable without official identity verification',async({page})=>{
+ await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ expect(await page.evaluate(()=>(window as any).accounts.openai.candidate.identity_verified)).toBe(false);
+ expect(await writes(page)).toEqual([]);
+});
+
+
+for(const [label,override] of [
+ ['expired',{expires_at:'2000-01-01T00:00:00Z'}],
+ ['missing reference',{reference:null}],
+ ['missing fingerprint',{fingerprint:null}],
+ ['failed source check',{error:{code:'source_changed',check:'source_readback',platform:'openai',message:'Source changed during readback',evidence:{source_revision_match:'false'}}}],
+] as const)test(`an OpenAI candidate with ${label} cannot be selected`,async({page})=>{
+ await setup(page);
+ await page.evaluate(override=>{(window as any).accountScenarios.candidates={openai:override};},override);
+ await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('heading')).not.toHaveText('正在读取并核验账号…');
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true}).and(page.locator(':enabled'))).toHaveCount(0);
+ expect(await writes(page)).toEqual([]);
+});

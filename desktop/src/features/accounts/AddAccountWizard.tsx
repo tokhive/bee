@@ -30,7 +30,10 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const observing=checking||!initial.current&&!!accounts.busy.openai;
  const busy=observing||!accounts.sourceReady||checking||accounts.sourceSaving||!!accounts.writeBusy.openai;
  const candidate=view?.candidate;
- const valid=!!candidate?.identity_verified&&candidate.state==='available'&&!!candidate.reference&&!!candidate.fingerprint&&!!candidate.expires_at&&Date.parse(candidate.expires_at)>now+30000&&!accounts.dirty.openai&&!accounts.errors.openai;
+ // OpenAI exposes a locally validated candidate. identity_verified belongs to
+ // the Claude profile check and remains false even after an OpenAI login succeeds.
+ const valid=candidate?.state==='available'&&!candidate.error&&!!candidate.reference&&!!candidate.fingerprint&&!!candidate.expires_at&&Date.parse(candidate.expires_at)>now+30000&&!accounts.dirty.openai&&!accounts.errors.openai;
+ const loginSucceeded=op?.kind==='authorize'&&op.state==='succeeded';
  const login=pending&&op?.kind==='authorize';
  const intake=pending&&!login;
  const starting=!!accounts.startingLogin.openai&&!login&&!intake;
@@ -98,6 +101,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
     {progress?.actions.open&&!queryStopped&&<p>{t('未看到官方登录页面时，可点击“打开登录页面”继续本次登录。')}</p>}
     <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} aria-busy={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开登录页面…':'打开登录页面')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="outline" disabled={busy||progress?.phase==='cleaning_up'||!!progress&&!progress.actions.cancel} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
    </>:intake?<><p role="status">{t('账号操作结果待核对')}</p><p>{t('只核对原操作，确认结果前不会重复接入。')}</p>{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
+    {loginSucceeded&&valid&&<p role="status">{t('登录成功，尚未接入 Bee')}</p>}
     <dl><dt>{t('账号标识')}</dt><dd>{confirmedIdentity?.fingerprint?.slice(0,16)}</dd><dt>{t('套餐')}</dt><dd>{confirmedIdentity?.plan??t('尚未确认')}</dd></dl>
     <p>{t('接单将使用该账号的订阅额度。')}</p>
     <p>{t(!supplyCurrent?'接单选择尚未确认，请先核对，暂不能接入。':supply?.state.views.openai?.paused?'接入后保留暂停，由你决定何时恢复接单。':'接入后允许接单，账号准备完成且供给条件满足后开始。')}</p>

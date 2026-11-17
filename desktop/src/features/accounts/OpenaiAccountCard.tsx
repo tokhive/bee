@@ -45,7 +45,7 @@ function OpenaiAction({accounts,runtime,action,label,hidden=false}:{accounts:Acc
 export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onNavigate,now}:Props){
  const view=accounts.views.openai,journey=accounts.openaiJourney;
  const selected=view?.selection.state==='selected',candidate=!accounts.dirty.openai&&view?.candidate.state==='available'&&!!view.candidate.reference;
- const different=selected&&candidate&&view.candidate.identity_verified&&!!view.candidate.fingerprint&&view.candidate.fingerprint!==view.selection.fingerprint;
+ const different=selected&&candidate&&!!view.candidate.fingerprint&&view.candidate.fingerprint!==view.selection.fingerprint;
  const op=view?.operation,maintenance=view?.login_maintenance;
  const query=accounts.loginProgress,progress=query&&query.id===op?.id?query.value:undefined;
  const liveLogin=op?.kind==='authorize'&&['pending','running'].includes(op.state);
@@ -68,7 +68,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const presentation=accountPresentation(view,!!accounts.dirty.openai,now,!!accounts.readFailures.openai,!!accounts.deviceFailure);
  const sameFlow=!!journey&&!!op&&op.id===journey.operationId&&op.state==='succeeded'&&op.revision>journey.revision;
  const restored=!maintenance||maintenance.phase==='restored';
- const repairVerified=journey?.kind==='repair'&&!accounts.dirty.openai&&candidate&&view.candidate.identity_verified&&view.capabilities.some(c=>c.origin==='official'&&c.status==='ready'&&!!c.valid_until&&Date.parse(c.valid_until)>now);
+ const repairVerified=journey?.kind==='repair'&&!accounts.dirty.openai&&candidate&&view.capabilities.some(c=>c.origin==='official'&&c.status==='ready'&&!!c.valid_until&&Date.parse(c.valid_until)>now);
  const canComplete=!!view&&!failed&&!different&&!uncertain&&restored&&selected&&current&&view.authorization.state==='synchronized'&&view.hive.state==='ready'&&(sameFlow||repairVerified);
  useEffect(()=>{if(canComplete&&!journey?.completed&&view?.selection.fingerprint)accounts.completeOpenai(view.selection.fingerprint);},[canComplete,journey?.completed,view?.selection.fingerprint]);
  useEffect(()=>{if(journey?.completed&&(problem||different||accounts.deviceFailure))accounts.dismissOpenai();},[journey?.completed,problem,different,accounts.deviceFailure]);

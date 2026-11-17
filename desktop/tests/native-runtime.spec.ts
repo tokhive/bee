@@ -210,7 +210,7 @@ for(const change of ['candidate','source','selection','hive','pending','operatio
    case 'operation':a.operation={id:'c'.repeat(48),kind:'select',platform:'openai',state:'pending',revision:a.revision,error:null};break;
    case 'feature':a.features.select={available:false,reason:'update_pending'};break;
    case 'expiry':a.candidate.expires_at=new Date(Date.now()+30000).toISOString();break;
-   case 'identity-verification':a.candidate.identity_verified=false;break;
+   case 'identity-verification':a.candidate.identity_verified=!a.candidate.identity_verified;break;
    case 'authorization-state':a.authorization.state='expired';break;
    case 'authorization-fingerprint':a.authorization.fingerprint='e'.repeat(64);break;
    case 'authorization-error':a.authorization.error={code:'expired',check:'expiry',platform:'openai',message:'authorization expires within 30 seconds',evidence:{}};break;

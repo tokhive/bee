@@ -299,7 +299,7 @@ test('completed first pairing and recovery release the cross-domain barrier for 
   const selected=await account.action({platform:'openai',revision:candidate.revision,candidate_ref:candidate.candidate.reference!,action:'select',confirmed:true});assert.equal(selected.selection.state,'selected');
   t.mock.timers.tick(601);
   const prepared=await runtime.snapshot();assert.equal(prepared.local,'stopped');
-  const current=await account.snapshot('openai',false);assert.equal(current.authorization.state,'official_identity_verified');
+  const current=await account.snapshot('openai',false);assert.equal(current.authorization.state,'local_structure_only');
   const login=await authorize.start({platform:'openai',source:{directory:null,store:'file'},expected_revision:current.revision});assert.equal(login.state,'running');
   assert.equal((await authorize.cancel(login.id)).state,'cancelled');assert.equal((await authorize.status(login.id)).state,'cancelled');
   assert.equal((await network.applySaved(true)).error,null);
@@ -342,11 +342,11 @@ test('account verification while disconnected never invents synchronized Hive re
  const w=window as any,account=createAccountClient(invoke,instance);
  applyPreviewEvent({session:w.__beePreviewSession,action:'runtime-connection',value:'offline'});
  const detected=await account.detect({platform:'openai',directory:null,store:'file',mode:'official'});
- assert.equal(detected.candidate.identity_verified,true);
- assert.equal(detected.authorization.state,'official_identity_verified');
+ assert.equal(detected.candidate.identity_verified,false);
+ assert.equal(detected.authorization.state,'local_structure_only');
  assert.equal(detected.hive.state,'unconfirmed');
  const snapshot=await account.snapshot('openai',false);
- assert.equal(snapshot.authorization.state,'official_identity_verified');
+ assert.equal(snapshot.authorization.state,'local_structure_only');
  assert.equal(snapshot.hive.state,'unconfirmed');
  assert.equal((await runtime.snapshot()).connection,'reconnecting');
  applyPreviewEvent({session:w.__beePreviewSession,action:'runtime-connection',value:'online'});

@@ -51,8 +51,8 @@ test('source repair is scoped to its source and only detection produces a new ca
  assert.equal(local.candidate.identity_verified,false);
  assert.equal(local.candidate.source?.store,'file');
  const official=await accounts.detect({platform:'openai',directory:'/tmp/codex',store:'file',mode:'official'});
- assert.equal(official.candidate.identity_verified,true);
- assert.equal(official.authorization.state,'official_identity_verified');
+ assert.equal(official.candidate.identity_verified,false);
+ assert.equal(official.authorization.state,'local_structure_only');
  const other=await accounts.detect({platform:'openai',directory:'/tmp/other',store:'file',mode:'local'});
  assert.equal(other.candidate.state,'source_missing');
  event({action:'account-source',platform:'openai',directory:'/tmp/other',store:'file',value:'denied'});
@@ -72,7 +72,9 @@ test('login result appears in formal snapshots as a candidate and new platform l
  assert.equal(complete.operation?.id,first.id);
  assert.equal(complete.operation?.state,'succeeded');
  assert.equal(complete.candidate.state,'available');
- assert.equal(complete.candidate.identity_verified,true);
+ assert.equal(complete.candidate.identity_verified,false);
+ assert.ok(complete.candidate.reference);
+ assert.ok(complete.candidate.fingerprint);
  assert.equal(complete.selection.state,'not_selected');
  assert.deepEqual((await runtime.snapshot()).platforms.openai.account,complete);
  const claude=await accounts.snapshot('claude',false);

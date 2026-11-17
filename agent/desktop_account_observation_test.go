@@ -59,7 +59,7 @@ func TestDesktopAccountsOfficial(t *testing.T) {
 						return nil, &desktopSyntheticTransportError{}
 					}
 					if scenario == "429" {
-						res := claudeProfileResponse(429, "synthetic-SECRET")
+						res := claudeProfileResponse(429, `{"error":{"message":"official rate limit reached","access_token":"synthetic-SECRET"}}`)
 						res.Header.Set("Retry-After", "120")
 						return res, nil
 					}
@@ -155,7 +155,9 @@ func TestDesktopAccountsOfficial(t *testing.T) {
 
 type desktopSyntheticTransportError struct{}
 
-func (*desktopSyntheticTransportError) Error() string { return "transport-SECRET" }
+func (*desktopSyntheticTransportError) Error() string {
+	return "proxy authentication failed: password=transport-SECRET"
+}
 
 func TestDesktopAccountsOfficialDefaultSourceChanges(t *testing.T) {
 	first, second := t.TempDir(), t.TempDir()

@@ -14,6 +14,7 @@ async fn launch(root: &Path, fixture: &Path) -> Bridge {
         std::path::PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
     let bytes = std::fs::read(&program).unwrap();
     let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![

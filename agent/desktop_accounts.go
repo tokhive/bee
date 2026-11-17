@@ -208,7 +208,11 @@ func initialAccountSnapshot(platform string) DesktopAccountSnapshot {
 	}
 }
 func NewDesktopAccounts(device *DesktopDevice) *DesktopAccounts {
-	ctx, cancel := context.WithCancel(context.Background())
+	return NewDesktopAccountsWithContext(context.Background(), device)
+}
+
+func NewDesktopAccountsWithContext(parent context.Context, device *DesktopDevice) *DesktopAccounts {
+	ctx, cancel := context.WithCancel(parent)
 	result := &DesktopAccounts{ctx: ctx, cancel: cancel, activeActions: map[string]bool{}, accountWorkers: map[string]*desktopAccountWorker{}, device: device, platforms: map[string]*desktopAccountPlatform{}, goos: runtime.GOOS, now: time.Now, readKeyring: readCodexKeyring, networkTransport: officialTransport(""), networkPaths: desktopNetworkPaths("")}
 
 	for _, platform := range []string{"openai", "claude"} {

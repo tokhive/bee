@@ -83,6 +83,7 @@ func runDesktopDevice(ctx context.Context, in, out *os.File, diagnostics io.Writ
 	managed, cancel := context.WithCancel(ctx)
 	defer cancel()
 	done := make(chan struct{})
+	managed, diagnostics = desktopbridge.FailureDiagnostics(managed, diagnostics)
 	closed := make(chan error, 1)
 	go func() {
 		select {
@@ -93,7 +94,7 @@ func runDesktopDevice(ctx context.Context, in, out *os.File, diagnostics io.Writ
 		}
 	}()
 	defer device.Close()
-	accounts := bee.NewDesktopAccounts(device)
+	accounts := bee.NewDesktopAccountsWithContext(managed, device)
 	defer accounts.Close()
 	runner := bee.NewDesktopRuntime(managed, device, accounts)
 	defer runner.Close()

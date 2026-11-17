@@ -21,3 +21,17 @@ test('diagnostic reports and logs retain the public server codes emitted by the 
     assert.throws(()=>decodeLogPage(logs(code)),/outside public contract/);
   }
 });
+
+test('failure history retains the same evidence as the account error',()=>{
+ const entry={time:'2026-11-17T00:00:00Z',level:'error',module:'bridge',platform:null,code:'failure_observed',evidence:{check:'hive_request',failure_code:'http_rejected',failure_message:'Hive /api/bee/maintenance: HTTP 503; tee_unavailable; TEE inbox public key not configured'}};
+ assert.deepEqual(decodeLogPage({entries:[entry],next_cursor:null,truncated:false}).entries[0],entry);
+ for(const message of ['Authorization: Bearer SECRET','password=SECRET','refresh_token=SECRET','cookie=SECRET','-----BEGIN PRIVATE KEY-----SECRET','/Users/PRIVATE/auth.json']) {
+  assert.throws(()=>decodeLogPage({entries:[{...entry,evidence:{...entry.evidence,failure_message:message}}],next_cursor:null,truncated:false}));
+ }
+});
+
+ test('sanitized remote body remains readable through log validation',()=>{
+ const message='HTTP 503; response_body={"error":{"message":"upstream unavailable","refresh_token":[redacted],"revision":9007199254740993}}';
+ const entry={time:'2026-11-17T00:00:00Z',level:'error',module:'bridge',platform:null,code:'failure_observed',evidence:{check:'hive_request',failure_code:'http_rejected',failure_message:message}};
+ assert.equal(decodeLogPage({entries:[entry],next_cursor:null,truncated:false}).entries[0].evidence.failure_message,message);
+ });

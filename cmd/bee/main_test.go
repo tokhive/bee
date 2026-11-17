@@ -218,8 +218,15 @@ func TestDesktopCommandHandshakeAndParentEOF(t *testing.T) {
 			if err := cmd.Wait(); err != nil {
 				t.Fatalf("desktop did not terminate cleanly: %v; stderr=%q", err, diagnostics.String())
 			}
-			if diagnostics.Len() != 0 {
-				t.Fatalf("successful session stderr=%q", diagnostics.String())
+			line := strings.TrimSpace(diagnostics.String())
+			if !strings.HasPrefix(line, "BEE_DESKTOP_FAILURE ") || strings.Count(line, "BEE_DESKTOP_FAILURE ") != 1 {
+				t.Fatalf("expected one record for the rejected start method: %q", line)
+			}
+			var event struct {
+				Evidence map[string]string `json:"evidence"`
+			}
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "BEE_DESKTOP_FAILURE ")), &event); err != nil || event.Evidence["failure_code"] != "UNKNOWN_METHOD" || event.Evidence["check"] != "start" {
+				t.Fatalf("missing rejected-method evidence: %+v, %v", event, err)
 			}
 			entries, err := os.ReadDir(cmd.Dir)
 			data, readErr := os.ReadFile(path)

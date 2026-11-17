@@ -447,7 +447,11 @@ func claudeQuotaLimits(raw json.RawMessage, general map[string]claudeQuotaValue)
 }
 
 // Control queries use the local token only; they neither refresh nor inspect buyer traffic.
-func queryClaudeCapability(ctx context.Context, credential claudeCredential, path string, target any, transport http.RoundTripper) (time.Time, error) {
+func queryClaudeCapability(ctx context.Context, credential claudeCredential, path string, target any, transport http.RoundTripper) (retry time.Time, failure error) {
+	observed := observedOfficialTransport(transport)
+	transport = observed
+	defer func() { failure = finishOfficialFailure(ctx, observed, failure, credential.secret.Token) }()
+
 	if path != "/v1/models?limit=1000" && path != "/api/oauth/usage" {
 		return time.Time{}, errClaudeCapabilityQuery
 	}

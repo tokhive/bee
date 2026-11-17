@@ -42,7 +42,11 @@ func (identity claudeIdentity) fingerprint() string {
 }
 
 // The endpoint is fixed; a transport is injectable only for synthetic tests.
-func queryClaudeProfile(ctx context.Context, credential claudeCredential, transport http.RoundTripper) (claudeIdentity, error) {
+func queryClaudeProfile(ctx context.Context, credential claudeCredential, transport http.RoundTripper) (identity claudeIdentity, failure error) {
+	observed := observedOfficialTransport(transport)
+	transport = observed
+	defer func() { failure = finishOfficialFailure(ctx, observed, failure, credential.secret.Token) }()
+
 	var empty claudeIdentity
 	if !credential.available(time.Now()) {
 		return empty, errClaudeExpired

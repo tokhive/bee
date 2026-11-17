@@ -17,6 +17,10 @@ let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
+  if (mode === 'failure-logging') {
+    process.stderr.write('BEE_DESKTOP_FAILURE '+JSON.stringify({time:new Date().toISOString(),level:'error',module:'bridge',platform:null,code:'failure_observed',evidence:{check:'hive_request',failure_code:'http_rejected',failure_message:'POST /api/bee/maintenance HTTP 503; tee_unavailable; TEE inbox public key not configured'}})+'\n');
+  }
+
   if((mode==='parallel-reads' || mode==='owned-exit-parallel') && request.method!=='hello' && (mode==='parallel-reads'||['account_detect','account_snapshot','supply_status'].includes(request.method))) {
     const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
     appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');

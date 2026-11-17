@@ -28,6 +28,7 @@ pub(crate) fn allowed(mode: ProfileMode, method: &str) -> bool {
             | "device_context"
             | "device_status"
             | "device_begin"
+            | "device_recovery_start"
             | "device_recovery_prepare"
             | "device_recovery_confirm"
             | "device_recovery_status"

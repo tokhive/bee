@@ -253,6 +253,7 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "device_status",
             "device_begin",
             "device_context",
+            "device_recovery_start",
             "device_recovery_prepare",
             "device_recovery_confirm",
             "device_recovery_status",
@@ -808,13 +809,25 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         Some(group)
     }).collect();
     candidates.extend(login_candidates);
-    let switch_candidates: Vec<_> = candidates.iter()
+    let entry_candidates: Vec<_> = candidates
+        .iter()
+        .filter_map(|v| {
+            let index = v.iter().position(|m| m == "device_recovery_prepare")?;
+            let mut v = v.clone();
+            v.insert(index, "device_recovery_start".into());
+            Some(v)
+        })
+        .collect();
+    candidates.extend(entry_candidates);
+    let switch_candidates: Vec<_> = candidates
+        .iter()
         .filter(|group| group.iter().any(|v| v == "runtime_restore"))
         .map(|group| {
             let mut group = group.clone();
             group.push("desktop_switch".into());
             group
-        }).collect();
+        })
+        .collect();
     for group in &switch_candidates {
         for mode in [crate::profile_mode::ProfileMode::Prepare, crate::profile_mode::ProfileMode::Activate] {
             candidates.push(group.iter()
@@ -1371,7 +1384,15 @@ impl DeviceRecoveryConfirm {
                 .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
             || self.expected_revision == 0
             || self.expected_revision >= 9_007_199_254_740_991
-            || !["begin_pairing", "adopt_owner", "renew_expired"].contains(&self.decision.as_str())
+            || ![
+                "begin_pairing",
+                "adopt_owner",
+                "renew_expired",
+                "continue_checking",
+                "restart_pairing",
+                "cancel_pairing",
+            ]
+            .contains(&self.decision.as_str())
         {
             return Err(BridgeError::new("DEVICE_RECOVERY_REQUEST_INVALID","recovery confirmation requires operation ID, positive safe revision and fixed decision".into()));
         }
@@ -1555,9 +1576,6 @@ pub(crate) fn validate_device_recovery(value: &Value) -> Result<(), BridgeError>
     if let Some(recovery) = device.get("recovery") {
         let envelope = serde_json::json!({"recovery":recovery});
         let r = device_recovery(&envelope)?;
-        if !r["old_identity"].is_null() {
-            return Err(rejected());
-        }
         let expected = match r["phase"].as_str().unwrap_or("") {
             "completed" => "bound",
             "pending" => "pending",

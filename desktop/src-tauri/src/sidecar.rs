@@ -341,7 +341,8 @@ fn validate_method_result(
         // Classify its closed wire variant before entering success-only decoding;
         // never infer this distinction by comparing a decoder's error code/text.
         match request.method {
-            "device_recovery_prepare"
+            "device_recovery_start"
+            | "device_recovery_prepare"
             | "device_recovery_confirm"
             | "device_recovery_status"
             | "desktop_switch"
@@ -432,7 +433,7 @@ fn validate_method_result(
             Ok(())
         }
         "device_context" => protocol::device_context_state(result).map(|_| ()),
-        "device_recovery_prepare" | "device_recovery_confirm" | "device_recovery_status" => {
+        "device_recovery_start" | "device_recovery_prepare" | "device_recovery_confirm" | "device_recovery_status" => {
             protocol::device_recovery(result).map(|_| ())
         }
         "device_status" | "device_begin" if result.get("error").is_none() => {
@@ -1146,6 +1147,17 @@ impl Bridge {
         }
         Ok(())
     }
+    pub(crate) async fn device_recovery_start(
+        &self,
+        hive: String,
+        name: String,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.device_recovery_request(
+            "device_recovery_start",
+            serde_json::json!({"hive":hive,"name":name}),
+        )
+        .await
+    }
     pub(crate) async fn device_recovery_prepare(&self) -> Result<BridgeReply, BridgeError> {
         self.device_recovery_request("device_recovery_prepare", serde_json::json!({}))
             .await
@@ -1281,6 +1293,7 @@ impl Bridge {
                 | "device_begin"
                 | "device_status"
                 | "device_context"
+                | "device_recovery_start"
                 | "device_recovery_prepare"
                 | "device_recovery_confirm"
                 | "device_recovery_status"

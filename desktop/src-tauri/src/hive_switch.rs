@@ -629,7 +629,14 @@ pub(crate) struct HiveSwitch {
 impl HiveSwitch {
     pub(crate) fn open(root: PathBuf, startup: &Path) -> Result<Self, BridgeError> {
         let profiles = Arc::new(ProfileStore::open(root)?);
-        profiles.migrate_legacy(startup)?;
+        if let Err(cause) = profiles.snapshot().and_then(|_| profiles.migrate_legacy(startup)) {
+            if !matches!(
+                cause.code.as_str(),
+                "PROFILE_SCHEMA" | "PROFILE_INDEX" | "PROFILE_MIGRATION_PENDING" | "PROFILE_MIGRATION_INVALID"
+            ) {
+                return Err(cause);
+            }
+        }
         let launch = Bridge::bundled_spec()?;
         Self::from_store(profiles, launch)
     }
@@ -641,26 +648,51 @@ impl HiveSwitch {
         let journal = SwitchJournal::new(profiles.root().join("desktop-hive-switch.json"));
         // Load before spawning any process. Damaged/unresolved switch evidence
         // must never fall through to ordinary runtime retirement and restore.
-        let record = journal.load()?;
-        let index = profiles.snapshot()?;
+        let (record, metadata_valid) = match journal.load() {
+            Ok(value) => (value, true),
+            Err(e) if e.code == "HIVE_SWITCH_JOURNAL_INVALID" => (None, false),
+            Err(e) => return Err(e),
+        };
+        let index = match profiles.snapshot() {
+            Ok(value) => value,
+            Err(e) if matches!(e.code.as_str(), "PROFILE_SCHEMA" | "PROFILE_INDEX") => {
+                ProfileIndex::default()
+            }
+            Err(e) => return Err(e),
+        };
+        let metadata_valid=metadata_valid && match profiles.require_migrated(&index) {
+            Ok(())=>true,
+            Err(e) if matches!(e.code.as_str(),"PROFILE_SCHEMA"|"PROFILE_MIGRATION_PENDING")=>false,
+            Err(e)=>return Err(e),
+        };
         let reaped_source = record.as_ref().is_some_and(|r| {
             !r.terminal()
                 && r.source.child_reaped
                 && index.current_profile.as_deref() == Some(&r.source.profile)
         });
-        if let Some(id) = index.current_profile.as_ref().filter(|_| !reaped_source) {
-            let context = profiles.context(id)?;
-            let mode = if record
-                .as_ref()
-                .is_some_and(|r| !r.terminal() && r.target.profile == *id)
-            {
-                ProfileMode::Activate
-            } else {
-                ProfileMode::Current
+        if let Some(id) = index
+            .current_profile
+            .as_ref()
+            .filter(|_| !reaped_source && metadata_valid)
+        {
+            let context = match profiles.context(id) {
+                Ok(context) => Some(context),
+                Err(e) if e.code == "PROFILE_DIRECTORY_MISSING" => None,
+                Err(e) => return Err(e),
             };
-            let bridge = Bridge::start(launch.clone().for_profile(&context, mode)?);
-            crate::update_install::hold_startup(&bridge);
-            current.replace(Some(context), bridge);
+            if let Some(context) = context {
+                let mode = if record
+                    .as_ref()
+                    .is_some_and(|r| !r.terminal() && r.target.profile == *id)
+                {
+                    ProfileMode::Activate
+                } else {
+                    ProfileMode::Current
+                };
+                let bridge = Bridge::start(launch.clone().for_profile(&context, mode)?);
+                crate::update_install::hold_startup(&bridge);
+                current.replace(Some(context), bridge);
+            }
         }
         Ok(Self {
             profiles,
@@ -695,7 +727,11 @@ impl HiveSwitch {
         };
         let mut profile_identities = Vec::new();
         for entry in &profiles.profiles {
-            let context = self.profiles.context(&entry.id)?;
+            let context = match self.profiles.context(&entry.id) {
+                Ok(c) => c,
+                Err(e) if e.code == "PROFILE_DIRECTORY_MISSING" && profiles.current_profile.as_deref() != Some(entry.id.as_str()) => continue,
+                Err(e) => return Err(e),
+            };
             if let Ok(raw) = protected_read_bounded(&context.device_path(), 65536) {
                 if let Ok(v) = crate::profiles::unique_value(&raw) {
                     if v["hive"]
@@ -909,6 +945,40 @@ impl HiveSwitch {
         drop(target);
         Self::ready(&child).await?;
         Ok(child)
+    }
+    pub(crate) async fn recovery_start(
+        &self,
+        origin: String,
+        name: String,
+        updater: &crate::updater::UpdateManager,
+        preferences: crate::preferences::PreferencesSnapshot,
+    ) -> Result<crate::sidecar::BridgeReply, BridgeError> {
+        let _serial = self.serial.lock().await;
+        if self.pending()? {
+            return Err(error(
+                "HIVE_SWITCH_BUSY",
+                "original Hive switch must be reconciled before device recovery",
+            ));
+        }
+        let context = self.profiles.recovery_context(&origin)?;
+        if self.current.context().is_none() {
+            let index = self.profiles.snapshot()?;
+            if index.current_profile.is_none() {
+                self.profiles
+                    .commit_current(index.revision, &context.id, &id())?;
+            }
+            let bridge = Bridge::start(
+                self.launch
+                    .clone()
+                    .for_profile(&context, ProfileMode::Current)?,
+            );
+            crate::update_install::hold_startup(&bridge);
+            self.current.replace(Some(context), bridge);
+        }
+        let bridge = self.current.get()?;
+        Self::ready(&bridge).await?;
+        crate::update_install::verify_recheck(updater, &bridge, preferences).await?;
+        bridge.device_recovery_start(origin, name).await
     }
     /// First-time binding shares the same fixed profile ownership rules, without
     /// inventing a remote switch when there is no prior Hive to drain.
@@ -2235,6 +2305,19 @@ mod tests {
         crate::preferences::private_write(&context.device_path(),&serde_json::to_vec(&json!({"hive":context.origin,"name":"Synthetic Mac","credential":format!("bee_{}","b".repeat(43)),"identity":{"id":"synthetic-device","name":"Synthetic Mac","owner_id":"synthetic-owner","owner_email":"synthetic@example.com"}})).unwrap()).unwrap();
     }
     #[tokio::test]
+    async fn missing_current_directory_keeps_recovery_entry_without_spawning_a_child() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().canonicalize().unwrap();
+        let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
+        let context = profiles.register("https://hive.example").unwrap();
+        profiles.commit_current(profiles.snapshot().unwrap().revision, &context.id, &"a".repeat(48)).unwrap();
+        std::fs::remove_dir(context.directory()).unwrap();
+        let coordinator = HiveSwitch::from_store(profiles, real_launch()).unwrap();
+        assert!(coordinator.current.context().is_none());
+        assert_eq!(coordinator.snapshot().unwrap_err().code, "PROFILE_DIRECTORY_MISSING");
+        assert!(!context.directory().exists());
+    }
+    #[tokio::test]
     async fn historical_conflict_blocks_target_preparation_and_keeps_current_binding() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path().canonicalize().unwrap();
@@ -2723,7 +2806,7 @@ mod tests {
                 .iter()
                 .filter(|e| e["method"] == "POST" && e["path"] == "/api/bee/pairings")
                 .count(),
-            1
+            0
         );
         c.current.get().unwrap().stop().await.unwrap();
     }
@@ -2908,9 +2991,13 @@ mod tests {
             let profiles = Arc::new(ProfileStore::open(root.join("tokhive")).unwrap());
             let a = profiles.register(&a_server.1).unwrap();
             let b = profiles.register(&b_server.1).unwrap();
-            bind(&a); bind(&b);
-            profiles.commit_current(profiles.snapshot().unwrap().revision, &a.id, &id()).unwrap();
-            let prefs = crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
+            bind(&a);
+            bind(&b);
+            profiles
+                .commit_current(profiles.snapshot().unwrap().revision, &a.id, &id())
+                .unwrap();
+            let prefs =
+                crate::preferences::PreferencesStore::new(root.join("preferences.json")).read();
             let c = HiveSwitch::from_store(profiles.clone(), real_launch()).unwrap();
             let started = c.start(b.origin, "Mac".into(), prefs.clone()).await.unwrap().operation.unwrap();
             let leg = if target { &started.target } else { &started.source };
@@ -2930,9 +3017,17 @@ mod tests {
             assert_eq!(done.phase, "cancelled", "{done:?}");
             let leg = if target { &done.target } else { &done.source };
             assert_eq!(leg.release, Some(release.clone()));
-            let writes = audit(failing).await.as_array().unwrap().iter()
-                .filter(|e| e["method"] == "POST" && e["path"].as_str().is_some_and(|p| p.ends_with("/release")))
-                .cloned().collect::<Vec<_>>();
+            let writes = audit(failing)
+                .await
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|e| {
+                    e["method"] == "POST"
+                        && e["path"].as_str().is_some_and(|p| p.ends_with("/release"))
+                })
+                .cloned()
+                .collect::<Vec<_>>();
             assert_eq!(writes.len(), 1, "{writes:?}");
             assert_eq!(writes[0]["body"], release);
             let late = reqwest::Client::builder().no_proxy().build().unwrap()

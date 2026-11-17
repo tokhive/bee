@@ -85,6 +85,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	switcher, hasSwitch := runner.(SwitchRuntime)
 	hasSwitch = hasSwitch && switchProfileID(devices) != ""
 	recoveries, hasRecovery := devices.(DeviceRecovery)
+	recoveryEntry, hasRecoveryEntry := devices.(interface {
+		RecoveryAt(context.Context, string, string) (bee.DeviceRecoveryView, error)
+	})
 	contexts, hasContext := devices.(DeviceContext)
 	verifier, hasVerifier := runner.(StartupVerifier)
 	inspector, hasInspector := runner.(RecoveryInspector)
@@ -219,6 +222,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasVerifier {
 					capabilities = append(capabilities, "runtime_verify")
 				}
+				if hasRecoveryEntry {
+					capabilities = append(capabilities, "device_recovery_start")
+				}
 				if hasRecovery {
 					capabilities = append(capabilities, "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status")
 				}
@@ -240,6 +246,17 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 					}{operationFailure("HIVE_SWITCH_FAILED", err)}
 				} else {
 					answer.Result = value
+				}
+			case hasRecoveryEntry && req.Method == "device_recovery_start":
+				value, err := recoveryEntry.RecoveryAt(ctx, req.Hive, req.Name)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("DEVICE_RECOVERY_FAILED", err)}
+				} else {
+					answer.Result = struct {
+						Recovery bee.DeviceRecoveryView `json:"recovery"`
+					}{value}
 				}
 			case hasRecovery && slices.Contains([]string{"device_recovery_prepare", "device_recovery_confirm", "device_recovery_status"}, req.Method):
 				var value bee.DeviceRecoveryView

@@ -309,8 +309,8 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 					return req, rejected("INVALID_REQUEST", "recovery revision requires positive safe integer")
 				}
 			case "decision":
-				if json.Unmarshal(raw, &req.RecoveryDecision) != nil || !slices.Contains([]string{"begin_pairing", "adopt_owner", "renew_expired"}, req.RecoveryDecision) {
-					return req, rejected("INVALID_REQUEST", "recovery decision requires begin_pairing,adopt_owner,renew_expired")
+				if json.Unmarshal(raw, &req.RecoveryDecision) != nil || !slices.Contains([]string{"begin_pairing", "adopt_owner", "renew_expired", "continue_checking", "restart_pairing", "cancel_pairing"}, req.RecoveryDecision) {
+					return req, rejected("INVALID_REQUEST", "recovery decision requires begin_pairing,adopt_owner,renew_expired,continue_checking,restart_pairing,cancel_pairing")
 				}
 			}
 		}
@@ -319,7 +319,7 @@ func decodeRequest(frame []byte) (request, *protocolError) {
 		}
 		return req, nil
 	}
-	if req.Method == "device_begin" {
+	if req.Method == "device_begin" || req.Method == "device_recovery_start" {
 		decoder := json.NewDecoder(bytes.NewReader(fields["params"]))
 		_, _ = decoder.Token()
 		seen := map[string]bool{}

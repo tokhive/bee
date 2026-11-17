@@ -76,6 +76,13 @@ func (d *DesktopDevice) operate(ctx context.Context, origin, name string) (Devic
 		return DeviceView{}, err
 	}
 	defer end()
+	localRecovery, e := readDesktopRecovery(session)
+	if e == nil && localRecovery != nil && localRecovery.Purpose == "local_recovery" && localRecovery.Phase != "completed" {
+		if e = d.advanceRecovery(ctx, session, localRecovery); e != nil {
+			return DeviceView{}, e
+		}
+		return initialRecoveryView(localRecovery, localState{}), nil
+	}
 	state, err := session.read()
 	if err != nil {
 		return DeviceView{}, err
@@ -227,6 +234,8 @@ func validateDesktopIdentity(state localState, identity beewire.Identity) error 
 // credentials. Error codes are bounded to the Hive contract's public alphabet.
 func safeCode(code string) string {
 	switch code {
+	case "pairing_attempt_not_found", "pairing_recovery_conflict", "invalid_pairing_attempt":
+		return code
 	case "runtime_retired", "invalid_runtime_recovery", "runtime_recovery_conflict", "runtime_preparation_conflict", "runtime_account_conflict":
 		return code
 	case "", "pending", "draining", "approved", "redeemed", "device_exists", "device_draining", "replacement_pending", "pairing_expired", "pairing_redeemed", "invalid_device_credential", "device_replaced", "rate_limited", "invalid_pairing", "invalid_pairing_token", "unavailable", "device_changed", "pairing_pending":
@@ -252,6 +261,14 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 		}
 	case "/api/bee/pairings/redeem":
 		check = "pairing_redeem"
+	}
+	if strings.HasPrefix(path, beewire.PairingRecoveryPath) {
+		check = "pairing_status"
+		if strings.HasSuffix(path, "/begin") {
+			check = "pairing_create"
+		} else if strings.HasSuffix(path, "/advance") {
+			check = "pairing_redeem"
+		}
 	}
 	started := time.Now()
 	var retryAfter string

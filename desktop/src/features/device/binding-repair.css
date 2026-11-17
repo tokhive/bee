@@ -1,0 +1,55 @@
+/* The approved overview card shares the application's existing theme tokens. */
+.native-device-summary.device-card{position:relative;max-width:none;margin:0 0 18px;padding:16px;border:1px solid var(--line);border-radius:9px;background:var(--paper)}
+.device-card-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.device-card-heading h2{margin:0;font-size:14px;font-weight:600}
+.device-card-heading .ui-button{width:28px;min-width:28px;min-height:28px;padding:0}
+.device-card-heading svg{width:16px;height:16px}
+.device-switch-anchor{position:absolute;top:42px;right:16px}
+.device-actions-menu{z-index:60;min-width:168px;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);box-shadow:0 6px 20px var(--shadow);font-size:12px}
+.device-actions-menu [role=menuitem]{display:flex;align-items:center;min-height:32px;padding:6px 9px;border-radius:4px;outline:none;cursor:pointer}
+.device-actions-menu [data-highlighted]{background:var(--panel)}
+.device-actions-menu [data-disabled]{color:var(--muted);opacity:.55;cursor:default}
+.device-actions-menu p{max-width:190px;padding:4px 9px;color:var(--muted);font-size:11px;line-height:1.5}
+.device-card-facts{display:flex;flex-wrap:wrap;gap:6px 20px;margin:12px 0 0;padding:0;color:var(--muted);font-size:11px}
+.device-card-facts>div{display:flex;align-items:baseline;gap:7px;min-width:0}
+.device-card-facts dt{flex:none;margin:0;font-size:11px;line-height:1.5}.device-card-facts dd{margin:0;overflow-wrap:anywhere}
+.device-card .device-card-runtime{margin:0;padding:0;border:0}
+.device-card-runtime .native-runtime-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.device-card-runtime .native-runtime-row:has(.native-runtime-title:only-child){min-height:0;height:0}
+.device-card-runtime .native-runtime-health{margin-top:0;font-size:13px;gap:20px}
+.device-card-runtime .native-runtime-health svg{width:12px;height:12px}
+.device-card-runtime .native-runtime-row{justify-content:flex-end}
+.device-card .device-transaction{margin:16px 0 0;padding:14px 0 0;border-top:1px solid var(--line);font-size:13px;line-height:1.6}
+.device-card .device-transaction>p{margin:8px 0;color:var(--muted)}
+.device-card .device-transaction-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 8px}
+.device-card .pairing-phase{font-size:13px;line-height:1.6;font-weight:600;margin:0;color:var(--ink)}
+.device-card .device-transaction-heading .ui-button{width:28px;min-height:28px;padding:0}
+.device-card .first-launch-failure{margin:8px 0;font-size:12px}
+.device-card .first-launch-failure>p{margin:4px 0}
+.device-card .first-launch-error-trigger{width:24px;min-height:24px;padding:0}
+.binding-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:12px}
+.device-card .ui-button{font-size:12px;min-height:32px}
+.device-card .repair-result{display:flex;align-items:center;gap:6px;margin:12px 0 0;font-size:12px;color:var(--good)}
+.repair-result svg{width:14px;height:14px}
+.binding-pairing-code{border-radius:6px;background:var(--panel);padding:12px 14px;margin:12px 0}
+.binding-pairing-code>p{margin:0;font-size:11px;color:var(--muted)}
+.binding-pairing-code>div{display:flex;align-items:center;gap:12px;margin:2px 0}
+.binding-pairing-code .pair-code{font:600 22px/1.5 ui-monospace,SFMono-Regular,monospace;letter-spacing:.08em;user-select:all}
+.binding-pairing-code small,.device-card .device-note{font-size:11px;color:var(--muted)}
+.device-card p.repair-impact,.binding-confirmation .repair-impact{padding:9px 12px;border-radius:5px;background:var(--panel);color:var(--ink);font-size:12px;line-height:1.6}
+.repair-progress{padding:8px 12px;border-left:2px solid var(--accent);margin:12px 0;background:var(--panel)}
+.repair-progress p{margin:0}.repair-progress details{margin-top:6px}.repair-progress pre,.binding-url p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
+.binding-url{font-size:11px;color:var(--muted);margin-top:4px}.binding-url summary{cursor:pointer;min-height:24px}
+.device-card .recovery-identities{margin:12px 0;gap:12px}.recovery-identities dt{color:var(--muted);font-size:11px}.recovery-identities dd{margin:4px 0;overflow-wrap:anywhere}
+.device-card .device-recovery-action{margin:12px 0 0;padding:0;border:0;display:block}
+.device-card .device-recovery-action form{margin-top:12px}.device-card .device-recovery-action .ui-button{margin-left:0}
+.device-card .settings-form input{max-width:100%}
+@media(max-width:720px){.device-card-facts{gap:6px 14px}.device-card .device-transaction-heading{flex-direction:row;align-items:center}.binding-actions .ui-button{white-space:normal}.binding-pairing-code .pair-code{font-size:20px}}
+@media(prefers-reduced-motion:reduce){.device-refreshing{animation:none}}
+
+.device-card-facts>div{padding:0;border:0}.device-card-facts dd{font-size:11px;line-height:1.5}
+.overview-accounts-card{border:1px solid var(--line);border-radius:9px;background:var(--paper);overflow:hidden}
+.native-shell .overview-accounts-card>.section-heading{margin:0;padding:16px 16px 0}.overview-accounts-card>.section-heading h2{font-size:14px;font-weight:600}
+.overview-accounts-card .native-account-list{border:0;border-radius:0;box-shadow:none}.overview-accounts-card .native-accounts-footnote{padding:0 16px 14px;margin:0}
+
+.device-service-counts{display:flex;gap:16px;margin-left:auto;color:var(--muted);font-size:11px}.device-service-counts b{margin-left:4px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+@media(max-width:720px){.device-service-counts{gap:10px}}

@@ -80,7 +80,7 @@ test('preview controls reject stale sessions and messages from other sources',as
 });
 
 const cases:[string,string|RegExp][]=[
- ['device-unbound','设置这台设备'],['device-pending','在 Hive 网页确认设备归属'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
+ ['device-unbound','设置这台设备'],['device-pending','在 Hive 网页确认设备归属'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备与 Hive'],['device-error','HTTP 503'],
  ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Hive 未连接'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
  ['account-reading','正在读取并核验账号'],['account-empty','选择要添加的平台'],['account-candidate','选择要添加的平台'],['account-selected','已用 3%'],['account-error','没有读取所选凭证来源的权限'],['account-expired','上次记录'],['account-change','尚未核对'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
@@ -131,7 +131,7 @@ test('review selector covers approved groups and preserves scene when theme or s
   expect(facts.selections).toEqual(['not_selected','not_selected']);
   if(scene==='runtime-no-accounts'){
    await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('接入账号后，Bee 将自动准备服务。');
-   await expect(app.getByRole('button',{name:'前往准备账号',exact:true})).toBeVisible();
+   await expect(app.getByRole('button',{name:'接入账号',exact:true})).toBeVisible();
   }else{
    await expect(app.getByText('接入数量待确认',{exact:true})).toBeVisible();
    await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('贡献状态待确认');

@@ -80,7 +80,7 @@ for(const outcome of ['success','failure'])test(`late Hive open ${outcome} from 
  await page.evaluate((outcome:string)=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command!=='hive_open')return invoke(command,args);const result=await invoke(command,args);w.oldHiveStarted=true;return new Promise((resolve,reject)=>{w.finishOldHive=()=>outcome==='success'?resolve(result):reject(new Error('HIVE_OPEN_FAILED: old instance result arrived after replacement'));});};},outcome);
  await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).oldHiveStarted)).toBe(true);
  const before=await page.evaluate(()=>{const w=window as any;w.emit('d'.repeat(32));return w.runtimeReadCount;});await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
- await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
  const reads=await page.evaluate(()=>{const w=window as any;w.finishOldHive();return w.runtimeReadCount;});await page.clock.runFor(1);
  expect(await page.evaluate(()=>(window as any).runtimeReadCount)).toBe(reads);await expect(page.getByText(/HIVE_OPEN_FAILED/)).toHaveCount(0);
 });
@@ -356,7 +356,7 @@ for(const reason of ['device_replaced','invalid_device_credential'])test('T8 dia
  await setup(page);await page.clock.runFor(100);await page.evaluate(reason=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='diagnostics_start'){const r=value.result.report;r.state='completed';r.finished_at=r.started_at;r.checks=[{id:'device',platform:null,status:'pass',code:'device_binding_valid',observed_at:r.started_at,evidence:{},next_action:'diagnostics'},{id:'hive',platform:null,status:'fail',code:reason==='device_replaced'?reason:'http_rejected',observed_at:r.started_at,evidence:{method:'GET',path:'/api/bee/identity',http_status:'401',server_code:reason},next_action:'diagnostics'}];}return value;};},reason);
  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.getByTestId('passed-checks').locator(':scope > summary').click();
  await expect(page.getByText('本机绑定信息完整；远端身份需单独核对。',{exact:true})).toBeVisible();const check=page.locator('.nd-issues [data-nav-section="connection"]');await expect(check).toContainText(reason==='device_replaced'?'此设备已被替换，原设备凭据已撤销。':'Hive 已拒绝此设备凭据。');
- await check.getByRole('button',{name:'查看概览',exact:true}).click();await expect(page.locator('[data-nav-section="device"]')).toBeFocused();await expect(page.getByRole('button',{name:'重新绑定设备',exact:true})).toBeVisible();
+ await check.getByRole('button',{name:'查看概览',exact:true}).click();await expect(page.locator('[data-nav-section="device"]')).toBeFocused();await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toBeVisible();
  await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(check).toBeFocused();expect((await calls(page,'diagnostics_start')).length).toBe(1);
  for(const command of ['device_recovery_prepare','device_recovery_confirm','runtime_start','account_action','device_begin'])expect((await calls(page,command)).length).toBe(0);
 });
@@ -697,7 +697,7 @@ test('unsupported Hive recovery gives an honest next step and no ineffective que
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?Promise.resolve({state:'blocked',failure:{code:'RECOVERY_SERVER_UNSUPPORTED',message:'Hive runtime recovery protocol unavailable: HTTP 404; original guard retained'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false,recovering:false}):invoke(command,args);});
  await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('需要先升级 Hive');
- await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toHaveCount(0);await expect(page.getByRole('alert')).toHaveCount(1);
+ await expect(notice.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();await expect(page.getByRole('alert')).toHaveCount(1);
  await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('HTTP 404');
  await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);

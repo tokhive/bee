@@ -1,14 +1,15 @@
 import {test,expect,type Page} from '@playwright/test';
 async function open(page:Page,scene:string){
+ await page.clock.install();
  await page.goto('/tests/fixtures/bee-preview/app.html?scene='+scene);
  await page.waitForFunction(()=>(window as any).__beePreviewReady||(window as any).__beePreviewError);
  expect(await page.evaluate(()=>(window as any).__beePreviewError)).toBeUndefined();
 }
 const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('button',{name,exact:true});
 const calls=(page:Page)=>page.evaluate(()=>(window as any).calls as {command:string;args:any}[]);
-const writes=new Set(['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
+const writes=new Set(['device_recovery_start','device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
 const phases:{[key:string]:string}={
- 'recovery-pending':'等待网页确认','recovery-draining':'等待 Hive 核对旧设备的任务、结算和遗留操作','recovery-creation-unknown':'创建结果未知','recovery-redemption-unknown':'兑换结果未知','recovery-saving':'本机保存未完成','recovery-owner':'新设备归属与原设备不同',
+ 'recovery-pending':'在 Hive 网页确认设备','recovery-draining':'等待 Hive 核对旧设备的任务、结算和遗留操作','recovery-creation-unknown':'创建结果未知','recovery-redemption-unknown':'兑换结果未知','recovery-saving':'绑定已完成，本机保存失败','recovery-owner':'新设备归属与原设备不同',
 };
 for(const [scene,copy] of [
  ['device-creation-unknown','尚无法确认配对请求结果'],
@@ -36,26 +37,27 @@ for(const [scene,copy] of Object.entries(phases))test('unresolved device transac
 });
 test('revoked credential recovery requires local consent, external approval and explicit new owner adoption',async({page})=>{
  await open(page,'device-recovery-confirm');
- const rebind=page.getByRole('button',{name:'重新绑定设备',exact:true});await rebind.click();
+ await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();
+ const rebind=page.getByRole('button',{name:'重新绑定 Hive',exact:true});await rebind.click();
  await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(rebind).toBeFocused();
- expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
+ expect((await calls(page)).filter(c=>c.command==='device_recovery_confirm')).toEqual([]);
  await rebind.click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
- await expect(page.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(page.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
- await expect(page.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(page.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  await page.evaluate(()=>(window as any).__beePreviewApprove());
- await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await page.clock.runFor(2100);
  await expect(page.locator('.pairing-phase')).toHaveText('新设备归属与原设备不同');
  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('owner@example.test');await expect(page.getByRole('dialog')).toContainText('new-owner@example.test');
  await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
- await expect(page.locator('.pairing-phase')).toContainText('未自动开始贡献');
- await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await expect(page.locator('.device-card')).toContainText('设备绑定已保存。');
+ await page.clock.runFor(2100);
  const commands=(await calls(page)).filter(c=>writes.has(c.command));
- expect(commands.map(c=>c.command)).toEqual(['device_recovery_prepare','device_recovery_confirm','device_recovery_confirm']);
+ expect(commands.map(c=>c.command)).toEqual(['device_recovery_start','device_recovery_confirm','device_recovery_confirm']);
  expect(commands.filter(c=>c.command==='device_recovery_confirm').map(c=>c.args.decision)).toEqual(['begin_pairing','adopt_owner']);
  expect(await page.evaluate(()=>Object.values((window as any).accounts).map((a:any)=>a.selection.state))).toEqual(['not_selected','not_selected']);
- await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'前往准备账号',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'接入 AI 账号',exact:true})).toBeVisible();
 });
 test('saved revoked identity and missing selected source keep all pages reachable without account or runtime writes',async({page})=>{
  await open(page,'device-revoked-source-missing');await expect(page.locator('body')).toContainText('上次保存的设备信息');
@@ -77,11 +79,11 @@ test('first launch keeps explicit original-request controls available after reop
 
 test('missing local binding exposes recovery from the first launch form and retains its address on failure',async({page})=>{
  await open(page,'device-unbound');
- await page.getByRole('button',{name:'重新绑定 Hive',exact:true}).click();
+ await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();
  const form=page.locator('.device-recovery-action form');
  await form.getByLabel('Hive 地址',{exact:true}).fill('https://original-hive.example');
  await form.getByLabel('设备名称',{exact:true}).fill('Recovered Bee');
- await form.getByRole('button',{name:'核对并准备恢复',exact:true}).click();
+ await form.getByRole('button',{name:'继续',exact:true}).click();
  await expect(form.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://original-hive.example');
  expect((await calls(page)).filter(c=>c.command==='device_recovery_start').map(c=>c.args)).toEqual([{hive:'https://original-hive.example',name:'Recovered Bee'}]);
  expect((await calls(page)).filter(c=>['device_begin','runtime_start','account_action'].includes(c.command))).toEqual([]);
@@ -93,23 +95,24 @@ test('local recovery advances only after confirmation and cancel dialog returns 
   const w=window as any,prior=w.__TAURI_INTERNALS__.invoke;
   w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_recovery_start'?{result:{recovery:{operation_id:'a'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:null,new_identity:null,pairing:null,failure:null}}}:command==='device_recovery_confirm'?{result:{recovery:{operation_id:'a'.repeat(48),revision:2,phase:'pending',old_identity:null,new_identity:null,pairing:{code:'ABCD-EFGH',verification_url:'https://original-hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'},failure:null}}}:prior(command,args);
  });
- await page.getByRole('button',{name:'重新绑定 Hive',exact:true}).click();
+ await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();
  await page.locator('input[name="recovery-hive"]').fill('https://original-hive.example');
- await page.getByRole('button',{name:'核对并准备恢复',exact:true}).click();
- await expect(page.getByText('等待确认后生成配对码',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'继续',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'请重新绑定',exact:true})).toBeVisible();
  await expect(page.getByText('ABCD-EFGH',{exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();
+ await page.getByRole('button',{name:'重新绑定 Hive',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
- await expect(page.getByText('等待网页确认',{exact:true})).toBeVisible();
- const cancel=page.getByRole('button',{name:'取消本次重绑',exact:true});
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备',exact:true})).toBeVisible();
+ const cancel=page.getByRole('button',{name:'重新绑定操作',exact:true});
  await cancel.click();
+ await page.getByRole('menuitem',{name:'取消重新绑定',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('旧设备不会自动恢复接单');
- await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'继续重新绑定',exact:true}).click();
  await expect(cancel).toBeFocused();
  await page.getByRole('button',{name:'查看诊断',exact:true}).click();
  await expect(page.getByRole('heading',{name:'诊断',exact:true})).toBeFocused();
  await page.getByRole('button',{name:'返回设备设置',exact:true}).click();
- await expect(page.getByRole('region',{name:'设备配对',exact:true})).toBeFocused();
+ await expect(page.getByRole('region',{name:'设备与 Hive',exact:true})).toBeFocused();
  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
  expect((await calls(page)).filter(c=>['device_begin','runtime_start','account_action'].includes(c.command))).toEqual([]);
 });

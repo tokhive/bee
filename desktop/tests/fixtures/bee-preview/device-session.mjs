@@ -81,7 +81,7 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
   const pending=Object.entries(w.accounts).find(([,a])=>a.operation&&['pending','running','reconciling'].includes(a.operation.state));
   return pending?'device recovery blocked by pending account operation: platform='+pending[0]+'; state='+pending[1].operation.state:null;
  };
- const commands=new Set(['device_context','device_begin','device_status','device_open','device_recovery_prepare','device_recovery_confirm','device_recovery_status','startup_status','startup_recheck']);
+ const commands=new Set(['device_recovery_start','device_context','device_begin','device_status','device_open','device_recovery_prepare','device_recovery_confirm','device_recovery_status','startup_status','startup_recheck']);
  return {
   binding:()=>({hive:savedHive||origin,device_id:identity?.id??null,owner_id:identity?.owner_id??null}),
   writeBarrier:()=>transaction&&transaction.phase!=='completed'?{phase:transaction.phase,revision:transaction.revision}:null,
@@ -91,6 +91,13 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
    w.calls.push({command,args});
    if(command==='startup_status'||command==='startup_recheck')return {state:revoked?'blocked':'ready',failure:revoked?failure('device_replaced','GET /api/bee/identity HTTP 401 device_replaced; saved credential rejected','startup_identity'):null,instance,binding_revision:w.bindingRevision??1,network_revision:w.networkRevision??0,observed_at:stamp(0),revision:w.__beeMockRuntimeContext().revision};
    if(command==='device_context')return savedHive?{result:{context:{hive:savedHive,name,device_id:identity?.id??null,owner_id:identity?.owner_id??null,binding_revision:w.bindingRevision??1}}}:{result:{binding_revision:w.bindingRevision??1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'saved desktop binding absent; required=configured Hive and device'}}};
+   if(command==='device_recovery_start'){
+    if(args.hive!==savedHive)return rejected('DEVICE_RECOVERY_PRECONDITION','requested Hive='+args.hive+'; required=saved original Hive '+savedHive,command);
+    if(!revoked&&!transaction)return rejected('PREVIEW_RECOVERY_NOT_REQUIRED','bound identity still valid; required=read-only healthy check',command);
+    const blocked=admission();if(blocked)return rejected('DEVICE_RECOVERY_PRECONDITION',blocked,command);
+    if(!transaction){transaction=makeTransaction('awaiting_confirmation',identity);accepted=[];approved=false;redeemAttempted=false;alias();}
+    return {result:{recovery:clone(transaction)}};
+   }
    if(command==='device_recovery_prepare'){
     const blocked=admission();if(blocked)return rejected('DEVICE_RECOVERY_PRECONDITION',blocked,command);
     if(transaction&&transaction.phase!=='completed')return transaction.old_identity?{result:{recovery:clone(transaction)}}:rejected('DEVICE_RECOVERY_PRECONDITION','initial pairing already occupies saved device transaction; original transaction preserved',command);
@@ -107,11 +114,14 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
      const decision={operationId:args.operationId,expectedRevision:args.expectedRevision,decision:args.decision};
      if(accepted.some(item=>item.operationId===decision.operationId&&item.expectedRevision===decision.expectedRevision&&item.decision===decision.decision))return {result:{recovery:clone(transaction)}};
      if(args.operationId!==transaction.operation_id||args.expectedRevision!==transaction.revision)return rejected('DEVICE_RECOVERY_PRECONDITION','recovery confirmation revision conflict: actual='+transaction.revision+' expected='+args.expectedRevision+' operation_match='+(args.operationId===transaction.operation_id),command);
-     const allowed=args.decision==='begin_pairing'&&transaction.phase==='awaiting_confirmation'||args.decision==='adopt_owner'&&transaction.phase==='awaiting_owner_confirmation'||args.decision==='renew_expired'&&transaction.phase==='expired'&&!redeemAttempted;
+     const originalControl=['continue_checking','restart_pairing','cancel_pairing'].includes(args.decision)&&!['completed','saving','awaiting_owner_confirmation'].includes(transaction.phase);
+     const allowed=originalControl||args.decision==='begin_pairing'&&transaction.phase==='awaiting_confirmation'||args.decision==='adopt_owner'&&transaction.phase==='awaiting_owner_confirmation'||args.decision==='renew_expired'&&transaction.phase==='expired'&&!redeemAttempted;
      if(!allowed)return rejected('DEVICE_RECOVERY_PRECONDITION','recovery decision rejected: phase='+transaction.phase+'; decision='+args.decision+'; redeem_attempted='+redeemAttempted+'; required=authorized decision for current phase',command);
      const blocked=admission();if(blocked)return rejected('DEVICE_RECOVERY_PRECONDITION',blocked,command);
      accepted.push(decision);
-     if(args.decision==='adopt_owner')complete();
+     if(args.decision==='cancel_pairing')changed('blocked',{failure:failure('PAIRING_CLOSED','Hive confirmed cancellation; old device remains stopped and completed work is retained','pairing_recovery')});
+     else if(args.decision==='continue_checking')advance();
+     else if(args.decision==='adopt_owner')complete();
      else {approved=false;redeemAttempted=false;changed('pending',{pairing:pair(),new_identity:null,failure:null});}
     }else advance();
     return {result:{recovery:clone(transaction)}};

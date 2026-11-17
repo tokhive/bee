@@ -33,7 +33,7 @@ test.beforeEach(async({page})=>{
    const w=window as any;
    if(command==='device_context')return {result:w.deviceContext?{context:w.deviceContext}:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved device configuration'}}};
    if(command==='device_recovery_status')return {result:w.recovery?{recovery:structuredClone(w.recovery)}:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
-   if(command==='device_recovery_prepare'){w.recovery={operation_id:w.nextRecoveryOperation??'d'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:{id:'old-1',name:'My Mac',owner_id:'old-owner',owner_email:'old@example.test'},new_identity:null,pairing:null,failure:null};return {result:{recovery:structuredClone(w.recovery)}};}
+   if(command==='device_recovery_prepare'||command==='device_recovery_start'){w.recovery={operation_id:w.nextRecoveryOperation??'d'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:{id:'old-1',name:'My Mac',owner_id:'old-owner',owner_email:'old@example.test'},new_identity:null,pairing:null,failure:null};return {result:{recovery:structuredClone(w.recovery)}};}
    if(command==='device_recovery_confirm'){
     // Top-level Tauri command arguments are camelCase; the sidecar protocol stays snake_case.
     for(const key of ['operationId','expectedRevision','decision'])if(!Object.hasOwn(args??{},key))throw `invalid args \`${key}\` for command \`device_recovery_confirm\`: command device_recovery_confirm missing required key ${key}`;
@@ -77,32 +77,32 @@ test('normal native build pairs and verifies without demo balances or starting s
  await page.getByRole('button',{name:'进入概览',exact:true}).click();await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();
 });
 test('failed verification blocks success and remains retryable',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+ await page.goto('/');await expect(page.getByRole('button',{name:'设备操作'})).toBeEnabled();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
- await page.getByRole('button',{name:'重新核对设备'}).click();
+ await checkDevice(page);
  await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
- await expect(page.getByText('设备已绑定。')).toHaveCount(0);
- await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+ await expect(page.getByText('设备绑定正常，无需修复。')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'设备操作'})).toBeEnabled();
 });
 
 test('retrying a failed bound-device check does not revive cached success',async({page})=>{
- await page.goto('/');await expect(page.getByRole('button',{name:'重新核对设备'})).toBeEnabled();
+ await page.goto('/');await expect(page.getByRole('button',{name:'设备操作'})).toBeEnabled();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='bound';});
- await page.getByRole('button',{name:'重新核对设备'}).click();
- await expect(page.getByText('设备已绑定。')).toBeVisible();
+ await checkDevice(page);
+ await expect(page.getByText('设备绑定正常，无需修复。')).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string}).deviceStage='error';});
- await page.getByRole('button',{name:'重新核对设备'}).click();await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
+ await checkDevice(page);await expect(page.getByRole('alert').filter({hasText:'HTTP 503'}).first()).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {deviceStage:string;deviceDelay:number}).deviceStage='bound';(window as unknown as {deviceDelay:number}).deviceDelay=500;});
- await page.getByRole('button',{name:'重新核对设备'}).click();
- await expect(page.getByRole('button',{name:'重新核对设备'})).toHaveAttribute('aria-busy','true');
- await expect(page.getByText('设备已绑定。')).toHaveCount(0);
- await expect(page.getByText('设备已绑定。')).toBeVisible();
+ await checkDevice(page);
+ await expect(page.getByRole('button',{name:'设备操作'})).toHaveAttribute('aria-busy','true');
+ await expect(page.getByText('设备绑定正常，无需修复。')).toHaveCount(0);
+ await expect(page.getByText('设备绑定正常，无需修复。')).toBeVisible();
 });
 
 test('an old native status rejection cannot overwrite a newer ready event',async({page})=>{
  await page.goto('/?fixture=stale-status');
  await expect.poll(()=>page.evaluate(()=>Boolean((window as unknown as {initialRejected:boolean}).initialRejected))).toBe(true);
- await expect(page.getByRole('heading',{name:'本机设备',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'设备与 Hive',exact:true})).toBeVisible();
 });
 
 test('opening after website confirmation consumes the latest bound result without claiming browser launch',async({page})=>{
@@ -126,7 +126,7 @@ test('Hive expiry discovered while opening replaces the stale website action wit
 test('English device entry and settings have complete translations',async({page})=>{
  await page.goto('/');await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('tab',{name:'通用',exact:true}).click();await page.getByLabel('语言',{exact:true}).selectOption('en');
  await expect(page.getByText('Saved for this system user and retained after restarting.')).toBeVisible();
- await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'This device',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'Overview',exact:true}).click();await expect(page.getByRole('heading',{name:'Device and Hive',exact:true})).toBeVisible();
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
 });
 
@@ -154,32 +154,32 @@ const deviceCalls=(page:Page,command:string)=>page.evaluate((command:string)=>{c
 const recoveryView=(phase:string)=>({operation_id:'d'.repeat(48),revision:4,phase,old_identity:{id:'old-1',name:'My Mac',owner_id:'old-owner',owner_email:'old@example.test'},new_identity:['saving','completed','awaiting_owner_confirmation'].includes(phase)?{id:'new-1',name:'New Mac',owner_id:'new-owner',owner_email:'new@example.test'}:null,pairing:['pending','draining','redeeming','redemption_unknown','expired'].includes(phase)?{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'}:null,failure:null});
 test('a completed recovery permits another revoked identity only after confirmation with a new operation',async({page})=>{
  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.nextRecoveryOperation='e'.repeat(48);w.deviceFailure={code:'device_replaced',message:'current device GET identity HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};},recoveryView('completed'));
- await page.goto('/');const begin=page.getByRole('button',{name:'重新绑定设备',exact:true});await begin.click();
+ await page.goto('/');await checkDevice(page);const begin=page.getByRole('button',{name:'重新绑定 Hive',exact:true});await begin.click();
  await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(begin).toBeFocused();
  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
  await begin.click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).evaluate(button=>{(button as HTMLButtonElement).click();(button as HTMLButtonElement).click();});
  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(begin).toHaveCount(0);
- expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(1);
+ expect(await deviceCalls(page,'device_recovery_start')).toHaveLength(1);
  const confirmations=await page.evaluate(()=>(window as any).deviceRequests.filter((request:any)=>request.command==='device_recovery_confirm'));
  expect(confirmations).toEqual([{command:'device_recovery_confirm',args:{operationId:'e'.repeat(48),expectedRevision:1,decision:'begin_pairing'}}]);
  expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 for(const [phase,button,confirm,decision] of [
- ['awaiting_confirmation','重新绑定设备','确认重新绑定','begin_pairing'],
- ['expired','重新生成配对码','确认重新生成','renew_expired'],
+ ['awaiting_confirmation','重新绑定 Hive','确认重新绑定','begin_pairing'],
+ ['expired','重新获取配对码','确认重新绑定','renew_expired'],
 ] as const)test(`saved recovery ${phase} confirms the existing transaction through native arguments`,async({page})=>{
  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'device_replaced',message:'HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'My Mac',device_id:'old-1',owner_id:'old-owner',binding_revision:1};},recoveryView(phase));
  await page.goto('/');const trigger=page.getByRole('button',{name:button,exact:true});await trigger.click();
  await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(trigger).toBeFocused();
  expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
  await trigger.click();await page.getByRole('dialog').getByRole('button',{name:confirm,exact:true}).click();
- await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(page.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(page.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  const confirmations=await page.evaluate(()=>(window as any).deviceRequests.filter((request:any)=>request.command==='device_recovery_confirm'));
  expect(confirmations).toEqual([{command:'device_recovery_confirm',args:{operationId:'d'.repeat(48),expectedRevision:4,decision}}]);
  for(const command of ['device_recovery_prepare','device_begin','runtime_start','account_action'])expect(await deviceCalls(page,command)).toHaveLength(0);
 });
 for(const locale of ['zh','en'] as const)for(const cause of ['native','hive'] as const)test(`recovery ${cause} failure remains visible in the confirmation while status reconciliation is pending in ${locale}`,async({page})=>{
- const copy=locale==='zh'?{rebind:'重新绑定设备',confirm:'确认重新绑定',pending:'正在处理…',status:'正在处理设备恢复，请稍候…',back:'返回设备核对',phase:'等待网页确认'}:{rebind:'Rebind this device',confirm:'Confirm rebinding',pending:'Processing…',status:'Processing device recovery. Please wait…',back:'Back to device verification',phase:'Waiting for website confirmation'};
+ const copy=locale==='zh'?{rebind:'重新绑定 Hive',confirm:'确认重新绑定',pending:'正在处理…',status:'正在处理设备恢复，请稍候…',back:'关闭',phase:'在 Hive 网页确认设备'}:{rebind:'Rebind Hive',confirm:'Confirm rebinding',pending:'Processing…',status:'Processing device recovery. Please wait…',back:'Close',phase:'Confirm this device on Hive'};
  await page.setViewportSize({width:860,height:600});
  await page.addInitScript(({recovery,cause,locale})=>{
   const w=window as any;w.recovery=recovery;w.deviceFailure={code:'device_replaced',message:'HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'My Mac',device_id:'old-1',owner_id:'old-owner',binding_revision:1};
@@ -197,22 +197,22 @@ for(const locale of ['zh','en'] as const)for(const cause of ['native','hive'] as
  await page.goto('/');await page.getByRole('button',{name:copy.rebind,exact:true}).click();
  const dialog=page.getByRole('dialog');await dialog.getByRole('button',{name:copy.confirm,exact:true}).click();
  await expect(dialog).toBeVisible();await expect(dialog.getByRole('status')).toHaveText(copy.status);
- await expect(dialog.getByRole('button',{name:copy.pending,exact:true})).toBeDisabled();
+ await expect(dialog.getByRole('button',{name:copy.confirm,exact:true})).toBeDisabled();
  await page.evaluate(()=>(window as any).rejectRecovery());
- await expect(dialog.getByRole('alert').locator('p').first()).toContainText(cause==='native'?'missing required key operationId':'HTTP 503');
- await expect(dialog.getByRole('alert').locator('p').first()).toBeInViewport();
  await expect(dialog.locator('[data-recovery-failure]')).toBeFocused();
- await expect(dialog.getByRole('button',{name:copy.confirm,exact:true})).toHaveCount(0);
+ await dialog.getByRole('button',{name:locale==='zh'?'查看错误详情':'View error details',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText(cause==='native'?'missing required key operationId':'HTTP 503');await page.keyboard.press('Escape');
+ await expect(dialog.getByRole('alert').locator('p').first()).toBeInViewport();
+ await expect(dialog.getByRole('button',{name:copy.confirm,exact:true})).toBeDisabled();
  await page.screenshot({path:`../.cache/device-pairing/rebind-failure-${locale}-${cause}.png`});
  expect(await page.evaluate(()=>(window as any).recoverySubmissions)).toBe(1);
  await dialog.getByRole('button',{name:copy.back,exact:true}).click();
- await expect(page.locator('.device-pairing')).toBeFocused();
+ await expect(page.getByRole('button',{name:/^(设备操作|Device actions)$/})).toBeFocused();
  await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRecoveryRead)).toBe('function');
  await page.evaluate(()=>{const w=window as any;w.releaseRecoveryRead();w.allowRecovery=true;});
  await page.getByRole('button',{name:copy.rebind,exact:true}).click();
  await dialog.getByRole('button',{name:copy.confirm,exact:true}).click();
  await expect(dialog).toHaveCount(0);await expect(page.locator('.pairing-phase')).toHaveText(copy.phase);
- await expect(page.locator('.device-pairing')).toBeFocused();
+ await expect(page.getByRole('button',{name:/^(设备操作|Device actions)$/})).toBeFocused();
  expect(await page.evaluate(()=>(window as any).recoverySubmissions)).toBe(2);
  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
@@ -226,25 +226,33 @@ test('closing a pending recovery returns keyboard focus to the device section',a
    return invoke(command,args);
   };
  },recoveryView('awaiting_confirmation'));
- await page.goto('/');const trigger=page.getByRole('button',{name:'重新绑定设备',exact:true});await trigger.click();
+ await page.goto('/');const trigger=page.getByRole('button',{name:'重新绑定 Hive',exact:true});await trigger.click();
  await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
- await expect(page.getByRole('button',{name:'重新绑定设备',exact:true,includeHidden:true})).toBeDisabled();await page.keyboard.press('Escape');
- await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('.device-pairing')).toBeFocused();
+ await expect(page.getByRole('button',{name:'重新绑定 Hive',exact:true,includeHidden:true})).toBeDisabled();await page.keyboard.press('Escape');
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('button',{name:/^(设备操作|Device actions)$/})).toBeFocused();
  await page.evaluate(()=>(window as any).releaseRecoveryConfirm(null));
- await expect(page.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(page.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(1);
 });
-for(const changed of ['identity_valid','pending_transaction','query_failed'] as const)test(`a repeated recovery rechecks ${changed} after an in-flight read`,async({page})=>{
- await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});
- await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceStage='bound';w.deviceContext={hive:'https://hive.example',name:'New Mac',device_id:'new-1',owner_id:'new-owner',binding_revision:1};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='device_recovery_status'&&w.holdRecovery){await new Promise(resolve=>{w.releaseRecovery=resolve;});if(w.failRecovery)throw {code:'DEVICE_RECOVERY_BLOCKED',message:'journal read permission denied'};}return invoke(command,args);};},recoveryView('completed'));
- await page.goto('/');await expect(page.getByText('设备已绑定。',{exact:true})).toBeVisible();
- await page.evaluate(()=>{(window as any).deviceFailure={code:'invalid_device_credential',message:'GET identity HTTP 401 invalid_device_credential'};});await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();
- await page.evaluate(()=>{(window as any).holdRecovery=true;});await page.clock.runFor(10001);
- await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRecovery)).toBe('function');
- await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
- await page.evaluate(({changed,pending})=>{const w=window as any;w.holdRecovery=false;if(changed==='identity_valid'){w.deviceFailure=null;w.deviceStage='bound';}else if(changed==='pending_transaction')w.recovery=pending;else w.failRecovery=true;w.releaseRecovery();},{changed,pending:recoveryView('pending')});
- await expect(page.getByRole('alert').filter({hasText:'DEVICE_RECOVERY_PRECONDITION'}).first()).toBeVisible();
- expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
+for(const changed of ['identity_valid','pending_transaction','query_failed'] as const)test(`binding repair rechecks ${changed} before preparing a replacement`,async({page})=>{
+ await page.clock.install();await page.goto('/');await expect(page.locator('.device-card-facts')).toBeVisible();
+ await page.evaluate(changed=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='device_status'){
+    await new Promise(resolve=>{w.releaseRepairRead=resolve;});
+    if(changed==='query_failed')throw {code:'unavailable',message:'GET identity HTTP 503'};
+   }
+   if(command==='device_recovery_status'&&changed==='pending_transaction')return {result:{recovery:{operation_id:'a'.repeat(48),revision:1,phase:'pending',old_identity:null,new_identity:null,pairing:{code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'},failure:null}}};
+   return invoke(command,args);
+  };
+ },changed);
+ await checkDevice(page);await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRepairRead)).toBe('function');
+ await page.evaluate(()=>(window as any).releaseRepairRead());
+ if(changed==='identity_valid')await expect(page.getByText('设备绑定正常，无需修复。',{exact:true})).toBeVisible();
+ else if(changed==='pending_transaction')await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ else await expect(page.getByRole('button',{name:'重试连接',exact:true})).toBeVisible();
+ for(const command of ['device_recovery_start','device_recovery_prepare','device_recovery_confirm','device_begin'])expect(await deviceCalls(page,command)).toHaveLength(0);
 });
 for(const kind of ['initial_pairing','credential_recovery'] as const)test(`completed ${kind} hides retained pairing instructions even after the old code expires`,async({page})=>{
  await page.clock.install({time:new Date('2026-11-03T03:00:00Z')});
@@ -256,10 +264,10 @@ for(const kind of ['initial_pairing','credential_recovery'] as const)test(`compl
   w.deviceOverride={state:'bound',hive:'https://hive.example',name:'My Mac',identity};
   if(kind==='initial_pairing')w.deviceOverride.recovery={...recovery,old_identity:null};else w.recovery=recovery;
  },{kind,recovery:recoveryView('completed')});
- await page.goto('/');const device=page.getByRole('region',{name:'设备配对'});
+ await page.goto('/');const device=page.getByRole('region',{name:'设备与 Hive'});
  const assertCompleted=async()=>{
-  await expect(device.getByText('设备已绑定。',{exact:true})).toBeVisible();
-  await expect(device.locator('.pairing-phase')).toContainText(kind==='initial_pairing'?'设备已配对':'已完成');
+  await expect(device.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
+  await expect(device.locator('.pairing-phase')).toContainText(kind==='initial_pairing'?'设备已绑定':'设备已重新绑定');
   await expect(device.locator('.device-pairing-grid,.device-url')).toHaveCount(0);
   await expect(device).not.toContainText('完成网页确认后，请回到 Bee。');
   await expect(device).not.toContainText('等待 Hive 核对是否过期');
@@ -271,10 +279,10 @@ for(const kind of ['initial_pairing','credential_recovery'] as const)test(`compl
 });
 test('a historical completed recovery yields preparation guidance to current account and runtime facts',async({page})=>{
  await page.addInitScript(({recovery,runtime})=>{const w=window as any;w.recovery=recovery;w.deviceStage='bound';w.runtimeOverride=runtime;}, {recovery:recoveryView('completed'),runtime:passiveRuntime});
- await page.goto('/');const device=page.getByRole('region',{name:'设备配对'});
- await expect(page.getByRole('region',{name:'准备贡献'})).toBeVisible();await expect(page.getByRole('button',{name:'前往准备账号',exact:true}).first()).toBeVisible();
+ await page.goto('/');const device=page.getByRole('region',{name:'设备与 Hive'});
+ await expect(device.getByRole('button',{name:'接入 AI 账号',exact:true})).toBeVisible();
  await page.evaluate(()=>{const w=window as any,r=w.runtimeOverride;r.local='running';r.run_id='a'.repeat(32);r.connection='connected';r.revision++;r.platforms.openai.account.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='account_snapshot'?{instance:'b'.repeat(32),result:{account:r.platforms[args.platform].account}}:invoke(command,args);});
- await page.getByRole('button',{name:'重新核对设备',exact:true}).click();await expect(page.getByRole('region',{name:'服务状态',exact:true}).locator('.native-runtime-health')).toContainText('贡献已启动');await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
+ await checkDevice(page);await expect(page.getByRole('region',{name:'服务状态',exact:true}).locator('.native-runtime-health')).toContainText('Bee 运行中');await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
  await expect(page.getByRole('region',{name:'准备贡献'})).toHaveCount(0);await expect(device.getByRole('button',{name:'前往准备账号',exact:true})).toHaveCount(0);
  await expect(device.getByText('重新绑定已完成，贡献保持停止。',{exact:true})).toHaveCount(0);await expect(device.getByText('请重新准备账号；旧账号选择与运行意图不会迁移。',{exact:true})).toHaveCount(0);
  expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);
@@ -305,24 +313,24 @@ for(const [phase,copy] of [['creation-unknown','尚无法确认配对请求结�
 });
 test('revoked credential recovery asks before preparing and preserves one transaction across navigation',async({page})=>{
  await page.addInitScript(()=>{const w=window as any;w.deviceFailure={code:'device_replaced',message:'HTTP 401 device_replaced'};w.deviceContext={hive:'https://hive.example',name:'Old Mac',device_id:'old-1',owner_id:'old-owner',binding_revision:1};});await page.goto('/');
- await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
- await expect(page.getByRole('button',{name:'重新绑定设备',exact:true})).toBeFocused();
+ await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();await page.getByRole('button',{name:'重新绑定 Hive',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
+ await expect(page.getByRole('button',{name:'重新绑定 Hive',exact:true})).toBeFocused();
  expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
- await page.getByRole('button',{name:'重新绑定设备',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
+ await page.getByRole('button',{name:'重新绑定 Hive',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
  await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
- await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(1);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+ await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();expect(await deviceCalls(page,'device_recovery_start')).toHaveLength(1);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 test('restarted unknown recovery queries the existing transaction without writes',async({page})=>{
  await page.addInitScript(recovery=>{const w=window as any;w.recovery=recovery;w.deviceFailure={code:'invalid_device_credential',message:'HTTP 401 invalid_device_credential'};},recoveryView('redemption_unknown'));
- await page.goto('/');await expect(page.getByText('兑换结果未知，正在核对新设备身份',{exact:true})).toBeVisible();await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await page.goto('/');await expect(page.getByText('兑换结果未知',{exact:true})).toBeVisible();await checkDevice(page);
  await expect.poll(async()=>(await deviceCalls(page,'device_recovery_status')).length).toBeGreaterThan(1);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 test('adopting a different owner requires its own current revision confirmation',async({page})=>{
  await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
  await expect(page.getByText('new@example.test',{exact:true})).toBeVisible();await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);
  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
- await expect(page.getByText('上次重新绑定已完成，未自动开始贡献。',{exact:true})).toBeVisible();expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);expect(await deviceCalls(page,'account_action')).toHaveLength(0);
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();expect(await deviceCalls(page,'runtime_start')).toHaveLength(0);expect(await deviceCalls(page,'account_action')).toHaveLength(0);
 });
 test('local expiry waits for Hive confirmation before offering another pairing request',async({page})=>{
  await page.clock.install();await initial(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
@@ -335,5 +343,10 @@ test('local expiry waits for Hive confirmation before offering another pairing r
 test('a stale owner dialog cannot submit after the coordinator sees a newer transaction revision',async({page})=>{
  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();await page.evaluate(()=>{(window as any).recovery.revision=5;});await page.clock.runFor(10001);await expect.poll(async()=>(await deviceCalls(page,'device_recovery_status')).length).toBeGreaterThan(1);
- await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();await expect(page.getByRole('alert').filter({hasText:'actual=5 expected=4'})).toBeVisible();expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
+ await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();await expect(page.getByRole('dialog').getByRole('alert').filter({hasText:'actual=5 expected=4'})).toBeVisible();expect(await deviceCalls(page,'device_recovery_confirm')).toHaveLength(0);expect(await deviceCalls(page,'device_recovery_prepare')).toHaveLength(0);
 });
+
+async function checkDevice(page:Page){
+ await page.getByRole('button',{name:/^(设备操作|Device actions)$/}).click();
+ await page.getByRole('menuitem',{name:/^(修复设备绑定|查看修复进度|Repair device binding|View repair progress)$/}).click();
+}

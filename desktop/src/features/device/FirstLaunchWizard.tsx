@@ -11,6 +11,7 @@ import {wizardText as w} from './first-launch-copy';
 import './first-launch-wizard.css';
 
 export interface FirstLaunchWizardProps {
+ startupNotice?:ReactNode;
  recoveryEntry?:ReactNode;
  recover?:(decision:RecoveryDecision,transaction?:DeviceRecoveryView)=>Promise<boolean>;
  view?:DeviceView;context?:DeviceContext;refreshStatus?:RefreshStatus;
@@ -22,7 +23,7 @@ export interface FirstLaunchWizardProps {
  onDiagnostics?:()=>void;onRepair?:()=>void;onOpenHive?:()=>void|Promise<unknown>;
 }
 
-function validateHive(raw:string):string {
+export function validateHive(raw:string):string {
  if(!raw)return '请填写 Hive 地址。';
  let url:URL;try{url=new URL(raw);}catch{return 'Hive 地址须为完整的 HTTPS 网址。';}
  if(url.username||url.password||raw.includes('@'))return 'Hive 地址不能包含用户名或密码。';
@@ -32,7 +33,7 @@ function validateHive(raw:string):string {
  return '';
 }
 
-function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;manualUrlAvailable?:boolean}){
+export function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;manualUrlAvailable?:boolean}){
  const [open,setOpen]=useState(false),titleId=useId();
  const problem=presentFailure(failure,currentLocale()),details=problem.details;
  const browserReason:Record<string,string>={BROWSER_OPEN_FAILED:'默认浏览器打开失败。',BROWSER_OPEN_TIMEOUT:'打开浏览器超时，网页打开结果尚未确认。',BROWSER_OPEN_CLEANUP_FAILED:'浏览器打开程序超时，且未能确认已结束。'};
@@ -49,7 +50,7 @@ function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;man
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */
-export function FirstLaunchWizard({recover,recoveryEntry,view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
+export function FirstLaunchWizard({startupNotice,recover,recoveryEntry,view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
  const recoveryTrigger=useRef<HTMLButtonElement|null>(null);
  const [recoveryDecision,setRecoveryDecision]=useState<'restart_pairing'|'cancel_pairing'|null>(null);
 
@@ -113,7 +114,7 @@ export function FirstLaunchWizard({recover,recoveryEntry,view,context,refreshSta
   submitted.current=true;setSubmitting(true);begin(address.replace(/\/$/,''),deviceName);
  };
  return <div className="first-launch-wizard"><a className="first-launch-skip" href="#first-launch-content">{w('跳到设备设置')}</a><header className="first-launch-brand" translate="no">Bee</header><main id="first-launch-content" className="first-launch-content">
-  <h1 ref={title} tabIndex={-1}>{w(loading?'正在检查设备…':readBlocked?'无法确认设备状态':complete?'设备已绑定':'设置这台设备')}</h1>{!loading&&!readBlocked&&<ol className="first-launch-steps" aria-label={w('设置步骤')}><li aria-current={form?'step':undefined} className={!form?'done':undefined}><span>{form?'1':'✓'}</span>{w('连接 Hive')}</li><li aria-current={!form&&!complete?'step':undefined} className={complete?'done':undefined}><span>{complete?'✓':'2'}</span>{w('绑定设备')}</li></ol>}
+  <h1 ref={title} tabIndex={-1}>{w(loading?'正在检查设备…':readBlocked?'无法确认设备状态':complete?'设备已绑定':'设置这台设备')}</h1>{startupNotice}{!loading&&!readBlocked&&<ol className="first-launch-steps" aria-label={w('设置步骤')}><li aria-current={form?'step':undefined} className={!form?'done':undefined}><span>{form?'1':'✓'}</span>{w('连接 Hive')}</li><li aria-current={!form&&!complete?'step':undefined} className={complete?'done':undefined}><span>{complete?'✓':'2'}</span>{w('绑定设备')}</li></ol>}
   {loading?<p role="status">{w('正在读取本机配置与设备状态…')}</p>:readBlocked?<>{failureNotices}<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button>{onRepair&&<Button type="button" variant="outline" onClick={onRepair}>{w('修复当前问题')}</Button>}</div></>:complete?<><dl className="first-launch-facts"><dt>{w('设备')}</dt><dd>{identity.name}</dd><dt>{w('归属账号')}</dt><dd>{identity.owner_email}</dd><dt>Hive</dt><dd>{view.hive}</dd></dl><h2>{w('下一步：接入 AI 账号')}</h2><p>{w('接入后才能使用该账号参与贡献。')}</p><div className="first-launch-actions"><Button type="button" onClick={()=>onNavigate('accounts')}>{w('前往接入 AI 账号')}</Button><Button type="button" variant="ghost" onClick={()=>onNavigate('overview')}>{w('进入概览')}</Button></div></>:form?<form noValidate onSubmit={submit}>
    <label htmlFor="first-launch-hive">{w('Hive 地址')}</label><input ref={hiveInput} id="first-launch-hive" name="hive" type="url" inputMode="url" autoComplete="off" spellCheck={false} placeholder="https://hive.example…" value={hive} disabled={creating} aria-invalid={!!fieldErrors.hive} aria-describedby="first-launch-hive-help first-launch-hive-error" onChange={event=>{setHive(event.target.value);setFieldErrors(current=>({...current,hive:''}));}}/>
    <p id="first-launch-hive-help" className="first-launch-help">{w('填写你要连接的 Hive 服务地址。')}</p><p id="first-launch-hive-error" aria-live="polite" aria-atomic="true" className="first-launch-field-error">{w(fieldErrors.hive)}</p>

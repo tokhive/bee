@@ -4,11 +4,13 @@
 
 [打开唯一主预览](index.html) · [历史版本与确认记录](http://127.0.0.1:15500/docs/preview/history/README.md) · [维护规范](../standard/html-preview.md)
 
-整个 App 使用同一个主入口。2026-11-09 用户已认可连续流程新版，首次登录、已登录账号接入、重新登录／授权恢复、读取修复、换号及相关准备重试的步骤与完成反馈已纳入主预览。首次启动设备绑定向导及错误详情、等待文案已于 2026-11-12 认可并纳入。三步添加 OpenAI 账号向导及叹号错误详情已于 2026-11-13 认可并纳入。同时保留 Hive 切换的 17 个入口；当前 536 个入口用于静态评审，不代表全部真实接口已验收。
+整个 App 使用同一个主入口。2026-11-17 用户确认将最新 `draft.html` 同步为主预览并实现正式界面。主预览已纳入概览设备卡内绑定修复、视觉优化及设备菜单内的“切换 Hive”，共 588 个场景；原账号管理、首次绑定和 Hive 切换场景保留。
 
-页面使用模拟数据，不接真实登录或业务。[当前待评审稿 draft.html](draft.html?scene=rebind-device) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
+本轮认可的[主预览冻结版](http://127.0.0.1:15500/docs/preview/history/20261117-153033-approved-binding-repair/index.html?scene=rebind-fault&size=narrow)和[正式 React 组件冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)分别保存在独立档案库。正式组件已实现概览内修复、设备菜单、确认与取消回执、保存续接；通过 mock 验证不代表真实 Hive／原生 App 验收。
 
-当前开发 worktree：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-setup-failure-preview`，分支 `codex/bee-setup-failure-preview`。本轮只更新待评审稿；`index.html` 仍为既有已认可主预览。下方其它 worktree 和旧端口属于历史记录。
+页面使用模拟数据，不接真实登录或业务。`draft.html` 保留为本次认可来源；以下“待评审”章节属于历史记录，以本段认可状态为准。主预览并不代替正式应用或真实 Hive 的业务验收。
+
+当前开发 worktree：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-setup-failure-preview`，分支 `codex/bee-setup-failure-preview`。历史版本与确认记录在独立档案库；下方其它 worktree 和旧端口为历史记录。
 
 在本 worktree 根目录运行：
 

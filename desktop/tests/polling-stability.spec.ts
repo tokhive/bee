@@ -38,7 +38,7 @@ test('an explicit start during a runtime read waits and submits once',async({pag
  const button=page.getByRole('button',{name:'重试准备',exact:true});await expect(button).toBeEnabled();
  await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();expect(await calls(page,'runtime_start')).toHaveLength(0);
  await page.evaluate(()=>(window as any).release());await expect.poll(async()=>(await calls(page,'runtime_start')).length).toBe(1);
- await expect(page.locator('.native-runtime-health')).toContainText('贡献已启动');await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
+ await expect(page.locator('.native-runtime-health')).toContainText('Bee 运行中');await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
 });
 
 test('a failed runtime read cancels the waiting start without replay',async({page})=>{

@@ -34,7 +34,7 @@ test('service preparation retry preserves platform pause and keeps the device on
  await app.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
- await expect(region.locator('.native-runtime-health')).toContainText('贡献已启动');
+ await expect(region.locator('.native-runtime-health')).toContainText('Bee 运行中');
  await expect(region.locator('.native-runtime-health')).toContainText('Hive 已连接');
  expect((await commands(page)).filter(c=>c.command==='runtime_start')).toHaveLength(1);
  expect((await commands(page)).filter(c=>c.command==='runtime_stop')).toHaveLength(0);
@@ -77,7 +77,7 @@ test('an unknown preparation receipt is reconciled through one write and a stabl
  await expect(region).toContainText('等待已安排的核对');
  const original=await page.locator('iframe').evaluate(async(el:HTMLIFrameElement)=>(await (el.contentWindow as any).__TAURI_INTERNALS__.invoke('runtime_snapshot')).result.runtime.operation.id);
  await page.clock.runFor(10300);
- await expect(region.locator('.native-runtime-health')).toContainText('贡献已启动');
+ await expect(region.locator('.native-runtime-health')).toContainText('Bee 运行中');
  await expect(region.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);

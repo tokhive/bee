@@ -183,11 +183,17 @@ async fn context(bridge: &Bridge, store: &PreferencesStore) -> Result<CheckConte
         preferences: saved.preferences.revision,
     })
 }
+#[derive(Clone, Copy, PartialEq)]
+enum NetworkCheck {
+    Bootstrap,
+    BindDraft,
+    Observe,
+}
 async fn prerequisites(
     bridge: &Bridge,
     store: &PreferencesStore,
     controller: &NetworkController,
-    bootstrap: bool,
+    network_check: NetworkCheck,
 ) -> Result<CheckContext, BridgeError> {
     wait_bridge(bridge).await?;
     let local = bridge.device_context().await?;
@@ -198,7 +204,11 @@ async fn prerequisites(
     }
     let before = context(bridge, store).await?;
     let device = bridge.device_status().await?;
-    let scope = controller.bind_verified_device(store, &device.result)?;
+    let scope = if network_check == NetworkCheck::Observe {
+        crate::network::trusted_scope(&device.result)?
+    } else {
+        controller.bind_verified_device(store, &device.result)?
+    };
     // Device status may not finish into a different saved binding behind our back.
     if binding(bridge).await? != before.binding {
         return Err(BridgeError::new(
@@ -211,7 +221,7 @@ async fn prerequisites(
         let fresh = runtime.result["runtime"]["local"] == "stopped"
             && runtime.result["runtime"]["revision"] == 0
             && runtime.result["runtime"]["network_revision"] == 0;
-        let network = if fresh && bootstrap {
+        let network = if fresh && network_check == NetworkCheck::Bootstrap {
             controller
                 .bootstrap_saved(store, &BridgeNetworkRuntime(bridge), &scope)
                 .await
@@ -287,7 +297,7 @@ async fn startup_mode<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge,ma
             if let Some(cause) = inspected.failure { return Err(cause); }
         }
         observer(crate::startup_recovery::RecoveryProgress::stage("checking_device"));
-        let checked = prerequisites(&bridge, &store, &controller, true).await?;
+        let checked = prerequisites(&bridge, &store, &controller, NetworkCheck::Bootstrap).await?;
         // The only automatic runtime recovery path belongs to initial startup.
         crate::update_install::verify_startup_progress(
             &app.state::<crate::updater::UpdateManager>(),
@@ -338,22 +348,120 @@ async fn refresh_retry(gate:&StartupGate,bridge:&Bridge,manager:&crate::updater:
         }
     }
 }
-pub(crate) async fn query<R:tauri::Runtime>(app:&tauri::AppHandle<R>,bridge:&Bridge)->Result<StartupStatus,BridgeError> {
-    let gate=app.state::<StartupGate>();
-    let Ok(_serial)=gate.serial.try_lock() else {return Ok(gate.snapshot());};
-    if bridge.status().state!=BridgePhase::Ready || gate.snapshot().state=="ready" {return Ok(gate.snapshot());}
-    let journal=bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
+pub(crate) async fn query<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+) -> Result<StartupStatus, BridgeError> {
+    let gate = app.state::<StartupGate>();
+    let Ok(_serial) = gate.serial.try_lock() else {
+        return Ok(gate.snapshot());
+    };
+    if bridge.status().state != BridgePhase::Ready || gate.snapshot().state == "ready" {
+        return Ok(gate.snapshot());
+    }
+    let journal = bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
     let result=async {
-        journal.observe(bridge).await?;
+        if let Some(record)=journal.observe(bridge).await? {
+            if let Some(cause)=record.failure{return Err(cause);}
+        }
+        let previous=gate.snapshot();
+        // Only this failed preparation can be superseded by an already verified
+        // live session. Other recovery blockers still require their own proof.
+        if previous.failure.as_ref().is_some_and(|v|v.code=="NETWORK_START_UNCONFIRMED")
+            && bridge.0.startup_verified.load(Ordering::SeqCst)
+        {
+            bridge.check_restore_admission()?;
+            let running=bridge.runtime_snapshot().await?;
+            crate::protocol::result_error(&running.result)?;
+            if ["running","waiting"].contains(&running.result["runtime"]["local"].as_str().unwrap_or("")) {
+                let store=app.state::<PreferencesStore>();
+                let current=verified_live_context(app,bridge,&store,&app.state::<NetworkController>(),NetworkCheck::Observe,&running).await?;
+                if previous.instance.as_ref()!=Some(&current.instance)
+                    || previous.binding_revision!=current.binding
+                    || previous.network_revision!=Some(current.network)
+                {
+                    return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED",format!("live recovery query context changed: instance_match={} binding_before={:?} binding_now={:?} network_before={:?} network_now={}; required=same previously verified instance, binding and network",previous.instance.as_ref()==Some(&current.instance),previous.binding_revision,current.binding,previous.network_revision,current.network)));
+                }
+                bridge.check_restore_admission()?;
+                gate.finish(Ok(current));
+                return Ok(());
+            }
+        }
         let inspection=bridge.inspect_recovery().await?;
         if let Some(cause)=inspection.failure{return Err(cause);}
         Ok(())
     }.await;
-    if gate.snapshot().state=="blocked" {let mut status=gate.status.lock().unwrap_or_else(|v|v.into_inner());status.can_retry=result.is_ok();status.revision+=1;}
-    refresh_retry(&gate,bridge,&app.state::<crate::updater::UpdateManager>()).await;
+    if gate.snapshot().state == "blocked" {
+        let mut status = gate.status.lock().unwrap_or_else(|v| v.into_inner());
+        status.can_retry = result.is_ok();
+        status.revision += 1;
+    }
+    refresh_retry(&gate, bridge, &app.state::<crate::updater::UpdateManager>()).await;
     // A failed read has its own receipt; retain the original startup failure.
-    emit(app,&gate);result.map(|_|gate.snapshot())
+    emit(app, &gate);
+    result.map(|_| gate.snapshot())
 }
+
+async fn verified_context<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    store: &PreferencesStore,
+    controller: &NetworkController,
+    network_check: NetworkCheck,
+) -> Result<CheckContext, BridgeError> {
+    let checked = prerequisites(bridge, store, controller, network_check).await?;
+    crate::update_install::verify_recheck(
+        &app.state::<crate::updater::UpdateManager>(),
+        bridge,
+        store.read(),
+    )
+    .await?;
+    let current = context(bridge, store).await?;
+    if checked != current {
+        return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED",format!("recheck context changed: instance_match={} binding_before={:?} binding_now={:?} network_before={} network_now={} preferences_before={} preferences_now={}; required=unchanged instance, binding, network and preferences",checked.instance==current.instance,checked.binding,current.binding,checked.network,current.network,checked.preferences,current.preferences)));
+    }
+    Ok(current)
+}
+
+// Reuse only a stable, connected session owned by this management child.
+// Query observes saved preferences; binding checks retain their existing draft binding.
+async fn verified_live_context<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    store: &PreferencesStore,
+    controller: &NetworkController,
+    network_check: NetworkCheck,
+    before: &crate::sidecar::BridgeReply,
+) -> Result<CheckContext, BridgeError> {
+    bridge.check_restore_admission()?;
+    let current = verified_context(app, bridge, store, controller, network_check).await?;
+    let after = bridge.runtime_snapshot().await?;
+    crate::protocol::result_error(&after.result)?;
+    let initial = &before.result["runtime"];
+    let final_runtime = &after.result["runtime"];
+    if before.instance != current.instance
+        || after.instance != current.instance
+        || initial["network_revision"].as_u64() != Some(current.network)
+        || final_runtime["network_revision"].as_u64() != Some(current.network)
+        || initial["run_id"] != final_runtime["run_id"]
+        || initial["local"] != final_runtime["local"]
+        || !["running", "waiting"].contains(&final_runtime["local"].as_str().unwrap_or(""))
+        || final_runtime["local"] == "running" && !final_runtime["run_id"].is_string()
+        || final_runtime["local"] == "waiting" && !final_runtime["run_id"].is_null()
+        || initial["connection"] != "connected"
+        || final_runtime["connection"] != "connected"
+    {
+        return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED",format!(
+            "live runtime recheck rejected: initial_instance_match={} final_instance_match={} verified_network={} initial_network={} final_network={} run_match={} initial_run_present={} final_run_present={} local_before={} local_now={} connection_before={} connection_now={}; required=same verified context, unchanged running/waiting session, run present exactly when running and connected owned session",
+            before.instance==current.instance,after.instance==current.instance,current.network,
+            initial["network_revision"],final_runtime["network_revision"],initial["run_id"]==final_runtime["run_id"],
+            initial["run_id"].is_string(),final_runtime["run_id"].is_string(),initial["local"],final_runtime["local"],initial["connection"],final_runtime["connection"]
+        )));
+    }
+    bridge.check_restore_admission()?;
+    Ok(current)
+}
+
 pub(crate) async fn recheck<R: tauri::Runtime>(
     app: &tauri::AppHandle<R>,
     bridge: &Bridge,
@@ -542,52 +650,112 @@ pub(crate) async fn observe_device<R: tauri::Runtime>(app: &tauri::AppHandle<R>,
     }
 }
 
-async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &Bridge, new_binding: bool) -> StartupStatus {
+async fn recheck_binding<R: tauri::Runtime>(
+    app: &tauri::AppHandle<R>,
+    bridge: &Bridge,
+    new_binding: bool,
+) -> StartupStatus {
     let gate = app.state::<StartupGate>();
     let Ok(_serial) = gate.serial.try_lock() else {
         return gate.snapshot();
     };
-    let previous=gate.snapshot();
+    let previous = gate.snapshot();
     gate.checking(bridge.status().metadata.map(|v| v.instance));
     emit(app, &gate);
     let store = app.state::<PreferencesStore>();
     let controller = app.state::<NetworkController>();
     let result = async {
+        wait_bridge(bridge).await?;
+        // Device observations can wait behind startup; re-evaluate the binding
+        // after acquiring its owner instead of trusting the earlier observation.
+        let new_binding = new_binding && binding(bridge).await? != previous.binding_revision;
         if !new_binding {
-            if previous.state=="blocked" && previous.failure.as_ref().is_some_and(|v|v.code.starts_with("RECOVERY_")) {
-                let inspected=bridge.inspect_recovery().await?;
-                if let Some(cause)=inspected.failure{return Err(cause);}
+            if previous.state == "blocked"
+                && previous
+                    .failure
+                    .as_ref()
+                    .is_some_and(|v| v.code.starts_with("RECOVERY_"))
+            {
+                let inspected = bridge.inspect_recovery().await?;
+                if let Some(cause) = inspected.failure {
+                    return Err(cause);
+                }
             }
-            let journal=bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
-            if let Some(record)=journal.observe(bridge).await? {
-                if let Some(cause)=record.failure{return Err(cause);}
+            let journal =
+                bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
+            if let Some(record) = journal.observe(bridge).await? {
+                if let Some(cause) = record.failure {
+                    return Err(cause);
+                }
             }
         }
-        if new_binding {
-            crate::update_install::verify_recheck(&app.state::<crate::updater::UpdateManager>(), bridge, store.read()).await?;
+        let new_scope = if new_binding {
+            crate::update_install::verify_recheck(
+                &app.state::<crate::updater::UpdateManager>(),
+                bridge,
+                store.read(),
+            )
+            .await?;
             let before = binding(bridge).await?;
             let device = bridge.device_status().await?;
-            let scope = controller.bind_verified_device(&store, &device.result)?.ok_or_else(||BridgeError::new("NETWORK_DEVICE_REQUIRED", "new binding requires verified bound device".into()))?;
-            if binding(bridge).await? != before { return Err(BridgeError::new("STARTUP_CONTEXT_CHANGED", "binding changed during new-device network preparation".into())); }
-            let runtime = bridge.runtime_snapshot().await?;
-            crate::protocol::result_error(&runtime.result)?;
-            let revision = runtime.result["runtime"]["revision"].as_u64().ok_or_else(||BridgeError::new("STARTUP_CONTEXT_INVALID", "new-device runtime revision missing".into()))?;
-            controller.prepare_start(&store, &BridgeNetworkRuntime(bridge), &scope, revision).await?;
+            let scope = controller
+                .bind_verified_device(&store, &device.result)?
+                .ok_or_else(|| {
+                    BridgeError::new(
+                        "NETWORK_DEVICE_REQUIRED",
+                        "new binding requires verified bound device".into(),
+                    )
+                })?;
+            if binding(bridge).await? != before {
+                return Err(BridgeError::new(
+                    "STARTUP_CONTEXT_CHANGED",
+                    "binding changed during new-device network preparation".into(),
+                ));
+            }
+            Some(scope)
+        } else {
+            None
+        };
+        let runtime = bridge.runtime_snapshot().await?;
+        crate::protocol::result_error(&runtime.result)?;
+        let active = ["running", "waiting"]
+            .contains(&runtime.result["runtime"]["local"].as_str().unwrap_or(""));
+        if let Some(scope) = new_scope {
+            if active {
+                let journal = bridge
+                    .startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
+                if let Some(record) = journal.observe(bridge).await? {
+                    if let Some(cause) = record.failure {
+                        return Err(cause);
+                    }
+                }
+            } else {
+                let revision = runtime.result["runtime"]["revision"]
+                    .as_u64()
+                    .ok_or_else(|| {
+                        BridgeError::new(
+                            "STARTUP_CONTEXT_INVALID",
+                            "new-device runtime revision missing".into(),
+                        )
+                    })?;
+                controller
+                    .prepare_start(&store, &BridgeNetworkRuntime(bridge), &scope, revision)
+                    .await?;
+            }
         }
-        let checked = prerequisites(bridge, &store, &controller, false).await?;
-        crate::update_install::verify_recheck(
-            &app.state::<crate::updater::UpdateManager>(),
-            bridge,
-            store.read(),
-        )
-        .await?;
-        let current = context(bridge, &store).await?;
-        if checked != current {
-            return Err(BridgeError::new(
-                "STARTUP_CONTEXT_CHANGED",
-                "instance, binding, network or preferences changed during recheck; old result discarded".into(),
-            ));
-        }
+        let current = if active {
+            verified_live_context(
+                app,
+                bridge,
+                &store,
+                &controller,
+                NetworkCheck::BindDraft,
+                &runtime,
+            )
+            .await?
+        } else {
+            verified_context(app, bridge, &store, &controller, NetworkCheck::BindDraft).await?
+        };
         // Release only the startup data hold after the final context comparison.
         // The independent owned-exit freeze and real bridge state still apply.
         bridge.0.startup_verified.store(true, Ordering::SeqCst);
@@ -604,10 +772,11 @@ async fn recheck_binding<R: tauri::Runtime>(app: &tauri::AppHandle<R>, bridge: &
         }
     }
     gate.finish(result);
-    refresh_retry(&gate,bridge,&app.state::<crate::updater::UpdateManager>()).await;
+    refresh_retry(&gate, bridge, &app.state::<crate::updater::UpdateManager>()).await;
     emit(app, &gate);
     gate.snapshot()
 }
+
 /// An explicit apply can resolve this one startup blocker without releasing the gate.
 pub(crate) async fn apply_saved_network(
     bridge: &Bridge,

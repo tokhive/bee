@@ -39,6 +39,7 @@ input.on('line', line => {
     const reply=result=>process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');
     const networkRevision=config.network_revision??bootstrapRevision;
     const runtime={...JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,revision:config.apply?startupRuntimeRevision:bootstrapRevision,network_revision:networkRevision,...(config.apply?{operation:startupOperation,stop_receipt:startupOperation?{workers_stopped:true,intent_saved:true,session_clean:true}:null}:{})};
+    if(config.running){runtime.local='running';runtime.connection=config.connection??'connected';runtime.run_id='d'.repeat(32);}
     switch(request.method){
       case 'device_context': reply(config.corrupt?{error:{code:'DEVICE_CONTEXT_INVALID',message:'saved local configuration JSON rejected'},binding_revision:config.binding_revision??1}:config.unbound?{error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved binding'},binding_revision:config.binding_revision??1}:{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:config.binding_revision??1}});return;
       case 'device_status': reply(config.rejected?{error:{code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',target_origin:'https://hive.example'}}}}:config.unbound?{device:{state:'unbound'}}:{device:{state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.com'}}});return;
@@ -58,6 +59,7 @@ input.on('line', line => {
         reply(config.presence_error?{error:{code:'RUNTIME_OPERATION_FAILED',message:'presence admission blocked: suspended=true'}}:config.presence_bad?{enabled:false}:{enabled:true});return;
       case 'runtime_inspect_recovery':
       case 'runtime_reconcile_recovery': {
+        if(config.running){reply({recovery:{state:'blocked',binding_revision:config.binding_revision??1,previous_run_id:null,account_revision:null,intent_running:false,failure:{code:'RECOVERY_OWNER_BUSY',message:'recovery inspection rejected: closed=false local=running account_actions=0; required=idle lifecycle owner'}}});return;}
         if(request.method==='runtime_reconcile_recovery' && config.retirement && !config.retirement_error) sessionRetired=true;
         const blocked=config.recovery_blocked&&!sessionRetired;
         reply({recovery:{state:blocked?'blocked':'eligible',binding_revision:config.binding_revision??1,binding_identity:'b'.repeat(64),previous_run_id:config.recovery_blocked?'d'.repeat(32):null,account_revision:'a'.repeat(64),intent_running:true,...(sessionRetired?{retirement_id:'e'.repeat(48)}:{}),failure:blocked?{code:request.method==='runtime_reconcile_recovery'?(config.retirement_error??'RECOVERY_SERVER_UNSUPPORTED'):'RECOVERY_SESSION_UNCONFIRMED',message:'previous_session_active=true clean=false; prior worker ownership unconfirmed'}:null}});return;

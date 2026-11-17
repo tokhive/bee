@@ -29,17 +29,21 @@ fn fixture(
     spec.args
         .extend(["".into(), marker.to_string_lossy().to_string()]);
     let bridge = Bridge::start(spec);
+    let app=fixture_app(dir.path(),&bridge);
+    (dir,bridge,app)
+}
+fn fixture_app(root:&std::path::Path,bridge:&Bridge)->tauri::App<tauri::test::MockRuntime> {
     let app = tauri::test::mock_builder()
         .manage(StartupGate::default())
         .manage({let route=crate::hive_switch::CurrentBridge::default();route.replace(None,bridge.clone());route})
-        .manage(PreferencesStore::new(dir.path().join("preferences.json")))
+        .manage(PreferencesStore::new(root.join("preferences.json")))
         .manage(NetworkController::default())
         .manage(
-            UpdateManager::new("0.1.0", UpdateStore::new(dir.path().join("update.json"))).unwrap(),
+            UpdateManager::new("0.1.0", UpdateStore::new(root.join("update.json"))).unwrap(),
         )
         .build(tauri::test::mock_context(tauri::test::noop_assets()))
         .unwrap();
-    (dir, bridge, app)
+    app
 }
 #[tokio::test]
 async fn rejected_startup_keeps_local_reads_and_recheck_unlocks_without_runtime_restore() {
@@ -483,6 +487,526 @@ async fn binding_after_unbound_startup_enables_presence_automatically() {
     assert!(!calls.contains("runtime_start"));
     assert!(!calls.contains("runtime_restore"));
     bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn binding_observation_while_running_rechecks_without_preparing_another_start() {
+    let (dir, bridge, app) = fixture(
+        serde_json::json!({"apply":true,"running":true,"runtime_revision":61,"binding_revision":2}),
+    );
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let gate = app.state::<StartupGate>();
+    let mut previous = context(&bridge, &app.state::<PreferencesStore>())
+        .await
+        .unwrap();
+    previous.binding = Some(1);
+    gate.finish(Ok(previous));
+    let reply = bridge.device_status().await.unwrap();
+    observe_device(app.handle(), &bridge, &reply.result).await;
+    let status = gate.snapshot();
+    assert_eq!(status.state, "ready", "{:?}", status.failure);
+    assert_eq!(status.binding_revision, Some(2));
+    let runtime = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(runtime.result["runtime"]["local"], "running");
+    assert_eq!(runtime.result["runtime"]["run_id"], "d".repeat(32));
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    for method in [
+        "runtime_start",
+        "runtime_restore",
+        "runtime_stop",
+        "runtime_configure_network",
+    ] {
+        assert!(
+            !calls.contains(method),
+            "binding observation dispatched {method}"
+        );
+    }
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn startup_query_revalidates_running_context_without_idle_recovery_inspection() {
+    let (dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"running":true,"runtime_revision":61}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let gate = app.state::<StartupGate>();
+    gate.finish(Err(BridgeError::new("NETWORK_START_UNCONFIRMED", "network preparation rejected before user Start: actual_runtime_revision=61 expected_runtime_revision=61 actual_local=running; required=matching revision and stopped or failed runtime".into())));
+    let before = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    let result = query(app.handle(), &bridge).await;
+    assert!(result.is_ok(), "{:?}", result.err());
+    assert_eq!(gate.snapshot().state, "ready");
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    for method in [
+        "runtime_inspect_recovery",
+        "runtime_reconcile_recovery",
+        "runtime_start",
+        "runtime_restore",
+        "runtime_stop",
+        "runtime_configure_network",
+    ] {
+        assert!(
+            !calls[before.len()..].contains(method),
+            "result query dispatched {method}"
+        );
+    }
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn late_binding_observation_and_explicit_start_keep_separate_admission() {
+    let (dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"running":true,"runtime_revision":61}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    // The observation was scheduled before startup verified this same binding.
+    let status = recheck_binding(app.handle(), &bridge, true).await;
+    assert_eq!(status.state, "ready", "{:?}", status.failure);
+    let failure = start_with_presence(
+        app.handle(),
+        &bridge,
+        &app.state::<PreferencesStore>(),
+        &app.state::<NetworkController>(),
+        &app.state::<StartupGate>(),
+        crate::runtime_protocol::RuntimeStartRequest {
+            expected_revision: 61,
+            resume_platforms: vec![],
+        },
+    )
+    .await
+    .unwrap_err();
+    assert_eq!(failure.code, "NETWORK_START_UNCONFIRMED");
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|method| [
+        "runtime_start",
+        "runtime_restore",
+        "runtime_stop",
+        "runtime_configure_network"
+    ]
+    .contains(&method)));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn live_result_query_keeps_conflicting_evidence_and_original_failure_blocking() {
+    for scenario in [
+        "device",
+        "data",
+        "proxy",
+        "update",
+        "exit",
+        "binding",
+        "network",
+        "unknown",
+        "failed",
+        "unverified",
+        "retirement",
+    ] {
+        let mut config = serde_json::json!({"apply":true,"running":true,"runtime_revision":61});
+        let (dir, bridge, app) = fixture(config.clone());
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let gate = app.state::<StartupGate>();
+        let original = if scenario == "retirement" {
+            "RECOVERY_REMOTE_DRAINING"
+        } else {
+            "NETWORK_START_UNCONFIRMED"
+        };
+        gate.finish(Err(BridgeError::new(
+            original,
+            "original preparation failure".into(),
+        )));
+        let expected = match scenario {
+            "device" => {
+                config["rejected"] = true.into();
+                "device_replaced"
+            }
+            "data" => {
+                config["bad_data"] = true.into();
+                "STARTUP_DATA_INVALID"
+            }
+            "proxy" => {
+                let store = app.state::<PreferencesStore>();
+                let scope =
+                    crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+                        .unwrap()
+                        .unwrap();
+                let mut prefs = store.read().preferences;
+                prefs.proxies.push(crate::preferences::ProxyPreference {
+                    origin: scope.origin().into(),
+                    device_scope: Some(scope.device_scope().into()),
+                    connect_proxy: "http://127.0.0.1:18080".into(),
+                });
+                assert!(store.save(prefs.revision, prefs).error.is_none());
+                "NETWORK_APPLY_REQUIRED"
+            }
+            "update" => {
+                app.state::<UpdateManager>()
+                    .lock()
+                    .unwrap()
+                    .persistent
+                    .pending_update = Some(crate::updater::PendingUpdate {
+                    from_version: "0.1.0".into(),
+                    to_version: "0.2.0".into(),
+                    channel: "stable".into(),
+                    stage: "prepared".into(),
+                    target_digest: "a".repeat(64),
+                });
+                "UPDATE_RECOVERY_PENDING"
+            }
+            "exit" => {
+                bridge.freeze_for_exit();
+                "OWNED_EXIT_PENDING"
+            }
+            "binding" => {
+                config["binding_revision"] = 2.into();
+                "STARTUP_CONTEXT_CHANGED"
+            }
+            "network" => {
+                config["network_revision"] = 1.into();
+                "STARTUP_CONTEXT_CHANGED"
+            }
+            "unknown" | "failed" => {
+                let mut record = unknown_startup_record();
+                if scenario == "failed" {
+                    record.phase = "failed".into();
+                    record.failure = Some(BridgeError::new(
+                        "RECOVERY_FAILED",
+                        "original start failed".into(),
+                    ));
+                }
+                bridge
+                    .startup_journal(app.state::<UpdateManager>().store.path())
+                    .save(&record)
+                    .unwrap();
+                if scenario == "failed" {
+                    "RECOVERY_FAILED"
+                } else {
+                    "RECOVERY_RESULT_UNCONFIRMED"
+                }
+            }
+            "unverified" => {
+                bridge.0.startup_verified.store(false, Ordering::SeqCst);
+                "RECOVERY_OWNER_BUSY"
+            }
+            "retirement" => "RECOVERY_OWNER_BUSY",
+            _ => unreachable!(),
+        };
+        std::fs::write(
+            dir.path().join("context.json"),
+            serde_json::to_vec(&config).unwrap(),
+        )
+        .unwrap();
+        let before = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert_eq!(
+            query(app.handle(), &bridge).await.unwrap_err().code,
+            expected,
+            "{scenario}"
+        );
+        assert_eq!(gate.snapshot().state, "blocked", "{scenario}");
+        assert_eq!(
+            gate.snapshot().failure.unwrap().code,
+            original,
+            "{scenario}"
+        );
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(
+            !calls[before.len()..].lines().any(|method| [
+                "runtime_start",
+                "runtime_restore",
+                "runtime_stop",
+                "runtime_configure_network",
+                "runtime_enable_presence",
+                "supply_set_paused"
+            ]
+            .contains(&method)),
+            "{scenario}: {calls}"
+        );
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn live_binding_observation_retains_network_draft_and_unknown_start() {
+    for unknown in [false, true] {
+        let (dir, bridge, app) = fixture(
+            serde_json::json!({"apply":true,"running":true,"runtime_revision":61,"binding_revision":2}),
+        );
+        assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+        let store = app.state::<PreferencesStore>();
+        if unknown {
+            bridge
+                .startup_journal(app.state::<UpdateManager>().store.path())
+                .save(&unknown_startup_record())
+                .unwrap();
+        } else {
+            let scope =
+                crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+                    .unwrap()
+                    .unwrap();
+            let mut prefs = store.read().preferences;
+            prefs.proxies.push(crate::preferences::ProxyPreference {
+                origin: scope.origin().into(),
+                device_scope: Some(scope.device_scope().into()),
+                connect_proxy: "http://127.0.0.1:18080".into(),
+            });
+            assert!(store.save(prefs.revision, prefs).error.is_none());
+        }
+        let mut previous = context(&bridge, &store).await.unwrap();
+        previous.binding = Some(1);
+        app.state::<StartupGate>().finish(Ok(previous));
+        let reply = bridge.device_status().await.unwrap();
+        observe_device(app.handle(), &bridge, &reply.result).await;
+        assert_eq!(
+            app.state::<StartupGate>().snapshot().failure.unwrap().code,
+            if unknown {
+                "RECOVERY_RESULT_UNCONFIRMED"
+            } else {
+                "NETWORK_APPLY_REQUIRED"
+            }
+        );
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(!calls.lines().any(|method| [
+            "runtime_start",
+            "runtime_restore",
+            "runtime_stop",
+            "runtime_configure_network"
+        ]
+        .contains(&method)));
+        bridge.stop().await.unwrap();
+    }
+}
+
+#[tokio::test]
+async fn live_binding_observation_rejects_a_disconnected_session() {
+    let (dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"running":true,"runtime_revision":61}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    std::fs::write(dir.path().join("context.json"),r#"{"apply":true,"running":true,"runtime_revision":61,"binding_revision":2,"connection":"connecting"}"#).unwrap();
+    let reply = bridge.device_status().await.unwrap();
+    observe_device(app.handle(), &bridge, &reply.result).await;
+    let status = app.state::<StartupGate>().snapshot();
+    assert_eq!(status.state, "blocked");
+    let cause = status.failure.unwrap();
+    assert_eq!(cause.code, "STARTUP_CONTEXT_CHANGED");
+    assert!(
+        cause.message.contains("connection_before=\"connecting\""),
+        "{}",
+        cause.message
+    );
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn live_query_does_not_bind_or_discard_a_saved_network_draft() {
+    let (_dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"running":true,"runtime_revision":61}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let store = app.state::<PreferencesStore>();
+    let scope = crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+        .unwrap()
+        .unwrap();
+    let mut prefs = store.read().preferences;
+    for (device_scope, connect_proxy) in [
+        (Some(scope.device_scope().into()), ""),
+        (None, "http://127.0.0.1:18080"),
+    ] {
+        prefs.proxies.push(crate::preferences::ProxyPreference {
+            origin: scope.origin().into(),
+            device_scope,
+            connect_proxy: connect_proxy.into(),
+        });
+    }
+    assert!(store.save(prefs.revision, prefs).error.is_none());
+    let before = serde_json::to_value(store.read().preferences).unwrap();
+    app.state::<StartupGate>().finish(Err(BridgeError::new(
+        "NETWORK_START_UNCONFIRMED",
+        "synthetic stale start preparation".into(),
+    )));
+    assert_eq!(query(app.handle(), &bridge).await.unwrap().state, "ready");
+    assert_eq!(
+        serde_json::to_value(store.read().preferences).unwrap(),
+        before
+    );
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn live_query_reports_both_connection_observations_before_rechecking_again() {
+    let (dir, bridge, app) =
+        fixture(serde_json::json!({"apply":true,"running":true,"runtime_revision":61}));
+    assert_eq!(recheck(app.handle(), &bridge).await.state, "ready");
+    let gate = app.state::<StartupGate>();
+    gate.finish(Err(BridgeError::new(
+        "NETWORK_START_UNCONFIRMED",
+        "original preparation failure".into(),
+    )));
+    std::fs::remove_file(dir.path().join("context.json.verify")).unwrap();
+    std::fs::write(dir.path().join("context.json"),r#"{"apply":true,"running":true,"runtime_revision":61,"connection":"connecting","delay":100}"#).unwrap();
+    let reconnect = async {
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            while !dir.path().join("context.json.verify").exists() {
+                tokio::time::sleep(std::time::Duration::from_millis(5)).await;
+            }
+        })
+        .await
+        .unwrap();
+        std::fs::write(
+            dir.path().join("context.json"),
+            r#"{"apply":true,"running":true,"runtime_revision":61}"#,
+        )
+        .unwrap();
+    };
+    let (result, ()) = tokio::join!(query(app.handle(), &bridge), reconnect);
+    let cause = result.unwrap_err();
+    assert_eq!(cause.code, "STARTUP_CONTEXT_CHANGED");
+    assert!(
+        cause.message.contains("connection_before=\"connecting\""),
+        "{}",
+        cause.message
+    );
+    assert!(
+        cause.message.contains("connection_now=\"connected\""),
+        "{}",
+        cause.message
+    );
+    assert_eq!(
+        gate.snapshot().failure.unwrap().code,
+        "NETWORK_START_UNCONFIRMED"
+    );
+    assert_eq!(query(app.handle(), &bridge).await.unwrap().state, "ready");
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "build go test -c ./agent and set BEE_NATIVE_BRIDGE_TEST_BINARY"]
+async fn native_live_binding_and_result_query_keep_the_same_owned_run_and_pause() {
+    use sha2::{Digest, Sha256};
+    let dir = tempfile::tempdir().unwrap();
+    let program =
+        std::path::PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
+    let bytes = std::fs::read(&program).unwrap();
+    let bridge = Bridge::start(crate::sidecar::LaunchSpec {
+        program,
+        bundle: None,
+        args: vec![
+            "-test.run=^TestDesktopNativeBridgeProcess$".into(),
+            format!(
+                "-bee-native-fixture-audit={}",
+                dir.path().join("audit.json").display()
+            ),
+        ],
+        source: crate::build_source::BuildSource {
+            revision: "controlled-go-fixture".into(),
+            tee_revision: "controlled-go-fixture".into(),
+            target: "controlled-go-fixture".into(),
+            goos: std::env::consts::OS.replace("macos", "darwin"),
+            goarch: match std::env::consts::ARCH {
+                "aarch64" => "arm64",
+                "x86_64" => "amd64",
+                v => v,
+            }
+            .into(),
+            go: "controlled-go-fixture".into(),
+            bee_version: "native-fixture".into(),
+            binary_sha256: format!("{:x}", Sha256::digest(bytes)),
+        },
+        timeout: std::time::Duration::from_secs(15),
+    });
+    wait_bridge(&bridge).await.unwrap();
+    let app = fixture_app(dir.path(), &bridge);
+    // The real Go fixture starts with a controlled local proxy already applied.
+    let scope = crate::network::trusted_scope(&bridge.device_status().await.unwrap().result)
+        .unwrap()
+        .unwrap();
+    let network = bridge.network_status().await.unwrap();
+    let store = app.state::<PreferencesStore>();
+    let mut prefs = store.read().preferences;
+    prefs.proxies.push(crate::preferences::ProxyPreference {
+        origin: scope.origin().into(),
+        device_scope: Some(scope.device_scope().into()),
+        connect_proxy: network.result["network"]["effective_proxy"]
+            .as_str()
+            .unwrap()
+            .into(),
+    });
+    assert!(store.save(prefs.revision, prefs).error.is_none());
+    let initial = recheck(app.handle(), &bridge).await;
+    assert_eq!(initial.state, "ready", "{:?}", initial.failure);
+    let platform = crate::protocol::SupplyPlatform::Openai;
+    let snapshot = bridge.account_snapshot(platform, false).await.unwrap();
+    let source = &snapshot.result["account"]["candidate"]["source"];
+    let detected = bridge
+        .account_detect(crate::protocol::AccountDetectRequest {
+            platform,
+            directory: source["directory"].as_str().map(str::to_owned),
+            store: source["store"].as_str().unwrap().into(),
+            mode: "local".into(),
+        })
+        .await
+        .unwrap();
+    let account = &detected.result["account"];
+    bridge
+        .account_action(crate::protocol::AccountActionRequest {
+            platform,
+            revision: account["revision"].as_u64().unwrap(),
+            candidate_ref: account["candidate"]["reference"].as_str().unwrap().into(),
+            action: "select".into(),
+            confirmed: true,
+        })
+        .await
+        .unwrap();
+    let running = tokio::time::timeout(std::time::Duration::from_secs(15), async {
+        loop {
+            let reply = bridge.runtime_snapshot().await.unwrap();
+            if reply.result["runtime"]["local"] == "running"
+                && reply.result["runtime"]["platforms"]["openai"]["account"]["authorization"]
+                    ["state"]
+                    == "synchronized"
+            {
+                break reply.result["runtime"].clone();
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    assert_eq!(running["platforms"]["openai"]["supply"]["paused"], true);
+    // A late observation carries a stale gate binding, while Go owns the live run.
+    let gate = app.state::<StartupGate>();
+    let mut previous = context(&bridge, &app.state::<PreferencesStore>())
+        .await
+        .unwrap();
+    previous.binding = previous.binding.map(|v| v + 1);
+    gate.finish(Ok(previous));
+    let device = bridge.device_status().await.unwrap();
+    observe_device(app.handle(), &bridge, &device.result).await;
+    assert_eq!(
+        gate.snapshot().state,
+        "ready",
+        "{:?}",
+        gate.snapshot().failure
+    );
+    gate.finish(Err(BridgeError::new(
+        "NETWORK_START_UNCONFIRMED",
+        "synthetic stale start-preparation failure on the current owned run".into(),
+    )));
+    let recovered = query(app.handle(), &bridge).await.unwrap();
+    assert_eq!(recovered.state, "ready", "{:?}", recovered.failure);
+    let after = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(after.result["runtime"]["run_id"], running["run_id"]);
+    assert_eq!(after.result["runtime"]["local"], "running");
+    assert_eq!(
+        after.result["runtime"]["platforms"]["openai"]["supply"]["paused"],
+        true
+    );
+    // Join this isolated child and inspect controlled Hive writes, not the real App.
+    bridge
+        .prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
+        .await
+        .unwrap();
+    let audit: serde_json::Value =
+        serde_json::from_slice(&std::fs::read(dir.path().join("audit.json")).unwrap()).unwrap();
+    assert_eq!(audit["connections"], 1);
+    assert_eq!(audit["resume_writes"], 0);
+    assert_eq!(audit["paused"]["openai"], true);
 }
 
 #[tokio::test]

@@ -60,6 +60,12 @@ impl StartupGate {
             serial: Default::default(),
         }
     }
+    fn admit(&self, method: &str) -> Result<tokio::sync::MutexGuard<'_, ()>, BridgeError> {
+        self.serial.try_lock().map_err(|_| BridgeError::new(
+            "REQUEST_RESOURCE_BUSY",
+            format!("{method} rejected before dispatch: startup/binding/network mutation lock is held; startup_state={}; required=free mutation owner; request not sent", self.snapshot().state),
+        ))
+    }
     pub fn check(&self) -> Result<(), BridgeError> {
         if self.ready.load(Ordering::Acquire) {
             Ok(())
@@ -493,7 +499,7 @@ pub(crate) async fn start_with_presence<R: tauri::Runtime>(
     gate: &StartupGate,
     mut request: crate::runtime_protocol::RuntimeStartRequest,
 ) -> Result<crate::sidecar::BridgeReply, BridgeError> {
-    let _serial = gate.serial.lock().await;
+    let _serial = gate.admit("runtime_start")?;
     gate.check()?;
     request.validate()?;
     let before = context(bridge, store).await?;
@@ -786,7 +792,7 @@ pub(crate) async fn apply_saved_network(
     manager: &crate::updater::UpdateManager,
     confirmed: bool,
 ) -> Result<crate::network::NetworkSnapshot, BridgeError> {
-    let _serial = gate.serial.lock().await;
+    let _serial = gate.admit("runtime_configure_network")?;
     let recovering = match gate.check() {
         Ok(()) => false,
         Err(cause)
@@ -856,7 +862,8 @@ pub(crate) async fn recover_device<R: tauri::Runtime>(
     prepare: bool,
 ) -> Result<crate::sidecar::BridgeReply, BridgeError> {
     let gate = app.state::<StartupGate>();
-    let _serial = gate.serial.lock().await;
+    let method = if prepare {"device_recovery_prepare"} else if decision.is_some() {"device_recovery_confirm"} else {"device_recovery_status"};
+    let _serial = gate.admit(method)?;
     let store = app.state::<PreferencesStore>();
     let status_only = !prepare && decision.is_none();
     if status_only {

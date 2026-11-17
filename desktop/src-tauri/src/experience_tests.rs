@@ -1463,3 +1463,25 @@ async fn pure_recovery_observation_bypasses_startup_mutation_lock_and_preserves_
         bridge.stop().await.unwrap();
     }
 }
+
+#[tokio::test]
+async fn conflicting_native_mutations_reject_before_waiting_or_dispatch() {
+    let (dir, bridge, app) = fixture(serde_json::json!({}));
+    wait_bridge(&bridge).await.unwrap();
+    let gate = app.state::<StartupGate>();
+    let _held = gate.serial.lock().await;
+    for method in ["runtime_start", "runtime_configure_network", "device_recovery_prepare", "device_recovery_status"] {
+        let result = tokio::time::timeout(std::time::Duration::from_millis(100), async {
+            match method {
+                "runtime_start" => start_with_presence(app.handle(), &bridge, &app.state::<PreferencesStore>(), &app.state::<NetworkController>(), &gate, crate::runtime_protocol::RuntimeStartRequest{expected_revision:1,resume_platforms:vec![]}).await.map(|_|()),
+                "runtime_configure_network" => apply_saved_network(&bridge, &app.state::<PreferencesStore>(), &app.state::<NetworkController>(), &gate, &app.state::<UpdateManager>(), true).await.map(|_|()),
+                _ => recover_device(app.handle(), &bridge, None, method=="device_recovery_prepare").await.map(|_|()),
+            }
+        }).await.expect("conflicting mutation waited for the startup lock").unwrap_err();
+        assert_eq!(result.code,"REQUEST_RESOURCE_BUSY", "{method}");
+        assert!(result.message.contains(method));
+    }
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap_or_default();
+    assert!(!calls.lines().any(|method| ["runtime_start","runtime_configure_network","device_recovery_prepare","device_recovery_status"].contains(&method)));
+    bridge.stop().await.unwrap();
+}

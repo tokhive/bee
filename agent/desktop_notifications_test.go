@@ -414,3 +414,33 @@ func TestDesktopNotificationsRuntimePublicationRetainsVerifiedBinding(t *testing
 		t.Fatalf("real runtime observation lost verified notification binding: %+v", fact)
 	}
 }
+
+func TestDesktopNotificationsSkipBusyPlatformWithoutWaitingOrInventingRecovery(t *testing.T) {
+	for _, busy := range []string{"openai", "claude"} {
+		t.Run(busy, func(t *testing.T) {
+			f := newNotificationFixture(t)
+			f.notice(t, "offline", true)
+			p := f.accounts.platforms[busy]
+			p.gate <- struct{}{}
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			got, err := f.accounts.NotificationSnapshot(ctx)
+			<-p.gate
+			if err != nil {
+				t.Fatalf("notification waited for %s account work: %v", busy, err)
+			}
+			for _, fact := range got.Facts {
+				if fact.Platform == busy {
+					t.Fatalf("busy platform emitted stale facts: %+v", fact)
+				}
+			}
+			if busy == "claude" && !notificationFact(t, got, "offline").Eligible {
+				t.Fatal("busy Claude suppressed the independent OpenAI notification")
+			}
+			next, err := f.accounts.NotificationSnapshot(context.Background())
+			if err != nil || !notificationFact(t, next, "offline").Eligible {
+				t.Fatalf("released platform did not retain original notification: %+v %v", next, err)
+			}
+		})
+	}
+}

@@ -23,6 +23,19 @@ type controlledSupplies struct {
 	exited  chan string
 }
 
+func (s *controlledSupplies) Status(ctx context.Context) (bee.DeviceView, error) {
+	if s.slow != "device" {
+		return s.fakeDevice.Status(ctx)
+	}
+	s.entered <- "device"
+	select {
+	case <-s.release:
+		return bee.DeviceView{State: "unbound"}, nil
+	case <-ctx.Done():
+		return bee.DeviceView{}, ctx.Err()
+	}
+}
+
 func (s *controlledSupplies) SupplyStatus(ctx context.Context, platform string) (bee.DesktopSupply, error) {
 	s.entered <- platform
 	defer func() { s.exited <- platform }()
@@ -57,6 +70,8 @@ func openLiveBridge(t *testing.T, service *controlledSupplies, accounts ...deskt
 	go func() {
 		if len(accounts) == 0 {
 			b.done <- desktopbridge.RunWithDevices(ctx, in, writer, io.Discard, "test", service)
+		} else if _, ok := accounts[0].(desktopbridge.Notifications); ok {
+			b.done <- desktopbridge.RunWithExperience(ctx, in, writer, io.Discard, "test", service, accounts[0], &runtimeFixture{}, &authorizeFixture{}, &diagnosticFixture{}, &notificationNetwork{})
 		} else {
 			b.done <- desktopbridge.RunWithAccounts(ctx, in, writer, io.Discard, "test", service, accounts[0])
 		}
@@ -116,6 +131,34 @@ func TestPlatformWriteDoesNotWaitForUnrelatedPlatform(t *testing.T) {
 	close(s.release)
 	if b.next(t).ID != "slow" {
 		t.Fatal("original result lost")
+	}
+}
+
+func TestNotificationsBypassHeldDeviceAndPlatformOperations(t *testing.T) {
+	for _, slow := range []string{"device", "openai"} {
+		t.Run(slow, func(t *testing.T) {
+			s := controlledService(slow)
+			accounts := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil)}
+			b := openLiveBridge(t, s, accounts)
+			frame := request("slow", "device_status")
+			if slow == "openai" {
+				frame = supplyRequest("slow", "supply_status", `{"platform":"openai"}`)
+			}
+			b.send(t, frame)
+			select {
+			case <-s.entered:
+			case <-time.After(time.Second):
+				t.Fatal("controlled operation did not enter")
+			}
+			b.send(t, supplyRequest("notification", "notification_snapshot", `{}`))
+			if got := b.next(t); got.ID != "notification" || got.Error != nil || !bytes.Contains(got.Result, []byte(`"facts":[]`)) {
+				t.Fatalf("notification observation blocked or lost: %+v", got)
+			}
+			close(s.release)
+			if got := b.next(t); got.ID != "slow" || got.Error != nil {
+				t.Fatalf("original operation lost: %+v", got)
+			}
+		})
 	}
 }
 

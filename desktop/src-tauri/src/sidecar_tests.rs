@@ -137,11 +137,12 @@ async fn observations_and_other_platform_bypass_slow_operation_on_owned_pipe() {
  let slow=tokio::spawn(async move { b.request("account_detect",serde_json::json!({"platform":"openai"}),Duration::from_secs(5)).await });
  observed_requests(&control,1).await;
  timeout(Duration::from_millis(500),bridge.ping()).await.unwrap().unwrap();
+ timeout(Duration::from_millis(500),bridge.notification_snapshot()).await.unwrap().unwrap();
  timeout(Duration::from_millis(500),bridge.request("supply_status",serde_json::json!({"platform":"claude"}),Duration::from_secs(5))).await.unwrap().unwrap();
  let conflict=bridge.request("supply_set_paused",serde_json::json!({"platform":"openai","paused":true}),Duration::from_secs(5)).await.unwrap_err();
  assert_eq!(conflict.code,"REQUEST_RESOURCE_BUSY");
  assert!(conflict.message.contains("account_detect"));
- assert_eq!(observed_requests(&control,3).await.len(),3,"conflicting write emitted bytes");
+ assert_eq!(observed_requests(&control,4).await.len(),4,"conflicting write emitted bytes");
  std::fs::write(control.with_extension("json.release"),b"release").unwrap();
  slow.await.unwrap().unwrap();
  bridge.stop().await.unwrap();

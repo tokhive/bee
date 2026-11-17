@@ -12,7 +12,7 @@ for(const destination of ['概览','诊断','AI 账号'])test('settings draft su
 test('binding replacement isolates unsaved settings drafts',async({page})=>{
  await open(page);await nav(page,'设置').click();const proxy=page.getByLabel('本机 HTTP 代理',{exact:true});await proxy.fill('http://127.0.0.1:18181');
  const reads=await calls(page,'runtime_snapshot');
- await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.bindingReads={context:0,recovery:0};w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='device_context'&&value.result.context.binding_revision===2)w.bindingReads.context++;if(command==='device_recovery_status')w.bindingReads.recovery++;return value;};w.bindingRevision=2;});await page.clock.runFor(10100);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.bindingReads={context:0,recovery:0};w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='device_context'&&value.result.context.binding_revision===2)w.bindingReads.context++;if(command==='device_recovery_snapshot')w.bindingReads.recovery++;return value;};w.bindingRevision=2;});await page.clock.runFor(10100);
  await expect.poll(()=>page.evaluate(()=>(window as any).bindingReads.context)).toBeGreaterThan(0);
  await expect.poll(()=>calls(page,'runtime_snapshot')).toBeGreaterThan(reads);await page.clock.runFor(0);
  // A revision first seen by the second context read invalidates recovery evidence until the next normal round.

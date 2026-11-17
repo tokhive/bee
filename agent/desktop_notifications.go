@@ -44,15 +44,17 @@ func (a *DesktopAccounts) NotificationSnapshot(ctx context.Context) (DesktopNoti
 	if err := ctx.Err(); err != nil {
 		return result, err
 	}
-	// Acquire only the public snapshot gates. a.acquire invalidates official
-	// observations on network changes and is deliberately not used by this read.
+	// A busy platform supplies no notification facts: old observations cannot
+	// authorize a notice or clear deduplication. Never wait while holding the
+	// other platform gate. Idle platforms retain the existing coherent disk read.
+	readable := make([]string, 0, 2)
 	for _, platform := range []string{"openai", "claude"} {
 		p := a.platforms[platform]
 		select {
 		case p.gate <- struct{}{}:
+			readable = append(readable, platform)
 			defer func() { <-p.gate }()
-		case <-ctx.Done():
-			return result, ctx.Err()
+		default:
 		}
 	}
 	a.networkMu.RLock()
@@ -106,7 +108,7 @@ func (a *DesktopAccounts) NotificationSnapshot(ctx context.Context) (DesktopNoti
 		return result, nil
 	}
 	now := a.now()
-	for _, platform := range []string{"openai", "claude"} {
+	for _, platform := range readable {
 		selected, ok := scope.Selections[platform]
 		if !ok {
 			continue

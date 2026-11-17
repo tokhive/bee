@@ -76,7 +76,7 @@ function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedba
  const run=async(action?:(active:()=>boolean)=>Promise<unknown>,check=false)=>{
   if(working.current||!model)return;working.current=true;const attempt=++sequence.current;const active=()=>mounted.current&&attempt===sequence.current&&(firstProfile||model.getSnapshot().native.state==='ready')&&model.getSnapshot().native.metadata?.instance===instance;
   (check?setChecking:setBusy)(true);if(!check)setOperationError(null);
-  try{if(model.getSnapshot().busy)await model.refresh();if(!active())return;await action?.(active);if(active())await model.refresh();if(active()&&!identityFailure(model.getSnapshot()))setOperationError(null);}
+  try{if(!check)await model.settleForWrite('device');if(model.getSnapshot().busy)await model.refresh();if(!active())return;await action?.(active);if(active())await model.refresh();if(active()&&!identityFailure(model.getSnapshot()))setOperationError(null);}
   catch(cause){if(active()){setOperationError(normalizeFailure(cause,'device_pairing'));await model.refresh();}}
   finally{if(attempt===sequence.current){working.current=false;if(mounted.current)(check?setChecking:setBusy)(false);}}
  };
@@ -123,6 +123,8 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
   try{
    const binding=(value:DeviceView|undefined)=>JSON.stringify([value?.state,value?.hive,value?.user_code,value?.identity?.id]);
    const intent=model?.getSnapshot().device;
+   if(action&&!check)await model?.settleForWrite('device');
+   if(!current()||action&&!check&&binding(intent)!==binding(model?.getSnapshot().device))return;
    if(action&&!check&&model?.getSnapshot().busy){
     await refresh();if(!current())return;
     const next=model?.getSnapshot();
@@ -167,7 +169,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const currentSnapshot=useCallback(()=>model?.getSnapshot()??initial,[model]);
  const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error,identityError:identityFailure(s),busy:s.busy,refreshStatus:s.refresh};},[currentSnapshot]);
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
- const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,beforeWrite:()=>model?.settleForWrite('all')??Promise.resolve(),pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
  const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,sourceReady:preferencesReady,recheckOpenaiReads:model?.recheckOpenaiReads,openaiSource:preferences.preferences.openai_source,
  saveOpenaiSource:async source=>{
@@ -177,9 +179,9 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
   const confirmed=await props.preferencesClient.read();if(confirmed.error)throw confirmed.error;
   if(confirmed.preferences.revision<saved.preferences.revision||JSON.stringify(confirmed.preferences.openai_source)!==JSON.stringify(source))throw {code:'PREFERENCES_UNCONFIRMED',message:'OpenAI source readback differs from saved receipt; required=same directory/store and revision at least '+saved.preferences.revision};
   onSaved(confirmed);return confirmed.preferences.openai_source!;
- },error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
+ },error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,beforeWrite:(platform,local)=>model?.settleForWrite(platform,local)??Promise.resolve(),pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
- const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
+ const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,beforeWrite:platform=>model?.settleForWrite(platform)??Promise.resolve(),pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
  const switchingPending=switchPending(switching.snapshot),firstProfile=!!switching.snapshot&&!switching.snapshot.profiles.current_profile&&!switchingPending;
  const switchControl=props.hiveSwitchClient?<HiveSwitchChooser model={switching} view={view}/>:null,switchStatus=props.hiveSwitchClient?<HiveSwitchProgress model={switching}/>:null;

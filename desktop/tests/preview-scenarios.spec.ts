@@ -9,6 +9,18 @@ const card=(page:Page,platform='OpenAI')=>page.getByRole('region',{name:platform
 const commands=(page:Page)=>page.evaluate(()=>(window as unknown as {calls:{command:string;args:Record<string,unknown>}[]}).calls);
 const writes=new Set(['account_action','authorize_start','supply_set_paused','runtime_start','runtime_stop']);
 
+test('a platform reading now takes precedence over another platform awaiting its scheduled retry',async({page})=>{
+ await openScene(page,'running');
+ await page.evaluate(async()=>{
+  const load=(path:string)=>import(/* @vite-ignore */path);
+  const [{default:React},{default:ReactDOM},{AccountCheckStatus}]=await Promise.all([load('/node_modules/.vite/deps/react.js'),load('/node_modules/.vite/deps/react-dom_client.js'),load('/src/features/accounts/AccountDisplay.tsx')]);
+  const root=document.createElement('div');root.id='parallel-check-status';document.body.append(root);
+  const state={views:{},errors:{},busy:false,operation:'idle',supplyRefresh:{openai:{state:'reading'},claude:{state:'scheduled',nextRetryAt:new Date(Date.now()+10000).toISOString()}}};
+  ReactDOM.createRoot(root).render(React.createElement(AccountCheckStatus,{supply:{state}}));
+ });
+ await expect(page.locator('#parallel-check-status').getByRole('status')).toHaveText('核对中…');
+});
+
 test('preview keeps a completed operation through navigation, appearance and size changes until reset',async({page})=>{
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=running&theme=light');
  const app=page.frameLocator('iframe');

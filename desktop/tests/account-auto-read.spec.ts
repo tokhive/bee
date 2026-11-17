@@ -251,3 +251,36 @@ test('busy OpenAI observation shows progress and leaves other navigation usable'
  await page.evaluate(()=>{(window as any).busyObservation=false;});await page.clock.runFor(10500);
  await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page)).not.toContainText('正在读取最新账号状态，完成后自动更新。');
 });
+
+
+
+test('in-flight official detection shows the busy observation from the real account owner',async({page})=>{
+ const openai=accountFixture('openai') as any;openai.selection={...openai.selection,state:'selected',fingerprint:'b'.repeat(64)};
+ await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai,claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='account_detect'&&args.request.platform==='openai'&&args.request.mode==='official'){
+    w.officialHeld=true;await new Promise(resolve=>w.releaseOfficial=resolve);w.officialHeld=false;
+   }
+   const result=await invoke(command,args);
+   const a=command==='account_snapshot'&&args.platform==='openai'?result.result.account:command==='runtime_snapshot'?result.result.runtime.platforms.openai.account:undefined;
+   if(a&&w.officialHeld){w.busyObservations=(w.busyObservations??0)+1;a.candidate.reference=null;a.authorization={state:'unconfirmed',fingerprint:null,observed_at:null,error:{code:'operation_pending',check:'platform_operation',platform:'openai',message:'controlled check in progress',evidence:{}}};for(const f of Object.values(a.features) as any[]){f.available=false;f.reason='platform_operation_pending';}}
+   return result;
+  };
+ });
+ await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).officialHeld)).toBe(true);
+ await page.clock.runFor(11000);
+ const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+
+ expect(await page.evaluate(()=>(window as any).busyObservations??0)).toBeGreaterThan(0);
+ await expect(card.getByText('正在核验账号…',{exact:true})).toBeVisible({timeout:1000});
+ const officialCalls=()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.platform==='openai'&&c.args.request.mode==='official').length);
+ const writes=()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>['account_action','authorize_start','supply_set_paused'].includes(c.command)).length);
+ expect(await writes()).toBe(0);
+ await page.clock.runFor(20000);expect(await officialCalls()).toBe(0);
+ await page.evaluate(()=>(window as any).releaseOfficial());
+ await expect(card.getByText('正在核验账号…',{exact:true})).toHaveCount(0);
+ expect(await officialCalls()).toBe(1);expect(await writes()).toBe(0);
+});

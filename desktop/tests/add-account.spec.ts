@@ -1,8 +1,9 @@
 import {test,expect,type Page} from '@playwright/test';
 import {accountFixture,installAccountFixture} from './fixtures/native-accounts.mjs';
-async function setup(page:Page,missing=false,progress=false){
+async function setup(page:Page,missing=false,progress=false,paused=false){
  const openai=accountFixture('openai') as any;if(missing)openai.candidate.state='source_missing';
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{openai,claude:accountFixture('claude')},runtimeEnabled:true,scenarios:{autoService:true,cancelUnknown:true}})});`});
+ if(paused)await page.addInitScript(()=>{(window as any).paused.openai=true;});
  if(progress)await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='authorize_progress'||command==='authorize_open'){
   w.calls.push({command,args});if(w.progressFailure)throw {code:'RESPONSE_TIMEOUT',message:'controlled login progress read timed out'};
   const operation=w.accounts.openai.operation,live=operation.state==='running';
@@ -117,7 +118,7 @@ test('save failure retains the source form and error details use an exclamation'
  await details.click();await expect(page.locator('.account-error-popover')).toContainText('PREFERENCES_WRITE_FAILED');await page.keyboard.press('Escape');await expect(details).toBeFocused();
 });
 test('paused choice remains paused after intake; no supply write is sent',async({page})=>{
- await setup(page);await page.evaluate(()=>(window as any).paused.openai=true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await setup(page,false,false,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
  await expect(wizard(page)).toContainText('接入后保留暂停');await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
  await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);

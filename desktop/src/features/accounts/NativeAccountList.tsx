@@ -28,7 +28,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
    if(context==='accounts'&&accounts.autoService&&platform==='openai')return <OpenaiAccountCard key={platform} accounts={accounts} runtime={runtime} supply={supply} now={now} onNavigate={navigate} navigationRequest={navigationRequest}/>;
    const snapshot=accounts.views[platform],label=platform==='openai'?'OpenAI':'Claude',dirty=!!accounts.dirty[platform];
    const readFailed=!!accounts.readFailures[platform];
-   const presentation=accountPresentation(snapshot,dirty,now,readFailed,!!accounts.deviceFailure),selected=snapshot?.selection.state==='selected';
+   const presentation=accountPresentation(snapshot,dirty,now,readFailed,!!accounts.deviceFailure,accounts.quotaHistory[platform]),selected=snapshot?.selection.state==='selected';
    const view=supply?.state.views[platform];
    const current=!readFailed&&!!supply&&!supply.blocked&&supplyFresh(supply.state,platform,now)&&!(supply.state.operation==='write'&&supply.state.activePlatform===platform);
    const ready=current&&running&&!view!.paused&&view!.ready&&view!.reasons.length===0;

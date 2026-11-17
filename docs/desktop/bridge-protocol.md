@@ -76,7 +76,7 @@ Rust 发送调度与 Go 执行调度按相同资源规则分流：
 
 | 请求类别 | 并发与互斥边界 |
 | --- | --- |
-| `ping`、`device_context`、`device_recovery_snapshot`、`runtime_snapshot`、`account_snapshot(refresh=false)`、`account_defaults`、`network_status/test`、登录／诊断状态观察 | 不占业务资源，可以越过慢操作；Go 同类观察仍串行，不能据此承诺固定响应时间 |
+| `ping`、`notification_snapshot`、`device_context`、`device_recovery_snapshot`、`runtime_snapshot`、`account_snapshot(refresh=false)`、`account_defaults`、`network_status/test`、登录／诊断状态观察 | 不占业务资源，可以越过慢操作；Go 同类观察仍串行，不能据此承诺固定响应时间 |
 | `authorize_cancel/open`、`diagnostics_cancel` | 操作已拥有的流程，可越过业务等待；仍核对操作归属和原有取消条件 |
 | `account_detect`、`account_snapshot(refresh=true)`、`supply_status` | 按平台排队；OpenAI 与 Claude 可并发，读取可能刷新／续办，不能归为纯观察 |
 | `account_action`、`authorize_start`、`supply_set_paused` | 同平台冲突写立即拒绝，不排到慢操作结束后偷偷执行；不同平台可并发 |
@@ -86,6 +86,12 @@ Rust 发送调度与 Go 执行调度按相同资源规则分流：
 冲突返回 `REQUEST_RESOURCE_BUSY`，带本次方法、阻塞方法及资源，并明确本次业务未执行。Rust 可在发送前拒绝，Go 也会在接收后执行前拒绝，因此它不等于“管道未发送任何字节”。前端将其视为确定未执行；已发送但结果未明的超时仍须等待原请求，不得重放写入。观察独立不意味着管道／容量无限：单 writer、最多 16 项、完整帧校验和迟到结果检查均保留。
 
 平台锁繁忙时，`account_snapshot(refresh=false)` 与运行快照返回最后发布的账号观察副本，清除候选引用和能力结果，标记 `authorization.state=unconfirmed`、`error.code=operation_pending`，禁用相关写入口；它不能授权接入或换号。该提示可在持久账号 revision 不变时出现／消失，前端接收同 revision 的忙闲观察变化，仍拒绝低于既有操作回执的结果。
+
+`notification_snapshot` 不等待忙平台的账号锁，省略该平台的通知事实；空闲平台仍重新核对磁盘、绑定和通知证据。省略事实既不能发送旧通知，也不能清除该平台的通知去重。Tauri 的启动／绑定／网络变更入口同样使用即时准入；锁被占用时返回带当前操作和启动状态的 `REQUEST_RESOURCE_BUSY`，不等待锁释放后执行。
+
+前端仍只有一个持续观察入口，但按资源保留各自的在途请求。共享读取只等待本机上下文、恢复记录、运行快照和默认设置；设备核对、恢复推进、OpenAI 与 Claude 的读取独立进行，同平台先读账号再读接单状态。首次设备身份未核实前只展示本机事实，不启动 Hive 账号维护。手动核对设备等待本次设备核对及当前恢复推进，再重读恢复记录；普通轮询不等待恢复推进。
+
+写前仅等待相关资源，并重新核对用户确认时的账号、候选、运行状态和作用域；本机登录不等待无关平台或 Hive 接单查询，取消登录可越过慢查询。写回执到达前已开始的读取不能充当写后核对；进程、绑定或网络版本变化后的旧结果不得发布到新作用域。旧进程的恢复请求也不得阻挡新进程。前端显示保留的同账号额度时只标记为历史记录，不修改原始账号事实，不作为接单或写操作依据；切换绑定／进程后不复用该显示记录。
 
 本地 Tauri 命令 `bridge_pending_requests` 返回 `{instance,requests:[{id,method,platform}]}`，只列已超时仍在途的请求，不向 Go 发探测。完成事件 `bee://request-settled` 携带 `{instance,id,method,platform}`，不包含业务结果；无平台时为 null。前端先等待原请求结束，再按资源使用 2/4/8/16/30 秒退避（抖动为基准的 80%–100%）；成功恢复正常 10 秒核对。事件丢失通过本地在途回读补偿。有效 429 Retry-After 可延长等待，认证／TLS／非法数据或未知失败停止该资源自动重试。写命令不自动重放。
 

@@ -484,7 +484,7 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		lane      string
 	}
 	lanes := map[string]chan readJob{"openai": make(chan readJob, 16), "claude": make(chan readJob, 16), "shared": make(chan readJob, 16)}
-	for _, method := range []string{"ping", "account_defaults", "authorize_open", "device_context", "device_recovery_snapshot", "runtime_snapshot", "network_status", "network_test", "authorize_status", "authorize_progress", "authorize_cancel", "diagnostics_snapshot", "diagnostics_cancel", "account:openai", "account:claude"} {
+	for _, method := range []string{"ping", "notification_snapshot", "account_defaults", "authorize_open", "device_context", "device_recovery_snapshot", "runtime_snapshot", "network_status", "network_test", "authorize_status", "authorize_progress", "authorize_cancel", "diagnostics_snapshot", "diagnostics_cancel", "account:openai", "account:claude"} {
 		lanes["observe:"+method] = make(chan readJob, 16)
 	}
 	var admission sync.Mutex

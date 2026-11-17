@@ -4,13 +4,13 @@ const calls=(page:Page)=>page.evaluate(()=>(window as any).calls as {command:str
 const expectEvidence=async(page:Page,text:string)=>{await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog')).toContainText(text);await page.keyboard.press('Escape');};
 const finish=async(page:Page)=>{await page.evaluate(()=>(window as any).__beePreviewApprove());await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toBeVisible({timeout:15000});};
 test('unconfigured startup waits for trusted recovery absence and fences notification accounts',async({page})=>{
- await open(page,'?hold=device_recovery_status');
+ await open(page,'?hold=device_recovery_snapshot');
  await expect(page.getByRole('heading',{name:'正在检查设备…',exact:true})).toBeVisible();
  await page.evaluate(()=>(window as any).emitNotification('accounts'));
  await expect(page.getByLabel('Hive 地址',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('navigation')).toHaveCount(0);
  expect((await calls(page)).filter(c=>c.command==='account_detect')).toEqual([]);
- await page.evaluate(()=>(window as any).__firstLaunchTest.release('device_recovery_status'));
+ await page.evaluate(()=>(window as any).__firstLaunchTest.release('device_recovery_snapshot'));
  await expect(page.getByLabel('Hive 地址',{exact:true})).toBeVisible();
  await expect(page.getByRole('heading',{name:'AI 账号',exact:true})).toHaveCount(0);
 });

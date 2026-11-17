@@ -8,9 +8,10 @@ import {createOperationQuery,type QueryState} from '../../system/operationQuery'
 import type {AuthorizeClient} from '../../system/authorize';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
+import {rememberAccountQuota,type AccountQuotaHistory} from './accountPresentation';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state)||!!s?.login_maintenance&&s.login_maintenance.phase!=='restored';
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
+export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;beforeWrite?:(platform:AccountPlatform,local:boolean)=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -37,6 +38,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const detectedSources=useRef(new Map<string,string>()),officialReads=useRef(new Map<string,string>());
  const epochs=useRef({openai:0,claude:0}),active=useRef(true),running=useRef({openai:false,claude:false});
  const requests=useRef<Partial<Record<AccountPlatform,Promise<void>>>>({}),latest=useRef<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),verified=useRef({openai:false,claude:false});
+ const quotaHistory=useRef<Partial<Record<AccountPlatform,AccountQuotaHistory>>>({});
  const localUnconfirmed=useRef<Partial<Record<AccountPlatform,boolean>>>({});
  const revisions=useRef({openai:-1,claude:-1}),unconfirmedRevisions=useRef<Partial<Record<AccountPlatform,number>>>({});
  const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??null,accountErrors=coordinated?.accountErrors??noAccountErrors;
@@ -48,6 +50,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  const publish=useCallback((platform:AccountPlatform,view:AccountSnapshot,detected=false)=>{
   if(view.revision<revisions.current[platform])return false;
+  quotaHistory.current={...quotaHistory.current,[platform]:rememberAccountQuota(quotaHistory.current[platform],view,Date.now())};
   revisions.current[platform]=view.revision;latest.current[platform]=view;verified.current[platform]=true;setViews(v=>({...v,[platform]:view}));
   const login=view.operation?.kind==='authorize'&&view.operation.state==='succeeded'?view.operation.id:undefined;
   if(detected||login&&!completedLogins.current.has(login))setDirty(v=>({...v,[platform]:false}));
@@ -61,8 +64,12 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   if(!enabled||!runtime)return;
   const observationChanged=runtime!==observedRuntime.current;
   for(const p of platforms){
-   if(running.current[p])continue;
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
+   if(running.current[p]){
+    // The active request owns its receipt; the central observer still owns progress.
+    if(next.authorization.error?.code==='operation_pending'&&!centralError&&!accountErrors[p])publish(p,next);
+    continue;
+   }
    if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
    const resolved=resolution&&runtime!==resolution.previous&&resolution.generation===coordinated?.generation?.();
    // Busy observations change availability without changing persisted account revision.
@@ -135,6 +142,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(prior)await prior;
    if(!active.current||central.current?.generation?.()!==started)return;
    if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
+   if(!cancel)await central.current?.beforeWrite?.(platform,local);
    if(central.current?.snapshot?.().busy&&refreshCentral)await refreshCentral();
    if(!active.current||central.current?.generation?.()!==started)return;
    if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
@@ -244,7 +252,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   loginQuery.current=query;setLoginOpenError(undefined);void query.start();
   return()=>{query.dispose();if(loginQuery.current===query)loginQuery.current=undefined;};
  },[enabled,authorizer,loginID]);
- return {setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
+ return {quotaHistory:quotaHistory.current,setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
   async verifyOpenai(){
    if(!client||!savedDefaults||centralError||central.current?.sourceReady===false||writing.current.openai||sourceSavingRef.current||uncertain.openai||accountPending(latest.current.openai))return;
    if(requests.current.openai)await requests.current.openai;

@@ -22,7 +22,7 @@ input.on('line', line => {
     const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
     appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');
     const reply=()=>{
-      const result=request.method==='ping'?{alive:true}:config.nestedFailure??{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null,login_maintenance:null},alive:true};
+      const result=request.method==='ping'?{alive:true}:config.nestedFailure??(request.method==='notification_snapshot'?{notifications:{facts:[],observed_at:new Date().toISOString(),network_revision:0}}:{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null,login_maintenance:null},alive:true});
       const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),...(config.businessFailure&&request.method!=='ping'?{error:{code:'http_rejected',message:'HTTP 503'}}:{result})})+'\n';
       setTimeout(()=>{process.stdout.write(frame);
       if(config.fault==='duplicate')process.stdout.write(frame);},config.delay??0);

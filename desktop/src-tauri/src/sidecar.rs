@@ -452,7 +452,7 @@ fn validate_method_result(
 // Keep this policy aligned with desktopbridge/scheduling.go. Observations
 // never advance a durable transaction; cancellation targets an already-owned job.
 fn observation(request: &Request) -> bool {
-    matches!(request.method, "ping" | "account_defaults" | "authorize_open" | "device_context" | "device_recovery_snapshot"
+    matches!(request.method, "ping" | "notification_snapshot" | "account_defaults" | "authorize_open" | "device_context" | "device_recovery_snapshot"
         | "runtime_snapshot" | "network_status" | "network_test" | "authorize_status"
         | "authorize_progress" | "authorize_cancel" | "diagnostics_snapshot" | "diagnostics_cancel")
         || request.method == "account_snapshot" && request.params["refresh"] == false

@@ -70,7 +70,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const confirmationUnsent=op?.kind==='confirm_change'&&op.state==='reconciling'&&op.error?.code==='confirmation_not_submitted';
  const intakeUnconfirmed=intakeOperation&&!confirmationUnsent&&(uncertain||!!op&&['pending','running','reconciling'].includes(op.state));
  const preparationFailed=selected&&intakeOperation&&!intakeUnconfirmed&&failed&&!confirmationUnsent&&(view.authorization.state!=='synchronized'||view.hive.state!=='ready');
- const presentation=accountPresentation(view,!!accounts.dirty.openai,now,!!accounts.readFailures.openai,!!accounts.deviceFailure);
+ const presentation=accountPresentation(view,!!accounts.dirty.openai,now,!!accounts.readFailures.openai,!!accounts.deviceFailure,accounts.quotaHistory.openai);
  const sameFlow=!!journey&&!!op&&op.id===journey.operationId&&op.state==='succeeded'&&op.revision>journey.revision;
  const restored=!maintenance||maintenance.phase==='restored';
  const repairVerified=journey?.kind==='repair'&&!accounts.dirty.openai&&candidate&&view.capabilities.some(c=>c.origin==='official'&&c.status==='ready'&&!!c.valid_until&&Date.parse(c.valid_until)>now);

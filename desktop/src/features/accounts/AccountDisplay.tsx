@@ -22,9 +22,10 @@ export function useAccountClock(accounts:AccountsModel){
 }
 export function AccountCheckStatus({supply,platform}:{supply?:SharedSupply;platform?:AccountPlatform}){
  const progress=supply?(platform?[supplyProgress(supply.state,platform)]:platforms.map(p=>supplyProgress(supply.state,p))):[];
- const copy=progress.includes('inflight')?'前次核对尚未结束，结束后重试。':progress.includes('retrying')?'重试中…':progress.includes('waiting')?'等待自动重试…':progress.includes('checking')?'核对中…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
+ const checking=progress.includes('checking'),waiting=!checking&&!progress.includes('inflight')&&!progress.includes('retrying')&&progress.includes('waiting');
+ const copy=progress.includes('inflight')?'前次核对尚未结束，结束后重试。':progress.includes('retrying')?'重试中…':checking?'核对中…':waiting?'等待自动重试…':progress.includes('blocked')?'核对已暂停，需先处理当前问题。':progress.includes('stale')?'接单状态待核对。':null;
  const at=platform?supply?.state.supplyRefresh?.[platform]?.nextRetryAt:Object.values(supply?.state.supplyRefresh??{}).flatMap(v=>v?.state==='scheduled'&&v.nextRetryAt?[v.nextRetryAt]:[]).sort()[0];
- return copy?<span className="account-check-status" role="status"><span>{t(copy)}</span>{progress.includes('waiting')&&at&&<> <time dateTime={at}>{formatDate(at,currentLocale())}</time></>}</span>:null;
+ return copy?<span className="account-check-status" role="status"><span>{t(copy)}</span>{waiting&&at&&<> <time dateTime={at}>{formatDate(at,currentLocale())}</time></>}</span>:null;
 }
 export function AccountReadHistory({accounts,platform}:{accounts:AccountsModel;platform:AccountPlatform}){
  const snapshot=accounts.views[platform];

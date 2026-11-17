@@ -6,7 +6,7 @@ import "slices"
 // recovery or refresh/reconcile an account deliberately remain business work.
 func observationLane(req request) string {
 	switch req.Method {
-	case "ping", "account_defaults", "authorize_open", "device_context", "device_recovery_snapshot", "runtime_snapshot", "network_status", "network_test", "authorize_status", "authorize_progress", "authorize_cancel", "diagnostics_snapshot", "diagnostics_cancel":
+	case "ping", "notification_snapshot", "account_defaults", "authorize_open", "device_context", "device_recovery_snapshot", "runtime_snapshot", "network_status", "network_test", "authorize_status", "authorize_progress", "authorize_cancel", "diagnostics_snapshot", "diagnostics_cancel":
 		return "observe:" + req.Method
 	case "account_snapshot":
 		if !req.Refresh {

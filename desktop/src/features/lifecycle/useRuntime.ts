@@ -5,7 +5,7 @@ import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
 import {failure} from '../supply/useSupply';
 
-export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus}}
+export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus;refresh:()=>Promise<void>;beforeWrite?:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus}}
 export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordinated?:CoordinatedRuntime){
  const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
  const [settled,setSettled]=useState(0);
@@ -47,6 +47,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   writing.current=true;setBusy(true);
   try{
    if(reading.current&&!await reading.current)return;
+   await central.current?.beforeWrite?.();
    if(central.current?.snapshot?.().busy&&refreshCentral){await refreshCentral();if(!current()||!observe())return;}
    if(external&&!observe())return;
    if(kind==='start'&&(central.current?.snapshot?.()??central.current)?.identityError)return;

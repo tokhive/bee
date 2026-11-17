@@ -8,7 +8,19 @@
 
 本轮认可的[主预览冻结版](http://127.0.0.1:15500/docs/preview/history/20261117-153033-approved-binding-repair/index.html?scene=rebind-fault&size=narrow)和[正式 React 组件冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)分别保存在独立档案库。正式组件已实现概览内修复、设备菜单、确认与取消回执、保存续接；通过 mock 验证不代表真实 Hive／原生 App 验收。
 
-页面使用模拟数据，不接真实登录或业务。`draft.html` 保留为本次认可来源；以下“待评审”章节属于历史记录，以本段认可状态为准。主预览并不代替正式应用或真实 Hive 的业务验收。
+页面使用模拟数据，不接真实登录或业务。主预览并不代替正式应用或真实 Hive 的业务验收。以下旧“待评审”章节是历史记录；当前草稿以本节为准。
+
+## 待评审：概览设备区简化（2026-11-17）
+
+[打开当前草稿](draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-211505-compact-device-overview/draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
+
+针对真实截图中“切换已取消、设备绑定完成、当前网络故障、账号接入引导”同时展开的问题：设备卡只展开当前故障与操作，设备身份放在底部；已结束的切换和绑定收成可关闭的简短反馈；接入入口留在账号区。只有进行中的绑定与 Hive 切换保留展开步骤。独立账号故障、已知身份、暂停选择和 OpenAI 双窗口额度仍保留；未知值显示 —。
+
+新增 10 个“概览 / 设备区简化”入口，原有 588 个入口保留，共 598 个。包含截图组合故障、诊断、重试进行中、重试失败／成功、独立授权过期、绑定完成、配对中、切换中及正常状态。默认打开截图组合场景。该稿待评审，`index.html` 和正式应用代码未修改。
+
+已检查浅／深色、820 × 680／1080 × 700、关闭反馈不隐藏故障且重试后不重新弹出、诊断详情与焦点返回、键盘菜单、主题／尺寸保留弹层输入、重试失败／恢复后保留暂停和独立故障、网页明确确认后完成绑定、切换进行中及取消、重置和切场景中断旧模拟任务。HTTP 503 与连接拒绝分别保留具体证据，不据此推断协议不兼容。全是静态预设，不访问真实 Hive。
+
+修改前草稿复用 `20261117-153033-approved-binding-repair/draft.html`，已核对字节一致；本轮冻结新草稿、修改前草稿、认可主预览及全部对照 HTML，独立打开后交付。
 
 当前开发 worktree：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-setup-failure-preview`，分支 `codex/bee-setup-failure-preview`。历史版本与确认记录在独立档案库；下方其它 worktree 和旧端口为历史记录。
 

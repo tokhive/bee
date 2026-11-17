@@ -8,7 +8,7 @@
 
 页面使用模拟数据，不接真实登录或业务。[当前待评审稿 draft.html](draft.html?scene=rebind-device) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
 
-当前开发 worktree：`/Users/dayong/.codex/worktrees/bee-setup-failure-preview/bee`，分支 `codex/bee-setup-failure-preview`。本轮只更新待评审稿；`index.html` 仍为既有已认可主预览。下方其它 worktree 和旧端口属于历史记录。
+当前开发 worktree：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-setup-failure-preview`，分支 `codex/bee-setup-failure-preview`。本轮只更新待评审稿；`index.html` 仍为既有已认可主预览。下方其它 worktree 和旧端口属于历史记录。
 
 在本 worktree 根目录运行：
 
@@ -18,7 +18,26 @@ python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 
 固定访问地址：<http://127.0.0.1:1497/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
 
-## 待评审：概览内设备绑定修复（2026-11-16）
+## 待评审：设备绑定修复视觉优化（2026-11-17）
+
+[绑定故障](draft.html?scene=rebind-fault&theme=light&size=narrow) · [配对确认](draft.html?scene=rebind-pair&theme=dark&size=narrow) · [恢复进度](draft.html?scene=rebind-tasks&size=narrow) · [完成](draft.html?scene=rebind-complete&size=narrow) · [启动恢复](draft.html?scene=rebind-config) · [修改前同场景](http://127.0.0.1:15500/docs/preview/history/20261116-175535-inline-binding-repair/draft.html?scene=rebind-fault&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-111736-binding-repair-visual-polish/draft.html?scene=rebind-fault&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)。
+
+用户确认视觉方案后只调整 `draft.html` 的样式与修复区域的标记结构；文案、场景、流程和交互逻辑沿用下方 2026-11-16 方案，`index.html` 和正式代码未修改。本轮 HTML 待视觉评审。
+
+- 概览设备卡：修复区域以一条分隔线接在设备信息下方，沿用主预览 Hive 切换区的字号与行距（12px 正文、12px 加粗标题），取代原先比卡片标题更大的 16px 标题；卡片标题的更多入口改为 28px 图标按钮，菜单向下展开。
+- 故障提示：恢复顶部状态圆点，“设备绑定待修复”用强调色、“等待设备绑定修复”用中性色，不再以表示正常的绿色显示；错误详情入口缩为 24px。
+- 配对确认：标签、配对码和有效期收为一行，影响告知改为浅底提示条；紧凑窗口下配对态卡片高度由 564px 降至 380px，AI 账号卡回到首屏。
+- 按钮层级：按钮高度由 36px 回到基线 32px，每个状态只保留一个主按钮；取消等低频操作收入操作行右侧的“⋯”菜单，取消确认弹窗的取消按钮用危险色。概览内服务故障不再重复显示第二个菜单入口。
+- 恢复进度：按用户要求与主预览进行中场景的呈现方式一致，不新增转圈或步骤条。概览内为标题行加普通状态行，同 Hive 切换进行中；启动恢复页使用设备设置页已有的左侧强调线状态块。
+- 弹窗与完成态：确认弹窗、证据浮层对齐 Hive 切换弹窗的尺寸、圆角与字号；完成态的设备、Hive、归属账号按设备摘要样式单行排列。
+
+与确认方案文字的三处差异，均由“与主预览场景呈现方式一致”这一补充要求引出：概览内修复区域整体采用 Hive 切换区的 12px 字阶，未使用方案中的 14px 标题和 13px 原因；进度不加转圈；启动恢复页的配对码保持主预览设备设置页的上下排列，未改单行。
+
+验证：46 个修复相关入口在浅色紧凑、深色宽屏下逐一渲染，无横向溢出、缺失文本或越出卡片的元素。浏览器演练故障→检查→配对→网页确认（含错误配对码、切换主题与尺寸保留输入）→完成→空账号页；“⋯”菜单键盘操作与焦点返回、取消确认到已取消；正常检查；HTTP 503 证据浮层与重试；停止核对后继续；启动恢复地址校验至完成；直接选中的进行中场景停留、切场景取消旧任务、重置；Hive 切换等待场景及 Claude 模板。紧凑窗口下配对与配对码过期两个状态仍略高于一屏（729／705px 对 678px），需在概览内滚动。直接打开 `rebind-complete` 时场景下拉显示“尚未登录 · 首次接入”，修改前后一致，本轮未改。全部为页面内模拟数据，不连接真实 Hive，不代表正式应用验收。
+
+修改前复用字节一致的 `20261116-175535-inline-binding-repair`；新完整留版为 `20261117-111736-binding-repair-visual-polish`，其中 `before-visual-polish.html` 为修改前完整稿，并带齐全部对照 HTML。
+
+## 上一轮待评审：概览内设备绑定修复（2026-11-16，交互方案沿用，视觉见上方）
 
 [概览正常态](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与影响告知](draft.html?scene=rebind-pair&theme=dark&size=narrow) · [启动恢复](draft.html?scene=rebind-config) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-175535-inline-binding-repair/draft.html?scene=rebind-device)。
 

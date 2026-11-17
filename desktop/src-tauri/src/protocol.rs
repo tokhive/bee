@@ -131,6 +131,9 @@ pub(crate) fn safe_failure_text(value: &str) -> bool {
         return false;
     }
     let lower = value.to_ascii_lowercase();
+    if lower.contains("private key-----") || value.contains("/Users/") || value.contains("/home/") || value.contains("\\Users\\") {
+        return false;
+    }
     for prefix in [
         "bearer ",
         "authorization",
@@ -140,6 +143,10 @@ pub(crate) fn safe_failure_text(value: &str) -> bool {
         "password",
         "api_key",
         "api-key",
+        "access_token", "refresh_token", "id_token", "client_secret",
+        "access-token", "refresh-token", "id-token", "client-secret",
+        "accesstoken", "refreshtoken", "idtoken", "clientsecret",
+        "cookie", "ticket", "private_key", "private-key", "privatekey", "mnemonic", "seed",
     ] {
         let mut rest = lower.as_str();
         while let Some((before, tail)) = rest.split_once(prefix) {

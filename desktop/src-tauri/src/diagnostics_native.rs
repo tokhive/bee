@@ -11,17 +11,17 @@ use sha2::{Digest, Sha256};
 use std::{
     collections::{BTreeMap, VecDeque},
     path::PathBuf,
-    sync::Mutex,
+    sync::{Arc, Mutex},
 };
 pub(crate) struct NativeDiagnostics {
-    pub logs: DiagnosticLogStore,
+    pub logs: Arc<DiagnosticLogStore>,
     seen: Mutex<VecDeque<String>>,
     runtime_seen: Mutex<BTreeMap<String, String>>,
 }
 impl NativeDiagnostics {
     pub fn new(path: PathBuf) -> Self {
         Self {
-            logs: DiagnosticLogStore::new(path),
+            logs: Arc::new(DiagnosticLogStore::new(path)),
             seen: Mutex::new(VecDeque::new()),
             runtime_seen: Mutex::new(BTreeMap::new()),
         }

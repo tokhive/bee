@@ -18,6 +18,9 @@ type diagnosticWriter struct {
 func (w *diagnosticWriter) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
+	if w.writer == nil {
+		return len(p), nil
+	}
 	return w.writer.Write(p)
 }
 
@@ -32,7 +35,7 @@ func (w *diagnosticWriter) report(cause error) error {
 	return err
 }
 
-// Diagnostics never sit on the business request's completion path. One writer
+// Timing diagnostics never sit on the business request's completion path. One writer
 // owns a bounded queue; congestion drops events instead of stalling Bee. As for
 // other caller-owned streams, an owner must close/unblock a stuck writer when
 // disposing its session. The management process can exit without waiting for it.
@@ -70,4 +73,26 @@ func requestDiagnosticSink(ctx context.Context, writer io.Writer) func(bee.Deskt
 		default:
 		}
 	}
+}
+
+// FailureDiagnostics shares the stderr writer with timing diagnostics, but
+// writes failures synchronously instead of dropping them when telemetry is full.
+func FailureDiagnostics(ctx context.Context, output io.Writer) (context.Context, io.Writer) {
+	writer := &diagnosticWriter{writer: output}
+	if output == nil {
+		return ctx, nil
+	}
+	ctx = bee.WithDesktopFailureRecorder(ctx, func(event bee.DesktopDiagnosticEvent) error {
+		data, err := json.Marshal(event)
+		if err != nil {
+			return fmt.Errorf("encode failure event: %w", err)
+		}
+		line := append(append([]byte("BEE_DESKTOP_FAILURE "), data...), '\n')
+		n, err := writer.Write(line)
+		if err == nil && n != len(line) {
+			err = io.ErrShortWrite
+		}
+		return err
+	})
+	return ctx, writer
 }

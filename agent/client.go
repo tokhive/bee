@@ -22,9 +22,21 @@ import (
 type apiFailure struct {
 	Status int
 	Code   string
+	Body   string
 }
 
 func (e *apiFailure) Error() string {
+	detail := e.hint()
+	text := fmt.Sprintf("Hive request rejected: HTTP %d; code=%q; required=HTTP 2xx", e.Status, desktopSafeText(e.Code))
+	if e.Body != "" {
+		text += "; response_body=" + e.Body
+	}
+	if detail != "" {
+		text += "; " + detail
+	}
+	return text
+}
+func (e *apiFailure) hint() string {
 	switch e.Code {
 	case "device_exists":
 		return "this user already has a Bee; review and confirm replacement in the web console"
@@ -43,7 +55,7 @@ func (e *apiFailure) Error() string {
 	case "rate_limited":
 		return "too many requests; try again later"
 	}
-	return fmt.Sprintf("Hive request failed (HTTP %d)", e.Status)
+	return ""
 }
 
 // DefaultHive is the Hive a new device pairs with when no address is given.
@@ -85,18 +97,19 @@ func callState(ctx context.Context, client *http.Client, state localState, path,
 	return callWithEpoch(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, input, output)
 }
 
-func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
+func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) (failure error) {
+	defer func() { failure = recordRequestFailure(ctx, "hive_request", failure, secret) }()
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
 		if err != nil {
-			return errors.New("failed to encode Bee request")
+			return &connectionRequestFailure{cause: fmt.Errorf("encode Hive request %s: %w", method, err), origin: origin, path: path, credential: secret}
 		}
 		body = bytes.NewReader(data)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, origin+path, body)
 	if err != nil {
-		return errors.New("invalid Hive request URL")
+		return &connectionRequestFailure{cause: fmt.Errorf("build Hive request %s: %w", method, err), origin: origin, path: path, credential: secret}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
@@ -111,23 +124,26 @@ func callWithEpoch(ctx context.Context, client *http.Client, origin, path, metho
 	response, err := client.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return &connectionRequestFailure{cause: ctx.Err(), origin: origin, path: path, credential: secret}
 		}
-		slog.Warn("Hive request failed", "module", "request", "method", method, "path", path, "error", connectionMessage(err, secret))
 		return &connectionRequestFailure{cause: err, origin: origin, path: path, credential: secret}
 	}
 	defer response.Body.Close()
-	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		data, readErr := io.ReadAll(io.LimitReader(response.Body, 65537))
 		var result struct {
 			Error struct {
 				Code string `json:"code"`
 			} `json:"error"`
 		}
-		_ = decoder.Decode(&result)
-		slog.Debug("Hive request rejected", "module", "request", "method", method, "path", path, "status", response.StatusCode, "code", result.Error.Code, "duration_ms", time.Since(started).Milliseconds())
-		return &connectionRequestFailure{cause: &apiFailure{Status: response.StatusCode, Code: result.Error.Code}, origin: origin, path: path, credential: secret}
+		_ = json.Unmarshal(data, &result)
+		failure := error(&apiFailure{Status: response.StatusCode, Code: result.Error.Code, Body: safeResponseBody(data, secret)})
+		if readErr != nil {
+			failure = errors.Join(failure, fmt.Errorf("read Hive error response: %w", readErr))
+		}
+		return &connectionRequestFailure{cause: failure, origin: origin, path: path, credential: secret}
 	}
+	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
 	slog.Debug("Hive request", "module", "request", "method", method, "path", path, "status", response.StatusCode, "duration_ms", time.Since(started).Milliseconds())
 	if output != nil {
 		if err := decoder.Decode(output); err != nil {

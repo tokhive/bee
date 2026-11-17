@@ -192,7 +192,7 @@ commands::device_recovery_status,
                 lifecycle::deliver_callback(app.handle(), &argument);
             }
             let updates=updater::setup(app.handle()).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
-            let coordinator=hive_switch::HiveSwitch::open(app.path().config_dir()?.join("tokhive"),&app.path().app_config_dir()?).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
+            let coordinator=hive_switch::HiveSwitch::open_with_diagnostics(app.path().config_dir()?.join("tokhive"),&app.path().app_config_dir()?,Some(app.state::<diagnostics_native::NativeDiagnostics>().logs.clone())).map_err(|cause|std::io::Error::other(format!("{}: {}",cause.code,cause.message)))?;
             let route=coordinator.current.clone();
             app.manage(route.clone());
             app.manage(coordinator);
@@ -236,7 +236,7 @@ commands::device_recovery_status,
                 if let Some(route) = app.try_state::<hive_switch::CurrentBridge>() {
                     if let Ok(bridge)=route.get() {
                     if let Err(cause) =
-                        tauri::async_runtime::block_on(lifecycle::shutdown_owned(&bridge, app.try_state::<diagnostics_native::NativeDiagnostics>().as_deref().map(|diagnostics| &diagnostics.logs), || {
+                        tauri::async_runtime::block_on(lifecycle::shutdown_owned(&bridge, app.try_state::<diagnostics_native::NativeDiagnostics>().as_deref().map(|diagnostics| diagnostics.logs.as_ref()), || {
                             tauri_plugin_single_instance::destroy(app)
                         }))
                     {

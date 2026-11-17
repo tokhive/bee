@@ -675,6 +675,7 @@ pub(crate) fn fixture(mode: &str) -> LaunchSpec {
         value => value,
     };
     LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![
@@ -839,6 +840,7 @@ fn native_spec() -> LaunchSpec {
     )
     .unwrap();
     LaunchSpec {
+        diagnostics: None,
         program: binary,
         bundle: None,
         args: vec!["desktop".into()],
@@ -964,6 +966,7 @@ async fn signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup() 
     )
     .unwrap();
     let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None,
         program: bundle.join("Contents/MacOS/bee"),
         bundle: Some(bundle),
         args: vec!["desktop".into()],
@@ -2144,7 +2147,7 @@ async fn profile_prepare_blocks_runtime_restore_before_ipc() {
  let source_path=std::path::PathBuf::from(env!("BEE_SOURCE_FILE"));
  let source=BuildSource::parse(&std::fs::read(&source_path).unwrap(),env!("BEE_TARGET"),env!("BEE_REVISION"),env!("BEE_TEE_REVISION")).unwrap();
  let program=std::path::PathBuf::from(source_path.to_str().unwrap().strip_suffix(".source.json").unwrap());
- let spec=LaunchSpec{program,bundle:None,args:vec!["desktop".into()],source,timeout:Duration::from_secs(5)}.for_profile(&profile,crate::profiles::ProfileMode::Prepare).unwrap();
+ let spec=LaunchSpec{diagnostics: None, program,bundle:None,args:vec!["desktop".into()],source,timeout:Duration::from_secs(5)}.for_profile(&profile,crate::profiles::ProfileMode::Prepare).unwrap();
  let bridge=Bridge::start(spec);wait(&bridge,BridgePhase::Ready).await;
  let err=bridge.runtime_restore().await.unwrap_err();assert_eq!(err.code,"PROFILE_MODE_RESTRICTED");assert!(bridge.pending_requests().requests.is_empty());
  let context=bridge.device_context().await.unwrap();let revision=context.result["context"]["binding_revision"].clone();
@@ -2155,4 +2158,36 @@ async fn profile_prepare_blocks_runtime_restore_before_ipc() {
  let reply=bridge.request("desktop_switch",params,Duration::from_secs(5)).await.unwrap();assert_eq!(reply.result["error"]["code"],"HIVE_SWITCH_FAILED");assert!(reply.result["error"]["message"].as_str().unwrap().contains("context changed"));
  }
  bridge.ping().await.unwrap();bridge.stop().await.unwrap();stopped.store(true,Ordering::SeqCst);server.join().unwrap();
+}
+
+#[tokio::test]
+async fn failure_history_is_drained_to_disk_before_owned_process_stop_returns() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = Arc::new(crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf()));
+    let mut spec = fixture("failure-logging");
+    spec.diagnostics = Some(logs);
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+    let reopened = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf());
+    let entries = reopened.export_entries().unwrap();
+    assert!(entries.len() >= 2, "hello and ping evidence must reach disk without subscribers");
+    assert!(entries.iter().all(|entry| entry.evidence["failure_message"].contains("TEE inbox public key not configured")));
+}
+
+#[tokio::test]
+async fn missing_failure_history_is_visible_without_blocking_owned_exit() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = Arc::new(crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf()));
+    let mut spec = fixture("owned-exit");
+    spec.diagnostics = Some(logs.clone());
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    logs.note_write_error(error("DIAGNOSTIC_LOG_IO", "publish failure: storage full"));
+    let failure = bridge.request("runtime_snapshot", serde_json::json!({}), Duration::from_secs(2)).await.unwrap_err();
+    assert_eq!(failure.code, "DIAGNOSTIC_PERSISTENCE_FAILED");
+    assert!(failure.message.contains("storage full"));
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    assert!(bridge.prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit).await.unwrap().child_reaped);
 }

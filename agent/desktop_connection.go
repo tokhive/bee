@@ -54,7 +54,7 @@ func (e *connectionRequestFailure) Error() string {
 func (e *connectionRequestFailure) Unwrap() error { return e.cause }
 
 var connectionURL = regexp.MustCompile(`(?i)(?:https?|wss?|socks5h?)://[^\s<>"']+`)
-var connectionSecret = regexp.MustCompile(`(?i)(bearer\s+)[^\s,;"']+|((?:"|')?(?:authorization|credential|token|secret|password|api[_-]?key)(?:"|')?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;"']+)`)
+var connectionSecret = regexp.MustCompile(`(?i)(bearer\s+)[^\s,;"']+|((?:"|')?(?:authorization|credential|(?:access[_-]?|refresh[_-]?|id[_-]?)?token|(?:client[_-]?)?secret|password|cookie|ticket|private[_-]?key|mnemonic|seed|api[_-]?key)(?:"|')?\s*[:=]\s*)(?:"(?:[^"\\]|\\.)*(?:"|$)|'(?:[^'\\]|\\.)*(?:'|$)|[^\s,;"']+)`)
 
 func connectionMessage(err error, credential string) string {
 	message := "Hive connection ended without an underlying error"
@@ -77,7 +77,7 @@ func connectionMessage(err error, credential string) string {
 	message = connectionSecret.ReplaceAllString(message, "${1}${2}[redacted]")
 	message = strings.ToValidUTF8(message, "�")
 	if len(message) > 32768 {
-		message = fmt.Sprintf("connection error message exceeds limit: bytes=%d maximum=32768", len(message))
+		message = boundedFailureText(message, 30000)
 	}
 	return message
 }

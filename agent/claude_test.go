@@ -302,6 +302,8 @@ func TestClaudeStatusDistinguishesLocalAndVerifiedState(t *testing.T) {
 
 func TestClaudeProfileFailuresAreBoundedAndRedacted(t *testing.T) {
 	credential, _ := parseClaudeCredential(claudeSample(time.Now().Add(time.Hour)))
+	// Echo the actual request credential; preserve diagnostic text around it.
+	credential.secret.Token = "synthetic-secret"
 	for _, test := range []struct {
 		name   string
 		status int

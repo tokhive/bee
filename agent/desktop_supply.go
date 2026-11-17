@@ -134,6 +134,7 @@ func desktopSupplyCall(ctx context.Context, state localState, platform string, p
 		desktopHTTPDiagnostic(ctx, strings.SplitN(path, "?", 2)[0], method, started, status, true, failure)
 		if failure != nil {
 			failure = desktopHTTPFailure(state, path, check, method, started, failure, status, responseBody, retryAfter)
+			failure = recordRequestFailure(ctx, check, failure, state.Credential)
 		}
 	}()
 	if paused != nil {

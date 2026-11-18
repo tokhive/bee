@@ -510,11 +510,16 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 			r.ConfirmedOwner = r.NewIdentity.OwnerID
 			r.Phase = "saving"
 		} else {
-			credential, e := recoveryCredential()
-			if e != nil {
-				return DeviceRecoveryView{}, e
+			// Initial pairing already saved its credential before the identity
+			// check. Rotating it here would invalidate the binding guard before
+			// the first request is sent. Replacement recovery uses a new one.
+			if r.Purpose != "initial_pairing" {
+				credential, e := recoveryCredential()
+				if e != nil {
+					return DeviceRecoveryView{}, e
+				}
+				r.Credential = credential
 			}
-			r.Credential = credential
 			r.Pairing = nil
 			r.CreateAttempted = true
 			r.RedeemAttempted = false

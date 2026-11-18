@@ -1,4 +1,6 @@
 export const openaiEnglish:Record<string,string>={
+  "等待完成 Claude 登录": "Waiting for Claude sign-in",
+  "已完成重新登录，接单状态以当前核对结果为准。": "Signed in again. Request availability follows the current confirmed status.",
   "重新登录 Claude": "Sign in to Claude again",
   "调用已安装的 Claude Code 官方客户端，可能改变客户端当前登录账号。": "Use the installed official Claude Code client. This may change its signed-in account.",
   "Claude Code 默认目录": "Default Claude Code directory",

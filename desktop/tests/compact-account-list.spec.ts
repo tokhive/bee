@@ -85,20 +85,27 @@ for(const state of ['exhausted','checking','paused','blocked'] as const)test(`qu
  expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(state==='paused');
 });
 
-for(const fault of ['source','expired','normal'] as const)test(`Claude compact ${fault} offers the matching action without changing pause`,async({page})=>{
+for(const fault of ['source','expired','normal','login','completion'] as const)test(`Claude compact ${fault} offers the matching action without changing pause`,async({page})=>{
+ await page.clock.install();
  const claude=accountFixture('claude') as AccountSnapshot,fp='c'.repeat(64),now=new Date().toISOString();
- claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:fault==='expired'?new Date(Date.now()-60000).toISOString():'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:fault==='source'?{platform:'claude',code:'permission_denied',check:'read_keychain',message:'keychain read denied',evidence:{permission_denied:'true'}}:null};
+ claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:(fault==='expired'||fault==='login'||fault==='completion')?new Date(Date.now()-60000).toISOString():'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:fault==='source'?{platform:'claude',code:'permission_denied',check:'read_keychain',message:'keychain read denied',evidence:{permission_denied:'true'}}:null};
  claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};claude.hive={...claude.hive,state:'ready',fingerprint:fp,generation:1};claude.authorization={...claude.authorization,state:'synchronized',fingerprint:fp};
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
- const row=page.getByRole('region',{name:'Claude 账号',exact:true});await expect(row).toContainText('已接入账号');if(fault!=='expired')await expect(row).toContainText('系统钥匙串');else await expect(row.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();
+ const row=page.getByRole('region',{name:'Claude 账号',exact:true});await expect(row).toContainText('已接入账号');if(fault!=='expired'&&fault!=='login'&&fault!=='completion')await expect(row).toContainText('系统钥匙串');else await expect(row.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();
  if(fault==='source'){
   await expect(row.getByRole('status')).toContainText('无法读取系统钥匙串凭证');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
   await row.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('permission_denied: true');await page.keyboard.press('Escape');
   await row.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
- }else if(fault==='expired'){
+ }else if(fault==='expired'||fault==='login'||fault==='completion'){
   await expect(row.getByRole('status')).toContainText('授权已过期');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
   await row.getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 Claude',exact:true})).toBeVisible();await expect(page.getByRole('dialog')).toContainText('系统钥匙串');await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(row.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();
  }else await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();
  expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
+ if(fault==='login'||fault==='completion'){
+  await row.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
+  const login=row.getByRole('region',{name:'Claude 登录状态',exact:true});await expect(login).toContainText('等待完成 Claude 登录');await expect(login.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
+  if(fault==='completion'){await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'claude',operationId:w.accounts.claude.operation.id,value:'succeeded-same'});});await page.clock.runFor(11000);await expect(login).toContainText('重新登录成功');await login.getByRole('button',{name:'完成',exact:true}).click();await expect(login).toHaveCount(0);await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();}else {await login.getByRole('button',{name:'取消登录',exact:true}).click();await expect(login).toContainText('本次登录已取消');}expect((await writes(page)).filter((x:any)=>x.command==='authorize_start')).toHaveLength(1);expect((await writes(page)).filter((x:any)=>x.command==='authorize_cancel')).toHaveLength(fault==='completion'?0:1);expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
+ }
+
 });

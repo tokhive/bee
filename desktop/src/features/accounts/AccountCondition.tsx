@@ -13,7 +13,7 @@ import {supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {sameAccountFailure,supplyProblem} from './accountPresentation';
 
 /** One current conclusion; independent conditions remain available in the disclosure. */
-export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock,compact=false}:{compact?:boolean;deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
+export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock,compact=false,workflow=false}:{workflow?:boolean;compact?:boolean;deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
  const [expanded,setExpanded]=useState(false);
  const account=accounts.views[platform],selected=account?.selection.state==='selected';
  const op=account?.operation,dirty=accounts.dirty[platform];
@@ -66,6 +66,10 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const remainingErrors=primary?visibleErrors.slice(1):visibleErrors;
  const count=remainingErrors.length+reasons.length+(!compact&&showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(!compact&&expired?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
+ if(workflow)return visibleErrors.length||reasons.length?<div className="account-flow-evidence">
+  {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <div key={index}><p>{p.summary}<AccountErrorPopover errors={[error]}/></p>{p.action&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</div>;})}
+  {reasons.map(reason=>{const p=supplyProblem(reason,platform);return <div key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t('查看相关设置')}</Button>}</div>;})}
+ </div>:null;
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{!compact&&(ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>)}<span>{t(title)}</span>{primary&&<AccountErrorPopover errors={[primary]}/>}</p>
   {compact&&(specific?.impact||expired&&!changed||showPaused&&title!=='已暂停')&&<p className="account-action-help">{specific?.impact??(expired?t('需要通过官方客户端重新授权。'):'')}{showPaused&&title!=='已暂停'&&<> {t('接单保持暂停。')}</>}</p>}

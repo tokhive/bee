@@ -82,10 +82,10 @@
 .account-list-compact .native-account-row-actions .account-action-help{text-align:left}
 .account-list-quota{min-width:0;display:grid;gap:10px}
 .account-quota-caption{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted)}
-.account-list-window{display:grid;grid-template-columns:minmax(36px,auto) minmax(12px,1fr) auto;gap:4px 7px;align-items:center;font-size:11px;min-width:0}
+.account-list-window{display:grid;grid-template-columns:36px minmax(12px,1fr) 34px;gap:4px 7px;align-items:center;font-size:11px;min-width:0}
 .account-list-window .quota-value{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
 .account-list-window .quota-window-name{overflow-wrap:anywhere;max-width:80px}
-.account-list-window .quota-reset{grid-column:2/-1;margin:0;font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.account-list-window .quota-reset{grid-column:2/-1;margin:0;font-size:10px;color:var(--muted);overflow-wrap:anywhere}
 .account-list-window.is-exhausted [data-slot=progress-indicator]{background:var(--oa-danger,#a24231)}
 .account-list-quota .quota-history{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
 .oa-status-line{display:flex;align-items:center;gap:3px}

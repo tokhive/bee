@@ -106,5 +106,10 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .native-shell:has(.account-list-compact) .page-heading h1{font-weight:650;letter-spacing:-.5px}
 .native-shell:has(.account-list-compact) .page-heading p{margin-top:6px;line-height:18px}
 .native-shell:has(.account-list-compact) .account-heading-actions{min-height:31.2px;align-items:center}
-.account-list-compact{box-shadow:none}
+.native-shell .native-account-list.account-list-compact{box-shadow:none}
 @media(max-width:720px){.native-shell:has(.account-list-compact) main{padding:20px 16px}}
+
+.native-shell[data-page=accounts] nav{gap:6px}
+.native-shell[data-page=accounts] nav button{gap:11px;padding:5px 12px 5px 13px;border:1px solid transparent;line-height:19.5px}
+.native-shell[data-page=accounts] nav button[aria-current=page]{border-color:var(--line);background:var(--paper);box-shadow:0 1px 3px #00000008}
+.native-shell[data-page=accounts] nav svg{width:16px;height:16px;stroke-width:1.6}

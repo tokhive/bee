@@ -92,7 +92,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  };
  let title='尚未登录 OpenAI',note='通过已安装的 Codex 官方客户端登录。';
  if(!view||view.candidate.state==='not_checked'){title='账号状态尚未确认';note='正在读取账号状态…';}
- else if(selected){title=ready?'可接单':!current?'账号状态待更新':supplyView?.paused?'已暂停':reasons.length?supplyProblem(reasons[0],'openai').summary:'正在更新账号状态…';note=current&&supplyView?.paused?'不再接收新任务；已有任务可继续完成。':ready?'':current&&reasons.length?supplyProblem(reasons[0],'openai').impact:'连接恢复且其他条件满足后，按你的接单选择继续。';}
+ else if(selected){title=ready?'可接单':!current?'账号状态待更新':supplyView?.paused?'已暂停':reasons.length?supplyProblem(reasons[0],'openai').summary:'正在更新账号状态…';note=current&&supplyView?.paused?'':ready?'':current&&reasons.length?supplyProblem(reasons[0],'openai').impact:'连接恢复且其他条件满足后，按你的接单选择继续。';}
  else if(candidate){title=journey?.kind==='first'?'已识别账号，请确认是否接入':'尚未接入 Bee';note='接单会使用此账号的订阅额度。';}
  if(different){title='发现不同账号';note='确认换号前，Bee 保留已接入账号。';}
  if(accounts.dirty.openai||accounts.sourceSaving){title=accounts.sourceSaving?'正在保存设置…':'正在读取登录凭证…';note='设置保存后，Bee 将重新读取并核验账号。';}

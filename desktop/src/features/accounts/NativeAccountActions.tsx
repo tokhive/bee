@@ -18,7 +18,7 @@ const autoDescriptions={
  clear_selection:actions.clear_selection.description,
  authorize:'将使用 {client} 官方客户端重新登录，并暂停此平台接单；已接请求可能继续收尾。登录后保持暂停，不同账号需确认换号。',
 };
-export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure,conditionErrors=false}:{accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure;conditionErrors?:boolean}){
+export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailure,conditionErrors=false,hideProgress=false}:{hideProgress?:boolean;accounts:AccountsModel;platform:AccountPlatform;onNavigate?:(target:NavigationTarget)=>void;sourceFailure?:UiFailure;conditionErrors?:boolean}){
  const maintenance=accounts.views[platform]?.login_maintenance;
  const op=accounts.views[platform]?.operation??maintenance?.operation;
  const error=accounts.errors[platform],submissionChanged=error?.code==='ACCOUNT_CONTEXT_CHANGED';
@@ -31,8 +31,8 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
  const progress=refresh?.state==='waiting'?'前次核对尚未结束，结束后重试。':refresh?.state==='reading'?'重试中…':refresh?.state==='scheduled'&&refresh.nextRetryAt?'等待自动重试…':refresh?.state==='blocked'?'核对已暂停，需先处理当前问题。':'账号状态待核对。';
  const terminal=op?.state==='succeeded'?op.kind==='authorize'?accounts.views[platform]?.selection.state==='selected'?'登录已核验，账号选择未改变。':'登录已核验，尚未接入':op.kind==='clear_selection'?'已取消未注册的本地选择；Hive 注册账号未被移除。':op.kind==='confirm_change'?'换号已完成，该平台保持暂停。':'接入已完成，该平台保持暂停。':op?.state==='unknown'?'原登录进程已中断，原登录结果未确认；账号维护状态单独核对。':op?.state==='cancelled'?'官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。':'账号操作失败';
  return <div className="account-operation-status">
-  {unconfirmed&&!submissionChanged&&<p role="status">{t('账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。')}</p>}
-  {(unconfirmed||error&&!requestNotExecuted(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>}
+  {!hideProgress&&unconfirmed&&!submissionChanged&&<p role="status">{t('账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。')}</p>}
+  {!hideProgress&&((unconfirmed||error&&!requestNotExecuted(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>)}
   {op?.error&&!inCondition(op.error)&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
   {maintenance&&<><p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>{maintenance.error&&!inCondition(maintenance.error)&&<FailureNotice failure={maintenance.error} check="login_maintenance" onNavigate={onNavigate}/>} {maintenance.can_recheck&&<Button variant="outline" disabled={!!accounts.busy[platform]||!!accounts.writeBusy[platform]} onClick={()=>accounts.refresh(platform)}>{t('核对维护结果')}</Button>}</>}
   {showError&&<FailureNotice failure={error} check="account_operation" onNavigate={onNavigate}/>}

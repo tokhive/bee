@@ -1,4 +1,9 @@
 export const openaiEnglish:Record<string,string>={
+  "正在核对换号结果…": "Checking the account change…",
+  "原账号": "Original account",
+  "换号结果待核对": "Account change needs checking",
+  "正在等待本次更换结果。": "Waiting for the result of this account change.",
+  "暂时无法确认是否已更换，请核对后再继续。": "The account change is not yet confirmed. Check its result before continuing.",
   "确认更换 Claude 账号": "Confirm Claude account change",
   "保存失败：写入设置文件时系统拒绝访问。输入已保留，请修复写入权限后重试。": "Save failed: the system denied access to the settings file. Your input is retained. Fix write permissions, then retry.",
   "设置已保存；尚未确认读取或修复成功。": "Settings saved. Reading and recovery have not been confirmed yet.",

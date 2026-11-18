@@ -195,3 +195,14 @@ test('Claude changed identity requires review and explicit confirmation while re
  await expect.poll(()=>page.evaluate(()=>(window as any).accounts.claude.selection.fingerprint)).toBe('d'.repeat(64));
  expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
 });
+
+for(const state of ['pending','reconciling'] as const)test(`Claude change ${state} exposes only original-operation recovery`,async({page})=>{
+ await page.clock.install();const claude=accountFixture('claude') as AccountSnapshot,now=new Date().toISOString(),fp='c'.repeat(64);
+ claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:'b'.repeat(64),plan:'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:null};
+ claude.operation={id:'e'.repeat(48),kind:'confirm_change',platform:'claude',state,revision:claude.revision,error:null};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();const row=page.getByRole('region',{name:'Claude 账号',exact:true});
+ await expect(row.getByRole('status')).toHaveText(state==='pending'?'正在更换账号…':'换号结果待核对');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(row.getByRole('button',{name:'核对账号变更',exact:true})).toHaveCount(0);
+ if(state==='pending')await expect(row.locator('[aria-current=step]')).toHaveText('2确认换号');else{await row.getByRole('button',{name:'核对结果',exact:true}).click();await expect(row).toContainText('换号结果待核对');}
+ expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).accounts.claude.operation.id)).toBe('e'.repeat(48));expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
+});

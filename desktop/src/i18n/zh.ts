@@ -1,5 +1,7 @@
 import {en} from './en.ts';
 export const zh: Record<string, string> = {...Object.fromEntries(Object.keys(en).map(key => [key, key])),
+ "desktop.status.changing_account": "正在更换账号…",
+ "desktop.status.change_unconfirmed": "换号结果待核对",
  "desktop.status.preparing_accounts": "正在准备接单…",
  "desktop.status.loading":"正在读取设备与账号状态",
  "desktop.status.unconfirmed":"状态待确认",

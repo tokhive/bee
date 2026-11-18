@@ -38,3 +38,5 @@ for(const state of ['preparing','running','reconciling','maintenance'])test('acc
  const p=derive(s);assert.notEqual(p.kind,'ready');if(state==='preparing')assert.equal(p.kind,'preparing_accounts');assert.deepEqual(p.readyPlatforms,[]);assert.equal(s.supplies.claude.ready,true);
 });
 test('preparing Claude does not hide another confirmed ready platform',()=>{const s=fixture();s.accounts.claude.authorization.state='preparing';const p=derive(s);assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['openai']);});
+
+for(const state of ['pending','running','reconciling'])test('Claude change '+state+' precedes pause but preserves another ready platform',()=>{const s=fixture();s.accounts.claude.operation={kind:'confirm_change',state};assert.deepEqual(derive(s).readyPlatforms,['openai']);s.accounts.openai.selection.state='not_selected';s.supplies.claude.paused=true;s.supplies.claude.ready=false;s.supplies.claude.reasons=['manually_paused'];const p=derive(s);assert.equal(p.kind,state==='reconciling'?'change_unconfirmed':'changing_account');assert.equal(p.primaryTarget?.platform,'claude');assert.equal(s.supplies.claude.paused,true);});

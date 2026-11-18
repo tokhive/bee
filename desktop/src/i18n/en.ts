@@ -277,6 +277,8 @@ export const en: Record<string, string> = {
  "本机保存未完成，需重新核对":"Local storage is incomplete; recheck to continue",
  "desktop.status.changing_account": "Changing account…",
  "desktop.status.change_unconfirmed": "Account change needs checking",
+ "desktop.status.pausing": "Pausing contributions…",
+ "desktop.status.resuming": "Resuming contributions…",
  "desktop.status.quota_exhausted": "Quota exhausted",
  "desktop.status.preparing_accounts": "Preparing for requests…",
  "desktop.status.loading":"Reading device and account status",

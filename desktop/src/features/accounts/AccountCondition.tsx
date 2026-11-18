@@ -18,7 +18,9 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const account=accounts.views[platform],selected=account?.selection.state==='selected';
  const op=account?.operation,dirty=accounts.dirty[platform];
  const view=supply?.state.views[platform];
- const writing=supply?.state.operation==='write'&&supply.state.activePlatform===platform;
+ const requestedPause=supply?.state.pendingChoices?.[platform];
+ const writing=!!supply?.state.writeBusy&&requestedPause!==undefined||supply?.state.operation==='write'&&supply.state.activePlatform===platform;
+ const writeNote=writing&&requestedPause!==undefined?t(requestedPause?'确认暂停后不再接收新任务，已有任务可继续完成。':'正在解除暂停；完成后仍需满足额度等接单条件。'):undefined;
  const uncertain=accounts.uncertain[platform]||op?.state==='reconciling';
  const current=!!supply&&!supply.blocked&&!accounts.readFailures[platform]&&supplyFresh(supply.state,platform,now)&&!runtime.error&&!runtime.uncertain;
  const errors:UiFailure[]=[];
@@ -43,7 +45,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  if(pending&&op?.state!=='reconciling')title=op?.kind==='authorize'?'等待官方登录':'正在处理账号操作';
  else if(uncertain)title='操作结果待确认';
  else if(deviceWait)title=deviceBlock!;
- else if(writing)title='正在更新接单选择…';
+ else if(writing)title=requestedPause===undefined?'正在更新接单选择…':requestedPause?'正在暂停接单…':'正在恢复接单…';
  else if(account?.authorization.state==='preparing')title='正在准备账号…';
  else if(runtime.view?.local==='starting')title='正在准备服务…';
  else if(runtime.view?.local==='failed')title='服务准备失败';
@@ -76,7 +78,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  </div>:null;
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked&&!quotaOnly?'is-blocked':''}`} role="status">{!compact&&(ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>)}<span>{t(title)}</span>{primary&&<AccountErrorPopover errors={[primary]}/>}</p>
-  {compact&&(specific?.impact||expired&&!changed||showPaused&&title!=='已暂停')&&<p className="account-action-help">{specific?.impact??(expired?t('需要通过官方客户端重新授权。'):'')}{showPaused&&title!=='已暂停'&&<> {t('接单保持暂停。')}</>}</p>}
+  {compact&&(writeNote||specific?.impact||expired&&!changed||showPaused&&title!=='已暂停')&&<p className="account-action-help">{writeNote??specific?.impact??(expired?t('需要通过官方客户端重新授权。'):'')}{!writing&&showPaused&&title!=='已暂停'&&<> {t('接单保持暂停。')}</>}</p>}
   {deviceWait&&(view??runtime.view?.platforms[platform].supply)&&<p className="account-action-help">{t((view??runtime.view?.platforms[platform].supply)?.paused?'接单选择：暂停':'接单选择：允许')}</p>}
   {count>0&&<details className="account-conditions" open={expanded} onToggle={event=>setExpanded(event.currentTarget.open)}>
    <summary>{t('查看原因（{count}）',{count})}</summary>

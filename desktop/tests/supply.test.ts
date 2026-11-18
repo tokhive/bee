@@ -281,3 +281,9 @@ test('all supply reasons identify their actual handling object without false log
   for(const suffix of ['confirmation_required','authorization_rejected'])assert.deepEqual(present(prefix+'_'+suffix,platform).target,{page:'accounts',section:'account',platform});
  }
 });
+
+for(const paused of [true,false])test(`pending supply preference ${paused} describes intent without overwriting the last confirmed choice`,async(t)=>{
+ const {createSupplyModel}=await import('../src/features/supply/useSupply.ts');let release!:()=>void,calls=0;
+ const model=createSupplyModel({status:async platform=>({...good,platform,paused:!paused,reasons:!paused?['manually_paused']:['offline'],checked_at:new Date().toISOString()}),setPaused:async(platform,value)=>{calls++;await new Promise<void>(r=>release=r);return {...good,platform,paused:value,reasons:value?['manually_paused']:['offline'],checked_at:new Date().toISOString()};}});
+ t.after(()=>model.stop());model.start();await model.read();const action=model.write('claude',paused);await new Promise(r=>setImmediate(r));assert.equal(model.getSnapshot().pendingChoices?.claude,paused);assert.equal(model.getSnapshot().views.claude?.paused,!paused);assert.equal(model.getSnapshot().writeBusy,true);assert.equal(calls,1);release();await action;assert.equal(model.getSnapshot().pendingChoices?.claude,undefined);assert.equal(model.getSnapshot().views.claude?.paused,paused);assert.equal(calls,1);
+});

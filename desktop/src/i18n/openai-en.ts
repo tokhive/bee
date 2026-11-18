@@ -1,4 +1,10 @@
 export const openaiEnglish:Record<string,string>={
+  "正在暂停接单…": "Pausing requests…",
+  "正在恢复接单…": "Resuming requests…",
+  "暂停中…": "Pausing…",
+  "恢复中…": "Resuming…",
+  "确认暂停后不再接收新任务，已有任务可继续完成。": "Once paused, no new requests are accepted. Existing requests can finish.",
+  "正在解除暂停；完成后仍需满足额度等接单条件。": "Resuming requests. Quota and other requirements must still be met.",
   "Hive 账号身份与本机记录不一致（Hive 版本 {actual}，本机 {expected}）。": "Hive account identity differs from the local record (Hive generation {actual}, local {expected}).",
   "Hive 账号版本与本机记录不一致（Hive {actual}，本机 {expected}）。": "Hive account generation differs from the local record (Hive {actual}, local {expected}).",
   "账号已更换，接单状态以当前核对结果为准。": "Account changed. Request availability follows the current confirmed status.",

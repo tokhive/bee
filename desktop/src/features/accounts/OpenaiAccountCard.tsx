@@ -132,6 +132,8 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const showSteps=!!steps.length&&!sourceProblem&&!cleaning&&!cancelUnknown&&op?.state!=='cancelled'&&(!uncertain||confirmedLoginProgress)&&!intakeUnconfirmed;
  const pauseInNote=!completion&&selected&&supplyCurrent&&supplyView?.paused&&title!=='已暂停';
  if(pauseInNote&&!note.includes('暂停'))note+=(note?' ':'')+'接单保持暂停。';
+ const requestedPause=supply?.state.pendingChoices?.openai;
+ if(supply?.state.writeBusy&&requestedPause!==undefined){title=requestedPause?'正在暂停接单…':'正在恢复接单…';note=requestedPause?'确认暂停后不再接收新任务，已有任务可继续完成。':'正在解除暂停；完成后仍需满足额度等接单条件。';}
  const accountDetails=<DetailSheet overlayClassName="openai-detail-overlay" onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={t(panel==='settings'?'修改后，Bee 将重新读取并核验账号。':'查看账号信息，管理凭证读取方式。')}>
     {panel==='detail'&&<><dl className="account-detail-facts"><div><dt>{t(selected?'已接入账号':'待接入账号')}</dt><dd>{presentation.identity??t('尚未接入')}</dd></div><div><dt>{t('账号状态')}</dt><dd>{t(title)}</dd></div><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan?presentation.plan[0].toUpperCase()+presentation.plan.slice(1):t('待确认')}</dd></div>{candidate&&different&&<div><dt>{t('候选账号标识')}</dt><dd>{view.candidate.fingerprint?.slice(0,16)}</dd></div>}</dl>
     <AccountReadHistory accounts={accounts} platform="openai"/>
@@ -173,7 +175,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :failed&&!accountPending(view)?<Button disabled={!!accounts.busy.openai} onClick={()=>accounts.detect('openai','official')}>{t('重新核验')}</Button>
    :candidate&&!selected?<OpenaiAction accounts={accounts} runtime={runtime} action="select" label="接入账号"/>
    :!selected&&!accountPending(view)?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="登录 OpenAI"/>
-   :selected&&!accountPending(view)&&supply?<Button disabled={observing||!current||!supply.model.canWrite('openai',!supplyView?.paused)} onClick={()=>void supply.model.write('openai',!supplyView?.paused)}>{t(supply.state.writeBusy&&supply.state.activePlatform==='openai'?'正在更新接单选择…':supplyView?.paused?'恢复接单':'暂停接单')}</Button>:null}
+   :selected&&!accountPending(view)&&supply?<Button disabled={observing||!current||!supply.model.canWrite('openai',!supplyView?.paused)} onClick={()=>void supply.model.write('openai',!supplyView?.paused)}>{t(supply.state.writeBusy&&requestedPause!==undefined?requestedPause?'暂停中…':'恢复中…':supply.state.writeBusy&&supply.state.activePlatform==='openai'?'正在更新接单选择…':supplyView?.paused?'恢复接单':'暂停接单')}</Button>:null}
    {!showSteps&&accountDetails}
   </div>
   {!completion&&intakeUnconfirmed&&accounts.originalAccountQuery?.phase==='stopped'&&<p className="oa-evidence" role="status">{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}

@@ -6,7 +6,6 @@ import {currentLocale} from '../../i18n';
 import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
 import {Dialog,Popover} from 'radix-ui';
-import {CircleAlert} from 'lucide-react';
 import {downloadPayload} from '../diagnostics/report';
 import {wizardText as w} from './first-launch-copy';
 import './first-launch-wizard.css';
@@ -56,7 +55,7 @@ function WizardDiagnosticExport({details}:{details:string}){
  return <><Button type="button" variant="ghost" disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button>{exportNotice&&<p role="status">{w(exportNotice)}</p>}</>;
 }
 
-export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryOverride,compact=false}:{failure:UiFailure;manualUrlAvailable?:boolean;summary?:string;compact?:boolean}){
+export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryOverride,compact=false,centered=false}:{failure:UiFailure;manualUrlAvailable?:boolean;summary?:string;compact?:boolean;centered?:boolean}){
  const [open,setOpen]=useState(false),titleId=useId();
  const problem=presentFailure(failure,currentLocale()),details=problem.details;
  const {exporting,exportNotice,exportEvidence}=useDiagnosticExport(details);
@@ -67,12 +66,12 @@ export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryO
  const impact=browser&&manualUrlAvailable?w('原配对请求已保留，设备绑定仍需在 Hive 网页确认。'):problem.impact;
  const guidance=browser&&manualUrlAvailable?'可复制确认网址，在浏览器中打开；本次配对仍保留。':failure.code==='tls_failed'?'请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':failure.code==='unavailable'?'请等待 Hive 恢复服务，再继续当前绑定步骤。':'';
  useEffect(()=>{setOpen(false);},[details]);
- return <div className={`first-launch-failure${browser&&manualUrlAvailable?' first-launch-browser-failure':''}`} role="alert"><p>{summary}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
-  <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
-  <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
-   <header><h3 id={titleId}>{w('错误详情')}</h3></header><pre>{details}</pre><div className="binding-actions"><Button type="button" variant="outline" disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button><Popover.Close asChild><Button type="button" variant="outline" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></div>{exportNotice&&<p role="status">{w(exportNotice)}</p>}
-  </Popover.Content></Popover.Portal>
- </Popover.Root>}</p>{!compact&&!(browser&&manualUrlAvailable)&&<p>{impact}</p>}{!compact&&guidance&&<p>{w(guidance)}</p>}</div>;
+ const Root=centered?Dialog.Root:Popover.Root,Trigger=centered?Dialog.Trigger:Popover.Trigger,Portal=centered?Dialog.Portal:Popover.Portal,Close=centered?Dialog.Close:Popover.Close;
+ const contents=<><header>{centered?<Dialog.Title asChild><h3 id={titleId}>{w('错误详情')}</h3></Dialog.Title>:<h3 id={titleId}>{w('错误详情')}</h3>}</header><pre>{details}</pre><div className="binding-actions"><Button type="button" variant="outline" disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button><Close asChild><Button type="button" variant={centered?'ghost':'outline'} aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Close></div>{exportNotice&&<p role="status">{w(exportNotice)}</p>}</>;
+ return <div className={`first-launch-failure${browser&&manualUrlAvailable?' first-launch-browser-failure':''}`} role="alert"><p>{summary}{details.length>0&&<Root open={open} onOpenChange={setOpen} modal={false}>
+  <Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><span aria-hidden="true">!</span></Button></Trigger>
+  <Portal>{centered?<Dialog.Content className="dialog-content device-error-dialog" aria-labelledby={titleId} aria-describedby={undefined}>{contents}</Dialog.Content>:<Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>{contents}</Popover.Content>}</Portal>
+ </Root>}</p>{!compact&&!(browser&&manualUrlAvailable)&&<p>{impact}</p>}{!compact&&guidance&&<p>{w(guidance)}</p>}</div>;
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */

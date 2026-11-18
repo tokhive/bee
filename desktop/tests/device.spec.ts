@@ -115,8 +115,8 @@ test('Hive expiry discovered while opening replaces the stale website action wit
  const base=new Date('2026-11-12T00:00:00Z');await page.clock.install({time:base});await page.clock.pauseAt(new Date(base.getTime()+1000));
  await initial(page,'?scene=device-pending');const button=page.getByRole('button',{name:'打开 Hive 确认网页',exact:true});await expect(button).toBeEnabled();
  await page.clock.setFixedTime(new Date(base.getTime()+601000));await button.click();
- await expect(page.getByText('Hive 已确认配对码过期。',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'重新获取配对码',exact:true})).toBeEnabled();await expect(button).toHaveCount(0);
+ await expect(page.getByText('Hive 已确认配对码过期',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();await expect(button).toHaveCount(0);
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);await expect(page.getByText('浏览器已打开',{exact:true})).toHaveCount(0);
  expect(await deviceCalls(page,'device_open')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
@@ -263,7 +263,7 @@ for(const changed of ['identity_valid','pending_transaction','query_failed'] as 
  await page.evaluate(({changed,pending})=>{const w=window as any;w.holdRecovery=false;if(changed==='identity_valid'){w.deviceFailure=null;w.deviceStage='bound';}else if(changed==='pending_transaction')w.recovery=pending;else w.failRecovery=true;w.releaseRecovery();},{changed,pending:recoveryView('pending')});
  if(changed==='identity_valid')await expect(page.getByText('设备绑定正常。',{exact:true})).toBeVisible();
  else if(changed==='pending_transaction')await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
- else {await page.getByRole('alert').filter({hasText:'journal read permission denied'}).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText('journal read permission denied');}
+ else {await page.getByRole('alert').filter({hasText:'journal read permission denied'}).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('journal read permission denied');}
  for(const command of ['device_recovery_start','device_recovery_prepare','device_recovery_confirm'])expect(await deviceCalls(page,command)).toHaveLength(0);
 });
 for(const kind of ['initial_pairing','credential_recovery'] as const)test(`completed ${kind} hides retained pairing instructions even after the old code expires`,async({page})=>{
@@ -317,7 +317,7 @@ test('pairing copy feedback and failed browser opening retain the same request',
  await browserFailure.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog')).toContainText('open failed; OS denied browser launch');await page.keyboard.press('Escape');
  expect(await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId)).toBe(operation);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
-for(const [phase,copy] of [['creation-unknown','尚无法确认配对请求结果'],['draining','正在等待旧设备完成任务和结算。'],['redeeming','正在确认设备身份…'],['redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],['saving','设备身份已确认，本机保存尚未完成。']] as const)test(`initial pairing presents ${phase} from its durable transaction`,async({page})=>{
+for(const [phase,copy] of [['creation-unknown','尚无法确认配对请求结果'],['draining','正在等待旧设备完成任务和结算。'],['redeeming','正在确认设备身份…'],['redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],['saving','请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。']] as const)test(`initial pairing presents ${phase} from its durable transaction`,async({page})=>{
  await initial(page,'?scene=device-'+phase);await expect(page.getByText(copy,{exact:true})).toBeVisible();await expect(page.getByRole('navigation')).toHaveCount(0);
  const action=page.getByRole('button',{name:phase==='saving'?'继续完成绑定':'重新检查设备',exact:true});
  if(['creation-unknown','redemption-unknown','saving'].includes(phase))await action.click();else await expect(action).toHaveCount(0);
@@ -351,7 +351,7 @@ test('local expiry waits for Hive confirmation before offering another pairing r
  await page.clock.runFor(2100);await expect(page.getByText('配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toHaveCount(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
  await page.evaluate(()=>{(window as any).hiveExpired=true;});
- await page.clock.runFor(2100);await expect(page.getByRole('button',{name:'重新获取配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+ await page.clock.runFor(2100);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 test('a stale owner dialog cannot submit after the coordinator sees a newer transaction revision',async({page})=>{
  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');
@@ -362,3 +362,19 @@ test('a stale owner dialog cannot submit after the coordinator sees a newer tran
 async function checkDevice(page:Page){
  await page.getByRole('button',{name:/^(修复设备绑定|重试连接|重新核对)$/}).click();
 }
+
+test('device error details close accessibly and export the original evidence without writes',async({page})=>{
+ await page.addInitScript(()=>{(window as any).deviceFailure={code:'http_rejected',message:'GET /api/bee/identity HTTP 503 upstream unavailable'};});
+ await page.goto('/');
+ const trigger=page.getByRole('button',{name:'查看错误详情',exact:true});
+ await trigger.focus();await page.keyboard.press('Enter');
+ const dialog=page.getByRole('dialog',{name:'错误详情',exact:true});
+ await expect(dialog).toBeVisible();await expect(dialog).toContainText('HTTP 503 upstream unavailable');
+ await expect(page.locator('.dialog-overlay')).toHaveCount(0);
+ const downloadEvent=page.waitForEvent('download');await dialog.getByRole('button',{name:'导出诊断',exact:true}).click();
+ const download=await downloadEvent;expect(readFileSync((await download.path())!,'utf8')).toContain('HTTP 503 upstream unavailable');
+ await page.keyboard.press('Escape');await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
+ await trigger.click();await dialog.getByRole('button',{name:'关闭错误详情',exact:true}).click();await expect(dialog).toHaveCount(0);await expect(trigger).toBeFocused();
+ await trigger.click();await page.getByRole('heading',{name:'概览',exact:true}).click();await expect(dialog).toHaveCount(0);
+ for(const command of ['device_begin','device_recovery_confirm','runtime_start','supply_set_paused'])expect(await deviceCalls(page,command)).toHaveLength(0);
+});

@@ -104,7 +104,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    {phase==='saving'&&<p>{w(transaction?.failure?'请处理保存失败原因，然后继续保存。':'正在保存设备配置…')}</p>}
    {cancelled&&<><p>{w('旧设备不会自动恢复接单。')}</p><p>{w('已完成的处理不会撤回。')}</p></>}
    {!querying&&(unknown||cancelling)&&failures.length===0&&<p>{w('原请求已保留，结果尚未确认。')}</p>}
-   {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} compact summary={index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
+   {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} centered compact summary={index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
    {!active&&!querying&&!checking&&problem?.title==='Hive 暂不可用'&&<p>{w('请稍后重试连接。')}</p>}
    {active&&!issue&&startupNotice}
    <div className="binding-actions" aria-busy={busy}>

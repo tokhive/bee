@@ -35,7 +35,7 @@
 .first-launch-failure{margin-top:16px}
 .first-launch-content .first-launch-failure p{color:var(--first-launch-danger);overflow-wrap:anywhere}
 .first-launch-wizard .first-launch-error-trigger{display:inline-flex;vertical-align:middle;align-items:center;justify-content:center;min-height:28px;width:28px;padding:0;margin-left:3px;border:0;background:transparent;color:var(--first-launch-danger);box-shadow:none}
-.first-launch-error-trigger svg{width:16px;height:16px}
+.first-launch-error-trigger>span{display:grid;place-items:center;width:15px;height:15px;border:1px solid currentColor;border-radius:50%;font-size:11px;font-weight:650;line-height:1}
 .first-launch-error-popover{z-index:100;width:420px;max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto;padding:16px 18px;background:var(--paper);color:var(--ink);border:1px solid var(--line);border-radius:9px;box-shadow:0 8px 30px #0002;overscroll-behavior:contain;font-size:12px;line-height:1.65}
 .first-launch-error-popover header{display:flex;justify-content:space-between;align-items:center;gap:16px;margin-bottom:10px}
 .first-launch-error-popover h3{margin:0;font-size:13px}
@@ -50,3 +50,10 @@
 .first-launch-content .first-launch-progress p{color:var(--ink)}
 
 .first-launch-wizard button:disabled{opacity:.6}
+
+.dialog-content.device-error-dialog{box-sizing:border-box;width:min(420px,calc(100vw - 32px));max-height:calc(100dvh - 32px);overflow:auto;overscroll-behavior:contain;padding:20px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit;box-shadow:0 8px 30px #0002}
+.device-error-dialog h3{font-size:15px;line-height:1.4;font-weight:600;margin:0 0 10px}
+.device-error-dialog .binding-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.device-error-dialog .ui-button{font:400 12px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",sans-serif;box-shadow:none;min-height:32px;padding:5px 12px}
+.device-error-dialog .ui-button.quiet{padding-inline:4px}
+.device-error-dialog pre{margin:0;padding:10px 12px;border-radius:6px;background:var(--panel);font:11px/1.6 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap;overflow-wrap:anywhere}

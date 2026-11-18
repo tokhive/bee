@@ -26,6 +26,7 @@ function installOpenaiReplies(){
    for(const p of ['openai','claude'])reply.result.runtime.platforms[p].supply=supply(p);
   }
   if(command==='supply_status')reply.result.supply=supply(args.platform);
+  if(w.quotaReasons){for(const value of [reply.result?.supply,reply.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.reasons=[...(value.paused?['manually_paused']:[]),...w.quotaReasons];value.ready=false;}}
   return reply;
  };
 }
@@ -68,4 +69,18 @@ test('changed error evidence dismisses the old popover without changing pause',a
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.candidate.error.message='Updated controlled EACCES';a.revision++});await page.clock.runFor(11000);
  await expect(page.getByRole('dialog',{name:'错误详情'})).toHaveCount(0);await card(page).getByRole('button',{name:'查看错误详情'}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('Updated controlled');await expect(page.getByRole('dialog',{name:'错误详情'})).not.toContainText('First controlled');
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.candidate.error=null;a.revision++});await page.clock.runFor(11000);await expect(page.getByRole('dialog',{name:'错误详情'})).toHaveCount(0);await expect(card(page).getByRole('button',{name:'查看错误详情'})).toHaveCount(0);expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+for(const state of ['exhausted','checking','paused','blocked'] as const)test(`quota status stays concise without hiding ${state} facts`,async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate((state)=>{
+  const w=window as any,a=w.accounts.openai;
+  w.paused.openai=state==='paused';w.quotaReasons=state==='blocked'?['quota_exhausted','market_not_open']:['quota_exhausted'];
+  a.capabilities.forEach((c:any)=>{c.windows=[{scope:'',seconds:18000,used_percent:100,reset_at:state==='checking'?new Date(Date.now()-1000).toISOString():'2099-01-01T00:00:00Z'}];});a.revision++;
+  if(state==='checking'){const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:any)=>command==='account_detect'&&args.request?.mode==='official'?new Promise(()=>{}):invoke(command,args);}
+ },state);await page.clock.runFor(11000);
+ await expect(card(page).locator('.oa-title')).toHaveText(state==='paused'?'已暂停':state==='checking'?'正在核验额度…':state==='blocked'?'账号订阅额度已耗尽':'额度已耗尽');
+ if(state!=='blocked')await expect(card(page).locator('.oa-note')).toHaveCount(0);
+ else {await expect(card(page).locator('.oa-note')).not.toBeEmpty();await expect(card(page)).toContainText('Hive 尚未开放 OpenAI 模型交易');}
+ expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(state==='paused');
 });

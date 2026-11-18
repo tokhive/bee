@@ -35,10 +35,16 @@ test('historical conflict is explained and disables only the affected saved targ
 });
 test('first target pairing retains the fixed Hive origin before a device config exists',async({page})=>{
  const app=await open(page,'switch-target-pairing'),target=app.getByRole('region',{name:'目标 Hive 设备',exact:true});
- await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveValue('https://target-hive.example');
- await expect(target.getByLabel('Hive 地址',{exact:true})).toHaveAttribute('readonly','');
- await target.getByRole('button',{name:'继续绑定设备',exact:true}).click();
- await expect(target).toContainText('在 Hive 网页确认设备');
+ await expect(app.getByLabel('Hive 切换进度')).toContainText('https://target-hive.example');
+ await expect(target.getByRole('textbox')).toHaveCount(0);
+ await target.getByRole('button',{name:'生成目标配对码',exact:true}).click();
+ await expect(target).toContainText('等待目标 Hive 网页确认');
+ await expect(app.locator('.device-card')).toHaveCount(1);
+ await expect(app.locator('.device-card-facts')).toHaveCount(1);
+ await expect(target.getByRole('heading',{name:'目标 Hive 设备',exact:true})).toHaveCount(0);
+ await expect(target.getByRole('button',{name:'取消切换',exact:true})).toBeVisible();
+ await expect(app.locator('.toolbar')).toHaveCount(0);
+ await expect(app.locator('footer')).toHaveCount(0);
  expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_target_begin')).toHaveLength(1);
 });
 test('saved list supports keyboard close and keeps entered URL and background operation',async({page})=>{
@@ -48,7 +54,7 @@ test('saved list supports keyboard close and keeps entered URL and background op
  expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_cancel')).toEqual([]);await expect(app.getByLabel('Hive 切换进度')).toContainText('正在准备目标 Hive');
 });
 test('unknown and expired observation show no percent and continue the original operation',async({page})=>{
- const app=await open(page,'switch-paused'),progress=app.getByLabel('Hive 切换进度');await expect(progress).toContainText('自动核对已暂停');await progress.getByRole('button',{name:'继续等待',exact:true}).click();await expect(progress).not.toContainText('自动核对已暂停');expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_continue')).toHaveLength(1);
+ const app=await open(page,'switch-paused'),progress=app.getByLabel('Hive 切换进度');await expect(progress).toContainText('自动核对暂停后');await progress.getByRole('button',{name:'继续等待',exact:true}).click();await expect(progress).not.toContainText('自动核对暂停后');expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_continue')).toHaveLength(1);
  await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-unknown&theme=dark&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await expect(progress).toContainText('切换结果尚未确认');await expect(progress.getByRole('button',{name:'重新核对',exact:true})).toBeVisible();expect(await progress.textContent()).not.toMatch(/\d+%/);
 });
 test('first profile gate permits pairing and preserves the entered Hive',async({page})=>{
@@ -59,7 +65,7 @@ test('handoff progress stays visible when the ordinary source bridge is unavaila
  const app=await open(page,'switch-handoff','dark');await expect(app.getByLabel('Hive 切换进度')).toContainText('正在连接目标 Hive');await expect(app.getByTestId('startup-recovery')).toHaveCount(0);await app.getByRole('navigation').getByRole('button',{name:'设置',exact:true}).click();await expect(app.getByLabel('Hive 切换进度')).toContainText('正在连接目标 Hive');
 });
 test('target credential rejection uses dedicated recovery and keeps A identity until commit',async({page})=>{
- const app=await open(page,'switch-target-recovery'),progress=app.getByLabel('Hive 切换进度');await expect(progress).toContainText('设备绑定需要修复');await progress.getByRole('button',{name:'修复设备绑定',exact:true}).click();await app.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();await expect(progress).toContainText('在 Hive 网页确认设备');await progress.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();await page.clock.runFor(2100);await expect(progress).toContainText('新设备归属与原设备不同');await expect(app.locator('.device-card-facts').first()).toContainText('owner@example.test');
+ const app=await open(page,'switch-target-recovery'),progress=app.getByLabel('Hive 切换进度');await expect(progress).toContainText('设备绑定需要修复');await progress.getByRole('button',{name:'修复设备绑定',exact:true}).click();await app.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();await expect(progress).toContainText('等待目标 Hive 网页确认');await progress.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();await page.clock.runFor(2100);await expect(progress).toContainText('新设备归属与原设备不同');await expect(app.locator('.device-card-facts').first()).toContainText('owner@example.test');
  const writes=(await calls(page)).filter((c:any)=>c.command.includes('recovery_confirm'));expect(writes.map((c:any)=>c.command)).toEqual(['hive_switch_target_recovery_confirm']);
 });
 
@@ -135,8 +141,7 @@ for(const cancelling of [false,true])test(`${cancelling?'cancel':'switch'} unkno
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{(frame.contentWindow as any).holdSwitchRead=true;});
  await progress.getByRole('button',{name:'重新核对',exact:true}).click();
  await expect(progress).toContainText(cancelling?'正在核对取消结果…':'正在核对切换结果…');
- const button=progress.getByRole('button',{name:'正在核对…',exact:true});await expect(button).toBeDisabled();
- await button.evaluate((node:HTMLButtonElement)=>{node.click();node.click();});
+ await expect(progress.getByRole('button')).toHaveCount(0);
  expect(await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).heldSwitchReads)).toHaveLength(1);
  await expect(app.locator('.device-card-facts').first()).toContainText('https://hive.example');
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any;w.holdSwitchRead=false;w.releaseSwitchRead();});
@@ -156,7 +161,7 @@ test('pending switch cancellation shows progress before its confirmed result',as
  await progress.getByRole('button',{name:'取消切换',exact:true}).click();
  await expect(progress).toContainText('正在取消切换…');
  await expect(progress.getByRole('button',{name:'取消切换',exact:true})).toHaveCount(0);
- await expect(progress.getByRole('button',{name:'重新核对',exact:true})).toBeDisabled();
+ await expect(progress.getByRole('button')).toHaveCount(0);
  expect(await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).cancelSubmissions)).toBe(1);
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).releaseCancelSwitch());
  await expect(app.getByText('已取消切换，继续使用原 Hive。',{exact:true})).toBeVisible();
@@ -164,4 +169,24 @@ test('pending switch cancellation shows progress before its confirmed result',as
  await app.getByRole('button',{name:'关闭切换结果提示',exact:true}).click();
  await expect(app.getByRole('button',{name:'设备操作',exact:true})).toBeFocused();
  expect((await calls(page)).filter((c:any)=>['hive_switch_cancel','hive_switch_start','runtime_start','supply_set_paused'].includes(c.command)).map((c:any)=>c.command)).toEqual(['hive_switch_cancel']);
+});
+
+test('manual switch cancellation waits for a background read without disabling or losing the click',async({page})=>{
+ const app=await open(page,'switch-unknown'),progress=app.getByLabel('Hive 切换进度');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
+  const w=frame.contentWindow as any,invoke=w.__TAURI_INTERNALS__.invoke;let held=false;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   const result=await invoke(command,args);
+   if(!held&&command==='hive_switch_observe'){held=true;w.backgroundReadHeld=true;return new Promise(resolve=>{w.releaseBackgroundRead=()=>resolve(result);});}
+   return result;
+  };
+ });
+ await page.clock.runFor(2100);
+ await expect.poll(()=>page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).backgroundReadHeld)).toBe(true);
+ const cancel=progress.getByRole('button',{name:'取消切换',exact:true});
+ await expect(cancel).toBeEnabled();await cancel.click();
+ await expect(progress).toContainText('正在取消切换');
+ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_cancel')).toHaveLength(0);
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).releaseBackgroundRead());
+ await expect.poll(async()=>(await calls(page)).filter((c:any)=>c.command==='hive_switch_cancel').length).toBe(1);
 });

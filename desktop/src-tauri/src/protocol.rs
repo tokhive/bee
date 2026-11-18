@@ -1454,6 +1454,12 @@ pub(crate) fn device_recovery(value: &Value) -> Result<&Value, BridgeError> {
     let mut fields = vec![
         "operation_id", "revision", "phase", "old_identity", "new_identity", "pairing", "failure",
     ];
+    if let Some(purpose) = r.get("purpose") {
+        if !matches!(purpose.as_str(), Some("initial_pairing" | "credential_recovery" | "local_recovery")) {
+            return Err(rejected());
+        }
+        fields.push("purpose");
+    }
     if let Some(cancel) = r.get("cancel_requested") {
         if cancel.as_bool() != Some(true) {
             return Err(rejected());

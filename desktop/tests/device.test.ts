@@ -56,6 +56,8 @@ test('DeviceRecovery strict public contract rejects secrets missing fields and c
  assert.equal(typeof decode,'function');
  const base={operation_id:'a'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:{id:'old',name:'Mac',owner_id:'owner',owner_email:'a@example.test'},new_identity:null,pairing:null,failure:null};
  assert.deepEqual(decode({result:{recovery:base}}),base);
+ for(const purpose of ['initial_pairing','credential_recovery','local_recovery'])assert.equal(decode({result:{recovery:{...base,purpose}}}).purpose,purpose);
+ for(const purpose of ['',null,1,'unknown',['initial_pairing']])assert.throws(()=>decode({result:{recovery:{...base,purpose}}}));
  assert.equal(decode({result:{recovery:{...base,cancel_requested:true}}}).cancel_requested,true);
  for(const cancel_requested of [false,'true',null,1])assert.throws(()=>decode({result:{recovery:{...base,cancel_requested}}}));
  for(const value of [{...base,credential:'secret'},{...base,revision:-1},{...base,phase:'invented'},{...base,new_identity:{...base.old_identity,credential:'secret'}},{...base,pairing:{code:'ABCD-EFGH',verification_url:'https://other.example/wrong?code=ABCD-EFGH',expires_at:new Date().toISOString()}},Object.fromEntries(Object.entries(base).filter(([k])=>k!=='failure'))])assert.throws(()=>decode({result:{recovery:value}}));

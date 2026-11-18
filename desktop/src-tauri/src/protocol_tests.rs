@@ -481,10 +481,17 @@ fn clear_selection_accepts_revision_without_candidate_but_select_does_not() {
 fn device_recovery_public_contract_is_strict_and_keeps_initial_pairing_separate() {
     let base = json!({"operation_id":"a".repeat(48),"revision":1,"phase":"awaiting_confirmation","old_identity":null,"new_identity":null,"pairing":null,"failure":null});
     assert!(device_recovery(&json!({"recovery":base})).is_ok());
+    for purpose in ["initial_pairing", "credential_recovery", "local_recovery"] {
+        let mut with_purpose = base.clone();
+        with_purpose["purpose"] = json!(purpose);
+        assert!(device_recovery(&json!({"recovery":with_purpose})).is_ok());
+    }
     let mut cancel = base.clone();
     cancel["cancel_requested"] = json!(true);
     assert!(device_recovery(&json!({"recovery":cancel})).is_ok());
     for patch in [
+        json!({"purpose":"unknown"}),
+        json!({"purpose":null}),
         json!({"cancel_requested":"true"}),
         json!({"cancel_requested":false}),
         json!({"credential":"SECRET"}),

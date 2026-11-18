@@ -37,6 +37,7 @@ type DesktopRecoveryFailure struct {
 	Details *DesktopFailureDetails `json:"details,omitempty"`
 }
 type DeviceRecoveryView struct {
+	Purpose         string                  `json:"purpose,omitempty"`
 	CancelRequested bool                    `json:"cancel_requested,omitempty"`
 	OperationID     string                  `json:"operation_id"`
 	Revision        int64                   `json:"revision"`
@@ -209,7 +210,7 @@ func saveDesktopRecovery(s *desktopDeviceSession, r *desktopRecoveryRecord) erro
 	return nil
 }
 func (r *desktopRecoveryRecord) view() DeviceRecoveryView {
-	v := DeviceRecoveryView{OperationID: r.OperationID, Revision: r.Revision, Phase: r.Phase, OldIdentity: r.OldIdentity, NewIdentity: r.NewIdentity, Failure: r.Failure}
+	v := DeviceRecoveryView{Purpose: r.Purpose, OperationID: r.OperationID, Revision: r.Revision, Phase: r.Phase, OldIdentity: r.OldIdentity, NewIdentity: r.NewIdentity, Failure: r.Failure}
 	// The accepted decisions survive a restart. Continuing observation preserves
 	// cancellation; only an explicit restart/renewal changes that intent.
 	if r.Phase != "completed" && !(r.Failure != nil && r.Failure.Code == "PAIRING_CLOSED") {

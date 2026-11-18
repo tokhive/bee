@@ -45,7 +45,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
     <div className="native-account-identity"><span className={`platform-mark ${platform}`}>{platform==='openai'?<Sparkles aria-hidden="true"/>:<span aria-hidden="true">✳</span>}</span><div className="native-account-copy">
      <div className="native-platform-name"><h3>{label}</h3>{selected&&<Badge>{presentation.plan?presentation.plan[0].toUpperCase()+presentation.plan.slice(1):t('套餐待确认')}</Badge>}</div>
      <p className="native-account-fingerprint">{presentation.identity?<><span>{t('账号标识')}: </span><span>{presentation.identity}</span></>:accounts.autoService&&snapshot?candidate?.fingerprint?t('候选账号：{identity}',{identity:candidate.fingerprint.slice(0,16)}):t('通过官方客户端登录'):snapshot?t('尚未接入 {platform} 账号',{platform:label}):t('账号状态尚未确认')}</p>
-     {accounts.autoService?(compactList?null:<AccountCondition deviceBlock={deviceBlock} accounts={accounts} platform={platform} runtime={runtime} supply={supply} onNavigate={navigate} now={now} inlineFailure={loginFailure}/>):<>
+     {accounts.autoService?(compactList||context==='overview'?null:<AccountCondition deviceBlock={deviceBlock} accounts={accounts} platform={platform} runtime={runtime} supply={supply} onNavigate={navigate} now={now} inlineFailure={loginFailure}/>):<>
      <AccountReadHistory accounts={accounts} platform={platform}/>
      <p className={`native-account-condition ${ready?'is-ready':''}`}>{ready?<Check aria-hidden="true"/>:<Pause aria-hidden="true"/>}{t(copy)}{context==='accounts'&&selected&&!running&&current&&paused&&<span className="account-paused">{t('已暂停')}</span>}</p>
      {localReason&&<p className="native-account-reason">{t(localReason)}</p>}
@@ -58,7 +58,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
      </>}
      {accounts.autoService&&!inlineLogin&&(snapshot?.login_maintenance&&snapshot.login_maintenance.phase!=='restored'||snapshot?.operation&&snapshot.operation.state!=='succeeded')&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} conditionErrors={accounts.autoService}/>}
     </div></div>
-    {compactList&&<div className="account-list-condition"><AccountCondition deviceBlock={deviceBlock} accounts={accounts} platform={platform} runtime={runtime} supply={supply} onNavigate={navigate} now={now} inlineFailure={loginFailure}/></div>}
+    {(compactList||context==='overview'&&accounts.autoService)&&<div className="account-list-condition"><AccountCondition deviceBlock={deviceBlock} accounts={accounts} platform={platform} runtime={runtime} supply={supply} onNavigate={navigate} now={now} inlineFailure={loginFailure}/></div>}
     {compactList?<AccountQuota presentation={presentation} list historical={!!accounts.sourceReadFailed[platform]||!!snapshot?.candidate.error}/>:(!deviceBlock||platform==='openai')&&(!accounts.autoService||selected)&&<AccountQuota presentation={presentation}/>}
     <div className="native-account-row-actions">
      {context==='overview'&&!selected&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate({page:'accounts',platform})}>{t('前往接入')}</Button>}

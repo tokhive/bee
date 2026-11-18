@@ -71,16 +71,16 @@ test('failed preference save keeps the saved appearance; recovery and English co
 });
 
 test('Hive entry asks native code to open only the saved origin root without frontend URL input',async({page})=>{
- await setup(page);await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();
+ await setup(page);await nav(page,'设置').click();await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();
  expect(await calls(page,'hive_open')).toEqual([{command:'hive_open',args:{}}]);expect(await page.evaluate(()=>(window as any).openedHive)).toBe('https://hive.example/');
 });
 
 for(const outcome of ['success','failure'])test(`late Hive open ${outcome} from the previous instance cannot refresh the new owner`,async({page})=>{
- await setup(page);await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
+ await setup(page);await nav(page,'设置').click();await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
  await page.evaluate((outcome:string)=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{if(command!=='hive_open')return invoke(command,args);const result=await invoke(command,args);w.oldHiveStarted=true;return new Promise((resolve,reject)=>{w.finishOldHive=()=>outcome==='success'?resolve(result):reject(new Error('HIVE_OPEN_FAILED: old instance result arrived after replacement'));});};},outcome);
  await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).oldHiveStarted)).toBe(true);
  const before=await page.evaluate(()=>{const w=window as any;w.emit('d'.repeat(32));return w.runtimeReadCount;});await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
- await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
+ await nav(page,'概览').click();await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
  const reads=await page.evaluate(()=>{const w=window as any;w.finishOldHive();return w.runtimeReadCount;});await page.clock.runFor(1);
  expect(await page.evaluate(()=>(window as any).runtimeReadCount)).toBe(reads);await expect(page.getByText(/HIVE_OPEN_FAILED/)).toHaveCount(0);
 });
@@ -800,8 +800,8 @@ for(const [kind,http,title,action] of [
  await expect(device.getByText('设备状态尚未确认，请重新检查设备。',{exact:true})).toHaveCount(0);
  const before=await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}));
  await device.getByRole('button',{name:action,exact:true}).click();
- await expect(device.getByRole('heading',{name:action==='重试连接'?'正在连接 Hive…':'正在核对 Hive 状态…',exact:true})).toBeVisible();
- await expect(device.getByRole('button',{name:action==='重试连接'?'正在连接…':'正在核对…',exact:true})).toBeDisabled();
+ await expect(device.getByRole('heading',{name:action==='重试连接'?'正在连接 Hive':'正在核对 Hive 状态…',exact:true})).toBeVisible();
+ await expect(device.locator('.device-transaction').getByRole('button')).toHaveCount(0);
  expect(await calls(page,'startup_recheck')).toHaveLength(1);
  expect(await calls(page,'startup_query')).toEqual([]);
  await page.evaluate(()=>(window as any).completeIdentityRecheck());

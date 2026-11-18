@@ -116,3 +116,23 @@ test('local recovery advances only after confirmation and cancel dialog returns 
  await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
  expect((await calls(page)).filter(c=>['device_begin','runtime_start','account_action'].includes(c.command))).toEqual([]);
 });
+
+test('locally expired pending code offers renewal without pretending Hive confirmed expiry',async({page})=>{
+ await open(page,'recovery-pending');
+ await expect(page.locator('.pairing-phase')).toContainText('在 Hive 网页确认设备');
+ const before=await page.evaluate(()=>(window as any).__beeMockDeviceContext());
+ await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+100)));
+ await page.clock.setSystemTime(new Date(await page.evaluate(()=>Date.now()+660000)));
+ await page.clock.runFor(1000);
+ const renewal=page.getByRole('button',{name:'重新获取配对码',exact:true});
+ await expect(renewal).toBeVisible();
+ await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeDisabled();
+ await renewal.click();
+ await expect(page.getByRole('dialog')).toContainText('若旧绑定已经成功');
+ expect((await calls(page)).filter(c=>c.command==='device_recovery_confirm')).toHaveLength(0);
+ await page.getByRole('dialog').getByRole('button',{name:'确认获取新码',exact:true}).click();
+ const decisions=(await calls(page)).filter(c=>c.command==='device_recovery_confirm');
+ expect(decisions).toHaveLength(1);
+ expect(decisions[0].args.decision).toBe('restart_pairing');
+ expect(decisions[0].args.operationId??decisions[0].args.operation_id).toBe(before.operationId);
+});

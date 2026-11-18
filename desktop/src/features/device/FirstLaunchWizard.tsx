@@ -7,6 +7,7 @@ import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
 import {Dialog,Popover} from 'radix-ui';
 import {CircleAlert} from 'lucide-react';
+import {downloadPayload} from '../diagnostics/report';
 import {wizardText as w} from './first-launch-copy';
 import './first-launch-wizard.css';
 
@@ -41,16 +42,23 @@ export function validateHive(raw:string):string {
 
 export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryOverride,compact=false}:{failure:UiFailure;manualUrlAvailable?:boolean;summary?:string;compact?:boolean}){
  const [open,setOpen]=useState(false),titleId=useId();
+ const [exporting,setExporting]=useState(false),[exportNotice,setExportNotice]=useState('');
  const problem=presentFailure(failure,currentLocale()),details=problem.details;
  const browserReason:Record<string,string>={BROWSER_OPEN_FAILED:'默认浏览器打开失败。',BROWSER_OPEN_TIMEOUT:'打开浏览器超时，网页打开结果尚未确认。',BROWSER_OPEN_CLEANUP_FAILED:'浏览器打开程序超时，且未能确认已结束。'};
  const browser=browserReason[failure.code],summary=summaryOverride??(browser?w(browser):problem.summary);
  const impact=browser&&manualUrlAvailable?w('原配对请求已保留，设备绑定仍需在 Hive 网页确认。'):problem.impact;
  const guidance=browser&&manualUrlAvailable?'可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':failure.code==='tls_failed'?'请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':failure.code==='unavailable'?'请等待 Hive 恢复服务，再继续当前绑定步骤。':'';
- useEffect(()=>setOpen(false),[details]);
+ const exportEvidence=async()=>{
+  if(exporting)return;setExporting(true);setExportNotice('');
+  try{const result=await downloadPayload(new Blob([details],{type:'text/plain;charset=utf-8'}),'bee-device-diagnostics.txt');setExportNotice(result==='completed'?'诊断已导出。':result==='initiated'?'已发起下载，请核对下载文件。':'下载结果尚未确认，请核对下载文件。');}
+  catch(cause){setExportNotice(presentFailure(normalizeFailure(cause,'device_diagnostic_export'),currentLocale()).summary);}
+  finally{setExporting(false);}
+ };
+ useEffect(()=>{setOpen(false);setExportNotice('');},[details]);
  return <div className="first-launch-failure" role="alert"><p>{summary}{details.length>0&&<Popover.Root open={open} onOpenChange={setOpen}>
   <Popover.Trigger asChild><Button type="button" variant="ghost" className="first-launch-error-trigger" aria-label={w('查看错误详情')} title={w('查看错误详情')}><CircleAlert aria-hidden="true"/></Button></Popover.Trigger>
   <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
-   <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>
+   <header><h3 id={titleId}>{w('错误详情')}</h3></header><pre>{details}</pre><div className="binding-actions"><Button type="button" variant="outline" disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button><Popover.Close asChild><Button type="button" variant="outline" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></div>{exportNotice&&<p role="status">{w(exportNotice)}</p>}
   </Popover.Content></Popover.Portal>
  </Popover.Root>}</p>{!compact&&<p>{impact}</p>}{!compact&&guidance&&<p>{w(guidance)}</p>}</div>;
 }
@@ -137,8 +145,8 @@ export function FirstLaunchWizard({startupNotice,recover,recoveryEntry,view,cont
    {phase==='creation_unknown'&&onOpenHive&&<div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void onOpenHive()}>{w('打开 Hive 控制台')}</Button></div>}
    {failureNotices}
    {canCheck&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button></div>}
-   {recover&&view?.recovery&&!['completed','saving','awaiting_owner_confirmation'].includes(view.recovery.phase)&&<div className="first-launch-actions"><Button disabled={busy||checking} onClick={()=>void recover('continue_checking',view.recovery)}>{w('继续核对原请求')}</Button>{['creation_unknown','blocked','expired'].includes(view.recovery.phase)&&<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('restart_pairing');}}>{w('重新配对')}</Button>}<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('cancel_pairing');}}>{w('取消本次重绑')}</Button></div>}
-   {phase==='expired'&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}
+   {recover&&view?.recovery&&!['completed','saving','awaiting_owner_confirmation'].includes(view.recovery.phase)&&<div className="first-launch-actions"><Button disabled={busy||checking} onClick={()=>void recover('continue_checking',view.recovery)}>{w('继续核对原请求')}</Button>{(['creation_unknown','blocked','expired'].includes(view.recovery.phase)||expired&&phase==='pending')&&<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('restart_pairing');}}>{w(expired?'重新获取配对码':'重新配对')}</Button>}<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('cancel_pairing');}}>{w('取消本次重绑')}</Button></div>}
+   {phase==='expired'&&!view?.recovery&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}
    {phase==='saving'&&<><p role="status">{w(checking?'正在检查绑定结果并继续保存…':transactionFailure?'设备身份已确认，本机保存尚未完成。':'正在保存设备配置…')}</p>{transactionFailure&&<><p>{w('请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。')}</p><div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('继续完成绑定')}</Button></div></>}</>}
    {copied&&<p role="status">{w(copied)}</p>}{copyFailure&&<WizardFailure failure={copyFailure}/>}
   </>}

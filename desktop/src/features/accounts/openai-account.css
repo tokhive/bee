@@ -213,7 +213,11 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 .claude-source-form input::placeholder{color:var(--muted);opacity:1}
 
-.account-list-compact .claude-preparation-flow .native-account-fingerprint{line-height:16.5px}
-.account-list-compact .claude-preparation-flow .native-account-condition{line-height:19.5px}
-.account-list-compact .claude-preparation-flow .account-action-help{line-height:20.4px}
+.account-list-compact .claude-expired-flow .native-account-fingerprint{line-height:16.5px}
+.account-list-compact .claude-expired-flow .native-account-condition{line-height:19.5px}
+.account-list-compact .claude-expired-flow .account-action-help{line-height:20.4px}
 .account-list-compact .claude-preparation-flow>.native-account-row-actions>.account-action-help{margin:0}
+
+.detail-sheet .claude-source-form .claude-source-error{color:#a24231;margin-top:12px}
+[data-theme=dark] .detail-sheet .claude-source-form .claude-source-error{color:#f2a38f}
+.detail-sheet .claude-source-form .account-error-trigger{width:16px;height:16px;min-height:16px;padding:0;vertical-align:middle}

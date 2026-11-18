@@ -23,6 +23,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const sourceSavingRef=useRef(false);
  const [claudeSourceSaving,setClaudeSourceSaving]=useState(false),[claudeSourceSaveError,setClaudeSourceSaveError]=useState<UiFailure>();
  const claudeSourceSavingRef=useRef(false);
+ const [claudeSourcePhase,setClaudeSourcePhase]=useState<'saving'|'reading'|'verifying'>();
  const [sourceSavePhase,setSourceSavePhase]=useState<'saving'|'reading'>();
  const [originalAccountQuery,setOriginalAccountQuery]=useState<QueryState<AccountSnapshot>>();
  const originalAccountReader=useRef<ReturnType<typeof createOperationQuery<AccountSnapshot>>|undefined>(undefined);
@@ -271,19 +272,19 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    catch(cause){if(active.current)setLoginOpenError(failure(cause,'browser_opener'));}
    finally{openingLoginRef.current=false;if(active.current)setOpeningLogin(false);}
   },
-  claudeSourceSaving,claudeSourceSaveError,
+  claudeSourceSaving,claudeSourceSaveError,claudeSourcePhase,
   async saveClaudeSource(draft:AccountSource){
    if(!central.current?.saveClaudeSource||claudeSourceSavingRef.current||accountPending(latest.current.claude)||uncertain.claude||writing.current.claude)return;
-   claudeSourceSavingRef.current=true;setClaudeSourceSaving(true);setClaudeSourceSaveError(undefined);
+   claudeSourceSavingRef.current=true;setClaudeSourceSaving(true);setClaudeSourceSaveError(undefined);setClaudeSourcePhase('saving');
    const generation=central.current.generation?.();
    try{
     const saved=await central.current.saveClaudeSource(draft);
     if(!active.current||generation!==central.current?.generation?.())return;
-    editSource('claude',saved);
-    await run('claude',async()=>{const local=await detectLocal('claude',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('claude',saved,'official');},true);
+    setClaudeSourcePhase('reading');editSource('claude',saved);
+    await run('claude',async()=>{const local=await detectLocal('claude',saved);if(!local.candidate.source||local.candidate.error||!active.current||generation!==central.current?.generation?.())return local;setClaudeSourcePhase('verifying');return detectLocal('claude',saved,'official');},true);
     return true;
    }catch(cause){if(active.current)setClaudeSourceSaveError(failure(cause,'preferences_save'));}
-   finally{claudeSourceSavingRef.current=false;if(active.current)setClaudeSourceSaving(false);}
+   finally{claudeSourceSavingRef.current=false;if(active.current){setClaudeSourceSaving(false);setClaudeSourcePhase(undefined);}}
   },
   async saveOpenaiSource(draft=openaiDraft){
    if(!draft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;

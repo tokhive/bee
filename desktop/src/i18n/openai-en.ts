@@ -1,4 +1,7 @@
 export const openaiEnglish:Record<string,string>={
+  "保存失败：写入设置文件时系统拒绝访问。输入已保留，请修复写入权限后重试。": "Save failed: the system denied access to the settings file. Your input is retained. Fix write permissions, then retry.",
+  "设置已保存；尚未确认读取或修复成功。": "Settings saved. Reading and recovery have not been confirmed yet.",
+  "凭证读取已完成，正在核验身份。": "Credentials read. Verifying account identity.",
   "接单选择：已暂停；准备就绪后可恢复。": "Requests are paused. You can resume once preparation is complete.",
   "配置目录": "Configuration directory",
   "Claude 账号详情": "Claude account details",

@@ -14,6 +14,7 @@ let startupOperation=null,startupRuntimeRevision;
 let bootstrapProxy='',bootstrapRevision=0;
 let restores=0;
 let sessionRetired=false;
+let originalAccountResolved=false;
 let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
@@ -65,6 +66,7 @@ input.on('line', line => {
         reply(config.presence_error?{error:{code:'RUNTIME_OPERATION_FAILED',message:'presence admission blocked: suspended=true'}}:config.presence_bad?{enabled:false}:{enabled:true});return;
       case 'runtime_inspect_recovery':
       case 'runtime_reconcile_recovery': {
+        if(config.pending_account&&!originalAccountResolved){reply({recovery:{state:'blocked',binding_revision:1,previous_run_id:null,account_revision:'a'.repeat(64),intent_running:false,failure:{code:'RECOVERY_OPERATION_UNRESOLVED',message:'unresolved account operations=1; query original operations'}}});return;}
         if(config.running){reply({recovery:{state:'blocked',binding_revision:config.binding_revision??1,previous_run_id:null,account_revision:null,intent_running:false,failure:{code:'RECOVERY_OWNER_BUSY',message:'recovery inspection rejected: closed=false local=running account_actions=0; required=idle lifecycle owner'}}});return;}
         if(request.method==='runtime_reconcile_recovery' && config.retirement && !config.retirement_error) sessionRetired=true;
         const blocked=config.recovery_blocked&&!sessionRetired;
@@ -97,6 +99,9 @@ input.on('line', line => {
       case 'network_status':reply({network:{effective_revision:networkRevision,effective_proxy:bootstrapProxy,paths:{relay:bootstrapProxy?'local_proxy':'direct',official:bootstrapProxy?'openai=local_proxy;claude=local_proxy':'openai=direct;claude=direct',hive:'process_environment',official_login:'official_client'}}});return;
       case 'account_detect':reply({account:{platform:request.params.platform,operation:null,login_maintenance:null}});return;
       case 'account_defaults':reply({defaults:{platforms:[]}});return;
+      case 'account_snapshot':
+        if(request.params.refresh&&config.pending_account&&!config.account_still_unknown)originalAccountResolved=true;
+        reply({account:{platform:request.params.platform,operation:request.params.platform==='openai'?{id:'a'.repeat(48),kind:'select',platform:'openai',revision:1,state:originalAccountResolved?'succeeded':'reconciling',error:null}:null,login_maintenance:null}});return;
       case 'shutdown':input.close();process.stdin.destroy();return;
       default:reply({alive:true});return;
     }

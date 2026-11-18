@@ -234,6 +234,8 @@ func validateDesktopIdentity(state localState, identity beewire.Identity) error 
 // credentials. Error codes are bounded to the Hive contract's public alphabet.
 func safeCode(code string) string {
 	switch code {
+	case "invalid_preparation", "preparation_conflict", "preparation_unconfirmed":
+		return code
 	case "pairing_attempt_not_found", "pairing_recovery_conflict", "invalid_pairing_attempt":
 		return code
 	case "runtime_retired", "invalid_runtime_recovery", "runtime_recovery_conflict", "runtime_preparation_conflict", "runtime_account_conflict":

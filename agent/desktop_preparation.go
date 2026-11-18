@@ -121,10 +121,13 @@ func ensureDesktopPreparation(ctx context.Context, state localState, platform st
 		var err error
 		got, err = desktopPreparationCall(ctx, state, platform, input.ID, nil)
 		if err != nil {
-			return fmt.Errorf("preparation %s unresolved: write=%v; query: %w", input.Action, writeErr, err)
+			return fmt.Errorf("preparation %s unresolved: write=%w; query: %w", input.Action, writeErr, err)
 		}
 	}
 	if got != expected {
+		if writeErr != nil {
+			return fmt.Errorf("preparation %s unconfirmed: state=%s required=%s write=%w; reconcile original operation", input.Action, got, expected, writeErr)
+		}
 		return fmt.Errorf("preparation %s unconfirmed: state=%s required=%s write=%v; reconcile original operation", input.Action, got, expected, writeErr)
 	}
 	return nil

@@ -850,6 +850,37 @@ impl Bridge {
         crate::protocol::validate_account_operation(&reply.result, platform)?;
         Ok(reply)
     }
+    // Only the native startup query uses this path, after verifying the saved
+    // device and network. Go resumes durable pending operations; no account
+    // selection, login or supply-choice command is admitted by this exception.
+    pub(crate) async fn reconcile_startup_accounts(&self) -> Result<(), BridgeError> {
+        for platform in [SupplyPlatform::Openai, SupplyPlatform::Claude] {
+            let inspection = self.inspect_recovery().await?;
+            match inspection.failure {
+                Some(cause) if cause.code == "RECOVERY_OPERATION_UNRESOLVED" => {}
+                Some(cause) => return Err(cause),
+                None => return Ok(()),
+            }
+            let mut reply = self.request_inner("account_snapshot", serde_json::json!({"platform":platform,"refresh":true}), Duration::from_secs(15), false, true).await?;
+            crate::protocol::validate_account_operation(&reply.result, platform)?;
+            let original = reply.result["account"]["operation"]["id"].clone();
+            let deadline = tokio::time::Instant::now() + Duration::from_secs(12);
+            loop {
+                let operation = &reply.result["account"]["operation"];
+                if operation.is_null() || operation["state"] == "succeeded" || operation["state"] == "failed" { break; }
+                if !["pending", "running"].contains(&operation["state"].as_str().unwrap_or("")) || tokio::time::Instant::now() >= deadline {
+                    return Err(error("RECOVERY_OPERATION_UNRESOLVED", format!("original account operation remains unresolved: platform={platform:?}; operation={operation}; startup remains blocked")));
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                reply = self.request_inner("account_snapshot", serde_json::json!({"platform":platform,"refresh":false}), Duration::from_secs(15), false, true).await?;
+                crate::protocol::validate_account_operation(&reply.result, platform)?;
+                if reply.result["account"]["operation"]["id"] != original {
+                    return Err(error("RECOVERY_OPERATION_UNRESOLVED", "original account operation identity changed while querying; startup remains blocked"));
+                }
+            }
+        }
+        Ok(())
+    }
     pub async fn account_action(
         &self,
         request: AccountActionRequest,
@@ -1263,7 +1294,7 @@ impl Bridge {
         params: Value,
         duration: Duration,
     ) -> Result<BridgeReply, BridgeError> {
-        self.request_inner(method, params, duration, false).await
+        self.request_inner(method, params, duration, false, false).await
     }
 
     pub(crate) async fn exit_request(
@@ -1271,7 +1302,7 @@ impl Bridge {
         method: &'static str,
         params: Value,
     ) -> Result<BridgeReply, BridgeError> {
-        self.request_inner(method, params, Duration::from_secs(5), true)
+        self.request_inner(method, params, Duration::from_secs(5), true, false)
             .await
     }
 
@@ -1286,6 +1317,7 @@ impl Bridge {
         params: Value,
         duration: Duration,
         exit_request: bool,
+        startup_account_query: bool,
     ) -> Result<BridgeReply, BridgeError> {
         // Preserve the internal reads needed to stop and reap the owned runtime.
         if !exit_request && matches!(method, "account_snapshot" | "account_detect" | "runtime_snapshot" | "device_status" | "supply_status") {
@@ -1331,7 +1363,8 @@ impl Bridge {
                 | "runtime_configure_network"
         ) || (method == "runtime_stop"
             && params["reason"] == "network_change");
-        if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request && !startup_network {
+        if !self.0.startup_verified.load(Ordering::SeqCst) && !exit_request && !startup_network
+            && !(startup_account_query && method == "account_snapshot") {
             return Err(error("STARTUP_VERIFICATION_PENDING", "request rejected: startup package/data/runtime verification has not succeeded; contribution remains blocked"));
         }
         if self.0.frozen.load(Ordering::SeqCst) && !exit_request {

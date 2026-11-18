@@ -1,4 +1,34 @@
 use super::*;
+#[tokio::test]
+async fn explicit_startup_query_reconciles_original_accounts_without_admitting_new_work() {
+    for unresolved in [false, true] {
+        let (dir, bridge, app)=fixture(serde_json::json!({"pending_account":true,"account_still_unknown":unresolved}));
+        crate::update_install::hold_startup(&bridge);
+        startup(app.handle().clone(),bridge.clone()).await;
+        assert_eq!(app.state::<StartupGate>().snapshot().failure.unwrap().code,"RECOVERY_OPERATION_UNRESOLVED");
+        assert_eq!(bridge.account_snapshot(crate::protocol::SupplyPlatform::Openai,true).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+        let result=query(app.handle(),&bridge).await;
+        assert_eq!(result.is_ok(),!unresolved,"{result:?}");
+        assert_eq!(app.state::<StartupGate>().snapshot().can_retry,!unresolved);
+        assert!(!bridge.0.startup_verified.load(Ordering::SeqCst));
+        assert_eq!(bridge.account_snapshot(crate::protocol::SupplyPlatform::Openai,true).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+        let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(calls.lines().any(|method|method=="account_snapshot"));
+        assert!(!calls.lines().any(|method|["account_action","runtime_restore","runtime_start","supply_set_paused"].contains(&method)),"{calls}");
+        bridge.stop().await.unwrap();
+    }
+}
+#[tokio::test]
+async fn original_account_query_does_not_skip_device_verification() {
+    let (dir,bridge,app)=fixture(serde_json::json!({"pending_account":true,"rejected":true}));
+    crate::update_install::hold_startup(&bridge);
+    startup(app.handle().clone(),bridge.clone()).await;
+    assert_eq!(query(app.handle(),&bridge).await.unwrap_err().code,"device_replaced");
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|method|method=="account_snapshot"));
+    assert!(!app.state::<StartupGate>().snapshot().can_retry);
+    bridge.stop().await.unwrap();
+}
 #[test]
 fn startup_business_check_never_changes_real_management_status() {
     let gate = StartupGate::default();

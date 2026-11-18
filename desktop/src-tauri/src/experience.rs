@@ -393,7 +393,15 @@ pub(crate) async fn query<R: tauri::Runtime>(
                 return Ok(());
             }
         }
-        let inspection=bridge.inspect_recovery().await?;
+        let mut inspection=bridge.inspect_recovery().await?;
+        if inspection.failure.as_ref().is_some_and(|cause| cause.code=="RECOVERY_OPERATION_UNRESOLVED") {
+            // Explicitly query only the original durable account operations.
+            // A successful query merely offers retry; it never grants startup
+            // admission or bypasses retirement and package/data verification.
+            prerequisites(bridge,&app.state::<PreferencesStore>(),&app.state::<NetworkController>(),NetworkCheck::Bootstrap).await?;
+            bridge.reconcile_startup_accounts().await?;
+            inspection=bridge.inspect_recovery().await?;
+        }
         if let Some(cause)=inspection.failure{return Err(cause);}
         Ok(())
     }.await;

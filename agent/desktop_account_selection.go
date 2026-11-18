@@ -144,6 +144,13 @@ func (a *DesktopAccounts) launchAccountOperation(p *desktopAccountPlatform, plat
 				result.Error = failure
 			} else {
 				result.Error = accountFailure(platform, "account_operation_unconfirmed", "account_operation_commit", err.Error())
+				var requestFailure *DesktopFailure
+				if errors.As(err, &requestFailure) && requestFailure.Details != nil {
+					for key, value := range requestFailure.Details.Evidence {
+						result.Error.Evidence[key] = value
+					}
+					result.Error.Evidence["observed_at"] = requestFailure.Details.ObservedAt
+				}
 			}
 		} else {
 			locked.selected = selection

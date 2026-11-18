@@ -319,3 +319,13 @@ test('timed out login cannot offer a new login while cleanup is pending',async({
  await expect(wizard(page).getByRole('button',{name:'重新登录',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
+
+test('file permission failure focuses source repair and recheck preserves explicit intake',async({page})=>{
+ await setup(page);await page.evaluate(()=>(window as any).fail='openai');await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('无法读取本机登录信息');await expect(wizard(page).getByRole('alert')).toContainText('系统拒绝访问 Codex 登录文件。');
+ await expect(wizard(page).getByRole('button',{name:'检查凭证来源',exact:true})).toHaveCount(0);await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
+ await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('permission_denied');await page.keyboard.press('Escape');
+ await wizard(page).getByRole('button',{name:'设置读取位置',exact:true}).click();await expect(wizard(page).getByLabel('读取目录')).toBeFocused();await wizard(page).getByRole('button',{name:'返回',exact:true}).click();
+ await page.evaluate(()=>(window as any).fail=undefined);await wizard(page).getByRole('button',{name:'重新检查',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
+});

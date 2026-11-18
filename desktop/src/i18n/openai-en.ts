@@ -1,4 +1,7 @@
 export const openaiEnglish:Record<string,string>={
+  "无法读取本机登录信息": "Unable to read local sign-in information",
+  "系统拒绝访问 Codex 登录文件。": "The system denied access to the Codex sign-in file.",
+  "请检查目录的访问权限，也可以选择其他读取位置。": "Check the directory permissions, or choose another credential location.",
   "未找到 Codex": "Codex was not found",
   "本次登录已超时": "This sign-in attempt timed out",
   "请先安装 Codex 官方客户端，然后返回此处重试。": "Install the official Codex client, then return here and retry.",

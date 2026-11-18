@@ -1,7 +1,11 @@
 export const openaiEnglish:Record<string,string>={
+  "正在检查本机登录…": "Checking local sign-in…",
+  "正在检查账号是否仍有效…": "Checking whether the account is still valid…",
+  "检查完成后会自动继续。": "This will continue automatically after the check.",
+  "确认身份和授权未变化后，自动回到确认接入。": "After confirming the identity and authorization are unchanged, return to connection confirmation automatically.",
   "正在保存读取位置…": "Saving credential location…",
   "正在读取登录信息…": "Reading sign-in information…",
-  "读取位置已保存，正在读取并核验账号。": "The credential location is saved. Reading and verifying the account.",
+  "读取位置已保存；读取成功后将自动核验。": "The credential location is saved. Verification will follow a successful read.",
   "尚未开始读取或核验账号。": "Account reading and verification have not started yet.",
   "无法读取本机登录信息": "Unable to read local sign-in information",
   "系统拒绝访问 Codex 登录文件。": "The system denied access to the Codex sign-in file.",

@@ -178,7 +178,7 @@ for(const failure of ['runtime','openai'] as const)test(`${failure} read failure
  await expect(card(page).locator('.oa-title')).toContainText('无法更新账号状态');
  await expect(card(page).getByText(new RegExp('b'.repeat(16)))).toBeVisible();await expect(card(page).locator('.account-quota-caption')).toContainText('上次记录');
  if(failure==='openai'){await expect(card(page,'Claude').locator('.native-account-condition')).not.toContainText('状态待更新');await expect(card(page,'Claude').getByText('b'.repeat(16),{exact:true})).toBeVisible();}
- else {await expect(card(page,'Claude').locator('.native-account-condition')).toContainText('状态待更新');}
+ else {await expect(card(page,'Claude').locator('.native-account-condition')).toContainText('等待 Bee 响应超时，本次结果尚未确认。');}
  const dialog=await details(page);await expect(dialog.locator('.account-read-history time')).toHaveAttribute('datetime',/.+/);await expect(dialog.getByRole('button',{name:'重新登录',exact:true})).toBeDisabled();await expect(dialog).not.toContainText('接入前需先恢复设备身份');await page.keyboard.press('Escape');
  for(const command of ['account_action','authorize_start','authorize_cancel','supply_set_paused','runtime_start'])expect(await calls(page,command)).toHaveLength(0);
  await page.evaluate(()=>{const w=window as any;w.accountScenarios.runtimeReadFailure=false;w.accountScenarios.snapshotFailure='';});await page.clock.runFor(10100);

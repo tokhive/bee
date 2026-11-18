@@ -493,3 +493,7 @@ nav button { border:1px solid transparent; }
 .native-shell .side-note{font-size:11px}
 .native-shell .identity{padding:15px 0 0;margin-top:17px}
 .native-shell .avatar{width:25px;height:25px;border-radius:5px}
+
+.account-list-compact .account-status-block .native-account-condition { font-size:12px; gap:3px; }
+.account-list-compact .native-account-condition .account-error-trigger { flex:none; margin-left:0; width:20px; min-width:20px; min-height:24px; padding:2px; }
+.account-list-compact .native-account-fingerprint { line-height:1.8; }

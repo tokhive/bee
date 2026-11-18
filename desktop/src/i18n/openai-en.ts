@@ -1,4 +1,9 @@
 export const openaiEnglish:Record<string,string>={
+  "本地文件": "Local file",
+  "自动读取": "Automatic detection",
+  "无法读取系统钥匙串凭证": "Unable to read system keychain credentials",
+  "系统拒绝访问所选配置目录对应的钥匙串凭证，请检查钥匙串访问权限；原账号选择仍保留。": "The system denied access to the keychain credentials for the selected configuration directory. Check keychain permissions; the connected account is retained.",
+
   "授权已过期": "Authorization expired",
   "需要通过官方客户端重新授权。": "Authorize again through the official client.",
   "登录已超时": "Sign-in timed out",

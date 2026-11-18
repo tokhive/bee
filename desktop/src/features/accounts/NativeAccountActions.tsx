@@ -39,14 +39,14 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
   {cancellation&&cancellation.operationId===op?.id&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<><p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>{!sameAccountFailure(cancellation.failure,error)&&<FailureNotice failure={cancellation.failure} check="authorize_cancel" onNavigate={onNavigate}/>}</>}
  </div>;
 }
-export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
+export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin,repairAuthorization=false}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';repairAuthorization?:boolean;onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotExecuted(accounts.errors[platform]!);
  const context={autoService:accounts.autoService,view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);
  const candidate=!dirty&&view?.candidate.state==='available'&&!!view.candidate.reference;
- const offered:AccountAction[]=placement==='row'?(selected?[]:[candidate?'select':'authorize']):[
+ const offered:AccountAction[]=placement==='row'?(selected?(repairAuthorization?['authorize']:[]):[candidate?'select':'authorize']):[
   ...(!selected&&candidate?['select' as const]:[]),
   ...(selected&&candidate&&view?.candidate.fingerprint!==view?.selection.fingerprint?['confirm_change' as const]:[]),
   'authorize',

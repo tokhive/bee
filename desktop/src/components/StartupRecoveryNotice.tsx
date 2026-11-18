@@ -41,7 +41,7 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
  return <section className="startup-recovery-notice" data-testid="startup-recovery" role={!pending&&problem?'alert':undefined} aria-busy={pending&&!waiting}>
   <div className="startup-recovery-main"><div aria-live="polite"><h2 ref={heading} tabIndex={-1}>{t(title)}</h2><p>{subtitle}</p></div>
    {(!pending||waiting)&&<div className="inline-actions">
-    {!pending&&(native.state==='failed'||native.state==='stopped'||recoveryAvailable&&startup?.can_retry)?<button disabled={busy} onClick={event=>void run(onRetry,event.currentTarget)}>{t(native.state==='ready'?(problem?.code==='RECOVERY_REMOTE_DRAINING'||problem?.code==='RECOVERY_RETIREMENT_UNCONFIRMED'?'继续恢复':'重试恢复'):'重新连接')}</button>:queryUseful&&<button disabled={busy} onClick={event=>void run(onQuery,event.currentTarget)}>{t('核对结果')}</button>}
+    {!pending&&(native.state==='failed'||native.state==='stopped'||recoveryAvailable&&startup?.can_retry)?<button disabled={busy} onClick={event=>void run(onRetry,event.currentTarget)}>{t(native.state==='ready'?(problem?.code==='RECOVERY_REMOTE_DRAINING'||problem?.code==='RECOVERY_RETIREMENT_UNCONFIRMED'?'继续恢复':'重试恢复'):'重新连接')}</button>:queryUseful&&<button disabled={busy} onClick={event=>void run(onQuery,event.currentTarget)}>{t(busy?'正在核对…':'重新核对')}</button>}
     {!diagnostics&&<button className="quiet" onClick={onDiagnostics}>{t('查看诊断')}</button>}
    </div>}
   </div>

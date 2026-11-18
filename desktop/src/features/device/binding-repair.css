@@ -105,7 +105,7 @@
 .native-shell .native-accounts-section.overview-accounts-card .native-account-condition{margin:0;font-size:12px;line-height:18px}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-condition svg{width:6px;height:6px;border-radius:50%;fill:currentColor;stroke:none}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-row-actions{grid-column:3;grid-row:1;max-width:120px;margin:0}
-.native-shell .native-accounts-section.overview-accounts-card .native-account-row>.native-account-quota{grid-column:2 / -1;grid-row:2;padding:0;gap:16px;grid-template-columns:repeat(2,minmax(0,1fr))}
+.native-shell .native-accounts-section.overview-accounts-card .native-account-row>.native-account-quota{grid-column:2 / -1;grid-row:2;padding:0;gap:20px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .native-shell .native-accounts-section.overview-accounts-card .account-action-help{font-size:11px;line-height:18px;margin:4px 0 0}
 @media(max-width:640px){.native-shell .native-accounts-section.overview-accounts-card .native-account-row{grid-template-columns:112px minmax(0,1fr);gap:12px}.native-shell .native-accounts-section.overview-accounts-card .native-account-row-actions{grid-column:2;grid-row:2;justify-content:flex-start}.native-shell .native-accounts-section.overview-accounts-card .native-account-row>.native-account-quota{grid-column:1 / -1;grid-row:3}}
 
@@ -166,3 +166,9 @@
 .native-shell .device-card .first-launch-error-trigger{vertical-align:middle;color:#a24231;margin-left:2px}
 :root[data-theme=dark] .native-shell .device-card .first-launch-error-trigger{color:#f2a38f}
 @media(prefers-color-scheme:dark){:root:not([data-theme=light]) .native-shell .device-card .first-launch-error-trigger{color:#f2a38f}}
+
+.native-shell .overview-accounts-card .native-platform-name{gap:5px}
+.native-shell .overview-accounts-card .native-platform-name .ui-badge{font-size:10px;line-height:15px;padding:0 5px;border-radius:2px}
+.native-shell .overview-accounts-card .native-account-quota .quota-label{font-size:11px;line-height:16.5px;gap:8px;margin-bottom:5px}
+.native-shell .overview-accounts-card .quota-value{font:inherit;color:inherit}
+.native-shell .overview-accounts-card .ui-progress{background:var(--line)}

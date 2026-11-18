@@ -1,6 +1,8 @@
 import {currentLocale} from '../../i18n';
 
 const english:Record<string,string>={
+ '正在取消重新绑定':'Cancelling device rebinding',
+ '正在取消…':'Cancelling…',
  '设备身份已确认，但系统拒绝保存配置（EACCES）。':'Device identity is confirmed, but the system refused to save the configuration (EACCES).',
  '请恢复配置目录的写入权限，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。':'Restore write access to the configuration directory, then click “Continue binding”. Bee will check the existing binding and continue saving.',
  "· 仅在目标 Hive 确认，不更改当前 Hive。":"· Confirm only on the target Hive; the current Hive stays unchanged.",

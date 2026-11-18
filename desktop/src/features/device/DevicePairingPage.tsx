@@ -32,14 +32,14 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const [localHive,setLocalHive]=useState(''),[localName,setLocalName]=useState('Bee Desktop');
  const hive=inputDraft?.hive??localHive,name=inputDraft?.name??localName,setHive=inputDraft?.setHive??setLocalHive,setName=inputDraft?.setName??setLocalName;
  const [now,setNow]=useState(Date.now()),[copied,setCopied]=useState(''),[copyError,setCopyError]=useState<UiFailure|null>(null);
- const [querying,setQuerying]=useState(false);
+ const [querying,setQuerying]=useState(false),[cancelSubmitting,setCancelSubmitting]=useState(false);
  const [menuOpen,setMenuOpen]=useState(false),[progressOpen,setProgressOpen]=useState(false);
  const afterMenuClose=useRef<(()=>void)|null>(null);
  const mounted=useRef(true),copyAttempt=useRef(0);
  const progressTrigger=useRef<HTMLButtonElement>(null);
  const [confirmation,setConfirmation]=useState<{decision:RecoveryDecision;transaction?:DeviceRecoveryView}|null>(null),[submitted,setSubmitted]=useState(false);
  const section=useRef<HTMLElement>(null),menuTrigger=useRef<HTMLButtonElement>(null),confirmationTrigger=useRef<HTMLButtonElement|null>(null),failureFocus=useRef<HTMLDivElement>(null);
- const busy=writing||checking||initialLoading||querying;
+ const busy=writing||checking||initialLoading||querying||cancelSubmitting;
  const transaction=recovery??view?.recovery;
  const initialPairing=transaction?.purpose==='initial_pairing';
  const phase=transaction?.phase??(view?.state==='pending'||view?.state==='draining'||view?.state==='expired'?view.state:undefined);
@@ -55,7 +55,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const issue=error??reportedFailure??recoveryError;
  const credentialFault=!!issue&&['device_replaced','invalid_device_credential','DEVICE_CONTEXT_INVALID'].includes(issue.code);
  const confirmed=view?.state==='bound'&&!issue&&!active;
- const cancelling=active&&(transaction?.cancel_requested===true||!!cancelOperation&&cancelOperation===transaction?.operation_id);
+ const cancelling=active&&(cancelSubmitting||transaction?.cancel_requested===true||!!cancelOperation&&cancelOperation===transaction?.operation_id);
  const unknown=active&&['creation_unknown','redemption_unknown'].includes(phase!);
  const problem=issue?deviceProblem(normalizeFailure(issue,'device_binding')):null;
  const canCancel=!embedded&&!cancelling&&!!transaction&&!!recover&&active&&!['saving','awaiting_owner_confirmation','awaiting_confirmation'].includes(phase!);
@@ -66,12 +66,12 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  useEffect(()=>{copyAttempt.current++;setCopied('');setCopyError(null);},[address,transaction?.operation_id,pairing?.code]);
  useEffect(()=>{if(submitted&&operationError)failureFocus.current?.focus();},[submitted,operationError]);
  const ask=(trigger:HTMLButtonElement,decision:RecoveryDecision,record=transaction)=>{confirmationTrigger.current=trigger;setSubmitted(false);setConfirmation({decision,transaction:record});};
- const submit=async()=>{if(!confirmation||busy||!recover)return;const request=confirmation;setSubmitted(true);const ok=await recover(request.decision,request.transaction);if(ok||request.decision==='cancel_pairing')setConfirmation(value=>value===request?null:value);};
+ const submit=async()=>{if(!confirmation||busy||!recover)return;const request=confirmation;setSubmitted(true);if(request.decision==='cancel_pairing'){setCancelSubmitting(true);setConfirmation(null);}try{const ok=await recover(request.decision,request.transaction);if(ok)setConfirmation(value=>value===request?null:value);}finally{if(mounted.current)setCancelSubmitting(false);}};
  const copy=async(value:string,label:string)=>{const attempt=++copyAttempt.current;setCopyError(null);setCopied('');try{if(!navigator.clipboard?.writeText)throw Error('clipboard.writeText unavailable; select and copy the displayed value manually');await navigator.clipboard.writeText(value);if(mounted.current&&attempt===copyAttempt.current)setCopied(label);}catch(cause){if(mounted.current&&attempt===copyAttempt.current)setCopyError(normalizeFailure(cause,'clipboard_write'));}};
  const doRepair=(trigger:HTMLButtonElement)=>{if(cancelled){ask(trigger,'restart_pairing');return;}if(active){section.current?.querySelector<HTMLElement>('.device-transaction')?.focus();check();return;}if(repair)void repair();else if(recoveryStart&&address)void recoveryStart(address,deviceName);else if(recover){confirmationTrigger.current=trigger;setSubmitted(false);setConfirmation({decision:'begin_pairing'});}};
  const check=()=>{if(!busy&&canRefresh)refresh();};
  const recheck=async(trigger?:HTMLButtonElement)=>{if(busy||!canRefresh)return;setQuerying(true);try{if(recover&&transaction&&active&&phase!=='saving')await recover('continue_checking',transaction);else if(problem?.action==='retry'&&retryConnection)await retryConnection();else await refresh();}finally{if(mounted.current){setQuerying(false);requestAnimationFrame(()=>{if(mounted.current)(trigger?.isConnected?trigger:section.current?.previousElementSibling instanceof HTMLElement?section.current.previousElementSibling:section.current)?.focus({preventScroll:true});});}}};
- const headline=querying?(!active&&problem?.action==='retry'?'正在连接 Hive':cancelling?'正在核对取消结果…':active?'正在核对绑定结果…':'正在核对 Hive 状态…'):checking?'正在连接 Hive':cancelling?'取消结果尚未确认':cancelled?'设备尚未恢复贡献':!active&&problem?problem.title:locallyExpired?'配对码有效期已到':paused&&!embedded?(initialPairing?'设备绑定尚未完成':'重新绑定尚未完成'):phase==='saving'&&transaction?.failure?'绑定已完成，本机保存失败':phase==='pending'?(embedded?'等待目标 Hive 网页确认':'在 Hive 网页确认设备'):phase==='completed'&&!transaction?.old_identity?'设备已绑定':active?(initialPairing&&phase==='awaiting_confirmation'?'请绑定设备':phaseCopy[phase!]):problem?.title??'无法确认设备状态';
+ const headline=cancelSubmitting?'正在取消重新绑定':querying?(!active&&problem?.action==='retry'?'正在连接 Hive':cancelling?'正在核对取消结果…':active?'正在核对绑定结果…':'正在核对 Hive 状态…'):checking?'正在连接 Hive':cancelling?'取消结果尚未确认':cancelled?'设备尚未恢复贡献':!active&&problem?problem.title:locallyExpired?'配对码有效期已到':paused&&!embedded?(initialPairing?'设备绑定尚未完成':'重新绑定尚未完成'):phase==='saving'&&transaction?.failure?'绑定已完成，本机保存失败':phase==='pending'?(embedded?'等待目标 Hive 网页确认':'在 Hive 网页确认设备'):phase==='completed'&&!transaction?.old_identity?'设备已绑定':active?(initialPairing&&phase==='awaiting_confirmation'?'请绑定设备':phaseCopy[phase!]):problem?.title??'无法确认设备状态';
  const feedback=!issue&&repairResult?(repairResult==='healthy'?'设备绑定正常。':'设备绑定已恢复，接单选择保留。'):!issue&&phase==='completed'?'设备绑定已保存。':cancelled?'重新绑定已取消。':'';
  const progressMenu=canCancel&&!querying&&!checking&&<DropdownMenu.Root open={progressOpen} onOpenChange={setProgressOpen}><DropdownMenu.Trigger asChild><Button ref={progressTrigger} variant="ghost" size="icon" aria-label={w('重新绑定操作')}><MoreHorizontal aria-hidden="true"/></Button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="device-actions-menu" align="end" sideOffset={4}><DropdownMenu.Item onSelect={event=>{event.preventDefault();setProgressOpen(false);ask(progressTrigger.current!,'cancel_pairing');}}>{w('取消重新绑定')}</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root>;
  const showConfirmationUrl=embedded||!!copyError||failures.some(f=>f.code.startsWith('BROWSER_')||f.check==='browser_open');
@@ -91,7 +91,8 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {phase!=='pending'&&progressMenu}
    </div>
    {((checking&&!querying)||querying&&!active&&problem?.action==='retry')&&<p role="status">{w('正在重试连接…')}</p>}
-   {!querying&&!checking&&<>
+   {cancelSubmitting&&<p role="status">{w('正在取消…')}</p>}
+   {!querying&&!checking&&!cancelSubmitting&&<>
    {transactionIntro}
    {!querying&&!cancelling&&pairing&&(phase==='pending'||phase==='expired')&&<div className="binding-pairing-code"><p>{w('配对码')}</p><div><strong className="pair-code">{pairing.code}</strong>{!embedded&&<Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制')}</Button>}</div>{(!embedded||phase!=='pending'||locallyExpired)&&<small>{w(phase==='expired'?'Hive 已确认配对码过期':Date.parse(pairing.expires_at)<=now?'有效期已到，请重新获取配对码。':'有效期至')}{phase!=='expired'&&Date.parse(pairing.expires_at)>now&&' '+expiryLabel}</small>}{embedded&&phase==='pending'&&!locallyExpired&&<span>{w('· 仅在目标 Hive 确认，不更改当前 Hive。')}</span>}</div>}
    {!embedded&&!querying&&!cancelling&&phase==='pending'&&<p>{w(transaction?.old_identity?'请登录原设备所属的 Hive 账号，核对配对码和旧设备后，确认重新绑定。':'请登录 Hive 账号，核对配对码后，确认设备归属。')}</p>}

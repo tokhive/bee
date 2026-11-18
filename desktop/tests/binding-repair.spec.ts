@@ -193,3 +193,11 @@ test('completed binding feedback dismisses without losing account access or retu
  await expect(openai.getByRole('button',{name:'前往接入',exact:true})).toBeVisible();
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
 });
+
+test('cancel submission returns to inline progress before its receipt without reporting unknown early',async({page})=>{
+ await open(page,'recovery-pending');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.cancelAttempts=0;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any={})=>{if(command==='device_recovery_confirm'&&args.decision==='cancel_pairing'){w.cancelAttempts++;await new Promise<void>(resolve=>w.finishCancel=resolve);}return invoke(command,args);};});
+ await page.getByRole('button',{name:'重新绑定操作',exact:true}).click();await page.getByRole('menuitem',{name:'取消重新绑定',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认取消',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.getByRole('heading',{name:'正在取消重新绑定',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'取消结果尚未确认',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);expect(await page.evaluate(()=>(window as any).cancelAttempts)).toBe(1);
+ await page.evaluate(()=>(window as any).finishCancel());await expect(page.getByRole('heading',{name:'设备尚未恢复贡献',exact:true})).toBeVisible();expect(await page.evaluate(()=>(window as any).__beeMockRuntimeLocal())).toBe('stopped');expect((await calls(page)).filter(c=>['runtime_start','supply_set_paused','device_begin'].includes(c.command))).toEqual([]);
+});

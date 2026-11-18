@@ -49,7 +49,7 @@ test('saved list supports keyboard close and keeps entered URL and background op
 });
 test('unknown and expired observation show no percent and continue the original operation',async({page})=>{
  const app=await open(page,'switch-paused'),progress=app.getByLabel('Hive 切换进度');await expect(progress).toContainText('自动核对已暂停');await progress.getByRole('button',{name:'继续等待',exact:true}).click();await expect(progress).not.toContainText('自动核对已暂停');expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_continue')).toHaveLength(1);
- await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-unknown&theme=dark&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await expect(progress).toContainText('结果待核对');await expect(progress).toContainText('任务和结算数量待核对');expect(await progress.textContent()).not.toMatch(/\d+%/);
+ await page.goto('/tests/fixtures/bee-preview/index.html?scene=switch-unknown&theme=dark&size=narrow');await expect(page.locator('#control-status')).toHaveText('场景已就绪。');await expect(progress).toContainText('切换结果尚未确认');await expect(progress.getByRole('button',{name:'重新核对',exact:true})).toBeVisible();expect(await progress.textContent()).not.toMatch(/\d+%/);
 });
 test('first profile gate permits pairing and preserves the entered Hive',async({page})=>{
  const app=await open(page,'switch-first-launch'),device=app.locator('.first-launch-wizard');await expect(app.getByTestId('startup-recovery')).toHaveCount(0);await device.getByLabel('Hive 地址',{exact:true}).fill('https://first-hive.example');await device.getByLabel('设备名称',{exact:true}).fill('First Mac');await device.getByRole('button',{name:'继续绑定设备',exact:true}).click();await page.clock.runFor(2100);await expect(device).toContainText('在 Hive 网页确认设备归属');await expect(device).toContainText('https://first-hive.example');
@@ -83,7 +83,7 @@ test('native exit request keeps the original operation and requires an explicit 
 
 test('committed B remains current with no account selection and after an account source error',async({page})=>{
  for(const scene of ['switch-success','switch-account-error']){
-  const app=await open(page,scene);await expect(app.getByLabel('Hive 切换进度')).toContainText('Hive 已切换');await expect(app.locator('.device-card-facts').first()).toContainText('https://target-hive.example');
+  const app=await open(page,scene);await expect(app.getByText('Hive 已切换。',{exact:true})).toBeVisible();await expect(app.getByLabel('Hive 切换进度')).toHaveCount(0);await expect(app.locator('.device-card-facts').first()).toContainText('https://target-hive.example');
   const state=await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any;return {snapshot:await w.__TAURI_INTERNALS__.invoke('hive_switch_snapshot'),selection:w.accounts.openai.selection.state};});expect(state.snapshot.profiles.current_profile).toBe('2'.repeat(32));expect(state.selection).toBe('not_selected');
   await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await page.clock.runFor(2200);await expect(app.getByLabel('Hive 切换进度')).toHaveCount(0);
   const after=await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>(frame.contentWindow as any).__TAURI_INTERNALS__.invoke('hive_switch_snapshot'));expect(after.profiles.current_profile).toBe(state.snapshot.profiles.current_profile);expect(after.operation.phase).toBe('succeeded');
@@ -116,3 +116,52 @@ async function openSwitch(app:import('@playwright/test').FrameLocator,page:Page)
  await app.getByRole('button',{name:'设备操作',exact:true}).click();
  await app.getByRole('menuitem',{name:'切换 Hive',exact:true}).click();await page.clock.runFor(50);
 }
+
+for(const cancelling of [false,true])test(`${cancelling?'cancel':'switch'} unknown result rechecks once and keeps the original Hive`,async({page})=>{
+ const app=await open(page,'switch-unknown');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement,cancelling)=>{
+  const w=frame.contentWindow as any,invoke=w.__TAURI_INTERNALS__.invoke;w.heldSwitchReads=[];
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='hive_switch_observe'&&w.holdSwitchRead){w.heldSwitchReads.push(command);await new Promise(resolve=>{w.releaseSwitchRead=resolve;});}
+   const reply=await invoke(command,args);
+   if(cancelling&&['hive_switch_observe','hive_switch_snapshot'].includes(command)&&reply.operation)reply.operation.cancel_requested=true;
+   return reply;
+  };
+ },cancelling);
+ await page.clock.runFor(2100);
+ const progress=app.getByLabel('Hive 切换进度');
+ await expect(progress).toContainText(cancelling?'取消结果尚未确认':'切换结果尚未确认');
+ if(cancelling)await expect(progress.getByRole('button',{name:'取消切换',exact:true})).toHaveCount(0);
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{(frame.contentWindow as any).holdSwitchRead=true;});
+ await progress.getByRole('button',{name:'重新核对',exact:true}).click();
+ await expect(progress).toContainText(cancelling?'正在核对取消结果…':'正在核对切换结果…');
+ const button=progress.getByRole('button',{name:'正在核对…',exact:true});await expect(button).toBeDisabled();
+ await button.evaluate((node:HTMLButtonElement)=>{node.click();node.click();});
+ expect(await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).heldSwitchReads)).toHaveLength(1);
+ await expect(app.locator('.device-card-facts').first()).toContainText('https://hive.example');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{const w=frame.contentWindow as any;w.holdSwitchRead=false;w.releaseSwitchRead();});
+ await expect(progress.getByRole('button',{name:'重新核对',exact:true})).toBeEnabled();
+ expect((await calls(page)).filter((c:any)=>['hive_switch_start','hive_switch_cancel','device_begin','device_recovery_confirm'].includes(c.command))).toEqual([]);
+});
+
+test('pending switch cancellation shows progress before its confirmed result',async({page})=>{
+ const app=await open(page,'switch-waiting'),progress=app.getByLabel('Hive 切换进度');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
+  const w=frame.contentWindow as any,invoke=w.__TAURI_INTERNALS__.invoke;w.cancelSubmissions=0;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='hive_switch_cancel'){w.cancelSubmissions++;await new Promise(resolve=>{w.releaseCancelSwitch=resolve;});}
+   return invoke(command,args);
+  };
+ });
+ await progress.getByRole('button',{name:'取消切换',exact:true}).click();
+ await expect(progress).toContainText('正在取消切换…');
+ await expect(progress.getByRole('button',{name:'取消切换',exact:true})).toHaveCount(0);
+ await expect(progress.getByRole('button',{name:'重新核对',exact:true})).toBeDisabled();
+ expect(await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).cancelSubmissions)).toBe(1);
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).releaseCancelSwitch());
+ await expect(app.getByText('已取消切换，继续使用原 Hive。',{exact:true})).toBeVisible();
+ await expect(progress).toHaveCount(0);await expect(app.locator('.device-card-facts').first()).toContainText('https://hive.example');
+ await app.getByRole('button',{name:'关闭切换结果提示',exact:true}).click();
+ await expect(app.getByRole('button',{name:'设备操作',exact:true})).toBeFocused();
+ expect((await calls(page)).filter((c:any)=>['hive_switch_cancel','hive_switch_start','runtime_start','supply_set_paused'].includes(c.command)).map((c:any)=>c.command)).toEqual(['hive_switch_cancel']);
+});

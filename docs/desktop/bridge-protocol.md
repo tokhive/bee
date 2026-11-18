@@ -314,3 +314,5 @@ Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。
 Hive 未支持时返回 `RECOVERY_SERVER_UNSUPPORTED`；任务未排空为 `RECOVERY_REMOTE_DRAINING`，原回执待核对为 `RECOVERY_RETIREMENT_UNCONFIRMED`，明确 HTTP 拒绝为 `RECOVERY_RETIREMENT_CONFLICT`，本地原记录损坏为 `RECOVERY_RETIREMENT_INVALID`。排空／未知时显示“继续恢复”，仍使用原操作；不支持、冲突或损坏时保留诊断，隐藏无效核对入口。查询不会清除继续恢复资格。
 
 Hive HTTP 结构、迁移与部署顺序见[配套补丁](integrations/hive-session-retirement/README.md)。设备配置新增可选 `runtime_epoch`；旧客户端严格解码与降级限制同见该文档。上文“凭据恢复不改变 CLI localState”只指设备配对恢复扩展，本次会话隔离会增加该字段。
+
+设备恢复视图可包含 `cancel_requested: true`，表示原取消决定已经持久化，结果尚未终结；字段缺省表示没有待确认的取消。该标记由原恢复记录的已接受决定恢复，`continue_checking` 保留取消意图，完成或确认关闭后不再输出。界面据此只提供重新核对原操作，不再次提交取消。

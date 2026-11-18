@@ -30,29 +30,38 @@ test('overview counts distinguish ready platforms, deliberate pause, and unknown
  await expect(counts).toContainText('需处理 —');
 });
 
-test('healthy repair is read only and leaves the current accounts and pause choices intact',async({page})=>{
+test('a healthy device menu offers switching without a repair action or writes',async({page})=>{
  await open(page,'device-bound');
  const before=await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}));
  await page.getByRole('button',{name:'设备操作',exact:true}).click();
- await page.getByRole('menuitem',{name:'修复设备绑定',exact:true}).click();
- await expect(page.getByText('设备绑定正常，无需修复。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('menuitem',{name:'修复设备绑定',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('menuitem',{name:'切换 Hive',exact:true})).toBeEnabled();
+ await page.keyboard.press('Escape');
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
  expect(await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}))).toEqual(before);
- await expect(page.locator('.device-card')).toContainText('设备绑定正常，无需修复。');
 });
 
-test('HTTP 503 cannot authorize a new pairing or imply an upgrade',async({page})=>{
- await open(page,'device-bound');
- await page.evaluate(()=>{
+for(const [kind,title,action,message] of [
+ ['http_rejected','Hive 暂不可用','重试连接','GET /api/bee/identity HTTP 503 upstream unavailable'],
+ ['timeout','连接 Hive 超时','重试连接','GET identity: context deadline exceeded'],
+ ['connection_refused','无法连接 Hive','重试连接','dial tcp: connect: connection refused'],
+ ['unknown_failure','暂时无法确认 Hive 状态','重新核对','GET identity HTTP 500: NODE_STATE_UNRECOGNIZED'],
+] as const)test(`device failure ${kind} provides its matching action without replacing the binding`,async({page})=>{
+ await page.clock.install();await open(page,'device-bound');
+ const before=await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}));
+ await page.evaluate(({kind,message})=>{
   const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
-  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:'http_rejected',message:'GET /api/bee/identity HTTP 503 upstream unavailable',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'503',response_body:'upstream unavailable'}}}}}:invoke(command,args);
- });
- await page.getByRole('button',{name:'设备操作',exact:true}).click();
- await page.getByRole('menuitem',{name:'修复设备绑定',exact:true}).click();
- await expect(page.locator('.device-card')).toContainText('503');
- await expect(page.getByRole('button',{name:'重试连接',exact:true})).toBeVisible();
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:kind,message}}}:invoke(command,args);
+ },{kind,message});
+ await page.clock.runFor(10001);
+ await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:action,exact:true})).toBeEnabled();
+ await expect(page.locator('main>.startup-recovery-notice')).toHaveCount(0);
  await expect(page.getByText('需要更新 Bee',{exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText(message);
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+ expect(await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}))).toEqual(before);
 });
 
 test('pairing stays inline across navigation and cancelling needs consent and a confirmed receipt',async({page})=>{
@@ -68,7 +77,7 @@ test('pairing stays inline across navigation and cancelling needs consent and a 
  await expect(page.getByRole('dialog')).toContainText('旧设备不会自动恢复接单');
  expect((await calls(page)).filter(c=>c.command==='device_recovery_confirm')).toEqual([]);
  await page.getByRole('dialog').getByRole('button',{name:'确认取消',exact:true}).click();
- await expect(page.getByRole('heading',{name:'已取消重新绑定',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'设备尚未恢复贡献',exact:true})).toBeVisible();
  const writes=(await calls(page)).filter(c=>replacements.has(c.command));
  expect(writes.map(c=>c.command)).toEqual(['device_recovery_confirm']);
  expect(writes[0].args).toMatchObject({operationId:operation,decision:'cancel_pairing'});
@@ -105,16 +114,17 @@ for(const result of ['unknown','completed'] as const)test(`cancel receipt ${resu
     completion={...recovery,revision:recovery.revision+1,phase:'completed',new_identity:recovery.old_identity,failure:null};
     return {result:{recovery:completion}};
    }
-   if(completion&&command==='device_recovery_status')return {result:{recovery:completion}};
+   if(completion&&(command==='device_recovery_status'||command==='device_recovery_snapshot'))return {result:{recovery:completion}};
+   if(completion&&(command==='startup_status'||command==='startup_recheck')){const reply=await invoke(command,args);return {...reply,state:'ready',failure:null};}
    if(completion&&command==='device_status')return {result:{device:{state:'bound',hive:'https://hive.example',name:'Bee Desktop',identity:completion.new_identity}}};
    return invoke(command,args);
   };
  },result);
  await page.getByRole('button',{name:'重新绑定操作',exact:true}).click();await page.getByRole('menuitem',{name:'取消重新绑定',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'确认取消',exact:true}).click();
- if(result==='unknown')await expect(page.getByRole('dialog').getByRole('alert')).toBeVisible();
- else await expect(page.getByRole('heading',{name:'设备已重新绑定',exact:true})).toBeVisible();
- await expect(page.getByRole('heading',{name:'已取消重新绑定',exact:true})).toHaveCount(0);
+ if(result==='unknown'){await expect(page.getByRole('heading',{name:'取消结果尚未确认',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'重新核对',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'重新绑定操作',exact:true})).toHaveCount(0);}
+ else await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'设备尚未恢复贡献',exact:true})).toHaveCount(0);
  expect((await calls(page)).filter(c=>['device_recovery_start','device_begin','runtime_start','supply_set_paused'].includes(c.command))).toEqual([]);
 });
 
@@ -125,5 +135,53 @@ test('startup binding rejection has one inline fault while preserving the known 
  await expect(card.getByRole('button',{name:'修复设备绑定',exact:true})).toBeEnabled();
  await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true})).toContainText('bbbbbbbbbbbbbbbb');
  await expect(page.locator('main>.startup-recovery-notice')).toHaveCount(0);
+ expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+});
+
+for(const cancelling of [false,true])test(`${cancelling?'restored cancellation':'unknown binding'} rechecks the original request once with visible progress`,async({page})=>{
+ await page.clock.install();await open(page,'recovery-creation-unknown');
+ await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+100)));
+ await page.evaluate(cancelling=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.heldRechecks=[];
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='device_recovery_confirm'&&args.decision==='continue_checking'){
+    w.heldRechecks.push(args);await new Promise(resolve=>{w.releaseRecheck=resolve;});
+   }
+   const reply=await invoke(command,args);
+   if(cancelling&&['device_recovery_snapshot','device_recovery_status','device_recovery_confirm'].includes(command)&&reply.result?.recovery)reply.result.recovery.cancel_requested=true;
+   return reply;
+  };
+ },cancelling);
+ await page.clock.runFor(10001);
+ await expect(page.getByRole('heading',{name:cancelling?'取消结果尚未确认':'绑定结果尚未确认',exact:true})).toBeVisible();
+ if(cancelling){
+  await expect(page.getByRole('button',{name:'重新绑定操作',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toHaveCount(0);
+ }
+ const operation=await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId);
+ await page.getByRole('button',{name:'重新核对',exact:true}).click();
+ await expect(page.getByRole('heading',{name:cancelling?'正在核对取消结果…':'正在核对绑定结果…',exact:true})).toBeVisible();
+ const pending=page.getByRole('button',{name:'正在核对…',exact:true});await expect(pending).toBeDisabled();
+ await pending.evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
+ expect(await page.evaluate(()=>(window as any).heldRechecks)).toHaveLength(1);
+ await page.evaluate(()=>(window as any).releaseRecheck());
+ await expect(page.getByRole('button',{name:'重新核对',exact:true})).toBeEnabled();
+ const writes=(await calls(page)).filter(c=>replacements.has(c.command));
+ expect(writes).toHaveLength(1);expect(writes[0]).toMatchObject({command:'device_recovery_confirm',args:{operationId:operation,decision:'continue_checking'}});
+});
+
+test('completed binding feedback dismisses without losing account access or returning after navigation',async({page})=>{
+ await open(page,'recovery-completed');
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'关闭绑定结果提示',exact:true}).click();
+ await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeFocused();
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toHaveCount(0);
+ const openai=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await openai.getByRole('button',{name:'前往接入',exact:true}).click();
+ await expect(page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true})).toHaveAttribute('aria-current','page');
+ await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toHaveCount(0);
+ await expect(openai.getByRole('button',{name:'前往接入',exact:true})).toBeVisible();
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
 });

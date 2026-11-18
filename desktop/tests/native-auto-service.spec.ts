@@ -194,12 +194,12 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=true;});
   await reconcile(page);
   await expect(service(page)).toContainText('贡献状态待确认');
-  await expect(service(page).getByRole('button',{name:'核对服务状态',exact:true})).toBeEnabled();
+  await expect(page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true})).toBeEnabled();
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=false;});
   const before=(await calls(page,'runtime_snapshot')).length;
-  await service(page).getByRole('button',{name:'核对服务状态',exact:true}).click();
+  await page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true}).click();
   await expect.poll(async()=>(await calls(page,'runtime_snapshot')).length).toBeGreaterThan(before);
-  await expect(service(page).getByRole('button',{name:'核对服务状态',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);
   await noDailyControls(page);
   expect(await calls(page,'runtime_start')).toHaveLength(0);
   expect(await calls(page,'runtime_stop')).toHaveLength(0);
@@ -207,12 +207,13 @@ test.describe('native automatic service — frontend mock contract',()=>{
 
  test('halted waiting presence offers explicit reconnect and connection diagnostics without daily controls',async({page})=>{
   await setup(page,{connection:'occupied'});
-  await expect(service(page)).toContainText('自动重连已停止');
+  const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
+  await expect(device).toContainText('Hive 连接归属未确认');
   await expect(service(page)).toContainText('设备连接已被占用');
-  await expect(service(page).getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeEnabled();
-  await expect(service(page).getByRole('button',{name:'重新连接 Hive',exact:true})).toBeEnabled();
+  await expect(device.getByRole('button',{name:'查看诊断',exact:true})).toBeEnabled();
+  await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
   await noDailyControls(page);
-  await service(page).getByRole('button',{name:'重新连接 Hive',exact:true}).click();
+  await device.getByRole('button',{name:'重试连接',exact:true}).click();
   await expect(service(page)).toContainText('Hive 已连接');
   expect((await calls(page,'runtime_start')).map((call:any)=>call.args.request.resume_platforms)).toEqual([[]]);
   expect(await calls(page,'runtime_stop')).toHaveLength(0);

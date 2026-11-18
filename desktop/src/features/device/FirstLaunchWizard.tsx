@@ -39,11 +39,11 @@ export function validateHive(raw:string):string {
  return '';
 }
 
-export function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;manualUrlAvailable?:boolean}){
+export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryOverride,compact=false}:{failure:UiFailure;manualUrlAvailable?:boolean;summary?:string;compact?:boolean}){
  const [open,setOpen]=useState(false),titleId=useId();
  const problem=presentFailure(failure,currentLocale()),details=problem.details;
  const browserReason:Record<string,string>={BROWSER_OPEN_FAILED:'默认浏览器打开失败。',BROWSER_OPEN_TIMEOUT:'打开浏览器超时，网页打开结果尚未确认。',BROWSER_OPEN_CLEANUP_FAILED:'浏览器打开程序超时，且未能确认已结束。'};
- const browser=browserReason[failure.code],summary=browser?w(browser):problem.summary;
+ const browser=browserReason[failure.code],summary=summaryOverride??(browser?w(browser):problem.summary);
  const impact=browser&&manualUrlAvailable?w('原配对请求已保留，设备绑定仍需在 Hive 网页确认。'):problem.impact;
  const guidance=browser&&manualUrlAvailable?'可复制或选中上方确认网址，在浏览器中手动打开；完成确认后返回 Bee。':failure.code==='tls_failed'?'请核对 Hive 地址与服务证书，修复后再继续当前绑定步骤。':failure.code==='unavailable'?'请等待 Hive 恢复服务，再继续当前绑定步骤。':'';
  useEffect(()=>setOpen(false),[details]);
@@ -52,7 +52,7 @@ export function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFail
   <Popover.Portal><Popover.Content className="first-launch-error-popover" side="bottom" align="start" sideOffset={8} collisionPadding={12} aria-labelledby={titleId}>
    <header><h3 id={titleId}>{w('错误详情')}</h3><Popover.Close asChild><Button type="button" variant="ghost" aria-label={w('关闭错误详情')}>{w('关闭')}</Button></Popover.Close></header><pre>{details}</pre>
   </Popover.Content></Popover.Portal>
- </Popover.Root>}</p><p>{impact}</p>{guidance&&<p>{w(guidance)}</p>}</div>;
+ </Popover.Root>}</p>{!compact&&<p>{impact}</p>}{!compact&&guidance&&<p>{w(guidance)}</p>}</div>;
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */

@@ -9,7 +9,7 @@ const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('butto
 const calls=(page:Page)=>page.evaluate(()=>(window as any).calls as {command:string;args:any}[]);
 const writes=new Set(['device_recovery_start','device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
 const phases:{[key:string]:string}={
- 'recovery-pending':'在 Hive 网页确认设备','recovery-draining':'等待 Hive 核对旧设备的任务、结算和遗留操作','recovery-creation-unknown':'创建结果未知','recovery-redemption-unknown':'兑换结果未知','recovery-saving':'绑定已完成，本机保存失败','recovery-owner':'新设备归属与原设备不同',
+ 'recovery-pending':'在 Hive 网页确认设备','recovery-draining':'正在完成重新绑定','recovery-creation-unknown':'绑定结果尚未确认','recovery-redemption-unknown':'绑定结果尚未确认','recovery-saving':'绑定已完成，本机保存失败','recovery-owner':'新设备归属与原设备不同',
 };
 for(const [scene,copy] of [
  ['device-creation-unknown','尚无法确认配对请求结果'],
@@ -51,13 +51,13 @@ test('revoked credential recovery requires local consent, external approval and 
  await page.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(page.getByRole('dialog')).toContainText('owner@example.test');await expect(page.getByRole('dialog')).toContainText('new-owner@example.test');
  await page.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
- await expect(page.locator('.device-card')).toContainText('设备绑定已保存。');
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
  await page.clock.runFor(2100);
  const commands=(await calls(page)).filter(c=>writes.has(c.command));
  expect(commands.map(c=>c.command)).toEqual(['device_recovery_start','device_recovery_confirm','device_recovery_confirm']);
  expect(commands.filter(c=>c.command==='device_recovery_confirm').map(c=>c.args.decision)).toEqual(['begin_pairing','adopt_owner']);
  expect(await page.evaluate(()=>Object.values((window as any).accounts).map((a:any)=>a.selection.state))).toEqual(['not_selected','not_selected']);
- await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'接入 AI 账号',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);await expect(page.locator('.device-card').getByRole('button',{name:'接入 AI 账号',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'前往接入',exact:true}).first()).toBeVisible();
 });
 test('saved revoked identity and missing selected source keep all pages reachable without account or runtime writes',async({page})=>{
  await open(page,'device-revoked-source-missing');await expect(page.locator('body')).toContainText('上次保存的设备信息');

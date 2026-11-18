@@ -14,7 +14,7 @@ export interface DeviceView {
 export interface DeviceContext {hive:string;name:string;device_id:string|null;owner_id:string|null;binding_revision:number}
 export interface DeviceContextFailure {binding_revision:number;failure:UiFailure}
 export type DeviceRecoveryPhase='awaiting_confirmation'|'creating'|'creation_unknown'|'pending'|'draining'|'redeeming'|'redemption_unknown'|'awaiting_owner_confirmation'|'saving'|'completed'|'expired'|'blocked';
-export interface DeviceRecoveryView {operation_id:string;revision:number;phase:DeviceRecoveryPhase;old_identity:DeviceIdentity|null;new_identity:DeviceIdentity|null;pairing:{code:string;verification_url:string;expires_at:string}|null;failure:{code:string;message:string;details?:{check:string;observed_at:string;evidence:Record<string,string>}}|null}
+export interface DeviceRecoveryView {cancel_requested?:boolean;operation_id:string;revision:number;phase:DeviceRecoveryPhase;old_identity:DeviceIdentity|null;new_identity:DeviceIdentity|null;pairing:{code:string;verification_url:string;expires_at:string}|null;failure:{code:string;message:string;details?:{check:string;observed_at:string;evidence:Record<string,string>}}|null}
 export type RecoveryDecision='begin_pairing'|'adopt_owner'|'renew_expired'|'continue_checking'|'restart_pairing'|'cancel_pairing';
 export interface DeviceClient {
  recoveryStart?(hive:string,name:string):Promise<DeviceRecoveryView>;
@@ -114,6 +114,7 @@ export function decodeDeviceRecoveryReply(reply:unknown):DeviceRecoveryView {
  if(Object.keys(result).length!==1||!record(result.recovery))return invalid('recovery envelope rejected');
  const r=result.recovery;
  const fields=['operation_id','revision','phase','old_identity','new_identity','pairing','failure'];
+ if('cancel_requested'in r){if(r.cancel_requested!==true)return invalid('cancel_requested must be true when present');fields.push('cancel_requested');}
  if(Object.keys(r).length!==fields.length||!fields.every(k=>Object.hasOwn(r,k)))return invalid('recovery fields rejected');
  if(typeof r.operation_id!=='string'||!/^[a-f0-9]{48}$/.test(r.operation_id)||!Number.isSafeInteger(r.revision)||Number(r.revision)<1||!['awaiting_confirmation','creating','creation_unknown','pending','draining','redeeming','redemption_unknown','awaiting_owner_confirmation','saving','completed','expired','blocked'].includes(String(r.phase)))return invalid('recovery metadata rejected');
  for(const identity of [r.old_identity,r.new_identity])if(identity!==null){

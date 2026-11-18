@@ -1213,3 +1213,43 @@ func TestRecoverySnapshotDistinguishesInitialPairingFromLocalRecovery(t *testing
 		})
 	}
 }
+
+func TestRecoverySnapshotRetainsCancellationIntentAcrossRestart(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		decisions []string
+		want      bool
+	}{
+		{"cancellation", []string{"cancel_pairing"}, true},
+		{"continued cancellation", []string{"cancel_pairing", "continue_checking"}, true},
+		{"new pairing after cancellation", []string{"cancel_pairing", "restart_pairing"}, false},
+		{"continued binding", []string{"begin_pairing", "continue_checking"}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			session := &desktopDeviceSession{path: filepath.Join(t.TempDir(), "bee-desktop.json")}
+			record := &desktopRecoveryRecord{Version: 1, Purpose: "initial_pairing", OperationID: strings.Repeat("a", 48), Revision: 5, Phase: "creation_unknown", Hive: "https://hive.example", Name: "Bee", Credential: "bee_" + strings.Repeat("b", 43), CreateAttempted: true, Accepted: []desktopRecoveryDecision{}}
+			for i, decision := range tc.decisions {
+				record.Accepted = append(record.Accepted, desktopRecoveryDecision{record.OperationID, int64(i + 1), decision})
+			}
+			if err := saveDesktopRecovery(session, record); err != nil {
+				t.Fatal(err)
+			}
+			restarted, err := readDesktopRecovery(session)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if got := restarted.view().CancelRequested; got != tc.want {
+				t.Fatalf("cancel_requested=%t required=%t after restart", got, tc.want)
+			}
+			restarted.Phase = "blocked"
+			restarted.Failure = &DesktopRecoveryFailure{Code: "PAIRING_CLOSED", Message: "Hive confirmed cancellation"}
+			if restarted.view().CancelRequested {
+				t.Fatal("confirmed cancellation still presented as pending")
+			}
+			restarted.Phase = "completed"
+			if restarted.view().CancelRequested {
+				t.Fatal("confirmed binding still presented as pending cancellation")
+			}
+		})
+	}
+}

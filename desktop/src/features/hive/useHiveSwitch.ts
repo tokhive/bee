@@ -6,6 +6,7 @@ import type {DeviceView,DeviceRecoveryView} from '../../system/device';
 export function useHiveSwitch(client:HiveSwitchClient|undefined,bridge?:SystemBridge){
  const [chooserOpen,setChooserOpen]=useState(false),[hive,setHive]=useState(''),[name,setName]=useState('Bee Desktop');
  const [snapshot,setSnapshot]=useState<HiveSwitchSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[exitOperation,setExitOperation]=useState<string|null>(null);
+ const [foreground,setForeground]=useState<'recheck'|'cancel'|null>(null),[cancelIntent,setCancelIntent]=useState<string>();
  const [target,setTarget]=useState<{view?:DeviceView;recovery?:DeviceRecoveryView;error:UiFailure|null;recoveryError:UiFailure|null}>({error:null,recoveryError:null});
  const latest=useRef(snapshot);latest.current=snapshot;
  const scopeDirty=useRef(false);
@@ -47,7 +48,12 @@ export function useHiveSwitch(client:HiveSwitchClient|undefined,bridge?:SystemBr
   catch(cause){if(active.current&&operation===latest.current?.operation?.id)setError(normalizeFailure(cause,'hive_switch_target'));return false;}
   finally{if(request===sequence.current){working.current=false;if(active.current)setBusy(false);}}
  };
- return {snapshot,target,error,busy,exitOperation,chooserOpen,setChooserOpen,hive,setHive,name,setName,refresh,start:(origin:string,name:string)=>run(()=>client!.start(origin,name),{reconcileFailure:true}),observe:()=>run(()=>client!.observe()),continueWaiting:()=>run(()=>client!.continue()),cancel:()=>run(()=>client!.cancel()),quit:async(decision:'continue_waiting'|'cancel_and_quit')=>{const ok=await run(()=>client!.quit(decision));if(ok&&decision==='continue_waiting')setExitOperation(null);return ok;},
+ const userAction=async(kind:'recheck'|'cancel',action:()=>Promise<HiveSwitchSnapshot>)=>{
+  if(working.current)return false;
+  setForeground(kind);if(kind==='cancel')setCancelIntent(latest.current?.operation?.id);
+  try{return await run(action,{reconcileFailure:true});}finally{if(active.current)setForeground(null);}
+ };
+ return {snapshot,target,error,busy,foreground,cancelIntent,exitOperation,chooserOpen,setChooserOpen,hive,setHive,name,setName,refresh,start:(origin:string,name:string)=>run(()=>client!.start(origin,name),{reconcileFailure:true}),observe:()=>userAction('recheck',()=>client!.observe()),continueWaiting:()=>userAction('recheck',()=>client!.continue()),cancel:()=>userAction('cancel',()=>client!.cancel()),quit:async(decision:'continue_waiting'|'cancel_and_quit')=>{const ok=await run(()=>client!.quit(decision));if(ok&&decision==='continue_waiting')setExitOperation(null);return ok;},
   targetRefresh:readTarget,targetBegin:(_hive:string,name:string)=>targetAction(()=>client!.target.begin('',name)),targetOpen:()=>targetAction(()=>target.recovery?client!.target.recoveryOpen():client!.target.open()),
   targetRecover:async(decision:'begin_pairing'|'adopt_owner'|'renew_expired'|'continue_checking'|'restart_pairing'|'cancel_pairing',transaction?:DeviceRecoveryView)=>targetAction(async()=>{const original=transaction??await client!.target.recoveryPrepare();await client!.target.recoveryConfirm(original.operation_id,original.revision,decision);})};
 }

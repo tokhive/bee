@@ -1451,18 +1451,16 @@ pub(crate) fn device_recovery(value: &Value) -> Result<&Value, BridgeError> {
         return Err(rejected());
     }
     let r = &value["recovery"];
-    if !recovery_fields(
-        r,
-        &[
-            "operation_id",
-            "revision",
-            "phase",
-            "old_identity",
-            "new_identity",
-            "pairing",
-            "failure",
-        ],
-    ) {
+    let mut fields = vec![
+        "operation_id", "revision", "phase", "old_identity", "new_identity", "pairing", "failure",
+    ];
+    if let Some(cancel) = r.get("cancel_requested") {
+        if cancel.as_bool() != Some(true) {
+            return Err(rejected());
+        }
+        fields.push("cancel_requested");
+    }
+    if !recovery_fields(r, &fields) {
         return Err(rejected());
     }
     if !r["operation_id"].as_str().is_some_and(|s| {

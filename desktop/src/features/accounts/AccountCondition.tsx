@@ -12,7 +12,7 @@ import {supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {sameAccountFailure,supplyProblem} from './accountPresentation';
 
 /** One current conclusion; independent conditions remain available in the disclosure. */
-export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
+export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock}:{deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
  const [expanded,setExpanded]=useState(false);
  const account=accounts.views[platform],selected=account?.selection.state==='selected';
  const op=account?.operation,dirty=accounts.dirty[platform];
@@ -34,11 +34,13 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const expired=!dirty&&account?.candidate.expires_at&&Date.parse(account.candidate.expires_at)<=now+30000;
  const pending=accountPending(account);
  const stale=selected&&!current;
+ const deviceWait=selected&&deviceBlock&&!uncertain&&!pending;
  const blocked=errors.length>0||reasons.length>0||changed||expired;
- const ready=selected&&current&&runtime.view?.local==='running'&&view?.ready&&!view.paused&&!blocked&&!dirty&&!uncertain&&!pending;
+ const ready=!deviceWait&&selected&&current&&runtime.view?.local==='running'&&view?.ready&&!view.paused&&!blocked&&!dirty&&!uncertain&&!pending;
  let title:string;
  if(pending&&op?.state!=='reconciling')title=op?.kind==='authorize'?'等待官方登录':'正在处理账号操作';
  else if(uncertain)title='操作结果待确认';
+ else if(deviceWait)title=deviceBlock!;
  else if(writing)title='正在更新接单选择…';
  else if(account?.authorization.state==='preparing')title='正在准备账号…';
  else if(runtime.view?.local==='starting')title='正在准备服务…';
@@ -51,11 +53,12 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  else if(!selected)title=account?.candidate.state==='available'?'已有登录，尚未接入':'尚未接入';
  else if(ready)title='可接单';
  else title=view?.paused?'已暂停接单':'不能接单';
- const showPaused=selected&&view?.paused&&title!=='已暂停接单';
- const count=visibleErrors.length+reasons.length+(showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(expired?1:0)+(stale&&!errors.length?1:0);
+ const showPaused=!deviceWait&&selected&&view?.paused&&title!=='已暂停接单';
+ const count=visibleErrors.length+reasons.length+(showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(expired?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>}<span>{t(title)}</span></p>
+  {deviceWait&&view&&<p className="account-action-help">{t(view.paused?'接单选择：暂停':'接单选择：允许')}</p>}
   {count>0&&<details className="account-conditions" open={expanded} onToggle={event=>setExpanded(event.currentTarget.open)}>
    <summary>{t('查看原因（{count}）',{count})}</summary>
    <ul>
@@ -77,13 +80,13 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
     })}
     {changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))&&<li>{t('发现不同账号，请在详情确认换号；原账号选择仍保留。')}</li>}
     {expired&&<li>{t('所选来源的授权已过期，请重新登录。')}</li>}
-    {stale&&!errors.length&&<li>{t('上次报告不能证明当前接单状态，正在重新核对。')}</li>}
+    {!deviceWait&&stale&&!errors.length&&<li>{t('上次报告不能证明当前接单状态，正在重新核对。')}</li>}
     {showPaused&&<li>{t(current?'已暂停接单':'上次记录：已暂停接单')}</li>}
    </ul>
    {sourceError&&onNavigate&&<Button variant="ghost" onClick={()=>navigate({page:'accounts',section:'source',platform})}>{t('打开读取设置')}</Button>}
   </details>}
-  {runtime.view?.local==='failed'&&<Button variant="outline" disabled={runtime.busy||runtime.uncertain||runtime.startBlocked} onClick={()=>void runtime.start([])}>{t('重试准备')}</Button>}
-  {(uncertain||stale)&&<Button variant="outline" disabled={!!accounts.busy[platform]||!!accounts.writeBusy[platform]||supply?.state.busy} onClick={()=>{accounts.refresh(platform);void supply?.model.read();}}>{t('核对结果')}</Button>}
+  {!deviceWait&&runtime.view?.local==='failed'&&<Button variant="outline" disabled={runtime.busy||runtime.uncertain||runtime.startBlocked} onClick={()=>void runtime.start([])}>{t('重试准备')}</Button>}
+  {(uncertain||stale&&!deviceWait)&&<Button variant="outline" disabled={!!accounts.busy[platform]||!!accounts.writeBusy[platform]||supply?.state.busy} onClick={()=>{accounts.refresh(platform);void supply?.model.read();}}>{t('重新核对')}</Button>}
   {op?.kind==='authorize'&&op.state==='cancelled'&&<p className="account-action-help">{t('本次登录已取消；可重新读取当前登录后继续。')}</p>}
  </div>;
 }

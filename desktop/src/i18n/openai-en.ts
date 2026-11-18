@@ -1,4 +1,10 @@
 export const openaiEnglish:Record<string,string>={
+  "未找到 Codex": "Codex was not found",
+  "本次登录已超时": "This sign-in attempt timed out",
+  "请先安装 Codex 官方客户端，然后返回此处重试。": "Install the official Codex client, then return here and retry.",
+  "重新登录前，Bee 会先确认上次登录已结束。": "Before starting another sign-in, Bee will confirm the previous attempt has ended.",
+  "安装指引": "Installation instructions",
+  "通过 OpenAI 官方提供的 Codex 安装方式安装客户端，安装完成后回到 Bee。": "Install Codex using OpenAI’s official installation instructions, then return to Bee.",
   "正在核验额度…": "Verifying quota…",
   "已提交你确认的账号，正在等待接入结果。": "The account you confirmed has been submitted. Waiting for the connection result.",
   "账号已接入。请在问题解除后重试准备，无需重新确认接入。": "The account is connected. Resolve the issue, then retry preparation; no new connection confirmation is needed.",

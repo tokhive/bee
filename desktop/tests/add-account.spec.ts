@@ -297,3 +297,25 @@ test('intake submission replaces the confirmation form until its receipt arrives
  await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true})).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
 });
+
+for(const [code,title,action] of [['client_missing','未找到 Codex','重试登录'],['authorization_timeout','本次登录已超时','重新登录']] as const)test(`confirmed ${code} keeps recovery focused and permits returning to connection methods`,async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await page.evaluate(code=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code,check:code==='client_missing'?'official_executable':'official_source_recheck',message:code==='client_missing'?'codex executable not found':'official login deadline exceeded',evidence:{}};},code);await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText(title);await expect(wizard(page).getByRole('button',{name:action,exact:true})).toBeEnabled();
+ await expect(wizard(page).getByRole('button',{name:'设置读取位置',exact:true})).toHaveCount(0);
+ if(code==='client_missing'){await wizard(page).locator('summary').click();await expect(wizard(page)).toContainText('通过 OpenAI 官方提供的 Codex 安装方式安装客户端');}
+ await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText(code);await page.keyboard.press('Escape');
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ await wizard(page).getByRole('button',{name:code==='client_missing'?'返回':'取消登录',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('连接 OpenAI 账号');
+ await wizard(page).getByRole('button',{name:'设置读取位置',exact:true}).click();await expect(wizard(page).getByLabel('读取目录')).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+});
+
+test('timed out login cannot offer a new login while cleanup is pending',async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any;w.cleaning=true;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code:'authorization_timeout',check:'official_source_recheck',message:'official login deadline exceeded',evidence:{}};});await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在确认登录已结束…');
+ await expect(wizard(page).getByRole('button',{name:'重新登录',exact:true})).toHaveCount(0);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+});

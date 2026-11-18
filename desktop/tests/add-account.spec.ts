@@ -265,3 +265,19 @@ test('a past browser launch failure does not remain the blocker after official l
  await expect(wizard(page).getByRole('alert')).toBeVisible();await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
+
+test('confirmed Codex execution denial uses a focused retry page and retains evidence',async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code:'authorization_process_failed',check:'official_process',message:'spawn codex: permission denied (EACCES)',evidence:{permission_denied:'true'}};});
+ await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('无法启动官方登录');
+ await expect(wizard(page).getByRole('alert')).toContainText('系统拒绝运行 Codex，请检查客户端的执行权限。');
+ await expect(wizard(page).getByRole('button',{name:'设置读取位置',exact:true})).toHaveCount(0);
+ await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('spawn codex: permission denied (EACCES)');await page.keyboard.press('Escape');
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ await wizard(page).getByRole('button',{name:'重试登录',exact:true}).click();await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('等待完成 OpenAI 登录');
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(2);
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(0);
+});

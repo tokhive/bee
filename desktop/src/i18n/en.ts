@@ -1,4 +1,7 @@
 export const en: Record<string, string> = {
+ "无法启动官方登录":"Could not start official sign-in",
+ "系统拒绝运行 Codex，请检查客户端的执行权限。":"The system refused to run Codex. Check the client's execution permissions.",
+
  "查看切换错误详情":"View switch error details",
  "原 Hive 拒绝网络连接，任务状态尚未确认。":"The original Hive refused the connection; task status is still unconfirmed.",
  "Hive 切换中":"Switching Hive",

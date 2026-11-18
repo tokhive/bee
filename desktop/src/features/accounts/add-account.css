@@ -88,3 +88,4 @@
 
 .add-account-progress-title{display:flex;align-items:center;gap:9px}
 .add-account-progress-title svg{color:var(--accent-ink);flex:none}
+.add-account-body .add-account-error .account-error-trigger{color:inherit}

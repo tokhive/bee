@@ -281,3 +281,19 @@ test('confirmed Codex execution denial uses a focused retry page and retains evi
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(2);
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(0);
 });
+
+
+test('intake submission replaces the confirmation form until its receipt arrives',async({page})=>{
+ await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_action')await new Promise<void>(resolve=>w.releaseIntake=resolve);return invoke(command,args);};});
+ await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在接入账号…');
+ await expect(wizard(page).getByRole('status')).toHaveText('已提交你确认的账号，正在等待接入结果。');
+ await expect(wizard(page).locator('.add-account-identity')).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'重新核验',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>(window as any).releaseIntake());
+ await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
+});

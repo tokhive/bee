@@ -37,6 +37,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const loginSucceeded=op?.kind==='authorize'&&op.state==='succeeded';
  const login=pending&&op?.kind==='authorize';
  const intake=pending&&!login;
+ const submitting=submitted&&!!accounts.writeBusy.openai&&!pending;
  const starting=!!accounts.startingLogin.openai&&!login&&!intake;
  const queryStopped=login&&progressQuery?.phase==='stopped';
  const cleanup=login&&(progress?.phase==='cleaning_up'||!!accounts.cancelUnconfirmed.openai);
@@ -83,10 +84,10 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
  const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
  const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'等待完成 OpenAI 登录';
- const title=screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:loginStartDenied?'无法启动官方登录':intake?'暂时无法确认接入结果':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
+ const title=screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:loginStartDenied?'无法启动官方登录':intake?'暂时无法确认接入结果':submitting?'正在接入账号…':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
  const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成授权，Bee 会自动继续。';
- const status=starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
- const showSpinner=!!status&&!queryStopped&&!progress?.blocker&&(starting||observing||cleanup||!!progress&&['starting','verifying','finished'].includes(progress.phase));
+ const status=submitting?'已提交你确认的账号，正在等待接入结果。':starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
+ const showSpinner=!!status&&!queryStopped&&!progress?.blocker&&(submitting||starting||observing||cleanup||!!progress&&['starting','verifying','finished'].includes(progress.phase));
  const loginWaiting=login&&!cleanup&&!queryStopped&&!progress?.blocker&&(!progress||progress.phase==='waiting_authorization');
  const showLoginRefresh=!progress||queryStopped||!!progressError||cleanup||!!progress?.blocker;
  return <><section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
@@ -109,7 +110,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
    </>:intake?<>
     <div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{(confirmedIdentity?.fingerprint??candidate?.fingerprint)?.slice(0,16)??t('账号身份待核对')}</strong></div></div>
     <p>{t('接入请求已发出，但未取得确定回执。核对完成前，账号不会加入已接入列表。')}</p>
-    {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
+    {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing||submitting?null:step===3?<>
     {loginSucceeded&&valid&&<p role="status">{t('登录成功，尚未接入 Bee')}</p>}
     <div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{confirmedIdentity?.fingerprint?.slice(0,16)}</strong></div></div>
     <p>{t('接单会使用此账号的订阅额度。')}</p>

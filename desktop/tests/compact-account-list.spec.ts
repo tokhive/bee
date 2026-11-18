@@ -18,7 +18,7 @@ function installOpenaiReplies(){
   const reply=await original(command,args);
   if(command==='bridge_status')reply.metadata.capabilities=['authorize_progress','authorize_open'];
   if(command==='account_action'&&reply.result?.account){
-   const a=w.accounts.openai;a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1};a.authorization={...a.authorization,state:'synchronized',fingerprint:a.selection.fingerprint};
+   const a=w.accounts[args.request.platform];a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1};a.authorization={...a.authorization,state:args.request.platform==='claude'&&w.keepClaudePreparing?'unconfirmed':'synchronized',fingerprint:a.selection.fingerprint};
    reply.result.account=structuredClone(a);
   }
   if(command==='runtime_snapshot'){
@@ -190,9 +190,13 @@ test('Claude changed identity requires review and explicit confirmation while re
  await review.getByRole('button',{name:'确认换号',exact:true}).click();await expect(confirm).toBeVisible();await page.clock.runFor(100);await page.keyboard.press('Escape');await expect(confirm).toHaveCount(0);await expect(review).toBeVisible();await expect(review.getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
  await review.getByRole('button',{name:'确认换号',exact:true}).click();await page.evaluate(()=>{const a=(window as any).accounts.claude;a.candidate.fingerprint='d'.repeat(64);a.candidate.reference='d'.repeat(48);a.revision++;});await page.clock.runFor(11000);await expect(confirm.getByRole('alert')).toContainText('本次未提交');await expect(confirm.getByRole('button',{name:'确认更换',exact:true})).toBeDisabled();expect(await writes(page)).toEqual([]);await confirm.getByRole('button',{name:'取消',exact:true}).click();await expect(review).toContainText('d'.repeat(16));
  await expect(page.getByRole('button',{name:'返回原处',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>(window as any).keepClaudePreparing=true);
  await review.getByRole('button',{name:'确认换号',exact:true}).click();await confirm.getByRole('button',{name:'确认更换',exact:true}).click();
  await expect.poll(async()=>(await writes(page)).filter((x:any)=>x.command==='account_action'&&x.args.request.action==='confirm_change').length).toBe(1);
  await expect.poll(()=>page.evaluate(()=>(window as any).accounts.claude.selection.fingerprint)).toBe('d'.repeat(64));
+ await expect(row.getByRole('status')).toHaveText('正在准备接单…');await expect(row.locator('[aria-current=step]')).toHaveText('3准备接单');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>{const w=window as any;w.keepClaudePreparing=false;w.accounts.claude.authorization.state='synchronized';w.accounts.claude.revision++;});await page.clock.runFor(11000);
+ await expect(row.getByRole('status')).toHaveText('账号更换成功');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await row.getByRole('button',{name:'完成',exact:true}).click();await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();
  expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
 });
 

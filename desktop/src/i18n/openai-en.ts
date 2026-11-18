@@ -1,4 +1,5 @@
 export const openaiEnglish:Record<string,string>={
+  "账号已更换，接单状态以当前核对结果为准。": "Account changed. Request availability follows the current confirmed status.",
   "正在核对换号结果…": "Checking the account change…",
   "原账号": "Original account",
   "换号结果待核对": "Account change needs checking",

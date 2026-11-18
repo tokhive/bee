@@ -244,3 +244,6 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .claude-change-record{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px;font-size:12px;color:var(--muted)}
 .claude-change-record summary{cursor:pointer}
 .account-list-compact .account-list-condition>.native-account-condition{color:var(--ink)}
+
+.account-list-compact .claude-change-complete .native-account-condition{color:var(--oa-good)}
+.account-list-compact .claude-change-complete>.native-account-row-actions>.ui-button.primary{min-width:0;padding:6px 12px;font-size:13px;font-weight:400;min-height:34px;box-shadow:none}

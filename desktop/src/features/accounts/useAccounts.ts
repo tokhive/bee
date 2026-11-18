@@ -19,6 +19,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [views,setViews]=useState<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),[errors,setErrors]=useState<Partial<Record<AccountPlatform,UiFailure>>>({}),[busy,setBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[sources,setSources]=useState<Partial<Record<AccountPlatform,AccountSource>>>({}),[dirty,setDirty]=useState<Partial<Record<AccountPlatform,boolean>>>({}),[uncertain,setUncertain]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const [setupPlatform,setSetupPlatform]=useState<'choose'|'openai'|'claude'|null>(null);
  const [openaiJourney,setOpenaiJourney]=useState<{kind:'first'|'intake'|'change'|'relogin'|'repair';revision:number;operationId?:string;completed?:string}>();
+ const [claudeChange,setClaudeChange]=useState<{from:string;to:string;revision:number;operationId:string;generation:number|undefined}>();
  const [openaiDraft,setOpenaiDraft]=useState<AccountSource>(),[sourceSaving,setSourceSaving]=useState(false),[sourceSaveError,setSourceSaveError]=useState<UiFailure>();
  const sourceSavingRef=useRef(false);
  const [claudeSourceSaving,setClaudeSourceSaving]=useState(false),[claudeSourceSaveError,setClaudeSourceSaveError]=useState<UiFailure>();
@@ -256,7 +257,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   loginQuery.current=query;setLoginOpenError(undefined);void query.start();
   return()=>{query.dispose();if(loginQuery.current===query)loginQuery.current=undefined;};
  },[enabled,authorizer,loginID]);
- return {quotaHistory:quotaHistory.current,setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
+ return {claudeChange:claudeChange?.generation===coordinated?.generation?.()?claudeChange:undefined,dismissClaudeChange:()=>setClaudeChange(undefined),quotaHistory:quotaHistory.current,setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
   async verifyOpenai(){
    if(!client||!savedDefaults||centralError||central.current?.sourceReady===false||writing.current.openai||sourceSavingRef.current||uncertain.openai||accountPending(latest.current.openai))return;
    if(requests.current.openai)await requests.current.openai;
@@ -317,7 +318,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(platform==='claude'&&claudeSourceSavingRef.current)return;
    const view=views[platform];if(!client||!view||uncertain[platform]||centralError)return;
    if(platform==='openai'&&action!=='clear_selection')setOpenaiJourney(v=>({kind:action==='confirm_change'?'change':v?.kind==='first'?'first':'intake',revision:view.revision}));
-   void run(platform,async current=>{const result=await client.action({platform,action,revision:current!.revision,candidate_ref:action==='clear_selection'?'':current!.candidate.reference??'',confirmed:true});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:result.operation?.id}:v);return result;},false,true);
+   void run(platform,async current=>{const generation=central.current?.generation?.();const result=await client.action({platform,action,revision:current!.revision,candidate_ref:action==='clear_selection'?'':current!.candidate.reference??'',confirmed:true});if(platform==='claude'&&action==='confirm_change'&&active.current&&generation===central.current?.generation?.()&&result.operation?.kind==='confirm_change'&&current?.selection.fingerprint&&current.candidate.fingerprint)setClaudeChange({from:current.selection.fingerprint,to:current.candidate.fingerprint,revision:current.revision,operationId:result.operation.id,generation});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:result.operation?.id}:v);return result;},false,true);
   },
   authorize(platform:AccountPlatform){
    if(platform==='claude'&&claudeSourceSavingRef.current)return;

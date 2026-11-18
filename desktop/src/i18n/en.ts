@@ -1777,7 +1777,7 @@ export const en: Record<string, string> = {
   "正在取消切换": "Cancelling Hive switch",
   "取消切换": "Cancel Hive switch",
   "结果待核对；原操作已保留。": "Result unconfirmed. The original operation is saved.",
-  "正在执行 {running} · 终止结果未知 {unknown} · 未结算 {unsettled}": "Running {running} · Termination unknown {unknown} · Unsettled {unsettled}",
+  "正在执行 {running} · 结果待确认 {unknown} · 未结算 {unsettled}": "Running {running} · Outcome unconfirmed {unknown} · Unsettled {unsettled}",
   "任务和结算数量待核对。": "Work and settlement counts are unconfirmed.",
   "自动核对已暂停，切换仍保留。继续等待将核对同一操作。": "Automatic checks are paused. The switch is saved. Continue waiting to check the same operation.",
   "自动核对已停止，请先处理下方的具体原因。": "Automatic checks stopped. Resolve the reported issue first.",

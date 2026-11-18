@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {open} from '@tauri-apps/plugin-dialog';
-import {Check,CircleAlert,FolderOpen,LoaderCircle,Sparkles,ShieldCheck} from 'lucide-react';
+import {Check,CircleAlert,FolderOpen,LoaderCircle,ShieldCheck} from 'lucide-react';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -101,11 +101,11 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
     {progress?.actions.open&&!queryStopped&&<p>{t('未看到官方登录页面时，可点击“打开登录页面”继续本次登录。')}</p>}
     <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} aria-busy={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开登录页面…':'打开登录页面')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="outline" disabled={busy||progress?.phase==='cleaning_up'||!!progress&&!progress.actions.cancel} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
    </>:intake?<>
-    <div className="add-account-identity"><Sparkles aria-hidden="true"/><div><small>OpenAI</small><strong>{(confirmedIdentity?.fingerprint??candidate?.fingerprint)?.slice(0,16)??t('账号身份待核对')}</strong></div></div>
+    <div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{(confirmedIdentity?.fingerprint??candidate?.fingerprint)?.slice(0,16)??t('账号身份待核对')}</strong></div></div>
     <p>{t('接入请求已发出，但未取得确定回执。核对完成前，账号不会加入已接入列表。')}</p>
     {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
     {loginSucceeded&&valid&&<p role="status">{t('登录成功，尚未接入 Bee')}</p>}
-    <div className="add-account-identity"><Sparkles aria-hidden="true"/><div><small>OpenAI</small><strong>{confirmedIdentity?.fingerprint?.slice(0,16)}</strong></div></div>
+    <div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{confirmedIdentity?.fingerprint?.slice(0,16)}</strong></div></div>
     <p>{t('接单会使用此账号的订阅额度。')}</p>
     <p>{t(!supplyCurrent?'接单选择尚未确认，请先核对，暂不能接入。':supply?.state.views.openai?.paused?'接入后保留暂停，由你决定何时恢复接单。':'接入后允许接单，账号准备完成且供给条件满足后开始。')}</p>
     {(changed||confirmation&&confirmation!==stamp())&&<p role="alert">{t('账号、来源或接单选择已变化，请重新核验后确认。')}</p>}

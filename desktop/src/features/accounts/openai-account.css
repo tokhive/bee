@@ -116,7 +116,8 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 /* OpenAI details use the approved compact fact list; keep its accessible description. */
 .detail-sheet:has(.oa-sheet-actions)>p:first-of-type{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.detail-sheet:has(.oa-sheet-actions) header{margin-bottom:20px}
+.detail-sheet:has(.oa-sheet-actions){padding:24px}
+.detail-sheet:has(.oa-sheet-actions) header{margin-bottom:18px}
 .detail-sheet:has(.oa-sheet-actions) header h2{font-size:16px;font-weight:600;margin:0}
 .detail-sheet:has(.oa-sheet-actions) header button{border-color:transparent;background:transparent;color:var(--muted);padding-inline:4px}
 .detail-sheet:has(.oa-sheet-actions) .account-detail-facts{margin:0}
@@ -124,4 +125,7 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .detail-sheet:has(.oa-sheet-actions) .account-detail-facts dt{color:var(--muted)}
 .detail-sheet:has(.oa-sheet-actions) .account-detail-facts dd{font-size:12px;line-height:18px}
 .detail-sheet .oa-sheet-actions{margin:16px 0;gap:8px}
-.detail-sheet .oa-sheet-actions .ui-button{padding:5px 12px;font-weight:400;box-shadow:none}
+.detail-sheet .oa-sheet-actions .ui-button{padding:5px 12px;font-size:13px;font-weight:400;box-shadow:none}
+
+.dialog-overlay:has(+.detail-sheet:has(.oa-sheet-actions)){background:#202b3e40}
+:root[data-theme=dark] .dialog-overlay:has(+.detail-sheet:has(.oa-sheet-actions)){background:#0008}

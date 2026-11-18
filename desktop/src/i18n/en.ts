@@ -1747,6 +1747,7 @@ export const en: Record<string, string> = {
   '登录已核验，账号选择未改变。':'Login is verified. The selected account is unchanged.',
   '服务状态':'Service status',
   '核对服务状态':'Check service status',
+  'Bee 自动运行，按平台管理接单':'Bee runs automatically; manage requests per platform',
   '自动维护账号 · 按平台管理接单':'Accounts maintained automatically · Manage requests per platform',
   '原登录进程已中断，原登录结果未确认；账号维护状态单独核对。':'The original login process was interrupted and its outcome is unconfirmed. Account maintenance is checked separately.',
   '本次登录结果未确认':'Login outcome unconfirmed',

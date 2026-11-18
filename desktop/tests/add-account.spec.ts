@@ -329,3 +329,14 @@ test('file permission failure focuses source repair and recheck preserves explic
  await page.evaluate(()=>(window as any).fail=undefined);await wizard(page).getByRole('button',{name:'重新检查',exact:true}).click();
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
 });
+
+test('saving the source and reading it show distinct progress without losing the directory',async({page})=>{
+ await setup(page,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'设置读取位置',exact:true}).click();await wizard(page).getByLabel('读取目录').fill('/tmp/new-source');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__beeMockControls['account-source']({platform:'openai',directory:'/tmp/new-source',store:'file',value:'available'});w.__TAURI_INTERNALS__.invoke=async(c:string,a:any)=>{if(c==='preferences_save')await new Promise<void>(r=>w.releaseSave=r);if(c==='account_detect'&&a.request.directory==='/tmp/new-source')await new Promise<void>(r=>w.releaseRead=r);return invoke(c,a);};});
+ await wizard(page).getByRole('button',{name:'保存',exact:true}).click();await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在保存读取位置…');await expect(wizard(page).getByRole('status')).toHaveText('尚未开始读取或核验账号。');await expect(wizard(page).locator('form')).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/new-source'))).toEqual([]);
+ await page.evaluate(()=>(window as any).releaseSave());await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在读取登录信息…');await expect(wizard(page).getByRole('status')).toHaveText('读取位置已保存，正在读取并核验账号。');
+ await page.evaluate(()=>{const w=window as any,release=w.releaseRead;w.releaseRead=undefined;release();});await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRead)).toBe('function');await page.evaluate(()=>(window as any).releaseRead());
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
+ expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/new-source').map((c:any)=>c.args.request.mode))).toContain('official');
+});

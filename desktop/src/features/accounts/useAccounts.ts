@@ -21,6 +21,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [openaiJourney,setOpenaiJourney]=useState<{kind:'first'|'intake'|'change'|'relogin'|'repair';revision:number;operationId?:string;completed?:string}>();
  const [openaiDraft,setOpenaiDraft]=useState<AccountSource>(),[sourceSaving,setSourceSaving]=useState(false),[sourceSaveError,setSourceSaveError]=useState<UiFailure>();
  const sourceSavingRef=useRef(false);
+ const [sourceSavePhase,setSourceSavePhase]=useState<'saving'|'reading'>();
  const [originalAccountQuery,setOriginalAccountQuery]=useState<QueryState<AccountSnapshot>>();
  const originalAccountReader=useRef<ReturnType<typeof createOperationQuery<AccountSnapshot>>|undefined>(undefined);
  const [loginProgress,setLoginProgress]=useState<QueryState<CodexLoginProgress>>(),[loginOpenError,setLoginOpenError]=useState<UiFailure>();
@@ -259,7 +260,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
    await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
    return verified.current.openai?latest.current.openai:undefined;
-  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,startingLogin,
+  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSavePhase,sourceSaveError,loginProgress,loginOpenError,openingLogin,startingLogin,
   queryLogin(){return loginQuery.current?.start();},
   async openLoginPage(){
    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
@@ -270,16 +271,16 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   },
   async saveOpenaiSource(draft=openaiDraft){
    if(!draft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
-   sourceSavingRef.current=true;setSourceSaving(true);setSourceSaveError(undefined);
+   sourceSavingRef.current=true;setSourceSaving(true);setSourceSavePhase('saving');setSourceSaveError(undefined);
    const generation=central.current.generation?.();
    try{
     const saved=await central.current.saveOpenaiSource(draft);
     if(!active.current||generation!==central.current?.generation?.())return;
-    sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
+    setSourceSavePhase('reading');sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
     await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('openai',saved,'official');},true);
     return true;
    }catch(cause){if(active.current)setSourceSaveError(failure(cause,'preferences_save'));}
-   finally{sourceSavingRef.current=false;if(active.current)setSourceSaving(false);}
+   finally{sourceSavingRef.current=false;if(active.current){setSourceSaving(false);setSourceSavePhase(undefined);}}
   },
   autoService:!!coordinated?.autoService,submissionBlocked:!!centralError||!!deviceError,sharedReadFailure:centralError,deviceFailure:deviceError,readFailures:{...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},cancelUnconfirmed,sharedFailure:centralError??deviceError??null,refreshStatus:coordinated?.refreshStatus,accountRefresh:coordinated?.accountRefresh,sourceDirectories:coordinated?.sourceDirectories??{},setSourceDirectory:coordinated?.setSourceDirectory,loginFlows,
   openLogin(platform:AccountPlatform,confirmation:string){setLoginFlows(v=>({...v,[platform]:{confirmation,rechecked:false,checking:false}}));},

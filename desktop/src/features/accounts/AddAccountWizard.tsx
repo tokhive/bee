@@ -87,14 +87,15 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const sourcePermissionDenied=!starting&&!pending&&!observing&&!valid&&screen!=='source'&&error?.code==='permission_denied'&&error.check==='source_read'&&accounts.sourceFor('openai').store!=='keyring';
  const terminalLoginFailure=loginStartDenied||loginMissing||loginTimedOut;
  const returnToMethods=()=>{setDismissedLoginFailure(op?.id);setScreen('connect');setKept(false);};
+ const sourceProgress=screen==='source'&&accounts.sourceSaving;
  const source=accounts.openaiDraft??accounts.sourceFor('openai');
  const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
  const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
  const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'等待完成 OpenAI 登录';
- const title=screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:loginStartDenied?'无法启动官方登录':loginMissing?'未找到 Codex':loginTimedOut?'本次登录已超时':sourcePermissionDenied?'无法读取本机登录信息':intake?'暂时无法确认接入结果':submitting?'正在接入账号…':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
+ const title=sourceProgress?(accounts.sourceSavePhase==='reading'?'正在读取登录信息…':'正在保存读取位置…'):screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:loginStartDenied?'无法启动官方登录':loginMissing?'未找到 Codex':loginTimedOut?'本次登录已超时':sourcePermissionDenied?'无法读取本机登录信息':intake?'暂时无法确认接入结果':submitting?'正在接入账号…':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
  const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成授权，Bee 会自动继续。';
- const status=submitting?'已提交你确认的账号，正在等待接入结果。':starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
- const showSpinner=!!status&&!queryStopped&&!progress?.blocker&&(submitting||starting||observing||cleanup||!!progress&&['starting','verifying','finished'].includes(progress.phase));
+ const status=sourceProgress?(accounts.sourceSavePhase==='reading'?'读取位置已保存，正在读取并核验账号。':'尚未开始读取或核验账号。'):submitting?'已提交你确认的账号，正在等待接入结果。':starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
+ const showSpinner=!!status&&!queryStopped&&!progress?.blocker&&(sourceProgress||submitting||starting||observing||cleanup||!!progress&&['starting','verifying','finished'].includes(progress.phase));
  const loginWaiting=login&&!cleanup&&!queryStopped&&!progress?.blocker&&(!progress||progress.phase==='waiting_authorization');
  const showLoginRefresh=!progress||queryStopped||!!progressError||cleanup||!!progress?.blocker;
  return <><section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
@@ -103,9 +104,9 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
   <div className="add-account-body">
    <h3 ref={heading} tabIndex={-1} className={showSpinner?'add-account-progress-title':undefined}>{showSpinner&&<svg className="add-account-progress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l3-8 5 16 3-8h5"/></svg>}{t(title)}</h3>
    {status&&<p role="status" aria-live="polite" aria-atomic="true">{t(status)}</p>}
-   {error&&!intake&&!loginMissing&&!loginTimedOut&&<p className="add-account-error" role="alert">{loginStartDenied?t('系统拒绝运行 Codex，请检查客户端的执行权限。'):sourcePermissionDenied?t('系统拒绝访问 Codex 登录文件。'):problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
-   {problem?.action&&onNavigate&&!sourcePermissionDenied&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
-   {screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
+   {error&&!sourceProgress&&!intake&&!loginMissing&&!loginTimedOut&&<p className="add-account-error" role="alert">{loginStartDenied?t('系统拒绝运行 Codex，请检查客户端的执行权限。'):sourcePermissionDenied?t('系统拒绝访问 Codex 登录文件。'):problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
+   {problem?.action&&onNavigate&&!sourceProgress&&!sourcePermissionDenied&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
+   {sourceProgress?null:screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
     <p>{t('选择 Codex 保存登录信息的目录。')}</p>
     <label htmlFor="add-account-directory">{t('读取目录')}</label>
     <div className="add-account-directory"><input id="add-account-directory" name="credential-directory" autoComplete="off" spellCheck={false} value={source.directory??''} placeholder={accounts.defaults?.platforms.find(p=>p.platform==='openai')?.directory} disabled={busy||picking} onChange={e=>accounts.setOpenaiDraft({...source,directory:e.target.value||null})}/><Button type="button" variant="outline" disabled={busy||picking} onClick={()=>{setPicking(true);setPickerError(undefined);void open({directory:true,multiple:false,title:t('选择读取目录'),defaultPath:source.directory??undefined}).then(path=>{if(active.current&&typeof path==='string')accounts.setOpenaiDraft({...source,directory:path});}).catch(cause=>{if(active.current)setPickerError(normalizeFailure(cause,'directory_picker'));}).finally(()=>{if(active.current)setPicking(false);});}}><FolderOpen aria-hidden="true"/>{t('选择目录')}</Button></div>

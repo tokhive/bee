@@ -1,4 +1,8 @@
 export const openaiEnglish:Record<string,string>={
+  "正在保存读取位置…": "Saving credential location…",
+  "正在读取登录信息…": "Reading sign-in information…",
+  "读取位置已保存，正在读取并核验账号。": "The credential location is saved. Reading and verifying the account.",
+  "尚未开始读取或核验账号。": "Account reading and verification have not started yet.",
   "无法读取本机登录信息": "Unable to read local sign-in information",
   "系统拒绝访问 Codex 登录文件。": "The system denied access to the Codex sign-in file.",
   "请检查目录的访问权限，也可以选择其他读取位置。": "Check the directory permissions, or choose another credential location.",

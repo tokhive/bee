@@ -221,3 +221,8 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .detail-sheet .claude-source-form .claude-source-error{color:#a24231;margin-top:12px}
 [data-theme=dark] .detail-sheet .claude-source-form .claude-source-error{color:#f2a38f}
 .detail-sheet .claude-source-form .account-error-trigger{width:16px;height:16px;min-height:16px;padding:0;vertical-align:middle}
+@media(max-width:950px){.auto-service-accounts .account-list-compact .native-account-row.claude-expired-flow{padding:22px 16px}}
+@media(max-width:720px){
+ .account-list-compact .claude-expired-flow>.oa-steps,.account-list-compact .claude-expired-flow>.account-list-condition,.account-list-compact .claude-expired-flow>.account-list-quota,.account-list-compact .claude-login-flow>.native-account-login,.auto-service-accounts .account-list-compact .claude-expired-flow>.native-account-row-actions{margin-left:0}
+ .account-list-compact .claude-expired-flow>.native-account-row-actions>button[aria-label]{right:16px}
+}

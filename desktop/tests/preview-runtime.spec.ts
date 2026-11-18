@@ -47,10 +47,11 @@ test('preview network controls use formal read backoff and recover without repla
  await expect(account.getByText('可接单',{exact:true})).toBeVisible();
  await event(page,'runtime-connection','offline');
  await page.clock.runFor(10300);
- await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('正在重新连接 Hive');
+ await expect(app.getByRole('region',{name:'设备与 Hive',exact:true})).toContainText('Preview websocket heartbeat connection closed');
  await expect(account.getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
- await expect(app.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(account).toContainText('等待设备状态核对');
+ await account.locator('summary').filter({hasText:'查看原因'}).click();
  await expect(account).toContainText('HTTP 503');
  const failedReads=(await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='claude').length;
  await event(page,'runtime-connection','online');
@@ -62,10 +63,10 @@ test('preview network controls use formal read backoff and recover without repla
  for(const value of ['rejected','occupied']){
   await event(page,'runtime-connection',value);
   await page.clock.runFor(10100);
-  const region=app.getByRole('region',{name:'服务状态',exact:true});
-  await expect(region).toContainText('自动重连已停止，请先处理当前问题。');
+  const region=app.getByRole('region',{name:'设备与 Hive',exact:true});
+  await expect(region).toContainText(value==='rejected'?'HTTP 401':'HTTP 409');
   await expect(account.getByText('可接单',{exact:true})).toHaveCount(0);
-  await expect(region.getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeVisible();
+  await expect(region.getByRole('button',{name:'查看诊断',exact:true})).toBeVisible();
  }
 });
 

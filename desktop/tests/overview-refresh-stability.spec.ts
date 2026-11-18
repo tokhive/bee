@@ -85,28 +85,27 @@ for(const [locale,width] of [['zh',1200],['en',860]] as const){
    await noWrites(page);
   });
  }
- test(`manual binding check keeps confirmed identity without replacing it (${locale}, ${width})`,async({page})=>{
+ test(`scheduled binding check keeps confirmed identity without replacing it (${locale}, ${width})`,async({page})=>{
   await scene(page,'stopped',locale,width);
   const identity=await page.locator('.device-card-facts').innerText();
   await hold(page,'device_status');
-  await page.getByRole('button',{name:/^(设备操作|Device actions)$/}).click();
-  await page.getByRole('menuitem',{name:/^(修复设备绑定|Repair device binding)$/}).click();
+  await page.clock.runFor(10100);
   await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
   expect(await page.locator('.device-card-facts').innerText()).toBe(identity);
   await expect(page.locator('.device-loading')).toHaveCount(0);
   await page.evaluate(()=>(window as any).releaseRefresh());
-  await expect(page.getByRole('status').filter({hasText:/设备绑定正常|Device binding is healthy/})).toBeVisible();
-  expect(await page.evaluate(()=>(window as any).manualRechecks)).toBe(1);await noWrites(page);
+  await settled(page);expect(await page.locator('.device-card-facts').innerText()).toBe(identity);
+  expect(await page.evaluate(()=>(window as any).manualRechecks??0)).toBe(0);await noWrites(page);
  });
 }
 
-test('manual retry joins a background read without hiding its failure',async({page})=>{
+test('manual retry joins a background read and restores its failure after readback',async({page})=>{
  await scene(page,'device-error');await settled(page);await hold(page,'device_status');await page.clock.runFor(10100);
  await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
  const button=page.getByRole('button',{name:'重试连接',exact:true});
  const evidence=page.locator('.device-card .first-launch-failure');const copy=await evidence.innerText();
- await button.click();expect(await evidence.innerText()).toBe(copy);
- await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();
+ await button.click();await expect(page.getByRole('heading',{name:'正在连接 Hive',exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();expect(await evidence.innerText()).toBe(copy);
  expect(await page.evaluate(()=>(window as any).manualRechecks)).toBe(1);await noWrites(page);
 });
 
@@ -125,18 +124,10 @@ test('a startup checking event hides stale account actions until its ready readb
   }});
  });
  await scene(page,'stopped');await settled(page);await focusAndScroll(page);const before=await position(page);
- await page.evaluate(()=>{
-  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
-  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
-   const result=await invoke(command,args);
-   if(command==='startup_recheck')w.startupListener({payload:{...result,state:'checking'}});
-   return result;
-  };
- });
- await hold(page,'device_status');const button=page.getByRole('button',{name:/^(设备操作|Device actions)$/,exact:true});await button.click();await page.getByRole('menuitem',{name:'修复设备绑定',exact:true}).click();
- await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
- await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toBeVisible();await expect(page.locator('.native-account-row-actions button:enabled')).toHaveCount(0);await noWrites(page);
- await page.evaluate(()=>(window as any).releaseRefresh());await expect(button).toBeEnabled();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toHaveCount(0);await noWrites(page);
+ const button=page.getByRole('button',{name:/^(设备操作|Device actions)$/,exact:true});
+ await page.evaluate(async()=>{const w=window as any;const ready=await w.__TAURI_INTERNALS__.invoke('startup_status');w.checkingReady={...ready,revision:ready.revision+2};w.startupListener({payload:{...ready,state:'checking',revision:ready.revision+1}});});
+ await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toHaveCount(0);await expect(page.locator('.native-account-row-actions button:enabled')).toHaveCount(0);await noWrites(page);
+ await page.evaluate(()=>{const w=window as any;w.startupListener({payload:w.checkingReady});});await expect(button).toBeEnabled();await expect(page.getByRole('region',{name:'平台账号列表',exact:true})).toBeVisible();await expect(page.getByRole('heading',{name:'正在启动 Bee…',exact:true})).toHaveCount(0);await noWrites(page);
 });
 
 test('device failure keeps the last identity during retry and confirms it again after success',async({page})=>{
@@ -145,12 +136,12 @@ test('device failure keeps the last identity during retry and confirms it again 
  await page.evaluate(()=>{const w=window as any;w.failRefresh=true;w.releaseRefresh();});
  const failure=page.locator('.device-card .first-launch-failure');await expect(failure).toBeVisible();
  await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText('GET device_status fixture HTTP 503');await page.keyboard.press('Escape');
- await expect(page.getByText('上次确认的设备，当前待核对。',{exact:true})).toBeVisible();
- await expect(page.locator('.device-card-facts dd').nth(1)).toHaveText('owner@example.test');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeDisabled();
+ await expect(page.locator('.device-card-facts')).toHaveAttribute('aria-label','上次确认的设备，当前待核对。');
+ await expect(page.locator('.device-card-facts dd').nth(1)).toHaveText('owner@example.test');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);
  await hold(page,'device_status');const copy=await failure.innerText();
  const button=page.getByRole('button',{name:'重试连接',exact:true});await button.click();
  await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
- expect(await failure.innerText()).toBe(copy);await expect(page.locator('.device-loading')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'正在连接 Hive',exact:true})).toBeVisible();await expect(page.locator('.device-card-facts dd').nth(1)).toHaveText('owner@example.test');await expect(page.locator('.device-loading')).toHaveCount(0);
  await page.evaluate(()=>{const w=window as any;w.failRefresh=false;w.releaseRefresh();});
  await expect(failure).toHaveCount(0);await expect(page.getByText('上次确认的设备，当前待核对。',{exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeEnabled();await noWrites(page);
 });

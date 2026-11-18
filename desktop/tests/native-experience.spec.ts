@@ -685,8 +685,10 @@ test('startup automatic observation ends at sixty seconds without replaying reco
 test('failed first startup query is visible and keeps account actions unavailable until readback',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>command==='startup_status'?Promise.reject({code:'STARTUP_READ_FAILED',message:'startup receipt channel rejected the read'}):invoke(command==='startup_query'?'startup_status':command,args);});
- await page.goto('/');await nav(page,'AI 账号').click();
- const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('状态待核对');
+ await page.goto('/');
+ const notice=page.getByTestId('startup-recovery').filter({visible:true});await expect(notice).toContainText('状态待核对');
+ await expect(page.getByRole('alert')).toHaveCount(1);
+ await expect(page.getByRole('button',{name:'查看诊断',exact:true})).toHaveCount(1);
  await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('startup receipt channel rejected the read');
  await expect(page.getByRole('button',{name:'接入账号',exact:true})).toHaveCount(0);expect(await calls(page,'account_defaults')).toEqual([]);
  await notice.getByRole('button',{name:'重新核对',exact:true}).click();await expect(notice).toBeHidden();
@@ -697,7 +699,7 @@ test('unsupported Hive recovery gives an honest next step and no ineffective que
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>['startup_status','startup_query'].includes(command)?Promise.resolve({state:'blocked',failure:{code:'RECOVERY_SERVER_UNSUPPORTED',message:'Hive runtime recovery protocol unavailable: HTTP 404; original guard retained'},instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:2,can_retry:false,recovering:false}):invoke(command,args);});
  await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('需要先升级 Hive');
- await expect(notice.getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();await expect(page.getByRole('alert')).toHaveCount(1);
+ await expect(notice.getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'设备操作',exact:true})).toHaveCount(0);await expect(page.getByRole('alert')).toHaveCount(1);
  await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('HTTP 404');
  await notice.getByRole('button',{name:'查看诊断',exact:true}).click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);
@@ -733,7 +735,7 @@ test('startup exhausted observation immediately offers manual query and retains 
    return invoke(command==='startup_query'?'startup_status':command,args);
   };
  });
- await page.clock.install();await page.goto('/');const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('正在启动 Bee…');
+ await page.clock.install();await page.goto('/');const notice=page.locator('[data-testid=startup-recovery]:visible');await expect(notice).toContainText('正在启动 Bee…');
  await page.evaluate(()=>{(window as any).startupReadFails=true;});await page.clock.runFor(9500);await expect(notice.getByRole('heading')).toHaveText('状态待核对');await expect(notice).toHaveAttribute('aria-busy','false');await expect(notice).toContainText('上次确认：');
  const count=(await calls(page,'startup_status')).length;await page.clock.runFor(20000);expect((await calls(page,'startup_status')).length).toBe(count);
  await notice.getByRole('button',{name:'重新核对',exact:true}).click();await expect(notice).toBeHidden();expect(await calls(page,'runtime_start')).toEqual([]);

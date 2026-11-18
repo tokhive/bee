@@ -8,8 +8,11 @@ async function open(page:Page,scene:string){
 const calls=(page:Page)=>page.evaluate(()=>(window as any).calls as {command:string;args:any}[]);
 const replacements=new Set(['device_begin','device_recovery_start','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','supply_set_paused']);
 
-test('English inline pairing keeps the confirmation URL accessible without approving the device',async({page})=>{
+test('English inline pairing reveals the confirmation URL when copying fails without approving the device',async({page})=>{
  await open(page,'recovery-pending&locale=en');
+ await expect(page.getByText('Confirmation URL',{exact:true})).toHaveCount(0);
+ await page.evaluate(()=>Object.defineProperty(navigator.clipboard,'writeText',{configurable:true,value:async()=>{throw new Error('clipboard denied for test');}}));
+ await page.getByRole('button',{name:'Copy confirmation URL',exact:true}).click();
  await page.getByText('Confirmation URL',{exact:true}).click();
  await expect(page.locator('.binding-url')).toContainText('https://hive.example/');
  await expect(page.getByRole('button',{name:'Open Hive confirmation page',exact:true})).toBeVisible();
@@ -58,6 +61,8 @@ for(const [kind,title,action,message] of [
  await expect(page.locator('.device-card .native-runtime-health')).toHaveCount(0);
  await expect(page.getByRole('button',{name:action,exact:true})).toBeEnabled();
  await expect(page.locator('main>.startup-recovery-notice')).toHaveCount(0);
+ await expect(page.locator('.overview-accounts-card .account-conditions')).toHaveCount(0);
+ await expect(page.locator('.device-card>.device-note')).toHaveCount(0);
  await expect(page.getByText('需要更新 Bee',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
  await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText(message);
@@ -137,6 +142,8 @@ test('startup binding rejection has one inline fault while preserving the known 
  await expect(card.getByRole('button',{name:'修复设备绑定',exact:true})).toBeEnabled();
  await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true})).toContainText('bbbbbbbbbbbbbbbb');
  await expect(page.locator('main>.startup-recovery-notice')).toHaveCount(0);
+ await expect(page.locator('.overview-accounts-card .account-conditions')).toHaveCount(0);
+ await expect(page.locator('.device-card>.device-note')).toHaveCount(0);
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
 });
 

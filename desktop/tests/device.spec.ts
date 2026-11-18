@@ -116,7 +116,7 @@ test('Hive expiry discovered while opening replaces the stale website action wit
  await initial(page,'?scene=device-pending');const button=page.getByRole('button',{name:'打开 Hive 确认网页',exact:true});await expect(button).toBeEnabled();
  await page.clock.setFixedTime(new Date(base.getTime()+601000));await button.click();
  await expect(page.getByText('Hive 已确认配对码过期。',{exact:true})).toBeVisible();
- await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();await expect(button).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'重新获取配对码',exact:true})).toBeEnabled();await expect(button).toHaveCount(0);
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);await expect(page.getByText('浏览器已打开',{exact:true})).toHaveCount(0);
  expect(await deviceCalls(page,'device_open')).toHaveLength(1);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
@@ -351,7 +351,7 @@ test('local expiry waits for Hive confirmation before offering another pairing r
  await page.clock.runFor(2100);await expect(page.getByText('配对码有效期已到。Bee 正在向 Hive 确认最新状态，请稍等，结果会自动更新。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toHaveCount(0);expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
  await page.evaluate(()=>{(window as any).hiveExpired=true;});
- await page.clock.runFor(2100);await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
+ await page.clock.runFor(2100);await expect(page.getByRole('button',{name:'重新获取配对码',exact:true})).toBeEnabled();expect(await deviceCalls(page,'device_begin')).toHaveLength(0);
 });
 test('a stale owner dialog cannot submit after the coordinator sees a newer transaction revision',async({page})=>{
  await page.clock.install({time:new Date('2026-11-02T00:00:00Z')});await page.addInitScript(recovery=>{(window as any).recovery=recovery;},recoveryView('awaiting_owner_confirmation'));await page.goto('/');

@@ -80,7 +80,7 @@ async function setup(page:Page,scenario:Scenario={}){
  const accounts={openai:preparedAccount('openai',scenario),claude:preparedAccount('claude',{})};
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({runtimeEnabled:true,accounts})});(${installAutoServiceReplies.toString()})(${JSON.stringify(scenario)});`});
  await page.goto('/');
- await expect(service(page)).toBeVisible();
+ if(scenario.connection==='occupied')await expect(page.getByRole('region',{name:'设备与 Hive',exact:true})).toBeVisible();else await expect(service(page)).toBeVisible();
 }
 async function accountsPage(page:Page){
  await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
@@ -193,7 +193,7 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await setup(page,{selected:true});
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=true;});
   await reconcile(page);
-  await expect(service(page)).toContainText('贡献状态待确认');
+  await expect(page.getByRole('heading',{name:'暂时无法确认 Hive 状态',exact:true})).toBeVisible();
   await expect(page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true})).toBeEnabled();
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=false;});
   const before=(await calls(page,'runtime_snapshot')).length;
@@ -209,8 +209,8 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await setup(page,{connection:'occupied'});
   const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
   await expect(device).toContainText('Hive 连接归属未确认');
-  await expect(service(page)).toContainText('设备连接已被占用');
-  await expect(device.getByRole('button',{name:'查看诊断',exact:true})).toBeEnabled();
+  await expect(page.locator('.desktop-side-status')).toContainText('设备连接已被占用');
+  await device.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText('owned_session=false');await page.keyboard.press('Escape');
   await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
   await noDailyControls(page);
   await device.getByRole('button',{name:'重试连接',exact:true}).click();

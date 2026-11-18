@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Dialog,DropdownMenu} from 'radix-ui';
-import {Copy,ExternalLink,MoreHorizontal} from 'lucide-react';
+import {MoreHorizontal} from 'lucide-react';
 import {currentLocale,formatDate} from '../../i18n/index';
 import {Button} from '../../components/ui';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
@@ -72,6 +72,9 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const recheck=async(trigger?:HTMLButtonElement)=>{if(busy||!canRefresh)return;setQuerying(true);try{if(recover&&transaction&&active&&phase!=='saving')await recover('continue_checking',transaction);else if(problem?.action==='retry'&&retryConnection)await retryConnection();else await refresh();}finally{if(mounted.current){setQuerying(false);requestAnimationFrame(()=>{if(mounted.current)(trigger?.isConnected?trigger:section.current?.previousElementSibling instanceof HTMLElement?section.current.previousElementSibling:section.current)?.focus({preventScroll:true});});}}};
  const headline=querying?(!active&&problem?.action==='retry'?'正在连接 Hive':cancelling?'正在核对取消结果…':active?'正在核对绑定结果…':'正在核对 Hive 状态…'):checking?'正在连接 Hive':cancelling?'取消结果尚未确认':cancelled?'设备尚未恢复贡献':!active&&problem?problem.title:locallyExpired?'配对码有效期已到':paused&&!embedded?(initialPairing?'设备绑定尚未完成':'重新绑定尚未完成'):phase==='saving'&&transaction?.failure?'绑定已完成，本机保存失败':phase==='pending'?(embedded?'等待目标 Hive 网页确认':'在 Hive 网页确认设备'):phase==='completed'&&!transaction?.old_identity?'设备已绑定':active?(initialPairing&&phase==='awaiting_confirmation'?'请绑定设备':phaseCopy[phase!]):problem?.title??'无法确认设备状态';
  const feedback=!issue&&repairResult?(repairResult==='healthy'?'设备绑定正常。':'设备绑定已恢复，接单选择保留。'):!issue&&phase==='completed'?'设备绑定已保存。':cancelled?'重新绑定已取消。':'';
+ const progressMenu=canCancel&&!querying&&!checking&&<DropdownMenu.Root open={progressOpen} onOpenChange={setProgressOpen}><DropdownMenu.Trigger asChild><Button ref={progressTrigger} variant="ghost" size="icon" aria-label={w('重新绑定操作')}><MoreHorizontal aria-hidden="true"/></Button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="device-actions-menu" align="end" sideOffset={4}><DropdownMenu.Item onSelect={event=>{event.preventDefault();setProgressOpen(false);ask(progressTrigger.current!,'cancel_pairing');}}>{w('取消重新绑定')}</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root>;
+ const showConfirmationUrl=embedded||!!copyError||failures.some(f=>f.code.startsWith('BROWSER_')||f.check==='browser_open');
+ const expiryLabel=pairing&&new Date(pairing.expires_at).toDateString()===new Date(now).toDateString()?new Intl.DateTimeFormat(currentLocale(),{hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(pairing.expires_at)):pairing?formatDate(pairing.expires_at,currentLocale()):'';
  return <>{switchFeedback}{feedback&&<DeviceFeedback id={`${transaction?.operation_id??address}:${feedback}`} message={feedback}/>}<section ref={section} tabIndex={-1} className={embedded?"device-pairing device-pairing-embedded":"native-device-summary device-pairing device-card"} aria-label={w(title??'设备与 Hive')}>
   {!embedded&&<div className="device-card-heading"><h2>{w(title??'设备与 Hive')}</h2>
    {onSwitchHive&&<DropdownMenu.Root open={menuOpen} onOpenChange={setMenuOpen}><DropdownMenu.Trigger asChild><Button ref={menuTrigger} data-device-menu variant="ghost" size="icon" aria-label={w('设备操作')} aria-busy={checking}><MoreHorizontal aria-hidden="true"/></Button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="device-actions-menu" align="end" sideOffset={4} collisionPadding={12} onCloseAutoFocus={event=>{const action=afterMenuClose.current;if(action){event.preventDefault();afterMenuClose.current=null;queueMicrotask(action);}}}>
@@ -84,12 +87,12 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
   {switchStatus}
   {(active||cancelled||issue||checking)&&!initialLoading&&!switching&&<div className="device-transaction" tabIndex={-1}>
    <div className="device-transaction-heading"><h3 className="pairing-phase" aria-live="polite">{w(headline)}</h3>
-    {canCancel&&!querying&&!checking&&<DropdownMenu.Root open={progressOpen} onOpenChange={setProgressOpen}><DropdownMenu.Trigger asChild><Button ref={progressTrigger} variant="ghost" size="icon" aria-label={w('重新绑定操作')}><MoreHorizontal aria-hidden="true"/></Button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="device-actions-menu" align="end" sideOffset={4}><DropdownMenu.Item onSelect={event=>{event.preventDefault();setProgressOpen(false);ask(progressTrigger.current!,'cancel_pairing');}}>{w('取消重新绑定')}</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root>}
+    {phase!=='pending'&&progressMenu}
    </div>
    {(checking||querying&&!active&&problem?.action==='retry')&&<p role="status">{w('正在重试连接…')}</p>}
    {!querying&&!checking&&<>
    {transactionIntro}
-   {!querying&&!cancelling&&pairing&&(phase==='pending'||phase==='expired')&&<div className="binding-pairing-code"><p>{w('配对码')}</p><div><strong className="pair-code">{pairing.code}</strong>{!embedded&&<Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}><Copy aria-hidden="true"/>{w('复制')}</Button>}</div>{(!embedded||phase!=='pending'||locallyExpired)&&<small>{w(phase==='expired'?'Hive 已确认配对码过期':Date.parse(pairing.expires_at)<=now?'有效期已到，请重新获取配对码。':'有效期至')}{phase!=='expired'&&Date.parse(pairing.expires_at)>now&&' '+formatDate(pairing.expires_at,currentLocale())}</small>}{embedded&&phase==='pending'&&!locallyExpired&&<span>{w('· 仅在目标 Hive 确认，不更改当前 Hive。')}</span>}</div>}
+   {!querying&&!cancelling&&pairing&&(phase==='pending'||phase==='expired')&&<div className="binding-pairing-code"><p>{w('配对码')}</p><div><strong className="pair-code">{pairing.code}</strong>{!embedded&&<Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制')}</Button>}</div>{(!embedded||phase!=='pending'||locallyExpired)&&<small>{w(phase==='expired'?'Hive 已确认配对码过期':Date.parse(pairing.expires_at)<=now?'有效期已到，请重新获取配对码。':'有效期至')}{phase!=='expired'&&Date.parse(pairing.expires_at)>now&&' '+expiryLabel}</small>}{embedded&&phase==='pending'&&!locallyExpired&&<span>{w('· 仅在目标 Hive 确认，不更改当前 Hive。')}</span>}</div>}
    {!embedded&&!querying&&!cancelling&&phase==='pending'&&<p>{w(transaction?.old_identity?'请登录原设备所属的 Hive 账号，核对配对码和旧设备后，确认重新绑定。':'请登录 Hive 账号，核对配对码后，确认设备归属。')}</p>}
    {phase==='awaiting_confirmation'&&<p>{w(initialPairing?'请在 Hive 网页核对配对码，确认设备归属。':'请在 Hive 网页核对配对码与原设备，确认重新绑定。')}</p>}
    {!querying&&!cancelling&&((phase==='pending'||phase==='awaiting_confirmation')&&!!recovery&&!initialPairing||phase==='awaiting_owner_confirmation')&&<p className="repair-impact">{w('重新绑定完成后，需要重新接入 AI 账号。')}</p>}
@@ -109,7 +112,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {!active&&credentialFault&&!cancelled&&<Button disabled={busy||switching} onClick={event=>doRepair(event.currentTarget)}>{w('修复设备绑定')}</Button>}
     {phase==='awaiting_confirmation'&&<Button disabled={busy||!recover} onClick={event=>ask(event.currentTarget,'begin_pairing')}>{w(initialPairing?'绑定设备':'重新绑定 Hive')}</Button>}
     {phase==='awaiting_owner_confirmation'&&<Button disabled={busy||!recover} onClick={event=>ask(event.currentTarget,'adopt_owner')}>{w('确认采用新归属')}</Button>}
-    {!querying&&!cancelling&&pairing&&phase==='pending'&&<Button disabled={busy||Date.parse(pairing.expires_at)<=now} onClick={open}>{w('打开 Hive 确认网页')}{!embedded&&<ExternalLink aria-hidden="true"/>}</Button>}
+    {!querying&&!cancelling&&pairing&&phase==='pending'&&<Button disabled={busy||Date.parse(pairing.expires_at)<=now} onClick={open}>{w('打开 Hive 确认网页')}</Button>}
     {phase==='saving'&&transaction?.failure&&<Button disabled={busy} onClick={check}>{w('继续保存')}</Button>}
     {(phase==='expired'||locallyExpired)&&<Button disabled={busy||!recover} onClick={event=>ask(event.currentTarget,locallyExpired?'restart_pairing':'renew_expired')}>{w('重新获取配对码')}</Button>}
     {recover&&active&&(cancelling||unknown||paused||phase==='blocked')&&!admin&&!locallyExpired&&<Button variant={pairing&&phase==='pending'?'outline':'default'} disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?'正在核对…':'重新核对')}</Button>}
@@ -117,20 +120,19 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {!active&&issue&&!credentialFault&&canRefresh&&<Button disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?(problem?.action==='retry'?'正在连接…':'正在核对…'):checking?'正在连接…':problem?.action==='retry'?'重试连接':'重新核对')}</Button>}
     {!embedded&&!querying&&!cancelling&&pairing&&phase==='pending'&&<Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button>}
     {(admin||failures.length>0&&problem?.action==='recheck')&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate({page:'diagnostics'})}>{w('查看诊断')}</Button>}
+    {phase==='pending'&&progressMenu}
     {extraActions}
    </div>
-   {!querying&&!cancelling&&pairing&&phase==='pending'&&<>{!embedded&&<p className="device-note">{w(paused?'自动核对已暂停，网页确认后请点击重新核对。':'完成确认后，此处会自动更新。')}</p>}<details className="binding-url"><summary>{w(embedded?'切换详情':'确认网址')}</summary>{transactionDetails}{embedded&&<p>{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p>}<p>{pairing.verification_url}</p>{embedded&&<div className="binding-actions"><Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button><Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>}</details></>}
+   {!querying&&!cancelling&&pairing&&phase==='pending'&&<>{!embedded&&<p className="device-note">{w(paused?'自动核对已暂停，网页确认后请点击重新核对。':'完成确认后，此处会自动更新。')}</p>}{showConfirmationUrl&&<details className="binding-url"><summary>{w(embedded?'切换详情':'确认网址')}</summary>{transactionDetails}{embedded&&<p>{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p>}<p>{pairing.verification_url}</p>{embedded&&<div className="binding-actions"><Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button><Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>}</details>}</>}
    {!embedded&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
    </>}
   </div>}
   {!(active||issue)&&startupNotice}
-  {!embedded&&(initialLoading?<p className="device-loading" role="status">{w('正在读取本机配置与设备状态…')}</p>:<dl className="device-card-facts">
+  {!embedded&&(initialLoading?<p className="device-loading" role="status">{w('正在读取本机配置与设备状态…')}</p>:<dl className="device-card-facts" aria-label={identity&&issue?w('上次确认的设备，当前待核对。'):!identity&&context?.device_id?w('上次保存的设备信息'):undefined}>
    <div><dt>{w('本机设备')}</dt><dd>{deviceName}</dd></div>
    {(identity||context?.device_id)&&<div><dt>{w('归属账号')}</dt><dd>{identity?.owner_email??w('待核对')}</dd></div>}
    {address&&<div><dt>Hive</dt><dd>{address}</dd></div>}
   </dl>)}
-  {!embedded&&!switching&&!initialLoading&&identity&&issue&&<p className="device-note">{w('上次确认的设备，当前待核对。')}</p>}
-  {!embedded&&!switching&&!initialLoading&&!identity&&context?.device_id&&<p className="device-note">{w('上次保存的设备信息')}</p>}
 
   {embedded&&!transaction&&!issue&&view?.state==='unbound'&&<div className="binding-actions"><Button disabled={busy||!hive.trim()||!name.trim()} onClick={()=>begin(hive.trim(),name.trim())}>{w('生成目标配对码')}</Button>{extraActions}</div>}
   {!embedded&&!transaction&&!issue&&view?.state==='unbound'&&<form className="settings-form" onSubmit={event=>{event.preventDefault();if(!busy)begin(hive.trim(),name.trim());}}><label>{w('Hive 地址')}<input type="url" required readOnly={inputDraft?.hiveReadOnly} value={hive} disabled={busy} onChange={event=>setHive(event.target.value)}/></label><label>{w('设备名称')}<input required maxLength={80} value={name} disabled={busy} onChange={event=>setName(event.target.value)}/></label><Button disabled={busy||!hive.trim()||!name.trim()}>{w('继续绑定设备')}</Button></form>}

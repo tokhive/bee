@@ -7,11 +7,11 @@ async function scene(page:Page,id:string){
  await page.waitForFunction(()=>Boolean((window as any).__beePreviewReady));
 }
 test('a device action waiting for observation is cancelled when the binding changes',async({page})=>{
- await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');
- await expect(page.getByRole('button',{name:'打开 Hive 控制台',exact:true})).toBeEnabled();
- await page.evaluate(()=>{const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.contextReads=0;w.hiveOpens=0;w.__TAURI_INTERNALS__.invoke=(cmd:string,args:any)=>{if(cmd==='device_context')w.contextReads++;if(cmd==='hive_open'){w.hiveOpens++;return Promise.resolve();}return original(cmd,args);};});
+ await scene(page,'device-pending');
+ await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.contextReads=0;w.hiveOpens=0;w.__TAURI_INTERNALS__.invoke=(cmd:string,args:any)=>{if(cmd==='device_context')w.contextReads++;if(cmd==='device_open'){w.hiveOpens++;return Promise.resolve();}return original(cmd,args);};});
  await hold(page,'device_status');await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
- await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();
+ await page.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
  expect(await page.evaluate(()=>(window as any).hiveOpens)).toBe(0);
  const before=await page.evaluate(()=>{const w=window as any;w.bindingRevision=(w.bindingRevision??1)+1;w.release();return w.contextReads;});
  await expect.poll(()=>page.evaluate(()=>(window as any).contextReads)).toBeGreaterThan(before);
@@ -57,7 +57,7 @@ test('a failed runtime read cancels the waiting start without replay',async({pag
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=page.getByRole('button',{name:'重试准备',exact:true});await expect(button).toBeEnabled();await button.click();
  await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
- await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(0);
+ await expect(page.getByRole('heading',{name:'Hive 暂不可用',exact:true})).toBeVisible();expect(await calls(page,'runtime_start')).toHaveLength(0);
  await page.clock.runFor(10100);expect(await calls(page,'runtime_start')).toHaveLength(0);
 });
 
@@ -106,8 +106,8 @@ test('repeated runtime read failures retain feedback and continue read-only reco
  });
  for(let attempt=0;attempt<3;attempt++){
   await page.clock.runFor([10000,2000,4000][attempt]);await expect.poll(()=>page.evaluate(()=>(window as any).failedRuntimeReads)).toBe(attempt+1);
-  await expect(page.getByText('贡献状态待确认，等待已安排的核对。',{exact:true})).toBeVisible();
-  await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeDisabled();
+  await expect(page.getByRole('heading',{name:'Hive 暂不可用',exact:true})).toBeVisible();
+  await expect(page.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);
  }
  await page.evaluate(()=>(window as any).failRuntimeReads=false);await page.clock.runFor(8000);
  await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeEnabled();expect(await calls(page,'runtime_start')).toHaveLength(0);
@@ -178,7 +178,7 @@ for(const kind of ['start','stop'])test(kind==='start'?'central readback rejects
  }
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_start'||command==='runtime_stop'){w.receiptRevision=result.result.operation.revision;w.regressRuntime=true;}if(command==='runtime_snapshot'&&w.regressRuntime)result.result.runtime.revision=w.receiptRevision-1;return result;};});
  await page.getByRole('button',{name:'重试准备',exact:true}).click();
- await expect(page.getByText('贡献状态待确认，核对已暂停。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'暂时无法确认 Hive 状态',exact:true})).toBeVisible();
  expect(await calls(page,'runtime_'+kind)).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
  const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');expect(evidence.runtime.code).toBe('DESKTOP_STALE_RESULT');expect(evidence.runtime.message).toMatch(/runtime revision actual=.*required>=/);
@@ -242,13 +242,13 @@ test('retry A waits for the original request then recovers without changing Hive
  });
  await page.clock.runFor(10000);
  const card=page.getByRole('region',{name:/^(OpenAI 账号|添加账号)$/});
- await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toBeVisible();
+ await expect(card.getByText('状态待更新',{exact:true})).toBeVisible();await expect(card.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
  await expect(page.getByText('Hive 已连接',{exact:true})).toBeVisible();
  const runtimeReads=(await calls(page,'runtime_snapshot')).length;
  await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBeGreaterThan(runtimeReads);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'概览',exact:true}).click();await expect(card).toBeVisible();
  await page.evaluate(()=>{const w=window as any;w.retryFailure=false;w.pendingRequests=[];w.emitRequestSettled(w.retryRequest);});
- await expect(page.getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByText('状态待更新',{exact:true})).toBeVisible();
  await page.clock.runFor(999);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);
  await page.clock.runFor(1);await expect.poll(()=>page.evaluate(()=>(window as any).retryAttempts)).toBe(2);
  await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toHaveCount(0);

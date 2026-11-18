@@ -95,13 +95,15 @@ test('transaction phases expose only the permitted original-request actions',asy
  await expect(page.getByText('尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:/继续绑定设备|重新生成配对码|打开 Hive 确认网页|复制确认网址/})).toHaveCount(0);
  await page.evaluate(({pending,transaction})=>window.setWizardProps({view:{state:'expired',hive:pending.hive,name:pending.name,recovery:{...transaction,new_identity:null,phase:'expired'}}}),{pending,transaction});
- await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
- await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nbegin https://hive.example Work Mac');
+ await page.getByRole('button',{name:'重新获取配对码',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('refresh');
+ await page.getByRole('dialog').getByRole('button',{name:'确认重新配对',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nrecover restart_pairing');
  await page.evaluate(({pending,transaction})=>window.setWizardProps({view:{state:'pairing',hive:pending.hive,name:pending.name,recovery:{...transaction,new_identity:null,phase:'blocked'}}}),{pending,transaction});
  await expect(page.getByText('设备绑定暂时无法继续，请查看具体原因并导出诊断。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:/继续绑定设备|重新生成配对码|重新检查设备/})).toHaveCount(0);
  await page.getByRole('button',{name:'查看诊断',exact:true}).click();
- await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nbegin https://hive.example Work Mac\ndiagnostics');
+ await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nrecover restart_pairing\ndiagnostics');
 });
 
 test('startup reads and actual failures block the form while the authorized pre-creation retry preserves fields',async({page})=>{

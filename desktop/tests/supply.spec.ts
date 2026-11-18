@@ -73,10 +73,10 @@ test('an uncertain write retries GET automatically, preserves diagnostics and ne
  await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));
  await page.evaluate(()=>{(window as unknown as {fail:string}).fail='PUT /api/bee/platforms/openai HTTP 503; result unconfirmed';});
  await openai.getByRole('button',{name:'暂停接单',exact:true}).click();
- await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();await expect(openai.getByText('可接单',{exact:true})).toHaveCount(0);
+ await expect(card(page,'OpenAI').getByText('状态待更新',{exact:true})).toBeVisible();await expect(openai.getByText('可接单',{exact:true})).toHaveCount(0);
  await page.clock.runFor(9999);expect(await page.evaluate(()=> (window as unknown as {calls:unknown[]}).calls.length)).toBe(3);
  await page.evaluate(()=>{const w=window as unknown as {fail:string;delay:number};w.fail='';w.delay=500;});await page.clock.runFor(1);
- await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('重试中…',{exact:true})).toBeVisible();await diagnostics(page,'PUT /api/bee/platforms/openai HTTP 503');
+ await expect(card(page,'OpenAI').getByText('状态待更新',{exact:true})).toBeVisible();await diagnostics(page,'PUT /api/bee/platforms/openai HTTP 503');
  await page.clock.runFor(2200);await expectPaused(page,'OpenAI');await expect(page.getByRole('alert')).toHaveCount(0);
  expect(await page.evaluate(()=> (window as unknown as {calls:{command:string}[]}).calls.filter(c=>c.command==='supply_set_paused').length)).toBe(1);
  await expect(page.getByRole('button',{name:'重新核对平台'})).toHaveCount(0);
@@ -89,12 +89,12 @@ test('independent platform polling waits ten seconds after success and backs off
  await page.clock.runFor(9999);expect(await calls(page,'supply_status')).toHaveLength(2);
  await page.evaluate(()=>{const w=window as any;w.fail='GET /api/bee/platforms/openai HTTP 502';w.failStatus=502;});await page.clock.runFor(1);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(4);await page.clock.runFor(700);
- await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(card(page,'OpenAI').getByText('状态待更新',{exact:true})).toBeVisible();
  await page.clock.runFor(999);expect(await calls(page,'supply_status')).toHaveLength(4);await page.clock.runFor(1);await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(5);await page.clock.runFor(1000);
  await expect.poll(async()=>(await calls(page,'supply_status')).length).toBe(6);await page.clock.runFor(700);
  const reads=await calls(page,'supply_status');
  for(const platform of ['openai','claude']){const own=reads.filter(c=>c.platform===platform);expect(own).toHaveLength(3);expect(own[1].startedAt-own[0].completedAt!).toBe(10000);expect(own[2].startedAt-own[1].completedAt!).toBe(platform==='openai'?1000:2000);}
- await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(card(page,'OpenAI').getByText('状态待更新',{exact:true})).toBeVisible();
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
 });
 test('expired snapshots never show a current successful state or enable writes',async({page})=>{
@@ -105,7 +105,7 @@ test('fresh background reads stay quiet and hide previous success only when thir
  await fixture(page,{ready:true});await page.clock.install();await page.goto('/');const openai=card(page,'OpenAI');await expect(openai.getByText('可接单',{exact:true})).toBeVisible();
  await page.evaluate(()=>{(window as unknown as {delay:number}).delay=60000;});await page.clock.runFor(11000);
  await expect(openai.getByText('可接单',{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('核对中…',{exact:true})).toHaveCount(0);
- await page.clock.runFor(20000);await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('核对中…',{exact:true})).toBeVisible();await expect(openai.getByText('可接单',{exact:true})).toHaveCount(0);await expect(openai.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await page.clock.runFor(20000);await expect(openai.getByText('状态待更新',{exact:true})).toBeVisible();await expect(openai.getByText('可接单',{exact:true})).toHaveCount(0);await expect(openai.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
  expect(await page.evaluate(()=>(window as any).platformMaxActive)).toEqual({openai:1,claude:1});expect(await page.evaluate(()=>(window as any).maxActive)).toBe(2);
  expect(await page.evaluate(()=>(window as any).platformActive)).toEqual({openai:1,claude:1});
 });
@@ -163,7 +163,7 @@ test('one platform read failure preserves the other platform fresh report',async
  await expectPaused(page,'Claude');
  await page.evaluate(()=>{const w=window as unknown as {fail:string;failPlatform:string};w.fail='GET openai HTTP 503';w.failPlatform='openai';});
  await page.clock.runFor(11000);
- await expect(page.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();await diagnostics(page,'GET openai HTTP 503');
+ await expect(card(page,'OpenAI').getByText('状态待更新',{exact:true})).toBeVisible();await diagnostics(page,'GET openai HTTP 503');
  await expectPaused(page,'Claude');await expect(card(page,'Claude').getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
 });
 

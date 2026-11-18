@@ -56,9 +56,11 @@ test('selected accounts inspect connection evidence and preserve pause after rec
  await expect(status(app)).toHaveText('已暂停');
  await expect(card(app)).toContainText('Hive 未看到此平台的 Bee 连接');
  await card(app).getByRole('button',{name:'查看相关设置',exact:true}).click();
- await expect(app.getByText('Hive 拒绝连接',{exact:true})).toBeVisible();
- await app.getByRole('region',{name:'服务状态',exact:true}).getByText('查看失败详情',{exact:true}).click();
- await expect(app.getByRole('region',{name:'服务状态',exact:true}).locator('pre')).toContainText('401');
+ const device=app.getByRole('region',{name:'设备与 Hive',exact:true});
+ await expect(device).toContainText('HTTP 401');
+ await device.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(app.getByRole('dialog',{name:'错误详情'})).toContainText('401');
+ await page.keyboard.press('Escape');
  await event(page,'runtime-connection','online');await settle(page);
  await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
  await expect(status(app)).toHaveText('已暂停');

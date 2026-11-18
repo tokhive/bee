@@ -36,7 +36,7 @@ test('formal first pairing saves the entered Hive and name and becomes online wi
 test('revoked credential recovery requires consent and explicit owner adoption and keeps all pages usable',async({page})=>{
  const app=await open(page,'device-revoked-source-missing');
  const device=app.getByRole('region',{name:'设备与 Hive',exact:true});await device.getByRole('button',{name:'修复设备绑定',exact:true}).click();const rebind=device.getByRole('button',{name:'重新绑定 Hive',exact:true});
- await expect(device).toContainText('上次确认的设备，当前待核对。');
+ await expect(device.locator('.device-card-facts')).toHaveAttribute('aria-label','上次确认的设备，当前待核对。');
  await rebind.click();
  await app.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
  await page.clock.runFor(0);
@@ -49,8 +49,8 @@ test('revoked credential recovery requires consent and explicit owner adoption a
  await device.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
  await expect(device.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  await event(page);
- await page.clock.runFor(2100);
- await expect(device.locator('.pairing-phase')).toHaveText('新设备归属与原设备不同');
+ // One tick advances the transaction; the next observes its confirmed receipt.
+ await expect.poll(async()=>{await page.clock.runFor(2100);return device.locator('.pairing-phase').textContent();}).toBe('新设备归属与原设备不同');
  await device.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(app.getByRole('dialog')).toContainText('owner@example.test');
  await expect(app.getByRole('dialog')).toContainText('new-owner@example.test');
@@ -58,8 +58,8 @@ test('revoked credential recovery requires consent and explicit owner adoption a
  await expect(device.locator('.pairing-phase')).toHaveText('新设备归属与原设备不同');
  await device.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await app.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
- await expect(device).toContainText('设备绑定已保存。');
- await expect(device.locator('.pairing-phase')).toContainText('设备已重新绑定');await page.clock.runFor(2100);
+ await expect(device).toContainText('new-owner@example.test');
+ await expect(device.locator('.pairing-phase')).toHaveCount(0);await page.clock.runFor(2100);
  const runtime=app.getByRole('region',{name:'服务状态',exact:true});
  await expect(runtime).toContainText('贡献未启动');await expect(runtime).toContainText('Hive 已连接');
  await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();

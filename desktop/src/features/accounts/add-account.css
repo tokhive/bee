@@ -73,3 +73,7 @@
 .add-account-platforms .ui-button{box-shadow:none}
 .add-account-platforms strong{font-weight:700}
 .add-account-platforms small{font-weight:400;color:var(--muted)}
+
+/* Preserve the inline small-label line box from the approved identity panel. */
+.add-account-identity small{display:inline}
+.add-account-body .add-account-platforms .ui-button{min-height:87px}

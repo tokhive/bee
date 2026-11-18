@@ -8,7 +8,7 @@ async function until(find){
  while(Date.now()-start<15000){const result=find();if(result)return result;await new Promise(resolve=>setTimeout(resolve,30));}
  throw new Error(`preview target timeout; scene=${scene.id}; step=${step}; waited_ms=${Date.now()-start}; required=enabled formal UI target`);
 }
-const button=(name,scope=document)=>[...scope.querySelectorAll('button')].find(element=>element.textContent.trim()===name&&!element.disabled);
+const button=(name,scope=document)=>[...scope.querySelectorAll('button')].find(element=>(element.getAttribute('aria-label')===name||element.textContent.trim()===name)&&!element.disabled);
 try{
  await installPreviewFixture(scene.id);
  installPreviewSession(scene.id);
@@ -22,7 +22,7 @@ try{
  await until(()=>document.querySelector('main h1'));
  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
  if(scene.page==='diagnostics'){(await until(()=>button(t('运行诊断')))).click();if(scene.id==='diagnostics-export-unknown'){(await until(()=>button(t('导出脱敏报告')))).click();(await until(()=>button(t('确认导出')))).click();}}
- if(scene.id==='account-reading'){step='读取 OpenAI 登录';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();await until(()=>document.querySelector('.add-account h2')?.textContent.includes(t('正在读取并核验账号…')));}
+ if(scene.id==='account-reading'){step='读取 OpenAI 登录';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();await until(()=>document.querySelector('.add-account h3')?.textContent.includes(t('正在读取并核验账号…')));}
  if(scene.action){
   if(scene.page==='accounts'){
    step='等待正式账号来源初始化';

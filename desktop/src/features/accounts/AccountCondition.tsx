@@ -25,6 +25,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  for(const value of candidates){
   if(!value)continue;
   const error=normalizeFailure(value,'account_condition');
+  if(deviceBlock&&sameAccountFailure(error,accounts.deviceFailure))continue;
   if(!errors.some(previous=>sameAccountFailure(previous,error)))errors.push(error);
  }
  const visibleErrors=errors.filter(error=>!sameAccountFailure(error,inlineFailure));
@@ -58,7 +59,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>}<span>{t(title)}</span></p>
-  {deviceWait&&view&&<p className="account-action-help">{t(view.paused?'接单选择：暂停':'接单选择：允许')}</p>}
+  {deviceWait&&(view??runtime.view?.platforms[platform].supply)&&<p className="account-action-help">{t((view??runtime.view?.platforms[platform].supply)?.paused?'接单选择：暂停':'接单选择：允许')}</p>}
   {count>0&&<details className="account-conditions" open={expanded} onToggle={event=>setExpanded(event.currentTarget.open)}>
    <summary>{t('查看原因（{count}）',{count})}</summary>
    <ul>

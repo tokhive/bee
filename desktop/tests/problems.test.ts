@@ -212,3 +212,7 @@ test('resource conflict identifies an unexecuted attempt without claiming no pip
  assert.match(problem.details,/account_detect/);
  assert.match(problem.impact,/状态查询仍可继续/);
 });
+
+test('account registration mismatch keeps the exact identities check and generation evidence',()=>{
+ for(const match of ['true','false']){const message=`registered account differs from saved selection: fingerprint_match=${match} generation=2 expected=1`,value=normalizeFailure({code:'account_operation_unconfirmed',check:'account_operation_commit',platform:'claude',message,evidence:{}},'account_operation');for(const locale of ['zh','en'] as const){const p=presentFailure(value,locale);assert.match(p.summary,/2/);assert.match(p.summary,/1/);assert.ok(p.details.includes(message));if(locale==='zh')assert.ok(p.summary.includes(match==='false'?'身份':'版本'));else assert.doesNotMatch(p.summary,/\p{Script=Han}/u);}}
+});

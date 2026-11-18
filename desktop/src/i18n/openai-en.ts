@@ -1,4 +1,6 @@
 export const openaiEnglish:Record<string,string>={
+  "Hive 账号身份与本机记录不一致（Hive 版本 {actual}，本机 {expected}）。": "Hive account identity differs from the local record (Hive generation {actual}, local {expected}).",
+  "Hive 账号版本与本机记录不一致（Hive {actual}，本机 {expected}）。": "Hive account generation differs from the local record (Hive {actual}, local {expected}).",
   "账号已更换，接单状态以当前核对结果为准。": "Account changed. Request availability follows the current confirmed status.",
   "正在核对换号结果…": "Checking the account change…",
   "原账号": "Original account",

@@ -1,4 +1,10 @@
 export const openaiEnglish:Record<string,string>={
+  "尚未确认登录已结束": "The end of this sign-in is unconfirmed",
+  "正在结束本次登录…": "Ending this sign-in…",
+  "本次取消请求尚无确定结果，不能启动另一轮登录。": "This cancellation is still unconfirmed. Another sign-in cannot start yet.",
+  "确认结束后退出添加向导。": "Exit the add-account flow after the sign-in is confirmed to have ended.",
+  "确认结束后返回连接方式选择。": "Return to connection methods after the sign-in is confirmed to have ended.",
+  "核对登录结果": "Check sign-in result",
   "正在检查本机登录…": "Checking local sign-in…",
   "正在检查账号是否仍有效…": "Checking whether the account is still valid…",
   "检查完成后会自动继续。": "This will continue automatically after the check.",

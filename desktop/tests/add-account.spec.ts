@@ -90,7 +90,10 @@ test('unknown cancellation never offers a second login',async({page})=>{
  await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await wizard(page).getByRole('button',{name:'取消登录',exact:true}).click();
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
- await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toBeVisible();
+ await expect(wizard(page).getByRole('button',{name:'核对登录结果',exact:true})).toBeVisible();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('尚未确认登录已结束');
+ await expect(wizard(page).locator('.add-account-progress-icon')).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
 test('identity changes invalidate visible confirmation until another verification',async({page})=>{
@@ -168,9 +171,10 @@ test('a clock jump cannot submit an expired supply observation before the next r
 test('a terminal login receipt cannot bypass cleanup that is still in progress',async({page})=>{
  await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await page.evaluate(()=>{const w=window as any;w.cleaning=true;const a=w.accounts.openai;a.operation.state='failed';a.operation.revision=++a.revision;});await page.clock.runFor(11000);
- await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在确认登录已结束…');await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在结束本次登录…');await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
- await page.evaluate(()=>(window as any).cleaning=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
+ await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toHaveCount(0);await expect(wizard(page).getByRole('button',{name:'取消登录',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>(window as any).cleaning=false);await page.clock.runFor(1100);await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
 });
 
 
@@ -239,13 +243,13 @@ test('returning from confirmation retains the displayed identity without connect
 test('cancel adding waits for the same login to finish and cannot hide an unknown cancellation',async({page})=>{
  await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
- await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'核对登录结果',exact:true})).toHaveCount(0);
  await wizard(page).getByRole('button',{name:'取消添加',exact:true}).click();
- await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toBeVisible();
+ await expect(wizard(page).getByRole('button',{name:'核对登录结果',exact:true})).toBeVisible();
  await expect(wizard(page).getByRole('button',{name:'OpenAI',exact:true})).toHaveCount(0);
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});});
- await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();await page.clock.runFor(11000);
+ await wizard(page).getByRole('button',{name:'核对登录结果',exact:true}).click();await page.clock.runFor(11000);
  await expect(wizard(page).getByRole('button',{name:'OpenAI',exact:true})).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(0);
@@ -315,7 +319,7 @@ for(const [code,title,action] of [['client_missing','未找到 Codex','重试登
 test('timed out login cannot offer a new login while cleanup is pending',async({page})=>{
  await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await page.evaluate(()=>{const w=window as any;w.cleaning=true;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code:'authorization_timeout',check:'official_source_recheck',message:'official login deadline exceeded',evidence:{}};});await page.clock.runFor(1100);
- await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在确认登录已结束…');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在结束本次登录…');
  await expect(wizard(page).getByRole('button',{name:'重新登录',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });

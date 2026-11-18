@@ -27,7 +27,7 @@ import type {createNotificationsClient} from '../system/notifications';
 import type {NetworkClient} from '../system/network';
 import type {DiagnosticsClient} from '../system/diagnostics';
 import type {DeviceClient,DeviceView,DeviceRecoveryView} from '../system/device';
-import type {AccountFactory} from '../system/accounts';
+import type {AccountFactory,AccountPlatform,AccountSource} from '../system/accounts';
 import type {RuntimeFactory} from '../system/runtime';
 import type {AuthorizeFactory} from '../system/authorize';
 import type {SupplyFactory} from '../system/supply';
@@ -201,15 +201,17 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
  const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,beforeWrite:()=>model?.settleForWrite('all')??Promise.resolve(),pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
- const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,sourceReady:preferencesReady,recheckOpenaiReads:model?.recheckOpenaiReads,openaiSource:preferences.preferences.openai_source,
- saveOpenaiSource:async source=>{
+ const saveAccountSource=async (platform:AccountPlatform,source:AccountSource)=>{
+  const key=platform==='openai'?'openai_source':'claude_source';
   const current=await props.preferencesClient.read();if(current.error)throw current.error;
-  const saved=await props.preferencesClient.save(current.preferences.revision,{...current.preferences,openai_source:source});
+  const saved=await props.preferencesClient.save(current.preferences.revision,{...current.preferences,[key]:source});
   if(saved.error)throw saved.error;
   const confirmed=await props.preferencesClient.read();if(confirmed.error)throw confirmed.error;
-  if(confirmed.preferences.revision<saved.preferences.revision||JSON.stringify(confirmed.preferences.openai_source)!==JSON.stringify(source))throw {code:'PREFERENCES_UNCONFIRMED',message:'OpenAI source readback differs from saved receipt; required=same directory/store and revision at least '+saved.preferences.revision};
-  onSaved(confirmed);return confirmed.preferences.openai_source!;
- },error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,beforeWrite:(platform,local)=>model?.settleForWrite(platform,local)??Promise.resolve(),pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
+  if(confirmed.preferences.revision<saved.preferences.revision||JSON.stringify(confirmed.preferences[key])!==JSON.stringify(source))throw {code:'PREFERENCES_UNCONFIRMED',message:platform+' source readback differs from saved receipt; required=same directory/store and revision at least '+saved.preferences.revision};
+  onSaved(confirmed);return confirmed.preferences[key]!;
+ };
+ const accounts=useAccounts(accountClient,native.state==='ready',authorizeClient,runtime.view,page==='accounts',{autoService:props.autoService,defaults:snapshot.defaults,refreshStatus:snapshot.refresh,accountRefresh:snapshot.accountRefresh,sourceDirectories,setSourceDirectory,sourceReady:preferencesReady,recheckOpenaiReads:model?.recheckOpenaiReads,openaiSource:preferences.preferences.openai_source,claudeSource:preferences.preferences.claude_source,
+ saveOpenaiSource:source=>saveAccountSource('openai',source),saveClaudeSource:source=>saveAccountSource('claude',source),error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,beforeWrite:(platform,local)=>model?.settleForWrite(platform,local)??Promise.resolve(),pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
  const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,beforeWrite:platform=>model?.settleForWrite(platform)??Promise.resolve(),pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);

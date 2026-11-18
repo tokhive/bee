@@ -24,7 +24,7 @@ export function NativeAccountLogin({accounts,runtime,onNavigate,expanded=false,c
  const confirmation=flow?.confirmation;
  useEffect(()=>{if(confirmation){root.current?.scrollIntoView({block:'nearest'});root.current?.focus({preventScroll:true});}},[confirmation]);
  if(!hasClaudeLogin(accounts))return null;
- const busy=!!accounts.writeBusy.claude||!!accounts.busy.claude||!!flow?.checking;
+ const busy=accounts.claudeSourceSaving||!!accounts.writeBusy.claude||!!accounts.busy.claude||!!flow?.checking;
  const active=op?.kind==='authorize'&&['pending','running'].includes(op.state);
  const failure=claudeLoginFailure(accounts);
  const cancelUnknown=!!accounts.cancelUnconfirmed.claude&&accounts.cancelUnconfirmed.claude.operationId===op?.id&&active;

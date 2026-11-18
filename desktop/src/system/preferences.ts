@@ -3,7 +3,7 @@ import type {DeviceInvoke} from './device';
 import type {AccountSource} from './accounts';
 
 export interface ProxyPreference {origin:string;device_scope:string|null;connect_proxy:string}
-export interface DesktopPreferences {version:1;revision:number;language:'system'|'zh'|'en';theme:'system'|'light'|'dark';notifications_enabled:boolean;autostart_desired:boolean;proxies:ProxyPreference[];openai_source?:AccountSource}
+export interface DesktopPreferences {version:1;revision:number;language:'system'|'zh'|'en';theme:'system'|'light'|'dark';notifications_enabled:boolean;autostart_desired:boolean;proxies:ProxyPreference[];openai_source?:AccountSource;claude_source?:AccountSource}
 export type PreferenceError = import('./bridge').BridgeError;
 export interface PreferencesSnapshot {preferences:DesktopPreferences;error:PreferenceError|null}
 export interface PreferencesClient {read():Promise<PreferencesSnapshot>;save(expected:number,preferences:DesktopPreferences):Promise<PreferencesSnapshot>}
@@ -28,7 +28,7 @@ export function validateProxy(value:string):string {
 }
 export function decodePreferences(value:unknown):PreferencesSnapshot {
  const snapshot=object(value,['preferences','error'],'snapshot');
- const p=object(snapshot.preferences,['version','revision','language','theme','notifications_enabled','autostart_desired','proxies'],'preferences',['openai_source']);
+ const p=object(snapshot.preferences,['version','revision','language','theme','notifications_enabled','autostart_desired','proxies'],'preferences',['openai_source','claude_source']);
  if(p.version!==1)invalid('version requires 1');
  if(typeof p.revision!=='number'||!Number.isSafeInteger(p.revision)||p.revision<0)invalid('revision requires nonnegative safe integer');
  if(typeof p.language!=='string'||!['system','zh','en'].includes(p.language))invalid('language requires known value');
@@ -46,10 +46,10 @@ export function decodePreferences(value:unknown):PreferencesSnapshot {
   if(typeof proxy.connect_proxy!=='string')invalid('proxy requires string');validateProxy(proxy.connect_proxy);
   const key=JSON.stringify([proxy.origin,proxy.device_scope]);if(scopes.has(key))invalid('duplicate origin/device scope');scopes.add(key);
  }
- if(Object.hasOwn(p,'openai_source')){
-  const source=object(p.openai_source,['directory','store'],'OpenAI source');
-  if(source.directory!==null&&(typeof source.directory!=='string'||new TextEncoder().encode(source.directory).length>4096||/[\x00-\x1f\x7f]/.test(source.directory)||!(/^(?:\/|[a-zA-Z]:[\\/]|\\\\[^\\]+\\[^\\]+)/.test(source.directory))))invalid('OpenAI directory requires null or absolute path of 1..4096 UTF-8 bytes without control characters');
-  if(!['auto','file','keyring'].includes(String(source.store)))invalid('OpenAI store requires auto, file or keyring');
+ for(const [key,label,stores] of [['openai_source','OpenAI',['auto','file','keyring']],['claude_source','Claude',['file','keychain']]] as const)if(Object.hasOwn(p,key)){
+  const source=object(p[key],['directory','store'],`${label} source`);
+  if(source.directory!==null&&(typeof source.directory!=='string'||new TextEncoder().encode(source.directory).length>4096||/[\x00-\x1f\x7f]/.test(source.directory)||!(/^(?:\/|[a-zA-Z]:[\\/]|\\\\[^\\]+\\[^\\]+)/.test(source.directory))))invalid(`${label} directory requires null or absolute path of 1..4096 UTF-8 bytes without control characters`);
+  if(!(stores as readonly string[]).includes(String(source.store)))invalid(`${label} store requires ${stores.join(', ')}`);
  }
  if(snapshot.error!==null){const error=decodeBridgeError(snapshot.error,'PREFERENCES_INVALID');if(!/^PREFERENCES_[A-Z_]+$/.test(error.code)||error.message.length>1024)invalid('error requires bounded public preference code and message');}
  return value as PreferencesSnapshot;

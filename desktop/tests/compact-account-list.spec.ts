@@ -109,3 +109,46 @@ for(const fault of ['source','expired','normal','login','completion','cancel-unk
  }
 
 });
+
+test('Claude source editing is explicit, preserves failed drafts and uses only confirmed saved settings',async({page})=>{
+ await page.clock.install();
+ const claude=accountFixture('claude') as AccountSnapshot,fp='c'.repeat(64),now=new Date().toISOString();
+ claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:null};claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'Claude 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
+ const settings=page.getByRole('dialog',{name:'凭证读取设置',exact:true}),field=settings.getByRole('textbox',{name:'配置目录',exact:true});await field.fill('/tmp/claude-draft');await field.blur();
+ expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='preferences_save'))).toEqual([]);
+ await settings.getByRole('button',{name:'取消',exact:true}).click();await row.getByRole('button',{name:'Claude 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(field).toHaveValue('');
+ await field.fill('/tmp/claude-saved');await page.evaluate(()=>(window as any).preferencesFail=true);await settings.getByRole('button',{name:'保存',exact:true}).click();await expect(field).toHaveValue('/tmp/claude-saved');await expect(settings.getByRole('alert')).toBeVisible();
+ expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/claude-saved'))).toEqual([]);
+ await page.evaluate(()=>{const w=window as any;w.preferencesFail=false;w.corruptSourceReadback=true;const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='preferences_read'&&w.corruptSourceReadback&&reply.preferences.claude_source)reply.preferences.claude_source={directory:'/tmp/unconfirmed-other-source',store:'keychain'};return reply;};});
+ await settings.getByRole('button',{name:'保存',exact:true}).click();await expect(settings.getByRole('alert')).toBeVisible();await expect(field).toHaveValue('/tmp/claude-saved');expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/claude-saved'))).toEqual([]);
+ await page.evaluate(()=>(window as any).corruptSourceReadback=false);await settings.getByRole('button',{name:'保存',exact:true}).click();await expect(settings).toHaveCount(0);
+ await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.platform==='claude'&&c.args.request.directory==='/tmp/claude-saved').length)).toBeGreaterThan(0);
+ const prefs=await page.evaluate(()=>(window as any).__TAURI_INTERNALS__.invoke('preferences_read',{}));expect(prefs.preferences.claude_source).toEqual({directory:'/tmp/claude-saved',store:'keychain'});expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);expect(await page.evaluate(()=>(window as any).accounts.claude.selection.fingerprint)).toBe(fp);
+});
+
+test('saved Claude source is restored before automatic reads and leaves OpenAI source unchanged',async({page})=>{
+ const claude=accountFixture('claude'),openai=accountFixture('openai');
+ await page.addInitScript(installAccountFixture,{accounts:{claude,openai},runtimeEnabled:true,scenarios:{autoService:true},initialPreferences:{claude_source:{directory:'/tmp/claude-restored',store:'file'},openai_source:{directory:'/tmp/codex-kept',store:'file'}}});
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.platform==='claude').length)).toBeGreaterThan(0);
+ const reads=await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'));
+ expect(reads.filter((c:any)=>c.args.request.platform==='claude').every((c:any)=>c.args.request.directory==='/tmp/claude-restored'&&c.args.request.store==='file')).toBe(true);
+ expect(reads.filter((c:any)=>c.args.request.platform==='openai').every((c:any)=>c.args.request.directory==='/tmp/codex-kept')).toBe(true);
+ expect(await writes(page)).toEqual([]);
+});
+
+test('Claude login confirmation cancellation returns to detail and restores keyboard focus',async({page})=>{
+ await page.clock.install();
+ const claude=accountFixture('claude') as AccountSnapshot,fp='c'.repeat(64),now=new Date().toISOString();
+ claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:null};claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
+
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.getByRole('button',{name:'Claude 详情'}).click();
+ const details=page.getByRole('dialog',{name:'Claude 账号详情',exact:true});await details.getByRole('button',{name:'重新登录',exact:true}).click();
+ const confirmation=page.getByRole('dialog',{name:'重新登录 Claude',exact:true});await expect(confirmation).toBeVisible();await expect(details).toHaveCount(0);
+ await confirmation.getByRole('button',{name:'取消',exact:true}).click();await expect(details).toBeVisible();await expect(details.getByRole('button',{name:'重新登录',exact:true})).toBeFocused();
+ await page.keyboard.press('Escape');await expect(details).toHaveCount(0);await expect(row.getByRole('button',{name:'Claude 详情'})).toBeFocused();expect(await writes(page)).toEqual([]);
+});

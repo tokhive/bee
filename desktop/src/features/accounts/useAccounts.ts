@@ -11,7 +11,7 @@ import {failure,platforms} from '../supply/useSupply';
 import {rememberAccountQuota,type AccountQuotaHistory} from './accountPresentation';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state)||!!s?.login_maintenance&&s.login_maintenance.phase!=='restored';
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;beforeWrite?:(platform:AccountPlatform,local:boolean)=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
+export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;claudeSource?:AccountSource;saveClaudeSource?:(source:AccountSource)=>Promise<AccountSource>;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;beforeWrite?:(platform:AccountPlatform,local:boolean)=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -21,6 +21,8 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [openaiJourney,setOpenaiJourney]=useState<{kind:'first'|'intake'|'change'|'relogin'|'repair';revision:number;operationId?:string;completed?:string}>();
  const [openaiDraft,setOpenaiDraft]=useState<AccountSource>(),[sourceSaving,setSourceSaving]=useState(false),[sourceSaveError,setSourceSaveError]=useState<UiFailure>();
  const sourceSavingRef=useRef(false);
+ const [claudeSourceSaving,setClaudeSourceSaving]=useState(false),[claudeSourceSaveError,setClaudeSourceSaveError]=useState<UiFailure>();
+ const claudeSourceSavingRef=useRef(false);
  const [sourceSavePhase,setSourceSavePhase]=useState<'saving'|'reading'>();
  const [originalAccountQuery,setOriginalAccountQuery]=useState<QueryState<AccountSnapshot>>();
  const originalAccountReader=useRef<ReturnType<typeof createOperationQuery<AccountSnapshot>>|undefined>(undefined);
@@ -199,9 +201,9 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  useEffect(()=>{
   if(!enabled||!autoRead||!client||!savedDefaults||centralError)return;
   for(const p of platforms){
-   if(p==='openai'&&coordinated?.sourceReady===false)continue;
+   if(coordinated?.sourceReady===false)continue;
    if(coordinated?.accountRefresh?.[p]?.state==='waiting'||busy[p]||running.current[p]||accountErrors[p]||errors[p]||uncertain[p]||accountPending(views[p]))continue;
-   const source=sources[p]??(p==='openai'?coordinated?.openaiSource:undefined)??{directory:null,store:savedDefaults.platforms.find(d=>d.platform===p)?.default_store??'file'};
+   const source=sources[p]??(p==='openai'?coordinated?.openaiSource:coordinated?.claudeSource)??{directory:null,store:savedDefaults.platforms.find(d=>d.platform===p)?.default_store??'file'};
    const key=JSON.stringify(source);
    if(detectedSources.current.get(p)!==key){
     detectedSources.current.set(p,key);
@@ -221,8 +223,8 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    officialReads.current.set(officialKey,stamp(view));
    void run(p,async()=>{const next=await client.detect({platform:p,...source,mode:'official'});officialReads.current.set(officialKey,stamp(next));return next;},true);
   }
- },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,coordinated?.accountRefresh,coordinated?.openaiSource,coordinated?.sourceReady,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
- const sourceFor=(p:AccountPlatform)=>sources[p]??(p==='openai'?coordinated?.openaiSource:undefined)??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
+ },[enabled,autoRead,client,savedDefaults,centralError,accountErrors,coordinated?.accountRefresh,coordinated?.openaiSource,coordinated?.claudeSource,coordinated?.sourceReady,sources,busy,errors,uncertain,views,dirty,clock,run,detectLocal]);
+ const sourceFor=(p:AccountPlatform)=>sources[p]??(p==='openai'?coordinated?.openaiSource:coordinated?.claudeSource)??{directory:null,store:savedDefaults?.platforms.find(d=>d.platform===p)?.default_store??'file'};
  const editSource=(platform:AccountPlatform,source:AccountSource)=>{
    if(accountPending(views[platform])||writing.current[platform]||uncertain[platform])return;
    if(JSON.stringify(sourceFor(platform))===JSON.stringify(source))return;
@@ -269,6 +271,20 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    catch(cause){if(active.current)setLoginOpenError(failure(cause,'browser_opener'));}
    finally{openingLoginRef.current=false;if(active.current)setOpeningLogin(false);}
   },
+  claudeSourceSaving,claudeSourceSaveError,
+  async saveClaudeSource(draft:AccountSource){
+   if(!central.current?.saveClaudeSource||claudeSourceSavingRef.current||accountPending(latest.current.claude)||uncertain.claude||writing.current.claude)return;
+   claudeSourceSavingRef.current=true;setClaudeSourceSaving(true);setClaudeSourceSaveError(undefined);
+   const generation=central.current.generation?.();
+   try{
+    const saved=await central.current.saveClaudeSource(draft);
+    if(!active.current||generation!==central.current?.generation?.())return;
+    editSource('claude',saved);
+    await run('claude',async()=>{const local=await detectLocal('claude',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('claude',saved,'official');},true);
+    return true;
+   }catch(cause){if(active.current)setClaudeSourceSaveError(failure(cause,'preferences_save'));}
+   finally{claudeSourceSavingRef.current=false;if(active.current)setClaudeSourceSaving(false);}
+  },
   async saveOpenaiSource(draft=openaiDraft){
    if(!draft||!central.current?.saveOpenaiSource||sourceSavingRef.current||accountPending(latest.current.openai)||uncertain.openai||writing.current.openai)return;
    sourceSavingRef.current=true;setSourceSaving(true);setSourceSavePhase('saving');setSourceSaveError(undefined);
@@ -297,11 +313,13 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   detect(platform:AccountPlatform,mode:'local'|'official'){if(client&&savedDefaults&&!centralError)void run(platform,()=>detectLocal(platform,sourceFor(platform),mode),true);},
   refresh(platform:AccountPlatform){void read(platform,true,views[platform]?.operation?.kind==='authorize'?views[platform]?.operation?.id:undefined);},
   action(platform:AccountPlatform,action:AccountActionRequest['action']){
+   if(platform==='claude'&&claudeSourceSavingRef.current)return;
    const view=views[platform];if(!client||!view||uncertain[platform]||centralError)return;
    if(platform==='openai'&&action!=='clear_selection')setOpenaiJourney(v=>({kind:action==='confirm_change'?'change':v?.kind==='first'?'first':'intake',revision:view.revision}));
    void run(platform,async current=>{const result=await client.action({platform,action,revision:current!.revision,candidate_ref:action==='clear_selection'?'':current!.candidate.reference??'',confirmed:true});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:result.operation?.id}:v);return result;},false,true);
   },
   authorize(platform:AccountPlatform){
+   if(platform==='claude'&&claudeSourceSavingRef.current)return;
    const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError||writing.current[platform]||platform==='openai'&&sourceSavingRef.current)return;
    setStartingLogin(v=>({...v,[platform]:true}));
    if(platform==='openai')setOpenaiJourney({kind:view.selection.state==='selected'?'relogin':'first',revision:view.revision});

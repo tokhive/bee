@@ -22,17 +22,38 @@ export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigat
  const readFailed=!!accounts.readFailures[platform];
  const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now,readFailed,!!accounts.deviceFailure,accounts.quotaHistory[platform]);
  const defaults=accounts.defaults?.platforms.find(d=>d.platform===platform);
- const source=accounts.sources[platform]??{directory:null,store:defaults?.default_store??'file'};
+ const source=accounts.sourceFor(platform);
  const [localDirectory,setLocalDirectory]=useState(source.directory??'');
+ const [compactPanel,setCompactPanel]=useState<'summary'|'source'>('summary'),[draftStore,setDraftStore]=useState(source.store);
  const directory=accounts.sourceDirectories[platform]??localDirectory;
  const setDirectory=(value:string)=>{if(accounts.setSourceDirectory)accounts.setSourceDirectory(platform,value);else setLocalDirectory(value);};
+ const returnFromLogin=useRef(false),restoreLoginFocus=useRef(false);
  const [open,setOpen]=useState(false),inlineLogin=useRef(false),sourceTrigger=useRef<HTMLElement|null>(null);
- useEffect(()=>{const target=navigationRequest?.target;if(target?.page==='accounts'&&['source','account'].includes(target.section??'')&&(target.platform??'openai')===platform){if(!open)sourceTrigger.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setOpen(true);}},[navigationRequest?.sequence,platform]);
+ useEffect(()=>{const target=navigationRequest?.target;if(target?.page==='accounts'&&['source','account'].includes(target.section??'')&&(target.platform??'openai')===platform){if(!open)sourceTrigger.current=document.activeElement instanceof HTMLElement?document.activeElement:null;setCompactPanel(target.section==='source'?'source':'summary');setOpen(true);}},[navigationRequest?.sequence,platform]);
+ useEffect(()=>{setLocalDirectory(source.directory??'');setDraftStore(source.store);},[source.directory,source.store]);
  useEffect(()=>{if(!open)return;const target=navigationRequest?.target;if(target?.page!=='accounts'||target.platform!==platform)return;const timer=setTimeout(()=>{const field=document.querySelector<HTMLInputElement>(`[data-account-source="${platform}"] input`);if(target.section==='source'){field?.closest('details')?.setAttribute('open','');field?.scrollIntoView({block:'nearest'});field?.focus({preventScroll:true});}},0);return()=>clearTimeout(timer);},[open,navigationRequest?.sequence,platform]);
+ useEffect(()=>{if(!returnFromLogin.current||accounts.loginFlows.claude?.confirmation)return;returnFromLogin.current=false;if(!accounts.loginFlows.claude){restoreLoginFocus.current=true;setCompactPanel('summary');setOpen(true);}},[accounts.loginFlows.claude]);
  const navigate=onNavigate?((target:NavigationTarget)=>onNavigate({...target,...((target.page==='accounts'||target.page==='diagnostics')&&!target.platform?{platform}:{})})):undefined;
  const blocked=accountPending(snapshot)||!!accounts.uncertain[platform]||!!accounts.writeBusy[platform];
  const commitDirectory=()=>{if(directory!==(source.directory??''))accounts.edit(platform,{...source,directory:directory||null});};
  const storeNames:Record<string,string>={auto:'自动',file:'文件',keyring:'钥匙串',keychain:'钥匙串'};
+ if(compact&&platform==='claude')return <DetailSheet onCloseAutoFocus={event=>{if(returnFromLogin.current){event.preventDefault();return;}if(sourceTrigger.current?.isConnected){event.preventDefault();sourceTrigger.current.focus({preventScroll:true});sourceTrigger.current=null;}}} onOpenAutoFocus={event=>{if(restoreLoginFocus.current){restoreLoginFocus.current=false;const button=document.querySelector<HTMLElement>('.claude-detail-actions .account-actions button');if(button){event.preventDefault();button.focus({preventScroll:true});}}}} open={open} onOpenChange={value=>{if(!accounts.claudeSourceSaving)setOpen(value);}} trigger={<Button variant="ghost" size="sm" aria-label={t('{platform} 详情',{platform:label})} onClick={()=>setCompactPanel('summary')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(compactPanel==='source'?'凭证读取设置':'Claude 账号详情')} description="">
+  {compactPanel==='summary'?<>
+   <AccountReadHistory accounts={accounts} platform={platform}/>
+   <dl className="account-detail-facts"><div><dt>{t('已接入账号')}</dt><dd>{presentation.identity??t('尚未接入')}</dd></div><div><dt>{t('账号状态')}</dt><dd><AccountCondition compact accounts={accounts} platform={platform} runtime={runtime} supply={supply} now={now}/></dd></div>{presentation.plan&&<div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan[0].toUpperCase()+presentation.plan.slice(1)}</dd></div>}</dl>
+   <div className="claude-detail-actions"><Button variant="outline" onClick={()=>setCompactPanel('source')}>{t('修改凭证读取设置')}</Button><NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="detail" onInlineLogin={()=>{returnFromLogin.current=true;setOpen(false);}} onNavigate={navigate}/></div>
+   {(!snapshot?.candidate.reference||snapshot.candidate.fingerprint===snapshot.selection.fingerprint)?null:<dl className="account-detail-facts"><div><dt>{t('目标账号')}</dt><dd>{snapshot.candidate.fingerprint?.slice(0,16)??t('账号标识待官方核验')}</dd></div></dl>}
+   {(accounts.readFailures[platform]||snapshot?.login_maintenance&&snapshot.login_maintenance.phase!=='restored')&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate}/>}
+  </>:<form className="claude-source-form" data-account-source={platform} onSubmit={event=>{event.preventDefault();if(!blocked&&!accounts.claudeSourceSaving)void accounts.saveClaudeSource({directory:localDirectory||null,store:draftStore}).then(saved=>{if(saved)setOpen(false);});}}>
+   <label>{t('配置目录')}<input autoComplete="off" spellCheck={false} value={localDirectory} placeholder={t('使用 Claude Code 默认目录')} disabled={blocked||accounts.claudeSourceSaving} onChange={event=>setLocalDirectory(event.target.value)}/></label>
+   <label>{t('存储方式')}<select value={draftStore} disabled={blocked||accounts.claudeSourceSaving||!defaults} onChange={event=>setDraftStore(event.target.value)}>{defaults?.stores.map(item=><option value={item.store} key={item.store} disabled={!item.supported}>{t(item.store==='keychain'?'系统钥匙串':storeNames[item.store]??item.store)}{item.supported?'':` (${t('暂不支持')})`}</option>)}</select></label>
+   <p>{t('修改后，Bee 将重新读取并核验账号。')}</p>
+   {blocked&&<p>{t('账号操作仍待完成或核对，暂不能修改来源；当前草稿会保留。')}</p>}
+   {accounts.claudeSourceSaveError&&<FailureNotice failure={accounts.claudeSourceSaveError} check="preferences_save"/>}
+   <div className="dialog-actions"><Button type="button" variant="outline" disabled={accounts.claudeSourceSaving} onClick={()=>{setLocalDirectory(source.directory??'');setDraftStore(source.store);setOpen(false);}}>{t('取消')}</Button><Button type="submit" disabled={blocked||accounts.claudeSourceSaving||!defaults}>{t(accounts.claudeSourceSaving?'正在保存…':'保存')}</Button></div>
+   {draftStore==='keychain'&&<p>{t('macOS 官方登录使用系统钥匙串；配置目录用于定位对应凭证，不表示凭证一定存为目录中的文件。')}</p>}
+  </form>}
+ </DetailSheet>;
  return <DetailSheet open={open} onOpenChange={setOpen} onCloseAutoFocus={event=>{if(sourceTrigger.current?.isConnected){event.preventDefault();sourceTrigger.current.focus({preventScroll:true});sourceTrigger.current=null;}if(inlineLogin.current){event.preventDefault();inlineLogin.current=false;const login=document.querySelector<HTMLElement>('[data-account-platform="claude"] .native-account-login');login?.scrollIntoView({block:'nearest'});login?.focus({preventScroll:true});}}} trigger={<Button variant="ghost" size={compact?'sm':'icon'} aria-label={t('{platform} 详情',{platform:label})} title={t('{platform} 详情',{platform:label})}>{compact&&t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t('{name} 账号详情',{name:label})} description={t('查看账号与额度，管理凭证读取方式。')}>
   <AccountCheckStatus supply={supply} platform={platform}/>
   <AccountReadHistory accounts={accounts} platform={platform}/>

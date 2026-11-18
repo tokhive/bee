@@ -1,4 +1,8 @@
 export const openaiEnglish:Record<string,string>={
+  "配置目录": "Configuration directory",
+  "Claude 账号详情": "Claude account details",
+  "使用 Claude Code 默认目录": "Use the default Claude Code directory",
+  "macOS 官方登录使用系统钥匙串；配置目录用于定位对应凭证，不表示凭证一定存为目录中的文件。": "Official macOS sign-in uses the system keychain. The configuration directory identifies the credentials; it does not mean they are stored as a file in that directory.",
   "等待完成 Claude 登录": "Waiting for Claude sign-in",
   "已完成重新登录，接单状态以当前核对结果为准。": "Signed in again. Request availability follows the current confirmed status.",
   "重新登录 Claude": "Sign in to Claude again",

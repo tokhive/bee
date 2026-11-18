@@ -41,7 +41,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
 }
 export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin,repairAuthorization=false}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';repairAuthorization?:boolean;onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
- const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
+ const busy=!!accounts.writeBusy[platform]||platform==='claude'&&accounts.claudeSourceSaving,dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotExecuted(accounts.errors[platform]!);
  const context={autoService:accounts.autoService,view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);

@@ -109,6 +109,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(op?.kind==='authorize'&&op.state==='cancelled'&&!journey?.completed){title='已取消登录';note='已确认本次流程结束；已发生的官方授权不会因此撤销。';}
  if(uncertain&&!liveLogin){title='账号操作结果待核对';note='尚未取得原操作的确定结果，不能据此再次提交。';}
  if(failed&&(!liveLogin||accounts.loginOpenError)){title=accounts.loginOpenError?'无法打开登录页面':sourceProblem?(sourceProblem.code==='source_missing'&&sourceProblem.check==='read_keyring'?'钥匙串中未找到 Codex 登录项':presentFailure(sourceProblem,currentLocale()).summary):problem?.check==='official_identity'?'无法核验账号':problem?.check==='official_process_cleanup'?'尚未确认登录进程已结束':problem?.code==='client_missing'?'未找到 Codex 官方客户端':problem?.code==='expired'?'登录已过期':op?.kind==='authorize'?'官方登录未完成':op?.kind==='confirm_change'?'更换账号未完成':op?.kind==='select'?'接入账号未完成':'无法更新账号状态';note='';}
+ if(failed&&problem&&sameAccountFailure(problem,supply?.state.errors.openai)&&!liveLogin){const failure=presentFailure(problem,currentLocale());title=failure.summary;note=failure.impact??'';}
  if(preparationFailed&&!liveLogin&&!sourceProblem){
   const cause=view.authorization.error??view.hive.error??op?.error??problem;
   title=presentFailure(normalizeFailure(cause,'account_operation'),currentLocale()).summary;

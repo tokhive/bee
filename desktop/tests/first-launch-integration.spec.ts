@@ -70,7 +70,7 @@ test('corrupt credential recovery is a recoverable read error, never pristine se
  await expect(page.getByLabel('Hive 地址',{exact:true})).toBeVisible();
 });
 test('restored unfinished initial pairing stops at completion but first observed completed binding opens overview',async({page})=>{
- await open(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);await finish(page);
+ await open(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'继续核对原请求',exact:true})).toHaveCount(0);await expect(page.locator('.first-launch-url')).toHaveCount(0);await finish(page);
  expect((await calls(page)).filter(c=>c.command==='device_begin')).toEqual([]);
  await open(page,'?scene=device-pending&completed');
  await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();

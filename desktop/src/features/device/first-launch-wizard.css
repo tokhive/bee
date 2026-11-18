@@ -41,3 +41,4 @@
 .first-launch-error-popover h3{margin:0;font-size:13px}
 .first-launch-error-popover pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin:0}
 @media(pointer:coarse){.first-launch-wizard .first-launch-error-trigger{width:44px;min-height:44px}}
+.first-launch-wizard .ui-button.quiet:not(.first-launch-error-trigger){padding-inline:14px}

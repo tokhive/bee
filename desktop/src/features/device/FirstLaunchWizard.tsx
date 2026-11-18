@@ -2,7 +2,7 @@ import {useEffect,useId,useRef,useState,type ReactNode,type FormEvent} from 'rea
 import type {DeviceView,DeviceContext,DeviceRecoveryView,RecoveryDecision} from '../../system/device';
 import type {RefreshStatus} from '../../system/desktopState';
 import {normalizeFailure,safeOrigin,type UiFailure} from '../../system/failures';
-import {currentLocale,formatDate} from '../../i18n';
+import {currentLocale} from '../../i18n';
 import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
 import {Dialog,Popover} from 'radix-ui';
@@ -98,6 +98,8 @@ export function FirstLaunchWizard({startupNotice,recover,recoveryEntry,view,cont
  const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&view.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
  const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
  const failures=[error,operationError,transactionFailure,phaseFailure].filter((failure):failure is UiFailure=>!!failure);
+ const showConfirmationUrl=!!copyFailure||failures.some(f=>f.code.startsWith('BROWSER_'));
+ const needsRecoveryAction=['creation_unknown','redemption_unknown','blocked','expired'].includes(phase??'')||failures.length>0||refreshStatus?.state==='blocked';
  const failureNotices=failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure} manualUrlAvailable={!!pairing&&waiting&&!expired}/>);
  useEffect(()=>{if(complete)title.current?.focus({preventScroll:true});},[complete]);
  useEffect(()=>{
@@ -137,15 +139,15 @@ export function FirstLaunchWizard({startupNotice,recover,recoveryEntry,view,cont
    {failureNotices}
    <div className="first-launch-actions"><Button type="submit" disabled={creating} aria-busy={creating}>{w(creating?'正在创建配对请求…':'继续绑定设备')}</Button></div>
   </form>:<><h2>{w(phase==='saving'||phase==='redeeming'||phase==='redemption_unknown'?'正在完成设备绑定':phase==='creation_unknown'?'尚无法确认配对请求结果':phase==='draining'?'正在等待旧设备结束连接':phase==='blocked'||phase==='awaiting_owner_confirmation'?'设备绑定已阻塞':'在 Hive 网页确认设备归属')}</h2><dl className="first-launch-facts"><dt>Hive</dt><dd>{view?.hive}</dd><dt>{w('设备')}</dt><dd>{view?.name}</dd></dl>
-   {pairing&&waiting&&<><div className="first-launch-pair"><div><strong className="first-launch-code">{pairing.code}</strong><Button type="button" variant="outline" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button></div><p className="first-launch-help">{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p></div>
-    {!expired&&<><div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void open()}>{w('打开 Hive 确认网页')}</Button><Button type="button" variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div><p className="first-launch-url">{pairing.verification_url}</p></>}
+   {pairing&&waiting&&<><div className="first-launch-pair"><div><strong className="first-launch-code">{pairing.code}</strong><Button type="button" variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button></div><p className="first-launch-help">{w('有效期至')} {new Intl.DateTimeFormat(currentLocale()==='zh'?'zh-CN':'en',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(pairing.expires_at))}</p></div>
+    {!expired&&<><div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void open()}>{w('打开 Hive 确认网页')}</Button><Button type="button" variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>{showConfirmationUrl&&<p className="first-launch-url">{pairing.verification_url}</p>}</>}
     {phase==='pending'&&<p role="status">{w(status)}</p>}
    </>}
    {stageCopy&&<p role="status">{w(stageCopy)}</p>}
    {phase==='creation_unknown'&&onOpenHive&&<div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void onOpenHive()}>{w('打开 Hive 控制台')}</Button></div>}
    {failureNotices}
    {canCheck&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button></div>}
-   {recover&&view?.recovery&&!['completed','saving','awaiting_owner_confirmation'].includes(view.recovery.phase)&&<div className="first-launch-actions"><Button disabled={busy||checking} onClick={()=>void recover('continue_checking',view.recovery)}>{w('继续核对原请求')}</Button>{(['creation_unknown','blocked','expired'].includes(view.recovery.phase)||expired&&phase==='pending')&&<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('restart_pairing');}}>{w(phase==='expired'||expired?'重新获取配对码':'重新配对')}</Button>}<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('cancel_pairing');}}>{w('取消本次重绑')}</Button></div>}
+   {needsRecoveryAction&&recover&&view?.recovery&&!['completed','saving','awaiting_owner_confirmation'].includes(view.recovery.phase)&&<div className="first-launch-actions"><Button disabled={busy||checking} onClick={()=>void recover('continue_checking',view.recovery)}>{w('继续核对原请求')}</Button>{(['creation_unknown','blocked','expired'].includes(view.recovery.phase)||expired&&phase==='pending')&&<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('restart_pairing');}}>{w(phase==='expired'||expired?'重新获取配对码':'重新配对')}</Button>}<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('cancel_pairing');}}>{w('取消本次重绑')}</Button></div>}
    {phase==='expired'&&!view?.recovery&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}
    {phase==='saving'&&<><p role="status">{w(checking?'正在检查绑定结果并继续保存…':transactionFailure?'设备身份已确认，本机保存尚未完成。':'正在保存设备配置…')}</p>{transactionFailure&&<><p>{w('请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。')}</p><div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('继续完成绑定')}</Button></div></>}</>}
    {copied&&<p role="status">{w(copied)}</p>}{copyFailure&&<WizardFailure failure={copyFailure}/>}

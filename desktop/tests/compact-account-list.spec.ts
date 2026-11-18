@@ -91,7 +91,7 @@ for(const fault of ['source','expired','normal'] as const)test(`Claude compact $
  claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};claude.hive={...claude.hive,state:'ready',fingerprint:fp,generation:1};claude.authorization={...claude.authorization,state:'synchronized',fingerprint:fp};
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
- const row=page.getByRole('region',{name:'Claude 账号',exact:true});await expect(row).toContainText('已接入账号');await expect(row).toContainText('系统钥匙串');
+ const row=page.getByRole('region',{name:'Claude 账号',exact:true});await expect(row).toContainText('已接入账号');if(fault!=='expired')await expect(row).toContainText('系统钥匙串');else await expect(row.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();
  if(fault==='source'){
   await expect(row.getByRole('status')).toContainText('无法读取系统钥匙串凭证');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
   await row.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('permission_denied: true');await page.keyboard.press('Escape');

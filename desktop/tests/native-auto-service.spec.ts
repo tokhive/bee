@@ -138,7 +138,6 @@ test.describe('native automatic service — frontend mock contract',()=>{
   });
   await page.clock.runFor(10001);
   await expect(login.getByText('官方登录进程执行失败。',{exact:true})).toBeVisible();
-  await row.locator('.account-conditions>summary').click();
   const summary=row.getByText('官方登录进程执行失败。',{exact:true});
   await expect(summary).toHaveCount(1);
   await expect(summary).toBeVisible();

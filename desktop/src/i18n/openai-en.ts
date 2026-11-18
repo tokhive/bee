@@ -1,4 +1,5 @@
 export const openaiEnglish:Record<string,string>={
+  "Claude 当前流程": "Current Claude workflow",
   "本地文件": "Local file",
   "自动读取": "Automatic detection",
   "无法读取系统钥匙串凭证": "Unable to read system keychain credentials",

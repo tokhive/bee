@@ -1,4 +1,5 @@
 export const openaiEnglish:Record<string,string>={
+  "确认更换 Claude 账号": "Confirm Claude account change",
   "保存失败：写入设置文件时系统拒绝访问。输入已保留，请修复写入权限后重试。": "Save failed: the system denied access to the settings file. Your input is retained. Fix write permissions, then retry.",
   "设置已保存；尚未确认读取或修复成功。": "Settings saved. Reading and recovery have not been confirmed yet.",
   "凭证读取已完成，正在核验身份。": "Credentials read. Verifying account identity.",

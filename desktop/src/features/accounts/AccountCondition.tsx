@@ -68,7 +68,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  if(workflow)return visibleErrors.length||reasons.length?<div className="account-flow-evidence">
   {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <div key={index}><p>{p.summary}<AccountErrorPopover errors={[error]}/></p>{p.action&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</div>;})}
-  {reasons.map(reason=>{const p=supplyProblem(reason,platform);return <div key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t('查看相关设置')}</Button>}</div>;})}
+  {reasons.filter(reason=>!changed||reason!==`${platform==='openai'?'codex':'claude'}_confirmation_required`).map(reason=>{const p=supplyProblem(reason,platform);return <div key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t('查看相关设置')}</Button>}</div>;})}
  </div>:null;
  return <div className="account-status-block">
   <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{!compact&&(ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>)}<span>{t(title)}</span>{primary&&<AccountErrorPopover errors={[primary]}/>}</p>

@@ -176,3 +176,22 @@ test('Claude saved source separates local reading from official verification wit
  await page.getByRole('dialog').getByLabel('配置目录',{exact:true}).fill('/tmp/claude-phases');await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(row.getByRole('status')).toHaveText('正在读取登录凭证…');await expect(row.locator('[aria-current=step]')).toHaveText('1修复读取');
  await page.evaluate(()=>(window as any).releaseLocal());await expect(row.getByRole('status')).toHaveText('正在核验账号…');await expect(row.locator('[aria-current=step]')).toHaveText('2核验账号');await page.evaluate(()=>(window as any).releaseOfficial());await expect(row.getByText('正在核验账号…',{exact:true})).toHaveCount(0);expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
 });
+
+test('Claude changed identity requires review and explicit confirmation while retaining the original account',async({page})=>{
+ await page.clock.install();
+ const claude=accountFixture('claude') as AccountSnapshot,fp='c'.repeat(64),now=new Date().toISOString();
+ claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:null};claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};
+ claude.candidate.fingerprint='b'.repeat(64);claude.hive={...claude.hive,state:'confirmation_required',fingerprint:fp,pending_fingerprint:'b'.repeat(64),generation:1};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=true;`});
+
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();const row=page.getByRole('region',{name:'Claude 账号',exact:true});await expect(row.getByRole('list',{name:'Claude 当前流程'})).toContainText('核对账号');await row.getByRole('button',{name:'核对账号变更',exact:true}).click();
+ const review=page.getByRole('dialog',{name:'核对账号变更',exact:true});await expect(review).toContainText(fp.slice(0,16));await expect(review).toContainText('b'.repeat(16));expect(await writes(page)).toEqual([]);
+ await review.getByRole('button',{name:'确认换号',exact:true}).click();const confirm=page.getByRole('dialog',{name:'确认更换 Claude 账号',exact:true});await expect(confirm).toBeVisible();await expect(review).not.toBeVisible();await confirm.getByRole('button',{name:'取消',exact:true}).click();await expect(review).toBeVisible();await expect(review.getByRole('button',{name:'确认换号',exact:true})).toBeFocused();expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).accounts.claude.selection.fingerprint)).toBe(fp);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
+ await review.getByRole('button',{name:'确认换号',exact:true}).click();await page.keyboard.press('Escape');await expect(confirm).toHaveCount(0);await expect(review).toBeVisible();await expect(review.getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
+ await review.getByRole('button',{name:'确认换号',exact:true}).click();await page.evaluate(()=>{const a=(window as any).accounts.claude;a.candidate.fingerprint='d'.repeat(64);a.candidate.reference='d'.repeat(48);a.revision++;});await page.clock.runFor(11000);await expect(confirm.getByRole('alert')).toContainText('本次未提交');await expect(confirm.getByRole('button',{name:'确认更换',exact:true})).toBeDisabled();expect(await writes(page)).toEqual([]);await confirm.getByRole('button',{name:'取消',exact:true}).click();await expect(review).toContainText('d'.repeat(16));
+ await expect(page.getByRole('button',{name:'返回原处',exact:true})).toHaveCount(0);
+ await review.getByRole('button',{name:'确认换号',exact:true}).click();await confirm.getByRole('button',{name:'确认更换',exact:true}).click();
+ await expect.poll(async()=>(await writes(page)).filter((x:any)=>x.command==='account_action'&&x.args.request.action==='confirm_change').length).toBe(1);
+ await expect.poll(()=>page.evaluate(()=>(window as any).accounts.claude.selection.fingerprint)).toBe('d'.repeat(64));
+ expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
+});

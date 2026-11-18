@@ -5,7 +5,7 @@ export function DetailSheet({
   trigger,
   title,
   description,
-  overlayClassName,
+  overlayClassName,contentClassName,
   children,
   open,onOpenChange,onCloseAutoFocus,onOpenAutoFocus,onEscapeKeyDown,
 }: {
@@ -14,6 +14,7 @@ export function DetailSheet({
   title: string;
   description: string;
   overlayClassName?: string;
+  contentClassName?: string;
   children: ReactNode;
   open?:boolean;onOpenChange?:(open:boolean)=>void;onCloseAutoFocus?:(event:Event)=>void;onOpenAutoFocus?:(event:Event)=>void;
   onEscapeKeyDown?:(event:KeyboardEvent)=>void;
@@ -23,7 +24,7 @@ export function DetailSheet({
       <Dialog.Trigger asChild>{trigger}</Dialog.Trigger>
       <Dialog.Portal>
         <Dialog.Overlay className={["dialog-overlay",overlayClassName].filter(Boolean).join(" ")} />
-        <Dialog.Content className="detail-sheet" onCloseAutoFocus={onCloseAutoFocus} onOpenAutoFocus={onOpenAutoFocus} onEscapeKeyDown={onEscapeKeyDown}>
+        <Dialog.Content className={["detail-sheet",contentClassName].filter(Boolean).join(" ")} onCloseAutoFocus={onCloseAutoFocus} onOpenAutoFocus={onOpenAutoFocus} onEscapeKeyDown={onEscapeKeyDown}>
           <header>
             <Dialog.Title>{title}</Dialog.Title>
             <Dialog.Close asChild>

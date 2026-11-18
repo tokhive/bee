@@ -29,7 +29,7 @@ export function NativeAccountLogin({accounts,runtime,onNavigate,expanded=false,c
  const failure=claudeLoginFailure(accounts);
  const cancelUnknown=!!accounts.cancelUnconfirmed.claude&&accounts.cancelUnconfirmed.claude.operationId===op?.id&&active;
  const unknown=cancelUnknown||op?.state==='reconciling'||!!accounts.uncertain.claude&&!active||!!accounts.errors.claude&&!requestNotExecuted(accounts.errors.claude)&&accounts.errors.claude.code!=='ACCOUNT_CONTEXT_CHANGED';
- const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sources.claude,!!accounts.dirty.claude,runtime.view?.local,runtime.view?.run_id]);
+ const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sourceFor('claude'),!!accounts.dirty.claude,runtime.view?.local,runtime.view?.run_id]);
  const block=()=>accountActionBlock('authorize',{autoService:accounts.autoService,view,platform,now:Date.now(),dirty:!!accounts.dirty.claude,busy:!!accounts.writeBusy.claude,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled});
  const changed=!!confirmation&&confirmation!==stamp();
  const candidate=view?.candidate;

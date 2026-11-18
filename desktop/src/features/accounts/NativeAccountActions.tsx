@@ -1,7 +1,7 @@
 import {requestNotExecuted} from '../../system/failures';
 import {FailureNotice} from '../../components/ProblemNotice';
 import type {NavigationTarget} from '../../app/navigation';
-import {useState} from 'react';
+import {useState,useEffect} from 'react';
 import {Dialog} from 'radix-ui';
 import {type AccountsModel} from './useAccounts';
 import {accountConfirmationKey,type AccountPlatform} from '../../system/accounts';
@@ -39,35 +39,37 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
   {cancellation&&cancellation.operationId===op?.id&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<><p>{t('取消请求结果未确认；仍在核对同一官方登录进程。')}</p>{!sameAccountFailure(cancellation.failure,error)&&<FailureNotice failure={cancellation.failure} check="authorize_cancel" onNavigate={onNavigate}/>}</>}
  </div>;
 }
-export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin,repairAuthorization=false}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';repairAuthorization?:boolean;onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
+export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin,repairAuthorization=false,onlyAction,primaryLabel,onConfirmationChange,onSubmitted}:{onlyAction?:'confirm_change';primaryLabel?:string;onConfirmationChange?:(open:boolean)=>void;onSubmitted?:()=>void;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';repairAuthorization?:boolean;onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform]||platform==='claude'&&accounts.claudeSourceSaving,dirty=!!accounts.dirty[platform];
  const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotExecuted(accounts.errors[platform]!);
  const context={autoService:accounts.autoService,view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);
  const candidate=!dirty&&view?.candidate.state==='available'&&!!view.candidate.reference;
- const offered:AccountAction[]=placement==='row'?(selected?(repairAuthorization?['authorize']:[]):[candidate?'select':'authorize']):[
+ const offered:AccountAction[]=onlyAction?[onlyAction]:placement==='row'?(selected?(repairAuthorization?['authorize']:[]):[candidate?'select':'authorize']):[
   ...(!selected&&candidate?['select' as const]:[]),
   ...(selected&&candidate&&view?.candidate.fingerprint!==view?.selection.fingerprint?['confirm_change' as const]:[]),
   'authorize',
   ...(selected&&view?.features.clear_selection.available&&view.hive.fingerprint===null&&view.hive.generation===null?['clear_selection' as const]:[]),
  ];
- const actionLabel=(action:AccountAction)=>action==='authorize'&&!selected?t('登录 {platform}',{platform:label}):t(actions[action].label);
- const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sources[platform],dirty,runtime.view?.local,runtime.view?.run_id]);
+ const actionLabel=(action:AccountAction)=>primaryLabel?t(primaryLabel):action==='authorize'&&!selected?t('登录 {platform}',{platform:label}):t(actions[action].label);
+ const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sourceFor(platform),dirty,runtime.view?.local,runtime.view?.run_id]);
  const [confirm,setConfirm]=useState<{action:AccountAction;stamp:string;current:string|null;target:string|null}|null>(null);
+ useEffect(()=>{onConfirmationChange?.(!!confirm);return()=>onConfirmationChange?.(false);},[!!confirm,onConfirmationChange]);
  const changed=!!confirm&&confirm.stamp!==stamp();
  const blocks=offered.map(action=>block(action)).filter(b=>!!b);
  const unique=[...new Map(blocks.map(b=>[b.message,b])).values()];
  const targetLabel=(target:NavigationTarget)=>target.page==='overview'&&target.section==='runtime'?'查看贡献运行':target.page==='overview'?'查看设备':target.section==='source'?'检查凭证来源':'查看账号详情';
  return <Dialog.Root open={confirm!==null} onOpenChange={open=>{if(!open)setConfirm(null);}}>
-  <div className="account-actions">{offered.map(action=>{const button=<Button variant={placement==='row'?'default':'outline'} disabled={!!block(action)} onClick={()=>{if(action==='authorize'&&platform==='claude'){accounts.openLogin(platform,stamp());onInlineLogin?.();}else setConfirm({action,stamp:stamp(),current:view?.selection.fingerprint??null,target:view?.candidate.fingerprint??null});}}>{actionLabel(action)}</Button>;return action==='authorize'&&platform==='claude'?<span key={action}>{button}</span>:<Dialog.Trigger asChild key={action}>{button}</Dialog.Trigger>;})}
+  <div className="account-actions">{offered.map(action=>{const button=<Button variant={onlyAction||placement==='row'?'default':'outline'} disabled={!!block(action)} onClick={()=>{if(action==='authorize'&&platform==='claude'){accounts.openLogin(platform,stamp());onInlineLogin?.();}else setConfirm({action,stamp:stamp(),current:view?.selection.fingerprint??null,target:view?.candidate.fingerprint??null});}}>{actionLabel(action)}</Button>;return action==='authorize'&&platform==='claude'?<span key={action}>{button}</span>:<Dialog.Trigger asChild key={action}>{button}</Dialog.Trigger>;})}
    {platform!=='claude'&&op?.kind==='authorize'&&['pending','running'].includes(op.state)&&<Button variant="outline" disabled={busy} onClick={()=>accounts.cancelAuthorize(platform)}>{t('取消官方登录')}</Button>}
   </div>
   {unique.length>0&&!(platform==='claude'&&op?.kind==='authorize'&&['pending','running','reconciling'].includes(op.state))&&<div className="account-action-help">{unique.map(b=><div key={b.message}><p>{t(b.message)}</p>{b.reason&&<details><summary>{t('查看操作限制')}</summary><code>{b.reason}</code></details>}{b.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(b.target!)}>{t(targetLabel(b.target))}</Button>}</div>)}</div>}
-  {confirm&&<Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content"><Dialog.Title>{actionLabel(confirm.action)}</Dialog.Title><Dialog.Description>{t(accounts.autoService?autoDescriptions[confirm.action]:actions[confirm.action].description,{client})}</Dialog.Description>
-   {['select','confirm_change'].includes(confirm.action)&&<dl className="account-detail-facts">{confirm.action==='confirm_change'&&<div><dt>{t('当前账号')}</dt><dd>{confirm.current?.slice(0,16)??t('未知')}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirm.target?.slice(0,16)??t('账号标识待官方核验')}</dd></div><div><dt>{t('平台')}</dt><dd>{label}</dd></div></dl>}
+  {confirm&&<Dialog.Portal><Dialog.Overlay className={`dialog-overlay ${onlyAction?'claude-detail-overlay':''}`}/><Dialog.Content className={`dialog-content ${onlyAction?'claude-change-confirm':''}`} onEscapeKeyDown={event=>{if(onlyAction){event.preventDefault();event.stopImmediatePropagation();setConfirm(null);}}}>{onlyAction&&<Dialog.Close asChild><Button variant="ghost" className="claude-login-close">{t('关闭')}</Button></Dialog.Close>}<Dialog.Title>{onlyAction?t('确认更换 Claude 账号'):actionLabel(confirm.action)}</Dialog.Title><Dialog.Description>{onlyAction?<>{t('已接入账号')} {confirm.current?.slice(0,16)} → {t('发现新账号')} {confirm.target?.slice(0,16)}</>:t(accounts.autoService?autoDescriptions[confirm.action]:actions[confirm.action].description,{client})}</Dialog.Description>
+   {onlyAction&&<p>{t('更换后使用新账号的订阅额度。将暂停此平台接单，准备就绪后仍暂停，由你恢复。')}</p>}
+   {!onlyAction&&['select','confirm_change'].includes(confirm.action)&&<dl className="account-detail-facts">{confirm.action==='confirm_change'&&<div><dt>{t('当前账号')}</dt><dd>{confirm.current?.slice(0,16)??t('未知')}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirm.target?.slice(0,16)??t('账号标识待官方核验')}</dd></div><div><dt>{t('平台')}</dt><dd>{label}</dd></div></dl>}
    {changed?<p role="alert">{t('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。')}</p>:block(confirm.action)&&<p role="alert">{t(block(confirm.action)!.message)}</p>}
-   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={!!block(confirm.action)||changed} onClick={()=>{if(confirm.stamp!==stamp()||accountActionBlock(confirm.action,{...context,now:Date.now()})){setConfirm({...confirm});return;}const action=confirm.action;setConfirm(null);if(action==='authorize')accounts.authorize(platform);else accounts.action(platform,action);}}>{t(actions[confirm.action].confirm)}</Button></div>
+   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={!!block(confirm.action)||changed} onClick={()=>{if(confirm.stamp!==stamp()||accountActionBlock(confirm.action,{...context,now:Date.now()})){setConfirm({...confirm});return;}const action=confirm.action;setConfirm(null);if(action==='authorize')accounts.authorize(platform);else accounts.action(platform,action);onSubmitted?.();}}>{t(actions[confirm.action].confirm)}</Button></div>
   </Dialog.Content></Dialog.Portal>}
  </Dialog.Root>;
 }

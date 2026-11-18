@@ -197,8 +197,8 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 /* Claude sheets reuse the approved preview's drawer and form geometry. */
 .detail-sheet:has(.claude-detail-actions),.detail-sheet:has(.claude-source-form){padding:24px;border-top:0;border-bottom:0;border-right:0}
 .detail-sheet:has(.claude-detail-actions)>header,.detail-sheet:has(.claude-source-form)>header{margin-bottom:18px}
-.detail-sheet:has(.claude-detail-actions)>header h2,.detail-sheet:has(.claude-source-form)>header h2{margin:0;font-weight:600}
-.detail-sheet:has(.claude-detail-actions)>header button,.detail-sheet:has(.claude-source-form)>header button{border:0;background:transparent;color:var(--muted);padding:5px 4px;font-size:13px;line-height:19.5px}
+.detail-sheet:has(.claude-detail-actions)>header h2,.detail-sheet:has(.claude-source-form)>header h2{margin:0;font-weight:600;letter-spacing:normal}
+.detail-sheet:has(.claude-detail-actions)>header button,.detail-sheet:has(.claude-source-form)>header button{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted);padding:5px 4px;font-size:13px;line-height:19.5px}
 .detail-sheet:has(.claude-detail-actions)>.account-detail-facts{display:grid;gap:12px;margin:17px 0}
 .detail-sheet:has(.claude-detail-actions)>.account-detail-facts>div{grid-template-columns:90px minmax(0,1fr);gap:12px;margin:0;font-size:12px;line-height:18px}
 .detail-sheet:has(.claude-detail-actions) .account-detail-facts dd,.detail-sheet:has(.claude-detail-actions) .native-account-condition{line-height:18px}
@@ -206,7 +206,9 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .claude-detail-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:16px 0}
 .claude-detail-actions .account-actions{display:flex;gap:8px;flex-wrap:wrap}
 .claude-source-form label{display:grid;gap:6px;margin-bottom:14px;font-size:12px}
-.claude-source-form input,.claude-source-form select{width:100%;min-width:0;height:34px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:7px 9px;font:inherit}
+.claude-source-form input,.claude-source-form select{width:100%;min-width:0;height:34px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 9px;font:inherit}
 .detail-sheet .claude-source-form p{font-size:13px;line-height:1.65;color:var(--muted)}
 .claude-source-form .dialog-actions{margin:22px 0 12px}
 .detail-sheet .claude-source-form .ui-button,.claude-detail-actions .ui-button{font-size:13px;font-weight:400;line-height:19.5px;padding:5px 12px;box-shadow:none}
+
+.claude-source-form input::placeholder{color:var(--muted);opacity:1}

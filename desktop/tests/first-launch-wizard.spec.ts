@@ -95,7 +95,7 @@ test('transaction phases expose only the permitted original-request actions',asy
  await expect(page.getByText('尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。',{exact:true})).toBeVisible();
  await expect(page.getByRole('button',{name:/继续绑定设备|重新生成配对码|打开 Hive 确认网页|复制确认网址/})).toHaveCount(0);
  await page.evaluate(({pending,transaction})=>window.setWizardProps({view:{state:'expired',hive:pending.hive,name:pending.name,recovery:{...transaction,new_identity:null,phase:'expired'}}}),{pending,transaction});
- await page.getByRole('button',{name:'重新获取配对码',exact:true}).click();
+ await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('refresh');
  await page.getByRole('dialog').getByRole('button',{name:'确认重新配对',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('refresh\nrecover restart_pairing');
@@ -207,7 +207,7 @@ test('native browser failure code and check remain available without invented ti
  await expect(page.getByRole('dialog')).toContainText('BROWSER_OPEN_FAILED');
  await expect(page.getByRole('dialog')).toContainText('device_open');
  await expect(page.getByRole('dialog').locator('pre')).toHaveText('错误码: BROWSER_OPEN_FAILED\n失败环节: device_open\n原始原因: default browser open failed: OS denied launch');
- await expect(page.getByRole('button',{name:'打开 Hive 确认网页',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'重新打开确认网页',exact:true})).toBeEnabled();
 });
 
 test('completed binding accepts a Hive display name that differs from the saved local name while identity mismatches stay blocked',async({page})=>{
@@ -273,11 +273,38 @@ for(const locale of ['zh','en'])test('native browser failures provide '+locale+'
  ]){
   await page.evaluate(({pending,code,message})=>window.setWizardProps({view:pending,operationError:{code,message,check:'device_open',observedAt:null,evidence:{}}}),{pending,code,message});
   const alert=page.getByRole('alert');await expect(alert).toContainText(locale==='zh'?zh:en);
-  await expect(alert).toContainText(locale==='zh'?'在浏览器中手动打开':'open it manually in your browser');
+  await expect(alert).toContainText(locale==='zh'?'在浏览器中打开':'open it manually in your browser');
   await expect(page.getByRole('button',{name:locale==='zh'?'复制确认网址':'Copy confirmation URL',exact:true})).toBeEnabled();
   await page.getByRole('button',{name:locale==='zh'?'查看错误详情':'View error details',exact:true}).click();
   await expect(page.getByRole('dialog')).toContainText(message);await expect(page.getByRole('dialog')).toContainText(code);await page.keyboard.press('Escape');
   await expect(page.getByText(locale==='zh'?'浏览器已打开':'Browser opened',{exact:true})).toHaveCount(0);
  }
  await expect(page.getByLabel('Fixture actions')).toHaveText('');
+});
+
+
+test('expired initial pairing keeps its code and only offers a confirmed restart of the original request',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({view:{...pending,state:'expired',recovery:{...transaction,new_identity:null,phase:'expired',pairing}}}),{pending,transaction,pairing});
+ await expect(page.getByText(pairing.code,{exact:true})).toBeVisible();
+ await expect(page.getByText('Hive 已确认配对码过期。',{exact:true})).toHaveCount(1);
+ await expect(page.getByRole('button',{name:/继续核对原请求|取消本次重绑|打开 Hive 确认网页/})).toHaveCount(0);
+ await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('');
+ await page.getByRole('dialog').getByRole('button',{name:'确认重新配对',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('recover restart_pairing');
+});
+
+test('browser launch failure keeps pending pairing actionable without transaction recovery controls',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({view:{...pending,recovery:{...transaction,new_identity:null,phase:'pending',pairing}},operationError:{code:'BROWSER_OPEN_FAILED',check:'device_open',observedAt:null,evidence:{},message:'browser launch: permission denied'}}),{pending,transaction,pairing});
+ await expect(page.getByRole('button',{name:/继续核对原请求|取消本次重绑|重新配对/})).toHaveCount(0);
+ await expect(page.getByText(pairing.verification_url,{exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'查看诊断',exact:true})).toHaveCount(0);
+ const alert=await page.getByRole('alert').boundingBox();
+ const reopen=page.getByRole('button',{name:'重新打开确认网页',exact:true});
+ const button=await reopen.boundingBox();expect(alert!.y+alert!.height).toBeLessThanOrEqual(button!.y);
+ await reopen.click();await expect(page.getByLabel('Fixture actions')).toHaveText('open');
+ await page.evaluate(()=>window.setWizardProps({error:{code:'DEVICE_READ_FAILED',check:'device_status',observedAt:null,evidence:{},message:'device status failed: connection refused'}}));
+ await expect(page.getByRole('button',{name:'继续核对原请求',exact:true})).toBeVisible();
 });

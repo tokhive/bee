@@ -26,8 +26,7 @@ test('overview counts distinguish ready platforms, deliberate pause, and unknown
  await expect(counts).toContainText('可接单 0');
  await expect(counts).toContainText('需处理 0');
  await open(page,'device-recovery-confirm');
- await expect(counts).toContainText('可接单 —');
- await expect(counts).toContainText('需处理 —');
+ await expect(counts).toHaveCount(0);
 });
 
 test('a healthy device menu offers switching without a repair action or writes',async({page})=>{
@@ -55,6 +54,8 @@ for(const [kind,title,action,message] of [
  },{kind,message});
  await page.clock.runFor(10001);
  await expect(page.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await expect(page.getByLabel('平台接单统计',{exact:true})).toHaveCount(0);
+ await expect(page.locator('.device-card .native-runtime-health')).toHaveCount(0);
  await expect(page.getByRole('button',{name:action,exact:true})).toBeEnabled();
  await expect(page.locator('main>.startup-recovery-notice')).toHaveCount(0);
  await expect(page.getByText('需要更新 Bee',{exact:true})).toHaveCount(0);

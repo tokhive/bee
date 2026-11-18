@@ -793,6 +793,8 @@ for(const [kind,http,title,action] of [
  await page.goto('/');
  const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
  await expect(device.getByRole('heading',{name:title,exact:true})).toBeVisible();
+ await expect(device.getByLabel('平台接单统计',{exact:true})).toHaveCount(0);
+ await expect(device.locator('.native-runtime-health')).toHaveCount(0);
  await expect(device.getByTestId('startup-recovery')).toHaveCount(0);
  await expect(device.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
  await expect(device.getByText('设备状态尚未确认，请重新检查设备。',{exact:true})).toHaveCount(0);

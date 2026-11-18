@@ -10,7 +10,7 @@ import {currentLocale,formatDate,t} from '../../i18n/index';
 import {accountPending,type AccountsModel} from './useAccounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import {supplyFresh,type SharedSupply} from '../supply/useSupply';
-import {sameAccountFailure,supplyProblem} from './accountPresentation';
+import {accountPresentation,sameAccountFailure,supplyProblem} from './accountPresentation';
 
 /** One current conclusion; independent conditions remain available in the disclosure. */
 export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock,compact=false,workflow=false}:{workflow?:boolean;compact?:boolean;deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
@@ -63,22 +63,26 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  else if(compact&&!pending&&!uncertain&&!deviceWait&&!dirty&&!changed&&expired)title='授权已过期';
  else if(compact&&title==='不能接单'&&reasons.length===1&&reasons[0]==='quota_exhausted')title='额度已耗尽';
  else if(compact&&title==='已暂停接单')title='已暂停';
+ const quotaOnly=compact&&selected&&current&&!errors.length&&!changed&&!expired&&!dirty&&!uncertain&&!pending&&reasons.length===1&&reasons[0]==='quota_exhausted';
+ const checkingQuota=quotaOnly&&(accounts.busy[platform]||accounts.accountRefresh?.[platform]?.state==='reading')&&accountPresentation(account,false,now,false,false,accounts.quotaHistory[platform]).quotaState==='stale';
+ if(quotaOnly&&!writing)title=view?.paused?'已暂停':checkingQuota?'正在核验额度…':'额度已耗尽';
+ const explainedReasons=quotaOnly?[]:reasons;
  const remainingErrors=primary?visibleErrors.slice(1):visibleErrors;
- const count=remainingErrors.length+reasons.length+(!compact&&showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(!compact&&expired?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
+ const count=remainingErrors.length+explainedReasons.length+(!compact&&showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(!compact&&expired?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  if(workflow)return visibleErrors.length||reasons.length?<div className="account-flow-evidence">
   {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <div key={index}><p>{p.summary}<AccountErrorPopover errors={[error]}/></p>{p.action&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</div>;})}
   {reasons.filter(reason=>!changed||reason!==`${platform==='openai'?'codex':'claude'}_confirmation_required`).map(reason=>{const p=supplyProblem(reason,platform);return <div key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t('查看相关设置')}</Button>}</div>;})}
  </div>:null;
  return <div className="account-status-block">
-  <p className={`native-account-condition ${ready?'is-ready':blocked?'is-blocked':''}`} role="status">{!compact&&(ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>)}<span>{t(title)}</span>{primary&&<AccountErrorPopover errors={[primary]}/>}</p>
+  <p className={`native-account-condition ${ready?'is-ready':blocked&&!quotaOnly?'is-blocked':''}`} role="status">{!compact&&(ready?<Check aria-hidden="true"/>:title==='已暂停接单'?<Pause aria-hidden="true"/>:<AlertCircle aria-hidden="true"/>)}<span>{t(title)}</span>{primary&&<AccountErrorPopover errors={[primary]}/>}</p>
   {compact&&(specific?.impact||expired&&!changed||showPaused&&title!=='已暂停')&&<p className="account-action-help">{specific?.impact??(expired?t('需要通过官方客户端重新授权。'):'')}{showPaused&&title!=='已暂停'&&<> {t('接单保持暂停。')}</>}</p>}
   {deviceWait&&(view??runtime.view?.platforms[platform].supply)&&<p className="account-action-help">{t((view??runtime.view?.platforms[platform].supply)?.paused?'接单选择：暂停':'接单选择：允许')}</p>}
   {count>0&&<details className="account-conditions" open={expanded} onToggle={event=>setExpanded(event.currentTarget.open)}>
    <summary>{t('查看原因（{count}）',{count})}</summary>
    <ul>
     {remainingErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <li key={index}><p>{p.summary}</p>{p.impact&&p.impact!==p.summary&&<p className="muted">{p.impact}</p>}<details className="account-condition-evidence"><summary>{t('查看失败详情')}</summary><pre>{p.details}</pre></details>{p.action&&p.action.section!=='source'&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</li>;})}
-    {reasons.map(reason=>{
+    {explainedReasons.map(reason=>{
      const p=supplyProblem(reason,platform);
      if(reason==='offline'){
       const detail=runtime.view?.connection_detail;

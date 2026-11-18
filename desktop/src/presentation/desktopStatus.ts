@@ -3,13 +3,13 @@ import {normalizeFailure,type UiFailure} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
 import type {AccountPlatform} from '../system/accounts';
 export interface DesktopPresentation {
- kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'ready'|'blocked';
+ kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'quota_exhausted'|'ready'|'blocked';
  severity:'neutral'|'info'|'warning'|'error'|'success';
  readyPlatforms:AccountPlatform[];blockedPlatforms:AccountPlatform[];problem:UiFailure|null;primaryTarget:NavigationTarget|null;
  preparationStep:'bind'|'confirm_device'|'connect_account'|null;
 }
 const platforms=['openai','claude'] as const;
-const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',preparing_accounts:'info',changing_account:'info',change_unconfirmed:'warning',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',ready:'success',blocked:'warning'};
+const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',preparing_accounts:'info',changing_account:'info',change_unconfirmed:'warning',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',quota_exhausted:'neutral',ready:'success',blocked:'warning'};
 /** Read-only presentation of confirmed facts. It never schedules work or authorizes a write. */
 export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoService=false):DesktopPresentation {
  const s=snapshot,r=s.runtime;
@@ -51,6 +51,8 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  const preparing=selected.find(p=>accountKnown(p)&&s.accounts[p]?.authorization.state==='preparing');
  if(preparing)return result('preparing_accounts',null,{page:'accounts',section:'account',platform:preparing});
  const current=(p:AccountPlatform)=>{const v=s.supplies[p];return accountKnown(p)&&!s.supplyErrors[p]&&v&&now-Date.parse(v.checked_at)<=30000;};
- if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
+ if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
+ const quota=selected.find(p=>current(p)&&s.supplies[p]?.reasons.includes('quota_exhausted'));
+ if(quota&&selected.every(p=>current(p)&&s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted')))return result('quota_exhausted',null,{page:'accounts',section:'account',platform:quota});
  return result('blocked',s.accountErrors[selected[0]]??s.supplyErrors[selected[0]]??null,{page:'accounts',section:'account',platform:blockedPlatforms[0]??selected[0]});
 }

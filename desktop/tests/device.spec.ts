@@ -378,3 +378,13 @@ test('device error details close accessibly and export the original evidence wit
  await trigger.click();await page.getByRole('heading',{name:'概览',exact:true}).click();await expect(dialog).toHaveCount(0);
  for(const command of ['device_begin','device_recovery_confirm','runtime_start','supply_set_paused'])expect(await deviceCalls(page,command)).toHaveLength(0);
 });
+
+for(const kind of ['unknown_failure','timeout'] as const)test(`device ${kind} recheck displays only its matching progress`,async({page})=>{
+ await page.addInitScript(kind=>{const w=window as any;w.deviceFailure={code:kind,message:kind==='timeout'?'GET identity: context deadline exceeded':'GET identity HTTP 500: NODE_STATE_UNRECOGNIZED'};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='startup_recheck')await new Promise(resolve=>{w.releaseStartup=resolve;});return invoke(command,args);};},kind);
+ await page.goto('/');await page.getByRole('button',{name:kind==='timeout'?'重试连接':'重新核对',exact:true}).click();
+ await expect(page.getByRole('heading',{name:kind==='timeout'?'正在连接 Hive':'正在核对 Hive 状态…',exact:true})).toBeVisible();
+ await expect(page.getByText('正在重试连接…',{exact:true})).toHaveCount(kind==='timeout'?1:0);
+ await page.evaluate(()=>{(window as any).deviceFailure=null;(window as any).releaseStartup();});
+ await expect(page.getByRole('heading',{name:'正在核对 Hive 状态…',exact:true})).toHaveCount(0);
+ for(const command of ['device_begin','device_recovery_confirm','runtime_start','supply_set_paused'])expect(await deviceCalls(page,command)).toHaveLength(0);
+});

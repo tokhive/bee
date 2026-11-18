@@ -89,7 +89,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    <div className="device-transaction-heading"><h3 className="pairing-phase" aria-live="polite">{w(headline)}</h3>
     {phase!=='pending'&&progressMenu}
    </div>
-   {(checking||querying&&!active&&problem?.action==='retry')&&<p role="status">{w('正在重试连接…')}</p>}
+   {((checking&&!querying)||querying&&!active&&problem?.action==='retry')&&<p role="status">{w('正在重试连接…')}</p>}
    {!querying&&!checking&&<>
    {transactionIntro}
    {!querying&&!cancelling&&pairing&&(phase==='pending'||phase==='expired')&&<div className="binding-pairing-code"><p>{w('配对码')}</p><div><strong className="pair-code">{pairing.code}</strong>{!embedded&&<Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制')}</Button>}</div>{(!embedded||phase!=='pending'||locallyExpired)&&<small>{w(phase==='expired'?'Hive 已确认配对码过期':Date.parse(pairing.expires_at)<=now?'有效期已到，请重新获取配对码。':'有效期至')}{phase!=='expired'&&Date.parse(pairing.expires_at)>now&&' '+expiryLabel}</small>}{embedded&&phase==='pending'&&!locallyExpired&&<span>{w('· 仅在目标 Hive 确认，不更改当前 Hive。')}</span>}</div>}

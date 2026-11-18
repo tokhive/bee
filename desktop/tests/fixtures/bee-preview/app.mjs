@@ -22,7 +22,7 @@ try{
  await until(()=>document.querySelector('main h1'));
  if(scene.page==='settings'){const tab=scene.id==='settings-network'?'网络与代理':scene.id==='settings-system'?'通知与启动':scene.id==='settings-general'?'通用':'关于';const trigger=await until(()=>button(t(tab)));trigger.focus();trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}));}
  if(scene.page==='diagnostics'){(await until(()=>button(t('运行诊断')))).click();if(scene.id==='diagnostics-export-unknown'){(await until(()=>button(t('导出脱敏报告')))).click();(await until(()=>button(t('确认导出')))).click();}}
- if(scene.id==='account-reading'){step='读取 OpenAI 登录';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();await until(()=>document.querySelector('.add-account h3')?.textContent.includes(t('正在读取并核验账号…')));}
+ if(scene.id==='account-reading'){step='读取 OpenAI 登录';(await until(()=>button('OpenAI',document.querySelector('.add-account')??document))).click();await until(()=>document.querySelector('.add-account-progress-title')&&document.querySelector('.add-account [role=status]'));}
  if(scene.action){
   if(scene.page==='accounts'){
    step='等待正式账号来源初始化';

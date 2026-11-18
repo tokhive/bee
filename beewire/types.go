@@ -122,9 +122,12 @@ type CredentialRegistration struct {
 	Claude   *Authorization `json:"claude,omitempty"`
 	// Reseller registers an API reseller key instead of a subscription
 	// account; it carries no authorization and no maintenance task.
-	OpenAIAPI *OpenAIAPIKey `json:"openai_api,omitempty"`
-	Reseller  *ResellerKey  `json:"reseller,omitempty"`
-	TaskID    string        `json:"task_id,omitempty"`
+	// OpenAIAPI and ClaudeAPI register a Provider's official Platform key,
+	// each separately from every other credential.
+	OpenAIAPI *OfficialAPIKey `json:"openai_api,omitempty"`
+	ClaudeAPI *OfficialAPIKey `json:"claude_api,omitempty"`
+	Reseller  *ResellerKey    `json:"reseller,omitempty"`
+	TaskID    string          `json:"task_id,omitempty"`
 }
 
 type MaintenanceResponse struct {

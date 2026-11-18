@@ -884,6 +884,7 @@ async fn native_live_binding_and_result_query_keep_the_same_owned_run_and_pause(
         std::path::PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
     let bytes = std::fs::read(&program).unwrap();
     let bridge = Bridge::start(crate::sidecar::LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![
@@ -960,6 +961,7 @@ async fn native_live_binding_and_result_query_keep_the_same_owned_run_and_pause(
                 && reply.result["runtime"]["platforms"]["openai"]["account"]["authorization"]
                     ["state"]
                     == "synchronized"
+                && reply.result["runtime"]["platforms"]["openai"]["supply"].is_object()
             {
                 break reply.result["runtime"].clone();
             }

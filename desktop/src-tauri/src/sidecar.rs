@@ -95,6 +95,7 @@ impl Default for RequestTracker {
 
 #[derive(Clone)]
 pub(crate) struct LaunchSpec {
+    pub diagnostics: Option<Arc<crate::diagnostic_log::DiagnosticLogStore>>,
     pub program: PathBuf,
     pub bundle: Option<PathBuf>,
     pub args: Vec<String>,
@@ -654,6 +655,7 @@ impl Bridge {
                 .filter(|path| path.extension() == Some(std::ffi::OsStr::new("app")))
                 .map(std::path::Path::to_path_buf);
             Ok(LaunchSpec {
+                diagnostics: None,
                 program: bundled_program(&executable)?,
                 bundle,
                 args: vec!["desktop".into()],
@@ -1285,6 +1287,15 @@ impl Bridge {
         duration: Duration,
         exit_request: bool,
     ) -> Result<BridgeReply, BridgeError> {
+        // Preserve the internal reads needed to stop and reap the owned runtime.
+        if !exit_request && matches!(method, "account_snapshot" | "account_detect" | "runtime_snapshot" | "device_status" | "supply_status") {
+            if let Some(cause) = self.0.launch.as_ref()
+                .and_then(|spec| spec.diagnostics.as_ref())
+                .and_then(|logs| logs.write_error())
+            {
+                return Err(error("DIAGNOSTIC_PERSISTENCE_FAILED", format!("failure evidence could not be saved: {}: {}; repair log storage and restart the app before relying on failure history", cause.code, cause.message)));
+            }
+        }
         let mode = self.0.launch.as_ref().map(LaunchSpec::profile_mode)
             .unwrap_or(crate::profiles::ProfileMode::Current);
         let released = self.0.switch_released.load(Ordering::SeqCst)
@@ -1810,8 +1821,9 @@ async fn supervise(
         // Device credentials stay in Go and are never logged by this entry point.
         // Drain continuously and retain only its bounded diagnostic tail.
         let diagnostic_events = tracker.diagnostics.clone();
+        let diagnostic_store = spec.diagnostics.clone();
         let mut diagnostics = tokio::spawn(async move {
-            crate::diagnostics::drain_with_events(&mut stderr, diagnostic_events).await
+            crate::diagnostics::drain_with_store(&mut stderr, diagnostic_events, diagnostic_store).await
         });
         let mut replies = Replies {
             stdout,

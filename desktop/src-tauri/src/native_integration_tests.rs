@@ -36,6 +36,7 @@ async fn native_auto_service_through_real_go_transport_and_controlled_hive() {
     let audit_path = audit.path().join("audit.json");
     let bytes = std::fs::read(&program).unwrap();
     let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![
@@ -205,6 +206,7 @@ async fn native_login_progress_open_cancel_through_real_go_transport() {
     let audit_path = audit.path().join("audit.json");
     let bytes = std::fs::read(&program).unwrap();
     let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![

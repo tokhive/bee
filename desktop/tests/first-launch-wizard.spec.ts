@@ -5,7 +5,7 @@ declare global {interface Window {setWizardProps:(props:Partial<FirstLaunchWizar
 test('first setup validates the Hive origin and Unicode device name before one explicit submission',async({page})=>{
  await page.goto('/tests/fixtures/first-launch-wizard.html');
  const hive=page.getByRole('textbox',{name:'Hive 地址',exact:true}),name=page.getByRole('textbox',{name:'设备名称',exact:true});
- await expect(hive).toBeFocused();
+ await expect(hive).toBeFocused();await expect(hive).toHaveValue('https://console.tokhive.ai');await hive.fill('');
  await page.getByRole('button',{name:'继续绑定设备',exact:true}).click();
  await expect(page.getByText('请填写 Hive 地址。',{exact:true})).toBeVisible();await expect(hive).toBeFocused();
  await hive.fill('http://remote.example');await page.getByRole('button',{name:'继续绑定设备',exact:true}).click();
@@ -19,6 +19,16 @@ test('first setup validates the Hive origin and Unicode device name before one e
  await expect(page.getByRole('button',{name:'正在创建配对请求…',exact:true})).toBeDisabled();
  await expect(page.getByLabel('Fixture actions')).toHaveText('begin http://127.0.0.1:8080 工作设备 😀');
  await expect(hive).toHaveValue('http://127.0.0.1:8080/');
+});
+
+test('first setup offers the default Hive and reads a bare host as HTTPS',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ const hive=page.getByRole('textbox',{name:'Hive 地址',exact:true});
+ await expect(hive).toHaveValue('https://console.tokhive.ai');await hive.press('Enter');
+ await expect(page.getByLabel('Fixture actions')).toHaveText('begin https://console.tokhive.ai Bee Desktop');
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await hive.fill(' hive.example.com ');await hive.press('Enter');
+ await expect(page.getByLabel('Fixture actions')).toHaveText('begin https://hive.example.com Bee Desktop');
 });
 
 const pairing={code:'ABCD-EFGH',verification_url:'https://hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-11-12T07:00:00Z'};
@@ -215,7 +225,7 @@ test('Enter validation is announced politely while the invalid input already has
  const hive=page.getByRole('textbox',{name:'Hive 地址',exact:true}),name=page.getByRole('textbox',{name:'设备名称',exact:true});
  const hiveError=page.locator('#first-launch-hive-error'),nameError=page.locator('#first-launch-name-error');
  await expect(hiveError).toBeEmpty();await expect(nameError).toBeEmpty();
- await expect(hive).toBeFocused();await hive.press('Enter');
+ await expect(hive).toBeFocused();await hive.fill('');await hive.press('Enter');
  await expect(hive).toBeFocused();await expect(hive).toHaveAttribute('aria-invalid','true');
  await expect(hive).toHaveAttribute('aria-describedby',/first-launch-hive-error/);
  await expect(hiveError).toHaveAttribute('aria-live','polite');await expect(hiveError).toHaveText('请填写 Hive 地址。');

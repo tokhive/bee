@@ -67,3 +67,55 @@ func TestSessionWaitJoinsCancelledRelayHandlers(t *testing.T) {
 		t.Fatal("wait did not join handler")
 	}
 }
+
+// TestSessionErrCarriesThePeersCloseCode: a peer that leaves with an
+// application close code is told apart from a transport that failed.
+func TestSessionErrCarriesThePeersCloseCode(t *testing.T) {
+	peer := make(chan *Session, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			return
+		}
+		s := New(r.Context(), conn, tunnel.Low, nil, Options{})
+		peer <- s
+		<-s.Context.Done()
+	}))
+	defer server.Close()
+	dial := func() (*websocket.Conn, *Session, *Session) {
+		conn, _, err := websocket.Dial(context.Background(), "ws"+strings.TrimPrefix(server.URL, "http"), nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return conn, New(context.Background(), conn, tunnel.High, nil, Options{}), <-peer
+	}
+	ended := func(s *Session) {
+		t.Helper()
+		select {
+		case <-s.Context.Done():
+		case <-time.After(2 * time.Second):
+			t.Fatal("session did not end")
+		}
+	}
+
+	conn, client, served := dial()
+	if err := served.Err(); err != nil {
+		t.Fatalf("a live session reported %v", err)
+	}
+	if err := conn.Close(websocket.StatusCode(4001), "leaving"); err != nil {
+		t.Fatalf("close handshake: %v", err)
+	}
+	ended(served)
+	if got := websocket.CloseStatus(served.Err()); got != 4001 {
+		t.Fatalf("served side saw close status %d (%v), want 4001", got, served.Err())
+	}
+	client.Close()
+
+	conn, client, served = dial()
+	conn.CloseNow()
+	ended(served)
+	if err := served.Err(); err == nil || websocket.CloseStatus(err) != -1 {
+		t.Fatalf("an abrupt close reported %v, want a transport error without a close status", err)
+	}
+	client.Close()
+}

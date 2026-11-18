@@ -280,3 +280,23 @@ fn diagnostic_log_export_accepts_real_development_versions_with_a_closed_shape()
         assert!(!failure.message.contains("MARKER"));
     }
 }
+
+#[test]
+fn failed_request_evidence_survives_reopen_and_export() {
+ let dir=tempfile::tempdir().unwrap();
+ let event=serde_json::json!({"time":"2026-11-17T00:00:00Z","level":"error","module":"bridge","platform":null,"code":"failure_observed","evidence":{"check":"hive_request","failure_code":"http_rejected","failure_message":"Hive POST /api/bee/maintenance: HTTP 503; response_body={\"error\":{\"code\":\"tee_unavailable\",\"message\":\"TEE inbox public key not configured\"}}"}});
+ { let store=DiagnosticLogStore::new(dir.path().to_path_buf());store.record(event.clone()).unwrap(); }
+ let store=DiagnosticLogStore::new(dir.path().to_path_buf());
+ let entries=store.export_entries().unwrap();
+ assert_eq!(entries.len(),1);
+ assert_eq!(serde_json::to_value(&entries[0]).unwrap(),event);
+}
+
+#[test]
+fn later_success_cannot_hide_missing_failure_history() {
+    let dir = tempfile::tempdir().unwrap();
+    let store = DiagnosticLogStore::new(dir.path().to_path_buf());
+    store.note_write_error(BridgeError { code: "DIAGNOSTIC_LOG_IO".into(), message: "publish failure: storage full".into(), details: None });
+    store.record(serde_json::json!({"time":"2026-11-17T00:00:00Z","level":"error","module":"bridge","platform":null,"code":"failure_observed","evidence":{"check":"hive_request","failure_code":"http_rejected","failure_message":"HTTP 503; upstream unavailable"}})).unwrap();
+    assert_eq!(store.write_error().unwrap().code, "DIAGNOSTIC_LOG_IO");
+}

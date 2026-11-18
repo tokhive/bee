@@ -1,11 +1,14 @@
 package bee
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,10 +37,17 @@ type desktopObservationTransport struct {
 	path            string
 	retryAt         time.Time
 	transportFailed bool
+	failure         error
 }
 
 func (t *desktopObservationTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	t.path = r.URL.Path
+	t.status = 0
+	t.transportFailed = false
+	t.failure = nil
+	defer func() {
+		t.failure = recordRequestFailure(r.Context(), "official_request", t.failure, strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer "))
+	}()
 	base := t.base
 	if base == nil {
 		base = http.DefaultTransport
@@ -45,9 +55,20 @@ func (t *desktopObservationTransport) RoundTrip(r *http.Request) (*http.Response
 	res, err := base.RoundTrip(r)
 	if err != nil {
 		t.transportFailed = true
-		return nil, errors.New("official transport returned no HTTP response")
+		t.failure = &safeTransportFailure{cause: err, message: fmt.Sprintf("official request %s %s received no HTTP response: %s", r.Method, r.URL.Scheme+"://"+r.URL.Host+r.URL.Path, desktopSafeText(err.Error(), strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))}
+		return nil, t.failure
 	}
 	t.status = res.StatusCode
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		body, readErr := io.ReadAll(io.LimitReader(res.Body, 65537))
+		original := res.Body
+		res.Body = &evidenceReadCloser{Reader: io.MultiReader(bytes.NewReader(body), original), Closer: original}
+		t.failure = fmt.Errorf("official request %s %s: HTTP %d; required=HTTP 2xx; response_body=%s", r.Method, r.URL.Scheme+"://"+r.URL.Host+r.URL.Path, res.StatusCode, safeResponseBody(body, strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")))
+		if readErr != nil {
+			t.failure = errors.Join(t.failure, fmt.Errorf("read official error response: %w", readErr))
+		}
+	}
+
 	if res.StatusCode == 429 {
 		now := time.Now()
 		at, _ := http.ParseTime(res.Header.Get("Retry-After"))
@@ -236,6 +257,9 @@ func officialObservationError(platform, check, reason string, t *desktopObservat
 	if strings.HasPrefix(reason, "usage plan ") {
 		reason = "usage plan does not match the local authorization plan"
 	}
+	if t.failure != nil && !strings.Contains(reason, t.failure.Error()) {
+		reason += "; " + t.failure.Error()
+	}
 	failure := accountFailure(platform, "official_check_failed", check, reason)
 	failure.Evidence["http_status"] = strconv.Itoa(t.status)
 	failure.Evidence["path"] = t.path
@@ -292,4 +316,28 @@ func expireOfficialCapabilities(c *DesktopAccountCapabilities, now time.Time) {
 			}
 		}
 	}
+}
+
+type evidenceReadCloser struct {
+	io.Reader
+	io.Closer
+}
+
+func observedOfficialTransport(base http.RoundTripper) *desktopObservationTransport {
+	if existing, ok := base.(*desktopObservationTransport); ok {
+		return existing
+	}
+	return &desktopObservationTransport{base: base}
+}
+func finishOfficialFailure(ctx context.Context, observed *desktopObservationTransport, failure error, token string) error {
+	if failure == nil {
+		return nil
+	}
+	if observed.failure != nil {
+		if strings.Contains(failure.Error(), observed.failure.Error()) {
+			return failure
+		}
+		return errors.Join(failure, observed.failure)
+	}
+	return recordRequestFailure(ctx, "official_response", failure, token)
 }

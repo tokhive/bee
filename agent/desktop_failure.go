@@ -35,6 +35,10 @@ func (e *DesktopFailure) Error() string { return e.Code + ": " + e.Message }
 func (e *DesktopFailure) Unwrap() error { return e.Cause }
 
 var desktopFailureCheck = regexp.MustCompile(`^[a-z][a-z0-9_]{0,79}$`)
+var desktopPrivatePath = regexp.MustCompile(`(?:/Users/|/home/|[A-Za-z]:\\Users\\)[^\s"'<>]+`)
+var desktopPrivateEmail = regexp.MustCompile(`[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}`)
+var desktopJWT = regexp.MustCompile(`\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+`)
+var desktopPEM = regexp.MustCompile(`(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)`)
 var desktopSecretToken = regexp.MustCompile(`\b(?:bee_|beep_|sk-)[A-Za-z0-9_-]{8,}`)
 
 func desktopSafeText(value string, secrets ...string) string {
@@ -44,6 +48,10 @@ func desktopSafeText(value string, secrets ...string) string {
 		}
 	}
 	value = connectionMessage(errors.New(value), "")
+	value = desktopPEM.ReplaceAllString(value, "[redacted]")
+	value = desktopJWT.ReplaceAllString(value, "[redacted]")
+	value = desktopPrivatePath.ReplaceAllString(value, "[redacted path]")
+	value = desktopPrivateEmail.ReplaceAllString(value, "[redacted email]")
 	return desktopSecretToken.ReplaceAllString(value, "[redacted]")
 }
 func desktopRequestFailure(state localState, path, check string, cause error, status int, body []byte, secrets ...string) error {
@@ -73,33 +81,14 @@ func desktopRequestFailure(state localState, path, check string, cause error, st
 		evidence["http_status"] = strconv.Itoa(status)
 	}
 	if len(body) > 0 {
-		// Copy only the public error fields. Pairing credentials and arbitrary response
-		// objects never become evidence; retain safe original error text when present.
-		var public struct {
-			Error struct {
-				Code    string `json:"code"`
-				Message string `json:"message,omitempty"`
-			} `json:"error"`
-		}
-		if json.Unmarshal(body, &public) == nil && (public.Error.Code != "" || public.Error.Message != "") {
-			public.Error.Code = safeCode(public.Error.Code)
-			public.Error.Message = desktopSafeText(public.Error.Message, secrets...)
-			data, _ := json.Marshal(public)
-			if len(data) <= 32768 {
-				evidence["response_body"] = string(data)
-			} else {
-				evidence["response_body"] = fmt.Sprintf("public error response bytes=%d; maximum=32768; body omitted", len(data))
-			}
-		} else {
-			evidence["response_body"] = fmt.Sprintf("public error response unavailable; response bytes=%d; required=error code/message JSON; body omitted", len(body))
-		}
+		evidence["response_body"] = desktopSafeText(safeResponseBody(body, secrets...))
 	}
 	message := desktopSafeText(cause.Error(), secrets...)
 	if body := evidence["response_body"]; body != "" {
 		message += "; response_body=" + body
 	}
 	if len(message) > 32768 {
-		message = fmt.Sprintf("desktop failure message bytes=%d; maximum=32768; inspect bounded evidence", len(message))
+		message = boundedFailureText(message, 30000)
 	}
 	return &DesktopFailure{Code: code, Message: message, Details: &DesktopFailureDetails{Check: check, ObservedAt: time.Now().UTC().Format(time.RFC3339Nano), Evidence: evidence}, Cause: cause}
 }

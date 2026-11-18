@@ -25,9 +25,9 @@ Prebuilt binaries are published on the [releases page](https://github.com/tokhiv
 curl -fsSL https://raw.githubusercontent.com/tokhive/bee/main/install.sh | sh
 ```
 
-On Linux, the script also registers and enables the system-level `tokhive-bee` service. It runs as the installing user at boot, even before an SSH login. Run the installer as the user who will pair Bee, without putting the whole command under `sudo`; only service management requests administrator access. In an interactive terminal, the installer offers to pair Bee, choose which signed-in accounts to supply, and start the background service. Accept the prompt, enter your Hive address and confirm pairing in its web console. Sign in to the official clients first so account setup can find them. See [Running as a service](#running-as-a-service) for the manual path.
+On Linux, the script also registers and enables the system-level `tokhive-bee` service. It runs as the installing user at boot, even before an SSH login. Run the installer as the user who will pair Bee, without putting the whole command under `sudo`; only service management requests administrator access. In an interactive terminal, the installer offers to pair Bee, choose which signed-in accounts to supply, and start the background service. Accept the prompt, press Enter to use the official Hive at `https://console.tokhive.ai` (or type another Hive address), and confirm pairing in its web console. Set `BEE_HIVE` to offer a different default address. Sign in to the official clients first so account setup can find them. See [Running as a service](#running-as-a-service) for the manual path.
 
-If Hive has deleted or replaced this device and rejects its previous pairing, the interactive installer offers to pair again (default **no**). After you agree and enter the Hive address, it stops the service, backs up only `bee.json` into a private, uniquely named directory beside it, and shows the backup path. It then opens the normal web pairing flow and reuses `egress.json`. Re-pairing requires the Linux `flock` tool (usually included in `util-linux`); a busy configuration lock or a changed configuration stops recovery. Declining or ending input keeps the existing configuration. A failed new pairing keeps both the backup and any newly saved pairing state so you can resume by running the installer again. Confirming a replacement in Hive may deactivate another Bee.
+If Hive has deleted or replaced this device and rejects its previous pairing, the interactive installer offers to pair again (default **no**). After you agree and confirm the Hive address (it defaults to the one the old configuration used), it stops the service, backs up only `bee.json` into a private, uniquely named directory beside it, and shows the backup path. It then opens the normal web pairing flow and reuses `egress.json`. Re-pairing requires the Linux `flock` tool (usually included in `util-linux`); a busy configuration lock or a changed configuration stops recovery. Declining or ending input keeps the existing configuration. A failed new pairing keeps both the backup and any newly saved pairing state so you can resume by running the installer again. Confirming a replacement in Hive may deactivate another Bee.
 
 Installation continues in **English** without a language-selection prompt. Installation results appear separately from the three setup steps: **1/3 device pairing**, **2/3 supplied accounts**, and **3/3 background startup**. Existing configuration is reused while all three steps and the final service state remain visible. Terminal output uses separators, status icons and colors; redirected output or `TERM=dumb` uses plain text, and `NO_COLOR=1` disables colors.
 
@@ -109,11 +109,13 @@ The menu requires a binary built from this change or a release containing it. Up
 
 If the Linux installer has completed setup and started the service, use `bee status` to check it. The following steps are for macOS, binary-only installation, or running in the foreground.
 
-First sign in to the official client on this machine, as the user that will run Bee: Codex (`codex login`) for an OpenAI subscription, Claude Code (`claude`) for a Claude subscription. Then copy the command from the **Devices** page of your Hive, which already contains its address:
+First sign in to the official client on this machine, as the user that will run Bee: Codex (`codex login`) for an OpenAI subscription, Claude Code (`claude`) for a Claude subscription. Then run:
 
 ```sh
-bee start --hive https://hive.example.com
+bee start
 ```
+
+Bee pairs with the official Hive at `https://console.tokhive.ai`. To use another Hive, copy the command from its **Devices** page, which adds its address as `--hive https://hive.example.com`. A bare host such as `hive.example.com` is read as HTTPS.
 
 `bee start` does three things and skips any that are already done, so you never edit a configuration file:
 
@@ -129,7 +131,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 
 `bee start` runs these commands for you; use them directly to redo one step.
 
-- `bee login --hive URL [--name NAME]` pairs this machine, or resumes a pairing that was interrupted.
+- `bee login [--hive URL] [--name NAME]` pairs this machine (default Hive `https://console.tokhive.ai`), or resumes a pairing that was interrupted.
 - `bee setup` detects the official sign-ins and writes `egress.json` next to the device configuration. Running it again is safe, and is how you add or remove a platform. Use `--platform openai,claude --yes` in scripts.
   - **OpenAI:** Bee reads the Codex login from `--codex-home`, `$CODEX_HOME` or `~/.codex`, in that order. On macOS it falls back to the Keychain.
   - **Claude:** Bee reads the Claude Code login where Claude Code keeps it: the Keychain on macOS, and `~/.claude/.credentials.json` on Linux (`$CLAUDE_CONFIG_DIR/.credentials.json` if you set that variable). `--claude-config-dir` selects a non-default Claude Code configuration. On a Linux server, run `claude` once and sign in, then run `bee setup`.
@@ -226,7 +228,7 @@ If a manually started Bee holds the same configuration lock, the installer shows
 If you decline, disable the wizard, or install without a terminal, sign in to the official clients and run the printed commands as the installing user. With the default configuration paths:
 
 ```sh
-bee login --hive https://hive.example.com  # existing pairing: bee login
+bee login                              # official Hive; another Hive: --hive URL
 bee setup                              # only if egress.json is missing
 sudo systemctl start tokhive-bee
 sudo systemctl status tokhive-bee

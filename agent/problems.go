@@ -104,6 +104,14 @@ var problems = map[string]problem{
 		"the official API key file is missing, unreadable, open to other users or does not hold a single key",
 		"set openai_api.key_file to an absolute path holding only the key, with permissions 600",
 	},
+	"BEE-CONFIG-CLAUDE-API": {
+		"official Claude API supply configuration is invalid",
+		"select 1 to 512 distinct model IDs; local_url is only for loopback test fixtures",
+	},
+	"BEE-CONFIG-CLAUDE-API-KEY": {
+		"the official Claude API key file is missing, unreadable, open to other users or does not hold a single key",
+		"set claude_api.key_file to an absolute path holding only the key, with permissions 600",
+	},
 	"BEE-CONFIG-RESELLER": {
 		"reseller names an API reseller Bee does not know",
 		"set reseller.reseller to a supported reseller, such as wokey",
@@ -191,10 +199,6 @@ var problems = map[string]problem{
 	"BEE-SETUP-NEEDED": {
 		"bee run has no egress configuration, so this Bee stays online but supplies no account",
 		"run bee setup to choose the accounts to supply, then restart bee run",
-	},
-	"BEE-START-HIVE": {
-		"bee start needs the Hive address to pair this machine",
-		"copy the bee start command from your Hive's Devices page, or run bee start --hive https://your-hive",
 	},
 }
 

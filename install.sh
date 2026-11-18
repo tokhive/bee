@@ -9,12 +9,15 @@
 # the installing user. Set BEE_INSTALL_SERVICE=0 to install only the binary.
 # Set BEE_INSTALL_INTERACTIVE=0 to skip the setup/start prompts.
 # Installation uses English by default; set BEE_LANG=zh for Chinese.
+# BEE_HIVE (default https://console.tokhive.ai) is the Hive address offered
+# when pairing; pressing Enter at the prompt accepts it.
 set -eu
 
 repository=tokhive/bee
 directory=${BEE_INSTALL_DIR:-"$HOME/.local/bin"}
 installed=0
 lang=${BEE_LANG:-en}
+default_hive=${BEE_HIVE:-https://console.tokhive.ai}
 
 message() {
 	if [ "$lang" = zh ]; then message_format=$2; else message_format=$1; fi
@@ -154,7 +157,7 @@ service_help() {
 	message 'Manual setup and startup\n\n' '手动配置并启动\n\n'
 	message 'Pair or validate: %s login --config %s' '配对或验证设备：%s login --config %s' "$(shell_quote "$directory/bee")" "$(shell_quote "$config_path")"
 	if [ ! -f "$config_path" ]; then
-		printf " --hive '<Hive URL>'"
+		printf ' --hive %s' "$(shell_quote "$default_hive")"
 	fi
 	printf '\n'
 	if [ ! -f "$egress_path" ]; then
@@ -271,16 +274,22 @@ pair_device() {
 		fi
 		repair_pairing=1
 	fi
-	while :; do
-		message 'Hive address: ' '请输入 Hive 地址：'
-		if ! IFS= read -r hive; then
-			pairing_cancelled
-			if [ "$repair_pairing" = 0 ]; then service_help; fi
-			return 1
-		fi
-		[ -n "$hive" ] && break
-		message 'Hive address must not be empty.\n' 'Hive 地址不能为空。\n'
-	done
+	suggested_hive=$default_hive
+	if [ "$repair_pairing" = 1 ]; then
+		# Re-pair with the Hive the rejected configuration belonged to.
+		previous_hive=$(grep -o '"hive":"[^"\\]*"' "$work/previous-bee.json" | head -n 1 | cut -d '"' -f 4) || previous_hive=
+		[ -z "$previous_hive" ] || suggested_hive=$previous_hive
+	fi
+	message 'Hive address [%s]: ' '请输入 Hive 地址 [%s]：' "$suggested_hive"
+	if ! IFS= read -r hive; then
+		pairing_cancelled
+		if [ "$repair_pairing" = 0 ]; then service_help; fi
+		return 1
+	fi
+	case $hive in
+	*[![:space:]]*) ;;
+	*) hive=$suggested_hive ;;
+	esac
 	if [ "$repair_pairing" = 1 ]; then
 		command -v flock >/dev/null 2>&1 || fail "$(message 'flock was not found on PATH; install util-linux before re-pairing. Configuration was not moved.' 'PATH 中未找到 flock；请安装 util-linux 后重新配对。未移动配置。')"
 		wizard_command 'systemctl stop tokhive-bee' as_root systemctl stop tokhive-bee

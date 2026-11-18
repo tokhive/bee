@@ -96,6 +96,7 @@ fn launch() -> LaunchSpec {
     let program = PathBuf::from(std::env::var_os("BEE_SWITCH_NATIVE_WRAPPER").unwrap());
     let bytes = std::fs::read(&program).unwrap();
     LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec!["desktop".into()],

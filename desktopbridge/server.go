@@ -146,7 +146,10 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	}()
 	diagnosticContext, stopDiagnostics := context.WithCancel(ctx)
 	defer stopDiagnostics()
-	diagnosticOutput := &diagnosticWriter{writer: diagnostics}
+	diagnosticOutput, shared := diagnostics.(*diagnosticWriter)
+	if !shared {
+		diagnosticOutput = &diagnosticWriter{writer: diagnostics}
+	}
 	diagnosticSink := requestDiagnosticSink(diagnosticContext, diagnosticOutput)
 	mode := bee.DesktopProfileCurrent
 	if profile, ok := devices.(interface{ ProfileMode() bee.DesktopProfileMode }); ok {
@@ -451,6 +454,14 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		encoded, err := json.Marshal(answer)
 		if err != nil {
 			return response{}, false, fmt.Errorf("encode desktop response: %w", err)
+		}
+		if err := bee.RecordDesktopReplyFailures(ctx, req.Method, req.Platform, encoded); err != nil {
+			answer.Error = rejected("DIAGNOSTIC_RECORDING_FAILED", "%s", err)
+			answer.Result = nil
+			encoded, err = json.Marshal(answer)
+			if err != nil {
+				return response{}, false, fmt.Errorf("encode diagnostic recording failure: %w", err)
+			}
 		}
 		var terminal error
 		if len(encoded) > maxFrameBytes {

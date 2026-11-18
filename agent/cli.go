@@ -103,7 +103,7 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		flags.StringVar(&egressPath, "egress-config", "", "encrypted egress configuration file")
 	}
 	if command == "login" {
-		flags.StringVar(&origin, "hive", "", "Hive address")
+		flags.StringVar(&origin, "hive", "", "Hive address (default "+DefaultHive+")")
 		flags.StringVar(&name, "name", "", "Device name")
 	}
 	if err := flags.Parse(args[1:]); err != nil {
@@ -134,11 +134,12 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		return err
 	}
 	if command == "login" {
+		origin = hiveInput(origin)
 		if origin == "" {
 			origin = state.Hive
 		}
 		if origin == "" {
-			origin = "http://localhost:8080"
+			origin = DefaultHive
 		}
 		origin, err = hiveOrigin(origin)
 		if err != nil {

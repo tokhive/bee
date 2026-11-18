@@ -74,6 +74,9 @@ func (m *managementMenu) pairingFlow(state localState, reset, offerNext bool) er
 		}
 	}
 	hive := state.Hive
+	if hive == "" {
+		hive = DefaultHive
+	}
 	name := state.Name
 	if state.Credential == "" || reset {
 		for {
@@ -88,7 +91,7 @@ func (m *managementMenu) pairingFlow(state localState, reset, offerNext bool) er
 			if a == "0" {
 				return m.back()
 			}
-			if a == "" {
+			if a = hiveInput(a); a == "" {
 				a = hive
 			}
 			origin, e := hiveOrigin(a)

@@ -628,6 +628,13 @@ pub(crate) struct HiveSwitch {
 }
 impl HiveSwitch {
     pub(crate) fn open(root: PathBuf, startup: &Path) -> Result<Self, BridgeError> {
+        Self::open_with_diagnostics(root, startup, None)
+    }
+    pub(crate) fn open_with_diagnostics(
+        root: PathBuf,
+        startup: &Path,
+        logs: Option<Arc<crate::diagnostic_log::DiagnosticLogStore>>,
+    ) -> Result<Self, BridgeError> {
         let profiles = Arc::new(ProfileStore::open(root)?);
         if let Err(cause) = profiles.snapshot().and_then(|_| profiles.migrate_legacy(startup)) {
             if !matches!(
@@ -637,7 +644,8 @@ impl HiveSwitch {
                 return Err(cause);
             }
         }
-        let launch = Bridge::bundled_spec()?;
+        let mut launch = Bridge::bundled_spec()?;
+        launch.diagnostics = logs;
         Self::from_store(profiles, launch)
     }
     pub(crate) fn from_store(
@@ -2288,6 +2296,7 @@ mod tests {
         )
         .unwrap();
         LaunchSpec {
+            diagnostics: None,
             program: PathBuf::from(
                 source_path
                     .to_str()

@@ -92,6 +92,13 @@ for(const mutation of ['operation','context-owner','context-name','context-hive'
  await open(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
  await page.evaluate(mutation=>{const w=window as any;w.__firstLaunchTest.completedMutation=mutation;w.__beePreviewApprove();},mutation);
  await expect(page.getByRole('alert')).toContainText(mutation.startsWith('new-')?'initial pairing identity differs from completed transaction':'首次绑定完成证据不匹配',{timeout:15000});
+ if(mutation==='operation'){
+  await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
+  await expect(page.getByRole('dialog')).toContainText('first_launch_completion');
+  await expect(page.getByRole('dialog')).toContainText('[redacted email]');
+  await expect(page.getByRole('dialog')).not.toContainText('@example');
+  await page.keyboard.press('Escape');
+ }
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
  await expect(page.getByRole('navigation')).toHaveCount(0);
  await expect(page.getByRole('button',{name:'重新检查设备',exact:true})).toBeVisible();

@@ -161,7 +161,7 @@ elif args and args[0] in ('login', 'setup'):
             print('a Bee process is already running with this configuration', file=sys.stderr)
             sys.exit(1)
     if args[0] == 'login' and os.environ.get('INSTALL_TEST_REVOKED'):
-        if config.exists() and config.read_text() == 'revoked-device-config':
+        if config.exists() and config.read_text() == os.environ.get('INSTALL_TEST_REVOKED_CONFIG', 'revoked-device-config'):
             print('bound device credential is invalid; silent pairing is not allowed', file=sys.stderr)
             sys.exit(1)
         if os.environ.get('INSTALL_TEST_REPAIR_FAIL'):
@@ -267,7 +267,7 @@ else:
     def test_terminal_install_pairs_sets_up_and_starts_service(self):
         result = self.run_terminal_install([
             ('Set up and start Bee now?', '\n'),
-            ('Hive address:', 'https://hive.example.com\n'),
+            ('Hive address [', 'https://hive.example.com\n'),
             ('Supply this account?', '\n'),
         ])
         self.assert_success(result)
@@ -283,7 +283,7 @@ else:
     def test_chinese_first_install_passes_language_to_both_commands(self):
         result = self.run_terminal_install([
             ('现在配置并启动 Bee？', '\n'),
-            ('请输入 Hive 地址：', 'https://hive.example.com\n'),
+            ('请输入 Hive 地址 [', 'https://hive.example.com\n'),
             ('Supply this account?', '\n'),
         ], BEE_LANG='zh')
         self.assert_success(result)
@@ -461,7 +461,7 @@ else:
         self.existing_configuration()
         result = self.run_terminal_install([('Set up and start Bee now?', '\n'),
             ('Stop this Bee', 'y\n'), ('Pair this device again?', 'y\n'),
-            ('Hive address:', 'https://hive.example.com\n')], INSTALL_TEST_HANDOFF='1',
+            ('Hive address [', 'https://hive.example.com\n')], INSTALL_TEST_HANDOFF='1',
             INSTALL_TEST_HANDOFF_REVOKED='1', INSTALL_TEST_REVOKED='1')
         self.assert_success(result)
         config = self.home / '.config/tokhive/bee.json'
@@ -479,14 +479,14 @@ else:
 
     def repair_answers(self, consent='y\n', hive='https://hive.example.com\n'):
         return [('Set up and start Bee now?', '\n'),
-                ('Pair this device again?', consent), ('Hive address:', hive)]
+                ('Pair this device again?', consent), ('Hive address [', hive)]
 
     def assert_repair_succeeds(self, lang):
         config = self.revoked_configuration()
         answers = self.repair_answers()
         if lang == 'zh':
             answers = [('现在配置并启动 Bee？', '\n'), ('是否重新配对？', 'y\n'),
-                       ('请输入 Hive 地址：', 'https://hive.example.com\n')]
+                       ('请输入 Hive 地址 [', 'https://hive.example.com\n')]
         result = self.run_terminal_install(answers, BEE_LANG=lang, INSTALL_TEST_REVOKED='1')
         self.assert_success(result)
         backups = list(config.parent.glob('bee.json.backup.*/bee.json'))
@@ -639,7 +639,7 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
             ('Set up and start Bee now?', '\n'), ('Supply this account?', '\n'),
         ])
         self.assert_success(result)
-        self.assertNotIn('Hive address:', result.stdout)
+        self.assertNotIn('Hive address [', result.stdout)
         commands = self.commands()
         self.assertLess(next(i for i, c in enumerate(commands) if c[:2] == ['bee', 'login']),
                         next(i for i, c in enumerate(commands) if c[:2] == ['bee', 'setup']))
@@ -653,7 +653,7 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
 
     def test_eof_at_hive_prompt_preserves_installation_without_login(self):
         result = self.run_terminal_install([
-            ('Set up and start Bee now?', '\n'), ('Hive address:', '\x04'),
+            ('Set up and start Bee now?', '\n'), ('Hive address [', '\x04'),
         ])
         self.assert_success(result)
         self.assertFalse(any(c[0] == 'bee' for c in self.commands()))
@@ -667,16 +667,57 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
                 self.assertTrue(self.unit.exists())
                 self.assertFalse(any(c[0] == 'bee' or c[:2] == ['systemctl', 'start'] for c in self.commands()))
 
-    def test_invalid_answer_reprompts_and_empty_hive_is_not_accepted(self):
+    def login_hives(self):
+        return [c[c.index('--hive') + 1] for c in self.commands() if c[:2] == ['bee', 'login'] and '--hive' in c]
+
+    def test_invalid_answer_reprompts_and_empty_hive_accepts_the_default(self):
         result = self.run_terminal_install([
             ('Set up and start Bee now?', 'maybe\n'),
             ('Set up and start Bee now?', 'y\n'),
-            ('Hive address:', '\n'), ('Hive address:', 'https://hive.example.com\n'),
+            ('Hive address [https://console.tokhive.ai]:', '\n'),
             ('Supply this account?', '\n'),
         ])
         self.assert_success(result)
         self.assertIn('Please answer yes or no', result.stdout)
-        self.assertIn('Hive address must not be empty', result.stdout)
+        self.assertEqual(self.login_hives(), ['https://console.tokhive.ai'])
+
+    def test_chinese_hive_prompt_offers_the_default(self):
+        result = self.run_terminal_install([
+            ('现在配置并启动 Bee？', '\n'),
+            ('请输入 Hive 地址 [https://console.tokhive.ai]：', '  \n'),
+            ('Supply this account?', '\n'),
+        ], BEE_LANG='zh')
+        self.assert_success(result)
+        self.assertEqual(self.login_hives(), ['https://console.tokhive.ai'])
+
+    def test_bee_hive_overrides_the_offered_default(self):
+        result = self.run_terminal_install([
+            ('Set up and start Bee now?', '\n'),
+            ('Hive address [https://dev.hive.example]:', '\n'),
+            ('Supply this account?', '\n'),
+        ], BEE_HIVE='https://dev.hive.example')
+        self.assert_success(result)
+        self.assertEqual(self.login_hives(), ['https://dev.hive.example'])
+
+    def test_typed_hive_replaces_the_default(self):
+        result = self.run_terminal_install([
+            ('Set up and start Bee now?', '\n'),
+            ('Hive address [', 'hive.example.com\n'),
+            ('Supply this account?', '\n'),
+        ])
+        self.assert_success(result)
+        self.assertEqual(self.login_hives(), ['hive.example.com'])
+
+    def test_repair_offers_the_previous_hive(self):
+        previous = '{"hive":"https://old.hive.example","name":"Bee","credential":"bee_x"}'
+        config = self.revoked_configuration()
+        config.write_text(previous)
+        result = self.run_terminal_install([
+            ('Set up and start Bee now?', '\n'), ('Pair this device again?', 'y\n'),
+            ('Hive address [https://old.hive.example]:', '\n'),
+        ], INSTALL_TEST_REVOKED='1', INSTALL_TEST_REVOKED_CONFIG=previous)
+        self.assert_success(result)
+        self.assertEqual(self.login_hives(), ['https://old.hive.example'])
 
     def test_active_service_defaults_to_no_restart(self):
         result = self.run_terminal_install([('Restart Bee now?', '\n')], INSTALL_TEST_SERVICE_STATE='active')
@@ -757,7 +798,7 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
             with self.subTest(operation=operation):
                 self.log.unlink(missing_ok=True)
                 result = self.run_terminal_install([
-                    ('Set up and start Bee now?', '\n'), ('Hive address:', 'https://hive.example.com\n'),
+                    ('Set up and start Bee now?', '\n'), ('Hive address [', 'https://hive.example.com\n'),
                     ('Supply this account?', '\n'),
                 ], INSTALL_TEST_BEE_NO_CONFIG=operation)
                 self.assertNotEqual(result.returncode, 0)
@@ -768,7 +809,7 @@ os.execv({native_mv!r}, ['mv'] + sys.argv[1:])
         special = self.home / "special ' $ % \\ space"
         hive = 'https://hive.example.com/$(touch unexpected)'
         result = self.run_terminal_install([
-            ('Set up and start Bee now?', '\n'), ('Hive address:', hive + '\n'),
+            ('Set up and start Bee now?', '\n'), ('Hive address [', hive + '\n'),
             ('Supply this account?', '\n'),
         ], BEE_INSTALL_DIR=str(special / 'bin'), XDG_CONFIG_HOME=str(special / 'config'))
         self.assert_success(result)

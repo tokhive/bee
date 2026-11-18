@@ -4,13 +4,15 @@
 
 [打开唯一主预览](index.html) · [历史版本与确认记录](http://127.0.0.1:15500/docs/preview/history/README.md) · [维护规范](../standard/html-preview.md)
 
-整个 App 使用同一个主入口。2026-11-17 用户确认将最新 `draft.html` 同步为主预览并实现正式界面。主预览已纳入概览设备卡内绑定修复、视觉优化及设备菜单内的“切换 Hive”，共 588 个场景；原账号管理、首次绑定和 Hive 切换场景保留。
+整个 App 使用同一个主入口。2026-11-18 用户确认当前草稿并要求“更新到主预览”。主预览现已纳入紧凑设备卡、正常菜单移除修复入口、连接故障重试，以及绑定／切换／取消结果的“重新核对”，共 638 个场景；原主预览 588 个场景全部保留。
 
-本轮认可的[主预览冻结版](http://127.0.0.1:15500/docs/preview/history/20261117-153033-approved-binding-repair/index.html?scene=rebind-fault&size=narrow)和[正式 React 组件冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)分别保存在独立档案库。正式组件已实现概览内修复、设备菜单、确认与取消回执、保存续接；通过 mock 验证不代表真实 Hive／原生 App 验收。
+[打开当前主预览](index.html?scene=device-service&theme=light&size=narrow) · [已认可冻结版](http://127.0.0.1:15500/docs/preview/history/20261118-114315-approved-device-fault-actions/index.html?scene=device-service&size=narrow)。`draft.html` 保留本次评审稿，当前没有新增待评审差异；后续调整仍在草稿进行。
 
-页面使用模拟数据，不接真实登录或业务。主预览并不代替正式应用或真实 Hive 的业务验收。以下旧“待评审”章节是历史记录；当前草稿以本节为准。
+本次只同步 HTML 与说明，不修改正式应用代码。2026-11-17 的正式 React 组件记录仍见[历史冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)。页面使用模拟数据，不接真实登录或业务，HTML 认可不代表正式应用或真实 Hive 已验收。
 
-## 待评审：设备故障与重新核对（2026-11-18）
+以下章节记录各轮交付时的范围与状态；2026-11-17 概览简化和 2026-11-18 故障核对草稿现均已获本次认可并纳入主预览。完整交互验证沿用草稿验证，本次另核对场景完整性、主入口显示与关键操作。
+
+## 已认可：设备故障与重新核对（2026-11-18）
 
 [打开当前草稿](draft.html?scene=device-service&theme=light&size=narrow) · [正常菜单](draft.html?scene=device-normal-menu&size=narrow) · [连接超时](draft.html?scene=device-connection-timeout&size=narrow) · [未知错误](draft.html?scene=device-status-unknown&size=narrow) · [结果未确认](draft.html?scene=device-binding-unknown&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261118-112829-device-fault-actions/draft.html?scene=device-service&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
 
@@ -18,7 +20,7 @@
 
 沿用上轮紧凑布局：当前故障与操作集中在设备卡，设备资料在卡底；保留账号自身问题、身份、暂停选择及 OpenAI 双窗口额度。绑定或切换确认完成后，接入入口仍位于账号区。
 
-新增“设备与 Hive / 故障与核对”分组，含 40 个可直接选择的正常、故障、错误详情、核对进行中及结果分支；原 598 个入口保留，共 638 个。默认打开 HTTP 503。已确认的是文字方案，本轮 HTML 待评审；只更新 `draft.html` 和本说明，`index.html` 与正式应用代码未修改。
+新增“设备与 Hive / 故障与核对”分组，含 40 个可直接选择的正常、故障、错误详情、核对进行中及结果分支；原 598 个入口保留，共 638 个。默认打开 HTTP 503。用户已确认本版 HTML，现已同步到 `index.html`；正式应用代码未在本轮更新。
 
 验证包括受影响场景的浅色紧凑／深色宽屏显示、重试成功与失败、状态／绑定／切换／取消核对结果、恢复后保留暂停、详情与键盘焦点、重置和场景切换取消旧模拟操作。所有数据和结果都是本地预设，不访问真实 Hive。
 

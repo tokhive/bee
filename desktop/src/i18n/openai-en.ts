@@ -1,4 +1,6 @@
 export const openaiEnglish:Record<string,string>={
+  "尚未取得数据": "No data received yet",
+  "重置时间待确认": "Reset time unconfirmed",
   "暂时无法确认取消结果": "Unable to confirm the cancellation result yet",
   "Bee 正在继续核对本次登录是否已结束。": "Bee is checking whether this sign-in has ended.",
   "尚未确认登录已结束": "The end of this sign-in is unconfirmed",

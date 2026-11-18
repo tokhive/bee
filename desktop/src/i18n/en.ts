@@ -275,6 +275,7 @@ export const en: Record<string, string> = {
  "系统通知权限检查失败。":"System notification permission check failed.",
 
  "本机保存未完成，需重新核对":"Local storage is incomplete; recheck to continue",
+ "desktop.status.preparing_accounts": "Preparing for requests…",
  "desktop.status.loading":"Reading device and account status",
  "desktop.status.unconfirmed":"Status unconfirmed",
  "desktop.status.failed":"Contribution stopped or interrupted",

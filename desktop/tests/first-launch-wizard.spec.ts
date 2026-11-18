@@ -287,7 +287,7 @@ test('expired initial pairing keeps its code and only offers a confirmed restart
  await page.goto('/tests/fixtures/first-launch-wizard.html');
  await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({view:{...pending,state:'expired',recovery:{...transaction,new_identity:null,phase:'expired',pairing}}}),{pending,transaction,pairing});
  await expect(page.getByText(pairing.code,{exact:true})).toBeVisible();
- await expect(page.getByText('Hive 已确认配对码过期。',{exact:true})).toHaveCount(1);
+ await expect(page.getByText('Hive 已确认配对码过期',{exact:true})).toHaveCount(1);
  await expect(page.getByRole('button',{name:/继续核对原请求|取消本次重绑|打开 Hive 确认网页/})).toHaveCount(0);
  await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('');

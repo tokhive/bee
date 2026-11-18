@@ -217,3 +217,20 @@ for(const [label,override] of [
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true}).and(page.locator(':enabled'))).toHaveCount(0);
  expect(await writes(page)).toEqual([]);
 });
+
+test('returning from confirmation retains the displayed identity without connecting the account',async({page})=>{
+ await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ const identity=await wizard(page).locator('.add-account-identity strong').innerText();
+ await wizard(page).getByRole('button',{name:'返回',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('已核验 OpenAI 账号');
+ await expect(wizard(page).locator('.add-account-identity strong')).toHaveText(identity);
+ expect(await writes(page)).toEqual([]);
+ await wizard(page).getByRole('button',{name:'继续使用此账号',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ expect(await writes(page)).toEqual([]);
+ await wizard(page).getByRole('button',{name:'返回',exact:true}).click();
+ await wizard(page).getByRole('button',{name:'更换连接方式',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeVisible();
+ expect(await writes(page)).toEqual([]);
+});

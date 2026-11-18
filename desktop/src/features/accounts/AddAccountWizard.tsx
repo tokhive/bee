@@ -76,12 +76,12 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
  const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
  const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在读取并核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'请在官方页面完成登录';
- const title=screen==='source'?'设置读取位置':starting?'正在启动 OpenAI 登录…':login?loginTitle:intake?'暂时无法确认接入结果':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已保留当前账号':missing?'未找到本机 OpenAI 登录':'连接 OpenAI 账号';
+ const title=screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:intake?'暂时无法确认接入结果':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
  const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成登录。Bee 会自动核对登录结果，无需反复刷新。';
  const status=starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
  const showSpinner=!!status&&!queryStopped&&!progress?.blocker;
  return <><section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
-  <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2></header>
+  <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2>{screen!=='source'&&step===2&&missing&&!error&&!starting&&!pending&&!observing&&!kept&&<Button variant="ghost" onClick={onBack}>{t('取消添加')}</Button>}</header>
   <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} className={step>i+1?'done':undefined} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
   <div className="add-account-body">
    <h3 ref={heading} tabIndex={-1}>{t(title)}</h3>
@@ -91,6 +91,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
    {error&&!intake&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
    {problem?.action&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
    {screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
+    <p>{t('选择 Codex 保存登录信息的目录。')}</p>
     <label htmlFor="add-account-directory">{t('读取目录')}</label>
     <div className="add-account-directory"><input id="add-account-directory" name="credential-directory" autoComplete="off" spellCheck={false} value={source.directory??''} placeholder={accounts.defaults?.platforms.find(p=>p.platform==='openai')?.directory} disabled={busy||picking} onChange={e=>accounts.setOpenaiDraft({...source,directory:e.target.value||null})}/><Button type="button" variant="outline" disabled={busy||picking} onClick={()=>{setPicking(true);setPickerError(undefined);void open({directory:true,multiple:false,title:t('选择读取目录'),defaultPath:source.directory??undefined}).then(path=>{if(active.current&&typeof path==='string')accounts.setOpenaiDraft({...source,directory:path});}).catch(cause=>{if(active.current)setPickerError(normalizeFailure(cause,'directory_picker'));}).finally(()=>{if(active.current)setPicking(false);});}}><FolderOpen aria-hidden="true"/>{t('选择目录')}</Button></div>
     <p>{t('留空使用默认目录。保存后会自动读取并核验账号。')}</p>
@@ -111,10 +112,19 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
     {(changed||confirmation&&confirmation!==stamp())&&<p role="alert">{t('账号、来源或接单选择已变化，请重新核验后确认。')}</p>}
     {selectBlock&&<p>{t(selectBlock.message)}</p>}
     <div className="add-account-actions"><Button disabled={!confirmValid||submitted} onClick={()=>{if(!confirmValid||confirmation!==stamp()||block('select')||!supply||!supplyFresh(supply.state,'openai',Date.now())){setChanged(true);return;}setSubmitted(true);accounts.action('openai','select');}}>{t('确认接入')}</Button><Button variant="ghost" disabled={busy} onClick={()=>{setScreen('connect');setKept(true);setSubmitted(false);}}>{t('返回')}</Button>{(!confirmValid||submitted)&&<Button variant="ghost" disabled={busy} onClick={()=>{setSubmitted(false);void accounts.recheckCurrentOpenai();void verify();}}>{t('重新核验')}</Button>}</div>
+   </>:missing&&!error&&!starting&&!kept?<>
+    <p>{t(source.directory?'未在所选位置找到登录信息。':'未在默认位置找到登录信息。')}</p>
+    <h4>{t('通过官方客户端登录')}</h4>
+    <p>{t('通过 Codex 完成登录后，Bee 会自动核验账号。登录后还需确认接入。')}</p>
+    {loginBlock&&<p>{t(loginBlock.message)}</p>}
+    <Button disabled={!!loginBlock||busy} onClick={()=>{initial.current=true;accounts.authorize('openai');}}>{t('登录 OpenAI')}</Button>
+    <div className="add-account-secondary"><p>{t('已在其他位置登录？')}</p><Button variant="ghost" disabled={busy} onClick={openSource}>{t('设置读取位置')}</Button></div>
+    <div className="add-account-back"><Button variant="ghost" disabled={busy} onClick={onBack}>{t('上一步')}</Button></div>
    </>:<>
-    {!starting&&<p>{t(kept&&valid?'返回不会丢失已核验的账号，继续时会再次核对。':'可以通过官方客户端登录，或设置已有登录的读取位置。')}</p>}
+    {kept&&valid&&<div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{confirmedIdentity?.fingerprint?.slice(0,16)}</strong></div></div>}
+    {!starting&&<p>{t(kept&&valid?'可以继续使用此账号，也可以更换连接方式。尚未接入 Bee。':'可以通过官方客户端登录，或设置已有登录的读取位置。')}</p>}
     {!starting&&loginBlock&&<p>{t(loginBlock.message)}</p>}
-    <div className="add-account-actions">{kept&&valid?<Button disabled={busy} onClick={()=>void verify()}>{t('继续使用此账号')}</Button>:<Button disabled={!!loginBlock||busy||starting} aria-busy={starting} onClick={()=>{initial.current=true;accounts.authorize('openai');}}>{t(starting?'正在启动登录…':'登录 OpenAI')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{if(kept&&valid)setKept(false);else openSource();}}>{t(kept&&valid?'更换连接方式':'设置读取位置')}</Button><Button variant="ghost" disabled={busy} onClick={onBack}>{t('返回')}</Button>{error&&<Button variant="ghost" disabled={busy} onClick={()=>void verify()}>{t('重新核验')}</Button>}</div>
+    <div className="add-account-actions">{kept&&valid?<Button disabled={busy} onClick={()=>void verify()}>{t('继续使用此账号')}</Button>:<Button disabled={!!loginBlock||busy||starting} aria-busy={starting} onClick={()=>{initial.current=true;accounts.authorize('openai');}}>{t(starting?'正在启动登录…':'登录 OpenAI')}</Button>}<Button variant={kept&&valid?"ghost":"outline"} disabled={busy} onClick={()=>{if(kept&&valid)setKept(false);else openSource();}}>{t(kept&&valid?'更换连接方式':'设置读取位置')}</Button>{!(kept&&valid)&&<Button variant="ghost" disabled={busy} onClick={onBack}>{t('返回')}</Button>}{error&&<Button variant="ghost" disabled={busy} onClick={()=>void verify()}>{t('重新核验')}</Button>}</div>
    </>}
   </div>
  </section><p className="add-account-privacy"><ShieldCheck aria-hidden="true"/>{t('授权信息保留在本机')}</p></>;

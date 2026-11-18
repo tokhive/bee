@@ -1,4 +1,14 @@
 export const addAccountEnglish:Record<string,string>={
+ '读取已有的 OpenAI 登录信息':'Read an existing OpenAI login',
+ '选择 Codex 保存登录信息的目录。':'Choose the directory where Codex saves login information.',
+ '已核验 OpenAI 账号':'Verified OpenAI account',
+ '未在所选位置找到登录信息。':'No login information was found in the selected location.',
+ '未在默认位置找到登录信息。':'No login information was found in the default location.',
+ '通过 Codex 完成登录后，Bee 会自动核验账号。登录后还需确认接入。':'Bee will verify the account after you sign in through Codex. You must then confirm connecting it.',
+ '已在其他位置登录？':'Already signed in elsewhere?',
+ '上一步':'Previous step',
+ '可以继续使用此账号，也可以更换连接方式。尚未接入 Bee。':'Continue with this account or choose another connection method. It is not connected to Bee yet.',
+
  'Codex 本机凭证':'Local Codex credentials',
  '更新于':'Updated',
  '账号身份待核对':'Account identity pending verification',

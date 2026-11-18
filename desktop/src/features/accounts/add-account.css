@@ -77,3 +77,11 @@
 /* Preserve the inline small-label line box from the approved identity panel. */
 .add-account-identity small{display:inline}
 .add-account-body .add-account-platforms .ui-button{min-height:87px}
+
+.add-account-secondary{border-top:1px solid var(--line);padding-top:16px;margin-top:18px}
+.add-account-secondary p{margin-bottom:9px}
+.add-account-back{margin-top:14px}
+.add-account-body h4{margin:18px 0 6px;font-size:13px;font-weight:600}
+.add-account .ui-button{box-shadow:none}
+.add-account-top .ui-button{font:inherit;padding:5px 4px}
+.add-account-body>.ui-button,.add-account-actions .ui-button,.add-account-secondary .ui-button,.add-account-back .ui-button,.add-account-directory .ui-button{font:inherit}

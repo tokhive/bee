@@ -60,11 +60,11 @@ const transaction={operation_id:'a'.repeat(48),revision:1,old_identity:null,new_
 test('saving failure continues the original binding and completion waits for matching saved identity and navigation',async({page})=>{
  await page.goto('/tests/fixtures/first-launch-wizard.html');
  await page.evaluate(({transaction})=>window.setWizardProps({view:{state:'pairing',hive:'https://hive.example',name:'Work Mac',recovery:{...transaction,phase:'saving',failure:{code:'CONFIG_WRITE_DENIED',message:'write device.json: permission denied (EACCES)',details:{check:'device_config_save',observed_at:new Date().toISOString(),evidence:{actual:'EACCES',required:'writable configuration directory'}}}}}}),{transaction});
- await expect(page.getByRole('alert').filter({hasText:'write device.json: permission denied (EACCES)'})).toBeVisible();
+ await expect(page.getByRole('alert')).toContainText('设备身份已确认，但系统拒绝保存配置（EACCES）。');
  await expect(page.getByRole('heading',{name:'设备已绑定',exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toHaveCount(0);
  const details=page.getByRole('button',{name:'查看错误详情',exact:true});await details.focus();await page.keyboard.press('Enter');
- await expect(page.getByRole('dialog')).toContainText('EACCES');await page.keyboard.press('Escape');await expect(details).toBeFocused();
+ await expect(page.getByRole('dialog')).toContainText('write device.json: permission denied (EACCES)');await page.keyboard.press('Escape');await expect(details).toBeFocused();
  await page.getByRole('button',{name:'继续完成绑定',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('refresh');
  await page.evaluate(({transaction})=>window.setWizardProps({checking:true,view:{state:'pairing',hive:'https://hive.example',name:'Work Mac',recovery:{...transaction,phase:'saving'}}}),{transaction});
@@ -307,4 +307,18 @@ test('browser launch failure keeps pending pairing actionable without transactio
  await reopen.click();await expect(page.getByLabel('Fixture actions')).toHaveText('open');
  await page.evaluate(()=>window.setWizardProps({error:{code:'DEVICE_READ_FAILED',check:'device_status',observedAt:null,evidence:{},message:'device status failed: connection refused'}}));
  await expect(page.getByRole('button',{name:'继续核对原请求',exact:true})).toBeVisible();
+});
+
+test('configuration failure exports its evidence beside retry without navigating away',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(()=>window.setWizardProps({error:{code:'CONFIG_READ_DENIED',check:'device_context',observedAt:null,evidence:{actual:'EACCES'},message:'read device.json: permission denied (EACCES)'}}));
+ const downloadEvent=page.waitForEvent('download');
+ await page.getByRole('button',{name:'导出诊断',exact:true}).click();
+ const download=await downloadEvent;expect(download.suggestedFilename()).toBe('bee-device-diagnostics.txt');
+ const content=await (await import('node:fs/promises')).readFile((await download.path())!,'utf8');
+ expect(content).toContain('CONFIG_READ_DENIED');expect(content).toContain('device_context');expect(content).toContain('read device.json: permission denied (EACCES)');
+ await expect(page.getByText('已发起下载，请核对下载文件。',{exact:true})).toBeVisible();
+ await expect(page.getByText('诊断已导出。',{exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Fixture actions')).toHaveText('');
+ await expect(page.getByRole('button',{name:'重新检查设备',exact:true})).toBeEnabled();
 });

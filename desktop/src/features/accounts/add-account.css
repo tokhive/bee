@@ -28,3 +28,43 @@
 @keyframes add-account-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.add-account-spinner{animation:none}}
 @media(max-width:600px){.add-account{padding:18px}.add-account-steps{gap:12px}.add-account-directory{flex-wrap:wrap}.add-account-directory input{flex-basis:100%}}
+
+/* Approved add-account preview: a bounded wizard with a shared step divider. */
+.add-account{max-width:700px;margin:26px auto 0;padding:0;border-color:var(--line);background:var(--paper);color:var(--ink)}
+[data-theme=dark] .add-account{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.add-account-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:22px 28px 0}
+.add-account-top h2{font-size:17px;line-height:25.5px;font-weight:600;margin:0}
+.add-account-steps{margin:24px 28px 0;padding:0 0 22px;border-bottom:1px solid var(--line);gap:12px}
+.add-account-steps li{flex:1;color:var(--muted);opacity:1;min-width:0}
+.add-account-steps li:not(:last-child):after{content:'';height:1px;background:var(--line);flex:1;margin-left:4px}
+.add-account-steps li>span{width:25px;height:25px;flex:none;font-size:11px;border-color:var(--line)}
+.add-account-steps li[aria-current]{color:var(--ink)}
+.add-account-steps li[aria-current]>span{background:var(--primary);border-color:var(--primary);color:var(--on-primary)}
+.add-account-steps li.done>span{color:var(--good);border-color:var(--good)}
+.add-account-body{max-width:none;margin:0;padding:22px 28px;min-height:270px}
+.add-account-body h3{font-size:20px;line-height:1.45;font-weight:600;margin:0 0 10px;letter-spacing:-.2px}
+.add-account-body p{font-size:13px;color:var(--muted);margin:0 0 14px;line-height:1.8}
+.add-account-body .ui-button{min-height:38px;padding:8px 15px;height:auto}
+.add-account-body .account-error-trigger{min-height:28px;padding:0}
+.add-account-identity{display:flex;gap:12px;align-items:center;padding:18px;background:var(--panel);border-radius:8px;margin:20px 0}
+.add-account-identity strong{display:block;font-size:15px;line-height:22.5px;font-weight:700;overflow-wrap:anywhere}
+.add-account-identity{font-size:13px;line-height:1.5}.add-account-identity small{font-size:83.333%;line-height:inherit;color:var(--muted)}
+.add-account-actions{gap:12px;margin-top:24px}
+.add-account-privacy{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--muted);margin:15px 0 0}
+.add-account-privacy svg{width:13px;height:13px}
+.add-account dl dt,.add-account dl dd{margin:0}
+@media(max-width:720px){.add-account{margin-top:20px;padding:0}.add-account-top{padding:20px 18px 0}.add-account-steps{margin:20px 18px 0;gap:7px}.add-account-steps li{gap:5px;font-size:11px}.add-account-body{padding:24px 18px}}
+.add-account-body .add-account-platforms{gap:14px;margin-top:25px;margin-bottom:0}
+.add-account-body .add-account-platforms .ui-button{padding:20px;min-height:88px;justify-content:flex-start;gap:13px;text-align:left;white-space:normal}
+.add-account-platforms strong{display:block;font-size:16px}.add-account-platforms small{display:block;font-size:12px;margin-top:3px}.add-account-platforms svg{width:25px;height:25px}
+.native-shell:has(.add-account) main{padding:26px 29px 20px;scrollbar-gutter:stable;scrollbar-width:auto}
+.native-shell:has(.add-account) .page-heading{align-items:flex-start;margin-bottom:0}
+.native-shell:has(.add-account) .page-heading h1{font-weight:650;letter-spacing:-.5px}
+.native-shell:has(.add-account) .page-heading p{margin-top:6px;line-height:18px}
+.native-shell:has(.add-account) .account-heading-actions{min-height:31.2px;align-items:center}
+@media(max-width:720px){.native-shell:has(.add-account) main{padding:20px 16px}.add-account-body .add-account-platforms{grid-template-columns:1fr}}
+
+.add-account-body .add-account-error{color:var(--danger,#a24231);align-items:flex-start}.add-account-body .account-error-trigger{flex:none}
+
+[data-theme=dark] .add-account-body .add-account-error{color:var(--danger,#f2a38f)}
+.add-account-body h3:focus-visible{outline:2px solid var(--accent-ink);outline-offset:4px}

@@ -18,7 +18,7 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{if(startup?.state==='checking'){observedChecking.current=true;setCompletedOperation(null);}else if(startup?.state==='ready'&&observedChecking.current){observedChecking.current=false;if(startup.recovering&&startup.progress?.operation_id)setCompletedOperation(startup.progress.operation_id);}},[startup?.state,startup?.recovering,startup?.progress?.operation_id]);
  useEffect(()=>{setElapsed(0);if(!pending){pendingSince.current=null;setTotalElapsed(0);return;}const began=Date.now();pendingSince.current??=began;const timer=setInterval(()=>{setElapsed(Date.now()-began);setTotalElapsed(Date.now()-pendingSince.current!);},1000);return()=>clearInterval(timer);},[phase,pending]);
- const currentProblem=startup?.failure??(native.error?normalizeFailure(native.error,'bridge_startup'):snapshot.startupReadError??null);
+ const currentProblem=localError??startup?.failure??(native.error?normalizeFailure(native.error,'bridge_startup'):snapshot.startupReadError??null);
  if(currentProblem)previousProblem.current=currentProblem;
  else if(!pending)previousProblem.current=null;
  const problem=currentProblem??(pending?previousProblem.current:null);
@@ -49,7 +49,6 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
   {waiting&&startup?.observed_at&&<small>{t('上次确认：{time}',{time:formatDate(startup.observed_at,currentLocale(),{dateStyle:"short",timeStyle:"medium"})})}</small>}
   {problem&&<details><summary>{t('错误详情')}</summary><pre>{presentFailure(problem,currentLocale()).details}</pre></details>}
   {snapshot.startupReadError&&snapshot.startupReadError!==currentProblem&&<p role="alert">{safeFailureText(snapshot.startupReadError.message)}</p>}
-  {localError&&<p role="alert">{safeFailureText(localError.message)}</p>}
   {diagnostics&&<><p className="startup-diagnostic-hint">{t('此记录由 App 保留；后台不可用时不会执行实时检查。')}</p><button disabled={exporting} onClick={()=>void exportEvidence()}>{t('导出启动诊断')}</button>{exportResult&&<p role="status">{t(exportResult)}</p>}</>}
  </section>;
 }

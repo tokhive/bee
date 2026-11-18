@@ -230,7 +230,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  };
  useEffect(()=>{const journey=openaiJourney,view=views.openai;if(journey?.completed&&(errors.openai||accountErrors.openai||centralError||dirty.openai||view?.candidate.error||view?.authorization.error||view?.hive.error||deviceError||view?.operation?.error||view?.selection.fingerprint!==journey.completed||view?.candidate.fingerprint&&view.candidate.fingerprint!==journey.completed))setOpenaiJourney(undefined);},[views.openai,errors.openai,accountErrors.openai,centralError,deviceError,dirty.openai,openaiJourney]);
  const originalOperation=views.openai?.operation;
- const accountOperationID=originalOperation&&['select','confirm_change'].includes(originalOperation.kind)?openaiJourney?.operationId??originalOperation.id:undefined;
+ const accountOperationID=originalOperation&&['select','confirm_change'].includes(originalOperation.kind)&&!['succeeded','failed','cancelled'].includes(originalOperation.state)?openaiJourney?.operationId??originalOperation.id:undefined;
  useEffect(()=>{
   if(!enabled||!client||!accountOperationID){setOriginalAccountQuery(undefined);return;}
   const query=createOperationQuery({id:accountOperationID,read:async id=>{

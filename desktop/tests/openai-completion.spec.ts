@@ -94,7 +94,7 @@ test('open and exhausted queries retain the original login without starting anot
 test('account reconciliation stops after 60 seconds and manual checks never replay the action',async({page})=>{
  await page.clock.install();await setup(page);await page.evaluate(()=>(window as any).actionPending=true);
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('status')).toHaveText('账号操作结果待核对');
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
  const id=await page.evaluate(()=>(window as any).accounts.openai.operation.id);
  await page.clock.runFor(61000);
  await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByText('自动核对已达 60 秒，尚未确认原操作结果。',{exact:true})).toBeVisible();
@@ -180,7 +180,7 @@ test('keyring missing keeps true quota and one repair action; unknown quota is n
   a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:20,reset_at:null}];a.revision++;
  });await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('凭证缺失');
- await expect(card(page).getByText('已用 100%',{exact:true})).toBeVisible();await expect(card(page).getByText('已用 20%',{exact:true})).toBeVisible();
+ await expect(card(page).getByText('100%',{exact:true})).toBeVisible();await expect(card(page).getByText('20%',{exact:true})).toBeVisible();
  await expect(card(page).getByRole('button',{name:'修改凭证读取设置',exact:true})).toHaveCount(1);
  await expect(card(page).getByText('查看接单条件',{exact:true})).toHaveCount(0);
  const fault=await card(page).boundingBox();expect(fault!.height-normal!.height).toBeLessThan(90);

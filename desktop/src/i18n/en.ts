@@ -1,4 +1,6 @@
 export const en: Record<string, string> = {
+ "查看切换错误详情":"View switch error details",
+ "原 Hive 拒绝网络连接，任务状态尚未确认。":"The original Hive refused the connection; task status is still unconfirmed.",
  "Hive 切换中":"Switching Hive",
  "设备绑定尚未完成":"Device binding is not complete",
  "请绑定设备":"Bind this device",

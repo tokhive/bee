@@ -190,3 +190,72 @@ test('manual switch cancellation waits for a background read without disabling o
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).releaseBackgroundRead());
  await expect.poll(async()=>(await calls(page)).filter((c:any)=>c.command==='hive_switch_cancel').length).toBe(1);
 });
+
+test('completed target binding keeps paused switch status and continuation available',async({page})=>{
+ const app=await open(page,'switch-target-pairing');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
+  const w=frame.contentWindow as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  const identity={id:'target-device',name:'Target Mac',owner_id:'target-owner',owner_email:'target-owner@example.test'};
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   const result=await invoke(command,args);
+   if(command==='hive_switch_snapshot'||command==='hive_switch_observe'){
+    result.observation={state:'paused',reason:'round_elapsed',next_query_at:null};
+    result.actions.can_continue=true;result.actions.can_observe=false;
+   }
+   if(command==='hive_switch_target_status')return {result:{device:{state:'bound',hive:'https://target-hive.example',name:identity.name,identity}}};
+   if(command==='hive_switch_target_recovery_status')return {result:{recovery:{purpose:'initial_pairing',operation_id:'c'.repeat(48),revision:5,phase:'completed',old_identity:null,new_identity:identity,pairing:null,failure:null}}};
+   return result;
+  };
+ });
+ await page.clock.runFor(2100);
+ const progress=app.getByLabel('Hive 切换进度');
+ await expect(progress).toContainText('正在准备目标 Hive');
+ await expect(progress.getByRole('button',{name:'继续等待',exact:true})).toBeVisible();
+ await expect(progress.getByRole('button',{name:'取消切换',exact:true})).toBeVisible();
+ await expect(app.locator('.device-card-facts').first()).toContainText('https://hive.example');
+ await progress.getByRole('button',{name:'继续等待',exact:true}).click();
+ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_continue')).toHaveLength(1);
+ expect((await calls(page)).filter((c:any)=>['hive_switch_start','hive_switch_target_begin','hive_switch_target_recovery_confirm'].includes(c.command))).toEqual([]);
+});
+
+test('source connection failure uses approved unknown layout and rechecks the paused operation',async({page})=>{
+ const app=await open(page,'switch-unknown');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
+  const w=frame.contentWindow as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   const result=await invoke(command,args);
+   if(['hive_switch_snapshot','hive_switch_observe'].includes(command)){
+    result.observation={state:'paused',reason:'query_failed',next_query_at:null};
+    result.actions.can_continue=true;result.actions.can_observe=false;
+    result.operation.failure={code:'HIVE_SWITCH_SOURCE_UNVERIFIED',message:'source GET device-drain-capabilities connection refused',details:{check:'device_drain',observed_at:new Date().toISOString(),evidence:{failure_kind:'connection_refused'}}};
+   }return result;
+  };
+ });
+ await page.clock.runFor(2100);
+ const progress=app.getByLabel('Hive 切换进度');
+ await expect(progress).toContainText('原 Hive 拒绝网络连接，任务状态尚未确认。');
+ await expect(progress).not.toContainText('自动核对暂停后');
+ expect(await progress.locator('.switch-failure').evaluate(e=>!!(e.compareDocumentPosition(e.parentElement!.querySelector('.hive-switch-route')!)&Node.DOCUMENT_POSITION_FOLLOWING))).toBe(true);
+ const details=progress.getByRole('button',{name:'查看切换错误详情',exact:true});await details.click();
+ const dialog=app.getByRole('dialog',{name:'错误详情',exact:true});await expect(dialog).toContainText('HIVE_SWITCH_SOURCE_UNVERIFIED');
+ await dialog.press('Escape');await page.clock.runFor(50);await expect(dialog).toHaveCount(0);await expect(details).toBeFocused();
+ await progress.getByRole('button',{name:'重新核对',exact:true}).click();
+ expect((await calls(page)).filter((c:any)=>c.command==='hive_switch_continue')).toHaveLength(1);
+});
+
+test('generic startup recovery uses the approved standalone region and returns to the bound overview',async({page})=>{
+ const app=await open(page,'switch-saved');
+ const emit=async(state:string,revision:number)=>page.locator('iframe').evaluate(async(frame:HTMLIFrameElement,{state,revision})=>{
+  const w=frame.contentWindow as any;
+  w.emitStartup({...await w.__TAURI_INTERNALS__.invoke('startup_status'),state,revision,observed_at:new Date().toISOString(),recovering:true,can_retry:state==='blocked',failure:state==='blocked'?{code:'REQUEST_RESOURCE_BUSY',message:'runtime_configure_network conflicts with device_status; request not sent',details:{check:'startup_check',observed_at:new Date().toISOString(),evidence:{}}}:null});
+ },{state,revision});
+ await emit('blocked',100);
+ const notice=app.getByTestId('startup-recovery');
+ await expect(notice).toContainText('暂时无法恢复 Bee');
+ await expect(app.getByRole('region',{name:'设备与 Hive'})).toHaveCount(0);
+ expect(await notice.evaluate(el=>el.closest('.device-card'))).toBeNull();
+ await notice.getByText('错误详情',{exact:true}).click();await expect(notice).toContainText('runtime_configure_network');
+ await emit('ready',101);
+ await expect(notice).toHaveCount(0);await expect(app.getByRole('heading',{name:'设备与 Hive',exact:true})).toBeVisible();
+ await expect(app.getByText('后台已连接，服务未启动。',{exact:true})).toHaveCount(0);
+});

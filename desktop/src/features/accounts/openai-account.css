@@ -99,3 +99,12 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 @container(max-width:320px){.auto-service-accounts .account-list-compact .native-account-row.oa-compact,.auto-service-accounts .account-list-compact .account-compact-row{grid-template-columns:1fr}.account-list-compact .openai-account.oa-compact .oa-body,.account-list-compact .account-list-condition,.account-list-compact .openai-account.oa-compact .oa-actions,.auto-service-accounts .account-list-compact .native-account-row-actions,.account-list-compact .openai-account.oa-compact>.oa-quota,.account-list-compact .account-compact-row>.account-list-quota{grid-column:1;grid-row:auto}}
 @media(max-width:760px){[data-radix-popper-content-wrapper]:has(>.account-error-popover){position:fixed!important;inset:auto 12px 12px!important;transform:none!important;width:calc(100vw - 24px)!important;min-width:0!important}.account-error-popover{width:100%;max-height:70vh;border-radius:12px}}
 @media(pointer:coarse){button.account-error-trigger{width:44px;min-height:44px}}
+
+/* Shared page geometry from the approved account-list preview. */
+.native-shell:has(.account-list-compact) main{padding:26px 29px 20px;scrollbar-gutter:stable;scrollbar-width:auto}
+.native-shell:has(.account-list-compact) .page-heading{align-items:flex-start;margin-bottom:20px}
+.native-shell:has(.account-list-compact) .page-heading h1{font-weight:650;letter-spacing:-.5px}
+.native-shell:has(.account-list-compact) .page-heading p{margin-top:6px;line-height:18px}
+.native-shell:has(.account-list-compact) .account-heading-actions{min-height:31.2px;align-items:center}
+.account-list-compact{box-shadow:none}
+@media(max-width:720px){.native-shell:has(.account-list-compact) main{padding:20px 16px}}

@@ -5,6 +5,12 @@ import { Monitor } from 'lucide-react';
 import { navigation,demoNavigation,navigationSelector,validNavigationTarget,type NavigationRequest } from '../app/navigation';
 import type { Page } from '../client/types';
 import logo from '../assets/app-icon-dark.svg';
+const approvedNavigationPaths:Record<string,string>={
+ overview:'M3 10l9-7 9 7v10H3z M9 20v-7h6v7',
+ accounts:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M16 3a4 4 0 010 8 M22 21v-2a4 4 0 00-3-3.87 M13 7a4 4 0 11-8 0 4 4 0 018 0',
+ diagnostics:'M2 12h4l3-8 5 16 3-8h5',
+ settings:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',
+};
 export function AppShell({
   page,
   onNavigate,
@@ -55,7 +61,7 @@ export function AppShell({
         <nav aria-label={t("主导航")}>
           {items.map(({ id, label, icon: Icon }) => (
             <button key={id} aria-current={id === page ? 'page' : undefined} onClick={() => onNavigate(id)}>
-              <Icon aria-hidden="true" />
+              <>{deviceMode&&approvedNavigationPaths[id]?<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d={approvedNavigationPaths[id]}/></svg>:<Icon aria-hidden="true" />}</>
               {t(label)}
             </button>
           ))}

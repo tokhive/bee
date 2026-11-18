@@ -19,26 +19,26 @@ test('starting a slow official login gives immediate feedback and prevents anoth
  await page.clock.install();await setup(page,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
  await page.evaluate(()=>(window as any).loginAdmissionDelay=6000);
  await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
- await expect(wizard(page).getByRole('heading')).toHaveText('正在启动 OpenAI 登录…',{timeout:1000});
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在启动 OpenAI 登录…',{timeout:1000});
  await expect(wizard(page).getByRole('status')).toContainText('Bee 正在准备官方登录，请稍候。');
  await expect(wizard(page).getByRole('button',{name:'正在启动登录…',exact:true})).toBeDisabled();
  await wizard(page).getByRole('button',{name:'正在启动登录…',exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
  await expect(wizard(page).getByRole('button',{name:'设置读取位置',exact:true})).toBeDisabled();
  await page.clock.runFor(6500);
- await expect(wizard(page).getByRole('heading')).toHaveText('请在官方页面完成登录');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('请在官方页面完成登录');
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
 test('official login reports its real phase and still requires explicit intake',async({page})=>{
  await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
  await page.evaluate(()=>(window as any).loginPhase='starting');await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
- await expect(wizard(page).getByRole('heading')).toHaveText('正在启动 OpenAI 登录…');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在启动 OpenAI 登录…');
  await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).loginPhase='waiting_authorization');await page.clock.runFor(1100);
  await expect(wizard(page).getByRole('status')).toContainText('Bee 会自动核对登录结果，无需反复刷新。');
  await expect(wizard(page).getByRole('alert')).toHaveCount(0);
  await wizard(page).getByRole('button',{name:'打开登录页面',exact:true}).click();
  await page.evaluate(()=>(window as any).loginPhase='verifying');await page.clock.runFor(1100);
- await expect(wizard(page).getByRole('heading')).toHaveText('正在读取并核验账号…');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在读取并核验账号…');
  await expect(wizard(page).getByRole('status')).toContainText('官方登录已完成，Bee 正在核验账号身份。');
  await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toEqual([]);
@@ -53,11 +53,11 @@ test('failed progress reads show retry and stopped states; refreshing only queri
  await expect(wizard(page).getByRole('status')).toContainText('暂时未读到登录进度，Bee 正在重试查询。');
  await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.account-error-popover')).toContainText('controlled login progress read timed out');await page.keyboard.press('Escape');
  await page.clock.runFor(8100);
- await expect(wizard(page).getByRole('heading')).toHaveText('登录进度查询已停止');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('登录进度查询已停止');
  await expect(wizard(page).locator('.add-account-spinner')).toHaveCount(0);
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).progressFailure=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();
- await expect(wizard(page).getByRole('heading')).toHaveText('请在官方页面完成登录');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('请在官方页面完成登录');
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  const ids=await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='authorize_progress').map((c:any)=>c.args.operationId));expect(new Set(ids).size).toBe(1);
 });
@@ -109,6 +109,17 @@ test('unknown intake checks its original operation and never repeats the write',
  await page.getByRole('button',{name:'核对结果',exact:true}).click();
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
 });
+test('a confirmed original operation removes the stopped-query notice',async({page})=>{
+ await page.clock.install();await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await page.evaluate(()=>(window as any).actionPending=true);await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
+ await page.clock.runFor(61000);
+ await expect(page.getByText('自动核对已达 60 秒，尚未确认原操作结果。',{exact:true})).toBeVisible();
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai;a.revision++;a.operation={...a.operation,state:'succeeded',revision:a.revision};a.selection={state:'selected',fingerprint:a.candidate.fingerprint,observed_at:new Date().toISOString(),error:null};});
+ await page.clock.runFor(11000);
+ await expect(wizard(page)).toHaveCount(0);
+ await expect(page.getByText(/尚未确认原操作结果/)).toHaveCount(0);
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
+});
 test('save failure retains the source form and error details use an exclamation',async({page})=>{
  await setup(page,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'设置读取位置',exact:true}).click();
  await wizard(page).getByLabel('读取目录').fill('/tmp/retained');await page.evaluate(()=>(window as any).preferencesFail=true);
@@ -142,10 +153,10 @@ test('English onboarding stays translated and fits the minimum desktop width',as
  await expect(page.getByLabel('Credential directory')).toBeFocused();expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const flow=page.getByRole('region',{name:'Add account',exact:true});
  await flow.getByRole('button',{name:'Back',exact:true}).click();await page.evaluate(()=>(window as any).loginAdmissionDelay=6000);
- await flow.getByRole('button',{name:'Sign in to OpenAI',exact:true}).click();await expect(flow.getByRole('heading')).toHaveText('Starting OpenAI sign-in…');
- await page.clock.runFor(6500);await expect(flow.getByRole('heading')).toHaveText('Complete login on the official page');
+ await flow.getByRole('button',{name:'Sign in to OpenAI',exact:true}).click();await expect(flow.getByRole('heading',{level:3})).toHaveText('Starting OpenAI sign-in…');
+ await page.clock.runFor(6500);await expect(flow.getByRole('heading',{level:3})).toHaveText('Complete login on the official page');
  await page.evaluate(()=>(window as any).loginPhase='verifying');await page.clock.runFor(1100);await expect(flow.getByRole('status')).toHaveText('Official sign-in has finished. Bee is verifying the account identity.');
- await page.evaluate(()=>(window as any).progressFailure=true);await page.clock.runFor(8500);await expect(flow.getByRole('heading')).toHaveText('Sign-in progress checks have stopped');
+ await page.evaluate(()=>(window as any).progressFailure=true);await page.clock.runFor(8500);await expect(flow.getByRole('heading',{level:3})).toHaveText('Sign-in progress checks have stopped');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  expect(await page.evaluate(async()=>[...(await import(/* @vite-ignore */ String('/src/i18n/index.ts'))).missingTranslations])).toEqual([]);
 });
@@ -157,7 +168,7 @@ test('a clock jump cannot submit an expired supply observation before the next r
 test('a terminal login receipt cannot bypass cleanup that is still in progress',async({page})=>{
  await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await page.evaluate(()=>{const w=window as any;w.cleaning=true;const a=w.accounts.openai;a.operation.state='failed';a.operation.revision=++a.revision;});await page.clock.runFor(11000);
- await expect(wizard(page).getByRole('heading')).toHaveText('正在确认登录已结束…');await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在确认登录已结束…');await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  await page.evaluate(()=>(window as any).cleaning=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
 });
@@ -173,7 +184,7 @@ test('a successful native OpenAI login offers intake without a Claude identity f
  });
  expect(await page.evaluate(()=>(window as any).accounts.openai.candidate.identity_verified)).toBe(false);
  await page.clock.runFor(11000);
- await expect(wizard(page).getByRole('heading')).toHaveText('确认接入 OpenAI');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('确认接入 OpenAI 账号');
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  expect(await page.evaluate(()=>(window as any).accounts.openai.candidate.identity_verified)).toBe(false);
  await expect(wizard(page)).toContainText('登录成功，尚未接入 Bee');
@@ -202,7 +213,7 @@ for(const [label,override] of [
  await setup(page);
  await page.evaluate(override=>{(window as any).accountScenarios.candidates={openai:override};},override);
  await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
- await expect(wizard(page).getByRole('heading')).not.toHaveText('正在读取并核验账号…');
+ await expect(wizard(page).getByRole('heading',{level:3})).not.toHaveText('正在读取并核验账号…');
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true}).and(page.locator(':enabled'))).toHaveCount(0);
  expect(await writes(page)).toEqual([]);
 });

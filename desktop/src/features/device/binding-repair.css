@@ -13,9 +13,12 @@
 .device-card-facts{display:flex;flex-wrap:wrap;gap:6px 20px;margin:12px 0 0;padding:0;color:var(--muted);font-size:11px}
 .device-card-facts>div{display:flex;align-items:baseline;gap:7px;min-width:0}
 .device-card-facts dt{flex:none;margin:0;font-size:11px;line-height:1.5}.device-card-facts dd{margin:0;overflow-wrap:anywhere}
-.device-card .device-card-runtime{margin:0;padding:10px 16px 16px;border:0}
+.device-card .device-card-runtime{margin:0;padding:18px 16px 12px;border:0}
 .device-card-runtime .native-runtime-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}.device-card-runtime .native-runtime-row:has(.native-runtime-title:only-child){min-height:0;height:0}
-.device-card-runtime .native-runtime-health{margin-top:0;font-size:13px;gap:20px}
+.device-card-runtime .native-runtime-health{margin-top:0;font-size:14px;line-height:21px;font-weight:500;gap:12px 24px;color:var(--ink)}
+.device-card-runtime .native-runtime-health>span{gap:7px}
+.device-card-runtime .service-dot{width:5px;height:5px;flex:none;border-radius:50%;background:var(--muted)}
+.device-card-runtime .service-dot.active{background:var(--good)}
 .device-card-runtime .native-runtime-health svg{width:12px;height:12px}
 .device-card-runtime .native-runtime-row{justify-content:flex-end}
 .device-card .device-transaction{margin:16px 0 0;padding:14px 0 0;border-top:1px solid var(--line);font-size:13px;line-height:1.6}
@@ -51,7 +54,7 @@
 .native-shell .native-accounts-section.overview-accounts-card>.section-heading{margin:0;padding:16px 16px 0}.native-shell .native-accounts-section.overview-accounts-card>.section-heading h2{font-size:14px;line-height:21px;font-weight:600}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-list{border:0;border-radius:0;box-shadow:none}.native-shell .native-accounts-section.overview-accounts-card .native-accounts-footnote{padding:0 16px 14px;margin:0}
 
-.device-service-counts{display:flex;gap:16px;margin-left:auto;color:var(--muted);font-size:11px}.device-service-counts b{margin-left:4px;color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+.device-service-counts{display:flex;flex-basis:100%;gap:24px;color:var(--muted);font-size:12px;line-height:18px;font-weight:400}.device-service-counts span{gap:7px;align-items:baseline}.device-service-counts b{color:var(--ink);font-size:13px;line-height:19.5px;font-weight:600;font-variant-numeric:tabular-nums}
 @media(max-width:720px){.device-service-counts{gap:10px}}
 
 .device-feedback-item{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--good);font-size:12px;line-height:1.6}
@@ -139,3 +142,17 @@
 
 .native-shell .native-accounts-section.overview-accounts-card .native-account-row-actions .ui-button:not(.primary):not(.quiet){background:var(--paper)}
 .native-shell[data-page=overview] nav svg{width:16px;height:16px;stroke-width:1.6}
+
+.native-shell .device-card .switch-error-info{width:24px;min-width:24px;min-height:24px;padding:0;border:0;background:transparent;color:#a24231;vertical-align:middle}
+.dialog-overlay.switch-error-overlay{background:#0003}
+.dialog-content.switch-error-dialog{box-sizing:border-box;width:min(420px,calc(100vw - 32px));max-width:420px;max-height:calc(100vh - 32px);overflow:auto;overscroll-behavior:contain;padding:20px;border:1px solid var(--line);border-radius:8px;background:var(--paper);color:var(--ink);font:inherit}
+.dialog-content.switch-error-dialog h2{font-size:15px;line-height:1.4;margin:0 0 10px}
+.switch-error-dialog pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11px/1.6 ui-monospace,monospace}
+.switch-error-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:16px}
+.switch-error-dialog .ui-button{font-size:12px;font-weight:400;line-height:18px;min-height:32px;padding:5px 12px;box-shadow:none}
+:root[data-theme=dark] .native-shell .device-card .switch-error-info{color:#f2a38f}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]) .native-shell .device-card .switch-error-info{color:#f2a38f}}
+.native-shell[data-page=overview] nav{gap:6px}
+.native-shell[data-page=overview] nav button{gap:11px;padding:5px 12px 5px 13px;border:1px solid transparent;line-height:19.5px}
+.native-shell[data-page=overview] nav button[aria-current=page]{border-color:var(--line);box-shadow:0 1px 3px #00000008}
+.native-shell[data-page=overview] nav svg{stroke-width:1.6}

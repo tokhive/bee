@@ -12,3 +12,8 @@ test('target pairing and recovery use dedicated native commands with original tr
  await client.start('https://target.example','Mac');await client.target.status();await client.target.begin('https://ignored.example','Mac');await client.target.recoveryConfirm('c'.repeat(48),3,'begin_pairing');
  assert.deepEqual(calls,[{command:'hive_switch_start',args:{origin:'https://target.example',name:'Mac'}},{command:'hive_switch_target_status',args:undefined},{command:'hive_switch_target_begin',args:{name:'Mac'}},{command:'hive_switch_target_recovery_confirm',args:{operationId:'c'.repeat(48),expectedRevision:3,decision:'begin_pairing'}}]);
 });
+test('target recovery browser opening accepts the initial-pairing device envelope',async()=>{
+ const device={state:'unbound'};
+ const client=createHiveSwitchClient(async()=>({result:{device}}));
+ assert.deepEqual(await client.target.recoveryOpen(),device);
+});

@@ -20,16 +20,17 @@ import './openai-account.css';
 function ErrorEvidence({error}:{error:UiFailure}){return <pre className="oa-error-evidence">{presentFailure(error,currentLocale()).details}</pre>;}
 
 type Props={accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply;navigationRequest?:NavigationRequest;onNavigate?:(target:NavigationTarget)=>void;now:number};
-function OpenaiAction({accounts,runtime,action,label}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string}){
+function OpenaiAction({accounts,runtime,action,label,onConfirmationChange}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string;onConfirmationChange?:(open:boolean)=>void}){
  const view=accounts.views.openai;
  const [confirmation,setConfirmation]=useState<{stamp:string;target?:string|null;selected?:string|null}>();
  const [invalid,setInvalid]=useState(false);
+ useEffect(()=>{onConfirmationChange?.(confirmation!==undefined);return()=>onConfirmationChange?.(false);},[confirmation!==undefined,onConfirmationChange]);
  const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sourceFor('openai'),runtime.view?.local,runtime.view?.run_id]);
  const block=()=>accountActionBlock(action,{autoService:true,view,platform:'openai',now:Date.now(),dirty:!!accounts.dirty.openai,busy:!!accounts.writeBusy.openai||accounts.sourceSaving,unknown:!!accounts.uncertain.openai||!!accounts.readFailures.openai,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:!!runtime.error||runtime.uncertain||runtime.stalled});
  const reason=block();
  return <Dialog.Root open={confirmation!==undefined} onOpenChange={open=>{if(!open)setConfirmation(undefined);}}>
   <div><Dialog.Trigger asChild><Button disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
-  <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content" onEscapeKeyDown={event=>event.stopImmediatePropagation()}>
+  <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content" onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
    <Dialog.Title>{t(action==='clear_selection'?'取消接入':action==='select'?'接入 OpenAI 账号':action==='confirm_change'?'确认更换 OpenAI 账号':view?.selection.state==='selected'?'重新登录 OpenAI':'登录 OpenAI')}</Dialog.Title>
    <Dialog.Description>{t(action==='clear_selection'?'仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。':action==='authorize'?'调用已安装的 Codex 官方客户端，可能改变客户端当前登录账号。':'接单将使用该账号的订阅额度。')}</Dialog.Description>
    {action==='authorize'?<p>{t(view?.selection.state==='selected'?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。')}</p>:action==='clear_selection'?null:<>
@@ -78,6 +79,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  useEffect(()=>{if(canComplete&&!journey?.completed&&view?.selection.fingerprint)accounts.completeOpenai(view.selection.fingerprint);},[canComplete,journey?.completed,view?.selection.fingerprint]);
  useEffect(()=>{if(journey?.completed&&(problem||different||accounts.deviceFailure))accounts.dismissOpenai();},[journey?.completed,problem,different,accounts.deviceFailure]);
  const completion=!!journey?.completed&&canComplete&&journey.completed===view?.selection.fingerprint;
+ const [nestedConfirmation,setNestedConfirmation]=useState(false);
  const [details,setDetails]=useState(false),[panel,setPanel]=useState<'detail'|'settings'|'compare'|'install'>('detail'),sourceField=useRef<HTMLInputElement>(null),returnFocus=useRef<HTMLElement|null>(null);
  const source=accounts.openaiDraft??accounts.sourceFor('openai');
  const defaults=accounts.defaults?.platforms.find(p=>p.platform==='openai');
@@ -90,7 +92,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  };
  let title='尚未登录 OpenAI',note='通过已安装的 Codex 官方客户端登录。';
  if(!view||view.candidate.state==='not_checked'){title='账号状态尚未确认';note='正在读取账号状态…';}
- else if(selected){title=ready?'可接单':!current?'账号状态待更新':supplyView?.paused?'已暂停':reasons.length?supplyProblem(reasons[0],'openai').summary:'正在更新账号状态…';note=current&&supplyView?.paused?'不再接收新任务；已有任务可继续完成。':ready?'':'连接恢复且其他条件满足后，按你的接单选择继续。';}
+ else if(selected){title=ready?'可接单':!current?'账号状态待更新':supplyView?.paused?'已暂停':reasons.length?supplyProblem(reasons[0],'openai').summary:'正在更新账号状态…';note=current&&supplyView?.paused?'不再接收新任务；已有任务可继续完成。':ready?'':current&&reasons.length?supplyProblem(reasons[0],'openai').impact:'连接恢复且其他条件满足后，按你的接单选择继续。';}
  else if(candidate){title=journey?.kind==='first'?'已识别账号，请确认是否接入':'尚未接入 Bee';note='接单会使用此账号的订阅额度。';}
  if(different){title='发现不同账号';note='确认换号前，Bee 保留已接入账号。';}
  if(accounts.dirty.openai||accounts.sourceSaving){title=accounts.sourceSaving?'正在保存设置…':'正在读取登录凭证…';note='设置保存后，Bee 将重新读取并核验账号。';}
@@ -114,14 +116,14 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(preparing&&(kind==='repair'||kind==='relogin'))steps.push('准备接单');
  const step=completion?steps.length:kind==='first'?liveLogin?(progress?.phase==='verifying'?1:0):candidate&&!selected?2:selected?3:0:kind==='change'?preparing?2:journey?.kind==='change'?1:0:kind==='intake'?selected?1:0:preparing?2:accounts.dirty.openai||liveLogin&&progress?.phase!=='verifying'?0:1;
  const showSteps=!!steps.length&&!sourceProblem&&!cleaning&&op?.state!=='cancelled'&&!uncertain&&!intakeUnconfirmed;
- const accountDetails=<DetailSheet onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={t(panel==='settings'?'修改后，Bee 将重新读取并核验账号。':'查看账号信息，管理凭证读取方式。')}>
+ const accountDetails=<DetailSheet onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={t(panel==='settings'?'修改后，Bee 将重新读取并核验账号。':'查看账号信息，管理凭证读取方式。')}>
     {panel==='detail'&&<><dl className="account-detail-facts"><div><dt>{t(selected?'已接入账号':'待接入账号')}</dt><dd>{presentation.identity??t('尚未接入')}</dd></div><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan??t('待确认')}</dd></div>{candidate&&different&&<div><dt>{t('候选账号标识')}</dt><dd>{view.candidate.fingerprint?.slice(0,16)}</dd></div>}</dl>
     <dl className="account-detail-facts"><div><dt>{t('账号状态')}</dt><dd>{t(title)}</dd></div></dl><AccountReadHistory accounts={accounts} platform="openai"/>
     {maintenance&&<p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>}
     {op?.kind==='authorize'&&op.state==='unknown'&&<p>{t('原登录进程已中断，原登录结果未确认；账号维护状态单独核对。')}</p>}
     {maintenance?.can_recheck&&<Button variant="outline" disabled={!!accounts.busy.openai||!!accounts.writeBusy.openai} onClick={()=>accounts.refresh('openai')}>{t('核对维护结果')}</Button>}
-    <div className="oa-sheet-actions"><Button variant="outline" onClick={()=>setPanel('settings')}>{t('修改凭证读取设置')}</Button><OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>{selected&&view.hive.fingerprint===null&&view.hive.generation===null&&<OpenaiAction accounts={accounts} runtime={runtime} action="clear_selection" label="取消接入"/>}</div></>}
-    {panel==='compare'&&<><dl className="account-detail-facts"><div><dt>{t('已接入账号')}</dt><dd>{view?.selection.fingerprint?.slice(0,16)}</dd></div><div><dt>{t('发现新账号')}</dt><dd>{view?.candidate.fingerprint?.slice(0,16)}</dd></div></dl><p>{t('确认换号前，Bee 保留已接入账号。')}</p><OpenaiAction accounts={accounts} runtime={runtime} action="confirm_change" label="确认换号"/></>}
+    <div className="oa-sheet-actions"><Button variant="outline" onClick={()=>setPanel('settings')}>{t('修改凭证读取设置')}</Button><OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>{selected&&view.hive.fingerprint===null&&view.hive.generation===null&&<OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="clear_selection" label="取消接入"/>}</div></>}
+    {panel==='compare'&&<><dl className="account-detail-facts"><div><dt>{t('已接入账号')}</dt><dd>{view?.selection.fingerprint?.slice(0,16)}</dd></div><div><dt>{t('发现新账号')}</dt><dd>{view?.candidate.fingerprint?.slice(0,16)}</dd></div></dl><p>{t('确认换号前，Bee 保留已接入账号。')}</p><OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="confirm_change" label="确认换号"/></>}
     {panel==='install'&&<><p>{t('安装 OpenAI 官方 Codex CLI，确保当前用户可运行 codex 命令，再返回 Bee 重试。')}</p><Button variant="outline" onClick={()=>setDetails(false)}>{t('返回账号页')}</Button></>}
     {panel==='settings'&&<form className="account-source" data-account-source="openai" data-nav-section="source" data-nav-platform="openai" onSubmit={event=>{event.preventDefault();void accounts.saveOpenaiSource();}}>
      <label>{t('读取目录')}<input ref={sourceField} name="openai-source-directory" autoComplete="off" spellCheck={false} disabled={sourceBlocked} placeholder={defaults?.directory??t('使用 Codex 默认目录')} value={source.directory??''} onChange={event=>accounts.setOpenaiDraft({...source,directory:event.target.value||null})}/></label>
@@ -133,7 +135,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
     </form>}
    </DetailSheet>;
  return <section className={`native-account-row openai-account ${showSteps?'oa-flow':'oa-compact'}`} aria-label={t('OpenAI 账号')} data-account-platform="openai" data-nav-section="account" data-nav-platform="openai" tabIndex={-1}>
-  <div className="oa-head"><span className="oa-icon"><Sparkle aria-hidden="true"/></span><div className="oa-identity"><div className="oa-platform"><h3>OpenAI</h3>{selected&&presentation.plan&&<Badge>{presentation.plan[0].toUpperCase()+presentation.plan.slice(1)}</Badge>}</div><p>{selected?t('已接入账号 {identity}',{identity:presentation.identity??t('待确认')}):candidate?t('待接入账号 {identity}',{identity:view.candidate.fingerprint?.slice(0,16)??t('待确认')}):t('通过官方客户端登录')}</p></div>
+  <div className="oa-head"><span className="oa-icon"><Sparkle aria-hidden="true"/></span><div className="oa-identity"><div className="oa-platform"><h3>OpenAI</h3>{selected&&presentation.plan&&<Badge>{presentation.plan[0].toUpperCase()+presentation.plan.slice(1)}</Badge>}</div><p>{selected?t('已接入账号 {identity}',{identity:presentation.identity??t('待确认')}):candidate?t('待接入账号 {identity}',{identity:view.candidate.fingerprint?.slice(0,16)??t('待确认')}):t('通过官方客户端登录')}</p>{selected&&<p>{t('Codex 本机凭证')}</p>}</div>
    {showSteps&&accountDetails}
   </div>
   {showSteps&&<ol className="oa-steps" aria-label={t('OpenAI 当前流程')}>{steps.map((label,index)=>{const state=index<step?'done':index===step?failed?'failed':'current':'pending';return <li key={label} className={state} aria-current={state==='current'?'step':undefined}><span className="oa-step-dot" aria-hidden="true">{index+1}</span><span>{t(label)}</span><span className="sr-only">{t(state==='done'?'已完成':state==='failed'?'失败':state==='current'?'当前阶段':'未开始')}</span></li>;})}</ol>}
@@ -157,11 +159,11 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :selected&&!accountPending(view)&&supply?<Button disabled={observing||!current||!supply.model.canWrite('openai',!supplyView?.paused)} onClick={()=>void supply.model.write('openai',!supplyView?.paused)}>{t(supply.state.writeBusy&&supply.state.activePlatform==='openai'?'正在更新接单选择…':supplyView?.paused?'恢复接单':'暂停接单')}</Button>:null}
    {!showSteps&&accountDetails}
   </div>
-  {!completion&&accounts.originalAccountQuery?.phase==='stopped'&&<p className="oa-evidence" role="status">{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}
+  {!completion&&intakeUnconfirmed&&accounts.originalAccountQuery?.phase==='stopped'&&<p className="oa-evidence" role="status">{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}
   {!completion&&selected&&supplyCurrent&&supplyView?.paused&&title!=='已暂停'&&<p className="oa-evidence">{t('接单保持暂停。')}</p>}
   {!completion&&reasons.filter(reason=>!['quota_exhausted','quota_unknown'].includes(reason)).map(reason=>{const condition=supplyProblem(reason,'openai');return <div className="oa-evidence" key={reason}>{condition.summary!==title&&<span>{t(condition.summary,{platform:'OpenAI'})}</span>}{condition.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(condition.target!)}>{t('查看相关设置')}</Button>}</div>;})}
   {!completion&&!!query?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(query.error,'authorize_progress')}/></details>}
-  {!completion&&!!accounts.originalAccountQuery?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(accounts.originalAccountQuery.error,'account_original_query')}/></details>}
+  {!completion&&intakeUnconfirmed&&!!accounts.originalAccountQuery?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(accounts.originalAccountQuery.error,'account_original_query')}/></details>}
   {!completion&&<div className="oa-quota"><AccountQuota presentation={presentation} list historical={!!sourceProblem||!!accounts.readFailures.openai}/></div>}
  </section>;
 }

@@ -5,6 +5,17 @@ import {presentFailure} from '../src/presentation/problems.ts';
 import {formatDate,formatNumber,translate} from '../src/i18n/index.ts';
 import {validNavigationTarget} from '../src/app/navigation.ts';
 const observed='2026-10-30T12:00:00Z';
+test('pending account preparation shows the specific HTTP conflict without flooding the page',()=>{
+ const message='preparation begin unconfirmed: state=absent required=active; original operation retained';
+ const value=normalizeFailure({code:'account_operation_unconfirmed',check:'account_operation_commit',platform:'openai',message,evidence:{http_status:'409',remote_code:'preparation_conflict',response_body:'another preparation is active'}},'account_operation');
+ for(const locale of ['zh','en'] as const){
+  const problem=presentFailure(value,locale);
+  assert.match(problem.summary,/409/);assert.ok(problem.summary.length<120);
+  assert.doesNotMatch(problem.summary,/state=absent/);
+  if(locale==='en')assert.doesNotMatch(problem.summary,/\p{Script=Han}/u);
+  assert.ok(problem.details.includes(message));assert.match(problem.details,/another preparation is active/);
+ }
+});
 const failure=(code='http_rejected')=>normalizeFailure({code,message:'GET /api/bee/identity: HTTP 503; upstream maintenance',details:{check:'device_identity',observed_at:observed,evidence:{target_origin:'https://hive.test',path:'/api/bee/identity',http_status:'503',response_body:'upstream maintenance'}}},'device_status');
 test('account failure displays its original HTTP observation time without inventing the render time',()=>{
  const account={code:'connection_closed',check:'identity',platform:'openai',message:'GET /api/bee/identity: unexpected EOF',evidence:{observed_at:observed,failure_kind:'connection_closed',elapsed_ms:'1174'}};

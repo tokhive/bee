@@ -30,7 +30,8 @@ export function createDesktopState(deps:DesktopDeps){
  let unlistenSettled:(()=>void)|undefined;
  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
  let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0;
- const startupBegan=Date.now();
+ let startupBegan=Date.now(),startupRetrying=false;
+ const startupOwnsDevice=()=>startupRetrying||!!deps.bridge.startupStatus&&(!state.startup||state.startup.state==='checking');
  const startupUnverified=()=>deps.bridge.startupStatus?state.startup?.state!=='ready':!!state.startup&&state.startup.state!=='ready';
  let runtimeReceiptRevision=-1,accountReceiptRevisions:Partial<Record<AccountPlatform,number>>={};
  let deviceObservedAt:string|null=null,diagnosticObservedAt:string|null=null;
@@ -92,6 +93,10 @@ export function createDesktopState(deps:DesktopDeps){
   }
   if(state.startup&&next.revision<state.startup.revision)return;
   const becameReady=next.state==='ready'&&state.startup?.state!=='ready',generation=epoch;
+  if(next.state==='checking'&&state.startup?.state!=='checking'){
+   startupBegan=Date.now();startupFailures=0;clearTimeout(startupTimer);
+   if(!startupReading)startupTimer=setTimeout(()=>void readStartup(),2000);
+  }
   publish({startup:next,startupReadError:null});
   if(next.state!=='checking'){clearTimeout(startupTimer);publish({startupObservation:'idle'});}
   if(becameReady)void Promise.resolve(pending).then(()=>{if(!disposed&&epoch===generation&&state.startup?.state==='ready')void refresh();});
@@ -266,10 +271,13 @@ export function createDesktopState(deps:DesktopDeps){
      }
     }
     publish({recovery,recoveryError,recoveryObservation});
-    if(!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))startRead('device',instance,()=>observeDevice(instance,generation));
+    // A replaced binding invalidates its startup receipt along with scoped data.
+    // Obtain the new receipt before deciding who owns remote device checks.
+    if(!state.startup&&deps.bridge.startupStatus){await readStartup();if(!current())return;}
+    if(!startupOwnsDevice()&&!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))startRead('device',instance,()=>observeDevice(instance,generation));
     // Observe first. Advancing an existing approved transaction has a separate
     // owner and must never keep runtime/account observations waiting for HTTP.
-    if(recovery&&deps.device.recoveryAdvance&&advancing?.instance!==instance&&allowed('recoveryAdvance')
+    if(!startupOwnsDevice()&&recovery&&deps.device.recoveryAdvance&&advancing?.instance!==instance&&allowed('recoveryAdvance')
        &&(recovery.phase!=='completed'||startupUnverified())&&!laneBlocked()){
      const operationId=recovery.operation_id,advanceEpoch=epoch;const ownsAdvance=()=>!disposed&&epoch===advanceEpoch&&state.native.metadata?.instance===instance&&state.recovery?.operation_id===operationId;
      const task=deps.device.recoveryAdvance().then(()=>{
@@ -393,7 +401,22 @@ export function createDesktopState(deps:DesktopDeps){
    if(scope)void deps.bridge.status().then(v=>{if(!disposed&&generation===epoch){accept(v);void readStartup();}},cause=>{if(!disposed&&generation===epoch)publish({error:failure(cause,'bridge_status')});});
   },
   async observeStartup(){const next=await (deps.bridge.startupQuery?.()??deps.bridge.startupStatus?.());if(next)acceptStartup(next);},
-  async retryStartup(){if(!deps.bridge.startupRetry)return;const next=await deps.bridge.startupRetry();acceptStartup(next);if(next.state==='ready'){repair();await refresh();}},
+  async retryStartup(){
+   if(!deps.bridge.startupRetry||startupRetrying)return;
+   startupRetrying=true;const generation=epoch;
+   try{
+    // Let existing device observations finish before startup configures the same runtime.
+    await pending;await reads.get('device')?.task;
+    if(disposed||generation!==epoch)return;
+    startupBegan=Date.now();startupFailures=0;
+    const next=await deps.bridge.startupRetry();
+    if(disposed||generation!==epoch)return;
+    if(next.state==='ready')repair();
+    // Recovery may advance the network revision. Observe it before applying
+    // the terminal startup receipt; keep stale-context rejection intact.
+    await refresh();acceptStartup(next);
+   }finally{startupRetrying=false;}
+  },
   async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refreshDevice();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refreshDevice();acceptStartup(next);},
   async recheckOpenaiReads(){
    const generation=epoch;

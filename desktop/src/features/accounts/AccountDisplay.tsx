@@ -44,11 +44,11 @@ export function AccountQuota({presentation,resets=false,compact=false,list=false
   const history=historical||quotaState==='stale'||quotaState==='unconfirmed';
   const compactTime=(value:string)=>formatDate(value,currentLocale(),{dateStyle:undefined,timeStyle:undefined,year:undefined,month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:undefined});
   return <div className="account-list-quota">
-   <div className="account-quota-caption"><span>{t('已用额度')}</span><span>{history?t('上次记录'):quotaState==='unknown'?t('尚未核对'):t('当前额度')}{presentation.observedAt&&<time dateTime={presentation.observedAt} title={formatDate(presentation.observedAt,currentLocale())}> · {compactTime(presentation.observedAt)}</time>}</span></div>
+   <div className="account-quota-caption"><span>{t('已用额度')}</span><span>{history?t('上次记录'):quotaState==='unknown'?t('尚未核对'):t('更新于')}{presentation.observedAt&&<time dateTime={presentation.observedAt} title={formatDate(presentation.observedAt,currentLocale())}> · {compactTime(presentation.observedAt)}</time>}</span></div>
    {listWindows.map((w,i)=><div className={`account-list-window ${w.used_percent!==null&&w.used_percent>=100?'is-exhausted':''}`} key={`${w.scope}:${w.seconds}:${i}`}>
     <span className="quota-window-name">{w.seconds===18000?t('5 小时'):w.seconds===604800?t('7 日'):t('{hours} 小时',{hours:formatNumber(w.seconds/3600,currentLocale())})}{w.scope?` · ${w.scope}`:''}</span>
     <Progress value={w.used_percent} aria-label={t('已用额度')} aria-valuetext={w.used_percent===null?t('尚未核对'):t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}/>
-    <span className="quota-value">{w.used_percent===null?'—':t('已用 {used}%',{used:formatNumber(w.used_percent,currentLocale())})}</span>
+    <span className="quota-value">{w.used_percent===null?'—':`${formatNumber(w.used_percent,currentLocale())}%`}</span>
     <span className="quota-reset">{w.reset_at?<><time dateTime={w.reset_at} title={formatDate(w.reset_at,currentLocale())}>{compactTime(w.reset_at)}</time> {t('重置')}</>:t('重置时间未知')}</span>
    </div>)}
   </div>;

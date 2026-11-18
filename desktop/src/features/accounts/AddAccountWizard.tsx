@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {open} from '@tauri-apps/plugin-dialog';
-import {Check,CircleAlert,FolderOpen,LoaderCircle,Sparkles} from 'lucide-react';
+import {Check,CircleAlert,FolderOpen,LoaderCircle,Sparkles,ShieldCheck} from 'lucide-react';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -76,19 +76,19 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
  const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
  const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在读取并核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'请在官方页面完成登录';
- const title=screen==='source'?'设置读取位置':starting?'正在启动 OpenAI 登录…':login?loginTitle:intake?'账号操作结果待核对':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI':kept&&valid?'已保留当前账号':missing?'未找到本机 OpenAI 登录':'连接 OpenAI 账号';
+ const title=screen==='source'?'设置读取位置':starting?'正在启动 OpenAI 登录…':login?loginTitle:intake?'暂时无法确认接入结果':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已保留当前账号':missing?'未找到本机 OpenAI 登录':'连接 OpenAI 账号';
  const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成登录。Bee 会自动核对登录结果，无需反复刷新。';
  const status=starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
  const showSpinner=!!status&&!queryStopped&&!progress?.blocker;
- return <section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
-  <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
+ return <><section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
+  <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2></header>
+  <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} className={step>i+1?'done':undefined} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
   <div className="add-account-body">
-   <Sparkles className="add-account-mark" aria-hidden="true"/>
-   <h2 ref={heading} tabIndex={-1}>{t(title)}</h2>
+   <h3 ref={heading} tabIndex={-1}>{t(title)}</h3>
    {status&&<div className="add-account-progress" role="status" aria-live="polite" aria-atomic="true">
     {showSpinner?<LoaderCircle className="add-account-spinner" aria-hidden="true"/>:<CircleAlert aria-hidden="true"/>}<p>{t(status)}</p>
    </div>}
-   {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
+   {error&&!intake&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
    {problem?.action&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
    {screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
     <label htmlFor="add-account-directory">{t('读取目录')}</label>
@@ -100,19 +100,22 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
     <p>{t('登录后自动核验账号，再由你确认是否接入。')}</p>
     {progress?.actions.open&&!queryStopped&&<p>{t('未看到官方登录页面时，可点击“打开登录页面”继续本次登录。')}</p>}
     <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} aria-busy={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开登录页面…':'打开登录页面')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="outline" disabled={busy||progress?.phase==='cleaning_up'||!!progress&&!progress.actions.cancel} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
-   </>:intake?<><p role="status">{t('账号操作结果待核对')}</p><p>{t('只核对原操作，确认结果前不会重复接入。')}</p>{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
+   </>:intake?<>
+    <div className="add-account-identity"><Sparkles aria-hidden="true"/><div><small>OpenAI</small><strong>{(confirmedIdentity?.fingerprint??candidate?.fingerprint)?.slice(0,16)??t('账号身份待核对')}</strong></div></div>
+    <p>{t('接入请求已发出，但未取得确定回执。核对完成前，账号不会加入已接入列表。')}</p>
+    {error&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}{accounts.originalAccountQuery?.phase==='stopped'&&<p>{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}{!!queryError&&<AccountErrorPopover errors={[normalizeFailure(queryError,'account_original_query')]}/>}<Button disabled={busy} onClick={()=>{if(accounts.originalAccountQuery)void accounts.queryOriginalAccount();else accounts.refresh('openai');}}>{t('核对结果')}</Button></>:observing?null:step===3?<>
     {loginSucceeded&&valid&&<p role="status">{t('登录成功，尚未接入 Bee')}</p>}
-    <dl><dt>{t('账号标识')}</dt><dd>{confirmedIdentity?.fingerprint?.slice(0,16)}</dd><dt>{t('套餐')}</dt><dd>{confirmedIdentity?.plan??t('尚未确认')}</dd></dl>
-    <p>{t('接单将使用该账号的订阅额度。')}</p>
+    <div className="add-account-identity"><Sparkles aria-hidden="true"/><div><small>OpenAI</small><strong>{confirmedIdentity?.fingerprint?.slice(0,16)}</strong></div></div>
+    <p>{t('接单会使用此账号的订阅额度。')}</p>
     <p>{t(!supplyCurrent?'接单选择尚未确认，请先核对，暂不能接入。':supply?.state.views.openai?.paused?'接入后保留暂停，由你决定何时恢复接单。':'接入后允许接单，账号准备完成且供给条件满足后开始。')}</p>
     {(changed||confirmation&&confirmation!==stamp())&&<p role="alert">{t('账号、来源或接单选择已变化，请重新核验后确认。')}</p>}
     {selectBlock&&<p>{t(selectBlock.message)}</p>}
-    <div className="add-account-actions"><Button disabled={!confirmValid||submitted} onClick={()=>{if(!confirmValid||confirmation!==stamp()||block('select')||!supply||!supplyFresh(supply.state,'openai',Date.now())){setChanged(true);return;}setSubmitted(true);accounts.action('openai','select');}}>{t('确认接入')}</Button><Button variant="outline" disabled={busy} onClick={()=>{setScreen('connect');setKept(true);setSubmitted(false);}}>{t('返回')}</Button>{(!confirmValid||submitted)&&<Button variant="ghost" disabled={busy} onClick={()=>{setSubmitted(false);void accounts.recheckCurrentOpenai();void verify();}}>{t('重新核验')}</Button>}</div>
+    <div className="add-account-actions"><Button disabled={!confirmValid||submitted} onClick={()=>{if(!confirmValid||confirmation!==stamp()||block('select')||!supply||!supplyFresh(supply.state,'openai',Date.now())){setChanged(true);return;}setSubmitted(true);accounts.action('openai','select');}}>{t('确认接入')}</Button><Button variant="ghost" disabled={busy} onClick={()=>{setScreen('connect');setKept(true);setSubmitted(false);}}>{t('返回')}</Button>{(!confirmValid||submitted)&&<Button variant="ghost" disabled={busy} onClick={()=>{setSubmitted(false);void accounts.recheckCurrentOpenai();void verify();}}>{t('重新核验')}</Button>}</div>
    </>:<>
     {!starting&&<p>{t(kept&&valid?'返回不会丢失已核验的账号，继续时会再次核对。':'可以通过官方客户端登录，或设置已有登录的读取位置。')}</p>}
     {!starting&&loginBlock&&<p>{t(loginBlock.message)}</p>}
     <div className="add-account-actions">{kept&&valid?<Button disabled={busy} onClick={()=>void verify()}>{t('继续使用此账号')}</Button>:<Button disabled={!!loginBlock||busy||starting} aria-busy={starting} onClick={()=>{initial.current=true;accounts.authorize('openai');}}>{t(starting?'正在启动登录…':'登录 OpenAI')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{if(kept&&valid)setKept(false);else openSource();}}>{t(kept&&valid?'更换连接方式':'设置读取位置')}</Button><Button variant="ghost" disabled={busy} onClick={onBack}>{t('返回')}</Button>{error&&<Button variant="ghost" disabled={busy} onClick={()=>void verify()}>{t('重新核验')}</Button>}</div>
    </>}
   </div>
- </section>;
+ </section><p className="add-account-privacy"><ShieldCheck aria-hidden="true"/>{t('授权信息保留在本机')}</p></>;
 }

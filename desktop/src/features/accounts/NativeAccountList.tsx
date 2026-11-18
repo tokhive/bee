@@ -59,7 +59,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
      {accounts.autoService&&!inlineLogin&&(snapshot?.login_maintenance&&snapshot.login_maintenance.phase!=='restored'||snapshot?.operation&&snapshot.operation.state!=='succeeded')&&<AccountOperationStatus accounts={accounts} platform={platform} onNavigate={navigate} conditionErrors={accounts.autoService}/>}
     </div></div>
     {(compactList||context==='overview'&&accounts.autoService)&&<div className="account-list-condition"><AccountCondition deviceBlock={deviceBlock} accounts={accounts} platform={platform} runtime={runtime} supply={supply} onNavigate={navigate} now={now} inlineFailure={loginFailure}/></div>}
-    {compactList?<AccountQuota presentation={presentation} list historical={!!accounts.sourceReadFailed[platform]||!!snapshot?.candidate.error}/>:(!deviceBlock||platform==='openai')&&(!accounts.autoService||selected)&&<AccountQuota presentation={presentation}/>}
+    {compactList?(selected?<AccountQuota presentation={presentation} list historical={!!accounts.sourceReadFailed[platform]||!!snapshot?.candidate.error}/>:null):(!deviceBlock||platform==='openai')&&(!accounts.autoService||selected)&&<AccountQuota presentation={presentation}/>}
     <div className="native-account-row-actions">
      {context==='overview'&&!selected&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate({page:'accounts',platform})}>{t('前往接入')}</Button>}
      {context==='accounts'&&<NativeAccountActions accounts={accounts} platform={platform} runtime={runtime} placement="row" onNavigate={navigate}/>}

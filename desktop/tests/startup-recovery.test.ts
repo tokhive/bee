@@ -94,3 +94,22 @@ test('startup observation exposes exhausted retries and still accepts late termi
  listener({...startup(instance,2),state:'ready',failure:null});
  assert.equal(model.getSnapshot().startup?.state,'ready');assert.equal(model.getSnapshot().startupObservation,'idle');
 });
+
+test('startup network bootstrap owns remote device checks until it finishes',async t=>{
+ const instance='a'.repeat(32);let remoteReads=0,listener:any;
+ const checking={...startup(instance),state:'checking',failure:null};
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},onStartup:async(fn:any)=>{listener=fn;return()=>{};},startupStatus:async()=>checking} as any,device:{context:async()=>({binding_revision:1}),status:async()=>{remoteReads++;return {state:'unbound'};}} as any,runtime:()=>({snapshot:async()=>({revision:1,network_revision:0,local:'stopped',platforms:{}})}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await tick();await model.refresh();
+ assert.equal(remoteReads,0,'device_status must not conflict with startup runtime_configure_network');
+ listener({...checking,state:'ready',revision:2});await tick();
+ assert.ok(remoteReads>0,'ordinary identity observation resumes after startup');
+});
+
+test('manual startup retry refreshes context before accepting a newer network receipt',async t=>{
+ const instance='a'.repeat(32);let network=0;
+ const deps:any={bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},startupStatus:async()=>startup(instance),startupRetry:async()=>{network=1;return {...startup(instance,2),state:'ready',failure:null,network_revision:network};}},device:{context:async()=>({binding_revision:1}),status:async()=>({state:'unbound'})},runtime:()=>({snapshot:async()=>({revision:network+1,network_revision:network,local:'waiting',platforms:{}})}),intervalMs:100000};
+ const model=createDesktopState(deps);t.after(()=>model.dispose());model.subscribe(()=>{});await tick();
+ await model.retryStartup();
+ assert.equal(model.getSnapshot().runtime?.network_revision,1);
+ assert.equal(model.getSnapshot().startup?.state,'ready');
+});

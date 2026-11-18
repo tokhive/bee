@@ -2,7 +2,7 @@ import {Dialog,Popover} from 'radix-ui';
 import {useRef} from 'react';
 import {Button} from '../../components/ui';
 import {FailureNotice} from '../../components/ProblemNotice';
-import {safeFailureText,normalizeFailure} from '../../system/failures';
+import {normalizeFailure} from '../../system/failures';
 import {presentFailure} from '../../presentation/problems';
 import {currentLocale,t} from '../../i18n/index';
 import {switchPending,type SwitchPhase} from '../../system/hiveSwitch';
@@ -10,7 +10,6 @@ import type {DeviceView} from '../../system/device';
 import {DevicePairingPage} from '../device/DevicePairingPage';
 import {DeviceFeedback} from '../device/DeviceFeedback';
 import {deviceProblem} from '../device/devicePresentation';
-import {WizardFailure} from '../device/FirstLaunchWizard';
 import type {HiveSwitchModel} from './useHiveSwitch';
 const phases:Record<SwitchPhase,string>={preparing_target:'正在准备目标 Hive',draining_source:'等待原 Hive 的任务完成',stopping_source:'正在安全停止原 Hive',connecting_target:'正在连接目标 Hive',committing_current:'正在保存当前 Hive',releasing_target:'已切换，正在确认目标 Hive 接单条件',restoring_source:'正在恢复原 Hive',succeeded:'Hive 已切换',failed:'本次切换未完成',cancelled:'切换已取消'};
 export function HiveSwitchChooser({model,view,hideTrigger=false}:{model:HiveSwitchModel;view?:DeviceView;hideTrigger?:boolean}){
@@ -34,9 +33,12 @@ export function HiveSwitchProgress({model}:{model:HiveSwitchModel}){
  const unknown=pending&&(!!operation.source.pending||!!operation.target.pending||!!operation.failure||!!error);
  const cancelling=pending&&(operation.cancel_requested||model.cancelIntent===operation.id);
  const rechecking=model.foreground==='recheck';
+ const failure=error||operation.failure?normalizeFailure(error??operation.failure,'hive_switch'):null;
+ const failureSummary=failure?.code==='HIVE_SWITCH_SOURCE_UNVERIFIED'&&failure.evidence.failure_kind==='connection_refused'?t('原 Hive 拒绝网络连接，任务状态尚未确认。'):failure?t(deviceProblem(failure).reason):undefined;
  const title=model.foreground==='cancel'?'正在取消切换…':rechecking?(cancelling?'正在核对取消结果…':'正在核对切换结果…'):cancelling?'取消结果尚未确认':unknown?'Hive 切换结果尚未确认':phases[operation.phase];
- const targetVisible=snapshot.actions.target_pairing&&!model.foreground&&!cancelling;
  const targetTransaction=target.recovery??target.view?.recovery;
+ const targetReady=target.view?.state==='bound'&&(!targetTransaction||targetTransaction.phase==='completed')&&!target.error&&!target.recoveryError;
+ const targetVisible=snapshot.actions.target_pairing&&!targetReady&&!model.foreground&&!cancelling;
  const targetActive=targetVisible&&!!(targetTransaction||['pending','expired','draining'].includes(target.view?.state??'')||target.error||target.recoveryError);
  const targetHasActions=targetVisible&&(targetActive||target.view?.state==='unbound');
  const targetPending=targetTransaction?.phase==='pending'||!targetTransaction&&target.view?.state==='pending';
@@ -46,15 +48,15 @@ export function HiveSwitchProgress({model}:{model:HiveSwitchModel}){
  return <div className="hive-switch-progress" aria-label={t('Hive 切换进度')}>
   {!targetActive&&<div className="device-transaction-heading"><p className="pairing-phase" aria-live="polite">{t(title)}</p></div>}
   {!model.foreground&&<>
+  {!rechecking&&!targetVisible&&failure&&<p className="switch-failure">{failureSummary}<Dialog.Root><Dialog.Trigger asChild><Button variant="ghost" className="switch-error-info" aria-label={t('查看切换错误详情')}>ⓘ</Button></Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="dialog-overlay switch-error-overlay"/><Dialog.Content className="dialog-content switch-error-dialog" aria-describedby={undefined}><Dialog.Title>{t('错误详情')}</Dialog.Title><pre>{presentFailure(failure,currentLocale()).details}</pre><div className="switch-error-actions"><Dialog.Close asChild><Button variant="outline">{t('关闭')}</Button></Dialog.Close></div></Dialog.Content></Dialog.Portal></Dialog.Root></p>}
   {!targetActive&&!rechecking&&model.foreground!=='cancel'&&route}
   {!rechecking&&!unknown&&!cancelling&&pending&&operation.phase==='draining_source'&&<p className="device-note">{work?t('正在执行 {running} · 终止结果未知 {unknown} · 未结算 {unsettled}',{running:work.executions,unknown:work.unknown_terminations,unsettled:work.unsettled}):t('任务和结算数量待核对。')}</p>}
-  {!targetActive&&pending&&snapshot.observation.state==='paused'&&<p className="device-note">{t('自动核对暂停后，原切换和停止派单保护继续保留。')}</p>}
+  {!targetActive&&!unknown&&!cancelling&&pending&&snapshot.observation.state==='paused'&&<p className="device-note">{t('自动核对暂停后，原切换和停止派单保护继续保留。')}</p>}
 
   {operation.committed&&<p className="device-note">{t('当前 Hive 已保存为目标地址；账号问题请在此 Hive 内处理。')}</p>}
-  {!rechecking&&!targetVisible&&(operation.failure||error)&&<WizardFailure compact failure={normalizeFailure(error??operation.failure,'hive_switch')} summary={t(deviceProblem(normalizeFailure(error??operation.failure,'hive_switch')).reason)}/>}
   {targetVisible&&<div className="hive-target-device"><DevicePairingPage embedded transactionIntro={route} transactionDetails={switchDetails} extraActions={cancelAction} title="目标 Hive 设备" inputDraft={{hive:destination?.origin??'',name:model.name,hiveReadOnly:true,setHive:()=>{},setName:model.setName}} view={target.view} context={target.error?{hive:destination?.origin??'',name:model.name,device_id:null,owner_id:snapshot.profile_identities.find(p=>p.profile_id===operation.target.profile)?.owner_id??null,binding_revision:operation.target.process_binding_revision??0}:undefined} recovery={target.recovery} recoveryError={target.recoveryError} error={target.error} operationError={error} busy={busy} initialLoading={!target.view&&!target.error&&!target.recovery} begin={model.targetBegin} refresh={()=>void model.targetRefresh()} open={()=>void model.targetOpen()} recover={model.targetRecover}/></div>}
   {!targetHasActions&&<div className="inline-actions hive-switch-actions">
-   {!targetVisible&&(snapshot.actions.can_observe||snapshot.actions.can_continue)&&<Button disabled={busy} onClick={()=>void (snapshot.actions.can_continue?model.continueWaiting():model.observe())}>{t(rechecking?'正在核对…':snapshot.observation.state==='paused'?'继续等待':'重新核对')}</Button>}
+   {!targetVisible&&(snapshot.actions.can_observe||snapshot.actions.can_continue)&&<Button disabled={busy} onClick={()=>void (snapshot.actions.can_continue?model.continueWaiting():model.observe())}>{t(rechecking?'正在核对…':snapshot.observation.state==='paused'&&!unknown&&!cancelling?'继续等待':'重新核对')}</Button>}
    {!targetActive&&cancelAction}
   </div>}
   {!(targetVisible&&targetPending)&&<details><summary>{t('切换详情')}</summary>{switchDetails}</details>}

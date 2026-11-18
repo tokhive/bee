@@ -1,4 +1,6 @@
 export const openaiEnglish:Record<string,string>={
+  "正在核验额度…": "Verifying quota…",
+  "已提交你确认的账号，正在等待接入结果。": "The account you confirmed has been submitted. Waiting for the connection result.",
   "账号已接入。请在问题解除后重试准备，无需重新确认接入。": "The account is connected. Resolve the issue, then retry preparation; no new connection confirmation is needed.",
   "尚未取得原操作的确定结果；只核对本次操作，不会重复提交。": "The original operation is still unconfirmed. Only its result will be checked; it will not be submitted again.",
   "状态": "Status",

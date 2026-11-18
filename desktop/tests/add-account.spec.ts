@@ -54,7 +54,7 @@ test('failed progress reads show retry and stopped states; refreshing only queri
  await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.account-error-popover')).toContainText('controlled login progress read timed out');await page.keyboard.press('Escape');
  await page.clock.runFor(8100);
  await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('登录进度查询已停止');
- await expect(wizard(page).locator('.add-account-spinner')).toHaveCount(0);
+ await expect(wizard(page).locator('.add-account-progress-icon')).toHaveCount(0);
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).progressFailure=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();
  await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('等待完成 OpenAI 登录');

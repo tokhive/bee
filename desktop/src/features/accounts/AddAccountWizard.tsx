@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {open} from '@tauri-apps/plugin-dialog';
-import {Check,FolderOpen,LoaderCircle,ShieldCheck} from 'lucide-react';
+import {Check,FolderOpen,ShieldCheck} from 'lucide-react';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -94,7 +94,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
   <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2>{screen!=='source'&&step===2&&(missing&&!error||loginStartDenied)&&!starting&&!pending&&!observing&&!kept&&<Button variant="ghost" onClick={onBack}>{t('取消添加')}</Button>}{loginWaiting&&progress?.actions.cancel&&op&&<Button variant="ghost" disabled={busy||accounts.openingLogin} onClick={()=>{setExitAfterLogin(op.id);accounts.cancelAuthorize('openai');}}>{t('取消添加')}</Button>}</header>
   <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} className={step>i+1?'done':undefined} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
   <div className="add-account-body">
-   <h3 ref={heading} tabIndex={-1} className={showSpinner?'add-account-progress-title':undefined}>{showSpinner&&<LoaderCircle className="add-account-spinner" aria-hidden="true"/>}{t(title)}</h3>
+   <h3 ref={heading} tabIndex={-1} className={showSpinner?'add-account-progress-title':undefined}>{showSpinner&&<svg className="add-account-progress-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12h4l3-8 5 16 3-8h5"/></svg>}{t(title)}</h3>
    {status&&<p role="status" aria-live="polite" aria-atomic="true">{t(status)}</p>}
    {error&&!intake&&<p className="add-account-error" role="alert">{loginStartDenied?t('系统拒绝运行 Codex，请检查客户端的执行权限。'):problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
    {problem?.action&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}

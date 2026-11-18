@@ -264,7 +264,7 @@ test('Claude account status polling never disables cancel login and the explicit
  });
  await page.getByRole('button',{name:'Claude',exact:true}).click();await page.getByRole('button',{name:'Claude 详情',exact:true}).click();
  await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();
- await page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'继续登录',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  const button=page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'取消登录',exact:true});await expect(button).toBeEnabled();
  await hold(page,'account_snapshot','claude');await page.clock.runFor(450);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);await expect(button).toBeEnabled();
@@ -282,7 +282,7 @@ for(const command of ['authorize_start','authorize_cancel'])test('Claude central
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();await page.getByRole('button',{name:'Claude 详情',exact:true}).click();
  await expect(page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true})).toBeEnabled();
  await page.evaluate(command=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(name:string,args:any)=>{const prior=structuredClone(w.accounts.claude),result=await invoke(name,args);if(name===command){w.accounts.claude=prior;w.regressAuthorize=true;}return result;};},command);
- await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();await page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'继续登录',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  if(command==='authorize_cancel')await page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'取消登录',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).regressAuthorize)).toBe(true);
  for(let i=0;i<3&&await page.getByRole('dialog').count();i++)await page.keyboard.press('Escape');
@@ -296,7 +296,7 @@ for(const outcome of ['identity','runtime','features'])test('Claude official log
  await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();await page.getByRole('button',{name:'Claude 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_snapshot'&&w.forceRunning){result.result.runtime.local='running';result.result.runtime.run_id='a'.repeat(32);}return result;};});
  await hold(page,'runtime_snapshot');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
- await page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'继续登录',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await page.evaluate(outcome=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;if(outcome==='identity')w.deviceFail=true;if(outcome==='features')w.accounts.claude.features.authorize={available:false,reason:'update_pending'};if(outcome==='runtime')w.forceRunning=true;w.release();},outcome);
  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
  else{await expect(page.getByText('账号提交条件已经变化，本次未提交。',{exact:true}).last()).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);}

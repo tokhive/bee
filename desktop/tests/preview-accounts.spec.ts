@@ -101,14 +101,14 @@ test('preview source conditions can recover through the formal source editor wit
  expect(await calls(page,'account_action')).toHaveLength(0);
 });
 
-test('preview Claude login controls follow its current operation and preserve the inline confirmation',async({page})=>{
+test('preview Claude login controls follow its current operation and preserve the explicit confirmation',async({page})=>{
  const app=await open(page);
  await wizard(app).getByRole('button',{name:'Claude',exact:true}).click();
  await card(app,'Claude').getByRole('button',{name:'登录 Claude',exact:true}).click();
  const login=card(app,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
- await expect(login).toBeFocused();
- await expect(login).toContainText('登录将暂停此平台接单');
- await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect(app.getByRole('dialog')).toBeVisible();
+ await expect(app.getByRole('dialog')).toContainText('由你确认是否接入 Bee');
+ await app.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await expect(login).toContainText('请完成 Claude 官方登录');
  await external(page,'login-result','succeeded','claude');
  await page.clock.runFor(10100);

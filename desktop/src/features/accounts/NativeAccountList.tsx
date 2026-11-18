@@ -44,7 +44,7 @@ export function NativeAccountList({context,accounts,runtime,supply,onNavigate,na
    const sourceFailure=!dirty&&(accounts.sourceReadFailed[platform]??snapshot?.candidate.error);
    const sourceRepair=compactList&&selected&&!!sourceFailure&&(sourceFailure.check==='source_read'||sourceFailure.evidence.permission_denied==='true'||['source_missing','source_unavailable','permission_denied'].includes(sourceFailure.code));
    const expired=compactList&&selected&&!dirty&&!readFailed&&!!presentation.expiresAt&&Date.parse(presentation.expiresAt)<=now;
-   const expiredFlow=expired&&!sourceRepair&&!inlineLogin&&!accountPending(snapshot)&&!accounts.uncertain[platform];
+   const expiredFlow=expired&&!sourceRepair&&(!inlineLogin||!!accounts.loginFlows.claude?.confirmation)&&!accountPending(snapshot)&&!accounts.uncertain[platform];
    const sourceStore=snapshot?.candidate.source?.store??accounts.sourceFor(platform).store;
    const localErrors=!dirty?[candidate?.error,snapshot?.authorization.error,snapshot?.capabilities[0]?.error]:[];
    return <section className={`native-account-row ${compactList?'account-compact-row':''} ${expiredFlow?'claude-expired-flow openai-account oa-flow':''}`} aria-label={t('{platform} 账号',{platform:label})} key={platform} data-account-platform={platform} data-nav-section="account" data-nav-platform={platform} tabIndex={-1}>

@@ -1,4 +1,9 @@
 export const openaiEnglish:Record<string,string>={
+  "重新登录 Claude": "Sign in to Claude again",
+  "调用已安装的 Claude Code 官方客户端，可能改变客户端当前登录账号。": "Use the installed official Claude Code client. This may change its signed-in account.",
+  "Claude Code 默认目录": "Default Claude Code directory",
+  "本次配置目录：{directory}；凭证存储：{store}。": "Configuration directory: {directory}; credential storage: {store}.",
+  "Bee 将打开系统终端，请按终端和浏览器提示完成登录。": "Bee will open the system terminal. Follow the terminal and browser prompts to complete sign-in.",
   "Claude 当前流程": "Current Claude workflow",
   "本地文件": "Local file",
   "自动读取": "Automatic detection",

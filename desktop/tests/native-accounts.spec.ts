@@ -6,10 +6,10 @@ const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).c
 test('Claude inline login keeps confirmation and cancellation recovery in the account row',async({page})=>{
  await fixture(page,{runtime:true});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const dialog=await details(page,'Claude');await dialog.getByRole('button',{name:'登录 Claude',exact:true}).click();
- await expect(page.getByRole('dialog')).toHaveCount(0);
+ await expect(page.getByRole('dialog',{name:'登录 Claude',exact:true})).toBeVisible();
  const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
- await expect(login).toBeFocused();await expect(login.getByRole('button',{name:'继续登录',exact:true})).toBeEnabled();
- await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect(page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true})).toBeFocused();await expect(page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true})).toBeEnabled();
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await expect(login).toContainText('请完成 Claude 官方登录');
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  await expect(login).toContainText('请完成 Claude 官方登录');await login.getByRole('button',{name:'取消登录',exact:true}).click();
@@ -22,7 +22,7 @@ test('Claude inline verification retry does not repeat official login or duplica
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{loginOutcome:{state:'failed',error:{platform:'claude',code:'source_unavailable',check:'official_profile',message:'official profile request timed out',evidence:{transport_failed:'true'}}}},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const dialog=await details(page,'Claude');await dialog.getByRole('button',{name:'登录 Claude',exact:true}).click();
- const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await page.evaluate(()=>(window as any).loginComplete=true);await expect(login.getByRole('button',{name:'重新核验',exact:true})).toBeEnabled();
  await expect(card(page,'Claude').getByRole('alert')).toHaveCount(1);await login.getByRole('button',{name:'重新核验',exact:true}).click();
  await expect(login).toContainText('已登录 Claude，尚未接入');expect(await calls(page,'authorize_start')).toHaveLength(1);
@@ -33,21 +33,21 @@ for(const code of ['permission_denied','invalid_credentials'])test(`Claude inlin
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{loginOutcome:{state:'failed',error}},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const dialog=await details(page,'Claude');await dialog.getByRole('button',{name:'登录 Claude',exact:true}).click();
- const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await page.evaluate(()=>(window as any).loginComplete=true);
  const recovery=login.getByRole('button',{name:code==='permission_denied'?'重新读取':'重新登录',exact:true});await expect(recovery).toBeEnabled();
  await expect(login.getByRole('button')).toHaveCount(1);await recovery.click();
  if(code==='permission_denied'){
   await expect(login).toContainText('尚未确认可用的 Claude 登录');
   const reads=(await calls(page,'account_detect')).filter((c:any)=>c.args.request.platform==='claude');expect(reads.at(-1).args.request.mode).toBe('local');
- }else await expect(login.getByRole('button',{name:'继续登录',exact:true})).toBeEnabled();
+ }else await expect(page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true})).toBeEnabled();
  expect(await calls(page,'authorize_start')).toHaveLength(1);expect(await calls(page,'account_action')).toHaveLength(0);
 });
 test('Claude inline uncertain cancellation only checks the owned login and accepts its terminal result',async({page})=>{
  await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,scenarios:{cancelUnknown:true},accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  const dialog=await details(page,'Claude');await dialog.getByRole('button',{name:'登录 Claude',exact:true}).click();
- const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await login.getByRole('button',{name:'取消登录',exact:true}).click();await expect(login).toContainText('登录结果待确认');
  await expect(login.getByRole('button')).toHaveCount(1);await login.getByRole('button',{name:'检查登录结果',exact:true}).click();
  await page.evaluate(()=>(window as any).loginComplete=true);await page.clock.runFor(10100);

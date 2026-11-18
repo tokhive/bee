@@ -129,7 +129,7 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await row.getByRole('button',{name:'Claude 详情',exact:true}).click();
   await page.getByRole('dialog').last().getByRole('button',{name:'登录 Claude',exact:true}).click();
   const login=row.getByRole('region',{name:'Claude 登录状态',exact:true});
-  await login.getByRole('button',{name:'继续登录',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
   await expect(login).toContainText('请完成 Claude 官方登录');
   await page.evaluate(()=>{
    const w=window as any;

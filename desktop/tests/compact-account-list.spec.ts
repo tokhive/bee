@@ -98,7 +98,7 @@ for(const fault of ['source','expired','normal'] as const)test(`Claude compact $
   await row.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.getByRole('dialog')).toBeVisible();
  }else if(fault==='expired'){
   await expect(row.getByRole('status')).toContainText('授权已过期');await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
-  await row.getByRole('button',{name:'重新登录',exact:true}).click();await expect(row.getByRole('region',{name:'Claude 登录状态',exact:true})).toBeVisible();
+  await row.getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 Claude',exact:true})).toBeVisible();await expect(page.getByRole('dialog')).toContainText('系统钥匙串');await page.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();await expect(row.getByRole('list',{name:'Claude 当前流程'})).toBeVisible();
  }else await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toBeVisible();
  expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(true);
 });

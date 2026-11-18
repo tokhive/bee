@@ -1,5 +1,6 @@
 import {useEffect,useRef} from 'react';
 import {AlertCircle,CheckCircle2,ExternalLink,LoaderCircle} from 'lucide-react';
+import {Dialog} from 'radix-ui';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
 import {normalizeFailure,requestNotExecuted} from '../../system/failures';
@@ -42,7 +43,17 @@ export function NativeAccountLogin({accounts,runtime,onNavigate}:{accounts:Accou
  const waiting=!confirmation&&!unknown&&(active||busy);
  const title=confirmation?'登录 Claude':unknown?'登录结果待确认':waiting?flow?.checking?'正在核验当前登录…':'请完成 Claude 官方登录':op?.state==='unknown'?'本次登录结果未确认':verified?view?.selection.state==='selected'?'Claude 登录已核验':'已登录 Claude，尚未接入':cancelled?'本次登录已取消':problem?null:'尚未确认可用的 Claude 登录';
  const open=()=>accounts.openLogin(platform,stamp());
+ const source=accounts.sourceFor(platform);
  const checkBlocked=busy||active||unknown||!!accounts.readFailures.claude||!accounts.defaults||!!accounts.sharedReadFailure;
+ if(confirmation&&accounts.autoService)return <Dialog.Root open onOpenChange={open=>{if(!open)accounts.dismissLogin(platform);}}><Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content claude-login-confirm">
+  <Dialog.Close asChild><Button variant="ghost" className="claude-login-close">{t('关闭')}</Button></Dialog.Close>
+  <Dialog.Title>{t(view?.selection.state==='selected'?'重新登录 Claude':'登录 Claude')}</Dialog.Title>
+  <Dialog.Description>{t('调用已安装的 Claude Code 官方客户端，可能改变客户端当前登录账号。')}</Dialog.Description>
+  <p className="claude-login-impact">{t(view?.selection.state==='selected'?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。')}</p>
+  <p>{t('本次配置目录：{directory}；凭证存储：{store}。',{directory:source.directory??t('Claude Code 默认目录'),store:t(source.store==='keychain'?'系统钥匙串':source.store==='file'?'本地文件':'自动读取')})} {t('Bee 将打开系统终端，请按终端和浏览器提示完成登录。')}</p>
+  {changed?<p role="alert">{t('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。')}</p>:block()&&<p role="alert">{t(block()!.message)}</p>}
+  <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={changed||!!block()} onClick={()=>{if(confirmation===stamp()&&!block())accounts.authorize(platform);}}>{t('开始官方登录')}</Button></div>
+ </Dialog.Content></Dialog.Portal></Dialog.Root>;
  return <section ref={root} tabIndex={-1} className="native-account-login" aria-label={t('Claude 登录状态')}>
   <div className="account-login-copy">
    <span className={`account-login-icon ${verified?'is-good':problem?'is-error':''}`} aria-hidden="true">{waiting?<LoaderCircle className="account-login-spinner"/>:verified?<CheckCircle2/>:problem?<AlertCircle/>:<ExternalLink/>}</span>

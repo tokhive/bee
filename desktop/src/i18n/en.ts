@@ -279,6 +279,7 @@ export const en: Record<string, string> = {
  "desktop.status.change_unconfirmed": "Account change needs checking",
  "desktop.status.pausing": "Pausing contributions…",
  "desktop.status.resuming": "Resuming contributions…",
+ "desktop.status.quota_checking": "Checking quota…",
  "desktop.status.quota_exhausted": "Quota exhausted",
  "desktop.status.preparing_accounts": "Preparing for requests…",
  "desktop.status.loading":"Reading device and account status",

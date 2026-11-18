@@ -1,3 +1,4 @@
+import {accountPresentation} from '../features/accounts/accountPresentation';
 import {useHiveSwitch,type HiveSwitchModel} from '../features/hive/useHiveSwitch';
 import {HiveSwitchChooser,HiveSwitchProgress,HiveSwitchFeedback} from '../features/hive/HiveSwitchControls';
 import {switchPending,type HiveSwitchClient} from '../system/hiveSwitch';
@@ -213,7 +214,8 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  saveOpenaiSource:source=>saveAccountSource('openai',source),saveClaudeSource:source=>saveAccountSource('claude',source),error:snapshot.error,deviceError:identityFailure(snapshot),accountErrors:snapshot.accountErrors,refresh,beforeWrite:(platform,local)=>model?.settleForWrite(platform,local)??Promise.resolve(),pause,generation,recordReceipt:model?.recordAccountReceipt,snapshot:accountSnapshot});
  supplyLocal.current=Object.fromEntries((['openai','claude'] as const).map(p=>[p,JSON.stringify([!!runtime.error,runtime.uncertain,!!accounts.writeBusy[p],!!accounts.errors[p],!!accounts.uncertain[p]])]));
  const sharedSupply=useSupply(supplyClient,native.state==='ready',busy||!!error||!!snapshot.error||!!identityFailure(snapshot),Object.values(accounts.views).filter(v=>v.hive.state==='confirmation_required').map(v=>v.platform),{views:snapshot.supplies,errors:snapshot.supplyErrors,activePlatform:snapshot.supplyPlatform,error:snapshot.error??identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,supplyRefresh:snapshot.supplyRefresh,refresh,beforeWrite:platform=>model?.settleForWrite(platform)??Promise.resolve(),pause,snapshot:supplySnapshot},supplyWriteContext(snapshot,supplyLocal.current));
- const presentation=deriveDesktopStatus({...snapshot,supplyErrors:{...snapshot.supplyErrors,...sharedSupply?.state.errors}},Date.now(),props.autoService,sharedSupply?.state.writeBusy?sharedSupply.state.pendingChoices:undefined);
+ const checkingQuota=(['openai','claude'] as const).filter(p=>(accounts.busy[p]||accounts.accountRefresh?.[p]?.state==='reading')&&accountPresentation(accounts.views[p],false,Date.now(),false,false,accounts.quotaHistory[p]).quotaState==='stale');
+ const presentation=deriveDesktopStatus({...snapshot,supplyErrors:{...snapshot.supplyErrors,...sharedSupply?.state.errors}},Date.now(),props.autoService,sharedSupply?.state.writeBusy?sharedSupply.state.pendingChoices:undefined,checkingQuota);
  const diagnostics=useMemo(()=>props.diagnosticsFactory(instance,snapshot.runtime?.network_revision??0,snapshot.runtime?.run_id,snapshot.bindingRevision??0),[props.diagnosticsFactory,instance,snapshot.bindingRevision]);
  const switchingPending=switchPending(switching.snapshot),firstProfile=!!switching.snapshot&&!switching.snapshot.profiles.current_profile&&!switchingPending;
  const switchControl=props.hiveSwitchClient?<HiveSwitchChooser model={switching} view={view} hideTrigger/>:null,switchStatus=props.hiveSwitchClient?<HiveSwitchProgress model={switching}/>:null;

@@ -3,15 +3,15 @@ import {normalizeFailure,type UiFailure} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
 import type {AccountPlatform} from '../system/accounts';
 export interface DesktopPresentation {
- kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'pausing'|'resuming'|'quota_exhausted'|'ready'|'blocked';
+ kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'pausing'|'resuming'|'quota_exhausted'|'quota_checking'|'ready'|'blocked';
  severity:'neutral'|'info'|'warning'|'error'|'success';
  readyPlatforms:AccountPlatform[];blockedPlatforms:AccountPlatform[];problem:UiFailure|null;primaryTarget:NavigationTarget|null;
  preparationStep:'bind'|'confirm_device'|'connect_account'|null;
 }
 const platforms=['openai','claude'] as const;
-const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',preparing_accounts:'info',changing_account:'info',change_unconfirmed:'warning',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',pausing:'info',resuming:'info',quota_exhausted:'neutral',ready:'success',blocked:'warning'};
+const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',preparing_accounts:'info',changing_account:'info',change_unconfirmed:'warning',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',pausing:'info',resuming:'info',quota_exhausted:'neutral',quota_checking:'info',ready:'success',blocked:'warning'};
 /** Read-only presentation of confirmed facts. It never schedules work or authorizes a write. */
-export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoService=false,pendingChoices:Partial<Record<AccountPlatform,boolean>>={}):DesktopPresentation {
+export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoService=false,pendingChoices:Partial<Record<AccountPlatform,boolean>>={},checkingQuota:AccountPlatform[]=[]):DesktopPresentation {
  const s=snapshot,r=s.runtime;
  const startup=s.startup&&(!s.startup.instance||s.startup.instance===s.native.metadata?.instance)&&(s.startup.binding_revision===null||s.startup.binding_revision===s.bindingRevision)&&(s.startup.network_revision===null||s.startup.network_revision===r?.network_revision)?s.startup:undefined;
  const selected=platforms.filter(p=>s.accounts[p]?.selection.state==='selected');
@@ -57,6 +57,6 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  const current=(p:AccountPlatform)=>{const v=s.supplies[p];return accountKnown(p)&&!s.supplyErrors[p]&&v&&now-Date.parse(v.checked_at)<=30000;};
  if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
  const quota=selected.find(p=>current(p)&&s.supplies[p]?.reasons.includes('quota_exhausted'));
- if(quota&&selected.every(p=>current(p)&&s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted')))return result('quota_exhausted',null,{page:'accounts',section:'account',platform:quota});
+ if(quota&&selected.every(p=>current(p)&&s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted')))return result(checkingQuota.includes(quota)?'quota_checking':'quota_exhausted',null,{page:'accounts',section:'account',platform:quota});
  return result('blocked',s.accountErrors[selected[0]]??s.supplyErrors[selected[0]]??null,{page:'accounts',section:'account',platform:blockedPlatforms[0]??selected[0]});
 }

@@ -46,6 +46,8 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  if(r.connection==='connecting'||r.connection==='reconnecting')return result('connecting',null,{page:'overview',section:'connection'});
  if(r.connection!=='connected')return result('disconnected',null,{page:'overview',section:'connection'});
  if(readyPlatforms.length)return result('ready',null,blockedPlatforms.length?{page:'accounts',section:'account',platform:blockedPlatforms[0]}:null);
+ const supplyUnknown=selected.find(p=>s.supplyErrors[p]);
+ if(supplyUnknown)return result('unconfirmed',s.supplyErrors[supplyUnknown]!,{page:'accounts',section:'account',platform:supplyUnknown});
  const pending=selected.find(p=>pendingChoices[p]!==undefined);
  if(pending)return result(pendingChoices[pending]?'pausing':'resuming',null,{page:'accounts',section:'account',platform:pending});
  const changing=selected.find(p=>accountKnown(p)&&s.accounts[p]?.operation?.kind==='confirm_change'&&['pending','running','reconciling'].includes(s.accounts[p]?.operation?.state??''));

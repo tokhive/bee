@@ -14,7 +14,7 @@ const phases:{[key:string]:string}={
 for(const [scene,copy] of [
  ['device-creation-unknown','尚无法确认配对请求结果'],
  ['device-redemption-unknown','尚未确认绑定结果。Bee 只检查原事务，不会再次兑换。'],
- ['device-saving','设备身份已确认，本机保存尚未完成。'],
+
 ] as const)test('unresolved first binding stays in the gate and returns from diagnostics without replay: '+scene,async({page})=>{
  await open(page,scene);await expect(page.getByText(copy,{exact:true})).toBeVisible();
  const operation=await page.evaluate(()=>(window as any).__beeMockDeviceContext().operationId);
@@ -60,7 +60,7 @@ test('revoked credential recovery requires local consent, external approval and 
  await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);await expect(page.locator('.device-card').getByRole('button',{name:'接入 AI 账号',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'前往接入',exact:true}).first()).toBeVisible();
 });
 test('saved revoked identity and missing selected source keep all pages reachable without account or runtime writes',async({page})=>{
- await open(page,'device-revoked-source-missing');await expect(page.locator('body')).toContainText('上次保存的设备信息');
+ await open(page,'device-revoked-source-missing');await expect(page.locator('.device-card-facts')).toHaveAttribute('aria-label','上次保存的设备信息');
  await nav(page,'AI 账号').click();await expect(page.getByTestId('startup-recovery')).toContainText('设备');await expect(page.getByRole('button',{name:'OpenAI 详情',exact:true})).toHaveCount(0);
  for(const destination of ['设置','诊断','概览']){await nav(page,destination).click();await expect(page.getByRole('heading',{level:1,name:destination,exact:true})).toBeFocused();}
  expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
@@ -78,7 +78,7 @@ test('first launch keeps explicit original-request controls available after reop
 });
 
 test('missing local binding exposes recovery from the first launch form and retains its address on failure',async({page})=>{
- await open(page,'device-unbound');
+ await openLocalRecovery(page);
  await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();
  const form=page.locator('.device-recovery-action form');
  await form.getByLabel('Hive 地址',{exact:true}).fill('https://original-hive.example');
@@ -90,7 +90,7 @@ test('missing local binding exposes recovery from the first launch form and reta
 });
 
 test('local recovery advances only after confirmation and cancel dialog returns focus',async({page})=>{
- await open(page,'device-unbound');
+ await openLocalRecovery(page);
  await page.evaluate(()=>{
   const w=window as any,prior=w.__TAURI_INTERNALS__.invoke;
   w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_recovery_start'?{result:{recovery:{operation_id:'a'.repeat(48),revision:1,phase:'awaiting_confirmation',old_identity:null,new_identity:null,pairing:null,failure:null}}}:command==='device_recovery_confirm'?{result:{recovery:{operation_id:'a'.repeat(48),revision:2,phase:'pending',old_identity:null,new_identity:null,pairing:{code:'ABCD-EFGH',verification_url:'https://original-hive.example/devices/pair?code=ABCD-EFGH',expires_at:'2099-01-01T00:00:00Z'},failure:null}}}:prior(command,args);
@@ -136,3 +136,27 @@ test('locally expired pending code offers renewal without pretending Hive confir
  expect(decisions[0].args.decision).toBe('restart_pairing');
  expect(decisions[0].args.operationId??decisions[0].args.operation_id).toBe(before.operationId);
 });
+
+test('saving first binding exports diagnostics beside continuation without replay',async({page})=>{
+ await open(page,'device-saving');await expect(page.getByRole('button',{name:'继续完成绑定',exact:true})).toBeVisible();
+ const downloadEvent=page.waitForEvent('download');await page.getByRole('button',{name:'导出诊断',exact:true}).click();await downloadEvent;
+ await expect(page.getByRole('navigation')).toHaveCount(0);expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
+});
+for(const message of ['atomic local save failed: kind=PermissionDenied os_code=13; required=private configuration writable','atomic local save failed: no space left on device'])test('recovery save failure keeps specific cause and original evidence: '+message,async({page})=>{
+ await open(page,'recovery-saving');
+ await page.evaluate(message=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='device_recovery_snapshot'&&reply.result?.recovery?.failure)reply.result.recovery.failure.message=message;return reply;};},message);
+ await page.clock.runFor(10001);
+ if(message.includes('PermissionDenied'))await expect(page.getByRole('alert')).toContainText('设备配置写入被拒绝。');
+ else {await expect(page.getByRole('alert')).not.toContainText('设备配置写入被拒绝。');await expect(page.getByRole('alert')).toContainText('no space left on device');}
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText(message);
+ await page.keyboard.press('Escape');await expect(page.getByRole('button',{name:'继续保存',exact:true})).toBeVisible();
+ expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);
+});
+
+async function openLocalRecovery(page:Page){
+ await open(page,'device-unbound');
+ await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_context'?{result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_INVALID',message:'device configuration JSON parse failed'}}}:invoke(command,args);});
+ await page.clock.runFor(10001);
+ await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toBeVisible();
+}

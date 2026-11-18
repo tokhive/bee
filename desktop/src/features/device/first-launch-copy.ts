@@ -64,6 +64,8 @@ const english:Record<string,string>={
  '重新生成配对码':'Generate a new pairing code','打开 Hive 控制台':'Open Hive console',
  '正在检查绑定结果并继续保存…':'Checking binding result and continuing to save…',
  '设备身份已确认，本机保存尚未完成。':'Device identity is confirmed; the local configuration has not been saved.',
+ '设备配置写入被拒绝。':'Writing the device configuration was denied.',
+ '请允许 Bee 写入设备配置，然后继续保存。':'Allow Bee to write the device configuration, then continue saving.',
  '正在保存设备配置…':'Saving device configuration…',
  '请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。':'Resolve the reported save failure, then click “Continue binding”. Bee will check the existing binding and continue saving.',
  '继续完成绑定':'Continue binding','导出诊断':'Export diagnostics','查看诊断':'View diagnostics',

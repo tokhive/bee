@@ -45,6 +45,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const phase=transaction?.phase??(view?.state==='pending'||view?.state==='draining'||view?.state==='expired'?view.state:undefined);
  const cancelled=phase==='blocked'&&transaction?.failure?.code==='PAIRING_CLOSED';
  const active=!!phase&&phase!=='completed'&&!cancelled;
+ const savePermissionDenied=phase==='saving'&&!!transaction?.failure&&/(?:EACCES|PermissionDenied|permission denied)/i.test(transaction.failure.message)&&/(?:save|writ|config)/i.test(transaction.failure.message);
  const paused=transaction?.failure?.code==='PAIRING_OBSERVATION_PAUSED';
  const admin=transaction?.failure?.code==='PAIRING_ADMIN_REQUIRED'||transaction?.failure?.code==='RECOVERY_EVIDENCE_UNRESOLVED';
  const pairing=phase==='completed'||cancelled?null:transaction?.pairing??(view?.user_code&&view.verification_url&&view.expires_at?{code:view.user_code,verification_url:view.verification_url,expires_at:view.expires_at}:null);
@@ -101,10 +102,11 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    {admin&&<p>{w('请联系 Hive 管理员检查记录。')}</p>}
    {!querying&&!cancelling&&phase&&['creating','redeeming'].includes(phase)&&<p className="repair-progress" role="status">{w(phase==='creating'?'正在处理已保存的请求，请勿重复创建。':'Bee 沿原请求核对结果；网页已批准不代表本机已经保存。')}</p>}
 
-   {phase==='saving'&&<p>{w(transaction?.failure?'请处理保存失败原因，然后继续保存。':'正在保存设备配置…')}</p>}
+   {phase==='saving'&&!transaction?.failure&&<p>{w('正在保存设备配置…')}</p>}
    {cancelled&&<><p>{w('旧设备不会自动恢复接单。')}</p><p>{w('已完成的处理不会撤回。')}</p></>}
    {!querying&&(unknown||cancelling)&&failures.length===0&&<p>{w('原请求已保留，结果尚未确认。')}</p>}
-   {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} centered compact summary={index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
+   {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} centered compact summary={savePermissionDenied&&failure.message===transaction?.failure?.message?w('设备配置写入被拒绝。'):index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
+   {phase==='saving'&&transaction?.failure&&!querying&&!checking&&<p>{w(savePermissionDenied?'请允许 Bee 写入设备配置，然后继续保存。':'请处理保存失败原因，然后继续保存。')}</p>}
    {!active&&!querying&&!checking&&problem?.title==='Hive 暂不可用'&&<p>{w('请稍后重试连接。')}</p>}
    {active&&!issue&&startupNotice}
    <div className="binding-actions" aria-busy={busy}>
@@ -124,7 +126,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {extraActions}
    </div>
    {!querying&&!cancelling&&pairing&&phase==='pending'&&<>{!embedded&&<p className="device-note">{w(paused?'自动核对已暂停，网页确认后请点击重新核对。':'完成确认后，此处会自动更新。')}</p>}{showConfirmationUrl&&<details className="binding-url"><summary>{w(embedded?'切换详情':'确认网址')}</summary>{transactionDetails}{embedded&&<p>{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p>}<p>{pairing.verification_url}</p>{embedded&&<div className="binding-actions"><Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button><Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>}</details>}</>}
-   {!embedded&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
+   {!embedded&&phase!=='saving'&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
    </>}
   </div>}
   {!(active||issue)&&startupNotice}

@@ -65,7 +65,7 @@ for(const [kind,title,action,message] of [
  await expect(page.locator('.device-card>.device-note')).toHaveCount(0);
  await expect(page.getByText('需要更新 Bee',{exact:true})).toHaveCount(0);
  await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
- await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText(message);
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText(message);
  const download=page.waitForEvent('download');await page.getByRole('button',{name:'导出诊断',exact:true}).click();expect((await download).suggestedFilename()).toBe('bee-device-diagnostics.txt');
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
  expect(await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}))).toEqual(before);

@@ -33,7 +33,9 @@ func TestDesktopAuthorizeBridgeStrictRequests(t *testing.T) {
 		f := &authorizeFixture{}
 		var out bytes.Buffer
 		input := hello + supplyRequest("start", "authorize_start", params) + request("ping", "ping")
-		if err := desktopbridge.RunWithAuthorization(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f); err != nil {
+		if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithAuthorization(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f)
+		}); err != nil {
 			t.Fatal(err)
 		}
 		frames := replies(t, out.String())
@@ -44,7 +46,9 @@ func TestDesktopAuthorizeBridgeStrictRequests(t *testing.T) {
 	f := &authorizeFixture{}
 	var out bytes.Buffer
 	input := hello + supplyRequest("start", "authorize_start", valid) + supplyRequest("status", "authorize_status", `{"operation_id":"`+strings.Repeat("a", 48)+`"}`) + supplyRequest("cancel", "authorize_cancel", `{"operation_id":"`+strings.Repeat("a", 48)+`"}`)
-	if err := desktopbridge.RunWithAuthorization(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithAuthorization(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, f)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

@@ -6,6 +6,17 @@ async function scene(page:Page,id:string){
  await page.goto('/tests/fixtures/bee-preview/app.html?scene='+id+'&theme=light');
  await page.waitForFunction(()=>Boolean((window as any).__beePreviewReady));
 }
+test('a device action waiting for observation is cancelled when the binding changes',async({page})=>{
+ await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');
+ await expect(page.getByRole('button',{name:'打开 Hive 控制台',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.contextReads=0;w.hiveOpens=0;w.__TAURI_INTERNALS__.invoke=(cmd:string,args:any)=>{if(cmd==='device_context')w.contextReads++;if(cmd==='hive_open'){w.hiveOpens++;return Promise.resolve();}return original(cmd,args);};});
+ await hold(page,'device_status');await page.clock.runFor(10000);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
+ await page.getByRole('button',{name:'打开 Hive 控制台',exact:true}).click();
+ expect(await page.evaluate(()=>(window as any).hiveOpens)).toBe(0);
+ const before=await page.evaluate(()=>{const w=window as any;w.bindingRevision=(w.bindingRevision??1)+1;w.release();return w.contextReads;});
+ await expect.poll(()=>page.evaluate(()=>(window as any).contextReads)).toBeGreaterThan(before);
+ await page.clock.runFor(1000);expect(await page.evaluate(()=>(window as any).hiveOpens)).toBe(0);
+});
 async function hold(page:Page,command:string,platform?:string){
  await page.evaluate(({command,platform})=>{
   const w=window as any,original=w.__TAURI_INTERNALS__.invoke;
@@ -83,7 +94,7 @@ test('account status polling never disables cancel login and the explicit cancel
  await hold(page,'account_snapshot','openai');await page.clock.runFor(450);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);await expect(button).toBeEnabled();
  await expect(page.getByText('正在读取已有登录…',{exact:true})).toHaveCount(0);
- await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();expect(await calls(page,'authorize_cancel')).toHaveLength(0);
+ await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  await page.evaluate(()=>(window as any).release());await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  await expect(page.getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();expect(await page.evaluate(()=>(window as any).accounts.openai.operation.state)).toBe('cancelled');
 });
@@ -179,7 +190,7 @@ test('central account readback below a successful receipt remains blocked with r
  const card=page.getByRole('region',{name:/^(OpenAI 账号|添加账号)$/});await expect(card.getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_action'){w.accounts.openai.revision=result.result.account.revision-1;w.regressAccount=true;}if(command==='account_snapshot'&&args.platform==='openai'&&w.regressAccount)result.result.account.revision=w.accounts.openai.revision;return result;};});
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card.locator('.oa-title')).toContainText('接入账号未完成');expect(await calls(page,'account_action')).toHaveLength(1);
+ await expect(card.locator('.oa-title')).toContainText('暂时无法确认接入结果');expect(await calls(page,'account_action')).toHaveLength(1);
  await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();
  const evidence=JSON.parse(await page.locator('.native-diagnostic-evidence pre').textContent()??'null');const problem=evidence.accounts.openai;expect(problem.code).toBe('DESKTOP_STALE_RESULT');expect(problem.message).toMatch(/account revision.*actual=.*required>=/);
 });
@@ -209,7 +220,7 @@ for(const action of ['start','stop'])test(action==='start'?'waiting retry prepar
 for(const outcome of ['identity','runtime','features'])test('official login waiting on a shared read rechecks '+outcome,async({page})=>{
  await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('button',{name:'OpenAI',exact:true}).click();await expect(page.getByRole('button',{name:'确认接入',exact:true})).toBeVisible();await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('button',{name:'更换连接方式',exact:true}).click();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_snapshot'&&w.forceRunning){result.result.runtime.local='running';result.result.runtime.run_id='a'.repeat(32);}return result;};});
- await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
+ await hold(page,'runtime_snapshot');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await page.getByRole('button',{name:'登录 OpenAI',exact:true}).click();await page.keyboard.press('Escape');
  await page.evaluate(outcome=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;if(outcome==='identity')w.deviceFail=true;if(outcome==='features')w.accounts.openai.features.authorize={available:false,reason:'update_pending'};if(outcome==='runtime')w.forceRunning=true;w.release();},outcome);
  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
@@ -234,7 +245,7 @@ test('retry A waits for the original request then recovers without changing Hive
  await expect(page.getByText('前次核对尚未结束，结束后重试。',{exact:true})).toBeVisible();
  await expect(page.getByText('Hive 已连接',{exact:true})).toBeVisible();
  const runtimeReads=(await calls(page,'runtime_snapshot')).length;
- await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBe(runtimeReads);
+ await page.clock.runFor(20000);expect(await page.evaluate(()=>(window as any).retryAttempts)).toBe(1);expect((await calls(page,'runtime_snapshot')).length).toBeGreaterThan(runtimeReads);
  await page.getByRole('button',{name:'设置',exact:true}).click();await page.getByRole('button',{name:'概览',exact:true}).click();await expect(card).toBeVisible();
  await page.evaluate(()=>{const w=window as any;w.retryFailure=false;w.pendingRequests=[];w.emitRequestSettled(w.retryRequest);});
  await expect(page.getByText('等待自动重试…',{exact:true})).toBeVisible();
@@ -258,7 +269,7 @@ test('Claude account status polling never disables cancel login and the explicit
  await hold(page,'account_snapshot','claude');await page.clock.runFor(450);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);await expect(button).toBeEnabled();
  await expect(page.getByText('正在读取已有登录…',{exact:true})).toHaveCount(0);
- await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();expect(await calls(page,'authorize_cancel')).toHaveLength(0);
+ await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  await page.evaluate(()=>(window as any).release());await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  const login=page.getByRole('region',{name:'Claude 登录状态',exact:true});
  await expect(login.getByText('本次登录已取消',{exact:true})).toBeVisible();
@@ -284,7 +295,7 @@ for(const command of ['authorize_start','authorize_cancel'])test('Claude central
 for(const outcome of ['identity','runtime','features'])test('Claude official login waiting on a shared read rechecks '+outcome,async({page})=>{
  await page.clock.install();await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();await page.getByRole('button',{name:'Claude 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='runtime_snapshot'&&w.forceRunning){result.result.runtime.local='running';result.result.runtime.run_id='a'.repeat(32);}return result;};});
- await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
+ await hold(page,'runtime_snapshot');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await page.getByRole('region',{name:'Claude 登录状态',exact:true}).getByRole('button',{name:'继续登录',exact:true}).click();
  await page.evaluate(outcome=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;if(outcome==='identity')w.deviceFail=true;if(outcome==='features')w.accounts.claude.features.authorize={available:false,reason:'update_pending'};if(outcome==='runtime')w.forceRunning=true;w.release();},outcome);
  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);

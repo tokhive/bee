@@ -23,15 +23,15 @@ test('credential recovery absence becomes trusted only after its current scope r
  assert.equal(model.getSnapshot().recoveryObservation,'absent');
 });
 test('status saving a new binding invalidates the earlier recovery absence even when its receipt is lost',async t=>{
- let revision=1,saved=false;
+ let revision=1,saved=false,reads=0,release!:()=>void;
  const model=createDesktopState({
   bridge:{status:async()=>({state:'ready',metadata:{instance:'a'}}),onStatus:async()=>()=>{}} as any,
-  device:{context:async()=>unconfigured(revision),recoveryStatus:async()=>{throw absent;},status:async()=>{if(!saved){saved=true;revision=2;throw {code:'RESPONSE_TIMEOUT',message:'status response lost after save'};}return {state:'unbound'};}} as any,
+  device:{context:async()=>unconfigured(revision),recoveryStatus:async()=>{if(++reads===2)await new Promise<void>(resolve=>release=resolve);throw absent;},status:async()=>{if(!saved){saved=true;revision=2;throw {code:'RESPONSE_TIMEOUT',message:'status response lost after save'};}return {state:'unbound'};}} as any,
   runtime:()=>({snapshot:async()=>({revision:1,network_revision:0,local:'stopped',platforms:{},run_id:null})}) as any,intervalMs:100000,
  });
  t.after(()=>model.dispose());model.subscribe(()=>{});await tick();
  assert.equal(model.getSnapshot().bindingRevision,2);
  assert.equal(model.getSnapshot().recoveryObservation,undefined);
  assert.equal(model.getSnapshot().deviceError?.code,'RESPONSE_TIMEOUT');
- await model.refresh();assert.equal(model.getSnapshot().recoveryObservation,'absent');
+ release();await model.refresh();assert.equal(model.getSnapshot().recoveryObservation,'absent');
 });

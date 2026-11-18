@@ -32,6 +32,7 @@ pub(crate) fn allowed(mode: ProfileMode, method: &str) -> bool {
             | "device_recovery_prepare"
             | "device_recovery_confirm"
             | "device_recovery_status"
+            | "device_recovery_snapshot"
             | "runtime_inspect_recovery"
             | "runtime_verify"
             | "desktop_switch"

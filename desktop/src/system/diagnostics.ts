@@ -1,5 +1,5 @@
-import {retryEvidence} from './failures.ts';
-import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
+import {retryEvidence,safeFailureText} from './failures.ts';
+import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotExecuted,type UiFailure} from './failures.ts';
 import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
@@ -16,7 +16,7 @@ export interface DiagnosticExport {product:'Bee';app_version:string;bee_version:
 export const DIAGNOSTIC_EXPORT_BYTES=5*1024*1024;
 const modules=['diagnostics','runtime','network','accounts','device','bridge','lifecycle','export'];
 const levels=['info','warning','error'];
-const codes=new Set('request_timed_out request_settled request_http_started request_http_finished request_http_failed dns_temporary connection_closed connection_refused pending not_checked cancelled timeout unknown unknown_failure dns_failed tls_failed connection_failed invalid_origin http_rejected rate_limited device_replaced invalid_response response_too_large local_read_failed device_not_paired identity_unconfirmed identity_mismatch device_binding_valid runtime_stopped runtime_waiting runtime_unknown runtime_failed connection_disconnected runtime_ownership_conflict owned_runtime_connected network_policy_observed hive_identity_verified selection_read_failed source_not_selected selection_unconfirmed source_changed selected_source_read authorization_expired network_changed expired unconfirmed official_result_unconfirmed quota_unconfirmed official_authorization_observed quota_available quota_exhausted account_result_unconfirmed account_binding_unconfirmed account_changed account_binding_verified capabilities_unconfirmed capabilities_synchronized supply_result_unconfirmed supply_blocked taking_new_work hive_check_failed source_missing source_unavailable permission_denied unsupported_store invalid_directory invalid_credentials deadline owned_exit_started owned_exit_completed owned_exit_unconfirmed bridge_started bridge_stopped bridge_failed export_prepared export_completed export_cancelled export_failed'.split(' '));
+const codes=new Set('failure_observed request_timed_out request_settled request_http_started request_http_finished request_http_failed dns_temporary connection_closed connection_refused pending not_checked cancelled timeout unknown unknown_failure dns_failed tls_failed connection_failed invalid_origin http_rejected rate_limited device_replaced invalid_response response_too_large local_read_failed device_not_paired identity_unconfirmed identity_mismatch device_binding_valid runtime_stopped runtime_waiting runtime_unknown runtime_failed connection_disconnected runtime_ownership_conflict owned_runtime_connected network_policy_observed hive_identity_verified selection_read_failed source_not_selected selection_unconfirmed source_changed selected_source_read authorization_expired network_changed expired unconfirmed official_result_unconfirmed quota_unconfirmed official_authorization_observed quota_available quota_exhausted account_result_unconfirmed account_binding_unconfirmed account_changed account_binding_verified capabilities_unconfirmed capabilities_synchronized supply_result_unconfirmed supply_blocked taking_new_work hive_check_failed source_missing source_unavailable permission_denied unsupported_store invalid_directory invalid_credentials deadline owned_exit_started owned_exit_completed owned_exit_unconfirmed bridge_started bridge_stopped bridge_failed export_prepared export_completed export_cancelled export_failed'.split(' '));
 const passCodes:Record<string,string>={device:'device_binding_valid',runtime:'owned_runtime_connected',hive:'hive_identity_verified',proxy:'network_policy_observed',source:'selected_source_read',authorization:'official_authorization_observed',quota:'quota_available',capabilities:'capabilities_synchronized',account:'account_binding_verified',supply:'taking_new_work'};
 function invalid(check:string):never {throw new Error(`DIAGNOSTICS_REPLY_INVALID: ${check}`);}
 function object(value:unknown,fields:string[],at:string):Record<string,unknown>{
@@ -47,7 +47,7 @@ function evidence(value:unknown){
   if(typeof v!=='string')invalid('evidence requires string values');
   const max:Record<string,number>={network_revision:Number.MAX_SAFE_INTEGER,checked_revision:Number.MAX_SAFE_INTEGER,current_revision:Number.MAX_SAFE_INTEGER,http_status:599,windows:5,max_used_percent:10000,reasons_count:64};
   const retry=retryEvidence(key,v);
-  const safe=retry!==undefined?retry:boolKeys.has(key)?v==='true'||v==='false':Object.hasOwn(max,key)?safeNumber(v,max[key])&&(key!=='http_status'||Number(v)>=100):Object.hasOwn(evidenceEnums,key)&&evidenceEnums[key].includes(v);
+  const safe=key==='failure_message'?new TextEncoder().encode(v).length<=32768&&safeFailureText(v)===v:['check','failure_code'].includes(key)?/^[A-Za-z0-9_]{1,128}$/.test(v):retry!==undefined?retry:boolKeys.has(key)?v==='true'||v==='false':Object.hasOwn(max,key)?safeNumber(v,max[key])&&(key!=='http_status'||Number(v)>=100):Object.hasOwn(evidenceEnums,key)&&evidenceEnums[key].includes(v);
   if(!safe)invalid('evidence contains a field or value outside public contract');
  }
 }
@@ -125,7 +125,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();if(session.start!=='idle'||cached?.state==='running')invalid(`diagnostic start blocked: start=${session.start} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=++reportGeneration;cached=null;reading=null;update({...emptySession(),start:'pending'});
    try{const r=await request('diagnostics_start',{});update({start:'idle'});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotSent(failure)?'idle':'unknown',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotExecuted(failure)?'idle':'unknown',failure});}throw cause;}
   },
   async snapshot(id){
    owned();digest(id,48,'report id');if(!cached||cached.id!==id)invalid('snapshot requires the original cached report ID');
@@ -139,7 +139,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();digest(id,48,'report id');if(!cached||cached.id!==id||cached.state!=='running'||session.cancel!=='idle')invalid(`diagnostic cancel blocked: cancel=${session.cancel} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=reportGeneration;update({cancel:'pending',failure:null});
    try{const r=await request('diagnostics_cancel',{id},id);update({cancel:r.state==='running'?'unknown':'idle',read:r.state==='running'?'paused':'idle',failure:null});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotSent(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotExecuted(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
   },
   async logs(query){object(query,['cursor','limit','module','platform','level'],'log query');cursor(query.cursor);if(!Number.isInteger(query.limit)||query.limit<1||query.limit>200)invalid('log query limit requires 1..200');enumValue(query.module,[null,...modules],'log query module');enumValue(query.platform,[null,'openai','claude'],'log query platform');enumValue(query.level,[null,...levels],'log query level');const generation=epoch;const page=decodeLogPage(await invoke('diagnostic_logs',{query}));current(generation);return page;},
   export:exportPayload,

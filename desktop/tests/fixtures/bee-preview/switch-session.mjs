@@ -37,7 +37,7 @@ export function createPreviewSwitchSession({scene,origin,instance,original,curre
   if(operation.phase==='connecting_target'){commit();operation.phase='releasing_target';return;}
   if(operation.phase==='releasing_target')operation.phase='succeeded';
  };
- const handles=command=>command.startsWith('hive_switch_')||command==='bridge_status'||first&&!currentProfile&&['startup_status','startup_recheck','device_begin'].includes(command)||scope()===null&&['startup_status','startup_recheck','device_status','device_context','runtime_snapshot','device_recovery_status','bridge_pending_requests'].includes(command)||currentProfile!==sourceId&&['device_context','device_status','device_recovery_status','startup_status','startup_recheck','bridge_pending_requests'].includes(command);
+ const handles=command=>command.startsWith('hive_switch_')||command==='bridge_status'||first&&!currentProfile&&['startup_status','startup_recheck','device_begin'].includes(command)||scope()===null&&['startup_status','startup_recheck','device_status','device_context','runtime_snapshot','device_recovery_status','device_recovery_snapshot','bridge_pending_requests'].includes(command)||currentProfile!==sourceId&&['device_context','device_status','device_recovery_status','device_recovery_snapshot','startup_status','startup_recheck','bridge_pending_requests'].includes(command);
  return {handles,scope,snapshot,async invoke(command,args={}){
   if(!current())throw new Error('PREVIEW_SESSION_STALE: switch request belongs to an old fixture');
   if(command==='bridge_status'){const status=await original(command,args);const s=scope();return s?{...status,profile_id:s.profile_id,metadata:{...status.metadata,instance:s.instance}}:{state:'failed',profile_id:currentProfile,error:{code:'HIVE_PROFILE_REQUIRED',message:currentProfile?'Current child safely reaped; durable switch still pending':'No current Hive profile; enter Hive address and device name'}};}
@@ -71,7 +71,7 @@ export function createPreviewSwitchSession({scene,origin,instance,original,curre
   if(currentProfile!==sourceId){
    if(command==='device_status')return {result:{device:{state:'bound',hive:profiles.find(p=>p.id===currentProfile).origin,name:identities.get(currentProfile).name,identity:identities.get(currentProfile)}}};
    if(command==='device_context')return {result:{context:{hive:targetURL(),name:identity.name,device_id:identity.id,owner_id:identity.owner_id,binding_revision:1}}};
-   if(command==='device_recovery_status')return replyError('DEVICE_RECOVERY_NONE','No current recovery transaction');
+   if(command==='device_recovery_status'||command==='device_recovery_snapshot')return replyError('DEVICE_RECOVERY_NONE','No current recovery transaction');
    if(command==='bridge_pending_requests')return {instance:targetInstance,requests:[]};
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance:targetInstance,binding_revision:1,network_revision:0,observed_at:stamp(),revision:1};
   }

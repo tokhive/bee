@@ -41,7 +41,7 @@ function installOpenaiReplies(){
 const card=(page:Page)=>page.getByRole('region',{name:'OpenAI 账号',exact:true});
 async function setup(page:Page,selected=false){
  const openai=accountFixture('openai') as AccountSnapshot,claude=accountFixture('claude');
- openai.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:'plus',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:new Date().toISOString(),error:null};
+ openai.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:'plus',expires_at:'2099-01-01T00:00:00Z',identity_verified:false,observed_at:new Date().toISOString(),error:null};
  if(selected){openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};openai.hive={...openai.hive,state:'ready',fingerprint:'b'.repeat(64),generation:1};openai.authorization={...openai.authorization,state:'synchronized',fingerprint:'b'.repeat(64)};}
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{openai,claude},runtimeEnabled:true,scenarios:{autoService:true}})});(${installOpenaiReplies.toString()})();`});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
@@ -206,6 +206,25 @@ test('different identity opens review before confirmation and Escape restores fo
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
 });
 
+test('login maintenance requiring a different account keeps the explicit change review reachable',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{
+  const w=window as any,a=w.accounts.openai;a.revision++;
+  a.candidate.fingerprint='c'.repeat(64);
+  a.operation={id:'e'.repeat(48),kind:'authorize',platform:'openai',state:'succeeded',revision:a.revision,error:null};
+  a.login_maintenance={operation:a.operation,phase:'confirmation_required',source:{directory:null,store:'file'},started_at:new Date().toISOString(),can_recheck:true,error:null};
+  a.hive={...a.hive,state:'confirmation_required',pending_fingerprint:a.candidate.fingerprint};
+  w.paused.openai=true;
+ });await page.clock.runFor(11000);
+ await expect(card(page).getByRole('button',{name:'核对账号变更',exact:true})).toBeVisible();
+ await expect(card(page).locator('.oa-actions').getByRole('button',{name:'核对维护结果',exact:true})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('bbbbbbbbbbbbbbbb');await expect(page.getByRole('dialog')).toContainText('cccccccccccccccc');
+ await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();
+ await expect(page.getByRole('dialog').last().getByRole('heading')).toHaveText('确认更换 OpenAI 账号');
+ expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
 test('main preview keeps quota in a read failure',async({page})=>{
  {
   await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=dark&size=narrow`);
@@ -217,4 +236,90 @@ test('main preview keeps quota in a read failure',async({page})=>{
   await app.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.frameLocator('iframe').getByLabel('读取目录')).toBeVisible();
  }
  await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-dark-narrow.png')});
+});
+
+// Mixed account/read failures must resolve to one current action, as in the main preview.
+async function setupBlockedIntake(page:Page,unknown:boolean){
+ await page.clock.install();
+ const openai=accountFixture('openai') as AccountSnapshot;
+ openai.revision=5;
+ openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};
+ openai.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'file'},fingerprint:'b'.repeat(64),plan:'plus',expires_at:'2099-01-01T00:00:00Z',identity_verified:false,observed_at:new Date().toISOString(),error:null};
+ const error={code:'http_rejected',check:'authorization_sync',platform:'openai' as const,message:'authorization synchronization rejected: HTTP 503; upstream unavailable',evidence:{http_status:'503'}};
+ openai.operation={id:'d'.repeat(48),kind:'select',platform:'openai',state:unknown?'reconciling':'failed',revision:5,error};
+ openai.authorization={state:'unconfirmed',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{openai,claude:accountFixture('claude')},runtimeEnabled:true,scenarios:{autoService:true}})});(${installBlockedIntake.toString()})(${unknown});`});
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page)).toBeVisible();
+ await page.evaluate(()=>(window as any).intakeBlockReads=true);await page.clock.runFor(11000);
+}
+function installBlockedIntake(unknown:boolean){
+ const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+ w.intakeResolved=false;w.intakeBlockReads=false;w.paused.openai=true;
+ w.__TAURI_INTERNALS__.invoke=async(command:string,args:any={})=>{
+  if(command==='account_snapshot'&&args.platform==='openai'&&w.intakeBlockReads&&!w.intakeResolved&&(!unknown||args.refresh)){
+   w.calls.push({command,args});throw {code:'HTTP_403',message:'account observation blocked: HTTP 403; original operation remains available locally'};
+  }
+  if(command==='supply_status'&&args.platform==='openai'&&w.intakeBlockReads&&!w.intakeResolved){
+   w.calls.push({command,args});throw {code:'HTTP_403',message:'supply observation blocked: HTTP 403'};
+  }
+  const reply=await invoke(command,args);
+  if(w.intakeResolved){
+   const a=w.accounts.openai;a.revision=Math.max(6,a.revision);a.operation={...a.operation,state:'succeeded',revision:a.revision,error:null};a.authorization={...a.authorization,state:'synchronized',error:null};a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1,error:null};
+   if(command==='account_snapshot'&&args.platform==='openai')reply.result.account=structuredClone(a);
+  }
+  return reply;
+ };
+}
+test('unknown intake shows one original-result query and preserves evidence without repeating selection',async({page})=>{
+ await setupBlockedIntake(page,true);await page.clock.runFor(61000);
+ await expect(card(page).locator('.oa-title')).toHaveText('暂时无法确认接入结果');
+ await expect(card(page).getByRole('button',{name:'核对结果',exact:true})).toHaveCount(1);
+ await expect(card(page).getByRole('button',{name:/重新查询状态|重新核验|重试$/})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'查看错误详情'}).click();
+ await expect(page.getByText(/authorization synchronization rejected: HTTP 503/)).toBeVisible();
+ await page.keyboard.press('Escape');
+ const before=await writes(page);await card(page).getByRole('button',{name:'核对结果',exact:true}).click();
+ expect(await writes(page)).toEqual(before);
+ await page.clock.runFor(61000);await page.evaluate(()=>(window as any).intakeResolved=true);
+ await card(page).getByRole('button',{name:'核对结果',exact:true}).click();
+ await expect(card(page).locator('.oa-title')).not.toHaveText('暂时无法确认接入结果');
+ await expect(card(page).getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);
+ expect(await writes(page)).toEqual(before);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+test('selected preparation failure has a specific cause, one retry, and header details like the main preview',async({page})=>{
+ await setupBlockedIntake(page,false);
+ await expect(card(page).getByRole('status')).toContainText('503');
+ await expect(card(page)).toContainText('账号已接入');
+ await expect(card(page).getByRole('button',{name:'重试',exact:true})).toHaveCount(1);
+ await expect(card(page).getByRole('button',{name:/重新查询状态|核对结果|重新核验/})).toHaveCount(0);
+ await expect(card(page).locator('.oa-head').getByRole('button',{name:'OpenAI 详情'})).toBeVisible();
+ await expect(page.getByText('核对已暂停，需先处理当前问题。',{exact:true})).toHaveCount(0);
+ const before=await writes(page);await page.evaluate(()=>(window as any).intakeResolved=true);
+ await card(page).getByRole('button',{name:'重试',exact:true}).click();
+ await expect(card(page).locator('.oa-title')).not.toContainText('503');
+ const after=await writes(page);expect(after.filter((c:any)=>c.command!=='runtime_start')).toEqual(before);
+ expect(after.filter((c:any)=>c.command==='runtime_start').every((c:any)=>c.args.request.resume_platforms.length===0)).toBe(true);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+
+for(const [size,width,height] of [['wide',1080,700],['narrow',860,680]] as const)test(`preparation failure matches main preview hierarchy — ${size}`,async({page})=>{
+ await page.setViewportSize({width,height});await setupBlockedIntake(page,false);
+ const actual=card(page);
+ await expect(actual.locator('.oa-steps .done')).toHaveCount(1);await expect(actual.locator('.oa-steps .failed')).toHaveCount(1);
+ await expect(actual.getByRole('progressbar')).toHaveCount(2);
+ await expect(actual.locator('.oa-head').getByRole('button',{name:'OpenAI 详情'})).toBeVisible();
+ await expect(actual.locator('.oa-actions button:visible')).toHaveText(['重试']);
+ await expect(page.locator('.page-heading').getByRole('button',{name:'添加账号',exact:true})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+ await page.screenshot({path:resolve(evidence,`formal-prepare-failed-${size}.png`),fullPage:true});
+ await actual.getByRole('button',{name:'查看错误详情'}).focus();await page.keyboard.press('Enter');
+ await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('HTTP 503');await page.keyboard.press('Escape');
+ await expect(actual.getByRole('button',{name:'查看错误详情'})).toBeFocused();
+ await page.goto(`/approved-preview/index.html?scene=add-prepare-failed&theme=light&size=${size==='narrow'?'narrow':'wide'}`);
+ const approved=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});
+ await expect(approved.getByRole('button',{name:'重试',exact:true})).toBeVisible();
+ await expect(approved).toContainText('账号已接入');await expect(approved.getByRole('progressbar')).toHaveCount(2);
+ await page.locator('iframe').screenshot({path:resolve(evidence,`approved-prepare-failed-${size}.png`)});
 });

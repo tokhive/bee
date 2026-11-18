@@ -103,7 +103,7 @@ func TestDesktopLoginMaintenanceFinalJournalFailureKeepsIsolationUntilReadOnlyRe
 	f.selectAccount("claude")
 	waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool { return s.Platforms["claude"].Supply != nil })
 	o, started, release := desktopLoginMaintenanceOwner(t, f, "claude", "succeeded")
-	current, _ := f.accounts.Snapshot(context.Background(), "claude", false)
+	current := waitDesktopAccountObservation(t, f.accounts, "claude")
 	op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "claude", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 	if err != nil {
 		t.Fatal(err)
@@ -114,7 +114,7 @@ func TestDesktopLoginMaintenanceFinalJournalFailureKeepsIsolationUntilReadOnlyRe
 	if done := waitAuthorize(t, o, op.ID); done.State != "succeeded" {
 		t.Fatalf("maintenance storage failure changed official result: %+v", done)
 	}
-	blocked, _ := f.accounts.Snapshot(context.Background(), "claude", false)
+	blocked := waitDesktopAccountObservation(t, f.accounts, "claude")
 	if !replaced.Load() || blocked.LoginMaintenance == nil || blocked.LoginMaintenance.Phase != "blocked" || blocked.LoginMaintenance.Error == nil {
 		t.Fatalf("final journal failure not reported: %+v", blocked.LoginMaintenance)
 	}
@@ -213,7 +213,7 @@ func TestDesktopLoginMaintenanceConfirmedChangeJournalFailureCanBeReconciledWith
 	if err := os.WriteFile(filepath.Join(filepath.Dir(started), "sample"), desktopOtherCodexFixture(t), 0600); err != nil {
 		t.Fatal(err)
 	}
-	current, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	current := waitDesktopAccountObservation(t, f.accounts, "openai")
 	op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "openai", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 	if err != nil {
 		t.Fatal(err)
@@ -223,7 +223,7 @@ func TestDesktopLoginMaintenanceConfirmedChangeJournalFailureCanBeReconciledWith
 	if done := waitAuthorize(t, o, op.ID); done.State != "failed" {
 		t.Fatalf("official login result=%+v; required=failed", done)
 	}
-	changed, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	changed := waitDesktopAccountObservation(t, f.accounts, "openai")
 	if changed.LoginMaintenance == nil || changed.LoginMaintenance.Phase != "confirmation_required" || changed.Candidate.Reference == nil {
 		t.Fatalf("changed identity not ready for explicit confirmation: %+v", changed)
 	}
@@ -275,7 +275,7 @@ func TestDesktopLoginMaintenanceConfirmedChangeJournalFailureCanBeReconciledWith
 	}
 	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
-		after, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+		after := waitDesktopAccountObservation(t, f.accounts, "openai")
 		if m := after.LoginMaintenance; m != nil && m.Phase == "restored" {
 			if m.Operation.ID != op.ID || m.Operation.State != "failed" || after.Hive.Generation == nil || *after.Hive.Generation != 2 || confirms.Load() != 1 || f.supplyWrites.Load() != writes {
 				t.Fatalf("read-only repair replaced login or replayed a write: confirms=%d snapshot=%+v", confirms.Load(), after)
@@ -284,7 +284,7 @@ func TestDesktopLoginMaintenanceConfirmedChangeJournalFailureCanBeReconciledWith
 		}
 		time.Sleep(time.Millisecond)
 	}
-	after, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	after := waitDesktopAccountObservation(t, f.accounts, "openai")
 	t.Fatalf("confirmed account cannot repair final login journal without another user confirmation: %+v", after)
 }
 
@@ -321,7 +321,7 @@ func TestDesktopLoginMaintenanceDifferentIdentityNeedsExplicitConfirmationAndRea
 				return false
 			}
 			f.mu.Unlock()
-			current, _ := f.accounts.Snapshot(context.Background(), platform, false)
+			current := waitDesktopAccountObservation(t, f.accounts, platform)
 			op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: platform, Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 			if err != nil {
 				t.Fatal(err)
@@ -329,7 +329,7 @@ func TestDesktopLoginMaintenanceDifferentIdentityNeedsExplicitConfirmationAndRea
 			waitDesktopLoginFile(t, started)
 			os.WriteFile(release, []byte("continue"), 0600)
 			done := waitAuthorize(t, o, op.ID)
-			changed, _ := f.accounts.Snapshot(context.Background(), platform, false)
+			changed := waitDesktopAccountObservation(t, f.accounts, platform)
 			if done.State != "failed" || changed.LoginMaintenance == nil || changed.LoginMaintenance.Phase != "confirmation_required" || changed.Candidate.Fingerprint == nil || changed.Selection.Fingerprint == nil || *changed.Candidate.Fingerprint == *changed.Selection.Fingerprint || confirms.Load() != 0 {
 				t.Fatalf("different identity was auto-selected or original login result lost: operation=%+v snapshot=%+v confirms=%d", done, changed, confirms.Load())
 			}
@@ -382,7 +382,7 @@ func TestDesktopLoginMaintenanceRecoveryPreservesFailedCancelledAndTimedOutLogin
 			f.mu.Lock()
 			f.dispatchOnUpload = true
 			f.mu.Unlock()
-			current, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+			current := waitDesktopAccountObservation(t, f.accounts, "openai")
 			op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "openai", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 			if err != nil {
 				t.Fatal(err)
@@ -466,13 +466,13 @@ func TestDesktopLoginMaintenanceUnknownPauseOnlyRechecksOriginalProcess(t *testi
 		return false
 	}
 	f.mu.Unlock()
-	current, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	current := waitDesktopAccountObservation(t, f.accounts, "openai")
 	op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "openai", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 	if err != nil {
 		t.Fatal(err)
 	}
 	done := waitAuthorize(t, o, op.ID)
-	blocked, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	blocked := waitDesktopAccountObservation(t, f.accounts, "openai")
 	if done.State != "failed" || blocked.LoginMaintenance == nil || blocked.LoginMaintenance.Phase != "blocked" || blocked.LoginMaintenance.Error == nil {
 		t.Fatalf("unknown pause lost original result: operation=%+v maintenance=%+v", done, blocked.LoginMaintenance)
 	}
@@ -486,7 +486,7 @@ func TestDesktopLoginMaintenanceUnknownPauseOnlyRechecksOriginalProcess(t *testi
 	}
 	until := time.Now().Add(5 * time.Second)
 	for time.Now().Before(until) {
-		after, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+		after := waitDesktopAccountObservation(t, f.accounts, "openai")
 		if after.LoginMaintenance != nil && after.LoginMaintenance.Phase == "restored" {
 			if after.LoginMaintenance.Operation.ID != op.ID || after.LoginMaintenance.Operation.State != "failed" || after.LoginMaintenance.Operation.Error == nil || f.pauseWrites.Load() != writes {
 				t.Fatalf("recheck changed original result or replayed write: %+v writes=%d expected=%d", after.LoginMaintenance, f.pauseWrites.Load(), writes)
@@ -567,7 +567,7 @@ func TestDesktopLoginMaintenanceRejectsCorruptJournalWithoutLaunchingOrReplacing
 	f.selectAccount("openai")
 	waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool { return s.Platforms["openai"].Supply != nil })
 	o, started, release := desktopLoginMaintenanceOwner(t, f, "openai", "succeeded")
-	current, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	current := waitDesktopAccountObservation(t, f.accounts, "openai")
 	op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "openai", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 	if err != nil {
 		t.Fatal(err)
@@ -613,7 +613,7 @@ func TestDesktopLoginMaintenanceReadOnlyRepairDischargesOnlyConfirmedJournalFail
 	f.selectAccount("openai")
 	waitRuntime(t, f.runtime, func(s DesktopRuntimeSnapshot) bool { return s.Platforms["openai"].Supply != nil })
 	o, started, _ := desktopLoginMaintenanceOwner(t, f, "openai", "succeeded")
-	current, _ := f.accounts.Snapshot(context.Background(), "openai", false)
+	current := waitDesktopAccountObservation(t, f.accounts, "openai")
 	op, err := o.Start(context.Background(), DesktopAuthorizeRequest{Platform: "openai", Source: *current.Candidate.Source, ExpectedRevision: current.Revision})
 	if err != nil {
 		t.Fatal(err)
@@ -724,7 +724,7 @@ func TestDesktopLoginMaintenanceRunningPlatformRestoresSameIdentityAndKeepsOther
 			if done.State != "succeeded" {
 				t.Fatalf("official login failed: %+v", done)
 			}
-			verified, _ := f.accounts.Snapshot(context.Background(), platform, false)
+			verified := waitDesktopAccountObservation(t, f.accounts, platform)
 			if verified.LoginMaintenance == nil || verified.LoginMaintenance.Phase != "restored" {
 				raw, _ := json.Marshal(verified)
 				t.Fatalf("login maintenance did not restore: %s", raw)

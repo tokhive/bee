@@ -363,3 +363,15 @@ Claude 草稿沿用当前主预览 OpenAI 的紧凑四列布局、固定双窗�
 新增待评审主预览场景：`index.html?scene=switch-history-conflict&theme=light&size=narrow`、`index.html?scene=switch-notification-source&theme=dark&size=narrow`。前者在列表解释历史归一化冲突并仅禁用受影响目标；后者保留旧通知的原 Hive，打开列表供明确选择，关闭提示后保留当前页。两者只模拟本轮正式界面的可见反馈。
 
 修改前主预览复用字节一致的 `history/20261112-221434-hive-switch-interface/`；本轮交付留版为 [完整快照](http://127.0.0.1:15500/docs/preview/history/20261113-002455-hive-switch-review-final/index.html?scene=switch-history-conflict&theme=light&size=narrow)。以该目录为独立 HTTP 根运行，冻结对照页随包提供。正式 React mock 预览及本轮验证见 [审查修复证据](../desktop/evidence/2026-11-13-hive-switch-review-fixes/README.md)。
+
+## OpenAI 登录结果候选稿（2026-11-17，待评审）
+
+[打开 HTML](openai-login-results.html?scene=success) · [从登录开始体验](openai-login-results.html?scene=ready)。本轮文字布局与流程已获认可；HTML 视觉待评审，唯一主入口仍为 `index.html`。本稿复用现有外壳的配色、字体、侧栏与三步向导比例，独立展示本次登录反馈，不代表其它主预览场景被替换。
+
+单文件内联资源，可直接打开；也可在 Bee 根目录运行 `python3 -m http.server 1498 --bind 127.0.0.1 --directory docs/preview`，访问 <http://127.0.0.1:1498/openai-login-results.html?scene=success>。支持 `scene`、`theme=light|dark`、`size=wide|narrow`、`marks=on|off`；非法参数回落默认值。默认展示登录成功而未接入，页面外的场景选择器可查看全部 19 个起点。新建候选，未覆盖旧预览，首次交付留版在独立档案库同相对路径的 history 目录。
+
+点击“登录 OpenAI”演示启动、等待、读取核验、成功；“确认接入”单独演示接入。暂停仅为本稿预设的历史选择，不能据此推断首次接入必然暂停。查询沿用原操作，取消确认后保留结果，切换概览再回来保留当前进展。直接选中的进行中场景保持静止，点击产品按钮才按预设推进；切换场景取消旧模拟任务。重置回到最后直接选中的起点，外观与尺寸不改变输入和状态。
+
+全部为模拟数据，不打开官方页面，不读取真实目录，不调用 Bee/Hive，不改变真实账号或接单。模拟等待秒数只供体验，不是实际耗时承诺；页面刷新恢复 URL 指定的评审起点，不模拟 App 重启。正式登录结果承接尚未由此稿实现或验收。
+
+本轮验证：JavaScript 语法与内联资源检查；Ego 浏览器核对完整登录到明确成功、显式接入、保留暂停、返回与概览往返、取消终态、未知结果不重复登录、原操作续查、失败后重试、目录输入与 Enter 提交、主题／尺寸保留输入、标注开关、重置起点和切场景清除旧定时操作。浅色宽屏与深色紧凑窗口已截图检查。仅证明预览行为，不证明真实登录或后台恢复。

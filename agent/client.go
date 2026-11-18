@@ -22,9 +22,21 @@ import (
 type apiFailure struct {
 	Status int
 	Code   string
+	Body   string
 }
 
 func (e *apiFailure) Error() string {
+	detail := e.hint()
+	text := fmt.Sprintf("Hive request rejected: HTTP %d; code=%q; required=HTTP 2xx", e.Status, desktopSafeText(e.Code))
+	if e.Body != "" {
+		text += "; response_body=" + e.Body
+	}
+	if detail != "" {
+		text += "; " + detail
+	}
+	return text
+}
+func (e *apiFailure) hint() string {
 	switch e.Code {
 	case "device_exists":
 		return "this user already has a Bee; review and confirm replacement in the web console"
@@ -43,7 +55,20 @@ func (e *apiFailure) Error() string {
 	case "rate_limited":
 		return "too many requests; try again later"
 	}
-	return fmt.Sprintf("Hive request failed (HTTP %d)", e.Status)
+	return ""
+}
+
+// DefaultHive is the Hive a new device pairs with when no address is given.
+// Builds for another Hive override it: -ldflags "-X main.defaultHive=https://hive.example".
+var DefaultHive = "https://console.tokhive.ai"
+
+// hiveInput turns a typed Hive address into a URL, reading a bare host as HTTPS.
+func hiveInput(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw != "" && !strings.Contains(raw, "://") {
+		return "https://" + raw
+	}
+	return raw
 }
 
 func hiveOrigin(raw string) (string, error) {
@@ -72,18 +97,19 @@ func callState(ctx context.Context, client *http.Client, state localState, path,
 	return callWithEpoch(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, input, output)
 }
 
-func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
+func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) (failure error) {
+	defer func() { failure = recordRequestFailure(ctx, "hive_request", failure, secret) }()
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
 		if err != nil {
-			return errors.New("failed to encode Bee request")
+			return &connectionRequestFailure{cause: fmt.Errorf("encode Hive request %s: %w", method, err), origin: origin, path: path, credential: secret}
 		}
 		body = bytes.NewReader(data)
 	}
 	req, err := http.NewRequestWithContext(ctx, method, origin+path, body)
 	if err != nil {
-		return errors.New("invalid Hive request URL")
+		return &connectionRequestFailure{cause: fmt.Errorf("build Hive request %s: %w", method, err), origin: origin, path: path, credential: secret}
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
@@ -98,23 +124,26 @@ func callWithEpoch(ctx context.Context, client *http.Client, origin, path, metho
 	response, err := client.Do(req)
 	if err != nil {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			return &connectionRequestFailure{cause: ctx.Err(), origin: origin, path: path, credential: secret}
 		}
-		slog.Warn("Hive request failed", "module", "request", "method", method, "path", path, "error", connectionMessage(err, secret))
 		return &connectionRequestFailure{cause: err, origin: origin, path: path, credential: secret}
 	}
 	defer response.Body.Close()
-	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		data, readErr := io.ReadAll(io.LimitReader(response.Body, 65537))
 		var result struct {
 			Error struct {
 				Code string `json:"code"`
 			} `json:"error"`
 		}
-		_ = decoder.Decode(&result)
-		slog.Debug("Hive request rejected", "module", "request", "method", method, "path", path, "status", response.StatusCode, "code", result.Error.Code, "duration_ms", time.Since(started).Milliseconds())
-		return &connectionRequestFailure{cause: &apiFailure{Status: response.StatusCode, Code: result.Error.Code}, origin: origin, path: path, credential: secret}
+		_ = json.Unmarshal(data, &result)
+		failure := error(&apiFailure{Status: response.StatusCode, Code: result.Error.Code, Body: safeResponseBody(data, secret)})
+		if readErr != nil {
+			failure = errors.Join(failure, fmt.Errorf("read Hive error response: %w", readErr))
+		}
+		return &connectionRequestFailure{cause: failure, origin: origin, path: path, credential: secret}
 	}
+	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
 	slog.Debug("Hive request", "module", "request", "method", method, "path", path, "status", response.StatusCode, "duration_ms", time.Since(started).Milliseconds())
 	if output != nil {
 		if err := decoder.Decode(output); err != nil {
@@ -210,11 +239,20 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			var syncFailures <-chan error
 			var moved func() uint64
 			if egress != nil {
-				session := egress.start(beeSession(ctx), conn, out)
+				// The session ends a moment after ctx, not with it: a Bee
+				// that is stopping tells Hive so first (leave), and only then
+				// is the tunnel torn down. Ending both at once would close
+				// the connection before the close frame could be written.
+				sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(beeSession(ctx)))
+				session := egress.start(sessionCtx, conn, out)
+				stopLeaving := context.AfterFunc(ctx, func() {
+					leave(conn, beewire.CloseStopping)
+					stopSession()
+				})
 				live, end, moved = session.Context, session.Close, session.Moved
 				forwardDone := make(chan struct{})
 				go func() { defer close(forwardDone); egress.failures.forward(live, state) }()
-				finish := func() { session.Close(); session.Wait(); <-forwardDone }
+				finish := func() { stopLeaving(); session.Close(); session.Wait(); stopSession(); <-forwardDone }
 				end = finish
 				if egress.dynamicAuthorization() {
 					var wait func()
@@ -246,6 +284,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			}
 			liveness := relay.NewLiveness(conn, moved)
 			var syncErr error
+			stalled := false
 			for live.Err() == nil && syncErr == nil {
 				if egress != nil && !egress.dynamicAuthorization() && !rejectionReported {
 					statusCtx, stopStatus := context.WithTimeout(live, 5*time.Second)
@@ -263,6 +302,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 				err = liveness.Check(live)
 				metrics.ping(pingStart, err)
 				if err != nil {
+					stalled = errors.Is(err, relay.ErrStalled)
 					lastFailure = observedConnectionFailure(err, nil, state, path, "heartbeat")
 					slog.Warn("Hive connection lost", "module", "connect", "error", err.Error())
 					break
@@ -284,7 +324,16 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 					timer.Stop()
 				}
 			}
-			conn.CloseNow()
+			// A Bee that ends the connection itself says why first. With a
+			// tunnel, end() closes whatever the goodbye left open.
+			switch {
+			case egress != nil && stalled:
+				leave(conn, beewire.CloseStalled)
+			case egress != nil && syncErr != nil && live.Err() == nil:
+				leave(conn, beewire.CloseSyncFailed)
+			default:
+				conn.CloseNow()
+			}
 			metrics.disconnect()
 			end()
 			// Join synchronization before choosing a reconnect. The transport
@@ -373,6 +422,30 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 
 // heartbeatInterval is the pause between liveness checks of the connection.
 const heartbeatInterval = 5 * time.Second
+
+// leaveGrace bounds how long a Bee waits for Hive to take its goodbye. Over a
+// working link the exchange takes a round trip; over a stalled one it never
+// completes, and the reconnect that follows must not wait on it.
+var leaveGrace = time.Second
+
+// leave ends the connection with a close frame naming why (beewire's close
+// codes), so Hive records a Bee that stopped or gave up on a silent link as
+// that, rather than as a connection that merely ended. It returns once Hive
+// has answered or leaveGrace has passed; in the second case the connection is
+// still open, and closing the tunnel session is what ends it.
+func leave(conn *websocket.Conn, code int) {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		_ = conn.Close(websocket.StatusCode(code), beewire.CloseReason(code))
+	}()
+	timer := time.NewTimer(leaveGrace)
+	defer timer.Stop()
+	select {
+	case <-done:
+	case <-timer.C:
+	}
+}
 
 // conflictRetries refusals as a duplicate, conflictRetryDelay apart, outlast
 // the time Hive takes to give up on a dead connection.

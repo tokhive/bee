@@ -1,7 +1,7 @@
 import type {BridgeError} from './bridge';
 export interface UiFailure {code:string;check:string;observedAt:string|null;evidence:Record<string,string>;message:string}
 export interface FailureDetails {check:string;observed_at:string;evidence:Record<string,string>}
-export const requestMethods='hello ping shutdown device_status device_begin device_context device_recovery_start device_recovery_prepare device_recovery_confirm device_recovery_status account_defaults account_detect account_snapshot account_action supply_status supply_set_paused authorize_start authorize_status authorize_cancel authorize_progress authorize_open diagnostics_start diagnostics_snapshot diagnostics_cancel runtime_snapshot runtime_start runtime_stop runtime_restore runtime_configure_network runtime_enable_presence runtime_verify runtime_inspect_recovery runtime_reconcile_recovery network_status network_test notification_snapshot'.split(' ');
+export const requestMethods='hello ping shutdown device_status device_begin device_context device_recovery_start device_recovery_prepare device_recovery_confirm device_recovery_status device_recovery_snapshot account_defaults account_detect account_snapshot account_action supply_status supply_set_paused authorize_start authorize_status authorize_cancel authorize_progress authorize_open diagnostics_start diagnostics_snapshot diagnostics_cancel runtime_snapshot runtime_start runtime_stop runtime_restore runtime_configure_network runtime_enable_presence runtime_verify runtime_inspect_recovery runtime_reconcile_recovery network_status network_test notification_snapshot'.split(' ');
 export const failureKinds='timeout dns_temporary dns_failed tls_failed connection_refused connection_closed http_rejected unknown_failure'.split(' ');
 export function retryEvidence(key:string,value:string):boolean|undefined {
  const integer=(max:number)=>/^(0|[1-9]\d{0,15})$/.test(value)&&Number.isSafeInteger(Number(value))&&Number(value)<=max;
@@ -20,12 +20,17 @@ const accountKeys=['not_found','permission_denied','os_error','cause','parsed','
 const record=(v:unknown):v is Record<string,unknown>=>typeof v==='object'&&v!==null&&!Array.isArray(v);
 const bytes=(v:string)=>new TextEncoder().encode(v).length;
 export function safeFailureText(value:string):string {
- let result=value.replace(/\b(?:bee_|beep_|sk-)[A-Za-z0-9_-]{8,}/g,'[redacted]')
-  .replace(/\bBearer\s+[^\s,;"']+/gi,'Bearer [redacted]')
-  .replace(/((?:"|')?(?:authorization|credential|token|secret|password|api[_-]?key)(?:"|')?\s*[:=]\s*)(?:"[^"]*"|'[^']*'|[^\s,;"']+)/gi,'$1[redacted]')
-  .replace(/(?:https?|wss?|socks5h?):\/\/[^\s<>"']+/gi,raw=>{
+ let result=value.replace(/(?:https?|wss?|socks5h?):\/\/[^\s<>"']+/gi,raw=>{
    try{const url=new URL(raw);if(url.username||url.password)return `${url.protocol}//${url.host}${url.pathname}`;return raw.split(/[?#]/,1)[0];}catch{return '[redacted URL]';}
-  }).replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g,'�');
+  })
+  .replace(/-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/g,'[redacted]')
+  .replace(/\beyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,'[redacted]')
+  .replace(/(?:\/Users\/|\/home\/|[A-Za-z]:\\Users\\)[^\s"'<>]+/g,'[redacted path]')
+  .replace(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g,'[redacted email]')
+  .replace(/\b(?:bee_|beep_|sk-)[A-Za-z0-9_-]{8,}/g,'[redacted]')
+  .replace(/\bBearer\s+[^\s,;"']+/gi,'Bearer [redacted]')
+  .replace(/((?:"|')?(?:authorization|credential|(?:access[_-]?|refresh[_-]?|id[_-]?)?token|(?:client[_-]?)?secret|password|cookie|ticket|private[_-]?key|mnemonic|seed|api[_-]?key)(?:"|')?\s*[:=]\s*)(?:"(?:[^"\\]|\\.)*(?:"|$)|'(?:[^'\\]|\\.)*(?:'|$)|[^\s,;"']+)/gi,'$1[redacted]')
+  .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f-\u009f]/g,'�');
  if(bytes(result)>32768)result=`failure text bytes=${bytes(result)}; maximum=32768; text omitted`;
  return result;
 }
@@ -85,3 +90,6 @@ export function normalizeFailure(cause:unknown,check:string):UiFailure {
 
 /** Reserved native transport codes prove this attempt emitted no request bytes. */
 export const requestNotSent=(failure:UiFailure):boolean=>['REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED'].includes(failure.code);
+
+/** Native scheduling rejection proves that this attempt did not execute a business operation. */
+export const requestNotExecuted=(failure:UiFailure):boolean=>requestNotSent(failure)||failure.code==='REQUEST_RESOURCE_BUSY';

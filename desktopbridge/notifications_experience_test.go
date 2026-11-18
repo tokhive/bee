@@ -38,7 +38,9 @@ func TestDesktopNotificationsExperienceCapabilitiesAndDispatch(t *testing.T) {
 	f := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil)}
 	var out bytes.Buffer
 	input := hello + supplyRequest("snapshot", "notification_snapshot", `{}`) + request("ping", "ping")
-	if err := desktopbridge.RunWithExperience(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, f, &runtimeFixture{}, &authorizeFixture{}, &diagnosticFixture{}, &notificationNetwork{}); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithExperience(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, f, &runtimeFixture{}, &authorizeFixture{}, &diagnosticFixture{}, &notificationNetwork{})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())
@@ -59,7 +61,9 @@ func TestDesktopNotificationsTransportRejectsInputsAndPreservesReadFailure(t *te
 		f := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil)}
 		var out bytes.Buffer
 		input := hello + supplyRequest("bad", "notification_snapshot", params) + supplyRequest("good", "notification_snapshot", `{}`)
-		if err := desktopbridge.RunWithExperience(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, f, nil, nil, nil, &notificationNetwork{}); err != nil {
+		if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithExperience(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, f, nil, nil, nil, &notificationNetwork{})
+		}); err != nil {
 			t.Fatal(err)
 		}
 		frames := replies(t, out.String())
@@ -69,7 +73,9 @@ func TestDesktopNotificationsTransportRejectsInputsAndPreservesReadFailure(t *te
 	}
 	f := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil), err: errors.New("read protected notification state: synthetic failure")}
 	var out bytes.Buffer
-	if err := desktopbridge.RunWithExperience(context.Background(), strings.NewReader(hello+supplyRequest("failed", "notification_snapshot", `{}`)+request("ping", "ping")), &out, io.Discard, "test", &fakeSupply{}, f, nil, nil, nil, &notificationNetwork{}); err != nil {
+	if err := runSequentialFrames(t, hello+supplyRequest("failed", "notification_snapshot", `{}`)+request("ping", "ping"), &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithExperience(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, f, nil, nil, nil, &notificationNetwork{})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())
@@ -81,7 +87,9 @@ func TestDesktopNotificationsTransportRejectsInputsAndPreservesReadFailure(t *te
 func TestDesktopNotificationsDoNotExpandOlderCapabilityGroups(t *testing.T) {
 	f := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil)}
 	var out bytes.Buffer
-	if err := desktopbridge.RunWithAccounts(context.Background(), strings.NewReader(hello+supplyRequest("snapshot", "notification_snapshot", `{}`)), &out, io.Discard, "test", &fakeSupply{}, f); err != nil {
+	if err := runSequentialFrames(t, hello+supplyRequest("snapshot", "notification_snapshot", `{}`), &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithAccounts(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, f)
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

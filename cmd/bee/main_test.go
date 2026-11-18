@@ -9,10 +9,13 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/tokhive/bee/desktopbridge"
 )
 
 type synchronizedBuffer struct {
@@ -66,6 +69,86 @@ func beeCommand(t *testing.T, args ...string) *exec.Cmd {
 	return cmd
 }
 
+func desktopBridgeCaller(t *testing.T, in io.Writer, out io.Reader) func(string, any) map[string]any {
+	t.Helper()
+	decoder := json.NewDecoder(out)
+	// A visible reply can precede the server's Write completion. Use fresh
+	// request IDs just like the production client, without waiting for cleanup.
+	sequence := 0
+	return func(method string, params any) map[string]any {
+		t.Helper()
+		sequence++
+		id := "lock-test-" + strconv.Itoa(sequence)
+		if err := json.NewEncoder(in).Encode(map[string]any{"protocol": 1, "id": id, "method": method, "params": params}); err != nil {
+			t.Fatal(err)
+		}
+		var frame map[string]any
+		if err := decoder.Decode(&frame); err != nil {
+			t.Fatal(err)
+		}
+		if frame["id"] != id {
+			t.Fatalf("bridge reply id=%v; required=%q", frame["id"], id)
+		}
+		result, ok := frame["result"].(map[string]any)
+		if !ok {
+			t.Fatalf("missing bridge result: %v", frame)
+		}
+		return result
+	}
+}
+
+type replyCompletionWriter struct {
+	io.Writer
+	release <-chan struct{}
+	once    sync.Once
+}
+
+func (w *replyCompletionWriter) Write(p []byte) (int, error) {
+	n, err := w.Writer.Write(p)
+	w.once.Do(func() { <-w.release })
+	return n, err
+}
+
+type nextRequestReader struct {
+	io.Reader
+	reads   int
+	release func()
+}
+
+func (r *nextRequestReader) Read(p []byte) (int, error) {
+	r.reads++
+	if r.reads == 3 {
+		// The reader has admitted the second request while the first reply's
+		// bytes are visible but its Write has not returned yet.
+		r.release()
+	}
+	return r.Reader.Read(p)
+}
+
+func TestDesktopBridgeCallerContinuesBeforePriorReplyWriteReturns(t *testing.T) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	in, feed := io.Pipe()
+	out, writer := io.Pipe()
+	release := make(chan struct{})
+	unblock := sync.OnceFunc(func() { close(release) })
+	closeStreams := func() { unblock(); in.Close(); feed.Close(); out.Close(); writer.Close() }
+	stop := context.AfterFunc(ctx, closeStreams)
+	t.Cleanup(func() { cancel(); stop(); closeStreams() })
+	done := make(chan error, 1)
+	go func() {
+		done <- desktopbridge.Run(ctx, &nextRequestReader{Reader: in, release: unblock}, &replyCompletionWriter{Writer: writer, release: release}, io.Discard, "test")
+	}()
+	call := desktopBridgeCaller(t, feed, out)
+	call("hello", map[string]any{})
+	if got := call("ping", map[string]any{}); got["alive"] != true {
+		t.Fatalf("ping after visible prior reply: %v", got)
+	}
+	call("shutdown", map[string]any{})
+	if err := <-done; err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestDesktopRuntimeExitReleasesOnlyOwnedConfigurationLock(t *testing.T) {
 	isolated := t.TempDir()
 	start := func() (*exec.Cmd, func(string, any) map[string]any) {
@@ -89,22 +172,7 @@ func TestDesktopRuntimeExitReleasesOnlyOwnedConfigurationLock(t *testing.T) {
 				cmd.Wait()
 			}
 		})
-		decoder := json.NewDecoder(out)
-		call := func(method string, params any) map[string]any {
-			t.Helper()
-			if err := json.NewEncoder(in).Encode(map[string]any{"protocol": 1, "id": "lock-test", "method": method, "params": params}); err != nil {
-				t.Fatal(err)
-			}
-			var frame map[string]any
-			if err := decoder.Decode(&frame); err != nil {
-				t.Fatal(err)
-			}
-			result, ok := frame["result"].(map[string]any)
-			if !ok {
-				t.Fatalf("missing bridge result: %v", frame)
-			}
-			return result
-		}
+		call := desktopBridgeCaller(t, in, out)
 		call("hello", map[string]any{})
 		return cmd, call
 	}
@@ -218,8 +286,15 @@ func TestDesktopCommandHandshakeAndParentEOF(t *testing.T) {
 			if err := cmd.Wait(); err != nil {
 				t.Fatalf("desktop did not terminate cleanly: %v; stderr=%q", err, diagnostics.String())
 			}
-			if diagnostics.Len() != 0 {
-				t.Fatalf("successful session stderr=%q", diagnostics.String())
+			line := strings.TrimSpace(diagnostics.String())
+			if !strings.HasPrefix(line, "BEE_DESKTOP_FAILURE ") || strings.Count(line, "BEE_DESKTOP_FAILURE ") != 1 {
+				t.Fatalf("expected one record for the rejected start method: %q", line)
+			}
+			var event struct {
+				Evidence map[string]string `json:"evidence"`
+			}
+			if err := json.Unmarshal([]byte(strings.TrimPrefix(line, "BEE_DESKTOP_FAILURE ")), &event); err != nil || event.Evidence["failure_code"] != "UNKNOWN_METHOD" || event.Evidence["check"] != "start" {
+				t.Fatalf("missing rejected-method evidence: %+v, %v", event, err)
 			}
 			entries, err := os.ReadDir(cmd.Dir)
 			data, readErr := os.ReadFile(path)

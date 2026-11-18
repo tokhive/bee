@@ -20,7 +20,7 @@ pub(crate) const LOG_FILE_BYTES: usize = 5 * 1024 * 1024;
 pub(crate) const LOG_FILES: usize = 3;
 pub(crate) const REPORT_BYTES: usize = 5 * 1024 * 1024;
 const MAX_SEQUENCE: u64 = 9_007_199_254_740_991;
-const MAX_ENTRY_BYTES: usize = 16 * 1024;
+const MAX_ENTRY_BYTES: usize = 128 * 1024;
 static STORE_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 fn error(code: &str, message: impl Into<String>) -> BridgeError {
     BridgeError {
@@ -43,6 +43,7 @@ fn io_error(stage: &str, cause: std::io::Error) -> BridgeError {
 }
 pub(crate) fn is_public_code(code: &str) -> bool {
     [
+        "failure_observed",
         "pending",
         "request_timed_out",
         "request_settled",
@@ -198,6 +199,8 @@ pub(crate) fn sanitize_evidence(input: &BTreeMap<String, String>) -> BTreeMap<St
     input
         .iter()
         .filter(|(key, value)| match key.as_str() {
+            "check" | "failure_code" => !value.is_empty() && value.len() <= 128 && value.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_'),
+            "failure_message" => value.len() <= 32768 && crate::protocol::safe_failure_text(value),
             "identity_valid"
             | "identity_present"
             | "credential_valid"
@@ -485,6 +488,7 @@ pub(crate) struct DiagnosticLogStore {
     directory: PathBuf,
     state: Mutex<LogState>,
     file_limit: usize,
+    write_error: Mutex<Option<BridgeError>>,
 }
 impl DiagnosticLogStore {
     pub fn new(directory: PathBuf) -> Self {
@@ -498,6 +502,7 @@ impl DiagnosticLogStore {
                 epoch: time.wrapping_add(STORE_SEQUENCE.fetch_add(1, Ordering::Relaxed) as u128),
             }),
             file_limit: LOG_FILE_BYTES,
+            write_error: Mutex::new(None),
         }
     }
     fn file(&self, index: usize) -> PathBuf {
@@ -576,7 +581,27 @@ impl DiagnosticLogStore {
         }
         Ok(records)
     }
+    pub fn write_error(&self) -> Option<BridgeError> {
+        self.write_error
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .clone()
+    }
+    // A later successful write cannot restore a failure record already lost.
+    pub fn note_write_error(&self, cause: BridgeError) {
+        self.write_error
+            .lock()
+            .unwrap_or_else(|poison| poison.into_inner())
+            .get_or_insert(cause);
+    }
     pub fn record(&self, input: Value) -> Result<SafeDiagnosticEvent, BridgeError> {
+        let result = self.record_inner(input);
+        if let Err(cause) = &result {
+            self.note_write_error(cause.clone());
+        }
+        result
+    }
+    fn record_inner(&self, input: Value) -> Result<SafeDiagnosticEvent, BridgeError> {
         let safe = sanitize_event(input)?;
         let _state = self.state.lock().map_err(|_| {
             error(

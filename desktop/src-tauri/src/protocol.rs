@@ -131,6 +131,9 @@ pub(crate) fn safe_failure_text(value: &str) -> bool {
         return false;
     }
     let lower = value.to_ascii_lowercase();
+    if lower.contains("private key-----") || value.contains("/Users/") || value.contains("/home/") || value.contains("\\Users\\") {
+        return false;
+    }
     for prefix in [
         "bearer ",
         "authorization",
@@ -140,6 +143,10 @@ pub(crate) fn safe_failure_text(value: &str) -> bool {
         "password",
         "api_key",
         "api-key",
+        "access_token", "refresh_token", "id_token", "client_secret",
+        "access-token", "refresh-token", "id-token", "client-secret",
+        "accesstoken", "refreshtoken", "idtoken", "clientsecret",
+        "cookie", "ticket", "private_key", "private-key", "privatekey", "mnemonic", "seed",
     ] {
         let mut rest = lower.as_str();
         while let Some((before, tail)) = rest.split_once(prefix) {
@@ -256,7 +263,7 @@ pub(crate) fn retry_evidence(key: &str, value: &str) -> Option<bool> {
             "device_recovery_start",
             "device_recovery_prepare",
             "device_recovery_confirm",
-            "device_recovery_status",
+            "device_recovery_status", "device_recovery_snapshot",
             "account_defaults",
             "account_detect",
             "account_snapshot",
@@ -788,6 +795,13 @@ pub fn hello(value: Value, version: &str, os: &str, arch: &str) -> Result<Hello,
         })
         .collect();
     candidates.extend(recovery_candidates);
+    let recovery_observation_candidates: Vec<_> = candidates.iter().filter_map(|group| {
+        let index = group.iter().position(|method| method == "device_recovery_status")?;
+        let mut group = group.clone();
+        group.insert(index+1, "device_recovery_snapshot".into());
+        Some(group)
+    }).collect();
+    candidates.extend(recovery_observation_candidates);
     let presence_candidates: Vec<_> = candidates
         .iter()
         .filter_map(|group| {

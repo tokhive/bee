@@ -8,6 +8,7 @@ if (mode === 'exit') process.exit(9);
 if (mode === 'diagnostic-exit') {
   process.stderr.write('management initialization failed: E42 Authorization=MARKER-A Cookie=MARKER-C token=MARKER-T confirmation_id=MARKER-I /Users/MARKER-P model_input=MARKER-IN model_output=MARKER-OUT\n', () => process.exit(9));
 }
+let fragmentedOutput=Promise.resolve();
 let exitSnapshot;
 let startupOperation=null,startupRuntimeRevision;
 let bootstrapProxy='',bootstrapRevision=0;
@@ -17,11 +18,15 @@ let restoreSnapshots=0;
 const input = createInterface({ input: process.stdin });
 input.on('line', line => {
   const request = JSON.parse(line);
+  if (mode === 'failure-logging') {
+    process.stderr.write('BEE_DESKTOP_FAILURE '+JSON.stringify({time:new Date().toISOString(),level:'error',module:'bridge',platform:null,code:'failure_observed',evidence:{check:'hive_request',failure_code:'http_rejected',failure_message:'POST /api/bee/maintenance HTTP 503; tee_unavailable; TEE inbox public key not configured'}})+'\n');
+  }
+
   if((mode==='parallel-reads' || mode==='owned-exit-parallel') && request.method!=='hello' && (mode==='parallel-reads'||['account_detect','account_snapshot','supply_status'].includes(request.method))) {
     const control=process.argv[4],config=JSON.parse(readFileSync(control,'utf8'));
     appendFileSync(`${control}.requests`,JSON.stringify(request)+'\n');
     const reply=()=>{
-      const result=request.method==='ping'?{alive:true}:config.nestedFailure??{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null,login_maintenance:null},alive:true};
+      const result=request.method==='ping'?{alive:true}:config.nestedFailure??(request.method==='notification_snapshot'?{notifications:{facts:[],observed_at:new Date().toISOString(),network_revision:0}}:{platform:request.params.platform,account:{platform:config.invalidAccount?'other':request.params.platform,operation:null,login_maintenance:null},alive:true});
       const frame=JSON.stringify({protocol:1,id:config.fault==='unknown'?'unowned':config.fault==='old'?'shell-1':request.id,instance:(config.fault==='instance'?'e':'f').repeat(32),...(config.businessFailure&&request.method!=='ping'?{error:{code:'http_rejected',message:'HTTP 503'}}:{result})})+'\n';
       setTimeout(()=>{process.stdout.write(frame);
       if(config.fault==='duplicate')process.stdout.write(frame);},config.delay??0);
@@ -39,11 +44,13 @@ input.on('line', line => {
     const reply=result=>process.stdout.write(JSON.stringify({protocol:1,id:request.id,instance:'f'.repeat(32),result})+'\n');
     const networkRevision=config.network_revision??bootstrapRevision;
     const runtime={...JSON.parse(readFileSync(new URL('../../../desktopbridge/testdata/runtime-contract.json',import.meta.url),'utf8')).snapshot,revision:config.apply?startupRuntimeRevision:bootstrapRevision,network_revision:networkRevision,...(config.apply?{operation:startupOperation,stop_receipt:startupOperation?{workers_stopped:true,intent_saved:true,session_clean:true}:null}:{})};
+    if(config.running){runtime.local='running';runtime.connection=config.connection??'connected';runtime.run_id='d'.repeat(32);}
     switch(request.method){
       case 'device_context': reply(config.corrupt?{error:{code:'DEVICE_CONTEXT_INVALID',message:'saved local configuration JSON rejected'},binding_revision:config.binding_revision??1}:config.unbound?{error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved binding'},binding_revision:config.binding_revision??1}:{context:{hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:config.binding_revision??1}});return;
       case 'device_status': reply(config.rejected?{error:{code:'device_replaced',message:'GET identity HTTP 401',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',remote_code:'device_replaced',target_origin:'https://hive.example'}}}}:config.unbound?{device:{state:'unbound'}}:{device:{state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.com'}}});return;
       case 'device_recovery_prepare':
       case 'device_recovery_confirm':
+      case 'device_recovery_snapshot':
       case 'device_recovery_status': {
         const keys=Object.keys(request.params).sort().join(',');
         if(keys!==(request.method==='device_recovery_confirm'?'decision,expected_revision,operation_id':''))throw new Error('invalid recovery params');
@@ -58,6 +65,7 @@ input.on('line', line => {
         reply(config.presence_error?{error:{code:'RUNTIME_OPERATION_FAILED',message:'presence admission blocked: suspended=true'}}:config.presence_bad?{enabled:false}:{enabled:true});return;
       case 'runtime_inspect_recovery':
       case 'runtime_reconcile_recovery': {
+        if(config.running){reply({recovery:{state:'blocked',binding_revision:config.binding_revision??1,previous_run_id:null,account_revision:null,intent_running:false,failure:{code:'RECOVERY_OWNER_BUSY',message:'recovery inspection rejected: closed=false local=running account_actions=0; required=idle lifecycle owner'}}});return;}
         if(request.method==='runtime_reconcile_recovery' && config.retirement && !config.retirement_error) sessionRetired=true;
         const blocked=config.recovery_blocked&&!sessionRetired;
         reply({recovery:{state:blocked?'blocked':'eligible',binding_revision:config.binding_revision??1,binding_identity:'b'.repeat(64),previous_run_id:config.recovery_blocked?'d'.repeat(32):null,account_revision:'a'.repeat(64),intent_running:true,...(sessionRetired?{retirement_id:'e'.repeat(48)}:{}),failure:blocked?{code:request.method==='runtime_reconcile_recovery'?(config.retirement_error??'RECOVERY_SERVER_UNSUPPORTED'):'RECOVERY_SESSION_UNCONFIRMED',message:'previous_session_active=true clean=false; prior worker ownership unconfirmed'}:null}});return;
@@ -203,7 +211,9 @@ input.on('line', line => {
   if (mode === 'slow-device' && request.method === 'device_status') {
     setTimeout(() => process.stdout.write(reply), 800);
   } else if (mode === 'split') {
-    process.stdout.write(reply.slice(0, 7));
-    setTimeout(() => process.stdout.write(reply.slice(7)), 15);
+    fragmentedOutput=fragmentedOutput.then(()=>new Promise(resolve=>{
+      process.stdout.write(reply.slice(0,7));
+      setTimeout(()=>{process.stdout.write(reply.slice(7));resolve();},15);
+    }));
   } else process.stdout.write(reply);
 });

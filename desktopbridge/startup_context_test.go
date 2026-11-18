@@ -44,7 +44,9 @@ func TestDeviceContextBridgeAndStartupVerificationUseStrictReadOnlyMethods(t *te
 		accounts := bee.NewDesktopAccounts(nil)
 		var out bytes.Buffer
 		input := hello + request("context", "device_context") + request("verify", "runtime_verify") + supplyRequest("bad-context", "device_context", `{"credential":"SECRET"}`) + supplyRequest("bad-verify", "runtime_verify", `{"restore":true}`) + request("ping", "ping")
-		err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", device, accounts, runtime)
+		err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", device, accounts, runtime)
+		})
 		accounts.Close()
 		if err != nil {
 			t.Fatal(err)
@@ -67,7 +69,9 @@ func TestDeviceContextBridgePreservesRevisionOnlyForObservedFailure(t *testing.T
 	accounts := bee.NewDesktopAccounts(nil)
 	defer accounts.Close()
 	var out bytes.Buffer
-	if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(hello+request("context", "device_context")), &out, io.Discard, "test", device, accounts, &startupContextRuntime{}); err != nil {
+	if err := runSequentialFrames(t, hello+request("context", "device_context"), &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", device, accounts, &startupContextRuntime{})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())

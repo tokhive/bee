@@ -1,6 +1,6 @@
 import type {DesktopSnapshot} from './desktopState';
 import type {DeviceView} from './device';
-import {normalizeFailure,type UiFailure} from './failures';
+import {normalizeFailure,safeFailureText,type UiFailure} from './failures';
 import {currentLocale} from '../i18n';
 
 interface InitialAttempt {operationId?:string;hive:string;name:string;revision:number;view?:DeviceView}
@@ -46,8 +46,8 @@ export function firstLaunchAdmission(session:FirstLaunchSession,snapshot:Desktop
  if(participating&&!snapshot.deviceError&&record&&record.operation_id===attempt?.operationId&&record.revision<attempt.revision){
   failure=normalizeFailure({code:'FIRST_LAUNCH_STALE_RESULT',message:`${currentLocale()==='en'?'Initial pairing receipt revision regressed':'首次绑定事务回执倒退'}: operation=${record.operation_id}; actual=${record.revision}; required>=${attempt.revision}`,details:{check:'first_launch_revision',observed_at:new Date().toISOString(),evidence:{actual:String(record.revision),required:`revision>=${attempt.revision}`}}},'first_launch_revision');
  }else if(participating&&!snapshot.deviceError&&snapshot.device?.state==='bound'&&!completed&&snapshot.recoveryObservation==='absent'&&!snapshot.recoveryError){
-  const actual=JSON.stringify({operation:record?.operation_id,revision:record?.revision,hive:snapshot.device.hive,name:snapshot.device.name,identity:snapshot.device.identity,new_identity:record?.new_identity,context:snapshot.deviceContext,binding_revision:snapshot.bindingRevision});
-  const required=JSON.stringify({operation:attempt?.operationId,minimum_revision:attempt?.revision,hive:attempt?.hive,name:attempt?.name,identity:'bound view name = Hive identity name; local context name = requested name; bound identity = transaction new identity = saved device/owner; context revision = current binding revision'});
+  const actual=safeFailureText(JSON.stringify({operation:record?.operation_id,revision:record?.revision,hive:snapshot.device.hive,name:snapshot.device.name,identity:snapshot.device.identity,new_identity:record?.new_identity,context:snapshot.deviceContext,binding_revision:snapshot.bindingRevision}));
+  const required=safeFailureText(JSON.stringify({operation:attempt?.operationId,minimum_revision:attempt?.revision,hive:attempt?.hive,name:attempt?.name,identity:'bound view name = Hive identity name; local context name = requested name; bound identity = transaction new identity = saved device/owner; context revision = current binding revision'}));
   failure=normalizeFailure({code:'FIRST_LAUNCH_ASSOCIATION_INVALID',message:`${currentLocale()==='en'?'Initial pairing completion evidence does not match':'首次绑定完成证据不匹配'}: actual=${actual}; required=${required}`,details:{check:'first_launch_completion',observed_at:new Date().toISOString(),evidence:{actual,required}}},'first_launch_completion');
  }
  const initialPending=!!record&&record.phase!=='completed';

@@ -278,6 +278,7 @@ func desktopCall(ctx context.Context, state localState, path, method, secret str
 		desktopHTTPDiagnostic(ctx, strings.SplitN(path, "?", 2)[0], method, started, status, true, failure)
 		if failure != nil {
 			failure = desktopHTTPFailure(state, path, check, method, started, failure, status, responseBody, retryAfter, secret)
+			failure = recordRequestFailure(ctx, check, failure, state.Credential)
 		}
 	}()
 	var body io.Reader

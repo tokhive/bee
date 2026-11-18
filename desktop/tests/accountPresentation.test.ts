@@ -14,6 +14,20 @@ test('waiting permits first official login with verified runtime and source prer
  assert.ok(presentation.accountActionBlock('authorize',{...input,defaultsReady:false}));
 });
 function selected(){const s=accountFixture('openai') as AccountSnapshot;s.selection={...s.selection,state:'selected',fingerprint:'b'.repeat(64)};s.candidate={...s.candidate,fingerprint:'b'.repeat(64),plan:'plus',expires_at:new Date(now+3600000).toISOString()};return s;}
+test('cleared quota retains only same-account history and cannot become current evidence',()=>{
+ const s=selected();Object.assign(s.capabilities[0],{status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:3,reset_at:null}]});
+ const history=presentation.rememberAccountQuota(undefined,s,now);
+ const latest=selected();latest.candidate.expires_at=new Date(now-1).toISOString();
+ const result=accountPresentation(latest,false,now,false,false,history);
+ assert.equal(result.quotaState,'stale');assert.equal(result.windows[0]?.used_percent,3);assert.equal(result.observedAt,new Date(now).toISOString());
+ assert.equal(latest.capabilities[0].status,'unknown');assert.deepEqual(latest.capabilities[0].windows,[]);
+ const emptyReport=structuredClone(latest);emptyReport.capabilities[0].observed_at=new Date(now+1).toISOString();
+ assert.equal(accountPresentation(emptyReport,false,now,false,false,history).quotaState,'unknown');
+ assert.equal(presentation.rememberAccountQuota(history,emptyReport,now),undefined);
+ assert.equal(accountPresentation(latest,true,now,false,false,history).quotaState,'unknown');
+ latest.candidate.fingerprint='c'.repeat(64);assert.equal(accountPresentation(latest,false,now,false,false,history).quotaState,'unknown');
+ latest.selection.fingerprint='c'.repeat(64);assert.equal(presentation.rememberAccountQuota(history,latest,now),undefined);
+});
 test('unfinished login maintenance blocks new actions and permits only explicit identity confirmation when required',()=>{
  const view=selected();view.features.authorize={available:true,reason:null};view.features.confirm_change={available:true,reason:null};
  view.candidate={...view.candidate,state:'available',reference:'a'.repeat(48),fingerprint:'d'.repeat(64)};

@@ -20,6 +20,10 @@
 .add-account dl{display:grid;grid-template-columns:90px 1fr;gap:12px;font-size:13px;margin:24px 0}.add-account dd{margin:0;overflow-wrap:anywhere}
 .add-account-error{display:flex;gap:6px;align-items:center;color:#a24231}[data-theme=dark] .add-account-error{color:#f2a38f}
 .add-account-spinner{animation:add-account-spin 1s linear infinite;width:20px;height:20px}
+.add-account-progress{display:flex;align-items:flex-start;gap:10px;margin:16px 0;padding:12px 14px;border-left:2px solid currentColor;background:var(--faint,#f1efe9);border-radius:0 6px 6px 0}
+.add-account-progress>svg{width:20px;height:20px;flex-shrink:0;margin-top:2px}
+.add-account-progress p{margin:0}
+[data-theme=dark] .add-account-progress{background:#33322d}
 .account-add-heading{display:flex;justify-content:flex-end;margin-bottom:16px}
 @keyframes add-account-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){.add-account-spinner{animation:none}}

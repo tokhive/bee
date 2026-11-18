@@ -35,7 +35,9 @@ func TestDesktopRuntimeBridgeRejectsUnknownNullAndDuplicateParams(t *testing.T) 
 		f := &runtimeFixture{}
 		var out bytes.Buffer
 		input := hello + supplyRequest("start", "runtime_start", params) + request("ping", "ping")
-		if e := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f); e != nil {
+		if e := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f)
+		}); e != nil {
 			t.Fatal(e)
 		}
 		frames := replies(t, out.String())
@@ -48,7 +50,9 @@ func TestDesktopRuntimeBridgeReturnsQueryableOperation(t *testing.T) {
 	f := &runtimeFixture{}
 	var out bytes.Buffer
 	input := hello + supplyRequest("start", "runtime_start", `{"expected_revision":0,"resume_platforms":["openai"]}`) + supplyRequest("snapshot", "runtime_snapshot", `{}`) + request("ping", "ping")
-	if e := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f); e != nil {
+	if e := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f)
+	}); e != nil {
 		t.Fatal(e)
 	}
 	frames := replies(t, out.String())
@@ -60,7 +64,9 @@ func TestDesktopRuntimeBridgeReturnsQueryableOperation(t *testing.T) {
 func TestDesktopRuntimeBridgePreservesConnectionDetail(t *testing.T) {
 	var out bytes.Buffer
 	input := hello + supplyRequest("snapshot", "runtime_snapshot", `{}`)
-	if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}); err != nil {
+	if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{})
+	}); err != nil {
 		t.Fatal(err)
 	}
 	frames := replies(t, out.String())
@@ -93,7 +99,9 @@ func TestDesktopPresenceBridgeStrictAdmission(t *testing.T) {
 		f := &presenceFixture{}
 		var out bytes.Buffer
 		input := hello + supplyRequest("presence", "runtime_enable_presence", params)
-		if err := desktopbridge.RunWithRuntime(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f); err != nil {
+		if err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+			return desktopbridge.RunWithRuntime(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), f)
+		}); err != nil {
 			t.Fatal(err)
 		}
 		frames := replies(t, out.String())

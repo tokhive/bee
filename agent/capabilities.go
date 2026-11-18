@@ -212,7 +212,14 @@ const officialCapabilityQueryTimeout = 10 * time.Minute
 // query fetches one official endpoint into target. It returns why it failed,
 // empty on success, the time a 429 asked to be left alone until, and whether
 // upstream rejected the token itself.
-func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (string, time.Time, bool) {
+func (s capabilitySource) query(ctx context.Context, credential codexCredential, path string, target any) (failure string, retry time.Time, rejected bool) {
+	observed := observedOfficialTransport(s.transport)
+	defer func() {
+		if failure != "" {
+			failure = finishOfficialFailure(ctx, observed, errors.New(failure), credential.Secret.Token).Error()
+		}
+	}()
+
 	base := "https://chatgpt.com"
 	if s.LocalURL != "" {
 		base = s.LocalURL
@@ -236,7 +243,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	req.Header.Set("User-Agent", "codex_cli_rs/"+s.version+codexFallbackUserAgentSuffix)
 	// The models catalog is hundreds of kilobytes. A slow link needs more than a
 	// minute; 5 seconds returns a truncated body that cannot be decoded.
-	client := &http.Client{Transport: s.transport, Timeout: officialCapabilityQueryTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	client := &http.Client{Transport: observed, Timeout: officialCapabilityQueryTimeout, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	res, err := client.Do(req)
 	if err != nil {
 		return capabilityTransportFailure(err), time.Time{}, false
@@ -254,8 +261,11 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 		return fmt.Sprintf("%s answered HTTP %d", reference.Path, res.StatusCode), time.Time{}, res.StatusCode == http.StatusUnauthorized
 	}
 	decoder := json.NewDecoder(io.LimitReader(res.Body, 1<<20))
-	if decoder.Decode(target) != nil || decoder.Decode(new(any)) != io.EOF {
-		return reference.Path + " response not understood", time.Time{}, false
+	if err := decoder.Decode(target); err != nil {
+		return fmt.Sprintf("decode %s response HTTP %d: %s; required=capability JSON", reference.Path, res.StatusCode, desktopSafeText(err.Error(), credential.Secret.Token)), time.Time{}, false
+	}
+	if err := decoder.Decode(new(any)); err != io.EOF {
+		return fmt.Sprintf("decode %s response: trailing JSON result=%v; required=EOF", reference.Path, err), time.Time{}, false
 	}
 	return "", time.Time{}, false
 }

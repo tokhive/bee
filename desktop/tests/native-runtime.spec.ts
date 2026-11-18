@@ -67,7 +67,10 @@ test('a successful account write still requires a verified read when central rea
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const w=window as any,native=w.__TAURI_INTERNALS__,invoke=native.invoke;native.invoke=async(command:string,args:unknown)=>{const result=await invoke(command,args);if(command==='account_action')w.deviceFail=true;return result;};});
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(card(page).locator('.oa-title')).toContainText('接入账号未完成');
+ await expect(page.getByRole('alert').filter({hasText:'503'}).first()).toBeVisible();
+ await expect(card(page).locator('.oa-title')).not.toHaveText('可接单');
+ await expect(card(page).locator('button:not(:disabled)').filter({hasText:/^(暂停接单|恢复接单|确认接入)$/})).toHaveCount(0);
+ expect(await calls(page,'account_action')).toHaveLength(1);
  await page.evaluate(()=>{(window as any).deviceFail=false;});await reconcile(page);
  await expect(card(page).getByText('等待自动重试…',{exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toHaveLength(1);
 });
@@ -147,7 +150,7 @@ test('account change remains paused and a platform failure leaves the other plat
 test('only proven unsubmitted confirmation can continue after reconciliation',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'f'.repeat(64),observed_at:new Date().toISOString(),error:null};a.candidate.identity_verified=true;a.revision++;a.operation={id:'c'.repeat(48),kind:'confirm_change',platform:'openai',state:'reconciling',revision:a.revision,error:{code:'confirmation_unknown',check:'account_change_submission',platform:'openai',message:'confirmation outcome unknown',evidence:{}}};});
- await reconcile(page);await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeDisabled();await page.keyboard.press('Escape');expect(await calls(page,'account_action')).toEqual([]);
+ await reconcile(page);await expect(card(page).getByRole('button',{name:'核对结果',exact:true})).toBeVisible();await expect(card(page).getByRole('button',{name:'核对账号变更',exact:true})).toHaveCount(0);expect(await calls(page,'account_action')).toEqual([]);
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.revision++;a.operation.revision=a.revision;a.operation.error.code='confirmation_not_submitted';a.operation.error.message='confirmation was not submitted';});
  await reconcile(page);await card(page).getByRole('button',{name:'核对账号变更',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'确认更换',exact:true}).click();await accountCompleted(page,'confirm_change');expect(await calls(page,'account_action')).toHaveLength(1);
 });
@@ -210,7 +213,7 @@ for(const change of ['candidate','source','selection','hive','pending','operatio
    case 'operation':a.operation={id:'c'.repeat(48),kind:'select',platform:'openai',state:'pending',revision:a.revision,error:null};break;
    case 'feature':a.features.select={available:false,reason:'update_pending'};break;
    case 'expiry':a.candidate.expires_at=new Date(Date.now()+30000).toISOString();break;
-   case 'identity-verification':a.candidate.identity_verified=false;break;
+   case 'identity-verification':a.candidate.identity_verified=!a.candidate.identity_verified;break;
    case 'authorization-state':a.authorization.state='expired';break;
    case 'authorization-fingerprint':a.authorization.fingerprint='e'.repeat(64);break;
    case 'authorization-error':a.authorization.error={code:'expired',check:'expiry',platform:'openai',message:'authorization expires within 30 seconds',evidence:{}};break;
@@ -282,7 +285,7 @@ for(const denial of ['device','diagnostic','recovery'])test('identity '+denial+'
  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await checkDevice(page);
  await page.getByRole('button',{name:'重试准备',exact:true}).click();await expect(runtimeSummary(page).locator('.native-runtime-health')).toContainText('Bee 运行中');
  if(denial==='device'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET /api/bee/identity HTTP 401 device_replaced',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',remote_code:'device_replaced'}}}}}:invoke(command,args);});await reconcile(page);}
- else if(denial==='recovery'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_status'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);});await reconcile(page);}
+ else if(denial==='recovery'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_snapshot'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);});await reconcile(page);}
  else{await page.clock.runFor(100);await page.evaluate(async()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;const currentRuntime=(await invoke('runtime_snapshot')).result.runtime;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot'){result.result.report.run_id=currentRuntime.run_id;result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};}return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status','rejected');await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
  await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',denial==='recovery'?'unconfirmed':'rejected');
  await noDailyControls(page);await expect(card(page).getByRole('button',{name:'恢复接单',exact:true}).and(page.locator(':enabled'))).toHaveCount(0);expect(await calls(page,'runtime_stop')).toHaveLength(0);
@@ -291,7 +294,7 @@ for(const denial of ['device','diagnostic','recovery'])test('identity '+denial+'
 
 for(const denial of ['device','recovery'])test(denial+' failure allows local login and cancellation but keeps account selection blocked',async({page})=>{
  const consoleErrors:string[]=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
- await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_status'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
+ await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_snapshot'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
  await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();await card(page).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('button',{name:'更换连接方式',exact:true}).click();const login=page.getByRole('button',{name:'登录 OpenAI',exact:true});await expect(login).toBeEnabled();await login.click();
  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);await page.keyboard.press('Escape');
  const cancel=page.getByRole('button',{name:'取消登录',exact:true}).last();await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
@@ -301,7 +304,7 @@ for(const denial of ['device','recovery'])test(denial+' failure allows local log
 test('recovery-only failure hides ready supply, blocks resume, and is visible beyond overview',async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(()=>{const w=window as any;for(const a of Object.values(w.accounts) as any[])a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
-  if(command==='device_recovery_status'&&w.recoveryFail)return {result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}};
+  if(command==='device_recovery_snapshot'&&w.recoveryFail)return {result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}};
   const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection:'connected'});
   if(command==='supply_status')Object.assign(reply.result.supply,{ready:args.platform==='openai',reasons:args.platform==='openai'?[]:['manually_paused']});return reply;
  };});
@@ -375,7 +378,7 @@ test('Claude official login warns about official account, supports cancellation,
 
 for(const denial of ['device','recovery'])test('Claude '+denial+' failure allows local login and cancellation but keeps account selection blocked',async({page})=>{
  const consoleErrors:string[]=[];page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
- await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_status'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
+ await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_snapshot'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
  await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();await openDetails(page,'Claude');
  const login=page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true});await expect(login).toBeEnabled();await login.click();
  const loginStatus=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await loginStatus.getByRole('button',{name:'继续登录',exact:true}).click();

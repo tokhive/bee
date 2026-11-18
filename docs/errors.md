@@ -129,10 +129,6 @@ Errors from `bee setup`, and from `bee run` when it has no egress configuration.
 
 `bee run` was given no `--egress-config`, and there is no `egress.json` next to the device configuration. Bee stays online but contributes no accounts. This is a warning, and `bee run` keeps running. Run `bee setup` to choose the accounts to contribute, then restart `bee run`.
 
-### BEE-START-HIVE
-
-This machine is not paired yet, and `bee start` doesn't know which Hive to pair it with. Copy the command from the Devices page of your Hive, which already contains its address, or run `bee start --hive https://your-hive`. The address is remembered, so later runs of `bee start` don't need it.
-
 ### BEE-SETUP-PLATFORM
 
 `--platform` names a platform that Bee doesn't support. Use `openai`, `claude`, or both separated by a comma.
@@ -330,3 +326,11 @@ Anthropic rejected the account's authorization. Sign in to Claude Code again.
 ### BEE-CONFIG-OPENAI-API-KEY
 
 官方 API Key 文件不可读取或内容无效。`openai_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个 Key。Key 不应写入配置文件、日志或命令参数。
+
+### BEE-CONFIG-CLAUDE-API
+
+官方 Claude API 供给配置无效。`claude_api.models` 必须选择 1–512 个不重复的模型 ID；`local_url` 仅用于全部目标均为 loopback 的本地测试。
+
+### BEE-CONFIG-CLAUDE-API-KEY
+
+官方 Claude API Key 文件不可读取或内容无效。`claude_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个 Key。Key 不应写入配置文件、日志或命令参数。

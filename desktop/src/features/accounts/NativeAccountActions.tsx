@@ -1,4 +1,4 @@
-import {requestNotSent} from '../../system/failures';
+import {requestNotExecuted} from '../../system/failures';
 import {FailureNotice} from '../../components/ProblemNotice';
 import type {NavigationTarget} from '../../app/navigation';
 import {useState} from 'react';
@@ -32,7 +32,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
  const terminal=op?.state==='succeeded'?op.kind==='authorize'?accounts.views[platform]?.selection.state==='selected'?'登录已核验，账号选择未改变。':'登录已核验，尚未接入':op.kind==='clear_selection'?'已取消未注册的本地选择；Hive 注册账号未被移除。':op.kind==='confirm_change'?'换号已完成，该平台保持暂停。':'接入已完成，该平台保持暂停。':op?.state==='unknown'?'原登录进程已中断，原登录结果未确认；账号维护状态单独核对。':op?.state==='cancelled'?'官方登录进程已取消；已发生的客户端登录变化可能保留，需重新核对来源。':'账号操作失败';
  return <div className="account-operation-status">
   {unconfirmed&&!submissionChanged&&<p role="status">{t('账号操作结果尚未确认；只核对原操作，不会重复提交或解除暂停。')}</p>}
-  {(unconfirmed||error&&!requestNotSent(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>}
+  {(unconfirmed||error&&!requestNotExecuted(error))&&!submissionChanged?<p><span>{t(progress)}</span>{refresh?.state==='scheduled'&&refresh.nextRetryAt&&<> <time dateTime={refresh.nextRetryAt}>{formatDate(refresh.nextRetryAt,currentLocale())}</time></>}</p>:op&&<p role="status">{t(op.state==='pending'||op.state==='running'?op.kind==='authorize'?'等待官方登录完成；关闭详情不会取消登录。':'正在处理账号操作':terminal)}</p>}
   {op?.error&&!inCondition(op.error)&&<FailureNotice failure={op.error} check="account_operation" onNavigate={onNavigate}/>}
   {maintenance&&<><p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>{maintenance.error&&!inCondition(maintenance.error)&&<FailureNotice failure={maintenance.error} check="login_maintenance" onNavigate={onNavigate}/>} {maintenance.can_recheck&&<Button variant="outline" disabled={!!accounts.busy[platform]||!!accounts.writeBusy[platform]} onClick={()=>accounts.refresh(platform)}>{t('核对维护结果')}</Button>}</>}
   {showError&&<FailureNotice failure={error} check="account_operation" onNavigate={onNavigate}/>}
@@ -42,7 +42,7 @@ export function AccountOperationStatus({accounts,platform,onNavigate,sourceFailu
 export function NativeAccountActions({accounts,platform,runtime,placement='row',onNavigate,onInlineLogin}:{accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;placement?:'row'|'detail';onInlineLogin?:()=>void;onNavigate?:(target:NavigationTarget)=>void}){
  const view=accounts.views[platform],selected=view?.selection.state==='selected',op=view?.operation,label=platform==='openai'?'OpenAI':'Claude',client=platform==='openai'?'Codex':'Claude Code';
  const busy=!!accounts.writeBusy[platform],dirty=!!accounts.dirty[platform];
- const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotSent(accounts.errors[platform]!);
+ const unknown=!!accounts.uncertain[platform]||!!accounts.errors[platform]&&accounts.errors[platform]?.code!=='ACCOUNT_CONTEXT_CHANGED'&&!requestNotExecuted(accounts.errors[platform]!);
  const context={autoService:accounts.autoService,view,platform,now:Date.now(),dirty,busy,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled};
  const block=(action:AccountAction)=>accountActionBlock(action,context);
  const candidate=!dirty&&view?.candidate.state==='available'&&!!view.candidate.reference;

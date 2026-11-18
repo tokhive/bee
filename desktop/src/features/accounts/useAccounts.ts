@@ -1,5 +1,5 @@
 import type {RefreshStatus} from '../../system/desktopState';
-import {requestNotSent,type UiFailure} from '../../system/failures';
+import {requestNotExecuted,type UiFailure} from '../../system/failures';
 import {useCallback,useEffect,useRef,useState} from 'react';
 import type {AccountClient,AccountDefaults,AccountPlatform,AccountSnapshot,AccountSource,AccountActionRequest,AccountOperation} from '../../system/accounts';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -8,9 +8,10 @@ import {createOperationQuery,type QueryState} from '../../system/operationQuery'
 import type {AuthorizeClient} from '../../system/authorize';
 import type {RuntimeSnapshot} from '../../system/runtime';
 import {failure,platforms} from '../supply/useSupply';
+import {rememberAccountQuota,type AccountQuotaHistory} from './accountPresentation';
 export const accountPending=(s:AccountSnapshot|undefined)=>!!s?.operation&&['pending','running','reconciling'].includes(s.operation.state)||!!s?.login_maintenance&&s.login_maintenance.phase!=='restored';
 const noAccountErrors:Partial<Record<AccountPlatform,UiFailure>>={};
-export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
+export interface CoordinatedAccounts {autoService?:boolean;openaiSource?:AccountSource;sourceReady?:boolean;saveOpenaiSource?:(source:AccountSource)=>Promise<AccountSource>;recheckOpenaiReads?:()=>Promise<void>;refreshStatus?:RefreshStatus;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;sourceDirectories?:Partial<Record<AccountPlatform,string>>;setSourceDirectory?:(platform:AccountPlatform,value:string)=>void;defaults?:AccountDefaults;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors?:Partial<Record<AccountPlatform,UiFailure>>;refresh:()=>Promise<void>;beforeWrite?:(platform:AccountPlatform,local:boolean)=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(platform:AccountPlatform,revision:number,confirmedOperation?:boolean)=>void;snapshot?:()=>{runtime?:RuntimeSnapshot;error:UiFailure|null;deviceError?:UiFailure|null;accountErrors:Partial<Record<AccountPlatform,UiFailure>>;accountRefresh?:Partial<Record<AccountPlatform,RefreshStatus>>;busy:boolean}}
 export function useAccounts(client:AccountClient|undefined,enabled:boolean,authorizer?:AuthorizeClient,runtime?:RuntimeSnapshot,autoRead=false,coordinated?:CoordinatedAccounts){
  const [defaults,setDefaults]=useState<AccountDefaults>(),[defaultsError,setDefaultsError]=useState<UiFailure|null>(null);
  const [clock,setClock]=useState(0);
@@ -25,6 +26,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [loginProgress,setLoginProgress]=useState<QueryState<CodexLoginProgress>>(),[loginOpenError,setLoginOpenError]=useState<UiFailure>();
  const loginQuery=useRef<ReturnType<typeof createOperationQuery<CodexLoginProgress>>|undefined>(undefined);
  const [openingLogin,setOpeningLogin]=useState(false);const openingLoginRef=useRef(false);
+ const [startingLogin,setStartingLogin]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
  const [loginFlows,setLoginFlows]=useState<Partial<Record<AccountPlatform,{confirmation:string|null;rechecked:boolean;checking:boolean}>>>({});
  const [writeBusy,setWriteBusy]=useState<Partial<Record<AccountPlatform,boolean>>>({});
@@ -36,6 +38,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const detectedSources=useRef(new Map<string,string>()),officialReads=useRef(new Map<string,string>());
  const epochs=useRef({openai:0,claude:0}),active=useRef(true),running=useRef({openai:false,claude:false});
  const requests=useRef<Partial<Record<AccountPlatform,Promise<void>>>>({}),latest=useRef<Partial<Record<AccountPlatform,AccountSnapshot>>>({}),verified=useRef({openai:false,claude:false});
+ const quotaHistory=useRef<Partial<Record<AccountPlatform,AccountQuotaHistory>>>({});
  const localUnconfirmed=useRef<Partial<Record<AccountPlatform,boolean>>>({});
  const revisions=useRef({openai:-1,claude:-1}),unconfirmedRevisions=useRef<Partial<Record<AccountPlatform,number>>>({});
  const external=!!coordinated,refreshCentral=coordinated?.refresh,pauseCentral=coordinated?.pause,centralError=coordinated?.error??null,accountErrors=coordinated?.accountErrors??noAccountErrors;
@@ -47,6 +50,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  useEffect(()=>{active.current=true;return()=>{active.current=false;};},[]);
  const publish=useCallback((platform:AccountPlatform,view:AccountSnapshot,detected=false)=>{
   if(view.revision<revisions.current[platform])return false;
+  quotaHistory.current={...quotaHistory.current,[platform]:rememberAccountQuota(quotaHistory.current[platform],view,Date.now())};
   revisions.current[platform]=view.revision;latest.current[platform]=view;verified.current[platform]=true;setViews(v=>({...v,[platform]:view}));
   const login=view.operation?.kind==='authorize'&&view.operation.state==='succeeded'?view.operation.id:undefined;
   if(detected||login&&!completedLogins.current.has(login))setDirty(v=>({...v,[platform]:false}));
@@ -60,11 +64,17 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   if(!enabled||!runtime)return;
   const observationChanged=runtime!==observedRuntime.current;
   for(const p of platforms){
-   if(running.current[p])continue;
    const next=runtime.platforms[p].account,resolution=resolutions.current[p];
+   if(running.current[p]){
+    // The active request owns its receipt; the central observer still owns progress.
+    if(next.authorization.error?.code==='operation_pending'&&!centralError&&!accountErrors[p])publish(p,next);
+    continue;
+   }
    if(centralError||accountErrors[p]){verified.current[p]=false;continue;}
    const resolved=resolution&&runtime!==resolution.previous&&resolution.generation===coordinated?.generation?.();
-   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
+   // Busy observations change availability without changing persisted account revision.
+   const busyObservationChanged=observationChanged&&next.revision===revisions.current[p]&&(next.authorization.error?.code==='operation_pending'||latest.current[p]?.authorization.error?.code==='operation_pending');
+   if((!dirty[p]||resolved&&resolution.detected)&&(next.revision>revisions.current[p]||busyObservationChanged||!verified.current[p]||resolved))publish(p,next,!!(resolved&&resolution.detected));
    const minimum=unconfirmedRevisions.current[p];
    const receipt=resolution?.operation,observed=next.operation;
    const ownedTerminal=!!resolved&&!!receipt&&observed?.id===receipt.id&&observed.kind===receipt.kind&&observed.platform===p&&['succeeded','failed','cancelled'].includes(observed.state)&&next.revision>=Math.max(receipt.revision,revisions.current[p])&&observed.revision>=receipt.revision;
@@ -108,7 +118,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     }catch(cause){if(current()){
      const problem=failure(cause,cancel?'authorize_cancel':'account_operation');
      verified.current[platform]=false;setErrors(v=>({...v,[platform]:problem}));
-     if(write&&!requestNotSent(problem)){
+     if(write&&!requestNotExecuted(problem)){
       localUnconfirmed.current[platform]=local;unconfirmedRevisions.current[platform]=writeRevision;setUncertain(v=>({...v,[platform]:true}));
       const owned=receiptOperation??(cancel?latest.current[platform]?.operation:undefined);
       pauseCentral?.();
@@ -132,6 +142,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(prior)await prior;
    if(!active.current||central.current?.generation?.()!==started)return;
    if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
+   if(!cancel)await central.current?.beforeWrite?.(platform,local);
    if(central.current?.snapshot?.().busy&&refreshCentral)await refreshCentral();
    if(!active.current||central.current?.generation?.()!==started)return;
    if(epoch!==epochs.current[platform]){rejectSubmission('account_source_epoch','source epoch='+epochs.current[platform],'source epoch='+epoch);return;}
@@ -217,7 +228,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    delete resolutions.current[platform];verified.current[platform]=false;setLoginFlows(v=>({...v,[platform]:undefined}));
    setSourceReadFailed(v=>({...v,[platform]:undefined}));client?.invalidate(platform);epochs.current[platform]++;running.current[platform]=false;setBusy(v=>({...v,[platform]:false}));setSources(v=>({...v,[platform]:source}));setDirty(v=>({...v,[platform]:true}));setErrors(v=>({...v,[platform]:undefined}));
  };
- useEffect(()=>{const journey=openaiJourney,view=views.openai;if(journey?.completed&&(errors.openai||accountErrors.openai||centralError||dirty.openai||view?.candidate.error||view?.authorization.error||view?.hive.error||deviceError||view?.operation?.error||view?.selection.fingerprint!==journey.completed||view?.candidate.identity_verified&&view.candidate.fingerprint!==journey.completed))setOpenaiJourney(undefined);},[views.openai,errors.openai,accountErrors.openai,centralError,deviceError,dirty.openai,openaiJourney]);
+ useEffect(()=>{const journey=openaiJourney,view=views.openai;if(journey?.completed&&(errors.openai||accountErrors.openai||centralError||dirty.openai||view?.candidate.error||view?.authorization.error||view?.hive.error||deviceError||view?.operation?.error||view?.selection.fingerprint!==journey.completed||view?.candidate.fingerprint&&view.candidate.fingerprint!==journey.completed))setOpenaiJourney(undefined);},[views.openai,errors.openai,accountErrors.openai,centralError,deviceError,dirty.openai,openaiJourney]);
  const originalOperation=views.openai?.operation;
  const accountOperationID=originalOperation&&['select','confirm_change'].includes(originalOperation.kind)?openaiJourney?.operationId??originalOperation.id:undefined;
  useEffect(()=>{
@@ -227,7 +238,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(snapshot.operation?.id!==id)throw {code:'ACCOUNT_ORIGINAL_UNAVAILABLE',message:'Original account operation record changed: actual='+(snapshot.operation?.id??'missing')+'; required='+id,details:{check:'account_original_query',observed_at:new Date().toISOString(),evidence:{actual:snapshot.operation?.id??'missing',required:id}}};
    return snapshot;
   },settled:s=>!!s.operation&&['succeeded','failed','cancelled'].includes(s.operation.state),retryable:cause=>['RESPONSE_TIMEOUT','REQUEST_NOT_SENT','CONNECTION_LOST'].includes(failure(cause).code),publish:state=>{
-   setOriginalAccountQuery(state);if(state.value&&active.current){publish('openai',state.value);if(state.phase==='settled')setUncertain(v=>({...v,openai:false}));}
+   setOriginalAccountQuery(state);if(state.value&&active.current){publish('openai',state.value);if(state.phase==='settled'){setUncertain(v=>({...v,openai:false}));central.current?.recordReceipt?.('openai',state.value.revision);void central.current?.recheckOpenaiReads?.();}}
   }});
   originalAccountReader.current=query;void query.start();
   return()=>{query.dispose();if(originalAccountReader.current===query)originalAccountReader.current=undefined;};
@@ -241,14 +252,14 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   loginQuery.current=query;setLoginOpenError(undefined);void query.start();
   return()=>{query.dispose();if(loginQuery.current===query)loginQuery.current=undefined;};
  },[enabled,authorizer,loginID]);
- return {setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
+ return {quotaHistory:quotaHistory.current,setupPlatform,setSetupPlatform,sourceReady:coordinated?.sourceReady!==false,
   async verifyOpenai(){
    if(!client||!savedDefaults||centralError||central.current?.sourceReady===false||writing.current.openai||sourceSavingRef.current||uncertain.openai||accountPending(latest.current.openai))return;
    if(requests.current.openai)await requests.current.openai;
    if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
    await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
    return verified.current.openai?latest.current.openai:undefined;
-  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,
+  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSaveError,loginProgress,loginOpenError,openingLogin,startingLogin,
   queryLogin(){return loginQuery.current?.start();},
   async openLoginPage(){
    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
@@ -290,10 +301,11 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    void run(platform,async current=>{const result=await client.action({platform,action,revision:current!.revision,candidate_ref:action==='clear_selection'?'':current!.candidate.reference??'',confirmed:true});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:result.operation?.id}:v);return result;},false,true);
   },
   authorize(platform:AccountPlatform){
-   const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError)return;
+   const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError||writing.current[platform]||platform==='openai'&&sourceSavingRef.current)return;
+   setStartingLogin(v=>({...v,[platform]:true}));
    if(platform==='openai')setOpenaiJourney({kind:view.selection.state==='selected'?'relogin':'first',revision:view.revision});
    if(platform==='claude')setLoginFlows(v=>({...v,[platform]:{confirmation:null,rechecked:false,checking:false}}));
-   void run(platform,async current=>{setCancelUnconfirmed(v=>({...v,[platform]:undefined}));const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:receipt.id}:v);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true);
+   void run(platform,async current=>{setCancelUnconfirmed(v=>({...v,[platform]:undefined}));const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:receipt.id}:v);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true).finally(()=>{if(active.current)setStartingLogin(v=>({...v,[platform]:false}));});
   },
   cancelAuthorize(platform:AccountPlatform){
    const id=views[platform]?.operation?.id;if(!client||!authorizer||!id)return;
@@ -305,7 +317,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     try{receipt=await authorizer.cancel(id);}
     catch(cause){
      const problem=failure(cause,'authorize_cancel');
-     if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation&&!requestNotSent(problem))setCancelUnconfirmed(v=>({...v,[platform]:{operationId:id,failure:problem}}));
+     if(active.current&&epochs.current[platform]===epoch&&central.current?.generation?.()===generation&&!requestNotExecuted(problem))setCancelUnconfirmed(v=>({...v,[platform]:{operationId:id,failure:problem}}));
      throw cause;
     }
     return refreshCentral?receipt:client.snapshot(platform,false);

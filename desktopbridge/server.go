@@ -88,6 +88,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	recoveryEntry, hasRecoveryEntry := devices.(interface {
 		RecoveryAt(context.Context, string, string) (bee.DeviceRecoveryView, error)
 	})
+	recoverySnapshots, hasRecoverySnapshot := devices.(interface {
+		RecoverySnapshot(context.Context) (bee.DeviceRecoveryView, error)
+	})
 	contexts, hasContext := devices.(DeviceContext)
 	verifier, hasVerifier := runner.(StartupVerifier)
 	inspector, hasInspector := runner.(RecoveryInspector)
@@ -143,7 +146,10 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 	}()
 	diagnosticContext, stopDiagnostics := context.WithCancel(ctx)
 	defer stopDiagnostics()
-	diagnosticOutput := &diagnosticWriter{writer: diagnostics}
+	diagnosticOutput, shared := diagnostics.(*diagnosticWriter)
+	if !shared {
+		diagnosticOutput = &diagnosticWriter{writer: diagnostics}
+	}
 	diagnosticSink := requestDiagnosticSink(diagnosticContext, diagnosticOutput)
 	mode := bee.DesktopProfileCurrent
 	if profile, ok := devices.(interface{ ProfileMode() bee.DesktopProfileMode }); ok {
@@ -228,6 +234,9 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				if hasRecovery {
 					capabilities = append(capabilities, "device_recovery_prepare", "device_recovery_confirm", "device_recovery_status")
 				}
+				if hasRecoverySnapshot {
+					capabilities = append(capabilities, "device_recovery_snapshot")
+				}
 				if hasSwitch {
 					capabilities = append(capabilities, "desktop_switch")
 				}
@@ -249,6 +258,17 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 				}
 			case hasRecoveryEntry && req.Method == "device_recovery_start":
 				value, err := recoveryEntry.RecoveryAt(ctx, req.Hive, req.Name)
+				if err != nil {
+					answer.Result = struct {
+						Error *protocolError `json:"error"`
+					}{operationFailure("DEVICE_RECOVERY_FAILED", err)}
+				} else {
+					answer.Result = struct {
+						Recovery bee.DeviceRecoveryView `json:"recovery"`
+					}{value}
+				}
+			case hasRecoverySnapshot && req.Method == "device_recovery_snapshot":
+				value, err := recoverySnapshots.RecoverySnapshot(ctx)
 				if err != nil {
 					answer.Result = struct {
 						Error *protocolError `json:"error"`
@@ -435,6 +455,14 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		if err != nil {
 			return response{}, false, fmt.Errorf("encode desktop response: %w", err)
 		}
+		if err := bee.RecordDesktopReplyFailures(ctx, req.Method, req.Platform, encoded); err != nil {
+			answer.Error = rejected("DIAGNOSTIC_RECORDING_FAILED", "%s", err)
+			answer.Result = nil
+			encoded, err = json.Marshal(answer)
+			if err != nil {
+				return response{}, false, fmt.Errorf("encode diagnostic recording failure: %w", err)
+			}
+		}
 		var terminal error
 		if len(encoded) > maxFrameBytes {
 			// JSON string escaping can expand even a legal input frame beyond
@@ -464,8 +492,15 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		problem   *protocolError
 		releaseID bool
 		accepted  chan struct{}
+		lane      string
 	}
-	lanes := map[string]chan readJob{"openai": make(chan readJob, 16), "claude": make(chan readJob, 16)}
+	lanes := map[string]chan readJob{"openai": make(chan readJob, 16), "claude": make(chan readJob, 16), "shared": make(chan readJob, 16)}
+	for _, method := range []string{"ping", "notification_snapshot", "account_defaults", "authorize_open", "device_context", "device_recovery_snapshot", "runtime_snapshot", "network_status", "network_test", "authorize_status", "authorize_progress", "authorize_cancel", "diagnostics_snapshot", "diagnostics_cancel", "account:openai", "account:claude"} {
+		lanes["observe:"+method] = make(chan readJob, 16)
+	}
+	var admission sync.Mutex
+	occupied := map[string]int{}
+	owners := map[string][]string{}
 	var work, workers sync.WaitGroup
 	var pendingReads atomic.Int32
 	workerFailures := make(chan error, 1)
@@ -476,11 +511,19 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 			for job := range lane {
 				func() {
 					defer work.Done()
+					leave := sync.OnceFunc(func() {
+						admission.Lock()
+						occupied[job.lane]--
+						owners[job.lane] = owners[job.lane][1:]
+						admission.Unlock()
+					})
+					defer leave()
 					defer pendingReads.Add(-1)
 					if readContext.Err() != nil {
 						return
 					}
 					value, _, err := execute(readContext, job.req, job.problem, job.releaseID)
+					leave()
 					if err != nil {
 						select {
 						case workerFailures <- err:
@@ -502,8 +545,8 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 		}()
 	}
 
-	// The input owner remains the sole reader. A fixed dispatcher can wait at a
-	// shared barrier while that reader observes EOF/shutdown and cancels reads.
+	// The input owner remains the sole reader. The dispatcher admits bounded
+	// resource lanes while the reader can still observe EOF/shutdown and cancel work.
 	jobs := make(chan readJob, 16)
 	dispatcherDone := make(chan struct{})
 	var dispatcherErr error // Read only after dispatcherDone closes.
@@ -539,31 +582,56 @@ func RunWithExperience(ctx context.Context, in io.Reader, out io.Writer, diagnos
 					return true
 				default:
 				}
-				platformRead := problem == nil && ready.Load() && req.Protocol == protocolVersion &&
-					(req.Method == "account_detect" || req.Method == "account_snapshot" || req.Method == "supply_status")
-				if platformRead {
-					if lane := lanes[req.Platform]; lane != nil {
-						work.Add(1)
-						pendingReads.Add(1)
-						select {
-						case lane <- job:
-							return false
-						default:
-							pendingReads.Add(-1)
-							work.Done()
-							job.problem = rejected("REQUEST_QUEUE_FULL", "platform read queue full: platform=%s queued=%d capacity=16; request not executed", req.Platform, len(lane))
+				if problem == nil && ready.Load() && req.Protocol == protocolVersion && req.Method != "hello" && req.Method != "ping" && scheduledMethod(req) && !shutdownRequest {
+					lane := observationLane(req)
+					observation := lane != ""
+					if !observation {
+						lane = platformLane(req)
+						if lane == "" {
+							lane = "shared"
 						}
 					}
-				} else {
-					if shutdownRequest {
-						cancelReads()
+					admission.Lock()
+					blocker := ""
+					if !observation {
+						if occupied["shared"] > 0 {
+							blocker = owners["shared"][0]
+						}
+						for _, resource := range []string{"openai", "claude"} {
+							if occupied[resource] > 0 && (lane == "shared" && req.Method != "runtime_stop" || lane == resource && !queuedRead(req)) {
+								blocker = owners[resource][0]
+								break
+							}
+						}
 					}
-					work.Wait() // A shared operation fences every later read.
-					if ctx.Err() != nil || (readContext.Err() != nil && !replyAfterReadsStop) {
-						return false
+					if blocker != "" {
+						problem = rejected("REQUEST_RESOURCE_BUSY", "method=%s conflicts with unfinished method=%s resource=%s; request not executed; observe progress before submitting again", req.Method, blocker, lane)
+					} else {
+						job.lane = lane
+						work.Add(1)
+						pendingReads.Add(1)
+						occupied[lane]++
+						owners[lane] = append(owners[lane], req.Method)
+						select {
+						case lanes[lane] <- job:
+							admission.Unlock()
+							return false
+						default:
+							occupied[lane]--
+							owners[lane] = owners[lane][:len(owners[lane])-1]
+							pendingReads.Add(-1)
+							work.Done()
+							problem = rejected("REQUEST_QUEUE_FULL", "request lane full: resource=%s queued=%d capacity=16; request not executed", lane, len(lanes[lane]))
+						}
 					}
+					admission.Unlock()
 				}
-				value, shutdown, err := execute(ctx, job.req, job.problem, job.releaseID)
+				if shutdownRequest {
+					cancelReads()
+					work.Wait()
+				}
+
+				value, shutdown, err := execute(ctx, req, problem, job.releaseID)
 				if len(value.frame) > 0 && !send(value) {
 					return true
 				}

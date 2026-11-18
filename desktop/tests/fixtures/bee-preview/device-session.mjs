@@ -81,7 +81,7 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
   const pending=Object.entries(w.accounts).find(([,a])=>a.operation&&['pending','running','reconciling'].includes(a.operation.state));
   return pending?'device recovery blocked by pending account operation: platform='+pending[0]+'; state='+pending[1].operation.state:null;
  };
- const commands=new Set(['device_recovery_start','device_context','device_begin','device_status','device_open','device_recovery_prepare','device_recovery_confirm','device_recovery_status','startup_status','startup_recheck']);
+ const commands=new Set(['device_recovery_start','device_context','device_begin','device_status','device_open','device_recovery_prepare','device_recovery_confirm','device_recovery_snapshot','device_recovery_status','startup_status','startup_recheck']);
  return {
   binding:()=>({hive:savedHive||origin,device_id:identity?.id??null,owner_id:identity?.owner_id??null}),
   writeBarrier:()=>transaction&&transaction.phase!=='completed'?{phase:transaction.phase,revision:transaction.revision}:null,
@@ -107,6 +107,7 @@ export function createPreviewDeviceSession({scene,origin,current,instance,onConf
     transaction.failure=failure('device_replaced','GET /api/bee/identity HTTP 401 device_replaced; required=explicit rebind confirmation','device_identity');alias();
     return {result:{recovery:clone(transaction)}};
    }
+   if(command==='device_recovery_snapshot')return transaction?.old_identity?{result:{recovery:clone(transaction)}}:rejected('DEVICE_RECOVERY_NONE','no device recovery transaction exists',command);
    if(command==='device_recovery_status'||command==='device_recovery_confirm'){
     if(!transaction?.old_identity)return rejected(command==='device_recovery_status'?'DEVICE_RECOVERY_NONE':'DEVICE_RECOVERY_PRECONDITION','no credential recovery transaction exists; prepare explicitly first',command);
     if(command==='device_recovery_confirm'){

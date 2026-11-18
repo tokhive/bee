@@ -124,11 +124,31 @@ func (s *Session) Wait() { <-s.done }
 // directions.
 func (s *Session) Moved() uint64 { return s.carrier.moved.Load() }
 
+// Err is the first error the WebSocket gave the tunnel, nil while it has
+// given none. It is what ended a session the owner did not end itself: a
+// close frame the peer sent (a websocket.CloseError carrying its code), or
+// the transport failing. A session its owner closed reports the error that
+// close produced, which says nothing about the peer.
+func (s *Session) Err() error {
+	if err := s.carrier.err.Load(); err != nil {
+		return *err
+	}
+	return nil
+}
+
 type carrier struct {
 	net.Conn
 	ready  chan struct{}
 	cancel context.CancelFunc
 	moved  atomic.Uint64
+	err    atomic.Pointer[error]
+}
+
+// fail records the first error before the session is cancelled, so whoever
+// the cancellation wakes can already read why.
+func (c *carrier) fail(err error) {
+	c.err.CompareAndSwap(nil, &err)
+	c.cancel()
 }
 
 func (c *carrier) Read(p []byte) (int, error) {
@@ -136,7 +156,7 @@ func (c *carrier) Read(p []byte) (int, error) {
 	n, err := c.Conn.Read(p)
 	c.moved.Add(uint64(n))
 	if err != nil {
-		c.cancel()
+		c.fail(err)
 	}
 	return n, err
 }
@@ -145,7 +165,7 @@ func (c *carrier) Write(p []byte) (int, error) {
 	n, err := c.Conn.Write(p)
 	c.moved.Add(uint64(n))
 	if err != nil {
-		c.cancel()
+		c.fail(err)
 	}
 	return n, err
 }

@@ -131,47 +131,21 @@ async fn observed_requests(control: &std::path::Path, count: usize) -> Vec<Value
 }
 
 #[tokio::test]
-async fn shared_barrier_fences_later_platform_on_owned_pipe() {
-    let (_dir, bridge, control) =
-        controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
-    let b = bridge.clone();
-    let slow = tokio::spawn(async move {
-        b.request(
-            "account_snapshot",
-            serde_json::json!({"platform":"openai","refresh":false}),
-            Duration::from_secs(5),
-        )
-        .await
-    });
-    observed_requests(&control, 1).await;
-    let b = bridge.clone();
-    let barrier = tokio::spawn(async move { b.ping().await });
-    timeout(Duration::from_secs(2), async {
-        while bridge.0.capacity.available_permits() != 14 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .expect("barrier was not admitted");
-    let b = bridge.clone();
-    let fast = tokio::spawn(async move {
-        b.request(
-            "account_snapshot",
-            serde_json::json!({"platform":"claude","refresh":false}),
-            Duration::from_secs(5),
-        )
-        .await
-    });
-    sleep(Duration::from_millis(30)).await;
-    assert_eq!(observed_requests(&control, 1).await.len(), 1);
-    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
-    slow.await.unwrap().unwrap();
-    barrier.await.unwrap().unwrap();
-    fast.await.unwrap().unwrap();
-    let calls = observed_requests(&control, 3).await;
-    assert_eq!(calls[1]["method"], "ping");
-    assert_eq!(calls[2]["params"]["platform"], "claude");
-    bridge.stop().await.unwrap();
+async fn observations_and_other_platform_bypass_slow_operation_on_owned_pipe() {
+ let (_dir, bridge, control) = controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
+ let b=bridge.clone();
+ let slow=tokio::spawn(async move { b.request("account_detect",serde_json::json!({"platform":"openai"}),Duration::from_secs(5)).await });
+ observed_requests(&control,1).await;
+ timeout(Duration::from_millis(500),bridge.ping()).await.unwrap().unwrap();
+ timeout(Duration::from_millis(500),bridge.notification_snapshot()).await.unwrap().unwrap();
+ timeout(Duration::from_millis(500),bridge.request("supply_status",serde_json::json!({"platform":"claude"}),Duration::from_secs(5))).await.unwrap().unwrap();
+ let conflict=bridge.request("supply_set_paused",serde_json::json!({"platform":"openai","paused":true}),Duration::from_secs(5)).await.unwrap_err();
+ assert_eq!(conflict.code,"REQUEST_RESOURCE_BUSY");
+ assert!(conflict.message.contains("account_detect"));
+ assert_eq!(observed_requests(&control,4).await.len(),4,"conflicting write emitted bytes");
+ std::fs::write(control.with_extension("json.release"),b"release").unwrap();
+ slow.await.unwrap().unwrap();
+ bridge.stop().await.unwrap();
 }
 
 #[tokio::test]
@@ -182,7 +156,7 @@ async fn canceled_waiters_release_total_budget_without_sending() {
     let slow = tokio::spawn(async move {
         b.request(
             "account_snapshot",
-            serde_json::json!({"platform":"openai","refresh":false}),
+            serde_json::json!({"platform":"openai","refresh":true}),
             Duration::from_secs(5),
         )
         .await
@@ -217,7 +191,7 @@ async fn canceled_waiters_release_total_budget_without_sending() {
     let fast = bridge
         .request(
             "account_snapshot",
-            serde_json::json!({"platform":"claude","refresh":false}),
+            serde_json::json!({"platform":"claude","refresh":true}),
             Duration::from_secs(1),
         )
         .await
@@ -244,7 +218,7 @@ async fn invalid_concurrent_replies_revoke_owned_session() {
         let result = bridge
             .request(
                 "account_snapshot",
-                serde_json::json!({"platform":"claude","refresh":false}),
+                serde_json::json!({"platform":"claude","refresh":true}),
                 Duration::from_secs(2),
             )
             .await;
@@ -284,7 +258,7 @@ async fn sent_deadline_and_abandoned_caller_preserve_live_session() {
         bridge
             .request(
                 "account_snapshot",
-                serde_json::json!({"platform":"claude","refresh":false}),
+                serde_json::json!({"platform":"claude","refresh":true}),
                 Duration::from_secs(1),
             )
             .await
@@ -319,7 +293,7 @@ async fn owned_exit_joins_both_reads_and_rejects_queued_write() {
     let one = tokio::spawn(async move {
         b.request(
             "account_snapshot",
-            serde_json::json!({"platform":"openai","refresh":false}),
+            serde_json::json!({"platform":"openai","refresh":true}),
             Duration::from_secs(5),
         )
         .await
@@ -328,7 +302,7 @@ async fn owned_exit_joins_both_reads_and_rejects_queued_write() {
     let two = tokio::spawn(async move {
         b.request(
             "account_snapshot",
-            serde_json::json!({"platform":"claude","refresh":false}),
+            serde_json::json!({"platform":"claude","refresh":true}),
             Duration::from_secs(5),
         )
         .await
@@ -337,13 +311,7 @@ async fn owned_exit_joins_both_reads_and_rejects_queued_write() {
     let b = bridge.clone();
     let write =
         tokio::spawn(async move { b.supply_set_paused(SupplyPlatform::Openai, false).await });
-    timeout(Duration::from_secs(2), async {
-        while bridge.0.capacity.available_permits() != 13 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .expect("write was not admitted");
+    assert_eq!(write.await.unwrap().unwrap_err().code,"REQUEST_RESOURCE_BUSY");
     let b = bridge.clone();
     let exiting = tokio::spawn(async move {
         b.prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
@@ -358,11 +326,11 @@ async fn owned_exit_joins_both_reads_and_rejects_queued_write() {
     .expect("owned exit did not freeze admission");
     exiting.abort();
     let _ = exiting.await;
-    assert_eq!(write.await.unwrap().unwrap_err().code, "OWNED_EXIT_PENDING");
-    assert_eq!(observed_requests(&control, 2).await.len(), 2);
+    assert!(!observed_requests(&control,2).await.iter().any(|r|r["method"]=="supply_set_paused"));
     std::fs::write(control.with_extension("json.release"), b"release").unwrap();
-    one.await.unwrap().unwrap();
-    two.await.unwrap().unwrap();
+    for result in [one.await.unwrap(), two.await.unwrap()] {
+        if let Err(cause) = result { assert_eq!(cause.code,"BRIDGE_STOPPED"); assert!(cause.message.contains("unconfirmed")); }
+    }
     assert!(
         bridge
             .prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit)
@@ -382,7 +350,7 @@ async fn owned_exit_reclaims_full_budget_before_internal_requests() {
         reads.push(tokio::spawn(async move {
             b.request(
                 "account_snapshot",
-                serde_json::json!({"platform":platform,"refresh":false}),
+                serde_json::json!({"platform":platform,"refresh":true}),
                 Duration::from_secs(8),
             )
             .await
@@ -393,7 +361,7 @@ async fn owned_exit_reclaims_full_budget_before_internal_requests() {
     for _ in 0..14 {
         let b = bridge.clone();
         queued.push(tokio::spawn(async move {
-            b.supply_set_paused(SupplyPlatform::Openai, false).await
+            b.supply_status(SupplyPlatform::Openai).await
         }));
     }
     timeout(Duration::from_secs(2), async {
@@ -453,7 +421,7 @@ async fn platform_reads_bypass_same_platform_waiters_on_owned_pipe() {
         let first = tokio::spawn(async move {
             b.request(
                 "account_snapshot",
-                serde_json::json!({"platform":slow,"refresh":false}),
+                serde_json::json!({"platform":slow,"refresh":true}),
                 Duration::from_secs(5),
             )
             .await
@@ -480,7 +448,7 @@ async fn platform_reads_bypass_same_platform_waiters_on_owned_pipe() {
             Duration::from_millis(250),
             bridge.request(
                 "account_snapshot",
-                serde_json::json!({"platform":fast,"refresh":false}),
+                serde_json::json!({"platform":fast,"refresh":true}),
                 Duration::from_secs(3),
             ),
         )
@@ -511,7 +479,7 @@ async fn queued_account_reply_deadline_does_not_wait_for_child_reaping() {
         first
             .request(
                 "account_snapshot",
-                serde_json::json!({"platform":"openai","refresh":false}),
+                serde_json::json!({"platform":"openai","refresh":true}),
                 Duration::from_millis(250),
             )
             .await
@@ -521,7 +489,7 @@ async fn queued_account_reply_deadline_does_not_wait_for_child_reaping() {
     let cause = bridge
         .request(
             "account_snapshot",
-            serde_json::json!({"platform":"openai","refresh":false}),
+            serde_json::json!({"platform":"openai","refresh":true}),
             Duration::from_millis(150),
         )
         .await
@@ -591,7 +559,7 @@ async fn account_native_commands_validate_typed_requests_without_expanding_gener
     }
     invoke(
         "account_snapshot",
-        serde_json::json!({"platform":"openai","refresh":false}),
+        serde_json::json!({"platform":"openai","refresh":true}),
     )
     .unwrap();
     let reply:Value=invoke("account_action",serde_json::json!({"request":{"platform":"openai","revision":0,"candidate_ref":"a".repeat(48),"action":"select","confirmed":false}})).unwrap().deserialize().unwrap();
@@ -675,6 +643,7 @@ pub(crate) fn fixture(mode: &str) -> LaunchSpec {
         value => value,
     };
     LaunchSpec {
+        diagnostics: None,
         program,
         bundle: None,
         args: vec![
@@ -839,6 +808,7 @@ fn native_spec() -> LaunchSpec {
     )
     .unwrap();
     LaunchSpec {
+        diagnostics: None,
         program: binary,
         bundle: None,
         args: vec!["desktop".into()],
@@ -964,6 +934,7 @@ async fn signed_app_bee_handshakes_pings_and_reaps_without_gui_or_path_lookup() 
     )
     .unwrap();
     let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None,
         program: bundle.join("Contents/MacOS/bee"),
         bundle: Some(bundle),
         args: vec!["desktop".into()],
@@ -1011,7 +982,7 @@ async fn device_business_failure_keeps_owned_bridge_ready() {
 }
 
 #[tokio::test]
-async fn unsent_queue_timeout_does_not_kill_a_healthy_device_session() {
+async fn observation_remains_available_during_slow_device_operation() {
     let mut spec = fixture("slow-device");
     spec.timeout = Duration::from_millis(500);
     let bridge = Bridge::start(spec);
@@ -1019,8 +990,7 @@ async fn unsent_queue_timeout_does_not_kill_a_healthy_device_session() {
     let slow = bridge.clone();
     let pending = tokio::spawn(async move { slow.device_status().await });
     sleep(Duration::from_millis(50)).await;
-    let cause = bridge.ping().await.unwrap_err();
-    assert_eq!(cause.code, "REQUEST_QUEUE_TIMEOUT");
+    timeout(Duration::from_millis(250), bridge.ping()).await.unwrap().unwrap();
     pending.await.unwrap().unwrap();
     assert_eq!(bridge.status().state, BridgePhase::Ready);
     bridge.ping().await.unwrap();
@@ -1316,10 +1286,10 @@ async fn unsent_waiters_keep_the_sent_request_terminal_evidence() {
     let (_dir, bridge, control) =
         controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
     let b = bridge.clone();
-    let sent = tokio::spawn(async move { b.account_snapshot(SupplyPlatform::Openai, false).await });
+    let sent = tokio::spawn(async move { b.account_snapshot(SupplyPlatform::Openai, true).await });
     observed_requests(&control, 1).await;
     let b = bridge.clone();
-    let queued = tokio::spawn(async move { b.ping().await });
+    let queued = tokio::spawn(async move { b.supply_status(SupplyPlatform::Openai).await });
     timeout(Duration::from_secs(1), async {
         while bridge.0.capacity.available_permits() != 14 {
             tokio::task::yield_now().await;
@@ -1741,84 +1711,17 @@ async fn pending_command_bypasses_business_queue_and_timeout_events_persist_safe
 }
 
 #[tokio::test]
-async fn timed_out_original_retains_shared_barrier_and_total_sixteen_budget() {
-    let (_dir, bridge, control) =
-        controlled_bridge(serde_json::json!({"slow":"openai"}), "parallel-reads").await;
-    assert_eq!(
-        bridge
-            .request(
-                "account_snapshot",
-                serde_json::json!({"platform":"openai"}),
-                Duration::from_millis(100)
-            )
-            .await
-            .unwrap_err()
-            .code,
-        "RESPONSE_TIMEOUT"
-    );
-    bridge
-        .request(
-            "supply_status",
-            serde_json::json!({"platform":"claude"}),
-            Duration::from_secs(1),
-        )
-        .await
-        .unwrap();
-    let b = bridge.clone();
-    let write =
-        tokio::spawn(async move { b.supply_set_paused(SupplyPlatform::Openai, true).await });
-    timeout(Duration::from_secs(1), async {
-        while bridge.0.capacity.available_permits() != 14 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
-    let mut queued = Vec::new();
-    for _ in 0..14 {
-        let b = bridge.clone();
-        queued.push(tokio::spawn(async move {
-            b.supply_status(SupplyPlatform::Claude).await
-        }));
-    }
-    timeout(Duration::from_secs(1), async {
-        while bridge.0.capacity.available_permits() != 0 {
-            tokio::task::yield_now().await;
-        }
-    })
-    .await
-    .unwrap();
-    assert_eq!(bridge.ping().await.unwrap_err().code, "REQUEST_NOT_QUEUED");
-    assert_eq!(bridge.pending_requests().requests.len(), 1);
-    sleep(Duration::from_millis(50)).await;
-    assert_eq!(
-        observed_requests(&control, 2).await.len(),
-        2,
-        "queued reads bypassed write barrier after timeout"
-    );
-    for task in queued {
-        task.abort();
-        let _ = task.await;
-    }
-    std::fs::write(control.with_extension("json.release"), b"release").unwrap();
-    write.await.unwrap().unwrap();
-    bridge.ping().await.unwrap();
-    let frames = observed_requests(&control, 4).await;
-    assert_eq!(
-        frames
-            .iter()
-            .filter(|v| v["method"] == "supply_set_paused")
-            .count(),
-        1
-    );
-    assert_eq!(
-        frames
-            .iter()
-            .filter(|v| v["method"] == "account_snapshot")
-            .count(),
-        1
-    );
-    bridge.stop().await.unwrap();
+async fn timed_out_original_retains_only_its_resource_until_real_reply() {
+ let (_dir, bridge, control)=controlled_bridge(serde_json::json!({"slow":"openai"}),"parallel-reads").await;
+ assert_eq!(bridge.request("account_detect",serde_json::json!({"platform":"openai"}),Duration::from_millis(100)).await.unwrap_err().code,"RESPONSE_TIMEOUT");
+ assert_eq!(bridge.pending_requests().requests.len(),1);
+ bridge.ping().await.unwrap();
+ bridge.request("supply_status",serde_json::json!({"platform":"claude"}),Duration::from_secs(1)).await.unwrap();
+ assert_eq!(bridge.supply_set_paused(SupplyPlatform::Openai,true).await.unwrap_err().code,"REQUEST_RESOURCE_BUSY");
+ assert_eq!(observed_requests(&control,3).await.len(),3);
+ std::fs::write(control.with_extension("json.release"),b"release").unwrap();
+ timeout(Duration::from_secs(1),async { while !bridge.pending_requests().requests.is_empty() { tokio::task::yield_now().await; } }).await.unwrap();
+ bridge.stop().await.unwrap();
 }
 
 #[tokio::test]
@@ -2144,7 +2047,7 @@ async fn profile_prepare_blocks_runtime_restore_before_ipc() {
  let source_path=std::path::PathBuf::from(env!("BEE_SOURCE_FILE"));
  let source=BuildSource::parse(&std::fs::read(&source_path).unwrap(),env!("BEE_TARGET"),env!("BEE_REVISION"),env!("BEE_TEE_REVISION")).unwrap();
  let program=std::path::PathBuf::from(source_path.to_str().unwrap().strip_suffix(".source.json").unwrap());
- let spec=LaunchSpec{program,bundle:None,args:vec!["desktop".into()],source,timeout:Duration::from_secs(5)}.for_profile(&profile,crate::profiles::ProfileMode::Prepare).unwrap();
+ let spec=LaunchSpec{diagnostics: None, program,bundle:None,args:vec!["desktop".into()],source,timeout:Duration::from_secs(5)}.for_profile(&profile,crate::profiles::ProfileMode::Prepare).unwrap();
  let bridge=Bridge::start(spec);wait(&bridge,BridgePhase::Ready).await;
  let err=bridge.runtime_restore().await.unwrap_err();assert_eq!(err.code,"PROFILE_MODE_RESTRICTED");assert!(bridge.pending_requests().requests.is_empty());
  let context=bridge.device_context().await.unwrap();let revision=context.result["context"]["binding_revision"].clone();
@@ -2155,4 +2058,36 @@ async fn profile_prepare_blocks_runtime_restore_before_ipc() {
  let reply=bridge.request("desktop_switch",params,Duration::from_secs(5)).await.unwrap();assert_eq!(reply.result["error"]["code"],"HIVE_SWITCH_FAILED");assert!(reply.result["error"]["message"].as_str().unwrap().contains("context changed"));
  }
  bridge.ping().await.unwrap();bridge.stop().await.unwrap();stopped.store(true,Ordering::SeqCst);server.join().unwrap();
+}
+
+#[tokio::test]
+async fn failure_history_is_drained_to_disk_before_owned_process_stop_returns() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = Arc::new(crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf()));
+    let mut spec = fixture("failure-logging");
+    spec.diagnostics = Some(logs);
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    bridge.ping().await.unwrap();
+    bridge.stop().await.unwrap();
+    let reopened = crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf());
+    let entries = reopened.export_entries().unwrap();
+    assert!(entries.len() >= 2, "hello and ping evidence must reach disk without subscribers");
+    assert!(entries.iter().all(|entry| entry.evidence["failure_message"].contains("TEE inbox public key not configured")));
+}
+
+#[tokio::test]
+async fn missing_failure_history_is_visible_without_blocking_owned_exit() {
+    let dir = tempfile::tempdir().unwrap();
+    let logs = Arc::new(crate::diagnostic_log::DiagnosticLogStore::new(dir.path().to_path_buf()));
+    let mut spec = fixture("owned-exit");
+    spec.diagnostics = Some(logs.clone());
+    let bridge = Bridge::start(spec);
+    wait(&bridge, BridgePhase::Ready).await;
+    logs.note_write_error(error("DIAGNOSTIC_LOG_IO", "publish failure: storage full"));
+    let failure = bridge.request("runtime_snapshot", serde_json::json!({}), Duration::from_secs(2)).await.unwrap_err();
+    assert_eq!(failure.code, "DIAGNOSTIC_PERSISTENCE_FAILED");
+    assert!(failure.message.contains("storage full"));
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    assert!(bridge.prepare_owned_exit(crate::runtime::OwnedExitReason::AppExit).await.unwrap().child_reaped);
 }

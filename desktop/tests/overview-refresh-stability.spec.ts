@@ -197,7 +197,7 @@ test('expiry during a slow refresh still blocks supply writes and marks quota hi
  await scene(page,'running');const card=page.locator('[data-account-platform=openai]');await expect(card.locator('.native-account-row-actions button')).toBeEnabled();
  await page.evaluate(()=>{const account=(window as any).accounts.openai;account.revision++;account.capabilities[0].valid_until=new Date(Date.now()+15000).toISOString();});
  await page.clock.runFor(10100);await expect.poll(async()=>(await calls(page,'account_snapshot')).filter((c:any)=>c.args.platform==='openai').length).toBeGreaterThan(1);
- await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
+ await hold(page,'runtime_snapshot');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
  await page.clock.runFor(30100);await expect(card.locator('.native-account-row-actions button')).toBeDisabled();
  await expect(card.locator('.quota-history')).toContainText(['历史数据，已过期','上次额度观测']);
  await expect(card.locator('.quota-value').first()).toContainText('3');await noWrites(page);await page.evaluate(()=>(window as any).releaseRefresh());

@@ -21,6 +21,7 @@ export interface DeviceClient {
  recoveryPrepare():Promise<DeviceRecoveryView>;
  recoveryConfirm(operation_id:string,expected_revision:number,decision:RecoveryDecision):Promise<DeviceRecoveryView>;
  recoveryStatus():Promise<DeviceRecoveryView>;
+ recoveryAdvance?():Promise<DeviceRecoveryView>;
  recoveryOpen():Promise<DeviceRecoveryView>;
  context?():Promise<DeviceContext|DeviceContextFailure>;
   status(): Promise<DeviceView>;
@@ -86,7 +87,8 @@ export function createDeviceClient(invoke: DeviceInvoke): DeviceClient {
     async recoveryStart(hive,name){return decodeDeviceRecoveryReply(await invoke('device_recovery_start',{hive,name}));},
     async recoveryPrepare(){return decodeDeviceRecoveryReply(await invoke('device_recovery_prepare'));},
     async recoveryConfirm(operation_id,expected_revision,decision){return decodeDeviceRecoveryReply(await invoke('device_recovery_confirm',{operationId:operation_id,expectedRevision:expected_revision,decision}));},
-    async recoveryStatus(){return decodeDeviceRecoveryReply(await invoke('device_recovery_status'));},
+    async recoveryStatus(){return decodeDeviceRecoveryReply(await invoke('device_recovery_snapshot'));},
+    async recoveryAdvance(){return decodeDeviceRecoveryReply(await invoke('device_recovery_status'));},
     async recoveryOpen(){return decodeDeviceRecoveryReply(await invoke('device_open'));},
     async context() {
      const reply=await invoke('device_context');

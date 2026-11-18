@@ -8,14 +8,50 @@ pub(crate) struct Diagnostics {
 
 #[cfg(test)]
 pub(crate) async fn drain<R: AsyncRead + Unpin>(input: &mut R) -> std::io::Result<Diagnostics> {
-    drain_inner(input, None).await
+    drain_inner(input, None, None).await
 }
 
+#[cfg(test)]
 pub(crate) async fn drain_with_events<R: AsyncRead + Unpin>(
     input: &mut R,
     events: tokio::sync::broadcast::Sender<serde_json::Value>,
 ) -> std::io::Result<Diagnostics> {
-    drain_inner(input, Some(events)).await
+    drain_inner(input, Some(events), None).await
+}
+
+pub(crate) async fn drain_with_store<R: AsyncRead + Unpin>(
+    input: &mut R,
+    events: tokio::sync::broadcast::Sender<serde_json::Value>,
+    store: Option<std::sync::Arc<crate::diagnostic_log::DiagnosticLogStore>>,
+) -> std::io::Result<Diagnostics> {
+    drain_inner(input, Some(events), store).await
+}
+
+fn failure_event(line: &[u8]) -> std::io::Result<Option<serde_json::Value>> {
+    let Some(raw) = line.strip_prefix(b"BEE_DESKTOP_FAILURE ") else {
+        return Ok(None);
+    };
+    let parsed: HttpEvent = serde_json::from_slice(raw).map_err(|_| {
+        std::io::Error::other("failure event rejected: required=unique structured fields")
+    })?;
+    let valid = parsed.code == "failure_observed"
+        && parsed.level == "error"
+        && parsed.module == "bridge"
+        && parsed.platform.is_none()
+        && crate::runtime_protocol::timestamp(&parsed.time)
+        && parsed.evidence.len() == 3
+        && ["check", "failure_code", "failure_message"]
+            .iter()
+            .all(|k| parsed.evidence.contains_key(*k))
+        && crate::diagnostic_log::sanitize_evidence(&parsed.evidence) == parsed.evidence;
+    if !valid {
+        return Err(std::io::Error::other(
+            "failure event rejected: required=bounded sanitized failure evidence",
+        ));
+    }
+    Ok(Some(serde_json::from_slice(raw).map_err(|_| {
+        std::io::Error::other("failure event JSON rejected")
+    })?))
 }
 
 // Serde's named fields reject duplicates before projection; the nested map
@@ -119,11 +155,13 @@ fn http_event(line: &[u8]) -> Option<serde_json::Value> {
 async fn drain_inner<R: AsyncRead + Unpin>(
     input: &mut R,
     events: Option<tokio::sync::broadcast::Sender<serde_json::Value>>,
+    store: Option<std::sync::Arc<crate::diagnostic_log::DiagnosticLogStore>>,
 ) -> std::io::Result<Diagnostics> {
     let mut diagnostics = Diagnostics::default();
     let mut buffer = [0u8; 2048];
     let mut line = Vec::new();
     let mut oversized = false;
+    let mut write_failure = None;
     loop {
         let count = input.read(&mut buffer).await.map_err(|cause| {
             std::io::Error::new(
@@ -135,21 +173,66 @@ async fn drain_inner<R: AsyncRead + Unpin>(
             )
         })?;
         if count == 0 {
-            return Ok(diagnostics);
+            if line.starts_with(b"BEE_DESKTOP_FAILURE ") {
+                return Err(std::io::Error::other(
+                    "failure event interrupted before newline; evidence incomplete",
+                ));
+            }
+            return match write_failure {
+                Some(cause) => Err(cause),
+                None => Ok(diagnostics),
+            };
         }
         diagnostics.bytes = diagnostics.bytes.saturating_add(count as u64);
         if let Some(events) = &events {
             for &byte in &buffer[..count] {
                 if byte == b'\n' {
                     if !oversized {
-                        if let Some(event) = http_event(&line) {
+                        let failure = match failure_event(&line) {
+                            Ok(event) => event,
+                            Err(cause) => {
+                                if let Some(store) = &store {
+                                    store.note_write_error(crate::protocol::BridgeError {
+                                        code: "DIAGNOSTIC_FAILURE_REJECTED".into(),
+                                        message: cause.to_string(),
+                                        details: None,
+                                    });
+                                }
+                                write_failure = Some(cause);
+                                None
+                            }
+                        };
+                        if let Some(event) = failure {
+                            if let Some(store) = &store {
+                                if let Err(cause) = store.record(event) {
+                                    // Keep draining so a broken log disk cannot block the owned runtime's pipe.
+                                    // Read commands expose the store's write_error immediately.
+                                    write_failure = Some(std::io::Error::other(format!(
+                                        "persist failure evidence: {}: {}",
+                                        cause.code, cause.message
+                                    )));
+                                }
+                            }
+                        } else if let Some(event) = http_event(&line) {
                             let _ = events.send(event);
                         }
                     }
                     line.clear();
                     oversized = false;
                 } else if !oversized {
-                    if line.len() == 8192 {
+                    if line.len() == 256 * 1024 {
+                        if line.starts_with(b"BEE_DESKTOP_FAILURE ") {
+                            let message =
+                                "failure event exceeds maximum=262144 bytes; evidence incomplete";
+                            if let Some(store) = &store {
+                                store.note_write_error(crate::protocol::BridgeError {
+                                    code: "DIAGNOSTIC_FAILURE_REJECTED".into(),
+                                    message: message.into(),
+                                    details: None,
+                                });
+                            }
+                            write_failure = Some(std::io::Error::other(message));
+                        }
                         line.clear();
                         oversized = true;
                     } else {
@@ -212,5 +295,58 @@ mod tests {
         ] {
             assert!(http_event(duplicate.as_bytes()).is_none());
         }
+    }
+}
+
+#[cfg(test)]
+mod failure_tests {
+    use super::*;
+    use crate::diagnostic_log::DiagnosticLogStore;
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn background_failures_persist_without_a_ui_subscriber() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = Arc::new(DiagnosticLogStore::new(dir.path().to_path_buf()));
+        let (events, _) = tokio::sync::broadcast::channel(1);
+        let event = serde_json::json!({"time":"2026-11-17T00:00:00Z","level":"error","module":"bridge","platform":null,"code":"failure_observed","evidence":{"check":"hive_request","failure_code":"http_rejected","failure_message":"POST /api/bee/maintenance HTTP 503: tee_unavailable; inbox missing"}});
+        let bytes = format!("BEE_DESKTOP_FAILURE {}\n", event)
+            .repeat(80)
+            .into_bytes();
+        drain_with_store(&mut bytes.as_slice(), events, Some(store))
+            .await
+            .unwrap();
+        let reopened = DiagnosticLogStore::new(dir.path().to_path_buf());
+        let saved = reopened.export_entries().unwrap();
+        assert_eq!(
+            saved.len(),
+            80,
+            "failures cannot drop like the 64-entry timing queue"
+        );
+        assert!(saved
+            .iter()
+            .all(|e| e.evidence["failure_message"].contains("inbox missing")));
+    }
+    #[tokio::test]
+    async fn failure_log_write_errors_and_secret_events_are_not_silenced() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("not-a-directory");
+        std::fs::write(&path, b"occupied").unwrap();
+        let event = serde_json::json!({"time":"2026-11-17T00:00:00Z","level":"error","module":"bridge","platform":null,"code":"failure_observed","evidence":{"check":"hive_request","failure_code":"http_rejected","failure_message":"HTTP 503: inbox unavailable"}});
+        let bytes = format!("BEE_DESKTOP_FAILURE {}\n", event).into_bytes();
+        let (events, _) = tokio::sync::broadcast::channel(1);
+        let err = drain_with_store(
+            &mut bytes.as_slice(),
+            events,
+            Some(Arc::new(DiagnosticLogStore::new(path))),
+        )
+        .await
+        .err()
+        .unwrap();
+        assert!(err.to_string().contains("persist failure evidence"));
+        let hostile = bytes.iter().copied().collect::<Vec<_>>();
+        let hostile = String::from_utf8(hostile)
+            .unwrap()
+            .replace("HTTP 503: inbox unavailable", "password=SECRET_MARKER");
+        assert!(failure_event(hostile.trim_end().as_bytes()).is_err());
     }
 }

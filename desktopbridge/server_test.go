@@ -422,3 +422,36 @@ func TestRunInvalidEnvelopePreservesUnambiguousID(t *testing.T) {
 		}
 	}
 }
+
+// Business scripts await each receipt. Pipelined requests now run concurrently;
+// EOF explicitly cancels unfinished handlers instead of committing the script.
+func runSequentialFrames(t *testing.T, script string, output io.Writer, run func(io.Reader, io.Writer) error) error {
+	t.Helper()
+	in, feed := io.Pipe()
+	out, writer := io.Pipe()
+	defer in.Close()
+	defer feed.Close()
+	defer out.Close()
+	defer writer.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	stop := context.AfterFunc(ctx, func() { in.Close(); feed.Close(); out.Close(); writer.Close() })
+	defer stop()
+	done := make(chan error, 1)
+	go func() { done <- run(in, writer); writer.Close(); in.Close() }()
+	reader := bufio.NewReader(out)
+	for _, line := range strings.Split(strings.TrimSpace(script), "\n") {
+		if _, err := io.WriteString(feed, line+"\n"); err != nil {
+			return err
+		}
+		response, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+		if _, err := io.WriteString(output, response); err != nil {
+			return err
+		}
+	}
+	feed.Close()
+	return <-done
+}

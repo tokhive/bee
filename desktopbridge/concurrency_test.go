@@ -23,6 +23,19 @@ type controlledSupplies struct {
 	exited  chan string
 }
 
+func (s *controlledSupplies) Status(ctx context.Context) (bee.DeviceView, error) {
+	if s.slow != "device" {
+		return s.fakeDevice.Status(ctx)
+	}
+	s.entered <- "device"
+	select {
+	case <-s.release:
+		return bee.DeviceView{State: "unbound"}, nil
+	case <-ctx.Done():
+		return bee.DeviceView{}, ctx.Err()
+	}
+}
+
 func (s *controlledSupplies) SupplyStatus(ctx context.Context, platform string) (bee.DesktopSupply, error) {
 	s.entered <- platform
 	defer func() { s.exited <- platform }()
@@ -57,6 +70,8 @@ func openLiveBridge(t *testing.T, service *controlledSupplies, accounts ...deskt
 	go func() {
 		if len(accounts) == 0 {
 			b.done <- desktopbridge.RunWithDevices(ctx, in, writer, io.Discard, "test", service)
+		} else if _, ok := accounts[0].(desktopbridge.Notifications); ok {
+			b.done <- desktopbridge.RunWithExperience(ctx, in, writer, io.Discard, "test", service, accounts[0], &runtimeFixture{}, &authorizeFixture{}, &diagnosticFixture{}, &notificationNetwork{})
 		} else {
 			b.done <- desktopbridge.RunWithAccounts(ctx, in, writer, io.Discard, "test", service, accounts[0])
 		}
@@ -96,27 +111,54 @@ func openLiveBridge(t *testing.T, service *controlledSupplies, accounts ...deskt
 	return b
 }
 
-func TestSharedBarrierWaitsForEarlierReadsAndFencesLaterPlatform(t *testing.T) {
+func TestPlatformWriteDoesNotWaitForUnrelatedPlatform(t *testing.T) {
 	s := controlledService("openai")
 	b := openLiveBridge(t, s)
 	b.send(t, supplyRequest("slow", "supply_status", `{"platform":"openai"}`))
 	<-s.entered
-	go func() {
-		_, _ = io.WriteString(b.feed, supplyRequest("write", "supply_set_paused", `{"platform":"claude","paused":true}`)+supplyRequest("later", "supply_status", `{"platform":"claude"}`))
-	}()
-	select {
-	case event := <-s.entered:
-		t.Fatalf("barrier overtook slow read: %s", event)
-	case <-time.After(50 * time.Millisecond):
+	b.send(t, supplyRequest("write", "supply_set_paused", `{"platform":"claude","paused":true}`))
+	if got := b.next(t); got.ID != "write" || got.Error != nil {
+		t.Fatalf("unrelated write blocked: %+v", got)
+	}
+	b.send(t, supplyRequest("conflict", "supply_set_paused", `{"platform":"openai","paused":true}`))
+	if got := b.next(t); got.ID != "conflict" || got.Error == nil || got.Error.Code != "REQUEST_RESOURCE_BUSY" {
+		t.Fatalf("conflicting write did not reject immediately: %+v", got)
+	}
+	b.send(t, request("progress", "ping"))
+	if b.next(t).ID != "progress" {
+		t.Fatal("progress hidden by conflict")
 	}
 	close(s.release)
-	for _, id := range []string{"slow", "write", "later"} {
-		if frame := b.next(t); frame.ID != id {
-			t.Fatalf("response=%s want=%s", frame.ID, id)
-		}
+	if b.next(t).ID != "slow" {
+		t.Fatal("original result lost")
 	}
-	if <-s.entered != "write:claude" || <-s.entered != "claude" {
-		t.Fatal("later read crossed write barrier")
+}
+
+func TestNotificationsBypassHeldDeviceAndPlatformOperations(t *testing.T) {
+	for _, slow := range []string{"device", "openai"} {
+		t.Run(slow, func(t *testing.T) {
+			s := controlledService(slow)
+			accounts := &notificationAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil)}
+			b := openLiveBridge(t, s, accounts)
+			frame := request("slow", "device_status")
+			if slow == "openai" {
+				frame = supplyRequest("slow", "supply_status", `{"platform":"openai"}`)
+			}
+			b.send(t, frame)
+			select {
+			case <-s.entered:
+			case <-time.After(time.Second):
+				t.Fatal("controlled operation did not enter")
+			}
+			b.send(t, supplyRequest("notification", "notification_snapshot", `{}`))
+			if got := b.next(t); got.ID != "notification" || got.Error != nil || !bytes.Contains(got.Result, []byte(`"facts":[]`)) {
+				t.Fatalf("notification observation blocked or lost: %+v", got)
+			}
+			close(s.release)
+			if got := b.next(t); got.ID != "slow" || got.Error != nil {
+				t.Fatalf("original operation lost: %+v", got)
+			}
+		})
 	}
 }
 
@@ -128,7 +170,7 @@ func TestReadWorkersJoinOnTerminalInput(t *testing.T) {
 			b.send(t, supplyRequest("active", "supply_status", `{"platform":"openai"}`))
 			<-s.entered
 			b.send(t, supplyRequest("queued", "supply_status", `{"platform":"openai"}`))
-			b.send(t, supplyRequest("queued-write", "supply_set_paused", `{"platform":"claude","paused":true}`))
+			b.send(t, supplyRequest("queued-write", "supply_set_paused", `{"platform":"openai","paused":true}`))
 			switch ending {
 			case "eof":
 				b.feed.Close()
@@ -168,7 +210,7 @@ func TestEOFCancelsReadsBehindAcceptedBarrier(t *testing.T) {
 	b.send(t, supplyRequest("slow", "supply_status", `{"platform":"openai"}`))
 	<-s.entered
 	b.send(t, request("barrier", "ping"))
-	b.send(t, supplyRequest("queued-write", "supply_set_paused", `{"platform":"claude","paused":true}`))
+	b.send(t, supplyRequest("queued-write", "supply_set_paused", `{"platform":"openai","paused":true}`))
 	b.feed.Close()
 	select {
 	case <-b.ended:
@@ -248,7 +290,7 @@ func TestAccountAndSupplyReadsShareOnePlatformLane(t *testing.T) {
 	b := openLiveBridge(t, s, &controlledAccounts{DesktopAccounts: bee.NewDesktopAccounts(nil), reads: s})
 	b.send(t, supplyRequest("detect", "account_detect", `{"platform":"openai","directory":null,"store":"file","mode":"official"}`))
 	<-s.entered
-	b.send(t, supplyRequest("snapshot", "account_snapshot", `{"platform":"openai","refresh":false}`))
+	b.send(t, supplyRequest("snapshot", "account_snapshot", `{"platform":"openai","refresh":true}`))
 	b.send(t, supplyRequest("supply", "supply_status", `{"platform":"openai"}`))
 	b.send(t, supplyRequest("other", "supply_status", `{"platform":"claude"}`))
 	if entered := <-s.entered; entered != "claude" {
@@ -361,7 +403,7 @@ func TestWriterFailureCancelsReadsBeforeOwnerUnblocksInput(t *testing.T) {
 	<-s.entered
 	_, _ = io.WriteString(feed, supplyRequest("fast", "supply_status", `{"platform":"claude"}`))
 	wait(t, writer.started)
-	_, _ = io.WriteString(feed, supplyRequest("queued-write", "supply_set_paused", `{"platform":"claude","paused":true}`))
+	_, _ = io.WriteString(feed, supplyRequest("queued-write", "supply_set_paused", `{"platform":"openai","paused":true}`))
 	close(writer.release)
 	select {
 	case <-writer.failed:
@@ -437,5 +479,20 @@ func TestPlatformReadsBypassSamePlatformWaiters(t *testing.T) {
 				t.Fatal("same-platform response order changed")
 			}
 		})
+	}
+}
+
+func TestObservationBypassesSlowPlatformAndWaitingMutation(t *testing.T) {
+	s := controlledService("openai")
+	b := openLiveBridge(t, s)
+	b.send(t, supplyRequest("slow", "supply_status", `{"platform":"openai"}`))
+	<-s.entered
+	b.send(t, request("observe", "ping"))
+	if got := b.next(t); got.ID != "observe" {
+		t.Fatalf("observation blocked by unrelated platform: %+v", got)
+	}
+	close(s.release)
+	if b.next(t).ID != "slow" {
+		t.Fatal("slow response lost")
 	}
 }

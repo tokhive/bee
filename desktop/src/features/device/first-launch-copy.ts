@@ -27,7 +27,7 @@ const english:Record<string,string>={
  '接入后才能使用该账号参与贡献。':'Connect an account before using it to contribute.',
  '前往接入 AI 账号':'Connect an AI account','进入概览':'Go to overview',
  'Hive 地址':'Hive address','设备名称':'Device name',
- '填写你要连接的 Hive 服务地址。':'Enter the address of the Hive service you want to connect to.',
+ '默认连接 TokHive 官方 Hive，也可以改为其他 Hive 地址。':'Bee connects to the official TokHive Hive by default; you can enter another Hive address instead.',
  '用于在 Hive 中识别这台设备。':'Used to identify this device in Hive.',
  '正在创建配对请求…':'Creating pairing request…','继续绑定设备':'Continue to bind device',
  '正在完成设备绑定':'Completing device binding','尚无法确认配对请求结果':'Pairing request result is not yet confirmed',

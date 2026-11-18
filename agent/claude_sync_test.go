@@ -101,7 +101,7 @@ func TestClaudeRuntimeSynchronizesOnlyVerifiedCurrentAccessToken(t *testing.T) {
 					t.Fatal("nonofficial profile endpoint")
 				}
 				if scenario == "profile_failure" {
-					return claudeProfileResponse(429, "synthetic-private-error"), nil
+					return claudeProfileResponse(429, "rate limit exceeded; credential="+credential.secret.Token), nil
 				}
 				return claudeProfileResponse(200, claudeTestProfile), nil
 			})}

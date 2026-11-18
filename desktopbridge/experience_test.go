@@ -30,7 +30,9 @@ func TestDesktopDiagnosticsExperienceRegistration(t *testing.T) {
 	d := &diagnosticFixture{}
 	var out bytes.Buffer
 	input := hello + supplyRequest("bad", "diagnostics_start", `{"path":"SECRET_MARKER"}`) + supplyRequest("start", "diagnostics_start", `{}`) + request("ping", "ping")
-	err := desktopbridge.RunWithExperience(context.Background(), strings.NewReader(input), &out, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, nil, d, nil)
+	err := runSequentialFrames(t, input, &out, func(inputStream io.Reader, outputStream io.Writer) error {
+		return desktopbridge.RunWithExperience(context.Background(), inputStream, outputStream, io.Discard, "test", &fakeSupply{}, bee.NewDesktopAccounts(nil), &runtimeFixture{}, nil, d, nil)
+	})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -114,6 +114,16 @@ func TestMenuPairInitialCancellationDoesNotCreateCredential(t *testing.T) {
 		t.Fatal(e)
 	}
 }
+func TestMenuPairOffersTheDefaultHive(t *testing.T) {
+	m, out := menuFixture(t, "\n0\n")
+	if e := m.pairing(); e != nil {
+		t.Fatal(e)
+	}
+	text := out.String()
+	if !strings.Contains(text, "["+DefaultHive+"]: ") || !strings.Contains(text, "设备名称") {
+		t.Fatal(text)
+	}
+}
 func TestMenuAccountConfirmationRejectsChangedRecord(t *testing.T) {
 	var posts int
 	count := 0

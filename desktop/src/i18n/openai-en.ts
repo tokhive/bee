@@ -1,4 +1,5 @@
 export const openaiEnglish:Record<string,string>={
+  "接单选择：已暂停；准备就绪后可恢复。": "Requests are paused. You can resume once preparation is complete.",
   "配置目录": "Configuration directory",
   "Claude 账号详情": "Claude account details",
   "使用 Claude Code 默认目录": "Use the default Claude Code directory",

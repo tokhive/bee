@@ -146,7 +146,7 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .account-list-compact .claude-expired-flow .native-account-condition{margin:0;line-height:22px;color:var(--ink);font-size:13px}
 .account-list-compact .claude-expired-flow .account-action-help{margin-top:8px;font-size:12px;line-height:20px}
 .auto-service-accounts .account-list-compact .claude-expired-flow>.native-account-row-actions{grid-column:1;grid-row:4;margin:8px 0 0 43px;justify-self:start;align-self:start;min-height:34px}
-.account-list-compact .claude-expired-flow>.native-account-row-actions>button[data-slot=button]{position:absolute;right:19px;top:22px}
+.account-list-compact .claude-expired-flow>.native-account-row-actions>button[aria-label]{position:absolute;right:19px;top:22px}
 .account-list-compact .claude-expired-flow>.account-list-quota{grid-column:1;grid-row:5;margin:14px 0 0 43px}
 .account-list-compact .claude-expired-flow .account-list-window{max-width:360px}
 
@@ -212,3 +212,8 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .detail-sheet .claude-source-form .ui-button,.claude-detail-actions .ui-button{font-size:13px;font-weight:400;line-height:19.5px;padding:5px 12px;box-shadow:none}
 
 .claude-source-form input::placeholder{color:var(--muted);opacity:1}
+
+.account-list-compact .claude-preparation-flow .native-account-fingerprint{line-height:16.5px}
+.account-list-compact .claude-preparation-flow .native-account-condition{line-height:19.5px}
+.account-list-compact .claude-preparation-flow .account-action-help{line-height:20.4px}
+.account-list-compact .claude-preparation-flow>.native-account-row-actions>.account-action-help{margin:0}

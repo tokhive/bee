@@ -152,3 +152,15 @@ test('Claude login confirmation cancellation returns to detail and restores keyb
  await confirmation.getByRole('button',{name:'取消',exact:true}).click();await expect(details).toBeVisible();await expect(details.getByRole('button',{name:'重新登录',exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await expect(details).toHaveCount(0);await expect(row.getByRole('button',{name:'Claude 详情'})).toBeFocused();expect(await writes(page)).toEqual([]);
 });
+
+for(const paused of [true,false])test(`Claude preparation shows confirmed intake steps without changing pause ${paused}`,async({page})=>{
+ await page.clock.install();
+ const claude=accountFixture('claude') as AccountSnapshot,fp='c'.repeat(64),now=new Date().toISOString();
+ claude.candidate={state:'available',reference:'a'.repeat(48),source:{directory:null,store:'keychain'},fingerprint:fp,plan:'pro',expires_at:'2099-01-01T00:00:00Z',identity_verified:true,observed_at:now,error:null};claude.selection={state:'selected',fingerprint:fp,observed_at:now,error:null};
+ claude.authorization={state:'preparing',fingerprint:fp,observed_at:now,error:null};claude.operation={id:'e'.repeat(48),kind:'select',platform:'claude',state:'running',revision:claude.revision,error:null};
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{claude,openai:accountFixture('openai')},runtimeEnabled:true,scenarios:{autoService:true,previewSources:true}})});(${installOpenaiReplies.toString()})();window.paused.claude=${paused};`});
+
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();const row=page.getByRole('region',{name:'Claude 账号',exact:true});
+ await expect(row.getByRole('list',{name:'Claude 当前流程'})).toContainText('确认接入');await expect(row.locator('[aria-current=step]')).toHaveText('2准备接单');await expect(row.getByRole('status')).toHaveText('正在准备接单…');await expect(row.locator('.account-list-quota')).toHaveCount(0);await expect(row).toContainText('这不改变你的接单选择');
+ await row.getByRole('button',{name:'Claude 详情'}).click();await expect(page.getByRole('dialog')).toContainText(fp.slice(0,16));await page.keyboard.press('Escape');expect(await writes(page)).toEqual([]);expect(await page.evaluate(()=>(window as any).paused.claude)).toBe(paused);if(!paused){await row.getByRole('button',{name:'暂停接单',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).paused.claude)).toBe(true);expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(1);}await expect(row.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
+});

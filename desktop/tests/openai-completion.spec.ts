@@ -127,7 +127,7 @@ test('credential failures retain quota, deduplicate one cause and preserve indep
  });
  await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('没有读取所选凭证来源的权限。');
- await expect(card(page).locator('.oa-note')).toHaveCount(0);
+ await expect(card(page).locator('.oa-note')).toHaveText('接单保持暂停。');
  await expect(card(page).locator('.oa-quota')).toHaveCount(1);
  await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
  await expect(card(page).getByText('接单保持暂停。',{exact:true})).toBeVisible();
@@ -346,4 +346,20 @@ test('cancelling relogin keeps account details open and confirmation reveals the
  await expect(steps.locator('.done')).toHaveCount(1);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });
+
+ test('unconfirmed relogin cancellation only queries the original operation',async({page})=>{
+ await page.clock.install();await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
+ await expect(card(page).getByRole('button',{name:'取消登录',exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as any).accountScenarios.cancelUnknown=true);await card(page).getByRole('button',{name:'取消登录',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('暂时无法确认取消结果');await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
+ await expect(card(page).getByRole('button',{name:'核对登录结果',exact:true})).toHaveCount(0);await page.evaluate(()=>(window as any).queryFailure=true);await page.clock.runFor(8100);await card(page).getByRole('button',{name:'核对登录结果',exact:true}).click();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect((await writes(page)).filter((c:any)=>c.command==='authorize_cancel')).toHaveLength(1);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });
+ test('confirmed cancellation offers explicit relogin without resuming supply',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();await card(page).getByRole('button',{name:'取消登录',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('已取消登录');await expect(card(page).getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();
+ await card(page).getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
  });

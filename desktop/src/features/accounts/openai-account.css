@@ -129,3 +129,8 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 .dialog-overlay.openai-detail-overlay{background:#202b3e40}
 :root[data-theme=dark] .dialog-overlay.openai-detail-overlay{background:#0008}
+
+/* Match the approved expanded workflow without stretching quota tracks. */
+.openai-account.oa-flow .account-list-window{max-width:360px}
+.openai-account.oa-flow .oa-steps .current{color:inherit;font-weight:600}
+.openai-account.oa-flow .oa-note{max-width:64ch;line-height:1.7}

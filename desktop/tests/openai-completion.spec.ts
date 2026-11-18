@@ -21,7 +21,8 @@ function installOpenaiReplies(){
    w.calls.push({command,args});
    if(w.queryFailure)throw {code:'RESPONSE_TIMEOUT',message:'controlled progress query response unavailable'};
    const operation=w.accounts.openai.operation;
-   const progress={operation,sequence:1,phase:['pending','running'].includes(operation.state)?'waiting_authorization':'finished',stop_reason:operation.state==='cancelled'?'cancelled':null,recheck_in_flight:false,actions:{open:operation.state==='running',cancel:operation.state==='running',retry:false,recheck:false,restart:false},blocker:null};
+   const phase=['pending','running'].includes(operation.state)?w.loginPhase??'waiting_authorization':'finished';
+   const progress={operation,sequence:w.progressSequence=(w.progressSequence??0)+1,phase,stop_reason:operation.state==='cancelled'?'cancelled':null,recheck_in_flight:false,actions:{open:operation.state==='running'&&phase==='waiting_authorization',cancel:operation.state==='running',retry:false,recheck:false,restart:false},blocker:null};
    return {instance:'b'.repeat(32),result:command==='authorize_open'?{open:{opened:true,error:null,progress}}:{progress}};
   }
   const reply=await original(command,args);
@@ -333,3 +334,16 @@ test('cancelling relogin keeps account details open and confirmation reveals the
  await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
 });
+
+ test('confirmed relogin progress retains the approved steps without enabling another submission',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
+ await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
+ const steps=card(page).getByRole('list',{name:'OpenAI 当前流程'});
+ await expect(steps).toBeVisible();await expect(steps.locator('li')).toHaveText(['1重新登录当前阶段','2核验账号未开始']);
+ await page.evaluate(()=>(window as any).loginPhase='verifying');
+ await expect(card(page).getByRole('status')).toHaveText('正在核验账号…');
+ await expect(steps.locator('.done')).toHaveCount(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });

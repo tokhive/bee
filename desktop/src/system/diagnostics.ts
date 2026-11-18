@@ -1,5 +1,5 @@
 import {retryEvidence,safeFailureText} from './failures.ts';
-import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
+import {decodeBridgeError,throwBridgeError,normalizeFailure,requestNotExecuted,type UiFailure} from './failures.ts';
 import { supplyReasons } from './supply.ts';
 import type {DeviceInvoke} from './device';
 
@@ -37,7 +37,7 @@ const evidenceEnums:Record<string,string[]>={
  path:['/api/bee/pairings','/api/bee/pairings/redeem','/api/bee/identity','/api/bee/platforms/openai/account','/api/bee/platforms/claude/account','/api/bee/platforms/openai/capabilities','/api/bee/platforms/claude/capabilities','/api/bee/platforms/openai','/api/bee/platforms/claude','/backend-api/codex/models','/backend-api/wham/usage','/api/oauth/profile','/api/oauth/usage','/v1/models'],
  reason:supplyReasons,
  source_type:['desktop_device','file','keyring','keychain','auto'],stage:['session','device_configuration','selected_source','persisted_selection','account_readback'],local:['stopped','waiting','starting','running','stopping','failed','unknown'],connection:['connected','disconnected','connecting','reconnecting','occupied','rejected','unknown'],status:['ready','not_configured','confirmation_required','authorization_rejected','expired','unknown'],
- server_code:'runtime_retired invalid_runtime_recovery runtime_recovery_conflict runtime_preparation_conflict runtime_account_conflict pending draining approved redeemed device_exists device_draining replacement_pending pairing_expired pairing_redeemed invalid_device_credential device_replaced rate_limited invalid_pairing invalid_pairing_token unavailable device_changed pairing_pending unrecognized_code device_connected forbidden invalid_content_type invalid_json invalid_platform invalid_pause invalid_confirmation account_changed invalid_lease stale_connection invalid_maintenance tee_unavailable stale_maintenance invalid_authorization invalid_codex_authorization invalid_claude_authorization invalid_envelope codex_account_changed codex_authorization_rejected claude_confirmation_required claude_authorization_rejected invalid_capabilities stale_account capability_metadata_required stale_observation invalid_events'.split(' '),
+ server_code:'pairing_attempt_not_found pairing_recovery_conflict invalid_pairing_attempt runtime_retired invalid_runtime_recovery runtime_recovery_conflict runtime_preparation_conflict runtime_account_conflict pending draining approved redeemed device_exists device_draining replacement_pending pairing_expired pairing_redeemed invalid_device_credential device_replaced rate_limited invalid_pairing invalid_pairing_token unavailable device_changed pairing_pending unrecognized_code device_connected forbidden invalid_content_type invalid_json invalid_platform invalid_pause invalid_confirmation account_changed invalid_lease stale_connection invalid_maintenance tee_unavailable stale_maintenance invalid_authorization invalid_codex_authorization invalid_claude_authorization invalid_envelope codex_account_changed codex_authorization_rejected claude_confirmation_required claude_authorization_rejected invalid_capabilities stale_account capability_metadata_required stale_observation invalid_events'.split(' '),
 };
 const paths=['direct','local_connect','local_proxy','environment_proxy','environment_with_no_proxy','process_environment','unknown'];
 for(const key of ['bee_upstream_path','official_query_path','openai_query_path','claude_query_path','hive_path'])evidenceEnums[key]=paths;
@@ -125,7 +125,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();if(session.start!=='idle'||cached?.state==='running')invalid(`diagnostic start blocked: start=${session.start} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=++reportGeneration;cached=null;reading=null;update({...emptySession(),start:'pending'});
    try{const r=await request('diagnostics_start',{});update({start:'idle'});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotSent(failure)?'idle':'unknown',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_start');update({start:requestNotExecuted(failure)?'idle':'unknown',failure});}throw cause;}
   },
   async snapshot(id){
    owned();digest(id,48,'report id');if(!cached||cached.id!==id)invalid('snapshot requires the original cached report ID');
@@ -139,7 +139,7 @@ export function createDiagnosticsClient(invoke:DeviceInvoke,instance:string|unde
    owned();digest(id,48,'report id');if(!cached||cached.id!==id||cached.state!=='running'||session.cancel!=='idle')invalid(`diagnostic cancel blocked: cancel=${session.cancel} report=${cached?.state??'none'}`);
    const generation=epoch,reportSequence=reportGeneration;update({cancel:'pending',failure:null});
    try{const r=await request('diagnostics_cancel',{id},id);update({cancel:r.state==='running'?'unknown':'idle',read:r.state==='running'?'paused':'idle',failure:null});return r;}
-   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotSent(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
+   catch(cause){if(ownsReport(generation,reportSequence)){const failure=normalizeFailure(cause,'diagnostics_cancel');if(cached?.state!=='running')update({cancel:'idle'});else update({cancel:requestNotExecuted(failure)?'idle':'unknown',read:'paused',failure});}throw cause;}
   },
   async logs(query){object(query,['cursor','limit','module','platform','level'],'log query');cursor(query.cursor);if(!Number.isInteger(query.limit)||query.limit<1||query.limit>200)invalid('log query limit requires 1..200');enumValue(query.module,[null,...modules],'log query module');enumValue(query.platform,[null,'openai','claude'],'log query platform');enumValue(query.level,[null,...levels],'log query level');const generation=epoch;const page=decodeLogPage(await invoke('diagnostic_logs',{query}));current(generation);return page;},
   export:exportPayload,

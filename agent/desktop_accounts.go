@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/tokhive/bee/beewire"
@@ -44,7 +45,12 @@ type desktopAccountWorker struct {
 	done   chan struct{}
 }
 
+type desktopAccountObservation struct {
+	snapshot          DesktopAccountSnapshot
+	selectionRevision int64
+}
 type desktopAccountPlatform struct {
+	published          atomic.Pointer[desktopAccountObservation]
 	networkRevision    int64
 	gate               chan struct{}
 	working            bool
@@ -234,10 +240,42 @@ func (a *DesktopAccounts) acquire(ctx context.Context, platform string) (*deskto
 		a.networkMu.RLock()
 		a.invalidateOfficialNetworkLocked(p)
 		a.networkMu.RUnlock()
-		return p, func() { <-p.gate }, nil
+		return p, func() { p.publish(); <-p.gate }, nil
 	case <-ctx.Done():
 		return nil, nil, accountFailure(platform, "deadline", "platform_gate", "request canceled or 12-second deadline exceeded")
 	}
+}
+
+// Called with the platform gate held. Only immutable public copies escape it.
+func (p *desktopAccountPlatform) observation() desktopAccountObservation {
+	value := desktopAccountObservation{snapshot: accountSnapshotCopy(p.snapshot)}
+	if p.selected != nil {
+		value.selectionRevision = p.selected.Revision
+	}
+	return value
+}
+func (p *desktopAccountPlatform) publish() {
+	value := p.observation()
+	p.published.Store(&value)
+}
+func (a *DesktopAccounts) observeBusy(platform string) desktopAccountObservation {
+	p := a.platforms[platform]
+	observation := desktopAccountObservation{snapshot: initialAccountSnapshot(platform)}
+	if prior := p.published.Load(); prior != nil {
+		observation = desktopAccountObservation{snapshot: accountSnapshotCopy(prior.snapshot), selectionRevision: prior.selectionRevision}
+	}
+	value := &observation.snapshot
+	// This is the last published observation, not evidence that an in-flight
+	// account/source check succeeded. Never expose a stale candidate as actionable.
+	value.Candidate.Reference = nil
+	value.Authorization = DesktopAccountFact{State: "unconfirmed", Error: accountFailure(platform, "operation_pending", "platform_operation", "platform operation is still running; showing the last published account observation")}
+	blocked := unavailable("platform_operation_pending")
+	value.Features.Detect, value.Features.Check, value.Features.Select = blocked, blocked, blocked
+	value.Features.ConfirmChange, value.Features.ClearSelection, value.Features.Remove, value.Features.Authorize = blocked, blocked, blocked, blocked
+	for i := range value.Capabilities {
+		value.Capabilities[i] = emptyAccountCapabilities(value.Capabilities[i].Origin)
+	}
+	return observation
 }
 func accountSnapshotCopy(s DesktopAccountSnapshot) DesktopAccountSnapshot {
 	// Only public DTOs enter this copy; pointers/maps never escape shared state.
@@ -247,16 +285,45 @@ func accountSnapshotCopy(s DesktopAccountSnapshot) DesktopAccountSnapshot {
 	return result
 }
 func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh bool) (DesktopAccountSnapshot, error) {
+	observation, err := a.snapshotObservation(ctx, platform, refresh)
+	return observation.snapshot, err
+}
+
+// Account and selection revision must come from the same published observation.
+func (a *DesktopAccounts) snapshotObservation(ctx context.Context, platform string, refresh bool) (desktopAccountObservation, error) {
 	ctx, cancel := context.WithTimeout(ctx, 12*time.Second)
 	defer cancel()
-	p, release, err := a.acquire(ctx, platform)
+	var p *desktopAccountPlatform
+	var release func()
+	var err error
+	if !refresh {
+		var ok bool
+		p, ok = a.platforms[platform]
+		if !ok {
+			return desktopAccountObservation{}, accountFailure("unknown", "invalid_platform", "platform", "required=openai,claude")
+		}
+		if err := ctx.Err(); err != nil {
+			return desktopAccountObservation{}, err
+		}
+		select {
+		case p.gate <- struct{}{}:
+			a.networkMu.RLock()
+			a.invalidateOfficialNetworkLocked(p)
+			a.networkMu.RUnlock()
+			release = func() { p.publish(); <-p.gate }
+		default:
+			return a.observeBusy(platform), nil
+		}
+	} else {
+		p, release, err = a.acquire(ctx, platform)
+	}
 	if err != nil {
-		return DesktopAccountSnapshot{}, err
+		return desktopAccountObservation{}, err
 	}
 	defer release()
 	if _, err := a.loadLoginMaintenance(ctx, p, platform); err != nil {
 		p.snapshot.Authorization = DesktopAccountFact{State: "unconfirmed", Error: accountFailure(platform, "login_journal_unconfirmed", "login_maintenance_journal", err.Error())}
-		return accountSnapshotCopy(p.snapshot), nil
+		return p.observation(), nil
 	}
 	a.expireCandidate(p, platform)
 	if refresh && !p.working {
@@ -272,7 +339,7 @@ func (a *DesktopAccounts) Snapshot(ctx context.Context, platform string, refresh
 	for i := range p.snapshot.Capabilities {
 		expireOfficialCapabilities(&p.snapshot.Capabilities[i], a.now())
 	}
-	return accountSnapshotCopy(p.snapshot), admissionErr
+	return p.observation(), admissionErr
 }
 func (a *DesktopAccounts) expireCandidate(p *desktopAccountPlatform, platform string) {
 	c := &p.snapshot.Candidate
@@ -321,6 +388,7 @@ func (a *DesktopAccounts) detectAccountLocked(ctx context.Context, p *desktopAcc
 	p.snapshot.Authorization = DesktopAccountFact{State: "unknown"}
 	p.snapshot.CheckedAt = accountTime(a.now())
 	p.source, p.credentialRevision = nil, ""
+	p.publish()
 	read, failure := a.readAccountSource(ctx, request)
 	if failure != nil {
 		p.snapshot.Candidate.Error = failure

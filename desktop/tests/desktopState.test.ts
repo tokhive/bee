@@ -5,6 +5,16 @@ const ready=(instance:string)=>({state:'ready',metadata:{instance,bee_version:'t
 const runtime=(network_revision=0)=>({revision:1,network_revision,local:'stopped',platforms:{},run_id:null});
 function fixture(){let listener:(v:any)=>void=()=>{};let calls=0;let current:any=runtime();const deps:any={bridge:{status:async()=>ready('a'),onStatus:async(fn:any)=>{listener=fn;return()=>{};}},device:{status:async()=>({state:'unbound'})},runtime:()=>({snapshot:async()=>{calls++;return current;}}),intervalMs:100000};return {deps,emit:(v:any)=>listener(v),calls:()=>calls,set:(v:any)=>{current=v;}};}
 const tick=()=>new Promise<void>(resolve=>setImmediate(resolve));
+test('a paused coordinator without a native instance never claims background reads are active',t=>{
+ const m=createDesktopState(fixture().deps);t.after(()=>m.dispose());m.pause();
+ assert.notEqual(m.getSnapshot().refresh.state,'reading');
+ assert.notEqual(m.getSnapshot().accountRefresh.openai?.state,'reading');
+ assert.notEqual(m.getSnapshot().supplyRefresh.claude?.state,'reading');
+});
+test('first device setup may check write dependencies before a native instance exists',async t=>{
+ const m=createDesktopState(fixture().deps);t.after(()=>m.dispose());
+ await m.settleForWrite('device');assert.equal(m.getSnapshot().busy,false);
+});
 test('OpenAI reads are pure and stop after 1/2/4 retries while Claude keeps its existing schedule',async t=>{
  t.mock.timers.enable({apis:['setTimeout','Date']});
  const f=fixture();const reads:{platform:string;at:number;refresh:boolean}[]=[];
@@ -23,6 +33,32 @@ test('OpenAI reads are pure and stop after 1/2/4 retries while Claude keeps its 
  t.mock.timers.tick(20000);await tick();assert.equal(reads.filter(r=>r.platform==='openai').length,4);assert.ok(reads.filter(r=>r.platform==='claude').every(r=>r.refresh));
 });
 test('one coordinator shares snapshots across subscriptions without page-triggered reads',async()=>{const f=fixture();const m=createDesktopState(f.deps);let updates=0;const off=m.subscribe(()=>updates++);await tick();const calls=f.calls();const second=m.subscribe(()=>updates++);await tick();assert.equal(f.calls(),calls);await Promise.all([m.refresh(),m.refresh()]);assert.equal(f.calls(),calls+1);assert.ok(updates>0);off();second();m.dispose();await m.refresh();assert.equal(f.calls(),calls+1);});
+test('a receipt during a shared read requires a new observation instead of joining the older read',async t=>{
+ const f=fixture();let release!:(value:any)=>void,held=true;
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ f.deps.runtime=()=>({snapshot:async()=>held?new Promise(resolve=>release=resolve):{...runtime(),revision:2}});
+ const old=m.refresh();await tick();m.recordRuntimeReceipt(2);held=false;
+ const afterReceipt=m.refresh();release(runtime());await Promise.all([old,afterReceipt]);
+ assert.equal(m.getSnapshot().runtime?.revision,2);assert.equal(m.getSnapshot().error,null);
+});
+test('manual OpenAI recheck waits for an active round then retries blocked reads',async t=>{
+ const f=fixture();let failed=true,release!:()=>void;
+ f.deps.openaiQueries=true;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string,refresh:boolean)=>{
+  if(platform==='openai'){assert.equal(refresh,false);if(failed)throw {code:'HTTP_403',message:'account observation blocked: HTTP 403'};}
+  return {platform,revision:1,issues:[]};
+ }});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().accountRefresh.openai?.state,'blocked');
+ f.deps.runtime=()=>({snapshot:async()=>{await new Promise<void>(resolve=>{release=resolve;});return {...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}};}});
+ const active=m.refresh();await tick();
+ failed=false;const retry=m.recheckOpenaiReads();
+ f.deps.runtime=()=>({snapshot:async()=>({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}})});
+ release();await Promise.all([active,retry]);
+ assert.equal(m.getSnapshot().accountErrors.openai,undefined);
+ assert.ok(m.getSnapshot().accountRefresh.openai?.lastConfirmedAt);
+});
 test('old child and network revision results never replace current state',async()=>{const f=fixture();const m=createDesktopState(f.deps);m.subscribe(()=>{});await tick();f.set(runtime(3));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.set(runtime(2));await m.refresh();assert.equal(m.getSnapshot().runtime?.network_revision,3);f.emit(ready('b'));await tick();assert.equal(m.getSnapshot().native.metadata?.instance,'b');m.dispose();});
 test('coordinator refreshes stopped account and supply observations once for all pages',async t=>{
  const f=fixture();let accountReads=0,supplyReads=0;
@@ -103,7 +139,7 @@ test('an account receipt floor retains the failing read evidence and resets with
  f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{if(fail&&platform==='openai')throw {code:'http_rejected',message:'GET account HTTP 503',details:{check:'account_read',observed_at:'2026-10-30T12:00:00Z',evidence:{http_status:'503',target_origin:'https://hive.example'}}};return {platform,revision:1,issues:[]};}});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
- m.recordAccountReceipt('openai',9);fail=true;await m.refresh();
+ m.recordAccountReceipt('openai',9);fail=true;await m.refresh();await tick();
  assert.match(m.getSnapshot().accountErrors.openai?.message??'',/GET account HTTP 503/);
  assert.match(m.getSnapshot().accountErrors.openai?.message??'',/actual=1; required>=9/);
  assert.equal(m.getSnapshot().accountErrors.openai?.code,'http_rejected');
@@ -135,7 +171,7 @@ test('failed platform reads retain confirmed history and its real retry time',as
  const f=fixture();let failed=false;f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{if(failed&&platform==='openai')throw {code:'timeout',message:'GET account timed out'};return {platform,revision:1,issues:[]};}});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();const confirmed=m.getSnapshot().accountRefresh.openai!.lastConfirmedAt;
- failed=true;await m.refresh();assert.equal(m.getSnapshot().accounts.openai?.revision,1);assert.equal(m.getSnapshot().accountErrors.openai?.code,'timeout');assert.equal(m.getSnapshot().accountRefresh.openai!.lastConfirmedAt,confirmed);assert.equal(m.getSnapshot().accountRefresh.openai!.state,'scheduled');
+ failed=true;await m.refresh();await tick();assert.equal(m.getSnapshot().accounts.openai?.revision,1);assert.equal(m.getSnapshot().accountErrors.openai?.code,'timeout');assert.equal(m.getSnapshot().accountRefresh.openai!.lastConfirmedAt,confirmed);assert.equal(m.getSnapshot().accountRefresh.openai!.state,'scheduled');
 });
 test('diagnostic identity observations are scoped and cannot turn HTTP success into runtime ready',async t=>{
  const f=fixture();f.deps.device.context=async()=>({hive:'https://hive.example',name:'Mac',device_id:'device',owner_id:'owner',binding_revision:1});
@@ -214,7 +250,7 @@ test('recovery completion changes binding within the same refresh before publish
  f.deps.device.recoveryStatus=async()=>{if(complete){revision=2;device='new';return recovery('completed',4);}return recovery();};
  f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>({platform,revision:1,scope:device})});
  f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
- const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>observed.push(structuredClone(m.getSnapshot())));await tick();complete=true;await m.refresh();
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>observed.push(structuredClone(m.getSnapshot())));await tick();complete=true;await m.refresh();await tick();
  const s=m.getSnapshot();assert.equal(s.bindingRevision,2);assert.equal(s.device?.identity?.id,'new');assert.equal((s.accounts.openai as any).scope,'new');
  assert.ok(observed.every(s=>s.bindingRevision!==2||Object.values(s.accounts).every((a:any)=>a.scope!=='old')),'new binding must never publish old accounts');
 });
@@ -268,4 +304,107 @@ test('the first ready bridge invalidates an older startup read without leaving s
  const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
  finishOld?.(startup);await tick();
  assert.equal(m.getSnapshot().startup?.state,'ready');assert.equal(m.getSnapshot().startupObservation,'idle');assert.equal(f.calls(),1);
+});
+
+test('recovery observation and runtime refresh continue while one advancement is in flight',async t=>{
+ const f=fixture();let advances=0,observations=0,finish!:()=>void;
+ const recovery={operation_id:'a'.repeat(48),revision:1,phase:'pending',old_identity:null,new_identity:null,pairing:null,failure:null};
+ f.deps.device.recoveryStatus=async()=>{observations++;return recovery;};
+ f.deps.device.recoveryAdvance=async()=>{advances++;await new Promise<void>(resolve=>{finish=resolve;});return recovery;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(advances,1);assert.ok(f.calls()>0);assert.equal(m.getSnapshot().busy,false);
+ const before=f.calls();await m.refresh();assert.ok(f.calls()>before);assert.ok(observations>=2);assert.equal(advances,1);
+ finish();await tick();
+});
+
+for(const held of [false,true])test(`manual device recheck observes recovery after ${held?'pending':'already settled'} advancement`,async t=>{
+ const f=fixture();let view=recovery(),release!:()=>void,advances=0;
+ f.deps.device.recoveryStatus=async()=>view;
+ f.deps.device.recoveryAdvance=async()=>{advances++;if(held)await new Promise<void>(resolve=>release=resolve);view={...view,phase:'draining',revision:view.revision+1};return view;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().recovery?.phase,'pending');
+ const recheck=m.recheckStartup();await tick();
+ if(held)release();await recheck;
+ assert.equal(m.getSnapshot().recovery?.phase,'draining');assert.equal(advances,held?1:2);
+});
+test('an old recovery advancement cannot block a new native instance or clear its current advancement',async t=>{
+ const f=fixture();let releaseOld!:()=>void,releaseNew!:()=>void,advances=0;
+ f.deps.device.recoveryStatus=async()=>recovery();
+ f.deps.device.recoveryAdvance=async()=>{const n=++advances;await new Promise<void>(resolve=>{if(n===1)releaseOld=resolve;else releaseNew=resolve;});return recovery();};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();assert.equal(advances,1);
+ f.emit(ready('b'));await tick();assert.equal(advances,2);
+ releaseOld();await tick();await m.refresh();assert.equal(advances,2,'settled old owner must not clear the new owner');
+ releaseNew();await tick();
+});
+
+test('a recovery observation failure stays local and cannot overwrite startup readiness',async t=>{
+ const f=fixture();f.deps.bridge.startupStatus=async()=>({state:'ready',instance:'a',revision:1});
+ f.deps.device.recoveryStatus=async()=>{throw {code:'REQUEST_QUEUE_TIMEOUT',message:'recovery query did not send'};};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().startup?.state,'ready');assert.equal(m.getSnapshot().recoveryError?.code,'REQUEST_QUEUE_TIMEOUT');assert.ok(f.calls()>0);
+});
+
+for(const change of ['binding','transaction','absent'] as const)test('recovery advancement error cannot leak after '+change,async t=>{
+ const f=fixture();let binding=1,advanceFails=true;
+ let recovery:any={operation_id:'a'.repeat(48),revision:1,phase:'completed',old_identity:null,new_identity:null,pairing:null,failure:null};
+ f.deps.device.context=async()=>({binding_revision:binding,hive:'https://hive.example',device_id:'device',owner_id:'owner'});
+ f.deps.bridge.startupStatus=async()=>({state:'blocked',instance:'a',revision:1,binding_revision:binding});
+ f.deps.device.recoveryStatus=async()=>{if(!recovery)throw {code:'DEVICE_RECOVERY_NONE',message:'no recovery'};return recovery;};
+ f.deps.device.recoveryAdvance=async()=>{if(advanceFails)throw {code:'RECOVERY_FIXTURE_BLOCKED',message:'original operation blocked'};return recovery;};
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().recoveryError?.code,'RECOVERY_FIXTURE_BLOCKED');
+ advanceFails=false;
+ if(change==='binding')binding++;
+ if(change==='transaction')recovery={...recovery,operation_id:'b'.repeat(48)};
+ if(change==='absent')recovery=null;
+ await m.refresh();await tick();
+ assert.equal(m.getSnapshot().recoveryError,null);
+});
+
+test('initial device verification keeps local facts readable and resumes Hive reads when verified',async t=>{
+ const f=fixture();let finish!:(value:any)=>void,accountReads=0;
+ f.deps.device.status=()=>new Promise(resolve=>finish=resolve);
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{accountReads++;return {platform,revision:2};}});
+ f.set({...runtime(),platforms:{openai:{account:{platform:'openai',revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ assert.equal(m.getSnapshot().accounts.openai?.revision,1);assert.equal(accountReads,0);
+ finish({state:'bound',hive:'https://hive.example',identity:{id:'device'}});await tick();
+ assert.equal(m.getSnapshot().accounts.openai?.revision,2);assert.equal(accountReads,2);
+});
+test('explicit device recheck waits for its device result without waiting for a slow platform',async t=>{
+ const f=fixture();let finish!:(value:any)=>void;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>platform==='claude'?new Promise(()=>{}):{platform,revision:1}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ f.deps.device.status=()=>new Promise(resolve=>finish=resolve);
+ let settled=false;const recheck=m.recheckStartup().then(()=>{settled=true;});await tick();
+ assert.equal(settled,false,'device recheck must retain its loading feedback');
+ finish({state:'bound',hive:'https://hive.example',identity:{id:'device'}});await recheck;
+ assert.equal(m.getSnapshot().device?.identity?.id,'device');assert.equal(settled,true);
+});
+test('a platform write waits for its own observation and revalidates without joining the other platform',async t=>{
+ const f=fixture();let held=true,release!:()=>void,settled=false;
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:string)=>{
+  if(platform==='claude')return new Promise(()=>{});
+  if(held)await new Promise<void>(resolve=>release=()=>{held=false;resolve();});
+  return {platform,revision:2};
+ }});
+ f.set({...runtime(),platforms:{openai:{account:{platform:'openai',revision:1}},claude:{account:{platform:'claude',revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ const waiting=m.settleForWrite('openai',true).then(()=>settled=true);await tick();
+ assert.equal(settled,false);release();await waiting;
+ assert.equal(m.getSnapshot().accounts.openai?.revision,2);assert.equal(settled,true);
+});
+for(const slow of ['device','openai','claude'] as const)test(`continuous observation bypasses held ${slow} work without duplicate requests`,async t=>{
+ t.mock.timers.enable({apis:['setTimeout','Date']});
+ const f=fixture();f.deps.intervalMs=10;let deviceReads=0;const reads={openai:0,claude:0};let release!:(value:any)=>void;
+ f.deps.device.status=async()=>{deviceReads++;if(slow==='device')return new Promise(resolve=>release=resolve);return {state:'bound',hive:'https://hive.example',identity:{id:'device'}};};
+ f.deps.accounts=()=>({defaults:async()=>({platforms:[]}),snapshot:async(platform:'openai'|'claude')=>{reads[platform]++;if(platform===slow)return new Promise(resolve=>release=resolve);return {platform,revision:1,issues:[]};}});
+ f.set({...runtime(),platforms:{openai:{account:{revision:1}},claude:{account:{revision:1}}}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ const before=f.calls(),fast=slow==='openai'?'claude':'openai',fastBefore=reads[fast];
+ for(let n=0;n<3;n++){t.mock.timers.tick(10);await tick();}
+ assert.ok(f.calls()>=before+3,'runtime observations must continue while slow work is held');
+ if(slow==='device')assert.equal(deviceReads,1);else {assert.equal(reads[slow],1);assert.ok(reads[fast]>=fastBefore+3);}
+ assert.equal(m.getSnapshot().busy,false,'unrelated writes must not join the slow resource');
+ release(slow==='device'?{state:'unbound'}:{platform:slow,revision:1,issues:[]});await tick();
 });

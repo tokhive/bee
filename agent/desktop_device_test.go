@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -25,7 +24,7 @@ func TestDesktopDevicePairingAndRestart(t *testing.T) {
 	creates := 0
 	identity := beewire.Identity{ID: "device-1", Name: "My Mac", OwnerID: "owner-1", OwnerEmail: "test@example.test"}
 	path := filepath.Join(t.TempDir(), "bee-desktop.json")
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("X-Hive-Request") != "1" {
 			t.Error("missing existing Hive request header")
 		}
@@ -82,7 +81,7 @@ func TestDesktopDevicePairingAndRestart(t *testing.T) {
 		t.Fatalf("empty: %+v %v", empty, err)
 	}
 	pending, err := device.Begin(context.Background(), origin, "My Mac")
-	if err != nil || pending.State != "pending" || !strings.Contains(pending.VerificationURL, "code=ABCD-EFGH") {
+	if err != nil || pending.State != "pending" || !userCodePattern.MatchString(pending.UserCode) || !strings.Contains(pending.VerificationURL, "code="+pending.UserCode) {
 		t.Fatalf("pending: %+v %v", pending, err)
 	}
 	public, _ := json.Marshal(pending)
@@ -132,7 +131,7 @@ func TestDesktopDeviceRejectsHiveChangeAndInvalidOrigin(t *testing.T) {
 
 func TestDesktopDeviceBoundCredentialNeverRebinds(t *testing.T) {
 	creates := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			creates++
 		}
@@ -155,7 +154,7 @@ func TestDesktopDeviceBoundCredentialNeverRebinds(t *testing.T) {
 }
 
 func TestDesktopDeviceRejectsChangedIdentity(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(beewire.Identity{ID: "different", Name: "Mac", OwnerID: "owner", OwnerEmail: "a@b.test"})
 	}))
 	defer server.Close()
@@ -173,7 +172,7 @@ func TestDesktopDeviceRejectsChangedIdentity(t *testing.T) {
 func TestDesktopDeviceRejectsUnsafePairingURL(t *testing.T) {
 	for _, link := range []string{"https://other.example/devices/pair", "https://hive.example/devices/pair?code=bad", "https://hive.example/other", "javascript:alert(1)"} {
 		t.Run(link, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.Method == "GET" {
 					w.WriteHeader(401)
 					return
@@ -183,7 +182,7 @@ func TestDesktopDeviceRejectsUnsafePairingURL(t *testing.T) {
 			defer server.Close()
 			path := filepath.Join(t.TempDir(), "desktop.json")
 			v, err := (newDesktopTestDevice(t, path)).Begin(context.Background(), server.URL, "Mac")
-			if err != nil || v.Recovery == nil || v.Recovery.Phase != "creation_unknown" || v.Recovery.Pairing != nil {
+			if err != nil || v.Recovery == nil || v.Recovery.Phase != "blocked" || v.Recovery.Pairing != nil {
 				t.Fatalf("accepted untrusted verification URL: %+v %v", v, err)
 			}
 			state, _ := readState(path)
@@ -209,7 +208,7 @@ func TestDesktopDeviceLockConflict(t *testing.T) {
 func TestDesktopDeviceHiveExpiryAllowsExplicitNewCode(t *testing.T) {
 	creates := 0
 	var origin string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method + " " + r.URL.Path {
 		case "GET /api/bee/identity":
 			w.WriteHeader(401)
@@ -245,7 +244,7 @@ func TestDesktopDeviceHiveExpiryAllowsExplicitNewCode(t *testing.T) {
 
 func TestDesktopDeviceUncertainRedeemKeepsTransaction(t *testing.T) {
 	var origin string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/bee/identity" {
 			w.WriteHeader(401)
 			return
@@ -276,7 +275,7 @@ func TestDesktopDeviceUnknownExchangeCannotBeReplacedAfterExpiry(t *testing.T) {
 	var origin string
 	expired := false
 	creates := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/bee/identity" {
 			w.WriteHeader(401)
 			return
@@ -326,7 +325,7 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 		t.Run(previous, func(t *testing.T) {
 			creates := 0
 			var origin string
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch r.Method + " " + r.URL.Path {
 				case "GET /api/bee/identity":
 					w.WriteHeader(401)
@@ -392,7 +391,7 @@ func TestDesktopDeviceRedeemExpiryDistinguishesFirstAttemptFromUnknown(t *testin
 
 func TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind(t *testing.T) {
 	creates := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			creates++
 		}
@@ -411,7 +410,7 @@ func TestDesktopDeviceRevokedCredentialWithoutCachedIdentityCannotRebind(t *test
 func TestDesktopDeviceRemoteErrorCannotEchoPairingToken(t *testing.T) {
 	secret := "beep_" + strings.Repeat("a", 43)
 	var origin string
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/api/bee/identity" {
 			w.WriteHeader(401)
 			return
@@ -433,7 +432,7 @@ func TestDesktopDeviceRemoteErrorCannotEchoPairingToken(t *testing.T) {
 // Context must remain local even when Hive rejects the saved device.
 func TestDesktopDeviceContextRetainsRejectedBindingWithoutHiveRequests(t *testing.T) {
 	calls := 0
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := newPairingFixtureServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		calls++
 		if r.Method != http.MethodGet || r.URL.Path != "/api/bee/identity" {
 			t.Errorf("revoked identity reached Hive write or contribution: %s %s", r.Method, r.URL.Path)

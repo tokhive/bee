@@ -23,7 +23,7 @@ async fn ready(mode: &str) -> Bridge {
 }
 
 #[tokio::test]
-async fn exit_freezes_queued_actions_and_survives_cancelled_caller() {
+async fn exit_preserves_immediate_conflict_and_survives_cancelled_caller() {
     let bridge = ready("owned-exit-slow").await;
     let b = bridge.clone();
     let reading = tokio::spawn(async move { b.device_status().await });
@@ -43,7 +43,7 @@ async fn exit_freezes_queued_actions_and_survives_cancelled_caller() {
     exiting.abort();
     assert_eq!(
         writing.await.unwrap().unwrap_err().code,
-        "OWNED_EXIT_PENDING"
+        "REQUEST_RESOURCE_BUSY"
     );
     reading.await.unwrap().unwrap();
     assert!(
@@ -73,7 +73,7 @@ async fn owned_exit_rejects_late_startup_restore_before_request_admission() {
 }
 
 #[tokio::test]
-async fn owned_exit_rejects_queued_startup_restore_before_first_byte() {
+async fn conflicting_startup_restore_is_rejected_before_first_byte() {
     let bridge = ready("owned-exit-slow").await;
     let b = bridge.clone();
     let reading = tokio::spawn(async move { b.device_status().await });
@@ -81,7 +81,7 @@ async fn owned_exit_rejects_queued_startup_restore_before_first_byte() {
     let b = bridge.clone();
     let restoring = tokio::spawn(async move { b.restore_when_ready().await });
     sleep(Duration::from_millis(30)).await;
-    assert!(!restoring.is_finished());
+    assert!(restoring.is_finished());
     let b = bridge.clone();
     let exiting = tokio::spawn(async move { b.prepare_owned_exit(OwnedExitReason::AppExit).await });
     while !bridge.0.frozen.load(Ordering::SeqCst) {
@@ -90,7 +90,7 @@ async fn owned_exit_rejects_queued_startup_restore_before_first_byte() {
     let result = restoring.await.unwrap();
     reading.await.unwrap().unwrap();
     let _ = exiting.await.unwrap();
-    assert_eq!(result.unwrap_err().code, "OWNED_EXIT_PENDING");
+    assert_eq!(result.unwrap_err().code, "REQUEST_RESOURCE_BUSY");
 }
 
 #[tokio::test]

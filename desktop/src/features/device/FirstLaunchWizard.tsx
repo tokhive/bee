@@ -1,16 +1,18 @@
-import {useEffect,useId,useRef,useState,type FormEvent} from 'react';
-import type {DeviceView,DeviceContext} from '../../system/device';
+import {useEffect,useId,useRef,useState,type ReactNode,type FormEvent} from 'react';
+import type {DeviceView,DeviceContext,DeviceRecoveryView,RecoveryDecision} from '../../system/device';
 import type {RefreshStatus} from '../../system/desktopState';
 import {normalizeFailure,safeOrigin,type UiFailure} from '../../system/failures';
 import {currentLocale,formatDate} from '../../i18n';
 import {presentFailure} from '../../presentation/problems';
 import {Button} from '../../components/ui';
-import {Popover} from 'radix-ui';
+import {Dialog,Popover} from 'radix-ui';
 import {CircleAlert} from 'lucide-react';
 import {wizardText as w} from './first-launch-copy';
 import './first-launch-wizard.css';
 
 export interface FirstLaunchWizardProps {
+ recoveryEntry?:ReactNode;
+ recover?:(decision:RecoveryDecision,transaction?:DeviceRecoveryView)=>Promise<boolean>;
  view?:DeviceView;context?:DeviceContext;refreshStatus?:RefreshStatus;
  initialLoading?:boolean;busy:boolean;checking?:boolean;
  error:UiFailure|null;operationError?:UiFailure|null;completed?:boolean;
@@ -53,7 +55,10 @@ function WizardFailure({failure,manualUrlAvailable=false}:{failure:UiFailure;man
 }
 
 /** First-launch presentation only. The caller owns native commands and status scheduling. */
-export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
+export function FirstLaunchWizard({recover,recoveryEntry,view,context,refreshStatus,busy,checking=false,initialLoading=false,error,operationError,completed=false,begin,open,refresh,onNavigate,onDiagnostics,onRepair,onOpenHive}:FirstLaunchWizardProps){
+ const recoveryTrigger=useRef<HTMLButtonElement|null>(null);
+ const [recoveryDecision,setRecoveryDecision]=useState<'restart_pairing'|'cancel_pairing'|null>(null);
+
  const [hive,setHive]=useState(view?.hive||DEFAULT_HIVE),[name,setName]=useState(view?.name??'Bee Desktop');
  const [fieldErrors,setFieldErrors]=useState({hive:'',name:''});
  const [submitting,setSubmitting]=useState(false),submitted=useRef(false);
@@ -131,10 +136,13 @@ export function FirstLaunchWizard({view,context,refreshStatus,busy,checking=fals
    {phase==='creation_unknown'&&onOpenHive&&<div className="first-launch-actions"><Button type="button" disabled={busy} onClick={()=>void onOpenHive()}>{w('打开 Hive 控制台')}</Button></div>}
    {failureNotices}
    {canCheck&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('重新检查设备')}</Button></div>}
+   {recover&&view?.recovery&&!['completed','saving','awaiting_owner_confirmation'].includes(view.recovery.phase)&&<div className="first-launch-actions"><Button disabled={busy||checking} onClick={()=>void recover('continue_checking',view.recovery)}>{w('继续核对原请求')}</Button>{['creation_unknown','blocked','expired'].includes(view.recovery.phase)&&<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('restart_pairing');}}>{w('重新配对')}</Button>}<Button variant="outline" disabled={busy||checking} onClick={event=>{recoveryTrigger.current=event.currentTarget;setRecoveryDecision('cancel_pairing');}}>{w('取消本次重绑')}</Button></div>}
    {phase==='expired'&&<div className="first-launch-actions"><Button type="button" disabled={busy||checking||submitting} onClick={()=>{if(submitted.current||!view?.hive||!view.name)return;submitted.current=true;setSubmitting(true);void begin(view.hive,view.name);}}>{w('重新生成配对码')}</Button></div>}
    {phase==='saving'&&<><p role="status">{w(checking?'正在检查绑定结果并继续保存…':transactionFailure?'设备身份已确认，本机保存尚未完成。':'正在保存设备配置…')}</p>{transactionFailure&&<><p>{w('请处理以上保存失败原因，再点击“继续完成绑定”。Bee 会检查已有绑定结果并继续保存。')}</p><div className="first-launch-actions"><Button type="button" disabled={busy||checking} onClick={()=>void refresh()}>{w('继续完成绑定')}</Button></div></>}</>}
    {copied&&<p role="status">{w(copied)}</p>}{copyFailure&&<WizardFailure failure={copyFailure}/>}
   </>}
   {!complete&&(failures.length>0||canCheck||phase==='blocked'||phase==='awaiting_owner_confirmation')&&onDiagnostics&&<div className="first-launch-actions"><Button type="button" variant="ghost" onClick={onDiagnostics}>{w('查看诊断')}</Button></div>}
+ {recoveryEntry}
+ <Dialog.Root open={!!recoveryDecision} onOpenChange={open=>{if(!open)setRecoveryDecision(null);}}><Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content" onCloseAutoFocus={event=>{event.preventDefault();(recoveryTrigger.current?.isConnected?recoveryTrigger.current:title.current)?.focus();}}><Dialog.Title>{w(recoveryDecision==='cancel_pairing'?'取消本次重绑':'重新配对')}</Dialog.Title><Dialog.Description>{w(recoveryDecision==='cancel_pairing'?'取消后 Bee 停止后续替换；Hive 保留已完成的旧操作处理，旧设备不会自动恢复接单。':'Bee 先向 Hive 确认结束旧申请。若旧绑定已经成功，Bee 会恢复原成功结果，不再生成新码。')}</Dialog.Description>{operationError&&<WizardFailure failure={operationError}/>}<div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{w('返回设备设置')}</Button></Dialog.Close><Button disabled={busy||checking} onClick={async()=>{if(recoveryDecision&&await recover?.(recoveryDecision,view?.recovery))setRecoveryDecision(null);}}>{w(recoveryDecision==='cancel_pairing'?'确认取消重绑':'确认重新配对')}</Button></div></Dialog.Content></Dialog.Portal></Dialog.Root>
  </main></div>;
 }

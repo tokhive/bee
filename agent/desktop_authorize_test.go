@@ -117,6 +117,27 @@ func waitAuthorize(t *testing.T, owner *DesktopAuthorizer, id string) DesktopOpe
 	t.Fatal("official login did not reach a terminal state")
 	return DesktopOperation{}
 }
+
+// A terminal receipt does not reserve the platform against another observer.
+func waitDesktopAccountObservation(t *testing.T, accounts *DesktopAccounts, platform string) DesktopAccountSnapshot {
+	t.Helper()
+	until := time.Now().Add(5 * time.Second)
+	var last DesktopAccountSnapshot
+	for time.Now().Before(until) {
+		var err error
+		last, err = accounts.Snapshot(context.Background(), platform, false)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if last.Authorization.Error == nil || last.Authorization.Error.Code != "operation_pending" {
+			return last
+		}
+		time.Sleep(time.Millisecond)
+	}
+	t.Fatalf("account observation stayed busy: platform=%s snapshot=%+v", platform, last)
+	return last
+}
+
 func TestDesktopAuthorizeRequiresVerifiedNewSource(t *testing.T) {
 	for _, mode := range []string{"success", "unchanged", "exit_error", "unsupported", "help_missing"} {
 		t.Run(mode, func(t *testing.T) {
@@ -144,10 +165,7 @@ func TestDesktopAuthorizeRequiresVerifiedNewSource(t *testing.T) {
 			if strings.Contains(string(raw), "PRIVATE_") {
 				t.Fatal("login output leaked into operation")
 			}
-			snapshot, err := a.Snapshot(context.Background(), "openai", false)
-			if err != nil {
-				t.Fatal(err)
-			}
+			snapshot := waitDesktopAccountObservation(t, a, "openai")
 			if snapshot.Selection.State != "not_selected" {
 				t.Fatal("official login automatically selected account")
 			}

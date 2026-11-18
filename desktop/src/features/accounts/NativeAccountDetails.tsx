@@ -20,7 +20,7 @@ export const accountTime=(value:string|null)=>value?formatDate(value,currentLoca
 export function NativeAccountDetails({accounts,platform,runtime,supply,onNavigate,navigationRequest,compact=false}:{compact?:boolean;navigationRequest?:NavigationRequest;accounts:AccountsModel;onNavigate?:(target:NavigationTarget)=>void;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply}){
  const label=platform==='openai'?'OpenAI':'Claude',snapshot=accounts.views[platform];
  const readFailed=!!accounts.readFailures[platform];
- const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now,readFailed,!!accounts.deviceFailure);
+ const now=useAccountClock(accounts),presentation=accountPresentation(snapshot,!!accounts.dirty[platform],now,readFailed,!!accounts.deviceFailure,accounts.quotaHistory[platform]);
  const defaults=accounts.defaults?.platforms.find(d=>d.platform===platform);
  const source=accounts.sources[platform]??{directory:null,store:defaults?.default_store??'file'};
  const [localDirectory,setLocalDirectory]=useState(source.directory??'');

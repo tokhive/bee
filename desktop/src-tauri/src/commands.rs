@@ -99,7 +99,7 @@ pub fn bridge_pending_requests(bridge: tauri::State<'_, CurrentBridge>) -> crate
 pub async fn account_defaults(
     bridge: tauri::State<'_, CurrentBridge>,
 ) -> Result<BridgeReply, BridgeError> {
-    let bridge=bridge.get()?;
+    let bridge = bridge.get()?;
     bridge.account_defaults().await
 }
 #[tauri::command]
@@ -125,7 +125,7 @@ pub async fn account_action(
     request: AccountActionRequest,
     gate: tauri::State<'_, crate::experience::StartupGate>,
 ) -> Result<BridgeReply, BridgeError> {
-    let bridge=bridge.get()?;
+    let bridge = bridge.get()?;
     gate.check()?;
     bridge.account_action(request).await
 }
@@ -365,6 +365,7 @@ mod tests {
             "ping --help",
             "supply_status",
             "supply_set_paused",
+            "device_recovery_start",
             "device_recovery_prepare",
             "device_recovery_confirm",
             "device_recovery_status",
@@ -893,6 +894,14 @@ pub async fn device_recovery_prepare(
     crate::experience::recover_device(&app, &bridge, None, true).await
 }
 #[tauri::command]
+pub async fn device_recovery_snapshot(
+    app: tauri::AppHandle,
+    bridge: tauri::State<'_, CurrentBridge>,
+) -> Result<BridgeReply, BridgeError> {
+    crate::experience::observe_device_recovery(&app, &bridge.get()?).await
+}
+
+#[tauri::command]
 pub async fn device_recovery_status(
     app: tauri::AppHandle,
     bridge: tauri::State<'_, CurrentBridge>,
@@ -1047,4 +1056,20 @@ pub async fn hive_switch_quit(
             format!("quit decision={decision}; required=continue_waiting or cancel_and_quit"),
         )),
     }
+}
+
+#[tauri::command]
+pub async fn device_recovery_start(
+    app: tauri::AppHandle,
+    coordinator: tauri::State<'_, crate::hive_switch::HiveSwitch>,
+    hive: String,
+    name: String,
+) -> Result<BridgeReply, BridgeError> {
+    require_idle_switch(&app)?;
+    let updater=app.state::<crate::updater::UpdateManager>();
+    let reply=coordinator.recovery_start(hive,name,&updater,app.state::<crate::preferences::PreferencesStore>().read()).await?;
+    app.state::<crate::network::NetworkController>()
+        .invalidate_device_scope()
+        .await;
+    Ok(reply)
 }

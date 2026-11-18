@@ -292,7 +292,11 @@ impl ProfileStore {
             _owner: owner,
             serial: Mutex::new(()),
         };
-        store.snapshot()?;
+        if let Err(cause) = store.snapshot() {
+            if !matches!(cause.code.as_str(), "PROFILE_SCHEMA" | "PROFILE_INDEX") {
+                return Err(cause);
+            }
+        }
         Ok(store)
     }
     pub(crate) fn root(&self) -> &Path {
@@ -382,11 +386,11 @@ impl ProfileStore {
             directory,
         })
     }
-    fn require_migrated(&self, index: &ProfileIndex) -> Result<(), BridgeError> {
+    pub(crate) fn require_migrated(&self, index: &ProfileIndex) -> Result<(), BridgeError> {
         if let Some(record) =
             read_json::<MigrationRecord>(&self.root.join("profile-migration.json"))?
         {
-            if record.phase != MigrationPhase::Committed
+            if record.version != 1 || !valid_id(&record.id) || record.phase != MigrationPhase::Committed
                 || index.migration_id.as_deref() != Some(&record.id)
             {
                 return Err(error("PROFILE_MIGRATION_PENDING",format!("profile migration phase={:?} committed_index_matches={}; continue original migration before profile changes",record.phase,index.migration_id.as_deref()==Some(&record.id))));
@@ -407,6 +411,125 @@ impl ProfileStore {
             }
         }
         Ok(())
+    }
+    // Only an explicit confirmed origin may repair metadata. Every surviving
+    // directory must be attributable; damaged/unattributable evidence stays put.
+    pub(crate) fn recovery_context(&self, origin: &str) -> Result<ProfileContext, BridgeError> {
+        let canonical = normalize(origin)?;
+        let index = match self.snapshot() {
+            Ok(index) if !index.profiles.is_empty() => index,
+            Ok(_) => self.recover_index(&canonical)?,
+            Err(e) if matches!(e.code.as_str(), "PROFILE_SCHEMA" | "PROFILE_INDEX") => {
+                self.recover_index(&canonical)?
+            }
+            Err(e) => return Err(e),
+        };
+        self.require_migrated(&index)?;
+        if !index.migration_blockers.is_empty() {
+            return Err(error("PROFILE_MIGRATION_BLOCKED", format!("original migration has unattributed blockers: {}; administrator must reconcile preserved evidence", index.migration_blockers.join(","))));
+        }
+        if let Some(current) = index.current_profile.as_ref() {
+            let entry = index
+                .profiles
+                .iter()
+                .find(|p| &p.id == current)
+                .ok_or_else(|| {
+                    error(
+                        "PROFILE_UNKNOWN",
+                        "current recovery profile missing from index",
+                    )
+                })?;
+            if entry.origin != canonical {
+                return Err(error(
+                    "PROFILE_RECOVERY_ORIGIN",
+                    "confirmed Hive differs from original current profile; original preserved",
+                ));
+            }
+            if !entry.blockers.is_empty() {
+                return Err(error("PROFILE_BLOCKED", format!("confirmed Hive retains original profile blockers: {}; administrator must reconcile preserved evidence", entry.blockers.join(","))));
+            }
+            let directory = self.root.join("profiles").join(&entry.id);
+            if !directory.exists() {
+                save_json(
+                    &self.root.join("profile-recovery.json"),
+                    &serde_json::json!({"version":1,"profile":entry.id,"origin":canonical}),
+                )?;
+                private_dir(&directory)?;
+                sync_dir(&self.root.join("profiles"))?;
+            }
+            return self.context(&entry.id);
+        }
+        self.register(origin)
+    }
+    fn recover_index(&self, canonical: &str) -> Result<ProfileIndex, BridgeError> {
+        let _serial = self.serial.lock().unwrap_or_else(|e| e.into_inner());
+        let mut index = ProfileIndex::default();
+        let migration = read_json::<MigrationRecord>(&self.root.join("profile-migration.json"))?;
+        if let Some(record) = migration.as_ref() {
+            if record.version != 1 || !valid_id(&record.id) || record.phase != MigrationPhase::Committed {
+                return Err(error("PROFILE_MIGRATION_PENDING", "original migration is incomplete; administrator must reconcile its evidence before index repair"));
+            }
+            index.migration_id = Some(record.id.clone());
+            index.migration_blockers = record.blockers.clone();
+            index.historical_conflicts = record.conflicts.clone();
+        } else {
+            self.require_migrated(&index)?;
+        }
+        let mut origins = HashSet::new();
+        for entry in fs::read_dir(self.root.join("profiles"))
+            .map_err(|e| io_error("inspect surviving recovery profiles", e))?
+        {
+            let entry = entry.map_err(|e| io_error("read surviving recovery profile", e))?;
+            let id = entry.file_name().to_string_lossy().into_owned();
+            if !valid_id(&id) {
+                return Err(error("PROFILE_INDEX", "surviving profile has an invalid internal ID; administrator must attribute preserved records"));
+            }
+            private_dir(&entry.path())?;
+            let raw = protected_read_bounded(&entry.path().join("bee-desktop.json"), LIMIT)
+                .map_err(|e| io_error("attribute surviving recovery profile", e))?;
+            let value = unique_value(&raw).map_err(|e| error("PROFILE_SCHEMA", format!("surviving profile JSON rejected: {e}; administrator must attribute original records")))?;
+            let origin = value["hive"].as_str().ok_or_else(|| error("PROFILE_INDEX", "surviving profile has no Hive address; administrator must attribute original records"))?;
+            let origin = normalize(origin)?;
+            if !origins.insert(origin.clone()) {
+                return Err(error("PROFILE_INDEX", format!("multiple surviving profiles refer to Hive {origin}; administrator must resolve the conflict")));
+            }
+            if origin == canonical {
+                index.current_profile = Some(id.clone());
+            }
+            let original = migration.as_ref().and_then(|record| record.profile.as_ref()).filter(|profile| profile.id == id);
+            let blockers = if let Some(profile) = original {
+                profile.blockers.clone()
+            } else if index.historical_conflicts.iter().any(|conflict| conflict.canonical_origin == origin) {
+                vec![format!("historical_origin_conflict:{origin}")]
+            } else {
+                vec![]
+            };
+            index.profiles.push(ProfileEntry {
+                id,
+                raw_origin: origin.clone(),
+                origin,
+                binding_revision: 0,
+                binding_digest: None,
+                blockers,
+            });
+        }
+        if !index.profiles.is_empty() && index.current_profile.is_none() {
+            return Err(error("PROFILE_RECOVERY_ORIGIN", "no surviving profile matches the confirmed Hive; administrator must attribute original records"));
+        }
+        let path = self.root.join("hive-profiles.json");
+        match protected_read_bounded(&path, LIMIT) {
+            Ok(raw) => write(
+                &self
+                    .root
+                    .join(format!("hive-profiles-evidence-{}.json", hex(&raw))),
+                &raw,
+            )?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => (),
+            Err(e) => return Err(io_error("preserve original profile index", e)),
+        }
+        index.revision = 1;
+        self.save(&index)?;
+        Ok(index)
     }
     pub(crate) fn register(&self, origin: &str) -> Result<ProfileContext, BridgeError> {
         let _serial = self.serial.lock().unwrap_or_else(|e| e.into_inner());
@@ -571,6 +694,11 @@ struct MigrationRecord {
     conflicts: Vec<HistoricalConflict>,
 }
 fn legacy_name(name: &str, startup: bool) -> bool {
+    if name.starts_with("bee-pairing-") && name.ends_with(".json")
+        || name.starts_with("bee-recovery-evidence-") && name.ends_with(".json")
+    {
+        return true;
+    }
     if startup {
         return name == "desktop-startup-recovery.json"
             || name.starts_with("desktop-startup-recovery-") && name.ends_with(".json");
@@ -581,6 +709,7 @@ fn legacy_name(name: &str, startup: bool) -> bool {
         "login-maintenance.json",
         "runtime-session",
         "bee-desktop-recovery.json",
+        "bee-recovery-source.json",
         "desktop-session-retirement.json",
         "capability-cooldown.json",
     ]
@@ -1737,5 +1866,86 @@ mod tests {
         let reopened = ProfileStore::open(tmp.path().join("tokhive")).unwrap();
         assert_eq!(reopened.snapshot().unwrap(), after);
         assert_eq!(reopened.context(&a.id).unwrap(), a);
+    }
+}
+
+#[cfg(test)]
+mod pairing_recovery_entry_tests {
+    use super::*;
+    #[test]
+    fn explicit_recovery_recreates_missing_enrolled_directory_only_after_request() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = ProfileStore::open(tmp.path().join("tokhive")).unwrap();
+        let context = store.register("https://hive.example").unwrap();
+        let index = store.snapshot().unwrap();
+        store
+            .commit_current(index.revision, &context.id, &"a".repeat(48))
+            .unwrap();
+        fs::remove_dir(context.directory()).unwrap();
+        assert!(store.context(&context.id).is_err());
+        assert!(store.recovery_context("https://different.example").is_err());
+        assert!(!context.directory().exists());
+        let recovered = store.recovery_context("https://hive.example").unwrap();
+        assert_eq!(recovered.id, context.id);
+        assert!(store.root().join("profile-recovery.json").exists());
+    }
+    #[test]
+    fn damaged_index_preserves_original_and_recovers_only_unambiguous_confirmed_hive() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path().join("tokhive");
+        let store = ProfileStore::open(root.clone()).unwrap();
+        let context = store.register("https://hive.example").unwrap();
+        write(&context.device_path(),br#"{"hive":"https://hive.example","name":"Original Bee","credential":"synthetic-retained-secret"}"#).unwrap();
+        write(&root.join("hive-profiles.json"), b"{damaged-index").unwrap();
+        drop(store);
+        let store = ProfileStore::open(root.clone()).unwrap();
+        assert!(store.snapshot().is_err());
+        let recovered = store.recovery_context("https://hive.example").unwrap();
+        assert_eq!(recovered.id, context.id);
+        assert!(fs::read_dir(root).unwrap().any(|entry| entry
+            .unwrap()
+            .file_name()
+            .to_string_lossy()
+            .starts_with("hive-profiles-evidence-")));
+        assert!(String::from_utf8(
+            protected_read_bounded(&recovered.device_path(), LIMIT).unwrap()
+        )
+        .unwrap()
+        .contains("synthetic-retained-secret"));
+    }
+    #[test]
+    fn duplicate_surviving_hives_do_not_overwrite_the_damaged_index() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = ProfileStore::open(tmp.path().join("tokhive")).unwrap();
+        let a = store.register("https://hive.example").unwrap();
+        let b = store.register("https://other.example").unwrap();
+        for context in [a, b] {
+            write(&context.device_path(), br#"{"hive":"https://hive.example"}"#).unwrap();
+        }
+        let index_path = store.root().join("hive-profiles.json");
+        write(&index_path, b"{original-damaged-index").unwrap();
+        assert_eq!(store.recovery_context("https://hive.example").unwrap_err().code, "PROFILE_INDEX");
+        assert_eq!(protected_read_bounded(&index_path, LIMIT).unwrap(), b"{original-damaged-index");
+    }
+    #[test]
+    fn repaired_index_retains_historical_migration_conflicts() {
+        let tmp = tempfile::tempdir().unwrap();
+        let store = ProfileStore::open(tmp.path().join("tokhive")).unwrap();
+        let a = store.register("https://hive.example").unwrap();
+        let b = store.register("https://other.example").unwrap();
+        write(&a.device_path(), br#"{"hive":"https://hive.example"}"#).unwrap();
+        write(&b.device_path(), br#"{"hive":"https://other.example"}"#).unwrap();
+        let record = MigrationRecord {
+            version: 1, id: "a".repeat(32), startup_directory: tmp.path().join("app"),
+            phase: MigrationPhase::Committed,
+            profile: Some(store.snapshot().unwrap().profiles[0].clone()), files: vec![], blockers: vec![],
+            conflicts: vec![HistoricalConflict {origin:"https://other.example".into(), canonical_origin:"https://other.example".into(), source:"root/ai-accounts.json".into()}],
+        };
+        save_json(&store.root().join("profile-migration.json"), &record).unwrap();
+        write(&store.root().join("hive-profiles.json"), b"{original-damaged-index").unwrap();
+        assert_eq!(store.recovery_context("https://other.example").unwrap_err().code, "PROFILE_BLOCKED");
+        let index = store.snapshot().unwrap();
+        assert_eq!(index.historical_conflicts, record.conflicts);
+        assert_eq!(index.profiles.iter().find(|p|p.id==b.id).unwrap().blockers, vec!["historical_origin_conflict:https://other.example"]);
     }
 }

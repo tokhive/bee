@@ -2,6 +2,14 @@
 
 2026-11-10 更新：`authorize_progress`／`authorize_open` 已有 Go、bridge、Rust 注册和 TypeScript 生产实现，并按同实例 capability 使用。复合重新登录仍仅为契约。受控测试和未闭环项见 [实施记录](evidence/2026-11-10-openai-completion/README.md)；未执行真实官方账号、桌面和 Hive 联调。2026-11-06 的静态样本继续仅用于契约测试。
 
+## OpenAI 成功登录后的接入判断（2026-11-17 修正）
+
+`candidate.identity_verified` 不可作为 OpenAI 确认接入的必要条件。Go 的 OpenAI 来源读取提供经本机结构核验的账号指纹与候选引用，`identity_verified` 保持 `false`；即使以 `mode=official` 查询额度，也不将它改成官方身份核验成功。该标记的真值由 Claude 的官方 profile 核验产生。独立契约依据是 `agent/desktop_account_observation_test.go` 的 `TestDesktopAccountsOfficial`，不是模拟值。
+
+OpenAI 向导按 `available`、无来源错误、有效候选引用、账号指纹和超过 30 秒边界的有效期判断可展示的候选；接入按钮仍核对设备、运行、维护、来源变更、操作冲突及最新接单选择。登录成功后进入“确认接入”，保留“登录成功，尚未接入 Bee”说明；不自动选择账号或恢复接单。已有本机登录同样可进入确认页。OpenAI 卡片的不同账号识别与修复完成也按这一语义处理，Claude 仍要求官方身份核验。
+
+本次真实故障表现为登录 journal 已是 `succeeded/restored`、登录文件已写入，而向导停在“连接 OpenAI 账号”。旧 mock 将 OpenAI 的 `identity_verified` 写成 `true`，掩盖了前端误用；现已校正共享 fixture，并覆盖登录后确认、已有登录、导航返回和无效候选拒绝接入。
+
 ## 交付状态与兼容性
 
 | 部分 | 当前状态 |

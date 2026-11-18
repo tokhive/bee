@@ -24,7 +24,7 @@ w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
  const replyInstance=control.instance;
  if(holds.has(command))await holds.get(command).promise;
  if(command==='device_begin'&&control.beginFailure)return {result:{error:control.beginFailure}};
- if(command==='device_recovery_status'&&control.recoveryFailure)return {result:{error:control.recoveryFailure}};
+ if(['device_recovery_status','device_recovery_snapshot'].includes(command)&&control.recoveryFailure)return {result:{error:control.recoveryFailure}};
  if(command==='device_context'&&control.contextFailure)return {result:{binding_revision:w.bindingRevision??1,error:control.contextFailure}};
  const result=await invoke(command,args);
  if(replyInstance&&command==='hive_switch_snapshot'&&result.current_scope)result.current_scope.instance=replyInstance;

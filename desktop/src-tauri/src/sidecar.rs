@@ -342,9 +342,10 @@ fn validate_method_result(
         // Classify its closed wire variant before entering success-only decoding;
         // never infer this distinction by comparing a decoder's error code/text.
         match request.method {
-            "device_recovery_prepare"
+            "device_recovery_start"
+            | "device_recovery_prepare"
             | "device_recovery_confirm"
-            | "device_recovery_status"
+            | "device_recovery_status" | "device_recovery_snapshot"
             | "desktop_switch"
             | "network_status"
             | "network_test"
@@ -433,7 +434,7 @@ fn validate_method_result(
             Ok(())
         }
         "device_context" => protocol::device_context_state(result).map(|_| ()),
-        "device_recovery_prepare" | "device_recovery_confirm" | "device_recovery_status" => {
+        "device_recovery_start" | "device_recovery_prepare" | "device_recovery_confirm" | "device_recovery_status" | "device_recovery_snapshot" => {
             protocol::device_recovery(result).map(|_| ())
         }
         "device_status" | "device_begin" if result.get("error").is_none() => {
@@ -449,17 +450,28 @@ fn validate_method_result(
     }
 }
 
+// Keep this policy aligned with desktopbridge/scheduling.go. Observations
+// never advance a durable transaction; cancellation targets an already-owned job.
+fn observation(request: &Request) -> bool {
+    matches!(request.method, "ping" | "notification_snapshot" | "account_defaults" | "authorize_open" | "device_context" | "device_recovery_snapshot"
+        | "runtime_snapshot" | "network_status" | "network_test" | "authorize_status"
+        | "authorize_progress" | "authorize_cancel" | "diagnostics_snapshot" | "diagnostics_cancel")
+        || request.method == "account_snapshot" && request.params["refresh"] == false
+}
 fn read_platform(request: &Request) -> Option<&str> {
-    if request.method == "authorize_progress" { return Some("openai"); }
-    if !matches!(
-        request.method,
-        "account_detect" | "account_snapshot" | "supply_status"
-    ) {
-        return None;
-    }
-    request.params["platform"]
-        .as_str()
-        .filter(|p| matches!(*p, "openai" | "claude"))
+    if !matches!(request.method, "account_detect" | "account_snapshot" | "account_action"
+        | "supply_status" | "supply_set_paused" | "authorize_start") { return None; }
+    request.params["platform"].as_str().filter(|p| matches!(*p, "openai" | "claude"))
+}
+fn conflicts(left: &Request, right: &Request) -> bool {
+    if observation(left) || observation(right) { return false; }
+    let a = read_platform(left);
+    let b = read_platform(right);
+    if left.method == "runtime_stop" && b.is_some() || right.method == "runtime_stop" && a.is_some() { return false; }
+    a.is_none() || b.is_none() || a == b
+}
+fn queued_read(request: &Request) -> bool {
+    matches!(request.method, "account_detect" | "account_snapshot" | "supply_status")
 }
 fn unsent_rejection(request: &Request, frozen: &AtomicBool, now: Instant) -> Option<BridgeError> {
     if frozen.load(Ordering::SeqCst) && !request.exit_request {
@@ -1148,9 +1160,23 @@ impl Bridge {
         }
         Ok(())
     }
+    pub(crate) async fn device_recovery_start(
+        &self,
+        hive: String,
+        name: String,
+    ) -> Result<BridgeReply, BridgeError> {
+        self.device_recovery_request(
+            "device_recovery_start",
+            serde_json::json!({"hive":hive,"name":name}),
+        )
+        .await
+    }
     pub(crate) async fn device_recovery_prepare(&self) -> Result<BridgeReply, BridgeError> {
         self.device_recovery_request("device_recovery_prepare", serde_json::json!({}))
             .await
+    }
+    pub(crate) async fn device_recovery_snapshot(&self) -> Result<BridgeReply, BridgeError> {
+        self.device_recovery_request("device_recovery_snapshot", serde_json::json!({})).await
     }
     pub(crate) async fn device_recovery_status(&self) -> Result<BridgeReply, BridgeError> {
         self.device_recovery_request("device_recovery_status", serde_json::json!({}))
@@ -1292,9 +1318,10 @@ impl Bridge {
                 | "device_begin"
                 | "device_status"
                 | "device_context"
+                | "device_recovery_start"
                 | "device_recovery_prepare"
                 | "device_recovery_confirm"
-                | "device_recovery_status"
+                | "device_recovery_status" | "device_recovery_snapshot"
                 | "runtime_inspect_recovery"
                 | "runtime_reconcile_recovery"
                 | "runtime_verify"
@@ -1569,20 +1596,26 @@ async fn session(
             }
             if writing.is_none() {
                 let mut selected = None;
+                let mut rejected = None;
                 for (index, request) in waiting.iter().enumerate() {
-                    let lane = read_platform(request);
-                    if lane.is_none() {
-                        if index == 0 && active.is_empty() {
-                            selected = Some(index);
+                    let blocker = active.values().find(|current| conflicts(request, current));
+                    if let Some(blocker) = blocker {
+                        if !observation(request) && !queued_read(request) && !request.exit_request {
+                            rejected = Some((index, error("REQUEST_RESOURCE_BUSY", format!(
+                                "method={} conflicts with unfinished method={} resource={}; request not executed; observe progress before submitting again",
+                                request.method, blocker.method, read_platform(request).unwrap_or("binding/runtime")))));
+                            break;
                         }
-                        break;
+                        continue;
                     }
-                    if active.values().all(|current| {
-                        read_platform(current).is_some() && read_platform(current) != lane
-                    }) {
-                        selected = Some(index);
-                        break;
-                    }
+                    // Preserve order only among operations on the same resource.
+                    if waiting.iter().take(index).any(|earlier| conflicts(request, earlier)) { continue; }
+                    selected = Some(index);
+                    break;
+                }
+                if let Some((index, cause)) = rejected {
+                    waiting.remove(index).unwrap().respond(Err(cause));
+                    continue;
                 }
                 if let Some(index) = selected {
                     let request = waiting.remove(index).unwrap();

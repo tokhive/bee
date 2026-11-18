@@ -20,7 +20,7 @@ async function fixture(page:Page, options:{delay?:number;age?:number;ready?:bool
    if(command==='bridge_pending_requests')return {instance:currentInstance,requests:[]};
    if(command==='bridge_status')return status();
    if(command==='startup_status'||command==='startup_recheck')return {state:'ready',failure:null,instance:currentInstance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1};
-   if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
+   if(command==='device_recovery_snapshot'||command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
    if(command==='device_context'&&options.unbound)return {instance:currentInstance,result:{binding_revision:1,error:{code:'DEVICE_CONTEXT_UNCONFIGURED',message:'no saved device configuration'}}};
    if(command==='device_context')return {instance:currentInstance,result:{context:{hive:'https://hive.example',name:'Fixture Mac',device_id:'device-1',owner_id:'owner-1',binding_revision:1}}};
    if(command==='preferences_read')return structuredClone({preferences,error:null});

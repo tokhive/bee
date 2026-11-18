@@ -1,4 +1,4 @@
-import {decodeBridgeError,normalizeFailure,requestNotSent,type UiFailure} from './failures.ts';
+import {decodeBridgeError,normalizeFailure,requestNotExecuted,type UiFailure} from './failures.ts';
 import type {BridgeError} from './bridge';
 import type {DeviceInvoke} from './device';
 
@@ -133,7 +133,7 @@ export function createUpdateClient(invoke: DeviceInvoke): UpdateClient {
     const epoch = ++generation;
     try {const next=await request(command, args, epoch, expected);publish({error:null,uncertain:null});return next;}
     catch(cause){
-      const failure=normalizeFailure(cause,command),unsent=requestNotSent(failure);
+      const failure=normalizeFailure(cause,command),unsent=requestNotExecuted(failure);
       const definite=unsent||typeof cause==='object'&&cause!==null&&nativeRejections.has(cause)&&failure.code.startsWith('UPDATE_');
       uncertainBase=definite?undefined:baseline;
       if(unsent&&command==='update_install'){const key=session.attemptedInstall;if(key)installations.delete(key);publish({attemptedInstall:null});}

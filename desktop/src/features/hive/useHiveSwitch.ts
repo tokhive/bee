@@ -49,6 +49,6 @@ export function useHiveSwitch(client:HiveSwitchClient|undefined,bridge?:SystemBr
  };
  return {snapshot,target,error,busy,exitOperation,chooserOpen,setChooserOpen,hive,setHive,name,setName,refresh,start:(origin:string,name:string)=>run(()=>client!.start(origin,name),{reconcileFailure:true}),observe:()=>run(()=>client!.observe()),continueWaiting:()=>run(()=>client!.continue()),cancel:()=>run(()=>client!.cancel()),quit:async(decision:'continue_waiting'|'cancel_and_quit')=>{const ok=await run(()=>client!.quit(decision));if(ok&&decision==='continue_waiting')setExitOperation(null);return ok;},
   targetRefresh:readTarget,targetBegin:(_hive:string,name:string)=>targetAction(()=>client!.target.begin('',name)),targetOpen:()=>targetAction(()=>target.recovery?client!.target.recoveryOpen():client!.target.open()),
-  targetRecover:async(decision:'begin_pairing'|'adopt_owner'|'renew_expired',transaction?:DeviceRecoveryView)=>targetAction(async()=>{const original=transaction??await client!.target.recoveryPrepare();await client!.target.recoveryConfirm(original.operation_id,original.revision,decision);})};
+  targetRecover:async(decision:'begin_pairing'|'adopt_owner'|'renew_expired'|'continue_checking'|'restart_pairing'|'cancel_pairing',transaction?:DeviceRecoveryView)=>targetAction(async()=>{const original=transaction??await client!.target.recoveryPrepare();await client!.target.recoveryConfirm(original.operation_id,original.revision,decision);})};
 }
 export type HiveSwitchModel=ReturnType<typeof useHiveSwitch>;

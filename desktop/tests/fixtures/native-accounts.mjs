@@ -87,8 +87,8 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
    a.capabilities[0]=emptyOfficial(platform);
   }else{
    const cached=a.candidate.identity_verified&&detectedSources[platform]?.key===sourceKey(platform,source)&&detectedSources[platform]?.revision===record.revision;
-   a.candidate={state:'available',reference:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','').slice(0,16),source,fingerprint:platform==='openai'||official||cached?record.fingerprint:null,plan:platform==='openai'?'plus':'pro',expires_at:w.expiry??record.expires_at,identity_verified:official||cached,observed_at:a.checked_at,error:null};
-   a.authorization={state:official||cached?'official_identity_verified':'local_structure_only',fingerprint:a.candidate.fingerprint,observed_at:a.checked_at,error:null};
+   a.candidate={state:'available',reference:crypto.randomUUID().replaceAll('-','')+crypto.randomUUID().replaceAll('-','').slice(0,16),source,fingerprint:platform==='openai'||official||cached?record.fingerprint:null,plan:platform==='openai'?'plus':'pro',expires_at:w.expiry??record.expires_at,identity_verified:platform==='claude'&&(official||cached),observed_at:a.checked_at,error:null};
+   a.authorization={state:platform==='claude'&&(official||cached)?'official_identity_verified':'local_structure_only',fingerprint:a.candidate.fingerprint,observed_at:a.checked_at,error:null};
    if(official&&w.missingProfile){a.candidate.identity_verified=false;a.authorization.error={code:'missing_scope',check:'official_scopes',platform,message:'official check requires user:profile',evidence:{profile_scope:'false',inference_scope:'true'}};}
    a.hive.state='unconfirmed';
    if(w.accountScenarios.candidates?.[platform])a.candidate={...a.candidate,...structuredClone(w.accountScenarios.candidates[platform])};
@@ -113,7 +113,9 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
   if(value==='succeeded'){
    const record=sourceRecord(p,job.source);
    accountSources.set(sourceKey(p,job.source),{...record,value:'available',revision:record.revision+1,fingerprint:identity==='same'?(accounts[p].selection.fingerprint??record.fingerprint):(crypto.randomUUID()+crypto.randomUUID()).replaceAll('-',''),expires_at:'2099-01-01T00:00:00Z',official:scenarios.previewSources?emptyOfficial(p):null});
-   detectAccount({platform:p,...job.source,mode:'official'});
+   // The native authorizer finishes with a local read for OpenAI. The UI
+   // receives a selectable local candidate, not a verified official identity.
+   detectAccount({platform:p,...job.source,mode:p==='openai'?'local':'official'});
   }else{
    accounts[p].candidate={...accounts[p].candidate,state:'not_checked',reference:null,source:null,fingerprint:null,identity_verified:false,error:null};delete detectedSources[p];
   }
@@ -176,7 +178,7 @@ export function installAccountFixture({accounts, runtimeEnabled=false,scenarios=
  w.__TAURI_INTERNALS__={transformCallback:fn=>{const id=++callback;callbacks.set(id,fn);return id;},unregisterCallback:id=>{callbacks.delete(id);},invoke:async(command,args={})=>{
   if(command==='hive_switch_snapshot')return {profile_identities:[{profile_id:'1'.repeat(32),name:'Fixture',owner_id:'owner-1',owner_email:'owner@example.test'}],profiles:{version:1,revision:1,profiles:[{id:'1'.repeat(32),origin:'https://hive.example',raw_origin:'https://hive.example',binding_revision:w.bindingRevision??1,binding_digest:null,blockers:[]}],current_profile:'1'.repeat(32),committed_operation:null,migration_id:null,migration_blockers:[],historical_conflicts:[]},operation:null,observation:{state:'idle',reason:null,next_query_at:null},actions:{can_cancel:false,can_continue:false,can_observe:false,target_pairing:false},current_scope:{profile_id:'1'.repeat(32),instance}};
   if(command==='plugin:event|listen'){subscriptions.set(args.handler,args.event);return args.handler;}if(command==='plugin:event|unlisten'){subscriptions.delete(args.eventId);return;}if(command==='bridge_status')return status();if(command==='bridge_pending_requests')return {instance,requests:w.pendingRequests??[]};
-  if(command==='device_recovery_status')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
+  if(command==='device_recovery_status'||command==='device_recovery_snapshot')return {result:{error:{code:'DEVICE_RECOVERY_NONE',message:'no credential recovery transaction exists'}}};
   if(command==='device_context')return {instance,result:{context:{hive:'https://hive.example',name:'Fixture',device_id:'dev-1',owner_id:'owner-1',binding_revision:w.bindingRevision??1}}};
   if(command==='startup_status'||command==='startup_recheck')return {state:w.deviceFail?'blocked':'ready',failure:w.deviceFail?{code:'device_replaced',message:'HTTP 401 device_replaced'}:null,instance,binding_revision:w.bindingRevision??1,network_revision:w.networkRevision??0,observed_at:new Date().toISOString(),revision:1};
   if(command==='device_status'&&w.deviceFail)return {result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET identity HTTP 503'}}};

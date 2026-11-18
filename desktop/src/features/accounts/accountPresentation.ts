@@ -4,7 +4,17 @@ import type {UiFailure} from '../../system/failures';
 type AccountFailure=Pick<UiFailure,'code'|'check'|'message'|'evidence'>;
 export const sameAccountFailure=(a:AccountFailure|null|undefined,b:AccountFailure|null|undefined)=>!!a&&!!b&&a.code===b.code&&a.check===b.check&&a.message===b.message&&JSON.stringify(Object.entries(a.evidence).sort())===JSON.stringify(Object.entries(b.evidence).sort());
 export interface AccountPresentation {identity:string|null;plan:string|null;expiresAt:string|null;observedAt:string|null;windows:AccountWindow[];quotaState:'unknown'|'current'|'stale'|'unconfirmed'}
-export function accountPresentation(snapshot:AccountSnapshot|undefined,dirty:boolean,now:number,readFailed=false,remoteUnconfirmed=false):AccountPresentation {
+export interface AccountQuotaHistory {fingerprint:string;presentation:AccountPresentation}
+/** Display evidence only; never merge retained quota into account or supply facts. */
+export function rememberAccountQuota(previous:AccountQuotaHistory|undefined,snapshot:AccountSnapshot,now:number):AccountQuotaHistory|undefined {
+ const fingerprint=snapshot.selection.state==='selected'?snapshot.selection.fingerprint:null;
+ if(!fingerprint)return undefined;
+ if(previous?.fingerprint!==fingerprint)previous=undefined;
+ const presentation=accountPresentation(snapshot,false,now);
+ if(presentation.observedAt&&!presentation.windows.length)return undefined;
+ return presentation.windows.length&&presentation.observedAt&&(!previous||Date.parse(presentation.observedAt)>=Date.parse(previous.presentation.observedAt!))?{fingerprint,presentation}:previous;
+}
+export function accountPresentation(snapshot:AccountSnapshot|undefined,dirty:boolean,now:number,readFailed=false,remoteUnconfirmed=false,history?:AccountQuotaHistory):AccountPresentation {
  const fingerprint=snapshot?.selection.state==='selected'?snapshot.selection.fingerprint:null;
  const result:AccountPresentation={identity:fingerprint?.slice(0,16)??null,plan:null,expiresAt:null,observedAt:null,windows:[],quotaState:'unknown'};
  if(!snapshot||!fingerprint)return result;
@@ -14,6 +24,9 @@ export function accountPresentation(snapshot:AccountSnapshot|undefined,dirty:boo
  const fresh=(c:AccountCapabilities)=>c.status==='ready'&&!!c.observed_at&&!!c.valid_until&&Date.parse(c.valid_until)>now&&!c.windows.some(w=>w.reset_at&&Date.parse(w.reset_at)<=now)&&!(result.expiresAt&&Date.parse(result.expiresAt)<=now);
  const observation=available.find(c=>c.origin==='official'&&fresh(c))??available.find(fresh)??available.find(c=>c.observed_at);
  if(observation){result.observedAt=observation.observed_at;result.plan=observation.plan??result.plan;result.windows=observation.windows.map(w=>({...w}));result.quotaState=observation.windows.length?(readFailed||remoteUnconfirmed&&observation.origin==='hive'&&fresh(observation)?'unconfirmed':fresh(observation)?'current':'stale'):'unknown';}
+ if(!observation&&candidate&&history?.fingerprint===fingerprint){
+  result.observedAt=history.presentation.observedAt;result.plan??=history.presentation.plan;result.windows=history.presentation.windows.map(w=>({...w}));result.quotaState='stale';
+ }
  return result;
 }
 

@@ -2,7 +2,7 @@ import {useEffect,useRef} from 'react';
 import {AlertCircle,CheckCircle2,ExternalLink,LoaderCircle} from 'lucide-react';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
-import {normalizeFailure,requestNotSent} from '../../system/failures';
+import {normalizeFailure,requestNotExecuted} from '../../system/failures';
 import {presentFailure} from '../../presentation/problems';
 import {currentLocale,t} from '../../i18n/index';
 import type {NavigationTarget} from '../../app/navigation';
@@ -26,7 +26,7 @@ export function NativeAccountLogin({accounts,runtime,onNavigate}:{accounts:Accou
  const busy=!!accounts.writeBusy.claude||!!accounts.busy.claude||!!flow?.checking;
  const active=op?.kind==='authorize'&&['pending','running'].includes(op.state);
  const failure=claudeLoginFailure(accounts);
- const unknown=!!accounts.cancelUnconfirmed.claude&&accounts.cancelUnconfirmed.claude.operationId===op?.id&&active||op?.state==='reconciling'||!!accounts.uncertain.claude&&!active||!!accounts.errors.claude&&!requestNotSent(accounts.errors.claude)&&accounts.errors.claude.code!=='ACCOUNT_CONTEXT_CHANGED';
+ const unknown=!!accounts.cancelUnconfirmed.claude&&accounts.cancelUnconfirmed.claude.operationId===op?.id&&active||op?.state==='reconciling'||!!accounts.uncertain.claude&&!active||!!accounts.errors.claude&&!requestNotExecuted(accounts.errors.claude)&&accounts.errors.claude.code!=='ACCOUNT_CONTEXT_CHANGED';
  const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sources.claude,!!accounts.dirty.claude,runtime.view?.local,runtime.view?.run_id]);
  const block=()=>accountActionBlock('authorize',{autoService:accounts.autoService,view,platform,now:Date.now(),dirty:!!accounts.dirty.claude,busy:!!accounts.writeBusy.claude,unknown,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:runtime.uncertain||!!runtime.error||runtime.stalled});
  const changed=!!confirmation&&confirmation!==stamp();

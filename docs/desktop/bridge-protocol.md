@@ -23,7 +23,7 @@
 响应示例（版本和实例以实际运行值为准）：
 
 ```json
-{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","authorize_progress","authorize_open","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_inspect_recovery","runtime_reconcile_recovery","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status"]}}
+{"protocol":1,"id":"hello-1","instance":"0d957c72d63b4c06ae544c10f4c549799","result":{"bee_version":"dev+revision-dirty","os":"darwin","arch":"arm64","capabilities":["ping","shutdown","device_status","device_begin","supply_status","supply_set_paused","account_defaults","account_detect","account_snapshot","account_action","runtime_snapshot","runtime_start","runtime_stop","runtime_configure_network","runtime_restore","runtime_enable_presence","authorize_start","authorize_status","authorize_cancel","authorize_progress","authorize_open","diagnostics_start","diagnostics_snapshot","diagnostics_cancel","network_status","network_test","notification_snapshot","device_context","runtime_inspect_recovery","runtime_reconcile_recovery","runtime_verify","device_recovery_prepare","device_recovery_confirm","device_recovery_status","device_recovery_snapshot"]}}
 ```
 
 版本不匹配返回 `VERSION_MISMATCH`，不进入 ready；未成功握手的其他方法返回 `NOT_READY`。握手成功后再发 `hello` 返回 `ALREADY_READY`，不会替换实例。当前 `bee desktop` 入口提供示例所列 **34 项**有序能力（包含设备在线、上下文核验与设备恢复）。Rust 保留 P0、设备、供给、账号、运行、官方登录及恢复服务的完整历史前缀；网络两项必须成组追加，诊断三项只能追加到含运行服务的前缀，通知快照只能追加到含账号且含网络或诊断的集合末尾。仅接受这些完整、有序组合，拒绝任意子集、乱序或额外方法。
@@ -70,7 +70,28 @@ Tauri 另提供不接受 URL 参数的 `device_open`：重新核对设备，只�
 
 Go 普通设备、供给或账号操作总期限 12 秒，普通单次 HTTP 最长 10 秒；OpenAI official 检测及官方能力查询最多 10 分钟，仍服从调用方取消。Rust 普通请求排队最多 15 秒，首次写出字节后再计算执行预算，普通业务为 15 秒、`account_detect` 为 10 分钟、ping 为原有 5 秒。握手、明确退出与更新继续遵守既有整体期限。
 
-未发送的超时请求返回 `REQUEST_QUEUE_TIMEOUT` 并移除，不会迟发。已发送超时返回 `RESPONSE_TIMEOUT`，保留 Ready、owned Bee 和原请求；部分帧继续剩余字节，不重放或交错。原请求继续占用既有最多 16 项预算及平台通道／共享屏障，直到真实回复。迟到成功或合法业务失败仍严格校验并消费，但不再交给已经超时的调用方；未知／重复 ID、错误实例、非法回复、真实进程退出与管道损坏仍终止会话。
+未发送的超时请求返回 `REQUEST_QUEUE_TIMEOUT` 并移除，不会迟发。已发送超时返回 `RESPONSE_TIMEOUT`，保留 Ready、owned Bee 和原请求；部分帧继续剩余字节，不重放或交错。原请求继续占用既有最多 16 项总预算及对应业务资源，直到真实回复；无关观察不等待该业务资源。迟到成功或合法业务失败仍严格校验并消费，但不再交给已经超时的调用方；未知／重复 ID、错误实例、非法回复、真实进程退出与管道损坏仍终止会话。
+
+Rust 发送调度与 Go 执行调度按相同资源规则分流：
+
+| 请求类别 | 并发与互斥边界 |
+| --- | --- |
+| `ping`、`notification_snapshot`、`device_context`、`device_recovery_snapshot`、`runtime_snapshot`、`account_snapshot(refresh=false)`、`account_defaults`、`network_status/test`、登录／诊断状态观察 | 不占业务资源，可以越过慢操作；Go 同类观察仍串行，不能据此承诺固定响应时间 |
+| `authorize_cancel/open`、`diagnostics_cancel` | 操作已拥有的流程，可越过业务等待；仍核对操作归属和原有取消条件 |
+| `account_detect`、`account_snapshot(refresh=true)`、`supply_status` | 按平台排队；OpenAI 与 Claude 可并发，读取可能刷新／续办，不能归为纯观察 |
+| `account_action`、`authorize_start`、`supply_set_paused` | 同平台冲突写立即拒绝，不排到慢操作结束后偷偷执行；不同平台可并发 |
+| 设备配对／恢复推进、运行启动、网络应用、切换等共享业务 | 与平台业务及其他共享业务互斥；`runtime_stop` 可越过平台业务以取消自有工作，但仍遵守核心生命周期检查和共享业务互斥 |
+| 退出／更新 | 保留冻结、取消和 owned 子进程回收流程 |
+
+冲突返回 `REQUEST_RESOURCE_BUSY`，带本次方法、阻塞方法及资源，并明确本次业务未执行。Rust 可在发送前拒绝，Go 也会在接收后执行前拒绝，因此它不等于“管道未发送任何字节”。前端将其视为确定未执行；已发送但结果未明的超时仍须等待原请求，不得重放写入。观察独立不意味着管道／容量无限：单 writer、最多 16 项、完整帧校验和迟到结果检查均保留。
+
+平台锁繁忙时，`account_snapshot(refresh=false)` 与运行快照返回最后发布的账号观察副本，清除候选引用和能力结果，标记 `authorization.state=unconfirmed`、`error.code=operation_pending`，禁用相关写入口；它不能授权接入或换号。该提示可在持久账号 revision 不变时出现／消失，前端接收同 revision 的忙闲观察变化，仍拒绝低于既有操作回执的结果。
+
+`notification_snapshot` 不等待忙平台的账号锁，省略该平台的通知事实；空闲平台仍重新核对磁盘、绑定和通知证据。省略事实既不能发送旧通知，也不能清除该平台的通知去重。Tauri 的启动／绑定／网络变更入口同样使用即时准入；锁被占用时返回带当前操作和启动状态的 `REQUEST_RESOURCE_BUSY`，不等待锁释放后执行。
+
+前端仍只有一个持续观察入口，但按资源保留各自的在途请求。共享读取只等待本机上下文、恢复记录、运行快照和默认设置；设备核对、恢复推进、OpenAI 与 Claude 的读取独立进行，同平台先读账号再读接单状态。首次设备身份未核实前只展示本机事实，不启动 Hive 账号维护。手动核对设备等待本次设备核对及当前恢复推进，再重读恢复记录；普通轮询不等待恢复推进。
+
+写前仅等待相关资源，并重新核对用户确认时的账号、候选、运行状态和作用域；本机登录不等待无关平台或 Hive 接单查询，取消登录可越过慢查询。写回执到达前已开始的读取不能充当写后核对；进程、绑定或网络版本变化后的旧结果不得发布到新作用域。旧进程的恢复请求也不得阻挡新进程。前端显示保留的同账号额度时只标记为历史记录，不修改原始账号事实，不作为接单或写操作依据；切换绑定／进程后不复用该显示记录。
 
 本地 Tauri 命令 `bridge_pending_requests` 返回 `{instance,requests:[{id,method,platform}]}`，只列已超时仍在途的请求，不向 Go 发探测。完成事件 `bee://request-settled` 携带 `{instance,id,method,platform}`，不包含业务结果；无平台时为 null。前端先等待原请求结束，再按资源使用 2/4/8/16/30 秒退避（抖动为基准的 80%–100%）；成功恢复正常 10 秒核对。事件丢失通过本地在途回读补偿。有效 429 Retry-After 可延长等待，认证／TLS／非法数据或未知失败停止该资源自动重试。写命令不自动重放。
 
@@ -233,7 +254,7 @@ Rust 在管理进程 ready 后先只读核对资格和原持久尝试；通过�
 
 ### 用户确认的设备恢复（T4b）
 
-新增有序 capabilities：`device_recovery_prepare`、`device_recovery_confirm`、`device_recovery_status`，排列在 `device_context`／`runtime_verify` 之后。prepare/status 的 params 必须为 `{}`；confirm 必须且只能包含 `{operation_id,expected_revision,decision}`，operation_id 为48位小写十六进制、expected_revision 为正安全整数，decision 为 `begin_pairing|adopt_owner|renew_expired`。重复字段、null、未知字段及不合法阶段在写入前拒绝。
+新增有序 capabilities：`device_recovery_prepare`、`device_recovery_confirm`、`device_recovery_status`，以及紧随其后的可选扩展 `device_recovery_snapshot`，排列在 `device_context`／`runtime_verify` 之后。prepare/status/snapshot 的 params 必须为 `{}`；confirm 必须且只能包含 `{operation_id,expected_revision,decision}`，operation_id 为48位小写十六进制、expected_revision 为正安全整数，decision 为 `begin_pairing|adopt_owner|renew_expired`。重复字段、null、未知字段及不合法阶段在写入前拒绝。
 
 成功返回 `{recovery:DeviceRecoveryView}`，失败返回现有 `{error:{code,message,details?}}`。DeviceRecoveryView 的7个必填字段是 `operation_id,revision,phase,old_identity,new_identity,pairing,failure`，后四者按下述规则可为null。身份摘要严格为 `{id,name,owner_id,owner_email}`；pairing严格为 `{code,verification_url,expires_at}`，URL只能为已保存同源 Hive 的 `/devices/pair?code=<code>`；failure复用结构化错误及安全证据。绝不返回配对token或新旧设备凭据。URL只供显式 `device_open` 使用，不记录到日志。
 
@@ -241,7 +262,9 @@ phase 固定为 `awaiting_confirmation|creating|creation_unknown|pending|drainin
 
 prepare只保存待确认记录，不创建配对；begin_pairing只适用于awaiting_confirmation，adopt_owner只适用于awaiting_owner_confirmation，renew_expired只适用于Hive明确确认过期且没有未决兑换的expired。已经接受的相同三元确认请求只返回现状；旧revision、其他decision、冲突事务明确拒绝。Status只查询／首次兑换已获网页批准的原事务／保存结果，不创建配对、不重放未知POST。不同owner在重启后仍须明确确认。
 
-首次配对继续使用 `device_begin`／`device_status`，不调用三条恢复命令。DeviceView新增可选 `recovery:DeviceRecoveryView`，仅表示purpose=initial_pairing的同一事务，old_identity必须为null。兼容状态pending/draining/expired/bound分别要求phase为pending/draining/expired/completed；bound.identity必须与completed.new_identity相同。其他阶段使用新增 `state:'pairing'`，此状态必须有合法recovery，且不能伪装成bound。pending/draining的顶层code／URL／expiry必须与事务pairing完全一致，事务URL必须与顶层hive同源；未知字段／敏感字段／矛盾组合均拒绝。公开阶段用于解释当前事实，不能按message猜测。
+`device_recovery_snapshot` 只读取原子持久记录，不取配对事务锁、不发 HTTP、不兑换、不保存结果，也不改变 StartupGate。没有恢复记录或 purpose 为 initial_pairing 时返回 `DEVICE_RECOVERY_NONE`；local_recovery 即使没有 old_identity 也须可读，损坏记录仍返回错误。前端先读快照，另由唯一 owner 在后台调用旧 `device_recovery_status` 续办；推进超时后保留原请求，查询页面不必等待推进完成。迟到结果须核对 instance、绑定代次及 operation_id。
+
+首次配对继续使用 `device_begin`／`device_status`，不通过恢复快照接管。DeviceView新增可选 `recovery:DeviceRecoveryView`，仅表示purpose=initial_pairing的同一事务，old_identity必须为null。兼容状态pending/draining/expired/bound分别要求phase为pending/draining/expired/completed；bound.identity必须与completed.new_identity相同。其他阶段使用新增 `state:'pairing'`，此状态必须有合法recovery，且不能伪装成bound。pending/draining的顶层code／URL／expiry必须与事务pairing完全一致，事务URL必须与顶层hive同源；未知字段／敏感字段／矛盾组合均拒绝。公开阶段用于解释当前事实，不能按message猜测。
 
 两个目的共用固定配置目录下的0600原子文件 `bee-desktop-recovery.json`，不改变CLI localState schema。创建／兑换尝试标记在POST前持久化；未知结果只查询原token／新credential身份。无token创建未知保留阻塞，现有Hive协议不能取回raw token；人工核对／导出入口不等于恢复已完成。旧redeeming按未知处理，缺少创建标记的旧残留不能当作未发送。Poll approved不证明先前未知兑换未提交；本机时间不证明远端过期。
 

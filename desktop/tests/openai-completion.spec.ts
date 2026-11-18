@@ -79,7 +79,7 @@ test('open and exhausted queries retain the original login without starting anot
  await page.clock.install();await setup(page,true);
  await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
  await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
- await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
  await card(page).getByRole('button',{name:'打开登录页面',exact:true}).click();
  await page.evaluate(()=>(window as any).queryFailure=true);
@@ -322,4 +322,14 @@ for(const [size,width,height] of [['wide',1080,700],['narrow',860,680]] as const
  await expect(approved.getByRole('button',{name:'重试',exact:true})).toBeVisible();
  await expect(approved).toContainText('账号已接入');await expect(approved.getByRole('progressbar')).toHaveCount(2);
  await page.locator('iframe').screenshot({path:resolve(evidence,`approved-prepare-failed-${size}.png`)});
+});
+
+
+test('cancelling relogin keeps account details open and confirmation reveals the login flow',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();
+ const details=page.getByRole('dialog',{name:'OpenAI 账号详情',exact:true});await details.getByRole('button',{name:'重新登录',exact:true}).click();
+ await page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'取消',exact:true}).click();await expect(details).toBeVisible();expect(await writes(page)).toEqual([]);
+ await details.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'开始官方登录',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
 });

@@ -20,7 +20,7 @@ import './openai-account.css';
 function ErrorEvidence({error}:{error:UiFailure}){return <pre className="oa-error-evidence">{presentFailure(error,currentLocale()).details}</pre>;}
 
 type Props={accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply;navigationRequest?:NavigationRequest;onNavigate?:(target:NavigationTarget)=>void;now:number};
-function OpenaiAction({accounts,runtime,action,label,onConfirmationChange}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string;onConfirmationChange?:(open:boolean)=>void}){
+function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubmitted}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string;onConfirmationChange?:(open:boolean)=>void;onSubmitted?:()=>void}){
  const view=accounts.views.openai;
  const [confirmation,setConfirmation]=useState<{stamp:string;target?:string|null;selected?:string|null}>();
  const [invalid,setInvalid]=useState(false);
@@ -38,7 +38,7 @@ function OpenaiAction({accounts,runtime,action,label,onConfirmationChange}:{acco
     <p>{t(action==='confirm_change'?'更换后使用新账号的订阅额度。将暂停此平台接单，准备就绪后仍暂停，由你恢复。':'准备期间临时停止派单，完成后保留你的最新接单选择。')}</p>
    </>}
    {(invalid||confirmation?.stamp!==stamp())&&<p role="alert">{t('账号、来源或运行条件已变化，本次未提交；请关闭后重新确认。')}</p>}
-   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={(invalid||confirmation?.stamp!==stamp())||!!reason} onClick={()=>{if((invalid||confirmation?.stamp!==stamp())||block()){setInvalid(true);return;}setConfirmation(undefined);if(action==='authorize')accounts.authorize('openai');else accounts.action('openai',action);}}>{t(action==='clear_selection'?'确认取消接入':action==='select'?'确认接入':action==='confirm_change'?'确认更换':'开始官方登录')}</Button></div>
+   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{t('取消')}</Button></Dialog.Close><Button disabled={(invalid||confirmation?.stamp!==stamp())||!!reason} onClick={()=>{if((invalid||confirmation?.stamp!==stamp())||block()){setInvalid(true);return;}setConfirmation(undefined);if(action==='authorize')accounts.authorize('openai');else accounts.action('openai',action);onSubmitted?.();}}>{t(action==='clear_selection'?'确认取消接入':action==='select'?'确认接入':action==='confirm_change'?'确认更换':'开始官方登录')}</Button></div>
   </Dialog.Content></Dialog.Portal>
  </Dialog.Root>;
 }
@@ -126,8 +126,8 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
     {maintenance&&<p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>}
     {op?.kind==='authorize'&&op.state==='unknown'&&<p>{t('原登录进程已中断，原登录结果未确认；账号维护状态单独核对。')}</p>}
     {maintenance?.can_recheck&&<Button variant="outline" disabled={!!accounts.busy.openai||!!accounts.writeBusy.openai} onClick={()=>accounts.refresh('openai')}>{t('核对维护结果')}</Button>}
-    <div className="oa-sheet-actions"><Button variant="outline" onClick={()=>setPanel('settings')}>{t('修改凭证读取设置')}</Button><OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>{selected&&view.hive.fingerprint===null&&view.hive.generation===null&&<OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="clear_selection" label="取消接入"/>}</div></>}
-    {panel==='compare'&&<><dl className="account-detail-facts"><div><dt>{t('已接入账号')}</dt><dd>{view?.selection.fingerprint?.slice(0,16)}</dd></div><div><dt>{t('发现新账号')}</dt><dd>{view?.candidate.fingerprint?.slice(0,16)}</dd></div></dl><p>{t('确认换号前，Bee 保留已接入账号。')}</p><OpenaiAction onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="confirm_change" label="确认换号"/></>}
+    <div className="oa-sheet-actions"><Button variant="outline" onClick={()=>setPanel('settings')}>{t('修改凭证读取设置')}</Button><OpenaiAction onSubmitted={()=>setDetails(false)} onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>{selected&&view.hive.fingerprint===null&&view.hive.generation===null&&<OpenaiAction onSubmitted={()=>setDetails(false)} onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="clear_selection" label="取消接入"/>}</div></>}
+    {panel==='compare'&&<><dl className="account-detail-facts"><div><dt>{t('已接入账号')}</dt><dd>{view?.selection.fingerprint?.slice(0,16)}</dd></div><div><dt>{t('发现新账号')}</dt><dd>{view?.candidate.fingerprint?.slice(0,16)}</dd></div></dl><p>{t('确认换号前，Bee 保留已接入账号。')}</p><OpenaiAction onSubmitted={()=>setDetails(false)} onConfirmationChange={setNestedConfirmation} accounts={accounts} runtime={runtime} action="confirm_change" label="确认换号"/></>}
     {panel==='install'&&<><p>{t('安装 OpenAI 官方 Codex CLI，确保当前用户可运行 codex 命令，再返回 Bee 重试。')}</p><Button variant="outline" onClick={()=>setDetails(false)}>{t('返回账号页')}</Button></>}
     {panel==='settings'&&<form className="account-source" data-account-source="openai" data-nav-section="source" data-nav-platform="openai" onSubmit={event=>{event.preventDefault();void accounts.saveOpenaiSource();}}>
      <label>{t('读取目录')}<input ref={sourceField} name="openai-source-directory" autoComplete="off" spellCheck={false} disabled={sourceBlocked} placeholder={defaults?.directory??t('使用 Codex 默认目录')} value={source.directory??''} onChange={event=>accounts.setOpenaiDraft({...source,directory:event.target.value||null})}/></label>

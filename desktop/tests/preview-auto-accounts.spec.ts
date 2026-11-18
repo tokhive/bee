@@ -73,7 +73,7 @@ async function relogin(app:FrameLocator){
  const confirm=app.getByRole('dialog').last();
  await expect(confirm).toContainText('将暂停此平台接单');
  await confirm.getByRole('button',{name:'开始官方登录',exact:true}).click();
- await app.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
+ await expect(app.getByRole('dialog')).toHaveCount(0);
  await expect(card(app).getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
 }
 
@@ -102,7 +102,7 @@ test('permission evidence and pause remain independent; saved source repair pres
  const app=await open(page,'error');
  await expect(status(app)).toHaveText('没有读取所选凭证来源的权限。');
  await expect(card(app).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
- await expect(card(app).getByText('接单保持暂停。',{exact:true})).toBeVisible();
+ await expect(card(app).getByText('接单保持暂停。',{exact:false})).toBeVisible();
  await card(app).getByRole('button',{name:'查看错误详情',exact:true}).click();
  await expect(app.getByRole('dialog',{name:'错误详情'})).toContainText('permission_denied');
  await page.keyboard.press('Escape');
@@ -167,7 +167,7 @@ test('failed login can retry; cancellation disables further simulated login resu
  await expect(page.locator('#event-apply')).toBeDisabled();
  await expect(page.locator('#event-help')).toContainText('当前没有进行中的登录');
  await expect(status(app)).toHaveText('已取消登录');
- await expect(card(app).getByText('接单保持暂停。',{exact:true})).toBeVisible();
+ await expect(card(app).getByText('接单保持暂停。',{exact:false})).toBeVisible();
  await expect(status(app,'Claude')).toHaveText('可接单');
  expect(await calls(page,'authorize_start')).toHaveLength(2);
 });

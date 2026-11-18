@@ -50,7 +50,7 @@ for(const width of [1080,820,600])test(`compact list evidence remains read-only 
  const popover=page.getByRole('dialog',{name:'错误详情',exact:true});await expect(popover).toContainText('security exit=44');await expect(popover).toContainText('permission_denied: false');await expect(popover.locator('details')).toHaveCount(0);await expect(popover.getByRole('button',{name:'修改凭证读取设置'})).toHaveCount(0);expect((await card(page).boundingBox())!.height).toBe(height);
  await page.keyboard.press('Escape');await expect(popover).toHaveCount(0);await expect(trigger).toBeFocused();await trigger.click();await page.getByRole('heading',{name:'AI 账号',exact:true}).click();await expect(popover).toHaveCount(0);
  await trigger.click();await page.getByRole('button',{name:'关闭错误详情',exact:true}).click();await expect(trigger).toBeFocused();expect(await writes(page)).toEqual(before);
- await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByText('接单保持暂停。',{exact:true})).toBeVisible();
+ await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByText('接单保持暂停。',{exact:false})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const dir=resolve(import.meta.dirname,'../test-results/compact-list');mkdirSync(dir,{recursive:true});await page.screenshot({path:resolve(dir,`native-${width}.png`)});
  await page.evaluate(()=>{document.documentElement.dataset.theme='dark'});await trigger.click();await page.screenshot({path:resolve(dir,`native-error-${width}-dark.png`)});

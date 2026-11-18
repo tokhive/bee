@@ -210,7 +210,7 @@ test.describe('native automatic service — frontend mock contract',()=>{
   const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
   await expect(device).toContainText('Hive 连接归属未确认');
   await expect(page.locator('.desktop-side-status')).toContainText('设备连接已被占用');
-  await device.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText('owned_session=false');await page.keyboard.press('Escape');
+  await device.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('owned_session=false');await page.keyboard.press('Escape');
   await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
   await noDailyControls(page);
   await device.getByRole('button',{name:'重试连接',exact:true}).click();

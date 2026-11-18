@@ -135,7 +135,7 @@ test('device failure keeps the last identity during retry and confirms it again 
  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).refreshHeld)).toBe(true);
  await page.evaluate(()=>{const w=window as any;w.failRefresh=true;w.releaseRefresh();});
  const failure=page.locator('.device-card .first-launch-failure');await expect(failure).toBeVisible();
- await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.first-launch-error-popover')).toContainText('GET device_status fixture HTTP 503');await page.keyboard.press('Escape');
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('GET device_status fixture HTTP 503');await page.keyboard.press('Escape');
  await expect(page.locator('.device-card-facts')).toHaveAttribute('aria-label','上次确认的设备，当前待核对。');
  await expect(page.locator('.device-card-facts dd').nth(1)).toHaveText('owner@example.test');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);
  await hold(page,'device_status');const copy=await failure.innerText();

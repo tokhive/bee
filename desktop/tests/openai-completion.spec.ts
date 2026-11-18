@@ -363,3 +363,21 @@ test('cancelling relogin keeps account details open and confirmation reveals the
  await card(page).getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true})).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
  });
+
+test('expired selected authorization offers relogin without automatically changing supply',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any;w.expiry=new Date(Date.now()-60000).toISOString();w.accounts.openai.candidate.expires_at=w.expiry;w.accounts.openai.revision++;});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('授权已过期');await expect(card(page).getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();await expect(card(page).getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true})).toBeVisible();expect(await writes(page)).toEqual([]);
+});
+for(const [code,check,title,completed] of [
+ ['client_missing','official_executable','未找到 Codex',0],
+ ['authorization_timeout','official_version','登录已超时',0],
+ ['authorization_timeout','official_process','登录已超时',0],
+ ['authorization_timeout','official_source_recheck','登录已超时',1],
+] as const)test(`login failure only completes proven prior steps: ${code}/${check}`,async({page})=>{
+ await page.clock.install();await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();await expect(card(page).getByRole('button',{name:'取消登录',exact:true})).toBeVisible();
+ await page.evaluate(({code,check})=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code,check,message:`controlled failure at ${check}`,evidence:{}};},{code,check});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText(title);await expect(card(page).locator('.oa-steps .done')).toHaveCount(completed);await expect(card(page).locator('.oa-steps .failed')).toHaveCount(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});

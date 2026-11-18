@@ -1,4 +1,10 @@
 export const openaiEnglish:Record<string,string>={
+  "授权已过期": "Authorization expired",
+  "需要通过官方客户端重新授权。": "Authorize again through the official client.",
+  "登录已超时": "Sign-in timed out",
+  "本次登录已超时。": "This sign-in attempt timed out.",
+  "Bee 正在启动 Codex，请稍候。": "Bee is starting Codex. Please wait.",
+  "系统未能打开浏览器，请重试。": "The system could not open the browser. Please retry.",
   "尚未取得数据": "No data received yet",
   "重置时间待确认": "Reset time unconfirmed",
   "暂时无法确认取消结果": "Unable to confirm the cancellation result yet",

@@ -127,5 +127,5 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 .detail-sheet .oa-sheet-actions{margin:16px 0;gap:8px}
 .detail-sheet .oa-sheet-actions .ui-button{padding:5px 12px;font-size:13px;font-weight:400;box-shadow:none}
 
-.dialog-overlay:has(+.detail-sheet:has(.oa-sheet-actions)){background:#202b3e40}
-:root[data-theme=dark] .dialog-overlay:has(+.detail-sheet:has(.oa-sheet-actions)){background:#0008}
+.dialog-overlay.openai-detail-overlay{background:#202b3e40}
+:root[data-theme=dark] .dialog-overlay.openai-detail-overlay{background:#0008}

@@ -39,7 +39,7 @@
 .binding-pairing-code .pair-code{font:600 22px/1.5 ui-monospace,SFMono-Regular,monospace;letter-spacing:.08em;user-select:all}
 .binding-pairing-code small,.device-card .device-note{font-size:11px;color:var(--muted)}
 .device-card p.repair-impact,.binding-confirmation .repair-impact{padding:9px 12px;border-radius:5px;background:var(--panel);color:var(--ink);font-size:12px;line-height:1.6}
-.repair-progress{padding:8px 12px;border-left:2px solid var(--accent);margin:12px 0;background:var(--panel)}
+.repair-progress{margin:6px 0;color:var(--ink);font-size:12px;line-height:1.5}
 .repair-progress p{margin:0}.repair-progress details{margin-top:6px}.repair-progress pre,.binding-url p{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}
 .binding-url{font-size:11px;color:var(--muted);margin-top:4px}.binding-url summary{cursor:pointer;min-height:24px}
 .device-card .recovery-identities{margin:12px 0;gap:12px}.recovery-identities dt{color:var(--muted);font-size:11px}.recovery-identities dd{margin:4px 0;overflow-wrap:anywhere}

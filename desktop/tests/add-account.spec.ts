@@ -9,7 +9,7 @@ async function setup(page:Page,missing=false,progress=false,paused=false){
   const operation=w.accounts.openai.operation,live=operation.state==='running';
   const phase=w.cleaning?'cleaning_up':live?w.loginPhase??'waiting_authorization':'finished';
   const value={operation,sequence:w.progressSequence=(w.progressSequence??0)+1,phase,stop_reason:w.cleaning?'failed':null,recheck_in_flight:false,actions:{open:phase==='waiting_authorization'&&live,cancel:!w.cleaning&&live,retry:false,recheck:false,restart:false},blocker:null};
-  return {instance:'b'.repeat(32),result:command==='authorize_open'?{open:{opened:true,error:null,progress:value}}:{progress:value}};
+  return {instance:'b'.repeat(32),result:command==='authorize_open'?{open:{opened:!w.loginOpenFailure,error:w.loginOpenFailure??null,progress:value}}:{progress:value}};
  }const result=await invoke(command,args);if(command==='bridge_status')result.metadata.capabilities=['authorize_progress','authorize_open'];return result;};});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
 }
@@ -25,7 +25,7 @@ test('starting a slow official login gives immediate feedback and prevents anoth
  await wizard(page).getByRole('button',{name:'正在启动登录…',exact:true}).evaluate((button:HTMLButtonElement)=>{button.click();button.click();});
  await expect(wizard(page).getByRole('button',{name:'设置读取位置',exact:true})).toBeDisabled();
  await page.clock.runFor(6500);
- await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('请在官方页面完成登录');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('等待完成 OpenAI 登录');
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
 test('official login reports its real phase and still requires explicit intake',async({page})=>{
@@ -34,11 +34,11 @@ test('official login reports its real phase and still requires explicit intake',
  await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在启动 OpenAI 登录…');
  await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).loginPhase='waiting_authorization');await page.clock.runFor(1100);
- await expect(wizard(page).getByRole('status')).toContainText('Bee 会自动核对登录结果，无需反复刷新。');
+ await expect(wizard(page).getByRole('status')).toContainText('请在官方页面完成授权，Bee 会自动继续。');
  await expect(wizard(page).getByRole('alert')).toHaveCount(0);
  await wizard(page).getByRole('button',{name:'打开登录页面',exact:true}).click();
  await page.evaluate(()=>(window as any).loginPhase='verifying');await page.clock.runFor(1100);
- await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在读取并核验账号…');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在核验账号…');
  await expect(wizard(page).getByRole('status')).toContainText('官方登录已完成，Bee 正在核验账号身份。');
  await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
  expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toEqual([]);
@@ -57,7 +57,7 @@ test('failed progress reads show retry and stopped states; refreshing only queri
  await expect(wizard(page).locator('.add-account-spinner')).toHaveCount(0);
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
  await page.evaluate(()=>(window as any).progressFailure=false);await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();
- await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('请在官方页面完成登录');
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('等待完成 OpenAI 登录');
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
  const ids=await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='authorize_progress').map((c:any)=>c.args.operationId));expect(new Set(ids).size).toBe(1);
 });
@@ -154,7 +154,7 @@ test('English onboarding stays translated and fits the minimum desktop width',as
  const flow=page.getByRole('region',{name:'Add account',exact:true});
  await flow.getByRole('button',{name:'Back',exact:true}).click();await page.evaluate(()=>(window as any).loginAdmissionDelay=6000);
  await flow.getByRole('button',{name:'Sign in to OpenAI',exact:true}).click();await expect(flow.getByRole('heading',{level:3})).toHaveText('Starting OpenAI sign-in…');
- await page.clock.runFor(6500);await expect(flow.getByRole('heading',{level:3})).toHaveText('Complete login on the official page');
+ await page.clock.runFor(6500);await expect(flow.getByRole('heading',{level:3})).toHaveText('Waiting for OpenAI sign-in');
  await page.evaluate(()=>(window as any).loginPhase='verifying');await page.clock.runFor(1100);await expect(flow.getByRole('status')).toHaveText('Official sign-in has finished. Bee is verifying the account identity.');
  await page.evaluate(()=>(window as any).progressFailure=true);await page.clock.runFor(8500);await expect(flow.getByRole('heading',{level:3})).toHaveText('Sign-in progress checks have stopped');
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
@@ -213,7 +213,7 @@ for(const [label,override] of [
  await setup(page);
  await page.evaluate(override=>{(window as any).accountScenarios.candidates={openai:override};},override);
  await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
- await expect(wizard(page).getByRole('heading',{level:3})).not.toHaveText('正在读取并核验账号…');
+ await expect(wizard(page).getByRole('heading',{level:3})).not.toHaveText('正在核验账号…');
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true}).and(page.locator(':enabled'))).toHaveCount(0);
  expect(await writes(page)).toEqual([]);
 });
@@ -233,4 +233,35 @@ test('returning from confirmation retains the displayed identity without connect
  await wizard(page).getByRole('button',{name:'更换连接方式',exact:true}).click();
  await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeVisible();
  expect(await writes(page)).toEqual([]);
+});
+
+
+test('cancel adding waits for the same login to finish and cannot hide an unknown cancellation',async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toHaveCount(0);
+ await wizard(page).getByRole('button',{name:'取消添加',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toBeVisible();
+ await expect(wizard(page).getByRole('button',{name:'OpenAI',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});});
+ await wizard(page).getByRole('button',{name:'刷新登录进度',exact:true}).click();await page.clock.runFor(11000);
+ await expect(wizard(page).getByRole('button',{name:'OpenAI',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(0);
+});
+
+
+test('a past browser launch failure does not remain the blocker after official login advances',async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ await page.evaluate(()=>{(window as any).loginOpenFailure={platform:'openai',code:'authorization_browser_open_failed',check:'browser_opener',message:'system browser launcher failed: EACCES',evidence:{}};});
+ await wizard(page).getByRole('button',{name:'打开登录页面',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'重新打开登录页面',exact:true})).toBeVisible();
+ await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.locator('.account-error-popover')).toContainText('system browser launcher failed: EACCES');await page.keyboard.press('Escape');
+ await page.evaluate(()=>(window as any).loginPhase='verifying');await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在核验账号…');await expect(wizard(page).getByRole('alert')).toHaveCount(0);
+ await page.evaluate(()=>(window as any).progressFailure=true);await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('alert')).toBeVisible();await expect(wizard(page).getByRole('button',{name:'刷新登录进度',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });

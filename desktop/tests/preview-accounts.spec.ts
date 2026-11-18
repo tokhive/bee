@@ -20,7 +20,7 @@ async function startOpenAI(app:FrameLocator){
  if(await wizard(app).getByRole('button',{name:'OpenAI',exact:true}).count())await chooseOpenAI(app);
  await wizard(app).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
  await expect(wizard(app).getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
- await expect(wizard(app)).toContainText('请在官方页面完成登录');
+ await expect(wizard(app)).toContainText('等待完成 OpenAI 登录');
 }
 async function calls(page:Page,command:string){return page.locator('iframe').evaluate((el:HTMLIFrameElement,command)=>(el.contentWindow as any).calls.filter((call:any)=>call.command===command),command);}
 

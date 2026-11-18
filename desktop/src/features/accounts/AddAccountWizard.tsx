@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {open} from '@tauri-apps/plugin-dialog';
-import {Check,CircleAlert,FolderOpen,LoaderCircle,ShieldCheck} from 'lucide-react';
+import {Check,FolderOpen,LoaderCircle,ShieldCheck} from 'lucide-react';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {Button} from '../../components/ui';
 import {accountConfirmationKey} from '../../system/accounts';
@@ -22,6 +22,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const [pickerError,setPickerError]=useState<UiFailure>(),[picking,setPicking]=useState(false);
  const [confirmedIdentity,setConfirmedIdentity]=useState<{fingerprint:string|null;plan:string|null}>();
  const [submitted,setSubmitted]=useState(false),[kept,setKept]=useState(false);
+ const [exitAfterLogin,setExitAfterLogin]=useState<string>();
  const initial=useRef(false),active=useRef(true),heading=useRef<HTMLHeadingElement>(null);
  const now=useAccountClock(accounts),view=accounts.views.openai,op=view?.operation;
  const progressQuery=accounts.loginProgress?.id===op?.id?accounts.loginProgress:undefined;
@@ -50,7 +51,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  const showSourceError=!missing&&!starting&&!login;
  const operationError=starting?undefined:op?.error;
  const progressError=login&&progressQuery?.error?normalizeFailure(progressQuery.error,'authorize_progress'):undefined;
- const rawError=pickerError??(screen==='source'?accounts.sourceSaveError:undefined)??(login?accounts.loginOpenError:undefined)??(login?accounts.cancelUnconfirmed.openai?.failure:undefined)??progress?.blocker??progressError??(op?.kind==='authorize'&&op.state==='failed'&&!valid?operationError:undefined)??accounts.errors.openai??(showSourceError?candidate?.error:undefined)??(showSourceError?view?.authorization.error:undefined)??(op?.kind==='authorize'&&valid?undefined:operationError);
+ const rawError=pickerError??(screen==='source'?accounts.sourceSaveError:undefined)??(login&&(!progress||progress.actions.open)?accounts.loginOpenError:undefined)??(login?accounts.cancelUnconfirmed.openai?.failure:undefined)??progress?.blocker??progressError??(op?.kind==='authorize'&&op.state==='failed'&&!valid?operationError:undefined)??accounts.errors.openai??(showSourceError?candidate?.error:undefined)??(showSourceError?view?.authorization.error:undefined)??(op?.kind==='authorize'&&valid?undefined:operationError);
  const queryError=accounts.originalAccountQuery?.error;
  const error=rawError?normalizeFailure(rawError,'account_operation'):undefined;
  const verify=async()=>{
@@ -71,23 +72,28 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  useEffect(()=>{
   if(op?.kind==='authorize'&&op.state==='succeeded'&&!pending&&!kept&&screen==='connect'&&valid){setScreen('confirm');setConfirmation(undefined);}
  },[op,pending,kept,screen,valid]);
+ useEffect(()=>{
+  if(!exitAfterLogin)return;
+  if(op?.id!==exitAfterLogin){setExitAfterLogin(undefined);return;}
+  if(!pending&&!accounts.writeBusy.openai&&['succeeded','failed','cancelled'].includes(op.state)){setExitAfterLogin(undefined);onBack();}
+ },[exitAfterLogin,op,pending,accounts.writeBusy.openai,onBack]);
  const problem=error?presentFailure(error,currentLocale()):undefined;
  const source=accounts.openaiDraft??accounts.sourceFor('openai');
  const openSource=()=>{if(!accounts.openaiDraft)accounts.setOpenaiDraft({...accounts.sourceFor('openai')});setScreen('source');setPickerError(undefined);};
  const step=intake?3:screen==='confirm'&&(valid||!!confirmation)&&!pending&&!checking?3:2;
- const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在读取并核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'请在官方页面完成登录';
+ const loginTitle=progress?.blocker?'登录流程暂时受阻':queryStopped?'登录进度查询已停止':cleanup?'正在确认登录已结束…':progress?.phase==='starting'?'正在启动 OpenAI 登录…':progress?.phase==='verifying'?'正在核验账号…':progress?.phase==='finished'?'正在更新登录结果…':'等待完成 OpenAI 登录';
  const title=screen==='source'?'读取已有的 OpenAI 登录信息':starting?'正在启动 OpenAI 登录…':login?loginTitle:intake?'暂时无法确认接入结果':observing?'正在读取并核验账号…':step===3?'确认接入 OpenAI 账号':kept&&valid?'已核验 OpenAI 账号':'连接 OpenAI 账号';
- const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成登录。Bee 会自动核对登录结果，无需反复刷新。';
+ const loginStatus=progress?.blocker?'本次登录仍有阻塞，请查看错误详情并核对原流程。':queryStopped?'Bee 尚未确认本次登录结果。点击“刷新登录进度”继续查询。':progressError?'暂时未读到登录进度，Bee 正在重试查询。':cleanup?'Bee 正在确认本次登录已结束，完成前不能再次发起登录。':progress?.phase==='starting'?'Bee 正在准备官方登录，请稍候。':progress?.phase==='verifying'?'官方登录已完成，Bee 正在核验账号身份。':progress?.phase==='finished'?'Bee 正在读取本次登录结果，核对通过后进入确认接入。':accounts.openingLogin?'Bee 正在请求打开本次官方登录页面。':'请在官方页面完成授权，Bee 会自动继续。';
  const status=starting?'Bee 正在准备官方登录，请稍候。':login?loginStatus:observing?'Bee 正在读取本机登录信息；读取成功后会自动核验账号。':undefined;
- const showSpinner=!!status&&!queryStopped&&!progress?.blocker;
+ const showSpinner=!!status&&!queryStopped&&!progress?.blocker&&(starting||observing||cleanup||!!progress&&['starting','verifying','finished'].includes(progress.phase));
+ const loginWaiting=login&&!cleanup&&!queryStopped&&!progress?.blocker&&(!progress||progress.phase==='waiting_authorization');
+ const showLoginRefresh=!progress||queryStopped||!!progressError||cleanup||!!progress?.blocker;
  return <><section className="add-account" aria-label={t('添加账号')} data-account-platform="openai" tabIndex={-1}>
-  <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2>{screen!=='source'&&step===2&&missing&&!error&&!starting&&!pending&&!observing&&!kept&&<Button variant="ghost" onClick={onBack}>{t('取消添加')}</Button>}</header>
+  <header className="add-account-top"><h2>{t('添加 OpenAI 账号')}</h2>{screen!=='source'&&step===2&&missing&&!error&&!starting&&!pending&&!observing&&!kept&&<Button variant="ghost" onClick={onBack}>{t('取消添加')}</Button>}{loginWaiting&&progress?.actions.cancel&&op&&<Button variant="ghost" disabled={busy||accounts.openingLogin} onClick={()=>{setExitAfterLogin(op.id);accounts.cancelAuthorize('openai');}}>{t('取消添加')}</Button>}</header>
   <ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} className={step>i+1?'done':undefined} aria-current={step===i+1?'step':undefined}><span>{step>i+1?<Check aria-hidden="true"/>:i+1}</span>{t(label)}</li>)}</ol>
   <div className="add-account-body">
-   <h3 ref={heading} tabIndex={-1}>{t(title)}</h3>
-   {status&&<div className="add-account-progress" role="status" aria-live="polite" aria-atomic="true">
-    {showSpinner?<LoaderCircle className="add-account-spinner" aria-hidden="true"/>:<CircleAlert aria-hidden="true"/>}<p>{t(status)}</p>
-   </div>}
+   <h3 ref={heading} tabIndex={-1} className={showSpinner?'add-account-progress-title':undefined}>{showSpinner&&<LoaderCircle className="add-account-spinner" aria-hidden="true"/>}{t(title)}</h3>
+   {status&&<p role="status" aria-live="polite" aria-atomic="true">{t(status)}</p>}
    {error&&!intake&&<p className="add-account-error" role="alert">{problem?.summary}<AccountErrorPopover errors={[error]}/></p>}
    {problem?.action&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(problem.action!)}>{problem.actionLabel??t('查看详情')}</Button>}
    {screen==='source'&&!pending?<form data-account-source="openai" onSubmit={event=>{event.preventDefault();initial.current=true;void (async()=>{const saved=await accounts.saveOpenaiSource(source);if(saved&&active.current){setScreen('confirm');setConfirmation(undefined);}})();}}>
@@ -98,9 +104,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
     <label htmlFor="add-account-store">{t('凭证存储')}</label><select id="add-account-store" name="credential-store" value={source.store} disabled={busy} onChange={e=>accounts.setOpenaiDraft({...source,store:e.target.value})}>{accounts.defaults?.platforms.find(p=>p.platform==='openai')?.stores.filter(s=>s.supported).map(s=><option key={s.store} value={s.store}>{s.store}</option>)}</select>
     <div className="add-account-actions"><Button type="submit" disabled={busy||picking}>{t(accounts.sourceSaving?'正在保存…':'保存')}</Button><Button type="button" variant="outline" disabled={busy||picking} onClick={()=>setScreen('connect')}>{t('返回')}</Button></div>
    </form>:login?<>
-    <p>{t('登录后自动核验账号，再由你确认是否接入。')}</p>
-    {progress?.actions.open&&!queryStopped&&<p>{t('未看到官方登录页面时，可点击“打开登录页面”继续本次登录。')}</p>}
-    <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} aria-busy={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开登录页面…':'打开登录页面')}</Button>}<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="outline" disabled={busy||progress?.phase==='cleaning_up'||!!progress&&!progress.actions.cancel} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
+    <div className="add-account-actions">{progress?.actions.open&&<Button disabled={accounts.openingLogin} aria-busy={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开…':accounts.loginOpenError?'重新打开登录页面':'打开登录页面')}</Button>}{showLoginRefresh&&<Button variant="outline" disabled={busy} onClick={()=>{void accounts.queryLogin();accounts.refresh('openai');}}>{t('刷新登录进度')}</Button>}{op&&['pending','running'].includes(op.state)&&!accounts.cancelUnconfirmed.openai&&<Button variant="ghost" disabled={busy||progress?.phase==='cleaning_up'||!!progress&&!progress.actions.cancel} onClick={()=>accounts.cancelAuthorize('openai')}>{t('取消登录')}</Button>}</div>
    </>:intake?<>
     <div className="add-account-identity"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/></svg><div><small>OpenAI</small><strong>{(confirmedIdentity?.fingerprint??candidate?.fingerprint)?.slice(0,16)??t('账号身份待核对')}</strong></div></div>
     <p>{t('接入请求已发出，但未取得确定回执。核对完成前，账号不会加入已接入列表。')}</p>

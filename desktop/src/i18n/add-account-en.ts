@@ -1,4 +1,8 @@
 export const addAccountEnglish:Record<string,string>={
+ '等待完成 OpenAI 登录':'Waiting for OpenAI sign-in',
+ '请在官方页面完成授权，Bee 会自动继续。':'Complete authorization on the official page. Bee will continue automatically.',
+ '正在核验账号…':'Verifying account…',
+
  '读取已有的 OpenAI 登录信息':'Read an existing OpenAI login',
  '选择 Codex 保存登录信息的目录。':'Choose the directory where Codex saves login information.',
  '已核验 OpenAI 账号':'Verified OpenAI account',

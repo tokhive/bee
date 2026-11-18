@@ -10,7 +10,21 @@
 
 页面使用模拟数据，不接真实登录或业务。主预览并不代替正式应用或真实 Hive 的业务验收。以下旧“待评审”章节是历史记录；当前草稿以本节为准。
 
-## 待评审：概览设备区简化（2026-11-17）
+## 待评审：设备故障与重新核对（2026-11-18）
+
+[打开当前草稿](draft.html?scene=device-service&theme=light&size=narrow) · [正常菜单](draft.html?scene=device-normal-menu&size=narrow) · [连接超时](draft.html?scene=device-connection-timeout&size=narrow) · [未知错误](draft.html?scene=device-status-unknown&size=narrow) · [结果未确认](draft.html?scene=device-binding-unknown&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261118-112829-device-fault-actions/draft.html?scene=device-service&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
+
+落实用户确认的文字 UI：正常设备菜单只保留“切换 Hive”；设备凭据确实失效时显示“修复设备绑定”。连接拒绝、HTTP 503 和超时显示具体原因及“重试连接”，不据此推荐重绑或升级。未识别错误保留实际错误摘要、详情与“重新核对”。绑定、切换和取消结果未确认时统一使用“重新核对”，查询期间不可重复点击，结束后区分成功、仍未完成和仍未知。切换结果未知保留“取消切换”，取消结果未知不重复取消。
+
+沿用上轮紧凑布局：当前故障与操作集中在设备卡，设备资料在卡底；保留账号自身问题、身份、暂停选择及 OpenAI 双窗口额度。绑定或切换确认完成后，接入入口仍位于账号区。
+
+新增“设备与 Hive / 故障与核对”分组，含 40 个可直接选择的正常、故障、错误详情、核对进行中及结果分支；原 598 个入口保留，共 638 个。默认打开 HTTP 503。已确认的是文字方案，本轮 HTML 待评审；只更新 `draft.html` 和本说明，`index.html` 与正式应用代码未修改。
+
+验证包括受影响场景的浅色紧凑／深色宽屏显示、重试成功与失败、状态／绑定／切换／取消核对结果、恢复后保留暂停、详情与键盘焦点、重置和场景切换取消旧模拟操作。所有数据和结果都是本地预设，不访问真实 Hive。
+
+修改前复用字节一致的 `20261117-211505-compact-device-overview/draft.html`；交付冻结于 `20261118-112829-device-fault-actions`，包含本轮草稿、修改前稿、认可主预览和全部对照 HTML。
+
+## 上一轮待评审：概览设备区简化（2026-11-17）
 
 [打开当前草稿](draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-211505-compact-device-overview/draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
 

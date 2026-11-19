@@ -220,3 +220,13 @@ test.describe('native automatic service — frontend mock contract',()=>{
   expect(await page.evaluate(()=>(window as any).autoServiceMock.local)).toBe('waiting');
  });
 });
+
+ test('settled account details omit resolved maintenance chatter',async({page})=>{
+  await setup(page,{selected:true,maintenance:'restored'});
+  await accountsPage(page);
+  await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+  const detail=page.getByRole('dialog');
+  await expect(detail).not.toContainText('此平台的账号维护已恢复。');
+  await expect(detail).not.toContainText('查看账号信息，管理凭证读取方式。');
+  await expect(detail.getByRole('button',{name:'修改凭证读取设置',exact:true})).toBeEnabled();
+ });

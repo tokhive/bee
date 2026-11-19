@@ -388,6 +388,7 @@ for(const condition of ['missing','denied'] as const)test(`saved source ${condit
  await page.evaluate(({directory,condition})=>(window as any).__beeMockControls['account-source']({platform:'openai',directory,store:'file',value:condition}),{directory,condition});
  await wizard(page).getByRole('button',{name:'保存',exact:true}).click();
  await expect(wizard(page).getByLabel('读取目录')).toHaveValue(directory);await expect(wizard(page).getByRole('alert')).toBeVisible();await expect(wizard(page).getByRole('button',{name:'保存',exact:true})).toBeEnabled();
+ if(condition==='missing')await expect(wizard(page).getByRole('alert')).toContainText('所选目录中未找到登录文件，请检查读取位置。');
  await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText(condition==='missing'?'not_found':'permission_denied');await page.keyboard.press('Escape');
  await page.evaluate(directory=>(window as any).__beeMockControls['account-source']({platform:'openai',directory,store:'file',value:'available'}),directory);
  await wizard(page).getByRole('button',{name:'保存',exact:true}).click();await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);

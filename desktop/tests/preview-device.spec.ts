@@ -22,7 +22,7 @@ test('formal first pairing saves the entered Hive and name and becomes online wi
  await wizard.getByLabel('Hive 地址',{exact:true}).fill('https://design-hive.example');await wizard.getByLabel('设备名称',{exact:true}).fill('Design Laptop');
  await wizard.getByRole('button',{name:'继续绑定设备',exact:true}).click();
  await expect(wizard.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
- await expect(wizard).toContainText('https://design-hive.example/devices/pair?code=ABCD-EFGH');await expect(app.getByRole('navigation')).toHaveCount(0);
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{const w=el.contentWindow as any;Object.defineProperty(w.navigator,'clipboard',{configurable:true,value:{writeText:async(value:string)=>{w.copiedPairingUrl=value;}}});});await wizard.getByRole('button',{name:'复制确认网址',exact:true}).click();await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).copiedPairingUrl)).toBe('https://design-hive.example/devices/pair?code=ABCD-EFGH');await expect(app.getByRole('navigation')).toHaveCount(0);
  await event(page);await page.clock.runFor(2100);
  await expect(wizard.getByRole('heading',{name:'设备已绑定',exact:true})).toBeFocused();await expect(wizard).toContainText('Design Laptop');await expect(wizard).toContainText('new-owner@example.test');
  await expect(app.getByRole('navigation')).toHaveCount(0);await wizard.getByRole('button',{name:'进入概览',exact:true}).click();

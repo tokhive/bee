@@ -180,6 +180,8 @@ for(const cancelling of [false,true])test(`${cancelling?'restored cancellation':
 });
 
 test('completed binding feedback dismisses without losing account access or returning after navigation',async({page})=>{
+ // A restart rereads the same persisted transaction, rather than creating a new fixture operation.
+ await page.addInitScript(()=>Object.defineProperty(crypto,'randomUUID',{configurable:true,value:()=> '11111111-1111-4111-8111-111111111111'}));
  await open(page,'recovery-completed');
  await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
  await page.getByRole('button',{name:'关闭绑定结果提示',exact:true}).click();
@@ -191,7 +193,12 @@ test('completed binding feedback dismisses without losing account access or retu
  await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await expect(page.getByText('设备绑定已保存。',{exact:true})).toHaveCount(0);
  await expect(openai.getByRole('button',{name:'前往接入',exact:true})).toBeVisible();
+ await page.reload();await page.waitForFunction(()=>(window as any).__beePreviewReady);
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toHaveCount(0);
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+ await page.addInitScript(()=>Object.defineProperty(crypto,'randomUUID',{configurable:true,value:()=> '22222222-2222-4222-8222-222222222222'}));
+ await page.reload();await page.waitForFunction(()=>(window as any).__beePreviewReady);
+ await expect(page.getByText('设备绑定已保存。',{exact:true})).toBeVisible();
 });
 
 test('cancel submission returns to inline progress before its receipt without reporting unknown early',async({page})=>{

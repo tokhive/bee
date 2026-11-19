@@ -88,7 +88,7 @@ test('preview source conditions can recover through the formal source editor wit
  const detail=wizard(app);await detail.getByRole('button',{name:'设置读取位置',exact:true}).click();
  await detail.getByLabel('读取目录').fill('/tmp/codex');
  await detail.getByRole('button',{name:'保存',exact:true}).click();
- await expect(detail).toContainText('没有读取所选凭证来源的权限');
+ await expect(detail).toContainText('系统拒绝访问 Codex 登录文件。');
  await detail.getByRole('button',{name:'设置读取位置',exact:true}).click();
  await external(page,'account-source','available');
  await detail.getByLabel('读取目录').fill('');

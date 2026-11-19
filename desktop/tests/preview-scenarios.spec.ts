@@ -98,7 +98,7 @@ const cases:[string,string|RegExp][]=[
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
  ['check-background','可接单'],['check-expired','核对中…'],['check-waiting','等待自动重试…'],['check-retrying','重试中…'],['check-recovered','可接单'],['check-sequence','可接单'],
  ['quota-normal',/已用额度[\s\S]*5 小时3%/],['quota-unknown','尚未取得数据'],['quota-expired','上次记录'],['quota-multiple','7 日 · opus'],['quota-over',/已用额度[\s\S]*5 小时120%/],
- ['confirm-login','登录 OpenAI'],['confirm-select','确认接入'],['confirm-change','确认更换'],['confirm-clear','确认取消接入'],['account-detail','凭证读取方式'],
+ ['confirm-login','登录 OpenAI'],['confirm-select','确认接入'],['confirm-change','确认更换'],['confirm-clear','确认取消接入'],['account-detail','修改凭证读取设置'],
 ];
 for(const [scene,copy] of cases)test('scene renders formal state without invalid data or unintended writes: '+scene,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));

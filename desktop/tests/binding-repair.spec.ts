@@ -236,3 +236,17 @@ test('binding repair distinguishes checking the original identity from reconnect
  expect(text).toContain('task-17');expect(text).toContain('required processing record missing');
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
  });
+
+test('credential revocation retains known account preference while disabling its supply action',async({page})=>{
+ await page.clock.install();await open(page,'device-bound');
+ const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{const w=window as any;w.__beeMockControls['device-credential']({session:w.__beePreviewSession,value:'revoke',...w.__beeMockDeviceContext()});});
+ await page.clock.runFor(11000);
+ await expect(page.getByRole('heading',{name:'设备绑定需要修复',exact:true})).toBeVisible();
+ await expect(account).toContainText('等待设备绑定修复');
+ await expect(account).toContainText('接单选择：允许');
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await expect(page.locator('.device-card-facts')).toContainText('owner@example.test');
+ expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+});

@@ -5,7 +5,7 @@
 .device-card-heading .ui-button{width:28px;min-width:28px;min-height:28px;padding:0}
 .device-card-heading svg{width:16px;height:16px}
 .device-switch-anchor{position:absolute;top:42px;right:16px}
-.device-actions-menu{z-index:60;min-width:168px;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);box-shadow:0 6px 20px var(--shadow);font-size:12px}
+.device-actions-menu{z-index:60;min-width:148px;padding:4px;border:1px solid var(--line);border-radius:6px;background:var(--paper);color:var(--ink);box-shadow:0 6px 20px var(--shadow);font-size:12px}
 .device-actions-menu [role=menuitem]{display:flex;align-items:center;min-height:32px;padding:6px 9px;border-radius:4px;outline:none;cursor:pointer}
 .device-actions-menu [data-highlighted]{background:var(--panel)}
 .device-actions-menu [data-disabled]{color:var(--muted);opacity:.55;cursor:default}

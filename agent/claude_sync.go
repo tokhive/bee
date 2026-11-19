@@ -208,8 +208,8 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		if task.ID == "" || (task.Kind != "reencrypt_authorization" && task.Kind != "refresh_authorization") || task.Platform != "claude" || task.DeviceID != state.Identity.ID || task.AccountGeneration != result.Account.Generation || task.AccountFingerprint != auth.AccountFingerprint || task.CredentialRevision != auth.CredentialRevision || task.KeyVersion < 1 {
 			return errors.New("invalid Hive Claude authorization maintenance task binding")
 		}
-		var key tee.InboxPublic
-		if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
+		key, err := fetchInboxKey(ctx, state, "")
+		if err != nil {
 			return err
 		}
 		if !validClaudeMaintenanceKey(key) {

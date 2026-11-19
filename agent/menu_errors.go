@@ -38,7 +38,7 @@ var menuProblemsZH = map[string]problem{
 	"BEE-CONFIG-NO-SOURCE":           {"供给配置未指定账号来源或静态凭证", "重新选择供给账号，或添加 codex / claude 配置。"},
 	"BEE-CONFIG-STATIC-MIXED":        {"官方账号来源不能与静态凭证混用", "移除 credential；codex 和 claude 可以同时配置。"},
 	"BEE-CONFIG-STATIC-CREDENTIAL":   {"静态凭证不完整或格式错误", "检查 token、header、scheme，或使用官方账号来源。"},
-	"BEE-CONFIG-INBOX-KEY":           {"inbox_key_id 缺失或不是 64 位十六进制标识", "静态凭证需填写经独立渠道验证的 TEE 收件箱公钥标识。"},
+	"BEE-CONFIG-INBOX-KEY":           {"inbox_key_id 不是 64 位十六进制标识", "留空以信任 TEE 已签名的收件箱公钥，或填写要额外固定的公钥标识。"},
 	"BEE-CONFIG-PROXY":               {"代理地址不符合本地 HTTP 代理要求", "使用 http://127.0.0.1:端口，或移除 connect_proxy 并设置 HTTPS_PROXY。"},
 	"BEE-CONFIG-CAPABILITIES-SOURCE": {"capabilities 需要官方 Codex 账号来源", "添加 codex，或移除 capabilities；Claude 使用 claude.capabilities。"},
 	"BEE-CONFIG-CAPABILITIES-URL":    {"capabilities.local_url 不是本地 HTTP 地址", "移除 local_url，该选项仅用于本地测试。"},

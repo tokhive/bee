@@ -140,13 +140,9 @@ func (cfg *egressConfig) synchronizeReseller(ctx context.Context, state localSta
 }
 
 func (cfg *egressConfig) registerReseller(ctx context.Context, state localState, lease, key, keyPrint string) error {
-	var inbox tee.InboxPublic
-	if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &inbox); err != nil {
+	inbox, err := fetchInboxKey(ctx, state, cfg.InboxKeyID)
+	if err != nil {
 		return err
-	}
-	hash := sha256.Sum256(inbox.PublicKey)
-	if hash != inbox.KeyID || cfg.InboxKeyID != "" && hex.EncodeToString(hash[:]) != cfg.InboxKeyID {
-		return errInboxIdentity
 	}
 	envelope, err := tee.EncryptCredential(inbox, beewire.ProviderID(state.Identity.ID), tee.Secret{Header: "authorization", Scheme: "Bearer", Token: key})
 	if err != nil {

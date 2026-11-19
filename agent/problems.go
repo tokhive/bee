@@ -81,8 +81,8 @@ var problems = map[string]problem{
 		"give the credential a token, header and scheme, or use an official account source instead",
 	},
 	"BEE-CONFIG-INBOX-KEY": {
-		"inbox_key_id is missing or is not a 64-character hex key ID",
-		"static credentials need the TEE inbox public key ID verified through an independent channel; official account sources may omit it",
+		"inbox_key_id is not a 64-character hex key ID",
+		"remove it to trust the TEE's attested key, or write the key ID printed by the TEE if this deployment pins one",
 	},
 	"BEE-CONFIG-PROXY": {
 		"connect_proxy is not an unauthenticated HTTP proxy at a loopback IP address and port",

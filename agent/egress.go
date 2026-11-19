@@ -3,7 +3,6 @@ package bee
 import (
 	"bytes"
 	"context"
-	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -223,11 +222,16 @@ func (cfg *egressConfig) validate() error {
 	} else if cfg.Credential.Token == "" || cfg.Credential.Validate() != nil {
 		return fail("BEE-CONFIG-STATIC-CREDENTIAL", "")
 	}
-	id, err := hex.DecodeString(cfg.InboxKeyID)
-	if (!cfg.dynamicAuthorization() || cfg.InboxKeyID != "") && (err != nil || len(id) != 32) {
-		return fail("BEE-CONFIG-INBOX-KEY", "")
+	// A static inbox key pin is optional now that the TEE signs its key: an
+	// attested key survives TEE restarts without an operator edit. When one is
+	// given it must still be well formed.
+	if cfg.InboxKeyID != "" {
+		id, err := hex.DecodeString(cfg.InboxKeyID)
+		if err != nil || len(id) != 32 {
+			return fail("BEE-CONFIG-INBOX-KEY", "")
+		}
+		cfg.InboxKeyID = hex.EncodeToString(id)
 	}
-	cfg.InboxKeyID = hex.EncodeToString(id)
 	if cfg.Claude != nil && cfg.Claude.Store != claudeStoreKeychain && cfg.Claude.Store != claudeStoreFile {
 		return failf("BEE-CONFIG-CLAUDE-STORE", "store is %q", cfg.Claude.Store)
 	}
@@ -500,13 +504,9 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 		metadata := cfg.authorization.metadata()
 		codex = &metadata
 	}
-	var key tee.InboxPublic
-	if err := callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &key); err != nil {
+	key, err := fetchInboxKey(ctx, state, cfg.InboxKeyID)
+	if err != nil {
 		return err
-	}
-	hash := sha256.Sum256(key.PublicKey)
-	if hash != key.KeyID || cfg.Codex == nil && hex.EncodeToString(hash[:]) != cfg.InboxKeyID {
-		return errInboxIdentity
 	}
 	taskID := ""
 	if cfg.Codex != nil {

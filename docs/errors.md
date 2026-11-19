@@ -95,7 +95,7 @@ The static `credential` is incomplete or malformed. It needs a token, a header a
 
 ### BEE-CONFIG-INBOX-KEY
 
-`inbox_key_id` is missing or is not 64 hexadecimal characters. A static credential must name a TEE inbox key ID that was verified through a separate channel. Official account sources may omit the field, but if it is present it must be well formed.
+`inbox_key_id` is not 64 hexadecimal characters. The field is optional: an empty value trusts the inbox key the TEE signs and this Bee verifies against its compiled-in pins. When present it must be well formed, and it pins one key directly for a deployment that has not moved to the attested endpoint.
 
 ### BEE-CONFIG-PROXY
 

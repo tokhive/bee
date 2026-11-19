@@ -344,3 +344,21 @@ test('saving the source and reading it show distinct progress without losing the
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
  expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/new-source').map((c:any)=>c.args.request.mode))).toContain('official');
 });
+
+test('platform chooser focuses its heading and cancellation returns to the add trigger',async({page})=>{
+ await setup(page);
+ await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
+ const add=page.getByRole('button',{name:'添加账号',exact:true});
+ await expect(add).toBeVisible();
+ const before=await writes(page);
+ await add.click();
+ await expect(wizard(page).getByRole('heading',{name:'添加另一个平台',exact:true})).toBeFocused();
+ await expect(wizard(page).getByRole('button',{name:'OpenAI',exact:true})).toBeDisabled();
+ await wizard(page).getByRole('button',{name:'取消添加',exact:true}).click();
+ await expect(add).toBeFocused();
+ await add.press('Enter');
+ await expect(wizard(page).getByRole('heading',{name:'添加另一个平台',exact:true})).toBeFocused();
+ await wizard(page).getByRole('button',{name:'取消添加',exact:true}).click();
+ expect(await writes(page)).toEqual(before);
+});

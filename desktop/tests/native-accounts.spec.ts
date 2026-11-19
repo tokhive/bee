@@ -175,7 +175,7 @@ test('background snapshot failure during official login never invents a cancel r
 for(const failure of ['runtime','openai'] as const)test(`${failure} read failure marks retained account facts until recovery without automatic writes`,async({page})=>{
  await page.clock.install();await fixture(page,{selected:true,runtime:true});await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await expect(card(page).getByText(/^120%$/)).toBeVisible();
  await page.evaluate(failure=>{const w=window as any;if(failure==='runtime')w.accountScenarios.runtimeReadFailure=true;else w.accountScenarios.snapshotFailure='openai';},failure);await page.clock.runFor(10100);
- await expect(card(page).locator('.oa-title')).toContainText('无法更新账号状态');
+ await expect(card(page).locator('.oa-title')).toContainText(failure==='runtime'?'等待 Bee 响应超时，本次结果尚未确认。':'无法更新账号状态');
  await expect(card(page).getByText(new RegExp('b'.repeat(16)))).toBeVisible();await expect(card(page).locator('.account-quota-caption')).toContainText('上次记录');
  if(failure==='openai'){await expect(card(page,'Claude').locator('.native-account-condition')).not.toContainText('状态待更新');await expect(card(page,'Claude').getByText('b'.repeat(16),{exact:true})).toBeVisible();}
  else {await expect(card(page,'Claude').locator('.native-account-condition')).toContainText('等待 Bee 响应超时，本次结果尚未确认。');}

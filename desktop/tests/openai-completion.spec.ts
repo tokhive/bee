@@ -204,6 +204,7 @@ test('different identity opens review before confirmation and Escape restores fo
  expect(await writes(page)).toEqual([]);
  await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();
  await expect(page.getByRole('dialog').last().getByRole('heading')).toHaveText('确认更换 OpenAI 账号');expect(await writes(page)).toEqual([]);
+ await expect(page.getByRole('dialog').last().getByRole('button',{name:'取消',exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
 });
 

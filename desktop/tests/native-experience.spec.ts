@@ -812,3 +812,23 @@ for(const [kind,http,title,action] of [
  expect(await page.evaluate(()=>({accounts:(window as any).accounts,paused:(window as any).paused}))).toEqual(before);
  for(const command of ['device_begin','device_recovery_start','device_recovery_confirm','runtime_start','account_action','supply_set_paused'])expect(await calls(page,command)).toEqual([]);
 });
+
+test('native failure before the first Hive scope retains evidence and reconnects without pairing writes',async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.nativeBootFailed=true;w.nativeRetries=0;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='bridge_status'&&w.nativeBootFailed)return {state:'failed',error:{code:'BUNDLED_BEE_INVALID',message:'bundled Bee signature validation failed: code has no resources but signature indicates they must be present'}};
+   if(command==='hive_switch_snapshot'&&w.nativeBootFailed)throw {code:'BRIDGE_NOT_READY',message:'Hive scope unavailable before sidecar startup'};
+   if(command==='startup_retry'){w.nativeRetries++;w.nativeBootFailed=false;w.emitBridgeStatus(await invoke('bridge_status'));return invoke('startup_status');}
+   return invoke(command,args);
+  };
+ });
+ await page.goto('/');
+ await expect(page.getByRole('heading',{name:'Bee 后台连接失败',exact:true})).toBeVisible();
+ await page.getByText('错误详情',{exact:true}).click();await expect(page.locator('.startup-recovery-notice pre')).toContainText('BUNDLED_BEE_INVALID');
+ for(const command of ['device_begin','device_recovery_start','runtime_start','account_action'])expect(await calls(page,command)).toEqual([]);
+ await page.getByRole('button',{name:'重新连接',exact:true}).click();
+ await expect(page.getByRole('navigation')).toBeVisible();expect(await page.evaluate(()=>(window as any).nativeRetries)).toBe(1);
+ for(const command of ['device_begin','device_recovery_start','runtime_start','account_action'])expect(await calls(page,command)).toEqual([]);
+});

@@ -195,32 +195,32 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 @container(max-width:320px){.claude-login-compact .account-login-copy,.claude-login-compact .account-login-actions{grid-column:1;grid-row:auto}.claude-login-record{grid-row:auto}}
 
 /* Claude sheets reuse the approved preview's drawer and form geometry. */
-.detail-sheet:has(.claude-detail-actions),.detail-sheet:has(.claude-source-form),.detail-sheet:has(.claude-compare-panel){padding:24px;border-top:0;border-bottom:0;border-right:0}
-.detail-sheet:has(.claude-detail-actions)>header,.detail-sheet:has(.claude-source-form)>header,.detail-sheet:has(.claude-compare-panel)>header{margin-bottom:18px}
-.detail-sheet:has(.claude-detail-actions)>header h2,.detail-sheet:has(.claude-source-form)>header h2,.detail-sheet:has(.claude-compare-panel)>header h2{margin:0;font-weight:600;letter-spacing:normal}
-.detail-sheet:has(.claude-detail-actions)>header button,.detail-sheet:has(.claude-source-form)>header button,.detail-sheet:has(.claude-compare-panel)>header button{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted);padding:5px 4px;font-size:13px;line-height:19.5px}
+.detail-sheet:has(.claude-detail-actions),.detail-sheet:has(:is(.claude-source-form,.openai-source-form)),.detail-sheet:has(.claude-compare-panel){padding:24px;border-top:0;border-bottom:0;border-right:0}
+.detail-sheet:has(.claude-detail-actions)>header,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header,.detail-sheet:has(.claude-compare-panel)>header{margin-bottom:18px}
+.detail-sheet:has(.claude-detail-actions)>header h2,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header h2,.detail-sheet:has(.claude-compare-panel)>header h2{margin:0;font-weight:600;letter-spacing:normal}
+.detail-sheet:has(.claude-detail-actions)>header button,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header button,.detail-sheet:has(.claude-compare-panel)>header button{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted);padding:5px 4px;font-size:13px;line-height:19.5px}
 .detail-sheet:has(.claude-detail-actions)>.account-detail-facts{display:grid;gap:12px;margin:17px 0}
 .detail-sheet:has(.claude-detail-actions)>.account-detail-facts>div{grid-template-columns:90px minmax(0,1fr);gap:12px;margin:0;font-size:12px;line-height:18px}
 .detail-sheet:has(.claude-detail-actions) .account-detail-facts dd,.detail-sheet:has(.claude-detail-actions) .native-account-condition{line-height:18px}
 .account-detail-facts .account-status-block .native-account-condition{margin:0}
 .claude-detail-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:16px 0}
 .claude-detail-actions .account-actions{display:flex;gap:8px;flex-wrap:wrap}
-.claude-source-form label{display:grid;gap:6px;margin-bottom:14px;font-size:12px}
-.claude-source-form input,.claude-source-form select{width:100%;min-width:0;height:34px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 9px;font:inherit}
-.detail-sheet .claude-source-form p{font-size:13px;line-height:1.65;color:var(--muted)}
-.claude-source-form .dialog-actions{margin:22px 0 12px}
-.detail-sheet .claude-source-form .ui-button,.claude-detail-actions .ui-button{font-size:13px;font-weight:400;line-height:19.5px;padding:5px 12px;box-shadow:none}
+:is(.claude-source-form,.openai-source-form) label{display:grid;gap:6px;margin-bottom:14px;font-size:12px}
+:is(.claude-source-form,.openai-source-form) input,:is(.claude-source-form,.openai-source-form) select{width:100%;min-width:0;height:34px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 9px;font:inherit}
+.detail-sheet :is(.claude-source-form,.openai-source-form) p{font-size:13px;line-height:1.65;color:var(--muted)}
+:is(.claude-source-form,.openai-source-form) .dialog-actions{margin:22px 0 12px}
+.detail-sheet :is(.claude-source-form,.openai-source-form) .ui-button,.claude-detail-actions .ui-button{font-size:13px;font-weight:400;line-height:19.5px;padding:5px 12px;box-shadow:none}
 
-.claude-source-form input::placeholder{color:var(--muted);opacity:1}
+:is(.claude-source-form,.openai-source-form) input::placeholder{color:var(--muted);opacity:1}
 
 .account-list-compact .claude-expired-flow .native-account-fingerprint{line-height:16.5px}
 .account-list-compact .claude-expired-flow .native-account-condition{line-height:19.5px}
 .account-list-compact .claude-expired-flow .account-action-help{line-height:20.4px}
 .account-list-compact .claude-preparation-flow>.native-account-row-actions>.account-action-help{margin:0}
 
-.detail-sheet .claude-source-form .claude-source-error{color:#a24231;margin-top:12px}
-[data-theme=dark] .detail-sheet .claude-source-form .claude-source-error{color:#f2a38f}
-.detail-sheet .claude-source-form .account-error-trigger{width:16px;height:16px;min-height:16px;padding:0;vertical-align:middle}
+.detail-sheet :is(.claude-source-form,.openai-source-form) .claude-source-error{color:#a24231;margin-top:12px}
+[data-theme=dark] .detail-sheet :is(.claude-source-form,.openai-source-form) .claude-source-error{color:#f2a38f}
+.detail-sheet :is(.claude-source-form,.openai-source-form) .account-error-trigger{width:16px;height:16px;min-height:16px;padding:0;vertical-align:middle}
 @media(max-width:950px){.auto-service-accounts .account-list-compact .native-account-row.claude-expired-flow{padding:22px 16px}}
 @media(max-width:720px){
  .account-list-compact .claude-expired-flow>.oa-steps,.account-list-compact .claude-expired-flow>.account-list-condition,.account-list-compact .claude-expired-flow>.account-list-quota,.account-list-compact .claude-login-flow>.native-account-login,.auto-service-accounts .account-list-compact .claude-expired-flow>.native-account-row-actions{margin-left:0}
@@ -247,3 +247,6 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 .account-list-compact .claude-change-complete .native-account-condition{color:var(--oa-good)}
 .account-list-compact .claude-change-complete>.native-account-row-actions>.ui-button.primary{min-width:0;padding:6px 12px;font-size:13px;font-weight:400;min-height:34px;box-shadow:none}
+
+.detail-sheet:has(.openai-source-form)>p:empty{display:none}
+.detail-sheet:has(:is(.claude-source-form,.openai-source-form)) :focus-visible{outline-color:var(--accent-ink)}

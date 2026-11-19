@@ -67,7 +67,7 @@ test('fresh supply reads keep pause available and serialize a single explicit ch
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=card.getByRole('button',{name:'暂停接单',exact:true});await expect(button).toBeEnabled();
  await expect(page.locator('.account-check-status')).toHaveCount(0);
- await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(button).toBeDisabled();expect(await calls(page,'supply_set_paused')).toHaveLength(0);
+ await button.evaluate((el:HTMLButtonElement)=>{el.click();el.click();});await expect(card.getByRole('button',{name:'暂停中…',exact:true})).toBeDisabled();expect(await calls(page,'supply_set_paused')).toHaveLength(0);
  await page.evaluate(()=>(window as any).release());await expect.poll(async()=>(await calls(page,'supply_set_paused')).length).toBe(1);
  await expect(card.getByRole('button',{name:'恢复接单',exact:true})).toBeEnabled();
 });
@@ -117,7 +117,7 @@ test('a waiting platform resume cannot apply to a replacement account',async({pa
  await scene(page,'supply-paused');await hold(page,'supply_status','openai');await page.clock.runFor(10100);
  await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  const button=page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:'恢复接单',exact:true});
- await button.click();await expect(button).toBeDisabled();
+ await button.click();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:'恢复中…',exact:true})).toBeDisabled();
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.revision++;a.selection.fingerprint='f'.repeat(64);a.candidate.fingerprint='f'.repeat(64);a.candidate.reference='f'.repeat(48);a.authorization.fingerprint='f'.repeat(64);});
  await page.evaluate(()=>(window as any).release());await expect(page.getByText('f'.repeat(16),{exact:true})).toBeVisible();await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('button',{name:/^(暂停|恢复)接单$/})).toBeEnabled();expect(await calls(page,'supply_set_paused')).toHaveLength(0);
 });

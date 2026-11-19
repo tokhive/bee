@@ -262,6 +262,7 @@ test('generic startup recovery uses the approved standalone region and returns t
 
 test('handoff explains confirmed source shutdown without requesting a device recheck',async({page})=>{
  const app=await open(page,'switch-handoff');
+ await expect(app.getByRole('region',{name:'平台账号列表',exact:true})).toHaveCount(0);
  const progress=app.getByLabel('Hive 切换进度');
  await expect(progress).toContainText('原后台已安全退出，正在核验目标连接。');
  await expect(app.getByLabel('上次保存的设备信息',{exact:true})).toContainText('owner@example.test');
@@ -293,4 +294,20 @@ for(const scene of ['switch-waiting','switch-unknown'])test('account supply acti
  await page.clock.runFor(11000);
  await expect(account.getByRole('button',{name:'恢复接单',exact:true})).toBeDisabled();
  expect((await calls(page)).filter((c:any)=>c.command==='supply_set_paused')).toEqual([]);
+});
+
+test('handoff retains only known source account display until the target commits',async({page})=>{
+ const app=await open(page,'switch-waiting');
+ const account=app.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(account).toContainText('等待 Hive 切换');
+ const identity=await account.locator('.native-account-fingerprint').innerText();
+ await page.locator('iframe').evaluate(async(frame:HTMLIFrameElement)=>{await (frame.contentWindow as any).__TAURI_INTERNALS__.invoke('hive_switch_continue');});
+ for(let i=0;i<3;i++)await page.clock.runFor(2100);
+ await expect(app.getByLabel('Hive 切换进度')).toContainText('正在连接目标 Hive');
+ await expect(account).toContainText(identity);await expect(account).toContainText('等待 Hive 切换');
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await expect(account).toContainText('上次确认的额度；当前待核对。');
+ expect((await calls(page)).filter((c:any)=>c.command==='supply_set_paused')).toEqual([]);
+ await page.clock.runFor(4200);
+ await expect(app.getByText('上次确认的额度；当前待核对。',{exact:true})).toHaveCount(0);
+ await expect(app.locator('.native-account-fingerprint').filter({hasText:identity})).toHaveCount(0);
 });

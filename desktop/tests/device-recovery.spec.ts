@@ -30,6 +30,7 @@ for(const [scene,copy] of [
 });
 for(const [scene,copy] of Object.entries(phases))test('unresolved device transaction survives four pages without write replay: '+scene,async({page})=>{
  await open(page,scene);await expect(page.locator('.pairing-phase')).toContainText(copy);
+ await expect(page.getByRole('region',{name:'OpenAI 账号',exact:true}).getByRole('status')).toHaveText('等待设备绑定修复');
  for(const destination of ['AI 账号','设置','诊断','概览']){await nav(page,destination).click();await expect(page.getByRole('heading',{level:1,name:destination,exact:true})).toBeFocused();}
  await expect(page.locator('.pairing-phase')).toContainText(copy);
  expect((await calls(page)).filter(c=>writes.has(c.command))).toEqual([]);

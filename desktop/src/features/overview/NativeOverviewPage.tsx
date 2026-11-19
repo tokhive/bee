@@ -18,7 +18,7 @@ export function NativeOverviewPage({accounts,runtime,supply,presentation,showAcc
  const connectionIssue=!runtime.stalled&&!deviceFailure&&!device.switching&&(!device.recovery||device.recovery.phase==='completed')&&connectionFailure?normalizeFailure(connectionFailure,'connection'):null;
  const sharedFailure=deviceFailure??connectionIssue;
  const recovery=device.recovery??device.view?.recovery;
- const deviceBlock=device.switching?'等待 Hive 切换':recovery&&recovery.phase!=='completed'?'等待设备状态核对':sharedFailure?deviceProblem(sharedFailure).action==='repair'?'等待设备绑定修复':deviceProblem(sharedFailure).action==='retry'?'等待 Hive 连接':'等待设备状态核对':undefined;
+ const deviceBlock=device.switching?'等待 Hive 切换':recovery&&recovery.phase!=='completed'?recovery.old_identity?'等待设备绑定修复':'等待设备状态核对':sharedFailure?deviceProblem(sharedFailure).action==='repair'?'等待设备绑定修复':deviceProblem(sharedFailure).action==='retry'?'等待 Hive 连接':'等待设备状态核对':undefined;
 
  const selected=platforms.filter(p=>accounts.views[p]?.selection.state==='selected');
  const countsKnown=!sharedFailure&&!device.switching&&!accounts.deviceFailure&&!runtime.error&&!runtime.uncertain&&!runtime.stalled&&device.view?.state==='bound'&&!device.error&&!device.recoveryError&&(!device.recovery||device.recovery.phase==='completed')&&platforms.every(p=>accounts.views[p]&&!accounts.errors[p]&&!accounts.readFailures[p]&&!accounts.dirty[p]&&!accounts.uncertain[p]&&(!accounts.accountRefresh||accounts.accountRefresh[p]?.lastConfirmedAt))&&selected.every(p=>supply&&!supply.blocked&&!supply.state.writeBusy&&supplyFresh(supply.state,p));

@@ -362,3 +362,22 @@ test('platform chooser focuses its heading and cancellation returns to the add t
  await wizard(page).getByRole('button',{name:'取消添加',exact:true}).click();
  expect(await writes(page)).toEqual(before);
 });
+
+test('Claude addition cancels from the heading but cannot abandon a live or unknown login',async({page})=>{
+ await page.clock.install();
+ const openai=accountFixture('openai') as any,claude=accountFixture('claude') as any;
+ openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};
+ claude.candidate.state='source_missing';
+ await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({accounts:{openai,claude},runtimeEnabled:true,scenarios:{autoService:true,cancelUnknown:true}})});window.paused.openai=true;`});
+ await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await page.getByRole('button',{name:'添加账号',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();
+ const cancel=page.locator('.account-heading-actions').getByRole('button',{name:'取消添加',exact:true});
+ await expect(cancel).toBeVisible();await expect(page.getByRole('button',{name:'返回',exact:true})).toHaveCount(0);
+ await cancel.click();await expect(page.getByRole('region',{name:'Claude 账号',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'添加账号',exact:true})).toBeFocused();
+ await page.getByRole('button',{name:'添加账号',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();
+ await page.getByRole('button',{name:'登录 Claude',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
+ await expect(page.getByRole('button',{name:'取消登录',exact:true})).toBeVisible();await expect(cancel).toHaveCount(0);
+ await page.getByRole('button',{name:'取消登录',exact:true}).click();await expect(cancel).toHaveCount(0);await expect(page.getByRole('button',{name:'返回',exact:true})).toHaveCount(0);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+});

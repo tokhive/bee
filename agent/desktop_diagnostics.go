@@ -665,6 +665,9 @@ func diagnosticSupplyResult(p string, supply beewire.PlatformSupply) (string, st
 		return "pass", "supply_paused", evidence
 	}
 	for _, c := range checks {
+		if c.Code == beewire.ReasonManuallyPaused && supply.Paused && slices.ContainsFunc(supply.Reasons, func(reason string) bool { return reason != beewire.ReasonManuallyPaused }) {
+			continue
+		}
 		if c.Status != "pass" {
 			status = "fail"
 			code = "supply_blocked"

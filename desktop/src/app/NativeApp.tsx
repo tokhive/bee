@@ -199,7 +199,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const currentSnapshot=useCallback(()=>model?.getSnapshot()??initial,[model]);
  const runtimeSnapshot=useCallback(()=>{const s=currentSnapshot();return {view:s.runtime,error:s.error,identityError:identityFailure(s),busy:s.busy,refreshStatus:s.refresh};},[currentSnapshot]);
  const supplySnapshot=useCallback(()=>{const s=currentSnapshot();return {views:s.supplies,errors:s.supplyErrors,activePlatform:s.supplyPlatform,error:s.error??identityFailure(s),busy:s.busy,refreshStatus:s.refresh,supplyRefresh:s.supplyRefresh,writeContext:supplyWriteContext(s,supplyLocal.current)};},[currentSnapshot]);
- const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,beforeWrite:()=>model?.settleForWrite('all')??Promise.resolve(),pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
+ const runtime=useRuntime(runtimeClient,native.state==='ready',{view:snapshot.runtime,error:snapshot.error,identityError:identityFailure(snapshot),busy:snapshot.busy,refreshStatus:snapshot.refresh,refresh,recheck:model?.recheckRuntime,beforeWrite:()=>model?.settleForWrite('all')??Promise.resolve(),pause,generation,recordReceipt:model?.recordRuntimeReceipt,snapshot:runtimeSnapshot});
  const accountSnapshot=useCallback(()=>{const s=currentSnapshot();return {...s,deviceError:identityFailure(s)};},[currentSnapshot]);
  const saveAccountSource=async (platform:AccountPlatform,source:AccountSource)=>{
   const key=platform==='openai'?'openai_source':'claude_source';

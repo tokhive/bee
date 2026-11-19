@@ -424,3 +424,32 @@ test('a bridge event during a pending Hive read rechecks the authoritative scope
 });
 
 async function observeNextDevicePoll(page:Page){await reconcile(page);}
+
+for(const recovery of ['automatic','manual','still-reconnecting'] as const)test(`a running Hive connection ${recovery} clears old failure without starting or pausing the worker`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.connectionRecovered=false;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='runtime_start'){w.calls.push({command,args});throw new Error('must not start an already running worker');}
+   const reply=await invoke(command,args);
+   if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{revision:w.connectionRecovered?746:377,local:'running',run_id:'a'.repeat(32),connection:w.connectionRecovered?'connected':'reconnecting',connection_detail:w.connectionRecovered?null:{failure:{code:'connection_refused',stage:'connect',occurred_at:new Date().toISOString(),message:'dial tcp 127.0.0.1:18080: connect: connection refused',evidence:{path:'/api/bee/agent',target_origin:'http://127.0.0.1:18080'}},retry:'scheduled',next_retry_at:new Date(Date.now()+15000).toISOString()}});
+   return reply;
+  };
+ });
+ await page.goto('/');const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
+ await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+ const before=await page.evaluate(()=>JSON.stringify({accounts:(window as any).accounts,paused:(window as any).paused}));
+ if(recovery!=='still-reconnecting')await page.evaluate(()=>(window as any).connectionRecovered=true);
+ if(recovery==='automatic')await page.clock.runFor(11000);
+ else await device.getByRole('button',{name:'重试连接',exact:true}).click();
+ if(recovery==='still-reconnecting'){
+  await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+  await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
+ }else{
+  await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toHaveCount(0);
+  await expect(device).toContainText('Hive 已连接');
+ }
+ await expect(page.getByText(/must not start an already running worker/)).toHaveCount(0);
+ for(const command of ['runtime_start','runtime_stop','supply_set_paused','account_action'])expect(await calls(page,command)).toEqual([]);
+ expect(await page.evaluate(()=>JSON.stringify({accounts:(window as any).accounts,paused:(window as any).paused}))).toBe(before);
+});

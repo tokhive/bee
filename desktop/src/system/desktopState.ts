@@ -65,7 +65,8 @@ export function createDesktopState(deps:DesktopDeps){
   return status(previous,'scheduled',g.at?new Date(g.at).toISOString():normalAt?new Date(normalAt).toISOString():null);
  };
  function updateStatuses(normalAt?:number){
-  const shared=(['context','device','recovery','runtime'] as Resource[]).find(k=>gate(k).terminal||gate(k).waiting||gate(k).failures||isReading(k))||'runtime';
+  const sharedResources:Resource[]=['context','device','recovery','runtime'];
+  const shared=sharedResources.find(k=>gate(k).terminal)??sharedResources.find(k=>gate(k).waiting||gate(k).failures||isReading(k))??'runtime';
   publish({refresh:resourceStatus(shared,state.refresh,normalAt),accountRefresh:Object.fromEntries(platforms.map(p=>[p,resourceStatus(`account:${p}`,state.accountRefresh[p],normalAt)])),supplyRefresh:Object.fromEntries(platforms.map(p=>[p,resourceStatus(`supply:${p}`,state.supplyRefresh[p],normalAt)]))});
  }
  async function readPending(){
@@ -314,7 +315,7 @@ export function createDesktopState(deps:DesktopDeps){
        refreshes[platform]=status(refreshes[platform],'blocked');
       }else{localAccounts[platform]=account;delete errors[platform];refreshes[platform]=status(refreshes[platform],'blocked');}
      }
-     publish({device,deviceError,runtime:next,defaults,error:null,accounts:localAccounts,accountErrors:errors,accountRefresh:refreshes,refresh:status(state.refresh,'idle'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});return;
+     publish({device,deviceError,runtime:next,defaults,...(runtimeRead?{error:null}:{}),accounts:localAccounts,accountErrors:errors,accountRefresh:refreshes,refresh:status(state.refresh,'idle'),supplyRefresh:mapStatus(state.supplyRefresh,'blocked')});return;
     }
     next={...next,platforms:{...next.platforms}};
     for(const platform of platforms){
@@ -418,6 +419,15 @@ export function createDesktopState(deps:DesktopDeps){
    }finally{startupRetrying=false;}
   },
   async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refreshDevice();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refreshDevice();acceptStartup(next);},
+  async recheckRuntime(){
+   const generation=epoch;await pending;
+   if(disposed||generation!==epoch)return;
+   const g=gate('runtime');
+   if(g.waiting)return refresh();
+   gates.delete('runtime');blocked=false;
+   // Keep receipt/version floors: a manual read does not make stale data valid.
+   return refresh();
+  },
   async recheckOpenaiReads(){
    const generation=epoch;
    if(pending)await pending;

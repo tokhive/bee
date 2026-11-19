@@ -405,3 +405,10 @@ test('opening the official page reports success only after the opener confirms a
  await page.evaluate(()=>{(window as any).loginOpenFailure=undefined;});await wizard(page).getByRole('button',{name:'重新打开登录页面',exact:true}).click();await expect(opened).toBeVisible();
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
+
+test('missing login before first intake keeps the sidebar empty state rather than claiming uncertain account status',async({page})=>{
+ await setup(page,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true})).toBeEnabled();
+ await expect(page.locator('.desktop-side-status')).toHaveText('尚未接入 AI 账号');
+ expect(await writes(page)).toEqual([]);
+});

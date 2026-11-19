@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -353,5 +354,45 @@ func TestPairingRecoveryRetainsCompletedRecordScopeWhenOriginalSecretIsInvalid(t
 	view, err := device.RecoveryAt(context.Background(), server.URL, "Recovery name")
 	if err != nil || view.Phase != "awaiting_confirmation" || view.OldIdentity == nil || *view.OldIdentity != identity {
 		t.Fatal("trusted original owner/device discarded", view, err)
+	}
+}
+
+func TestPairingCapabilityFailureDoesNotInferUpgradeDirection(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   int
+		body     string
+		evidence []string
+	}{
+		{"unavailable", http.StatusServiceUnavailable, `{"error":{"code":"unavailable","message":"maintenance in progress"}}`, []string{"503", "maintenance in progress"}},
+		{"unsupported_protocol", http.StatusOK, `{"version":2,"pairing_recovery":3}`, []string{"version=2", "recovery=3", "required=1,1"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var requests atomic.Int32
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				requests.Add(1)
+				if r.Method != http.MethodGet || r.URL.Path != beewire.PairingRecoveryCapabilitiesPath {
+					t.Errorf("unexpected request: %s %s", r.Method, r.URL.Path)
+				}
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte(tc.body))
+			}))
+			defer server.Close()
+			err := pairingCapabilities(context.Background(), &desktopRecoveryRecord{Hive: server.URL})
+			if err == nil {
+				t.Fatal("expected capability failure")
+			}
+			for _, evidence := range tc.evidence {
+				if !strings.Contains(err.Error(), evidence) {
+					t.Errorf("missing evidence %q: %v", evidence, err)
+				}
+			}
+			if strings.Contains(strings.ToLower(err.Error()), "upgrade") {
+				t.Errorf("failure does not establish which component needs upgrading: %v", err)
+			}
+			if requests.Load() != 1 {
+				t.Errorf("capability failure sent %d requests; want one read", requests.Load())
+			}
+		})
 	}
 }

@@ -1,5 +1,6 @@
 .startup-recovery-notice{margin-bottom:16px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--paper);font-size:13px}
-.startup-recovery-main{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.startup-recovery-main{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.startup-recovery-main>.inline-actions{flex-shrink:0}
 .startup-recovery-main h2{margin:0 0 4px;font-size:14px;font-weight:600;line-height:1.4;text-wrap:balance}
 .startup-recovery-main p{margin:0;color:var(--muted);line-height:1.5;overflow-wrap:anywhere}
 .startup-recovery-notice details{margin-top:8px}.startup-recovery-notice summary{cursor:pointer;line-height:1.8}

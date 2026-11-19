@@ -72,7 +72,7 @@ export function AddAccountWizard({accounts,runtime,supply,onBack,navigationReque
  useEffect(()=>{
   if(screen==='confirm'&&!checking&&valid&&!pending&&!confirmation){setConfirmation(stamp());setConfirmedIdentity({fingerprint:candidate!.fingerprint,plan:candidate!.plan});}
  },[screen,checking,valid,pending,confirmation,view,supply?.state.views.openai?.paused]);
- useEffect(()=>{if(screen==='source')document.getElementById('add-account-directory')?.focus();else heading.current?.focus();},[screen,login,intake]);
+ useEffect(()=>{if(screen==='source'&&!accounts.sourceSaving)document.getElementById('add-account-directory')?.focus();else heading.current?.focus();},[screen,login,intake,accounts.sourceSaving]);
  useEffect(()=>{
   if(op?.kind==='authorize'&&op.state==='succeeded'&&!pending&&!kept&&screen==='connect'&&valid){setScreen('confirm');setConfirmation(undefined);}
  },[op,pending,kept,screen,valid]);

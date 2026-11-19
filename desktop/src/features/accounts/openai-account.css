@@ -250,3 +250,9 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 .detail-sheet:has(.openai-source-form)>p:empty{display:none}
 .detail-sheet:has(:is(.claude-source-form,.openai-source-form)) :focus-visible{outline-color:var(--accent-ink)}
+
+/* Use the approved flat select surface in WKWebView as well as Chromium. */
+:is(.claude-source-form,.openai-source-form) label:has(>select){position:relative}
+:is(.claude-source-form,.openai-source-form) select{appearance:none;-webkit-appearance:none;padding-right:28px;box-shadow:none}
+:is(.claude-source-form,.openai-source-form) label:has(>select)::after{content:"";position:absolute;right:12px;bottom:15px;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);pointer-events:none}
+@media(forced-colors:active){:is(.claude-source-form,.openai-source-form) select{appearance:auto;-webkit-appearance:auto}:is(.claude-source-form,.openai-source-form) label:has(>select)::after{display:none}}

@@ -340,7 +340,7 @@ test('saving the source and reading it show distinct progress without losing the
  await wizard(page).getByRole('button',{name:'保存',exact:true}).click();await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在保存读取位置…');await expect(wizard(page).getByRole('status')).toHaveText('尚未开始读取或核验账号。');await expect(wizard(page).locator('form')).toHaveCount(0);
  expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/new-source'))).toEqual([]);
  await page.evaluate(()=>(window as any).releaseSave());await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在读取登录信息…');await expect(wizard(page).getByRole('status')).toHaveText('读取位置已保存；读取成功后将自动核验。');
- await page.evaluate(()=>{const w=window as any,release=w.releaseRead;w.releaseRead=undefined;release();});await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRead)).toBe('function');await page.evaluate(()=>(window as any).releaseRead());
+ await page.evaluate(()=>{const w=window as any,release=w.releaseRead;w.releaseRead=undefined;release();});await expect.poll(()=>page.evaluate(()=>typeof (window as any).releaseRead)).toBe('function');await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在核验账号…');await expect(wizard(page).getByRole('status')).toHaveText('核验完成后，你可以核对账号并确认接入。');await page.evaluate(()=>(window as any).releaseRead());
  await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
  expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/new-source').map((c:any)=>c.args.request.mode))).toContain('official');
 });

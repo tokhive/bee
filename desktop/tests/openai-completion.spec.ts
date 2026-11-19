@@ -74,7 +74,7 @@ test('source draft survives navigation and failed save; successful settings are 
  await page.evaluate(()=>(window as any).preferencesFail=false);
  await dialog.getByRole('button',{name:'保存',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/controlled-source'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);
- expect(await writes(page)).toEqual([]);
+ await expect(dialog).toHaveCount(0);expect(await writes(page)).toEqual([]);
 });
 test('open and exhausted queries retain the original login without starting another process',async({page})=>{
  await page.clock.install();await setup(page,true);
@@ -437,10 +437,17 @@ for(const [size,width,height]of [['narrow',820,680],['wide',1080,700]] as const)
  // completed Hive preparation receipt after that detection settles.
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.authorization={...a.authorization,state:'synchronized',fingerprint:a.selection.fingerprint};a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1};a.revision++;});await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('重新登录成功');await expect(card(page).locator('.oa-note')).toHaveText('已完成重新登录，接单保持暂停。');await expect(card(page).locator('.oa-steps .done')).toHaveCount(2);await expect(card(page).getByRole('progressbar')).toHaveCount(0);
+ const actualBox=await card(page).boundingBox();
  await card(page).screenshot({path:testInfo.outputPath(`formal-relogin-complete-${size}.png`)});
  const before=await writes(page);await card(page).getByRole('button',{name:'完成',exact:true}).click();await expect(card(page).getByRole('status')).toHaveText('已暂停');expect(await writes(page)).toEqual(before);
  await page.goto(`/approved-preview/index.html?scene=complete-relogin-paused&theme=light&size=${size}`);
+ // The preview toolbar size includes its iframe border. Calibrate the test
+ // surface only, so the unchanged design renders at the same content size.
+ await page.locator('iframe').evaluate(frame=>{frame.style.boxSizing='content-box';});
+ expect(await page.frameLocator('iframe').locator('html').evaluate(el=>[el.clientWidth,el.clientHeight])).toEqual([width,height]);
  const approved=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号',exact:true});await expect(approved.getByRole('status')).toHaveText('重新登录成功');await expect(approved).toContainText('已完成重新登录，接单保持暂停。');await expect(approved.getByRole('progressbar')).toHaveCount(0);
+ const approvedBox=await approved.boundingBox();
+ expect(Math.abs(actualBox!.width-approvedBox!.width)).toBeLessThanOrEqual(0.1);expect(Math.abs(actualBox!.height-approvedBox!.height)).toBeLessThanOrEqual(0.1);
  await approved.screenshot({path:testInfo.outputPath(`approved-relogin-complete-${size}.png`)});
 });
 
@@ -453,4 +460,18 @@ test('restored cancelled login drops stale progress blocker without resuming sup
  await expect(card(page).getByRole('button',{name:'核对维护结果',exact:true})).toBeVisible();
  await page.evaluate(()=>{const a=(window as any).accounts.openai;a.login_maintenance={...a.login_maintenance,phase:'restored',can_recheck:false,error:null};a.revision++;});await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('已取消登录');await expect(card(page).getByRole('button',{name:'查看错误详情'})).toHaveCount(0);await expect(card(page)).toContainText('接单保持暂停');expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+test('saved source closes the drawer and cannot report repaired before its read completes',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let held=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_detect'&&args.request.platform==='openai'&&!held){held=true;await new Promise<void>(resolve=>{w.releaseSourceRead=resolve;});}return invoke(command,args);};});
+ await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('status')).toHaveText('正在读取登录凭证…');await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>(window as any).releaseSourceRead());await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);expect(await writes(page)).toEqual([]);
+});
+
+test('source verification pending after save keeps the verification state and hides resume',async({page})=>{
+ await setup(page,true);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.paused.openai=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_detect'&&args.request.platform==='openai'&&args.request.mode==='official'){const a=w.accounts.openai;a.capabilities[0]={...a.capabilities[0],status:'unknown',observed_at:null,valid_until:null,windows:[]};reply.result.account=structuredClone(a);}return reply;};});
+ await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('status')).toHaveText('正在核验账号…');await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);expect(await writes(page)).toEqual([]);
 });

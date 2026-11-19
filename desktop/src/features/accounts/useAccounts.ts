@@ -25,7 +25,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [claudeSourceSaving,setClaudeSourceSaving]=useState(false),[claudeSourceSaveError,setClaudeSourceSaveError]=useState<UiFailure>();
  const claudeSourceSavingRef=useRef(false);
  const [claudeSourcePhase,setClaudeSourcePhase]=useState<'saving'|'reading'|'verifying'>();
- const [sourceSavePhase,setSourceSavePhase]=useState<'saving'|'reading'>();
+ const [sourceSavePhase,setSourceSavePhase]=useState<'saving'|'reading'|'verifying'>();
  const [originalAccountQuery,setOriginalAccountQuery]=useState<QueryState<AccountSnapshot>>();
  const originalAccountReader=useRef<ReturnType<typeof createOperationQuery<AccountSnapshot>>|undefined>(undefined);
  const [loginProgress,setLoginProgress]=useState<QueryState<CodexLoginProgress>>(),[loginOpenError,setLoginOpenError]=useState<UiFailure>();
@@ -296,7 +296,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     const saved=await central.current.saveOpenaiSource(draft);
     if(!active.current||generation!==central.current?.generation?.())return;
     setSourceSavePhase('reading');sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
-    await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;return detectLocal('openai',saved,'official');},true);
+    await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;if(active.current)setSourceSavePhase('verifying');return detectLocal('openai',saved,'official');},true);
     return true;
    }catch(cause){if(active.current)setSourceSaveError(failure(cause,'preferences_save'));}
    finally{sourceSavingRef.current=false;if(active.current){setSourceSaving(false);setSourceSavePhase(undefined);}}

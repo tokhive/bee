@@ -76,3 +76,14 @@ test('candidate expiry and changed source explain blocked submission; official l
  assert.match(sharedBlock.message,/共享状态读取未确认/);assert.doesNotMatch(sharedBlock.message,/恢复设备身份/);assert.deepEqual(sharedBlock.target,{page:'overview',section:'runtime'});
  assert.deepEqual(block('select',{...input,submissionBlocked:true,sharedReadFailure:{...sharedReadFailure,check:'account_defaults'}}).target,{page:'accounts',section:'source',platform:'openai'});
 });
+
+test('missing source retains selected-account quota history without treating it as current',()=>{
+ const before=selected();Object.assign(before.capabilities[0],{status:'ready',observed_at:new Date(now).toISOString(),valid_until:new Date(now+300000).toISOString(),windows:[{scope:'',seconds:18000,used_percent:0,reset_at:null},{scope:'',seconds:604800,used_percent:27,reset_at:null}]});
+ const history=presentation.rememberAccountQuota(undefined,before,now);
+ const missing=selected();missing.candidate={...missing.candidate,state:'source_missing',reference:null,source:null,fingerprint:null,plan:null,expires_at:null,error:{platform:'openai',code:'source_missing',check:'read_file',message:'credential file not found',evidence:{not_found:'true'}}};
+ const result=accountPresentation(missing,false,now,false,false,history);
+ assert.equal(result.quotaState,'stale');assert.deepEqual(result.windows.map(w=>w.used_percent),[0,27]);assert.equal(result.plan,'plus');assert.equal(result.observedAt,new Date(now).toISOString());
+ assert.equal(accountPresentation(missing,true,now,false,false,history).quotaState,'unknown');
+ missing.selection.fingerprint='c'.repeat(64);assert.deepEqual(accountPresentation(missing,false,now,false,false,history).windows,[]);
+ assert.deepEqual(missing.capabilities[0].windows,[]);
+});

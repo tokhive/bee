@@ -262,11 +262,12 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 
 /* Keep the detail context mounted for cancel/focus restoration, but show one layer. */
 .account-confirmation-background{visibility:hidden}
-.dialog-content.openai-login-confirm{padding:24px;border-radius:10px}
+.dialog-overlay.openai-login-overlay{background:#202b3e40}
+.dialog-content.openai-login-confirm{padding:24px;border-radius:10px;box-shadow:0 12px 45px #0002}
 .openai-login-confirm header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
-.openai-login-confirm h2{margin:0;line-height:1.5}
-.openai-login-confirm>p{margin:12px 0;line-height:1.65}
-.openai-login-confirm .openai-login-impact{margin:0;padding:11px 13px;background:var(--panel);border-radius:6px;font-size:12px;line-height:1.7;color:var(--ink)}
-.openai-login-confirm .ui-button{font-weight:400;line-height:1.5}
+.dialog-content.openai-login-confirm h2{margin:0;line-height:1.5}
+.dialog-content.openai-login-confirm>p{margin:12px 0;line-height:1.65}
+.dialog-content.openai-login-confirm .openai-login-impact{margin:0;padding:11px 13px;background:var(--panel);border-radius:6px;font-size:12px;line-height:1.7;color:var(--ink)}
+.openai-login-confirm .ui-button{padding:5px 12px;font-size:13px;font-weight:400;line-height:1.5;box-shadow:none}
 .openai-login-confirm .openai-login-close{color:var(--muted);padding:5px 4px;min-height:32px}
 .openai-login-confirm .dialog-actions{margin-top:22px}

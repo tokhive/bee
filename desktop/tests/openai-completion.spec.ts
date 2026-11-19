@@ -389,3 +389,20 @@ for(const [code,check,title,completed] of [
  await expect(card(page).getByRole('status')).toHaveText(title);await expect(card(page).locator('.oa-steps .done')).toHaveCount(completed);await expect(card(page).locator('.oa-steps .failed')).toHaveCount(1);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
 });
+
+for(const [size,width,height] of [['narrow',820,680],['wide',1080,700]] as const)test(`light login confirmation matches approved geometry — ${size}`,async({page})=>{
+ await page.setViewportSize({width,height});await setup(page,true);
+ await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+ await page.getByRole('dialog',{name:'OpenAI 账号详情',exact:true}).getByRole('button',{name:'重新登录',exact:true}).click();
+ const confirmation=page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true});
+ const actual=await confirmation.boundingBox();
+ await page.screenshot({path:resolve(evidence,`formal-login-confirm-light-${size}.png`)});
+ expect(await writes(page)).toEqual([]);
+ await page.goto(`/approved-preview/index.html?scene=add-list&theme=light&size=${size}`);
+ const app=page.frameLocator('iframe');
+ await app.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await app.getByRole('button',{name:'重新登录',exact:true}).click();
+ const approved=await app.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).boundingBox();
+ await page.locator('iframe').screenshot({path:resolve(evidence,`approved-login-confirm-light-${size}.png`)});
+ expect(Math.abs(actual!.width-approved!.width)).toBeLessThanOrEqual(0.1);
+ expect(Math.abs(actual!.height-approved!.height)).toBeLessThanOrEqual(0.1);
+});

@@ -35,7 +35,7 @@ function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubm
  const reason=block();
  return <Dialog.Root open={confirmation!==undefined} onOpenChange={open=>{if(!open)setConfirmation(undefined);}}>
   <div><Dialog.Trigger asChild><Button variant="outline" disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
-  <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className={`dialog-content${action==='authorize'?' openai-login-confirm':''}`} onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
+  <Dialog.Portal><Dialog.Overlay className={`dialog-overlay${action==='authorize'?' openai-login-overlay':''}`}/><Dialog.Content className={`dialog-content${action==='authorize'?' openai-login-confirm':''}`} onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
    <header>
    <Dialog.Title>{t(action==='clear_selection'?'取消接入':action==='select'?'接入 OpenAI 账号':action==='confirm_change'?'确认更换 OpenAI 账号':view?.selection.state==='selected'?'重新登录 OpenAI':'登录 OpenAI')}</Dialog.Title>
    {action==='authorize'&&<Dialog.Close asChild><Button variant="ghost" className="openai-login-close">{t('关闭')}</Button></Dialog.Close>}

@@ -174,7 +174,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :problem?.code==='client_missing'?<><Button onClick={()=>{setPanel('install');setDetails(true);}}>{t('查看安装说明')}</Button><OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重试"/></>
    :different?<Button onClick={()=>{setPanel('compare');setDetails(true);}}>{t('核对账号变更')}</Button>
    :preparationFailed?<Button disabled={!!accounts.busy.openai||runtime.busy||runtime.startBlocked} onClick={()=>void retryPreparation()}>{t('重试')}</Button>
-   :accounts.uncertain.openai||accounts.accountRefresh?.openai?.state==='blocked'||!!supply?.state.errors.openai?<Button disabled={!!accounts.busy.openai||supply?.state.busy} onClick={()=>void accounts.recheckCurrentOpenai()}>{t('核对结果')}</Button>
+   :accounts.uncertain.openai||accounts.accountRefresh?.openai?.state==='blocked'||!!supply?.state.errors.openai?<Button disabled={!!accounts.busy.openai||supply?.state.busy} onClick={()=>void accounts.recheckCurrentOpenai()}>{t(accounts.uncertain.openai?'核对结果':'重新核对')}</Button>
    :failed&&!accountPending(view)?<Button disabled={!!accounts.busy.openai} onClick={()=>accounts.detect('openai','official')}>{t('重新核验')}</Button>
    :candidate&&!selected?<OpenaiAction accounts={accounts} runtime={runtime} action="select" label="接入账号"/>
    :!selected&&!accountPending(view)?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="登录 OpenAI"/>

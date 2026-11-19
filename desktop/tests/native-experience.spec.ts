@@ -761,12 +761,12 @@ test('explicit OpenAI supply recheck clears a terminal GET gate without replayin
   };
  });
  await page.clock.install();await page.goto('/');await nav(page,'AI 账号').click();
- const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(account.getByRole('button',{name:'核对结果',exact:true})).toBeVisible();
+ const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});await expect(account.getByRole('button',{name:'重新核对',exact:true})).toBeVisible();
  const count=()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='supply_status'&&c.args.platform==='openai').length);
  const before=await count();await page.evaluate(()=>{(window as any).supplyAccessDenied=false;});
  await page.clock.runFor(11000);expect(await count()).toBe(before);
- await account.getByRole('button',{name:'核对结果',exact:true}).click();await expect.poll(count).toBeGreaterThan(before);
- await expect(account.getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);
+ await account.getByRole('button',{name:'重新核对',exact:true}).click();await expect.poll(count).toBeGreaterThan(before);
+ await expect(account.getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);
  expect(await calls(page,'supply_set_paused')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
 });
 

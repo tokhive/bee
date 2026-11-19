@@ -222,7 +222,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const switchingPending=switchPending(switching.snapshot),firstProfile=!!switching.snapshot&&!switching.snapshot.profiles.current_profile&&!switchingPending;
  const switchControl=props.hiveSwitchClient?<HiveSwitchChooser model={switching} view={view} hideTrigger/>:null,switchStatus=props.hiveSwitchClient?<HiveSwitchProgress model={switching}/>:null;
  const beginDevice=(hive:string,name:string)=>void run(async()=>{await props.client.begin(hive,name);await switching.refresh();});
- const ready=native.state==='ready',startupReadOnly=props.systemBridge.startupStatus?snapshot.startup?.state!=='ready':!!snapshot.startup&&snapshot.startup.state!=='ready';
+ const ready=native.state==='ready',startupReadOnly=!ready||(props.systemBridge.startupStatus?snapshot.startup?.state!=='ready':!!snapshot.startup&&snapshot.startup.state!=='ready');
  const switchSourceProfile=switchingPending&&!switching.snapshot?.operation?.committed?switching.snapshot?.operation?.source.profile:undefined;
  const switchSourceIdentity=switching.snapshot?.profile_identities.find(identity=>identity.profile_id===switchSourceProfile);
  const switchSourceOrigin=switching.snapshot?.profiles.profiles.find(profile=>profile.id===switchSourceProfile)?.origin;

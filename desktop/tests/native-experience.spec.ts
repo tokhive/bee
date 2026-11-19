@@ -667,9 +667,11 @@ for(const blocked of [true,false])test(`device read failure ${blocked?'during bl
   await page.locator('.native-diagnostic-evidence > summary').click();await expect(page.locator('.native-diagnostic-evidence')).toContainText('startup recovery guard unconfirmed: local=stopped');
   expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'startup_retry')).toEqual([]);
  }else{
-  await expect(notice).toHaveCount(0);await expect(page.getByRole('alert')).toContainText('GET identity HTTP 503');await expect(recheck).toBeEnabled();
-  await page.evaluate(()=>{(window as any).deviceReadFailure=null;});await recheck.click();
-  await expect(page.getByRole('alert')).toHaveCount(0);await expect(recheck).toHaveCount(0);await expect(page.getByRole('button',{name:'OpenAI',exact:true})).toBeVisible();
+  await expect(notice).toHaveCount(0);await expect(page.getByRole('alert')).toContainText('GET identity HTTP 503');
+  await page.getByRole('button',{name:'前往概览',exact:true}).click();
+  const retry=page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重试连接',exact:true});await expect(retry).toBeEnabled();
+  await page.evaluate(()=>{(window as any).deviceReadFailure=null;});await retry.click();
+  await expect(page.getByRole('alert')).toHaveCount(0);await expect(retry).toHaveCount(0);await nav(page,'AI 账号').click();await expect(page.getByRole('button',{name:'OpenAI',exact:true})).toBeVisible();
  }
 });
 
@@ -844,4 +846,31 @@ test('manual pause diagnostic stays out of failures and does not resume supply',
  await expect(page.getByText('需要处理的问题',{exact:true})).toHaveCount(0);
  await expect(page.getByTestId('passed-checks')).toContainText('已按你的选择暂停接单');
  expect(await calls(page,'supply_set_paused')).toEqual([]);
+});
+
+test('established workspace stays on startup recovery after the native process exits',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{(window as any).emitBridgeStatus({state:'failed',error:{code:'SIDECAR_EXIT',message:'owned management child exited: status=1'}});});
+ await expect(nav(page,'概览')).toBeVisible();
+ const notice=page.getByTestId('startup-recovery');await expect(notice).toContainText('Bee 后台连接失败');
+ await expect(notice.getByRole('button',{name:'重新连接',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'修复设备绑定',exact:true})).toHaveCount(0);
+ await expect(page.getByLabel('Hive 地址',{exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
+ await nav(page,'诊断').click();await expect(page.getByRole('button',{name:'导出启动诊断',exact:true})).toBeVisible();
+ expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'supply_set_paused')).toEqual([]);expect(await calls(page,'device_begin')).toEqual([]);
+});
+
+test('workspace admission history cannot cross a profile or become a pairing receipt',async({page})=>{
+ await setup(page);
+ const result=await page.evaluate(async()=>{
+  const path='/src/system/firstLaunch.ts';const {observeFirstLaunch,firstLaunchAdmission}=await import(path);
+  const previous={instance:'source-instance',profile:'source-profile',knownBinding:true,attempt:{hive:'https://hive.example',name:'Saved',revision:1,operationId:'old-operation'}};
+  const stopped={native:{state:'failed'},currentProfile:'source-profile'};
+  const retained=observeFirstLaunch(previous,stopped);
+  const other=observeFirstLaunch(retained,{...stopped,currentProfile:'target-profile'});
+  const restarted=observeFirstLaunch(retained,{...stopped,native:{state:'ready',metadata:{instance:'new-instance'}}});
+  return {retained,workspace:firstLaunchAdmission(retained,stopped).workspace,otherWorkspace:firstLaunchAdmission(other,{...stopped,currentProfile:'target-profile'}).workspace,restarted};
+ });
+ expect(result.retained.knownBinding).toBe(true);expect(result.retained.attempt).toBeUndefined();expect(result.workspace).toBe(true);expect(result.otherWorkspace).toBe(false);expect(result.restarted.knownBinding).toBeUndefined();expect(result.restarted.attempt).toBeUndefined();
 });

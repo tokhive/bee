@@ -13,7 +13,7 @@ import {supplyFresh,type SharedSupply} from '../supply/useSupply';
 import {accountPresentation,sameAccountFailure,supplyProblem} from './accountPresentation';
 
 /** One current conclusion; independent conditions remain available in the disclosure. */
-export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock,compact=false,workflow=false}:{workflow?:boolean;compact?:boolean;deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
+export function AccountCondition({accounts,platform,runtime,supply,onNavigate,now=Date.now(),inlineFailure,deviceBlock,compact=false,workflow=false,overview=false}:{overview?:boolean;workflow?:boolean;compact?:boolean;deviceBlock?:string;accounts:AccountsModel;platform:AccountPlatform;runtime:RuntimeModel;supply?:SharedSupply;onNavigate?:(target:NavigationTarget)=>void;now?:number;inlineFailure?:Parameters<typeof sameAccountFailure>[0]}){
  const [expanded,setExpanded]=useState(false);
  const account=accounts.views[platform],selected=account?.selection.state==='selected';
  const op=account?.operation,dirty=accounts.dirty[platform];
@@ -35,7 +35,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const sourceError=errors.some(e=>e.evidence.permission_denied==='true'||['source_missing','source_unavailable','permission_denied'].includes(e.code));
  const reasons=selected&&current?[...new Set(view?.reasons??[])].filter(r=>r!=='manually_paused'&&!(r==='offline'&&runtime.view?.local==='failed')&&!(sourceError&&r===`${platform==='openai'?'codex':'claude'}_source_unavailable`)):[];
  const changed=!dirty&&selected&&account?.candidate.fingerprint&&account.candidate.fingerprint!==account.selection.fingerprint;
- const expired=!dirty&&account?.candidate.expires_at&&Date.parse(account.candidate.expires_at)<=now+(compact?0:30000);
+ const expired=!dirty&&account?.candidate.expires_at&&Date.parse(account.candidate.expires_at)<=now+(compact||overview?0:30000);
  const pending=accountPending(account);
  const stale=selected&&!current;
  const deviceWait=selected&&deviceBlock&&!uncertain&&!pending;
@@ -58,19 +58,22 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  else if(ready)title='可接单';
  else title=view?.paused?'已暂停接单':'不能接单';
  const showPaused=!deviceWait&&selected&&view?.paused&&title!=='已暂停接单';
- const primary=compact&&!pending&&!uncertain&&!deviceWait&&!writing&&!dirty?visibleErrors[0]:undefined;
+ const independentSource=visibleErrors.find(error=>error.check==='source_read'||error.evidence.permission_denied==='true'||['source_missing','source_unavailable','permission_denied','invalid_credentials'].includes(error.code));
+ const independentOverview=overview&&deviceWait&&!pending&&!uncertain&&!writing&&!dirty&&(independentSource||!changed&&!accounts.readFailures[platform]&&expired);
+ const primary=compact&&!pending&&!uncertain&&!deviceWait&&!writing&&!dirty?visibleErrors[0]:independentOverview?independentSource:undefined;
  const specific=primary?presentFailure(primary,currentLocale()):undefined;
  if(specific&&primary&&(primary.check==='read_keychain'||primary.check==='read_keyring'||primary.check==='source_read'&&['keychain','keyring'].includes(accounts.sourceFor(platform).store))&&(primary.code==='permission_denied'||primary.evidence.permission_denied==='true')){specific.summary=t('无法读取系统钥匙串凭证');specific.impact=t('系统拒绝访问所选配置目录对应的钥匙串凭证，请检查钥匙串访问权限；原账号选择仍保留。');}
+ if(independentOverview&&specific&&primary&&primary.check==='source_read'&&(account?.candidate.source?.store??accounts.sourceFor(platform).store)==='file'&&(primary.code==='permission_denied'||primary.evidence.permission_denied==='true'))specific.summary=t('无法读取登录文件：系统拒绝访问');
  if(specific)title=specific.summary;
- else if(compact&&!pending&&!uncertain&&!deviceWait&&!dirty&&!changed&&expired)title='授权已过期';
+ else if((compact&&!pending&&!uncertain&&!deviceWait&&!dirty&&!changed||independentOverview)&&expired)title='授权已过期';
  else if(compact&&title==='不能接单'&&reasons.length===1&&reasons[0]==='quota_exhausted')title='额度已耗尽';
  else if(compact&&title==='已暂停接单')title='已暂停';
  const quotaOnly=compact&&selected&&current&&!errors.length&&!changed&&!expired&&!dirty&&!uncertain&&!pending&&reasons.length===1&&reasons[0]==='quota_exhausted';
  const checkingQuota=quotaOnly&&(accounts.busy[platform]||accounts.accountRefresh?.[platform]?.state==='reading')&&accountPresentation(account,false,now,false,false,accounts.quotaHistory[platform]).quotaState==='stale';
  if(quotaOnly&&!writing)title=view?.paused?'已暂停':checkingQuota?'正在核验额度…':'额度已耗尽';
  const explainedReasons=quotaOnly?[]:reasons;
- const remainingErrors=primary?visibleErrors.slice(1):visibleErrors;
- const count=remainingErrors.length+explainedReasons.length+(!compact&&showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(!compact&&expired?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
+ const remainingErrors=primary?visibleErrors.filter(error=>error!==primary):visibleErrors;
+ const count=remainingErrors.length+explainedReasons.length+(!compact&&showPaused?1:0)+(changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))?1:0)+(!compact&&expired&&!independentOverview?1:0)+(stale&&!errors.length&&!deviceWait?1:0);
  const navigate=(target:NavigationTarget)=>onNavigate?.({...target,...(target.page==='accounts'&&!target.platform?{platform}:{})});
  if(workflow)return visibleErrors.length||reasons.length?<div className="account-flow-evidence">
   {visibleErrors.map((error,index)=>{const p=presentFailure(error,currentLocale());return <div key={index}><p>{p.summary}<AccountErrorPopover errors={[error]}/></p>{p.action&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.action!)}>{p.actionLabel??t('查看账号详情')}</Button>}</div>;})}
@@ -100,7 +103,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
      return <li key={reason}><p>{t(p.summary,{platform:platform==='openai'?'OpenAI':'Claude'})}</p><p className="muted">{t(p.impact)}</p>{p.target&&onNavigate&&<Button variant="ghost" onClick={()=>navigate(p.target!)}>{t(p.target.section==='source'?'打开读取设置':'查看账号详情')}</Button>}</li>;
     })}
     {changed&&!reasons.some(r=>r.endsWith('_confirmation_required'))&&<li>{t('发现不同账号，请在详情确认换号；原账号选择仍保留。')}</li>}
-    {!compact&&expired&&<li>{t('所选来源的授权已过期，请重新登录。')}</li>}
+    {!compact&&expired&&!independentOverview&&<li>{t('所选来源的授权已过期，请重新登录。')}</li>}
     {!deviceWait&&stale&&!errors.length&&<li>{t('上次报告不能证明当前接单状态，正在重新核对。')}</li>}
     {!compact&&showPaused&&<li>{t(current?'已暂停接单':'上次记录：已暂停接单')}</li>}
    </ul>

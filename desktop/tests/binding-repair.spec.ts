@@ -250,3 +250,34 @@ test('credential revocation retains known account preference while disabling its
  await expect(page.locator('.device-card-facts')).toContainText('owner@example.test');
  expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
 });
+
+test('connection failure keeps independent expired authorization visible and navigable without supply writes',async({page})=>{
+ await page.route('**/bee-preview/fixture.mjs',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('const params=new URLSearchParams(location.search);',"accounts.openai.candidate.expires_at=stamp(-60000);const params=new URLSearchParams(location.search);")});});
+ await page.clock.install();await open(page,'device-bound');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:'connection_refused',message:'dial tcp: connect: connection refused'}}}:invoke(command,args);});
+ await page.clock.runFor(11000);
+ await expect(page.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+ const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(account.getByRole('status')).toHaveText('授权已过期');
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);
+ await account.getByRole('button',{name:'前往处理',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'OpenAI 账号详情',exact:true})).toBeVisible();
+ await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
+ await expect(page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true})).toHaveAttribute('aria-current','page');
+ expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+});
+
+test('connection failure does not hide an independent local credential read failure',async({page})=>{
+ await page.route('**/bee-preview/fixture.mjs',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('const params=new URLSearchParams(location.search);',"accounts.openai.candidate.state='unavailable';accounts.openai.candidate.error={code:'permission_denied',check:'source_read',platform:'openai',message:'file read denied: permission_denied=true',evidence:{permission_denied:'true'}};const params=new URLSearchParams(location.search);")});});
+ await page.clock.install();await open(page,'device-bound');
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:'connection_refused',message:'dial tcp: connect: connection refused'}}}:invoke(command,args);});
+ await page.clock.runFor(11000);await expect(page.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+ const account=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(account.getByRole('status')).toContainText('系统拒绝访问');
+ await expect(account.getByRole('button',{name:'前往处理',exact:true})).toBeEnabled();
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);
+ const details=account.getByRole('button',{name:'查看错误详情',exact:true});
+ expect(await details.locator('svg').evaluate(element=>element.getBoundingClientRect().width)).toBeGreaterThan(10);
+ await details.click();await expect(page.getByRole('dialog')).toContainText('permission_denied=true');
+ expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+});

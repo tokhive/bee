@@ -1,4 +1,6 @@
 export const en: Record<string, string> = {
+ "前往处理":"Resolve issue",
+ "无法读取登录文件：系统拒绝访问":"Cannot read the sign-in file: access denied by the system",
  "原后台已安全退出，正在核验目标连接。":"The previous background service has exited safely. Verifying the target connection.",
  "无法启动官方登录":"Could not start official sign-in",
  "系统拒绝运行 Codex，请检查客户端的执行权限。":"The system refused to run Codex. Check the client's execution permissions.",

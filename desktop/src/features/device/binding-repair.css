@@ -103,7 +103,7 @@
 .native-shell .native-accounts-section.overview-accounts-card .native-account-fingerprint{font-size:11px;line-height:16.5px;margin-top:4px}
 .native-shell .native-accounts-section.overview-accounts-card .account-list-condition{grid-column:2;grid-row:1}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-condition{margin:0;font-size:12px;line-height:18px}
-.native-shell .native-accounts-section.overview-accounts-card .native-account-condition svg{width:6px;height:6px;border-radius:50%;background:currentColor;fill:none;stroke:none}
+.native-shell .native-accounts-section.overview-accounts-card .native-account-condition>svg{width:6px;height:6px;border-radius:50%;background:currentColor;fill:none;stroke:none}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-row-actions{grid-column:3;grid-row:1;max-width:120px;margin:0}
 .native-shell .native-accounts-section.overview-accounts-card .native-account-row>.native-account-quota{grid-column:2 / -1;grid-row:2;padding:0;gap:20px;grid-template-columns:repeat(2,minmax(0,1fr))}
 .native-shell .native-accounts-section.overview-accounts-card .account-action-help{font-size:11px;line-height:18px;margin:4px 0 0}

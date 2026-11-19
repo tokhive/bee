@@ -85,7 +85,7 @@ impl BuildSource {
                 ))
             }
         };
-        let go = format!("go version go1.27.3 {goos}/{goarch}");
+        let go = format!("go version go1.27.4 {goos}/{goarch}");
         for (field, actual, expected) in [
             ("target", source.target.as_str(), target),
             ("revision", source.revision.as_str(), revision),
@@ -146,7 +146,7 @@ mod tests {
     use serde_json::json;
 
     fn metadata() -> serde_json::Value {
-        json!({"revision":"a".repeat(40),"teeRevision":"b".repeat(40),"target":"aarch64-apple-darwin","goos":"darwin","goarch":"arm64","go":"go version go1.27.3 darwin/arm64","beeVersion":"dev+fixture","binarySha256":"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"})
+        json!({"revision":"a".repeat(40),"teeRevision":"b".repeat(40),"target":"aarch64-apple-darwin","goos":"darwin","goarch":"arm64","go":"go version go1.27.4 darwin/arm64","beeVersion":"dev+fixture","binarySha256":"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"})
     }
 
     fn parse(value: serde_json::Value) -> Result<BuildSource, String> {

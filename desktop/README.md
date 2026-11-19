@@ -58,7 +58,7 @@ npm --prefix desktop run dev:ui
 make app
 ```
 
-此命令按顺序检查工具链、准备固定 TEE 依赖、按锁文件安装前端依赖、重建当前 revision 的内置 Bee，再编译正式前端和 Tauri 原生开发包；任一步失败立即停止。要求 Node 24、Go 1.27.3、Rust 1.94.0 和 Xcode。优先使用本机 NVM 或项目缓存中已有的 Node 24.22.1，也可用 `make app APP_NODE_BIN=/path/to/node24/bin` 指定；其他安装方式使用 PATH 并由预检校验。Cargo 默认使用 `~/.cargo`，显式设置的 `CARGO_HOME` 优先；不自动选用 `.cache/cargo-home` 中可能过期的离线快照。默认缺少依赖时允许联网下载；显式指定的 Cargo 配置仍按其自身设置执行，不自动安装工具链。
+此命令按顺序检查工具链、准备固定 TEE 依赖、按锁文件安装前端依赖、重建当前 revision 的内置 Bee，再编译正式前端和 Tauri 原生开发包；任一步失败立即停止。要求 Node 24、Go 1.27.4、Rust 1.94.0 和 Xcode。优先使用本机 NVM 或项目缓存中已有的 Node 24.22.1，也可用 `make app APP_NODE_BIN=/path/to/node24/bin` 指定；其他安装方式使用 PATH 并由预检校验。Cargo 默认使用 `~/.cargo`，显式设置的 `CARGO_HOME` 优先；不自动选用 `.cache/cargo-home` 中可能过期的离线快照。默认缺少依赖时允许联网下载；显式指定的 Cargo 配置仍按其自身设置执行，不自动安装工具链。
 
 产物为 `desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app`，使用本机 ad-hoc 签名。构建命令不会启动或退出 App；先在旧 Bee 中按 ⌘Q 完全退出，再打开新包：
 
@@ -125,7 +125,7 @@ BEE_E2E_PORT=28461 BEE_DEVICE_TEST_PORT=28462 npm --prefix desktop test
 
 [主桌面 CI](../.github/workflows/desktop.yml)与 hosted macOS／Linux 的浏览器阶段调用同一 `npm test`，失败时上传日志、截图和 trace。hosted Windows 的构建流程增加全量 TS 单测；它本身不运行浏览器，主桌面 CI 的 Windows 矩阵承担统一浏览器检查。原有 Go／Rust、构建与签名校验继续保留。
 
-原生联调另需 Go 1.27.3、Rust 1.94 及对应系统依赖，满足脚本预检后执行：
+原生联调另需 Go 1.27.4、Rust 1.94 及对应系统依赖，满足脚本预检后执行：
 
 ```sh
 node desktop/scripts/preflight.mjs

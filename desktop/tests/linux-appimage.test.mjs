@@ -24,7 +24,7 @@ function fixture(t) {
   const source = {
     revision: 'a'.repeat(40), teeRevision: 'b'.repeat(40),
     target: 'aarch64-unknown-linux-gnu', goos: 'linux', goarch: 'arm64',
-    go: 'go version go1.27.3 linux/arm64', beeVersion: 'dev+test',
+    go: 'go version go1.27.4 linux/arm64', beeVersion: 'dev+test',
     binarySha256: createHash('sha256').update(readFileSync(binaryPath)).digest('hex'),
   };
   const sourcePath = join(root, 'bee.source.json');

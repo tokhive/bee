@@ -61,7 +61,7 @@ jobs:
           architecture: x64
       - uses: actions/setup-go@v5
         with:
-          go-version: 1.27.3
+          go-version: 1.27.4
           architecture: x64
           cache: false
 
@@ -105,7 +105,7 @@ jobs:
             check('Xcode version', xcode, 'Xcode 16.4 / Build 16F6', xcode === 'Xcode 16.4\nBuild version 16F6');
             check('macOS SDK', run('xcrun', ['--show-sdk-version']), '15.5');
             console.log(run('xcrun', ['clang', '--version']));
-            check('Go version', run('go', ['version']), 'go version go1.27.3 darwin/amd64');
+            check('Go version', run('go', ['version']), 'go version go1.27.4 darwin/amd64');
             check('Go build/host', run('go', ['env', 'GOOS', 'GOARCH', 'GOHOSTOS', 'GOHOSTARCH']), 'darwin\namd64\ndarwin\namd64');
             const rust = run('rustc', ['-vV']);
             check('Rust version', rust.split('\n')[0], 'rustc 1.94.0', /^rustc 1\.94\.0\s/.test(rust));
@@ -186,7 +186,7 @@ jobs:
           const sourcePath = `${sidecar}.source.json`;
           const source = JSON.parse(readFileSync(sourcePath, 'utf8'));
           const teeRevision = readFileSync('TEE_REVISION', 'utf8').trim();
-          for (const [key, expected] of Object.entries({ revision: process.env.GITHUB_SHA, teeRevision, target: process.env.BEE_CI_TARGET, goos: 'darwin', goarch: 'amd64', go: 'go version go1.27.3 darwin/amd64', binarySha256: sha(sidecar) })) {
+          for (const [key, expected] of Object.entries({ revision: process.env.GITHUB_SHA, teeRevision, target: process.env.BEE_CI_TARGET, goos: 'darwin', goarch: 'amd64', go: 'go version go1.27.4 darwin/amd64', binarySha256: sha(sidecar) })) {
             if (source[key] !== expected) throw new Error(`Sidecar ${key} mismatch: actual=${JSON.stringify(source[key])}; required=${JSON.stringify(expected)}`);
           }
           const dir = 'desktop/src-tauri/target/debug/bundle/dmg';

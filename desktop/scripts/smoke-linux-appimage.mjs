@@ -24,7 +24,7 @@ export function verifyPackagedBee({ packageRoot, binaryPath, sourcePath, target,
   const source = JSON.parse(readFileSync(sourcePath, 'utf8'));
   const goarch = target === 'aarch64-unknown-linux-gnu' ? 'arm64' : target === 'x86_64-unknown-linux-gnu' ? 'amd64' : undefined;
   if (!goarch) throw new Error(`unsupported Linux package target: actual=${target}; required=x86_64-unknown-linux-gnu or aarch64-unknown-linux-gnu`);
-  for (const [name, expected] of Object.entries({ target, revision, teeRevision, goos: 'linux', goarch, go: `go version go1.27.3 linux/${goarch}` })) equal(name, source[name], expected);
+  for (const [name, expected] of Object.entries({ target, revision, teeRevision, goos: 'linux', goarch, go: `go version go1.27.4 linux/${goarch}` })) equal(name, source[name], expected);
   if (!/^[a-f0-9]{64}$/.test(source.binarySha256)) throw new Error(`invalid source binarySha256: actual=${source.binarySha256}; required=64 lowercase hex characters`);
   const binarySha256 = digest(actual);
   equal('packaged Bee SHA256', binarySha256, source.binarySha256);

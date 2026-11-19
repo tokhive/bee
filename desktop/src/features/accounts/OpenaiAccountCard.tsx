@@ -194,15 +194,15 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :failed&&!accountPending(view)?<Button disabled={!!accounts.busy.openai} onClick={()=>accounts.detect('openai','official')}>{t('重新核验')}</Button>
    :candidate&&!selected?<OpenaiAction accounts={accounts} runtime={runtime} action="select" label="接入账号"/>
    :!selected&&!accountPending(view)?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="登录 OpenAI"/>
-   :selected&&!accountPending(view)&&supply?<Button disabled={observing||!current||!supply.model.canWrite('openai',!supplyView?.paused)} onClick={()=>void supply.model.write('openai',!supplyView?.paused)}>{t(supply.state.writeBusy&&requestedPause!==undefined?requestedPause?'暂停中…':'恢复中…':supply.state.writeBusy&&supply.state.activePlatform==='openai'?'正在更新接单选择…':supplyView?.paused?'恢复接单':'暂停接单')}</Button>:null}
+   :selected&&!accountPending(view)&&supply?<Button variant={preparing?'outline':undefined} disabled={observing||!current||!supply.model.canWrite('openai',!supplyView?.paused)} onClick={()=>void supply.model.write('openai',!supplyView?.paused)}>{t(supply.state.writeBusy&&requestedPause!==undefined?requestedPause?'暂停中…':'恢复中…':supply.state.writeBusy&&supply.state.activePlatform==='openai'?'正在更新接单选择…':supplyView?.paused?'恢复接单':'暂停接单')}</Button>:null}
    {!showSteps&&accountDetails}
   </div>
   {!completion&&intakeUnconfirmed&&accounts.originalAccountQuery?.phase==='stopped'&&<p className="oa-evidence" role="status">{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}
   {!pauseInNote&&!completion&&selected&&supplyCurrent&&supplyView?.paused&&title!=='已暂停'&&<p className="oa-evidence">{t('接单保持暂停。')}</p>}
-  {!completion&&reasons.filter(reason=>!['quota_exhausted','quota_unknown'].includes(reason)).map(reason=>{const condition=supplyProblem(reason,'openai');return <div className="oa-evidence" key={reason}>{condition.summary!==title&&<span>{t(condition.summary,{platform:'OpenAI'})}</span>}{condition.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(condition.target!)}>{t('查看相关设置')}</Button>}</div>;})}
+  {!completion&&reasons.filter(reason=>!['quota_exhausted','quota_unknown'].includes(reason)&&!(preparing&&!failed&&reason==='authorization_unavailable')).map(reason=>{const condition=supplyProblem(reason,'openai');return <div className="oa-evidence" key={reason}>{condition.summary!==title&&<span>{t(condition.summary,{platform:'OpenAI'})}</span>}{condition.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(condition.target!)}>{t('查看相关设置')}</Button>}</div>;})}
   {cancelUnknown&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={accounts.cancelUnconfirmed.openai!.failure}/></details>}
   {!completion&&!cancelUnknown&&!!query?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(query.error,'authorize_progress')}/></details>}
   {!completion&&intakeUnconfirmed&&!!accounts.originalAccountQuery?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(accounts.originalAccountQuery.error,'account_original_query')}/></details>}
-  {!completion&&<div className="oa-quota"><AccountQuota presentation={presentation} list historical={!!sourceProblem||!!accounts.readFailures.openai}/></div>}
+  {!completion&&(!preparing||failed||intakeUnconfirmed||reasons.some(reason=>['quota_exhausted','quota_unknown'].includes(reason)))&&<div className="oa-quota"><AccountQuota presentation={presentation} list historical={!!sourceProblem||!!accounts.readFailures.openai}/></div>}
  </section>;
 }

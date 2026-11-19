@@ -486,3 +486,25 @@ test('official transport failure keeps last quota and explains no HTTP response 
  await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('未收到 HTTP 响应');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('127.0.0.1:1087');
  await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'查看错误详情',exact:true})).toBeFocused();expect(await writes(page)).toEqual(before);
 });
+
+for(const paused of [false,true])test(`preparing account focuses progress and prevents adding another account until settled ${paused}`,async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(paused=>{const w=window as any,a=w.accounts.openai;w.paused.openai=paused;a.authorization.state='preparing';a.revision++;const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(a.authorization.state==='preparing')for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=[...(paused?['manually_paused']:[]),'authorization_unavailable'];}return reply;};},paused);await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('正在准备接单…');
+ await expect(page.locator('.page-heading').getByRole('button',{name:'添加账号',exact:true})).toBeDisabled();
+ await expect(card(page).locator('.oa-quota')).toHaveCount(0);
+ await expect(card(page)).not.toContainText('Hive 没有可用的加密授权');
+ const before=await writes(page);
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.authorization.state='synchronized';a.revision++;});await page.clock.runFor(11000);
+ await expect(page.locator('.page-heading').getByRole('button',{name:'添加账号',exact:true})).toBeEnabled();
+ await expect(card(page).getByRole('progressbar')).toHaveCount(2);
+ expect(await writes(page)).toEqual(before);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(paused);
+});
+test('preparation does not hide an independently exhausted quota',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai,invoke=w.__TAURI_INTERNALS__.invoke;a.authorization.state='preparing';a.revision++;a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:null}];w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=['quota_exhausted'];}return reply;};});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('正在准备接单…');
+ await expect(card(page).getByRole('progressbar')).toHaveCount(2);
+ await expect(card(page).locator('.quota-value')).toHaveText(['100%','—']);
+ expect(await writes(page)).toEqual([]);
+});

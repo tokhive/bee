@@ -508,3 +508,14 @@ test('preparation does not hide an independently exhausted quota',async({page})=
  await expect(card(page).locator('.quota-value')).toHaveText(['100%','—']);
  expect(await writes(page)).toEqual([]);
 });
+
+for(const condition of ['quota','quota-and-market','paused'] as const)test(`intake completion explains ${condition} without claiming request readiness`,async({page})=>{
+ await setup(page);
+ await page.evaluate(condition=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_action')w.paused.openai=condition==='paused';for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.paused=condition==='paused';value.reasons=condition==='paused'?['manually_paused','quota_exhausted']:condition==='quota'?['quota_exhausted']:['quota_exhausted','market_not_open'];}return reply;};},condition);
+ await page.getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('账号接入成功！');
+ await expect(card(page)).toContainText(condition==='paused'?'账号已接入，接单保持暂停。':condition==='quota'?'账号已接入，等待额度恢复后接单。':'账号已接入，等待接单条件恢复。');
+ await expect(card(page)).not.toContainText('可以接单了');
+ const before=await writes(page);await card(page).getByRole('button',{name:'完成',exact:true}).click();expect(await writes(page)).toEqual(before);
+ expect(before.filter((c:any)=>c.command==='supply_set_paused')).toEqual([]);
+});

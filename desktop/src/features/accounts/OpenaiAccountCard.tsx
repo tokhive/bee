@@ -137,7 +137,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(accounts.loginStartError.openai&&!liveLogin){title='官方登录未完成';note='';}
  if(repairChecking){title='正在核验账号…';note='';}
  if(accounts.sourceSaving){title=accounts.sourceSavePhase==='saving'?'正在保存设置…':accounts.sourceSavePhase==='verifying'?'正在核验账号…':'正在读取登录凭证…';note='';}
- if(completion){title=journey.kind==='change'?'账号更换成功':journey.kind==='repair'?'账号读取已修复':journey.kind==='relogin'?'重新登录成功':'账号接入成功！';note=(journey.kind==='change'?'已更换账号':journey.kind==='repair'?'已读取并核验账号':journey.kind==='relogin'?'已完成重新登录':'账号已接入')+(supplyView?.paused?'，接单保持暂停。':ready?'，可以接单了。':'，等待接单条件恢复。');}
+ if(completion){title=journey.kind==='change'?'账号更换成功':journey.kind==='repair'?'账号读取已修复':journey.kind==='relogin'?'重新登录成功':'账号接入成功！';note=(journey.kind==='change'?'已更换账号':journey.kind==='repair'?'已读取并核验账号':journey.kind==='relogin'?'已完成重新登录':'账号已接入')+(supplyView?.paused?'，接单保持暂停。':ready?'，可以接单了。':reasons.length===1&&reasons[0]==='quota_exhausted'?'，等待额度恢复后接单。':'，等待接单条件恢复。');}
  const kind=different?'change':journey?.kind??(preparationFailed||preparing?(op?.kind==='confirm_change'?'change':'intake'):undefined);
  const steps=kind==='first'?['登录','核验账号','确认接入','准备接单']:kind==='intake'?['确认接入','准备接单']:kind==='change'?['核对账号','确认换号','准备接单']:kind==='repair'?['修复读取','核验账号']:kind==='relogin'?['重新登录','核验账号']:[];
  if(preparing&&(kind==='repair'||kind==='relogin'))steps.push('准备接单');

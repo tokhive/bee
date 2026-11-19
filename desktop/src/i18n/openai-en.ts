@@ -192,5 +192,9 @@ export const openaiEnglish:Record<string,string>={
   "已完成重新登录，等待接单条件恢复。": "Signed in again. Waiting for request requirements to recover.",
   "账号已接入，接单保持暂停。": "Account connected. Requests remain paused.",
   "账号已接入，可以接单了。": "Account connected. Ready for requests.",
-  "账号已接入，等待接单条件恢复。": "Account connected. Waiting for request requirements to recover."
+  "账号已接入，等待接单条件恢复。": "Account connected. Waiting for request requirements to recover.",
+  "已更换账号，等待额度恢复后接单。": "Account changed. Requests will start after quota recovers.",
+  "已读取并核验账号，等待额度恢复后接单。": "Account read and verified. Requests will start after quota recovers.",
+  "已完成重新登录，等待额度恢复后接单。": "Signed in again. Requests will start after quota recovers.",
+  "账号已接入，等待额度恢复后接单。": "Account connected. Requests will start after quota recovers."
 };

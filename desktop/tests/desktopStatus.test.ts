@@ -48,3 +48,17 @@ for(const paused of [true,false])test('pending supply intent '+paused+' excludes
 test('unconfirmed supply write cannot retain a ready badge for that platform',()=>{const s=fixture();s.supplyErrors.claude={...failure,code:'RESPONSE_TIMEOUT',check:'supply_write'};assert.deepEqual(derive(s).readyPlatforms,['openai']);s.accounts.openai.selection.state='not_selected';const p=derive(s);assert.equal(p.kind,'unconfirmed');assert.equal(p.problem,s.supplyErrors.claude);assert.equal(p.primaryTarget?.platform,'claude');assert.deepEqual(p.readyPlatforms,[]);});
 
 test('quota checking reflects an active stale observation but preserves pause and independent blockers',()=>{const s=fixture();s.accounts.openai.selection.state='not_selected';s.supplies.claude.ready=false;s.supplies.claude.reasons=['quota_exhausted'];assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'quota_checking');s.supplies.claude.paused=true;s.supplies.claude.reasons.push('manually_paused');assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'paused');s.supplies.claude.reasons.push('claude_source_unavailable');assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'blocked');});
+
+for(const platform of ['openai','claude'] as const)for(const paused of [false,true])test(`${platform} missing credential overrides stale supply readiness and pause`,()=>{
+ const s=fixture();s.accounts[platform==='openai'?'claude':'openai'].selection.state='not_selected';
+ const missing={code:'source_missing',check:'read_keyring',platform,message:'controlled missing credential',evidence:{not_found:'true'}};
+ s.accounts[platform].candidate.error=missing;s.supplies[platform].paused=paused;
+ const p=module.deriveDesktopStatus!(s,now,true);
+ assert.equal(p.kind,'blocked');assert.equal(p.problem?.code,'source_missing');assert.equal(p.primaryTarget?.platform,platform);assert.deepEqual(p.readyPlatforms,[]);assert.equal(s.supplies[platform].paused,paused);
+ s.accounts[platform].candidate.error=null;s.supplies[platform].ready=!paused;s.supplies[platform].reasons=paused?['manually_paused']:[];
+ assert.equal(module.deriveDesktopStatus!(s,now,true).kind,paused?'paused':'ready');
+});
+test('missing credential preserves another confirmed ready platform',()=>{
+ const s=fixture();s.accounts.openai.candidate.error={code:'source_missing',check:'read_keyring',message:'controlled missing credential',evidence:{not_found:'true'}};
+ const p=derive(s);assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['claude']);assert.deepEqual(p.blockedPlatforms,['openai']);
+});

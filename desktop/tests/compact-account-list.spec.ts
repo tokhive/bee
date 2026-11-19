@@ -45,6 +45,7 @@ for(const width of [1080,820,600])test(`compact list evidence remains read-only 
  await page.evaluate(()=>{const w=window as any,a=w.accounts.openai;w.paused.openai=true;
  const error={code:'source_missing',check:'read_keyring',platform:'openai',message:'Codex Keychain item absent: security exit=44: file does not exist',evidence:{not_found:'true',permission_denied:'false',cause:'security exit=44: file does not exist'}};
  a.candidate.error=error;a.authorization.error=structuredClone(error);a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:20,reset_at:null}];a.revision++;});await page.clock.runFor(11000);
+ await expect(page.locator('.desktop-side-status')).toHaveText('凭证缺失');
  const trigger=card(page).getByRole('button',{name:'查看错误详情',exact:true});await expect(trigger).toBeVisible();await expect(card(page).locator('.is-exhausted [data-slot=progress-indicator]')).not.toHaveCSS('background-color','rgba(0, 0, 0, 0)');await expect(card(page).locator('.account-list-quota')).toContainText('上次记录');await expect(card(page).locator('.quota-value')).toHaveText(['100%','20%']);
  const before=await writes(page),height=(await card(page).boundingBox())!.height;await trigger.focus();await page.keyboard.press('Enter');
  const popover=page.getByRole('dialog',{name:'错误详情',exact:true});await expect(popover).toContainText('security exit=44');await expect(popover).toContainText('permission_denied: false');await expect(popover.locator('details')).toHaveCount(0);await expect(popover.getByRole('button',{name:'修改凭证读取设置'})).toHaveCount(0);expect((await card(page).boundingBox())!.height).toBe(height);
@@ -53,7 +54,7 @@ for(const width of [1080,820,600])test(`compact list evidence remains read-only 
  await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByText('接单保持暂停。',{exact:false})).toBeVisible();
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  const dir=resolve(import.meta.dirname,'../test-results/compact-list');mkdirSync(dir,{recursive:true});await page.screenshot({path:resolve(dir,`native-${width}.png`)});
- await page.evaluate(()=>{document.documentElement.dataset.theme='dark'});await trigger.click();await page.screenshot({path:resolve(dir,`native-error-${width}-dark.png`)});
+ await trigger.click();await page.screenshot({path:resolve(dir,`native-error-${width}-light.png`)});
 });
 test('unknown windows and exhausted quota do not invent values or operation failures',async({page})=>{
  await page.clock.install();await setup(page,true);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.capabilities.forEach((c:any)=>c.windows=[]);a.revision++});await page.clock.runFor(11000);

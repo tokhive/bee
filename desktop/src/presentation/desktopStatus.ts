@@ -17,8 +17,9 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  const selected=platforms.filter(p=>s.accounts[p]?.selection.state==='selected');
  const accountKnown=(p:AccountPlatform)=>!!s.accounts[p]&&!s.accountErrors[p]&&!!s.accountRefresh[p]?.lastConfirmedAt;
  const accountBusy=(p:AccountPlatform)=>{const a=s.accounts[p];return a?.authorization.state==='preparing'||!!a?.operation&&['pending','running','reconciling'].includes(a.operation.state)||!!a?.login_maintenance&&a.login_maintenance.phase!=='restored';};
+ const missingCredential=(p:AccountPlatform)=>[s.accountErrors[p],s.accounts[p]?.candidate.error,s.accounts[p]?.authorization.error].find(error=>error?.code==='source_missing');
  const readyPlatforms=selected.filter(p=>{
-  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!accountBusy(p)&&pendingChoices[p]===undefined&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
+  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!missingCredential(p)&&!accountBusy(p)&&pendingChoices[p]===undefined&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
  });
  const blockedPlatforms=platforms.filter(p=>!readyPlatforms.includes(p)&&(!!s.accountErrors[p]||!!s.supplyErrors[p]||selected.includes(p)));
  const result=(kind:DesktopPresentation['kind'],problem:UiFailure|null=null,primaryTarget:NavigationTarget|null=null,preparationStep:DesktopPresentation['preparationStep']=null):DesktopPresentation=>({kind,severity:severities[kind],readyPlatforms:kind==='ready'?readyPlatforms:[],blockedPlatforms,problem,primaryTarget,preparationStep});
@@ -54,6 +55,8 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  if(changing)return result(s.accounts[changing]?.operation?.state==='reconciling'?'change_unconfirmed':'changing_account',null,{page:'accounts',section:'account',platform:changing});
  const preparing=selected.find(p=>accountKnown(p)&&s.accounts[p]?.authorization.state==='preparing');
  if(preparing)return result('preparing_accounts',null,{page:'accounts',section:'account',platform:preparing});
+ const missing=selected.find(p=>missingCredential(p));
+ if(missing)return result('blocked',normalizeFailure(missingCredential(missing)!,'source_read'),{page:'accounts',section:'source',platform:missing});
  const current=(p:AccountPlatform)=>{const v=s.supplies[p];return accountKnown(p)&&!s.supplyErrors[p]&&v&&now-Date.parse(v.checked_at)<=30000;};
  if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
  const quota=selected.find(p=>current(p)&&s.supplies[p]?.reasons.includes('quota_exhausted'));

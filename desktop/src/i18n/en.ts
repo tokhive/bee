@@ -1285,6 +1285,7 @@ export const en: Record<string, string> = {
   "能力已同步": "Capabilities synchronized",
   "可以接收新任务": "Accepting new tasks",
   "已按你的选择暂停接单": "Accepting tasks is paused as requested",
+  "保存后将自动读取并核验账号。": "Saving automatically reads and verifies the account.",
   "所选目录中未找到登录文件，请检查读取位置。": "No sign-in file was found in the selected directory. Check the credential location.",
   "核验完成后，你可以核对账号并确认接入。": "After verification, review the account and confirm connection.",
   "已请求打开官方页面，等待授权完成后自动继续。": "The official page was requested. Bee will continue automatically after authorization.",

@@ -89,3 +89,9 @@
 .add-account-body .add-account-error .account-error-trigger{color:inherit}
 
 .add-account-install{font-size:12px;color:var(--muted);margin:16px 0}.add-account-install summary{cursor:pointer}.add-account-install p{font-size:12px;margin-top:10px}
+
+/* Source form measurements follow the approved directory editor. */
+.add-account-directory{align-items:center}
+.add-account-directory input{padding:10px 12px;min-height:40px;border-color:var(--line);background:var(--paper);color:var(--ink);font-size:13px}
+.add-account-body form>label{margin-top:14px}
+.add-account-body .add-account-helper{font-size:12px;margin:9px 0 0}

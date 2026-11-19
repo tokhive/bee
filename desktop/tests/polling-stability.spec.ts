@@ -301,3 +301,29 @@ for(const outcome of ['identity','runtime','features'])test('Claude official log
  if(outcome==='identity')await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);
  else{await expect(page.getByText('账号提交条件已经变化，本次未提交。',{exact:true}).last()).toBeVisible();expect(await calls(page,'authorize_start')).toHaveLength(0);}
 });
+
+test('overview recheck recovers OpenAI supply after bounded retries are exhausted',async({page})=>{
+ await scene(page,'running');
+ await page.evaluate(()=>{
+  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.supplyAttempts=0;w.supplyUnavailable=true;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='supply_status'&&args?.platform==='openai'){
+    w.supplyAttempts++;
+    if(w.supplyUnavailable)throw {code:'timeout',message:'supply identity check timed out',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{failure_kind:'timeout',method:'GET',path:'/api/bee/identity'}}};
+   }
+   return original(command,args);
+  };
+ });
+ await page.clock.runFor(10000);
+ for(const delay of [1000,2000,4000])await page.clock.runFor(delay);
+ await expect.poll(()=>page.evaluate(()=>(window as any).supplyAttempts)).toBe(4);
+ const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(card.getByText('状态待更新',{exact:true})).toBeVisible();
+ await expect(card.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await page.evaluate(()=>(window as any).supplyUnavailable=false);
+ await card.getByRole('button',{name:'重新核对',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).supplyAttempts)).toBe(5);
+ await expect(card.getByText('状态待更新',{exact:true})).toHaveCount(0);
+ await expect(card.getByRole('button',{name:'暂停接单',exact:true})).toBeEnabled();
+ for(const method of ['runtime_start','runtime_stop','account_action','supply_set_paused'])expect(await calls(page,method)).toHaveLength(0);
+});

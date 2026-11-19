@@ -313,7 +313,10 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   defaults:savedDefaults,defaultsError:centralError||defaultsError,views,errors:{...errors,...accountErrors,...(centralError?{openai:centralError,claude:centralError}:{})},busy,sources,dirty,uncertain,writeBusy,sourceReadFailed,
   edit:editSource,
   detect(platform:AccountPlatform,mode:'local'|'official'){if(client&&savedDefaults&&!centralError)void run(platform,()=>detectLocal(platform,sourceFor(platform),mode),true);},
-  refresh(platform:AccountPlatform){void read(platform,true,views[platform]?.operation?.kind==='authorize'?views[platform]?.operation?.id:undefined);},
+  refresh(platform:AccountPlatform){
+   if(platform==='openai'&&central.current?.recheckOpenaiReads&&!views[platform]?.login_maintenance?.can_recheck){void central.current.recheckOpenaiReads();return;}
+   void read(platform,true,views[platform]?.operation?.kind==='authorize'?views[platform]?.operation?.id:undefined);
+  },
   action(platform:AccountPlatform,action:AccountActionRequest['action']){
    if(platform==='claude'&&claudeSourceSavingRef.current)return;
    const view=views[platform];if(!client||!view||uncertain[platform]||centralError)return;

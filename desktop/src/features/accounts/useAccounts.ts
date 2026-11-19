@@ -30,6 +30,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const originalAccountReader=useRef<ReturnType<typeof createOperationQuery<AccountSnapshot>>|undefined>(undefined);
  const [loginProgress,setLoginProgress]=useState<QueryState<CodexLoginProgress>>(),[loginOpenError,setLoginOpenError]=useState<UiFailure>();
  const loginQuery=useRef<ReturnType<typeof createOperationQuery<CodexLoginProgress>>|undefined>(undefined);
+ const [openedLoginID,setOpenedLoginID]=useState<string>();
  const [openingLogin,setOpeningLogin]=useState(false);const openingLoginRef=useRef(false);
  const [loginStartError,setLoginStartError]=useState<Partial<Record<AccountPlatform,UiFailure>>>({});
  const [startingLogin,setStartingLogin]=useState<Partial<Record<AccountPlatform,boolean>>>({});
@@ -265,12 +266,12 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
    await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
    return verified.current.openai?latest.current.openai:undefined;
-  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSavePhase,sourceSaveError,loginProgress,loginOpenError,loginStartError,openingLogin,startingLogin,
+  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSavePhase,sourceSaveError,loginProgress,loginOpenError,loginStartError,openingLogin,loginPageOpened:!!loginID&&openedLoginID===loginID,startingLogin,
   queryLogin(){return loginQuery.current?.start();},
   async openLoginPage(){
    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
-   openingLoginRef.current=true;setOpeningLogin(true);
-   try{const receipt=await authorizer.open(loginID);if(active.current){setLoginOpenError(receipt.error?failure(receipt.error,'browser_opener'):undefined);void loginQuery.current?.start();}}
+   openingLoginRef.current=true;setOpeningLogin(true);setOpenedLoginID(undefined);
+   try{const receipt=await authorizer.open(loginID);if(active.current){setLoginOpenError(receipt.error?failure(receipt.error,'browser_opener'):undefined);if(receipt.opened&&!receipt.error)setOpenedLoginID(loginID);void loginQuery.current?.start();}}
    catch(cause){if(active.current)setLoginOpenError(failure(cause,'browser_opener'));}
    finally{openingLoginRef.current=false;if(active.current)setOpeningLogin(false);}
   },
@@ -296,8 +297,16 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
     const saved=await central.current.saveOpenaiSource(draft);
     if(!active.current||generation!==central.current?.generation?.())return;
     setSourceSavePhase('reading');sourceSavingRef.current=false;editSource('openai',saved);setOpenaiDraft(undefined);setOpenaiJourney({kind:'repair',revision:revisions.current.openai});
-    await run('openai',async()=>{const local=await detectLocal('openai',saved);if(!local.candidate.source||local.candidate.error)return local;if(active.current)setSourceSavePhase('verifying');return detectLocal('openai',saved,'official');},true);
-    return true;
+    let candidateReady=false;
+    await run('openai',async()=>{
+     const local=await detectLocal('openai',saved);
+     if(!local.candidate.source||local.candidate.error||!active.current||generation!==central.current?.generation?.())return local;
+     setSourceSavePhase('verifying');
+     const verified=await detectLocal('openai',saved,'official');
+     candidateReady=verified.candidate.state==='available'&&!verified.candidate.error&&!verified.authorization.error;
+     return verified;
+    },true);
+    return candidateReady&&active.current&&generation===central.current?.generation?.();
    }catch(cause){if(active.current)setSourceSaveError(failure(cause,'preferences_save'));}
    finally{sourceSavingRef.current=false;if(active.current){setSourceSaving(false);setSourceSavePhase(undefined);}}
   },

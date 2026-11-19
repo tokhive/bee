@@ -381,3 +381,26 @@ test('Claude addition cancels from the heading but cannot abandon a live or unkn
  expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
  expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
 });
+
+for(const condition of ['missing','denied'] as const)test(`saved source ${condition} stays editable and recovery still requires intake confirmation`,async({page})=>{
+ await setup(page,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'设置读取位置',exact:true}).click();
+ const directory='/tmp/repairable-source';await wizard(page).getByLabel('读取目录').fill(directory);
+ await page.evaluate(({directory,condition})=>(window as any).__beeMockControls['account-source']({platform:'openai',directory,store:'file',value:condition}),{directory,condition});
+ await wizard(page).getByRole('button',{name:'保存',exact:true}).click();
+ await expect(wizard(page).getByLabel('读取目录')).toHaveValue(directory);await expect(wizard(page).getByRole('alert')).toBeVisible();await expect(wizard(page).getByRole('button',{name:'保存',exact:true})).toBeEnabled();
+ await wizard(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText(condition==='missing'?'not_found':'permission_denied');await page.keyboard.press('Escape');
+ await page.evaluate(directory=>(window as any).__beeMockControls['account-source']({platform:'openai',directory,store:'file',value:'available'}),directory);
+ await wizard(page).getByRole('button',{name:'保存',exact:true}).click();await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();expect(await writes(page)).toEqual([]);
+});
+
+
+test('opening the official page reports success only after the opener confirms and keeps the same login',async({page})=>{
+ await page.clock.install();await setup(page,true,true);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();await wizard(page).getByRole('button',{name:'登录 OpenAI',exact:true}).click();
+ const opened=wizard(page).getByText('已请求打开官方页面，等待授权完成后自动继续。',{exact:true});
+ await expect(opened).toHaveCount(0);
+ await wizard(page).getByRole('button',{name:'打开登录页面',exact:true}).click();await expect(opened).toBeVisible();
+ await page.evaluate(()=>{(window as any).loginOpenFailure={platform:'openai',code:'authorization_browser_open_failed',check:'browser_opener',message:'system browser launcher failed: EACCES',evidence:{}};});
+ await wizard(page).getByRole('button',{name:'打开登录页面',exact:true}).click();await expect(opened).toHaveCount(0);await expect(wizard(page).getByRole('button',{name:'重新打开登录页面',exact:true})).toBeVisible();
+ await page.evaluate(()=>{(window as any).loginOpenFailure=undefined;});await wizard(page).getByRole('button',{name:'重新打开登录页面',exact:true}).click();await expect(opened).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+});

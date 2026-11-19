@@ -10,7 +10,7 @@ import { extractArchive, prepareTee } from '../scripts/prepare-tee.mjs';
 import { beeTarget, buildBee } from '../scripts/build-bee.mjs';
 
 const versions = {
-  go: 'go version go1.27.3 darwin/arm64', rustc: 'rustc 1.94.0 (test)',
+  go: 'go version go1.27.4 darwin/arm64', rustc: 'rustc 1.94.0 (test)',
   cargo: 'cargo 1.94.0 (test)', git: 'git version 2.39.3',
   'xcode-select': '/Applications/Xcode.app/Contents/Developer',
   xcrun: '/Applications/Xcode.app/Contents/Developer/usr/bin/clang',
@@ -34,7 +34,7 @@ test('preflight reports actual and required versions instead of accepting old to
   assert.equal(result.ok, false);
   assert.match(result.checks.find(c => c.name === 'Node').actual, /20\.19\.4/);
   assert.match(result.checks.find(c => c.name === 'Go').actual, /1\.26\.5/);
-  assert.match(result.checks.find(c => c.name === 'Go').expected, /1\.27\.3/);
+  assert.match(result.checks.find(c => c.name === 'Go').expected, /1\.27\.4/);
 });
 
 test('preflight reports a missing native tool and fails for unsupported systems', () => {
@@ -66,7 +66,7 @@ function fixture(t, links = {}) {
   git('init', '--quiet');
   git('config', 'core.autocrlf', 'false');
   git('config', 'core.eol', 'lf');
-  writeFileSync(join(source, 'go.mod'), 'module example.test/pinned\n\ngo 1.27.3\n');
+  writeFileSync(join(source, 'go.mod'), 'module example.test/pinned\n\ngo 1.27.4\n');
   writeFileSync(join(source, '.gitattributes'), 'excluded export-ignore\n');
   writeFileSync(join(source, 'excluded'), 'must not be exported');
   const longPath = 'long-'.repeat(25) + '.txt';
@@ -258,7 +258,7 @@ test('sidecar build records the actual binary version, target and SHA256', t => 
   const output = buildBee({ root: f.root, target: 'aarch64-apple-darwin', run: (command, args) => {
     if (command === 'rustc') return 'host: aarch64-apple-darwin\n';
     if (command === 'git') return f.revision;
-    if (command === 'go' && args[0] === 'version') return 'go version go1.27.3 darwin/arm64';
+    if (command === 'go' && args[0] === 'version') return 'go version go1.27.4 darwin/arm64';
     if (command === 'go' && args[0] === 'build') { writeFileSync(args[args.indexOf('-o')+1], binary); return ''; }
     if (command === '/usr/bin/otool') return 'cmd LC_BUILD_VERSION\n platform 1\n minos 13.0\n sdk 14.4\n';
     return 'bee dev+fixture darwin/arm64\n';
@@ -278,7 +278,7 @@ for (const target of ['x86_64-unknown-linux-gnu', 'aarch64-unknown-linux-gnu', '
     const output = buildBee({ root: f.root, target, run: (command, args, options) => {
       if (command === 'rustc') return `host: ${target}\n`;
       if (command === 'git') return f.revision;
-      if (command === 'go' && args[0] === 'version') return `go version go1.27.3 ${goos}/${goarch}`;
+      if (command === 'go' && args[0] === 'version') return `go version go1.27.4 ${goos}/${goarch}`;
       if (command === 'go' && args[0] === 'build') {
         buildArgs = args;
         buildEnvironment = options.env;
@@ -302,7 +302,7 @@ test('macOS sidecar enforces deployment target 13 and rejects a newer actual min
   const run = (command, args, options) => {
     if (command === 'rustc') return 'host: aarch64-apple-darwin\n';
     if (command === 'git') return f.revision;
-    if (command === 'go' && args[0] === 'version') return 'go version go1.27.3 darwin/arm64';
+    if (command === 'go' && args[0] === 'version') return 'go version go1.27.4 darwin/arm64';
     if (command === 'go' && args[0] === 'build') { buildEnvironment = options.env; writeFileSync(args[args.indexOf('-o')+1], 'binary'); return ''; }
     if (command === '/usr/bin/otool') return 'cmd LC_BUILD_VERSION\n platform 1\n minos 14.4\n sdk 14.4\n';
     return 'bee dev+fixture darwin/arm64\n';
@@ -316,7 +316,7 @@ test('sidecar build rejects a binary reporting a different OS or architecture', 
   assert.throws(() => buildBee({ root: f.root, target: 'aarch64-apple-darwin', run: (command, args) => {
     if (command === 'rustc') return 'host: aarch64-apple-darwin\n';
     if (command === 'git') return f.revision;
-    if (command === 'go' && args[0] === 'version') return 'go version go1.27.3 darwin/arm64';
+    if (command === 'go' && args[0] === 'version') return 'go version go1.27.4 darwin/arm64';
     if (command === 'go' && args[0] === 'build') { writeFileSync(args[args.indexOf('-o')+1], 'binary'); return ''; }
     if (command === '/usr/bin/otool') return 'cmd LC_BUILD_VERSION\n platform 1\n minos 13.0\n sdk 14.4\n';
     return 'bee dev windows/amd64\n';

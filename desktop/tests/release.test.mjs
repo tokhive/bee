@@ -56,7 +56,7 @@ test('release sidecar embeds the App version and rejects a different real binary
   const run = (command, args) => {
     if (command === 'rustc') return `host: ${target}\n`;
     if (command === 'git') return revision;
-    if (command === 'go' && args[0] === 'version') return 'go version go1.27.3 darwin/arm64';
+    if (command === 'go' && args[0] === 'version') return 'go version go1.27.4 darwin/arm64';
     if (command === 'go') { linker = args.find(arg => arg.startsWith('-ldflags')); writeFileSync(args[args.indexOf('-o') + 1], 'compiled fixture'); return ''; }
     if (command === '/usr/bin/otool') return ' minos 13.0\n';
     return 'bee dev+wrong darwin/arm64';

@@ -23,7 +23,7 @@ export function buildBee({ root = beeRoot, target, releaseVersion = process.env.
   const { goos, goarch, suffix } = beeTarget(target);
   if (host !== target) throw new Error(`native sidecar target mismatch: actual Rust host=${host}; required target=${target}`);
   const version = run('go', ['version'], { cwd: root }).trim();
-  if (!/\bgo1\.27\.3\s/.test(version)) throw new Error(`Go toolchain mismatch: actual=${version}; required=go1.27.3`);
+  if (!/\bgo1\.27\.4\s/.test(version)) throw new Error(`Go toolchain mismatch: actual=${version}; required=go1.27.4`);
   const revision = run('git', ['rev-parse', 'HEAD'], { cwd: root }).trim();
   const teeRevision = readFileSync(join(root, 'TEE_REVISION'), 'utf8').trim();
   const outputDir = join(root, 'desktop/src-tauri/binaries');

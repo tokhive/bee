@@ -9,7 +9,7 @@ export function collectPreflight({ platform = process.platform, arch = process.a
     } catch (error) { checks.push({ name, actual: error.message, expected, ok: false }); }
   };
   check('Node', '24.x LTS', () => nodeVersion, v => /^24\./.test(v));
-  check('Go', 'go1.27.3', () => run('go', ['version']), v => /\bgo1\.27\.3\s/.test(v));
+  check('Go', 'go1.27.4', () => run('go', ['version']), v => /\bgo1\.27\.4\s/.test(v));
   check('Rust', '1.94.0 (rust-toolchain.toml)', () => run('rustc', ['--version']), v => /^rustc 1\.94\.0\s/.test(v));
   check('Cargo', '1.94.0', () => run('cargo', ['--version']), v => /^cargo 1\.94\.0\s/.test(v));
   check('Git', 'Git installed', () => run('git', ['--version']), v => /^git version /.test(v));

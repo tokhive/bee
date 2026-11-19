@@ -62,3 +62,11 @@ test('missing credential preserves another confirmed ready platform',()=>{
  const s=fixture();s.accounts.openai.candidate.error={code:'source_missing',check:'read_keyring',message:'controlled missing credential',evidence:{not_found:'true'}};
  const p=derive(s);assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['claude']);assert.deepEqual(p.blockedPlatforms,['openai']);
 });
+
+test('current authorization synchronization failure overrides stale ready supply for the affected platform',()=>{
+ const s=fixture();s.accounts.claude.selection.state='not_selected';
+ s.accounts.openai.authorization.error={platform:'openai',code:'runtime_platform_unconfirmed',check:'authorization_sync',message:'write tcp: connection reset by peer',evidence:{}};
+ s.accounts.openai.authorization.state='unconfirmed';
+ const status=derive(s);assert.equal(status.kind,'blocked');assert.equal(status.problem?.check,'authorization_sync');assert.deepEqual(status.readyPlatforms,[]);
+ s.accounts.openai.authorization.error=null;s.accounts.openai.authorization.state='synchronized';assert.equal(derive(s).kind,'ready');
+});

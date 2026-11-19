@@ -1,3 +1,4 @@
+import {isAuthorizationSyncDisconnected} from '../presentation/problems';
 import type {DesktopPresentation} from '../presentation/desktopStatus';
 import { t } from '../i18n/index';
 import {useEffect,useRef,type ReactNode} from 'react';
@@ -68,7 +69,7 @@ export function AppShell({
         </nav>
         <div className="sidebar-bottom">
           <div className="side-note">
-            <span className={`dot ${(!switching&&(desktopStatus?desktopStatus.severity==='success':connected)) ? '' : 'muted-dot'}`} />{hive ? new URL(hive).host : t(deviceMode ? desktopStatus&&['loading','unconfirmed'].includes(desktopStatus.kind)?'连接状态待确认':'尚未连接 Hive' : '尚未接通真实供给')}<p className={desktopStatus?'desktop-side-status':undefined} data-severity={desktopStatus?.severity}>{switching?t('Hive 切换中'):desktopStatus?t(desktopStatus.kind==='paused'?'已暂停':desktopStatus.kind==='blocked'&&desktopStatus.problem?.code==='source_missing'?'凭证缺失':`desktop.status.${desktopStatus.kind}`):t(connected ? 'Hive 已连接' : 'Hive 未连接')}</p>
+            <span className={`dot ${(!switching&&(desktopStatus?desktopStatus.severity==='success':connected)) ? '' : 'muted-dot'}`} />{hive ? new URL(hive).host : t(deviceMode ? desktopStatus&&['loading','unconfirmed'].includes(desktopStatus.kind)?'连接状态待确认':'尚未连接 Hive' : '尚未接通真实供给')}<p className={desktopStatus?'desktop-side-status':undefined} data-severity={desktopStatus?.severity}>{switching?t('Hive 切换中'):desktopStatus?t(desktopStatus.kind==='paused'?'已暂停':desktopStatus.kind==='blocked'&&desktopStatus.problem?.code==='source_missing'?'凭证缺失':desktopStatus.kind==='blocked'&&desktopStatus.problem&&isAuthorizationSyncDisconnected(desktopStatus.problem)?'授权同步失败：连接已中断':`desktop.status.${desktopStatus.kind}`):t(connected ? 'Hive 已连接' : 'Hive 未连接')}</p>
           </div>
           <div className="identity">
             <span className="avatar"><Monitor aria-hidden="true" /></span>

@@ -525,6 +525,7 @@ test('a proven synchronization reset keeps one repair action and the original er
  await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_action'){const a=w.accounts.openai;a.authorization={...a.authorization,state:'unconfirmed',error:{platform:'openai',code:'runtime_platform_unconfirmed',check:'authorization_sync',message:'write tcp 127.0.0.1:50000->127.0.0.1:18080: write: connection reset by peer',evidence:{}}};reply.result.account=structuredClone(a);}for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=[...(value.paused?['manually_paused']:[]),'authorization_unavailable'];}return reply;};});
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
  await expect(card(page).getByRole('status')).toHaveText('授权同步失败：连接已中断');
+ await expect(page.locator('.desktop-side-status')).toHaveText('授权同步失败：连接已中断');
  await expect(card(page)).toContainText('账号已接入。请在连接恢复后重试，无需重新确认接入。');
  await expect(card(page)).not.toContainText('Hive 没有可用的加密授权');
  await expect(card(page).getByRole('button',{name:'重试',exact:true})).toHaveCount(1);

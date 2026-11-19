@@ -1,6 +1,7 @@
 import type {DesktopSnapshot} from '../system/desktopState';
 import {normalizeFailure,type UiFailure} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
+import {isAuthorizationSyncDisconnected} from './problems.ts';
 import type {AccountPlatform} from '../system/accounts';
 export interface DesktopPresentation {
  kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'pausing'|'resuming'|'quota_exhausted'|'quota_checking'|'ready'|'blocked';
@@ -18,8 +19,9 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  const accountKnown=(p:AccountPlatform)=>!!s.accounts[p]&&!s.accountErrors[p]&&!!s.accountRefresh[p]?.lastConfirmedAt;
  const accountBusy=(p:AccountPlatform)=>{const a=s.accounts[p];return a?.authorization.state==='preparing'||!!a?.operation&&['pending','running','reconciling'].includes(a.operation.state)||!!a?.login_maintenance&&a.login_maintenance.phase!=='restored';};
  const missingCredential=(p:AccountPlatform)=>[s.accountErrors[p],s.accounts[p]?.candidate.error,s.accounts[p]?.authorization.error].find(error=>error?.code==='source_missing');
+ const synchronizationFailure=(p:AccountPlatform)=>{const error=s.accounts[p]?.authorization.error;return error&&isAuthorizationSyncDisconnected(normalizeFailure(error,'authorization_sync'))?error:undefined;};
  const readyPlatforms=selected.filter(p=>{
-  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!missingCredential(p)&&!accountBusy(p)&&pendingChoices[p]===undefined&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
+  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!missingCredential(p)&&!synchronizationFailure(p)&&!accountBusy(p)&&pendingChoices[p]===undefined&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
  });
  const blockedPlatforms=platforms.filter(p=>!readyPlatforms.includes(p)&&(!!s.accountErrors[p]||!!s.supplyErrors[p]||selected.includes(p)));
  const result=(kind:DesktopPresentation['kind'],problem:UiFailure|null=null,primaryTarget:NavigationTarget|null=null,preparationStep:DesktopPresentation['preparationStep']=null):DesktopPresentation=>({kind,severity:severities[kind],readyPlatforms:kind==='ready'?readyPlatforms:[],blockedPlatforms,problem,primaryTarget,preparationStep});
@@ -57,6 +59,8 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  if(preparing)return result('preparing_accounts',null,{page:'accounts',section:'account',platform:preparing});
  const missing=selected.find(p=>missingCredential(p));
  if(missing)return result('blocked',normalizeFailure(missingCredential(missing)!,'source_read'),{page:'accounts',section:'source',platform:missing});
+ const interrupted=selected.find(p=>synchronizationFailure(p));
+ if(interrupted)return result('blocked',normalizeFailure(synchronizationFailure(interrupted)!,'authorization_sync'),{page:'accounts',section:'account',platform:interrupted});
  const current=(p:AccountPlatform)=>{const v=s.supplies[p];return accountKnown(p)&&!s.supplyErrors[p]&&v&&now-Date.parse(v.checked_at)<=30000;};
  if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
  const quota=selected.find(p=>current(p)&&s.supplies[p]?.reasons.includes('quota_exhausted'));

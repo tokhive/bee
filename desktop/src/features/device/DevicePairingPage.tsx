@@ -20,6 +20,8 @@ const phaseCopy:Record<DeviceRecoveryView['phase'],string>={
  awaiting_owner_confirmation:'新设备归属与原设备不同',saving:'正在保存设备绑定',completed:'设备已重新绑定',expired:'Hive 已确认配对码过期',blocked:'设备绑定暂时无法继续',
 };
 export interface DevicePairingProps {
+ /** Public saved facts for display while a switch has no active device session. Never establishes binding readiness. */
+ savedFacts?:{hive:string;name:string;ownerEmail:string};
  embedded?:boolean;transactionIntro?:ReactNode;transactionDetails?:ReactNode;extraActions?:ReactNode;title?:string;inputDraft?:{hive:string;name:string;hiveReadOnly?:boolean;setHive:(value:string)=>void;setName:(value:string)=>void};
  switchFeedback?:ReactNode;switchControl?:ReactNode;switchStatus?:ReactNode;statusControl?:ReactNode;startupNotice?:ReactNode;
  retryConnection?:()=>Promise<unknown>;onSwitchHive?:()=>void;switching?:boolean;cancelOperation?:string;repair?:()=>Promise<void>;repairResult?:'healthy'|'restored';
@@ -29,7 +31,7 @@ export interface DevicePairingProps {
  begin:(hive:string,name:string)=>void;refresh:()=>void|Promise<unknown>;open:()=>void;recover?:(decision:RecoveryDecision,transaction?:DeviceRecoveryView)=>Promise<boolean>;
 }
 /** Presents native receipts only. Opening a web page never approves or completes a binding. */
-export function DevicePairingPage({embedded=false,transactionIntro,transactionDetails,extraActions,view,context,recovery,recoveryError,refreshStatus,busy:writing,checking=false,initialLoading=false,error,reportedFailure,operationError,begin,refresh,open,recover,recoveryStart,onNavigate,canRefresh=true,switchFeedback,switchControl,switchStatus,statusControl,startupNotice,onSwitchHive,switching=false,repair,repairResult,inputDraft,title,cancelOperation,retryConnection}:DevicePairingProps){
+export function DevicePairingPage({savedFacts,embedded=false,transactionIntro,transactionDetails,extraActions,view,context,recovery,recoveryError,refreshStatus,busy:writing,checking=false,initialLoading=false,error,reportedFailure,operationError,begin,refresh,open,recover,recoveryStart,onNavigate,canRefresh=true,switchFeedback,switchControl,switchStatus,statusControl,startupNotice,onSwitchHive,switching=false,repair,repairResult,inputDraft,title,cancelOperation,retryConnection}:DevicePairingProps){
  const [localHive,setLocalHive]=useState(''),[localName,setLocalName]=useState('Bee Desktop');
  const hive=inputDraft?.hive??localHive,name=inputDraft?.name??localName,setHive=inputDraft?.setHive??setLocalHive,setName=inputDraft?.setName??setLocalName;
  const [now,setNow]=useState(Date.now()),[copied,setCopied]=useState(''),[copyError,setCopyError]=useState<UiFailure|null>(null);
@@ -52,7 +54,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const pairing=phase==='completed'||cancelled?null:transaction?.pairing??(view?.user_code&&view.verification_url&&view.expires_at?{code:view.user_code,verification_url:view.verification_url,expires_at:view.expires_at}:null);
  const locallyExpired=phase==='pending'&&!!pairing&&Date.parse(pairing.expires_at)<=now;
  const identity=view?.identity??(phase==='completed'?transaction?.new_identity:transaction?.old_identity);
- const address=view?.hive??context?.hive??hive,deviceName=identity?.name??context?.name??name;
+ const address=view?.hive??context?.hive??savedFacts?.hive??hive,deviceName=identity?.name??context?.name??savedFacts?.name??name;
  const issue=error??reportedFailure??recoveryError;
  const credentialFault=!!issue&&['device_replaced','invalid_device_credential','DEVICE_CONTEXT_INVALID'].includes(issue.code);
  const confirmed=view?.state==='bound'&&!issue&&!active;
@@ -133,9 +135,9 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    </>}
   </div>}
   {!(active||issue)&&startupNotice}
-  {!embedded&&(initialLoading?<p className="device-loading" role="status">{w('正在读取本机配置与设备状态…')}</p>:<dl className="device-card-facts" aria-label={identity&&issue?w('上次确认的设备，当前待核对。'):!identity&&context?.device_id?w('上次保存的设备信息'):undefined}>
+  {!embedded&&(initialLoading?<p className="device-loading" role="status">{w('正在读取本机配置与设备状态…')}</p>:<dl className="device-card-facts" aria-label={identity&&issue?w('上次确认的设备，当前待核对。'):!identity&&(context?.device_id||savedFacts)?w('上次保存的设备信息'):undefined}>
    <div><dt>{w('本机设备')}</dt><dd>{deviceName}</dd></div>
-   {(identity||context?.device_id)&&<div><dt>{w('归属账号')}</dt><dd>{identity?.owner_email??w('待核对')}</dd></div>}
+   {(identity||context?.device_id||savedFacts)&&<div><dt>{w('归属账号')}</dt><dd>{identity?.owner_email??savedFacts?.ownerEmail??w('待核对')}</dd></div>}
    {address&&<div><dt>Hive</dt><dd>{address}</dd></div>}
   </dl>)}
 

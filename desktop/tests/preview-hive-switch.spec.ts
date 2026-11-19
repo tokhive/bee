@@ -264,6 +264,11 @@ test('handoff explains confirmed source shutdown without requesting a device rec
  const app=await open(page,'switch-handoff');
  const progress=app.getByLabel('Hive 切换进度');
  await expect(progress).toContainText('原后台已安全退出，正在核验目标连接。');
+ await expect(app.getByLabel('上次保存的设备信息',{exact:true})).toContainText('owner@example.test');
+ await expect(app.getByLabel('上次保存的设备信息',{exact:true})).toContainText('https://hive.example');
+ await app.getByRole('button',{name:'设备操作',exact:true}).click();
+ await expect(app.getByRole('menuitem',{name:'切换 Hive',exact:true})).toBeDisabled();
+ await page.keyboard.press('Escape');
  await expect(app.getByText('设备状态尚未确认，请重新检查设备。',{exact:true})).toHaveCount(0);
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
   const w=frame.contentWindow as any,prior=w.__TAURI_INTERNALS__.invoke;
@@ -277,4 +282,15 @@ test('handoff explains confirmed source shutdown without requesting a device rec
  await expect(progress.locator('.pairing-phase')).toHaveText('正在连接目标 Hive');
  await expect(progress).not.toContainText('原后台已安全退出，正在核验目标连接。');
  expect((await calls(page)).filter((c:any)=>['hive_switch_start','hive_switch_cancel','device_begin','runtime_start','supply_set_paused'].includes(c.command))).toEqual([]);
+});
+
+for(const scene of ['switch-waiting','switch-unknown'])test('account supply actions stay disabled during '+scene,async({page})=>{
+ const app=await open(page,scene);
+ const account=app.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
+ await expect(account).toContainText('等待 Hive 切换');
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{(frame.contentWindow as any).paused.openai=true;});
+ await page.clock.runFor(11000);
+ await expect(account.getByRole('button',{name:'恢复接单',exact:true})).toBeDisabled();
+ expect((await calls(page)).filter((c:any)=>c.command==='supply_set_paused')).toEqual([]);
 });

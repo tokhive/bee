@@ -406,6 +406,7 @@ export const en: Record<string, string> = {
   "目标": "Target",
   "路径": "Path",
   "HTTP 状态": "HTTP status",
+  "未收到 HTTP 响应": "No HTTP response received",
   "远端错误码": "Remote code",
   "安全响应": "Safe response",
   "来源类型": "Source type",

@@ -118,7 +118,7 @@ test('account reconciliation stops after 60 seconds and manual checks never repl
 
 test('credential failures retain quota, deduplicate one cause and preserve independent faults and pause',async({page})=>{
  await page.clock.install();await page.setViewportSize({width:820,height:680});await setup(page,true);
- await page.evaluate(()=>{document.documentElement.dataset.theme='dark';});
+ await page.evaluate(()=>{document.documentElement.dataset.theme='light';});
  await page.evaluate(()=>{
   const w=window as any,a=w.accounts.openai;w.paused.openai=true;
   const source={code:'permission_denied',check:'source_read',platform:'openai',message:'Controlled credential access denied: EACCES',evidence:{permission_denied:'true'}};
@@ -134,10 +134,10 @@ test('credential failures retain quota, deduplicate one cause and preserve indep
  await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'错误详情'}).locator('pre')).toHaveCount(1);
  await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('EACCES');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('HTTP 403');
- await page.screenshot({path:resolve(evidence,'formal-independent-errors-dark-narrow.png')});
+ await page.screenshot({path:resolve(evidence,'formal-independent-errors-light-narrow.png')});
  await page.keyboard.press('Escape');await card(page).getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
  await expect(page.getByRole('dialog').getByLabel('读取目录')).toBeVisible();expect(await writes(page)).toEqual([]);
- await page.screenshot({path:resolve(evidence,'formal-source-details-dark-narrow.png')});
+ await page.screenshot({path:resolve(evidence,'formal-source-details-light-narrow.png')});
 });
 
 const evidence=resolve(import.meta.dirname,'../test-results/compact-list');
@@ -229,7 +229,7 @@ test('login maintenance requiring a different account keeps the explicit change 
 
 test('main preview keeps quota in a read failure',async({page})=>{
  {
-  await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=dark&size=narrow`);
+  await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=light&size=narrow`);
   const app=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});
   await expect(app).toHaveClass(/oa-compact/);await expect(app.getByRole('progressbar')).toHaveCount(2);
   await expect(app.locator('.workflow')).toHaveCount(0);
@@ -237,7 +237,7 @@ test('main preview keeps quota in a read failure',async({page})=>{
   await app.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.frameLocator('iframe').locator('#list-error-popover')).toContainText('EACCES');await page.keyboard.press('Escape');
   await app.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.frameLocator('iframe').getByLabel('读取目录')).toBeVisible();
  }
- await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-dark-narrow.png')});
+ await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-light-narrow.png')});
 });
 
 // Mixed account/read failures must resolve to one current action, as in the main preview.
@@ -474,4 +474,15 @@ test('source verification pending after save keeps the verification state and hi
  await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);
  await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('status')).toHaveText('正在核验账号…');await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);expect(await writes(page)).toEqual([]);
+});
+
+test('official transport failure keeps last quota and explains no HTTP response without replaying writes',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai;w.paused.openai=true;Object.assign(a.capabilities[1],{status:'unknown',observed_at:null,valid_until:null,windows:[]});Object.assign(a.capabilities[0],{status:'ready',observed_at:new Date().toISOString(),valid_until:'2099-01-01T00:00:00Z',windows:[{scope:'',seconds:18000,used_percent:7,reset_at:null},{scope:'',seconds:604800,used_percent:23,reset_at:null}]});a.revision++;});
+ await page.clock.runFor(11000);await expect(card(page).locator('.quota-value')).toHaveText(['7%','23%']);
+ const before=await writes(page);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:any)=>command==='account_detect'&&args.request?.platform==='openai'?Promise.resolve({instance:'b'.repeat(32),result:{account:structuredClone(a)}}):invoke(command,args);Object.assign(a.capabilities[0],{status:'unknown',observed_at:new Date().toISOString(),valid_until:null,windows:[],error:{code:'official_check_failed',check:'capabilities',platform:'openai',message:'proxyconnect tcp: dial tcp 127.0.0.1:1087: connect: connection refused',evidence:{http_status:'0',transport_failed:'true'}}});a.revision++;});
+ await page.clock.runFor(11000);await expect(card(page).locator('.quota-value')).toHaveText(['7%','23%']);await expect(card(page).locator('.account-list-quota')).toContainText('上次记录');
+ await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('未收到 HTTP 响应');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('127.0.0.1:1087');
+ await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'查看错误详情',exact:true})).toBeFocused();expect(await writes(page)).toEqual(before);
 });

@@ -223,3 +223,10 @@ test('only an explicit login-start admission rejection proves that no login star
  for(const check of ['authorize_status','authorize_cancel','account_snapshot'])assert.equal(requestNotExecuted(normalizeFailure({code:'AUTHORIZE_OPERATION_FAILED',message:'original operation unavailable'},check)),false);
  for(const code of ['RESPONSE_TIMEOUT','CONNECTION_LOST','AUTHORIZE_REPLY_INVALID'])assert.equal(requestNotExecuted(normalizeFailure({code,message:'login result unconfirmed'},'authorize_start')),false);
 });
+
+test('transport status zero is explained as no HTTP response while original facts remain visible',()=>{
+ const failure=normalizeFailure({code:'official_check_failed',check:'capabilities',platform:'openai',message:'proxyconnect tcp: dial tcp 127.0.0.1:1087: connect: connection refused',evidence:{http_status:'0',transport_failed:'true'}},'capabilities');
+ const zh=presentFailure(failure,'zh');assert.match(zh.details,/未收到 HTTP 响应/);assert.doesNotMatch(zh.details,/HTTP 状态: 0/);assert.match(zh.details,/127\.0\.0\.1:1087/);
+ assert.match(presentFailure(failure,'en').details,/No HTTP response/);
+ const rejected=presentFailure({...failure,evidence:{http_status:'503',transport_failed:'false'}},'zh');assert.match(rejected.details,/HTTP 状态: 503/);
+});

@@ -10,7 +10,7 @@ export function rememberAccountQuota(previous:AccountQuotaHistory|undefined,snap
  const fingerprint=snapshot.selection.state==='selected'?snapshot.selection.fingerprint:null;
  if(!fingerprint)return undefined;
  if(previous?.fingerprint!==fingerprint)previous=undefined;
- const presentation=accountPresentation(snapshot,false,now);
+ const presentation=accountPresentation(snapshot,false,now,false,false,previous);
  if(presentation.observedAt&&!presentation.windows.length)return undefined;
  return presentation.windows.length&&presentation.observedAt&&(!previous||Date.parse(presentation.observedAt)>=Date.parse(previous.presentation.observedAt!))?{fingerprint,presentation}:previous;
 }
@@ -25,7 +25,7 @@ export function accountPresentation(snapshot:AccountSnapshot|undefined,dirty:boo
  const observation=available.find(c=>c.origin==='official'&&fresh(c))??available.find(fresh)??available.find(c=>c.observed_at);
  if(observation){result.observedAt=observation.observed_at;result.plan=observation.plan??result.plan;result.windows=observation.windows.map(w=>({...w}));result.quotaState=observation.windows.length?(readFailed||remoteUnconfirmed&&observation.origin==='hive'&&fresh(observation)?'unconfirmed':fresh(observation)?'current':'stale'):'unknown';}
  const missingSource=!dirty&&!snapshot.candidate.fingerprint&&!!snapshot.candidate.error&&['source_missing','source_unavailable','permission_denied','invalid_credentials'].includes(snapshot.candidate.error.code);
- if(!observation&&(candidate||missingSource)&&history?.fingerprint===fingerprint){
+ if((!observation||observation.error&&!observation.windows.length)&&(candidate||missingSource)&&history?.fingerprint===fingerprint){
   result.observedAt=history.presentation.observedAt;result.plan??=history.presentation.plan;result.windows=history.presentation.windows.map(w=>({...w}));result.quotaState='stale';
  }
  return result;

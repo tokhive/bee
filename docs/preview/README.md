@@ -6,11 +6,17 @@
 
 整个 App 使用同一个主入口。2026-11-18 用户确认当前草稿并要求“更新到主预览”。主预览现已纳入紧凑设备卡、正常菜单移除修复入口、连接故障重试，以及绑定／切换／取消结果的“重新核对”，共 638 个场景；原主预览 588 个场景全部保留。
 
-[打开当前主预览](index.html?scene=device-service&theme=light&size=narrow) · [已认可冻结版](http://127.0.0.1:15500/docs/preview/history/20261118-114315-approved-device-fault-actions/index.html?scene=device-service&size=narrow)。`draft.html` 保留本次评审稿，当前没有新增待评审差异；后续调整仍在草稿进行。
+[打开当前主预览](index.html?scene=device-service&theme=light&size=narrow) · [已认可冻结版](http://127.0.0.1:15500/docs/preview/history/20261119-182800-approved-selected-account-lists/index.html?scene=paused&theme=light&size=narrow)。`draft.html` 保留 11 月 18 日设备故障评审稿；11 月 19 日已确认的账号列表统一直接纳入主预览，后续未确认调整仍在草稿进行。
 
 本次只同步 HTML 与说明，不修改正式应用代码。2026-11-17 的正式 React 组件记录仍见[历史冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)。页面使用模拟数据，不接真实登录或业务，HTML 认可不代表正式应用或真实 Hive 已验收。
 
 以下章节记录各轮交付时的范围与状态；2026-11-17 概览简化和 2026-11-18 故障核对草稿现均已获本次认可并纳入主预览。完整交互验证沿用草稿验证，本次另核对场景完整性、主入口显示与关键操作。
+
+## 已认可：统一已接入账号列表（2026-11-19）
+
+用户确认沿用“已添加列表 · 仅有 OpenAI”的规则，并统一旧场景。账号列表不展示未接入平台占位卡，正在进行的接入流程仍保留；通过“添加账号”选择其它平台，取消返回原账号和接单选择，已接入平台不可重复添加。进行中的账号操作不会被新的添加操作替换。
+
+原 638 个场景名称、分组和入口全部保留。验证包括 OpenAI／Claude 正常与暂停、读取故障、双平台已接入、添加／取消与焦点、进行中保护、尺寸切换和重置。真实 App 暂停页已做浅色两尺寸目视对照；不等于全量像素验收，剩余差异继续记录。
 
 ## 已认可：设备故障与重新核对（2026-11-18）
 

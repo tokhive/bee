@@ -25,15 +25,21 @@ function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubm
  const [confirmation,setConfirmation]=useState<{stamp:string;target?:string|null;selected?:string|null}>();
  const [invalid,setInvalid]=useState(false);
  useEffect(()=>{onConfirmationChange?.(confirmation!==undefined);return()=>onConfirmationChange?.(false);},[confirmation!==undefined,onConfirmationChange]);
+ useEffect(()=>{
+  if(!confirmation)return;
+  const dismiss=(event:KeyboardEvent)=>{if(event.key==='Escape'){event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}};
+  window.addEventListener('keydown',dismiss,true);return()=>window.removeEventListener('keydown',dismiss,true);
+ },[confirmation]);
  const stamp=()=>JSON.stringify([accountConfirmationKey(view,Date.now()),accounts.sourceFor('openai'),runtime.view?.local,runtime.view?.run_id]);
  const block=()=>accountActionBlock(action,{autoService:true,view,platform:'openai',now:Date.now(),dirty:!!accounts.dirty.openai,busy:!!accounts.writeBusy.openai||accounts.sourceSaving,unknown:!!accounts.uncertain.openai||!!accounts.readFailures.openai,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:!!runtime.error||runtime.uncertain||runtime.stalled});
  const reason=block();
  return <Dialog.Root open={confirmation!==undefined} onOpenChange={open=>{if(!open)setConfirmation(undefined);}}>
   <div><Dialog.Trigger asChild><Button variant="outline" disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
-  <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content" onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
+  <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className={`dialog-content${action==='authorize'?' openai-login-confirm':''}`} onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
+   {action==='authorize'&&<Dialog.Close asChild><Button variant="ghost" className="openai-login-close">{t('关闭')}</Button></Dialog.Close>}
    <Dialog.Title>{t(action==='clear_selection'?'取消接入':action==='select'?'接入 OpenAI 账号':action==='confirm_change'?'确认更换 OpenAI 账号':view?.selection.state==='selected'?'重新登录 OpenAI':'登录 OpenAI')}</Dialog.Title>
    <Dialog.Description>{t(action==='clear_selection'?'仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。':action==='authorize'?'调用已安装的 Codex 官方客户端，可能改变客户端当前登录账号。':'接单将使用该账号的订阅额度。')}</Dialog.Description>
-   {action==='authorize'?<p>{t(view?.selection.state==='selected'?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。')}</p>:action==='clear_selection'?null:<>
+   {action==='authorize'?<p className="openai-login-impact">{t(view?.selection.state==='selected'?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。')}</p>:action==='clear_selection'?null:<>
     <dl className="account-detail-facts">{action==='confirm_change'&&<div><dt>{t('已接入账号')}</dt><dd>{confirmation?.selected?.slice(0,16)}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirmation?.target?.slice(0,16)??t('尚未确认')}</dd></div></dl>
     <p>{t(action==='confirm_change'?'更换后使用新账号的订阅额度。将暂停此平台接单，准备就绪后仍暂停，由你恢复。':'准备期间临时停止派单，完成后保留你的最新接单选择。')}</p>
    </>}
@@ -136,7 +142,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(pauseInNote&&!note.includes('暂停'))note+=(note?' ':'')+'接单保持暂停。';
  const requestedPause=supply?.state.pendingChoices?.openai;
  if(supply?.state.writeBusy&&requestedPause!==undefined){title=requestedPause?'正在暂停接单…':'正在恢复接单…';note=requestedPause?'确认暂停后不再接收新任务，已有任务可继续完成。':'正在解除暂停；完成后仍需满足额度等接单条件。';}
- const accountDetails=<DetailSheet overlayClassName="openai-detail-overlay" onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={panel==='settings'?'':t('查看账号信息，管理凭证读取方式。')}>
+ const accountDetails=<DetailSheet overlayClassName={`openai-detail-overlay${nestedConfirmation?' account-confirmation-background':''}`} contentClassName={nestedConfirmation?'account-confirmation-background':undefined} onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={panel==='settings'?'':t('查看账号信息，管理凭证读取方式。')}>
     {panel==='detail'&&<><dl className="account-detail-facts"><div><dt>{t(selected?'已接入账号':'待接入账号')}</dt><dd>{presentation.identity??t('尚未接入')}</dd></div><div><dt>{t('账号状态')}</dt><dd>{t(title)}</dd></div><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan?presentation.plan[0].toUpperCase()+presentation.plan.slice(1):t('待确认')}</dd></div>{candidate&&different&&<div><dt>{t('候选账号标识')}</dt><dd>{view.candidate.fingerprint?.slice(0,16)}</dd></div>}</dl>
     <AccountReadHistory accounts={accounts} platform="openai"/>
     {maintenance&&<p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>}

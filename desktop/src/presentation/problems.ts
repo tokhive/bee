@@ -3,6 +3,7 @@ import {safeFailureText,requestNotSent} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
 import {translate,formatDate} from '../i18n/index.ts';
 export interface PresentedProblem {summary:string;impact:string;details:string;action:NavigationTarget|null;actionLabel?:string;detailsLabel?:string}
+export function isAuthorizationSyncDisconnected(failure:UiFailure){return failure.code==='runtime_platform_unconfirmed'&&failure.check==='authorization_sync'&&/\b(?:connection reset by peer|ECONNRESET|broken pipe)\b/i.test(failure.message);}
 const copy:Record<string,string>={
  RECOVERY_SESSION_UNCONFIRMED:'上次运行未确认安全结束，暂未重新启动服务。',
  RECOVERY_RETIREMENT_CONFLICT:'Hive 拒绝结束旧会话，原记录已保留。请导出启动诊断以核对具体冲突。',
@@ -102,6 +103,7 @@ export function presentFailure(failure:UiFailure,locale:'zh'|'en'):PresentedProb
  const unsent=requestNotSent(failure);
  const stageCopy:Record<string,string>={update_install:'安装请求回执尚未确认。',update_download:'更新下载请求回执尚未确认。',update_check:'更新检查请求回执尚未确认。',update_snapshot:'更新状态读取失败。',network_observe:'应用前的运行与网络读取失败。',network_stop:'停止贡献的结果尚未确认，网络应用已暂停。',network_configure:'应用网络配置时发生错误，生效状态需重新核对。',network_configure_readback:'网络配置回读失败，贡献恢复尚未执行。',network_restore:'恢复贡献时发生错误，当前运行状态需重新核对。'};
  let summary=tr(failure.code==='REQUEST_RESOURCE_BUSY'?'已有冲突操作正在进行，本次操作未执行。':unsent?'本次请求未发送，操作未提交。':failure.code==='RESPONSE_TIMEOUT'?'等待 Bee 响应超时，本次结果尚未确认。':copy[reason]??stageCopy[failure.check]??'本次操作失败：{reason}',{status,reason:safeFailureText(failure.message)});
+ if(isAuthorizationSyncDisconnected(failure))summary=tr('授权同步失败：连接已中断');
  const registrationMismatch=failure.code==='account_operation_unconfirmed'&&failure.check==='account_operation_commit'?/^registered account differs from saved selection: fingerprint_match=(true|false) generation=(\d+) expected=(\d+)$/.exec(failure.message):null;
  if(registrationMismatch)summary=tr(registrationMismatch[1]==='false'?'Hive 账号身份与本机记录不一致（Hive 版本 {actual}，本机 {expected}）。':'Hive 账号版本与本机记录不一致（Hive {actual}，本机 {expected}）。',{actual:registrationMismatch[2],expected:registrationMismatch[3]});
  const device=failure.check.startsWith('device_')||failure.check.startsWith('pairing_');

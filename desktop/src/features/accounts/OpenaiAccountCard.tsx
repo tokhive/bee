@@ -4,7 +4,7 @@ import {ArrowRight,Sparkle} from 'lucide-react';
 import {Button,Badge} from '../../components/ui';
 import {FailureNotice} from '../../components/ProblemNotice';
 import {DetailSheet} from '../../components/DetailSheet';
-import {presentFailure} from '../../presentation/problems';
+import {isAuthorizationSyncDisconnected,presentFailure} from '../../presentation/problems';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
 import {accountConfirmationKey} from '../../system/accounts';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
@@ -80,6 +80,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const confirmationUnsent=op?.kind==='confirm_change'&&op.state==='reconciling'&&op.error?.code==='confirmation_not_submitted';
  const intakeUnconfirmed=intakeOperation&&!confirmationUnsent&&(uncertain||!!op&&['pending','running','reconciling'].includes(op.state));
  const preparationFailed=selected&&intakeOperation&&!intakeUnconfirmed&&failed&&!confirmationUnsent&&(view.authorization.state!=='synchronized'||view.hive.state!=='ready');
+ const synchronizationDisconnected=preparationFailed&&!!view.authorization.error&&isAuthorizationSyncDisconnected(normalizeFailure(view.authorization.error,'account_operation'));
  const presentation=accountPresentation(view,!!accounts.dirty.openai,now,!!accounts.readFailures.openai,!!accounts.deviceFailure,accounts.quotaHistory.openai);
  const credentialExpired=selected&&candidate&&!accounts.readFailures.openai&&!!presentation.expiresAt&&Date.parse(presentation.expiresAt)<=now;
  const sameFlow=!!journey&&!!op&&op.id===journey.operationId&&op.state==='succeeded'&&op.revision>journey.revision;
@@ -124,7 +125,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(preparationFailed&&!liveLogin&&!sourceProblem){
   const cause=view.authorization.error??view.hive.error??op?.error??problem;
   title=presentFailure(normalizeFailure(cause,'account_operation'),currentLocale()).summary;
-  note='账号已接入。请在问题解除后重试准备，无需重新确认接入。';
+  note=synchronizationDisconnected?'账号已接入。请在连接恢复后重试，无需重新确认接入。':'账号已接入。请在问题解除后重试准备，无需重新确认接入。';
  }
  if(intakeUnconfirmed){title=op?.kind==='confirm_change'?'换号结果待核对':'暂时无法确认接入结果';note='尚未取得原操作的确定结果；只核对本次操作，不会重复提交。';}
  if(sourceProblem?.code==='source_missing'&&sourceProblem.check==='read_keyring'&&!accounts.sourceSaving&&!accounts.dirty.openai){title='凭证缺失';note='钥匙串中未找到 Codex 登录项';}
@@ -199,7 +200,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
   </div>
   {!completion&&intakeUnconfirmed&&accounts.originalAccountQuery?.phase==='stopped'&&<p className="oa-evidence" role="status">{t(accounts.originalAccountQuery.reason==='time_limit'?'自动核对已达 60 秒，尚未确认原操作结果。':'本轮查询已停止，尚未确认原操作结果。')}</p>}
   {!pauseInNote&&!completion&&selected&&supplyCurrent&&supplyView?.paused&&title!=='已暂停'&&<p className="oa-evidence">{t('接单保持暂停。')}</p>}
-  {!completion&&reasons.filter(reason=>!['quota_exhausted','quota_unknown'].includes(reason)&&!(preparing&&!failed&&reason==='authorization_unavailable')).map(reason=>{const condition=supplyProblem(reason,'openai');return <div className="oa-evidence" key={reason}>{condition.summary!==title&&<span>{t(condition.summary,{platform:'OpenAI'})}</span>}{condition.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(condition.target!)}>{t('查看相关设置')}</Button>}</div>;})}
+  {!completion&&reasons.filter(reason=>!['quota_exhausted','quota_unknown'].includes(reason)&&!((preparing&&!failed||synchronizationDisconnected)&&reason==='authorization_unavailable')).map(reason=>{const condition=supplyProblem(reason,'openai');return <div className="oa-evidence" key={reason}>{condition.summary!==title&&<span>{t(condition.summary,{platform:'OpenAI'})}</span>}{condition.target&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate(condition.target!)}>{t('查看相关设置')}</Button>}</div>;})}
   {cancelUnknown&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={accounts.cancelUnconfirmed.openai!.failure}/></details>}
   {!completion&&!cancelUnknown&&!!query?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(query.error,'authorize_progress')}/></details>}
   {!completion&&intakeUnconfirmed&&!!accounts.originalAccountQuery?.error&&<details className="oa-evidence"><summary>{t('查看核对记录')}</summary><ErrorEvidence error={normalizeFailure(accounts.originalAccountQuery.error,'account_original_query')}/></details>}

@@ -230,3 +230,12 @@ test('transport status zero is explained as no HTTP response while original fact
  assert.match(presentFailure(failure,'en').details,/No HTTP response/);
  const rejected=presentFailure({...failure,evidence:{http_status:'503',transport_failed:'false'}},'zh');assert.match(rejected.details,/HTTP 状态: 503/);
 });
+
+test('authorization synchronization names a proven socket reset while retaining the original evidence',()=>{
+ const message='write tcp 127.0.0.1:50000->127.0.0.1:18080: write: connection reset by peer';
+ const value=normalizeFailure({code:'runtime_platform_unconfirmed',platform:'openai',check:'authorization_sync',message,evidence:{}},'account_operation');
+ assert.equal(presentFailure(value,'zh').summary,'授权同步失败：连接已中断');
+ assert.doesNotMatch(presentFailure(value,'en').summary,/\p{Script=Han}/u);
+ assert.ok(presentFailure(value,'zh').details.includes(message));
+ for(const other of [{...value,check:'authorization_readback'},{...value,message:'decode response: unexpected EOF'},{...value,message:'HTTP 503: unavailable'},{...value,code:'source_unavailable'}])assert.notEqual(presentFailure(other,'zh').summary,'授权同步失败：连接已中断');
+});

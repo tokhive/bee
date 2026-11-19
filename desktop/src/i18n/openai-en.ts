@@ -196,5 +196,7 @@ export const openaiEnglish:Record<string,string>={
   "已更换账号，等待额度恢复后接单。": "Account changed. Requests will start after quota recovers.",
   "已读取并核验账号，等待额度恢复后接单。": "Account read and verified. Requests will start after quota recovers.",
   "已完成重新登录，等待额度恢复后接单。": "Signed in again. Requests will start after quota recovers.",
+  "账号已接入。请在连接恢复后重试，无需重新确认接入。": "The account is connected. Retry after the connection recovers; no new connection confirmation is needed.",
+  "授权同步失败：连接已中断": "Authorization synchronization failed: connection interrupted",
   "账号已接入，等待额度恢复后接单。": "Account connected. Requests will start after quota recovers."
 };

@@ -121,7 +121,7 @@ func loadTEETrust() (teeTrust, error) {
 
 	applications := map[string]struct{}{}
 	for _, application := range strings.Split(TEEApplicationIDs, ",") {
-		application = strings.TrimSpace(application)
+		application = strings.ToLower(strings.TrimSpace(application))
 		if !validApplicationID(application) {
 			return teeTrust{}, fmt.Errorf("this Bee build has no usable TEE application pin (%q); update Bee", application)
 		}

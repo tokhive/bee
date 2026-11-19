@@ -31,6 +31,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
  const [loginProgress,setLoginProgress]=useState<QueryState<CodexLoginProgress>>(),[loginOpenError,setLoginOpenError]=useState<UiFailure>();
  const loginQuery=useRef<ReturnType<typeof createOperationQuery<CodexLoginProgress>>|undefined>(undefined);
  const [openingLogin,setOpeningLogin]=useState(false);const openingLoginRef=useRef(false);
+ const [loginStartError,setLoginStartError]=useState<Partial<Record<AccountPlatform,UiFailure>>>({});
  const [startingLogin,setStartingLogin]=useState<Partial<Record<AccountPlatform,boolean>>>({});
  const completedLogins=useRef(new Set<string>()),writing=useRef({openai:false,claude:false});
  const [loginFlows,setLoginFlows]=useState<Partial<Record<AccountPlatform,{confirmation:string|null;rechecked:boolean;checking:boolean}>>>({});
@@ -264,7 +265,7 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
    if(!active.current||writing.current.openai||accountPending(latest.current.openai))return;
    await run('openai',async()=>{const source=sourceFor('openai');const local=await detectLocal('openai',source);if(local.candidate.state!=='available'||local.candidate.error)return local;return detectLocal('openai',source,'official');},true);
    return verified.current.openai?latest.current.openai:undefined;
-  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSavePhase,sourceSaveError,loginProgress,loginOpenError,openingLogin,startingLogin,
+  },recheckCurrentOpenai:()=>central.current?.recheckOpenaiReads?.(),originalAccountQuery,queryOriginalAccount:()=>originalAccountReader.current?.start(),openaiJourney,completeOpenai:(fingerprint:string)=>setOpenaiJourney(v=>v?{...v,completed:fingerprint}:v),dismissOpenai:()=>setOpenaiJourney(undefined),sourceFor,openaiDraft,setOpenaiDraft,sourceSaving,sourceSavePhase,sourceSaveError,loginProgress,loginOpenError,loginStartError,openingLogin,startingLogin,
   queryLogin(){return loginQuery.current?.start();},
   async openLoginPage(){
    if(!loginID||!authorizer?.open||openingLoginRef.current)return;
@@ -326,10 +327,24 @@ export function useAccounts(client:AccountClient|undefined,enabled:boolean,autho
   authorize(platform:AccountPlatform){
    if(platform==='claude'&&claudeSourceSavingRef.current)return;
    const view=views[platform];if(!client||!authorizer||!view||uncertain[platform]||centralError||writing.current[platform]||platform==='openai'&&sourceSavingRef.current)return;
-   setStartingLogin(v=>({...v,[platform]:true}));
+   setStartingLogin(v=>({...v,[platform]:true}));setLoginStartError(v=>({...v,[platform]:undefined}));
    if(platform==='openai')setOpenaiJourney({kind:view.selection.state==='selected'?'relogin':'first',revision:view.revision});
    if(platform==='claude')setLoginFlows(v=>({...v,[platform]:{confirmation:null,rechecked:false,checking:false}}));
-   void run(platform,async current=>{setCancelUnconfirmed(v=>({...v,[platform]:undefined}));const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:current!.revision});if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:receipt.id}:v);return refreshCentral?receipt:client.snapshot(platform,false);},false,true,false,false,true).finally(()=>{if(active.current)setStartingLogin(v=>({...v,[platform]:false}));});
+   void run(platform,async current=>{
+    setCancelUnconfirmed(v=>({...v,[platform]:undefined}));
+    try{
+     // Runtime observations can lag the account store. Refresh without performing
+     // another detection, then preserve the identity the user actually confirmed.
+     const generation=central.current?.generation?.();
+     const fresh=await client.snapshot(platform,false);
+     if(!active.current||central.current?.generation?.()!==generation)return;
+     if(accountConfirmationKey(current,Date.now())!==accountConfirmationKey(fresh,Date.now()))throw {code:'ACCOUNT_CONTEXT_CHANGED',message:'authorize account confirmation changed before submission: observed revision='+fresh.revision+'; required=same confirmed account, source and operation'};
+     publish(platform,fresh);
+     const receipt=await authorizer.start({platform,source:sourceFor(platform),expected_revision:fresh.revision});
+     if(platform==='openai'&&active.current)setOpenaiJourney(v=>v?{...v,operationId:receipt.id}:v);
+     return refreshCentral?receipt:client.snapshot(platform,false);
+    }catch(cause){const problem=failure(cause,'authorize_start');if(active.current)setLoginStartError(v=>({...v,[platform]:problem}));throw problem;}
+   },false,true,false,false,true).finally(()=>{if(active.current)setStartingLogin(v=>({...v,[platform]:false}));});
   },
   cancelAuthorize(platform:AccountPlatform){
    const id=views[platform]?.operation?.id;if(!client||!authorizer||!id)return;

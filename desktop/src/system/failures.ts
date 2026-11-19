@@ -91,5 +91,6 @@ export function normalizeFailure(cause:unknown,check:string):UiFailure {
 /** Reserved native transport codes prove this attempt emitted no request bytes. */
 export const requestNotSent=(failure:UiFailure):boolean=>['REQUEST_NOT_SENT','REQUEST_QUEUE_TIMEOUT','REQUEST_NOT_QUEUED'].includes(failure.code);
 
-/** Native scheduling rejection proves that this attempt did not execute a business operation. */
-export const requestNotExecuted=(failure:UiFailure):boolean=>requestNotSent(failure)||failure.code==='REQUEST_RESOURCE_BUSY';
+/** Scheduling rejection or an explicit authorize-start admission failure proves no operation was started.
+ * AUTHORIZE_OPERATION_FAILED on status/cancel does not carry this guarantee. */
+export const requestNotExecuted=(failure:UiFailure):boolean=>requestNotSent(failure)||failure.code==='REQUEST_RESOURCE_BUSY'||failure.check==='authorize_start'&&['AUTHORIZE_OPERATION_FAILED','ACCOUNT_CONTEXT_CHANGED'].includes(failure.code);

@@ -216,3 +216,10 @@ test('resource conflict identifies an unexecuted attempt without claiming no pip
 test('account registration mismatch keeps the exact identities check and generation evidence',()=>{
  for(const match of ['true','false']){const message=`registered account differs from saved selection: fingerprint_match=${match} generation=2 expected=1`,value=normalizeFailure({code:'account_operation_unconfirmed',check:'account_operation_commit',platform:'claude',message,evidence:{}},'account_operation');for(const locale of ['zh','en'] as const){const p=presentFailure(value,locale);assert.match(p.summary,/2/);assert.match(p.summary,/1/);assert.ok(p.details.includes(message));if(locale==='zh')assert.ok(p.summary.includes(match==='false'?'身份':'版本'));else assert.doesNotMatch(p.summary,/\p{Script=Han}/u);}}
 });
+
+test('only an explicit login-start admission rejection proves that no login started',async()=>{
+ const {requestNotExecuted}=await import('../src/system/failures.ts');
+ assert.equal(requestNotExecuted(normalizeFailure({code:'AUTHORIZE_OPERATION_FAILED',message:'authorize revision changed: actual=71 expected=61'},'authorize_start')),true);
+ for(const check of ['authorize_status','authorize_cancel','account_snapshot'])assert.equal(requestNotExecuted(normalizeFailure({code:'AUTHORIZE_OPERATION_FAILED',message:'original operation unavailable'},check)),false);
+ for(const code of ['RESPONSE_TIMEOUT','CONNECTION_LOST','AUTHORIZE_REPLY_INVALID'])assert.equal(requestNotExecuted(normalizeFailure({code,message:'login result unconfirmed'},'authorize_start')),false);
+});

@@ -66,7 +66,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const ready=current&&runtime.view?.local==='running'&&runtime.view.connection==='connected'&&supplyView?.ready&&!supplyView.paused&&supplyView.reasons.length===0;
  const preparing=view?.authorization.state==='preparing'||!!view&&['pending','running'].includes(op?.state??'')&&op?.kind!=='authorize';
  const problems:UiFailure[]=[];
- for(const value of [accounts.sharedFailure,accounts.cancelUnconfirmed.openai?.failure,accounts.errors.openai,accounts.sourceReadFailed.openai,accounts.loginOpenError,progress?.blocker,maintenance?.error,op?.error,view?.candidate.error,view?.authorization.error,view?.hive.error,...view?.capabilities.map(c=>c.error)??[],supply?.state.errors.openai,runtime.view?.local==='failed'?runtime.view.operation?.error:null]){
+ for(const value of [accounts.loginStartError.openai,accounts.sharedFailure,accounts.cancelUnconfirmed.openai?.failure,accounts.errors.openai,accounts.sourceReadFailed.openai,accounts.loginOpenError,maintenance?.phase==='restored'?null:progress?.blocker,maintenance?.error,op?.state==='cancelled'&&op.error?.code==='authorization_cancelled'&&maintenance?.phase==='restored'?null:op?.error,view?.candidate.error,view?.authorization.error,view?.hive.error,...view?.capabilities.map(c=>c.error)??[],supply?.state.errors.openai,runtime.view?.local==='failed'?runtime.view.operation?.error:null]){
   if(value&&value.code!=='quota_exhausted'){const error=normalizeFailure(value,'account_operation');if(!problems.some(previous=>sameAccountFailure(previous,error)))problems.push(error);}
  }
  for(const issue of view?.issues??[])if(issue.code!=='quota_exhausted'&&!problems.some(error=>error.code===issue.code&&error.message===issue.message))problems.push(normalizeFailure(issue,'account_issue'));
@@ -132,11 +132,13 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(accounts.loginOpenError&&liveLogin){note='系统未能打开浏览器，请重试。';}
  if(accounts.openingLogin&&liveLogin){title='正在打开登录页面…';note='';}
  if(cancelUnknown){title='暂时无法确认取消结果';note='Bee 正在继续核对本次登录是否已结束。';}
+ if(accounts.loginStartError.openai&&!liveLogin){title='官方登录未完成';note='';}
  if(completion){title=journey.kind==='change'?'账号更换成功':journey.kind==='repair'?'账号读取已修复':journey.kind==='relogin'?'重新登录成功':'账号接入成功！';note=(journey.kind==='change'?'已更换账号':journey.kind==='repair'?'已读取并核验账号':journey.kind==='relogin'?'已完成重新登录':'账号已接入')+(supplyView?.paused?'，接单保持暂停。':ready?'，可以接单了。':'，等待接单条件恢复。');}
  const kind=different?'change':journey?.kind??(preparationFailed||preparing?(op?.kind==='confirm_change'?'change':'intake'):undefined);
  const steps=kind==='first'?['登录','核验账号','确认接入','准备接单']:kind==='intake'?['确认接入','准备接单']:kind==='change'?['核对账号','确认换号','准备接单']:kind==='repair'?['修复读取','核验账号']:kind==='relogin'?['重新登录','核验账号']:[];
  if(preparing&&(kind==='repair'||kind==='relogin'))steps.push('准备接单');
  let step=completion?steps.length:kind==='first'?liveLogin?(progress?.phase==='verifying'?1:0):candidate&&!selected?2:selected?3:0:kind==='change'?preparing?2:journey?.kind==='change'?1:0:kind==='intake'?selected?1:0:preparing?2:accounts.dirty.openai||liveLogin&&progress?.phase!=='verifying'?0:1;
+ if(kind==='relogin'&&!journey?.operationId)step=0;
  if(kind==='relogin'&&op?.state==='failed')step=['official_source_recheck','official_namespace','official_source_revision'].includes(problem?.check??'')?1:0;
  const confirmedLoginProgress=liveLogin&&progress?.operation.id===op?.id&&['starting','waiting_authorization','verifying'].includes(progress.phase)&&!accounts.cancelUnconfirmed.openai;
  const showSteps=!!steps.length&&!sourceProblem&&!cleaning&&!cancelUnknown&&op?.state!=='cancelled'&&(!uncertain||confirmedLoginProgress)&&!intakeUnconfirmed;
@@ -144,7 +146,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(pauseInNote&&!note.includes('暂停'))note+=(note?' ':'')+'接单保持暂停。';
  const requestedPause=supply?.state.pendingChoices?.openai;
  if(supply?.state.writeBusy&&requestedPause!==undefined){title=requestedPause?'正在暂停接单…':'正在恢复接单…';note=requestedPause?'确认暂停后不再接收新任务，已有任务可继续完成。':'正在解除暂停；完成后仍需满足额度等接单条件。';}
- const accountDetails=<DetailSheet overlayClassName={`openai-detail-overlay${nestedConfirmation?' account-confirmation-background':''}`} contentClassName={nestedConfirmation?'account-confirmation-background':undefined} onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t('账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={panel==='settings'?'':t('查看账号信息，管理凭证读取方式。')}>
+ const accountDetails=<DetailSheet overlayClassName={`openai-detail-overlay${nestedConfirmation?' account-confirmation-background':''}`} contentClassName={nestedConfirmation?'account-confirmation-background':undefined} onEscapeKeyDown={event=>{if(nestedConfirmation)event.preventDefault();}} onOpenAutoFocus={event=>{if(panel==='settings'){event.preventDefault();sourceField.current?.focus();}}} open={details} onOpenChange={open=>{setDetails(open);if(open)setPanel('detail');}} onCloseAutoFocus={event=>{if(returnFocus.current?.isConnected){event.preventDefault();returnFocus.current.focus();returnFocus.current=null;}}} trigger={<Button variant="ghost" aria-label={t('OpenAI 详情')}>{t(showSteps?'详情':'账号详情')}<ArrowRight aria-hidden="true"/></Button>} title={t(panel==='settings'?'凭证读取设置':panel==='compare'?'核对账号变更':panel==='install'?'安装 Codex':'OpenAI 账号详情')} description={panel==='settings'?'':t('查看账号信息，管理凭证读取方式。')}>
     {panel==='detail'&&<><dl className="account-detail-facts"><div><dt>{t(selected?'已接入账号':'待接入账号')}</dt><dd>{presentation.identity??t('尚未接入')}</dd></div><div><dt>{t('账号状态')}</dt><dd>{t(title)}</dd></div><div><dt>{t('订阅套餐')}</dt><dd>{presentation.plan?presentation.plan[0].toUpperCase()+presentation.plan.slice(1):t('待确认')}</dd></div>{candidate&&different&&<div><dt>{t('候选账号标识')}</dt><dd>{view.candidate.fingerprint?.slice(0,16)}</dd></div>}</dl>
     <AccountReadHistory accounts={accounts} platform="openai"/>
     {maintenance&&<p role="status">{t(loginMaintenanceCopy[maintenance.phase])}</p>}
@@ -183,6 +185,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :different?<Button onClick={()=>{setPanel('compare');setDetails(true);}}>{t('核对账号变更')}</Button>
    :preparationFailed?<Button disabled={!!accounts.busy.openai||runtime.busy||runtime.startBlocked} onClick={()=>void retryPreparation()}>{t('重试')}</Button>
    :accounts.uncertain.openai||accounts.accountRefresh?.openai?.state==='blocked'||!!supply?.state.errors.openai?<Button disabled={!!accounts.busy.openai||supply?.state.busy} onClick={()=>void accounts.recheckCurrentOpenai()}>{t(accounts.uncertain.openai?'核对结果':'重新核对')}</Button>
+   :accounts.loginStartError.openai&&!accountPending(view)?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
    :failed&&!accountPending(view)?<Button disabled={!!accounts.busy.openai} onClick={()=>accounts.detect('openai','official')}>{t('重新核验')}</Button>
    :candidate&&!selected?<OpenaiAction accounts={accounts} runtime={runtime} action="select" label="接入账号"/>
    :!selected&&!accountPending(view)?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="登录 OpenAI"/>

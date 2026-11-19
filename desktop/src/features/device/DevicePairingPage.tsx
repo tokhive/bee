@@ -104,7 +104,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    {!querying&&!cancelling&&phase&&['creating','redeeming'].includes(phase)&&<p className="repair-progress" role="status">{w(phase==='creating'?'正在处理已保存的请求，请勿重复创建。':'Bee 沿原请求核对结果；网页已批准不代表本机已经保存。')}</p>}
 
    {phase==='saving'&&!transaction?.failure&&<p>{w('正在保存设备配置…')}</p>}
-   {cancelled&&<><p>{w('旧设备不会自动恢复接单。')}</p><p>{w('已完成的处理不会撤回。')}</p></>}
+   {cancelled&&<p>{w('旧设备不会自动恢复接单。')}</p>}
    {!querying&&(unknown||cancelling)&&failures.length===0&&<p>{w('原请求已保留，结果尚未确认。')}</p>}
    {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} centered compact summary={savePermissionDenied&&failure.message===transaction?.failure?.message?w('设备配置写入被拒绝。'):index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
    {admin&&<p>{w('请联系 Hive 管理员检查记录。')}</p>}
@@ -119,7 +119,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {!querying&&!cancelling&&pairing&&phase==='pending'&&<Button disabled={busy||Date.parse(pairing.expires_at)<=now} onClick={open}>{w('打开 Hive 确认网页')}</Button>}
     {phase==='saving'&&transaction?.failure&&<Button disabled={busy} onClick={check}>{w('继续保存')}</Button>}
     {(phase==='expired'||locallyExpired)&&<Button disabled={busy||!recover} onClick={event=>ask(event.currentTarget,locallyExpired?'restart_pairing':'renew_expired')}>{w('重新获取配对码')}</Button>}
-    {recover&&active&&(cancelling||unknown||paused||phase==='blocked')&&!admin&&!locallyExpired&&<Button variant={pairing&&phase==='pending'?'outline':'default'} disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?'正在核对…':'重新核对')}</Button>}
+    {recover&&active&&(cancelling||unknown||paused||phase==='blocked')&&!admin&&!locallyExpired&&<Button variant={!cancelling&&pairing&&phase==='pending'?'outline':'default'} disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?'正在核对…':'重新核对')}</Button>}
     {recover&&active&&!cancelling&&!unknown&&!admin&&phase==='blocked'&&<Button variant="outline" disabled={busy||!!recoveryError} onClick={event=>ask(event.currentTarget,'restart_pairing')}>{w('重新配对')}</Button>}
     {!active&&issue&&!credentialFault&&canRefresh&&<Button disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?(problem?.action==='retry'?'正在连接…':'正在核对…'):checking?'正在连接…':problem?.action==='retry'?'重试连接':'重新核对')}</Button>}
     {!embedded&&!querying&&!cancelling&&pairing&&phase==='pending'&&<Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button>}
@@ -129,7 +129,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {extraActions}
    </div>
    {!querying&&!cancelling&&pairing&&phase==='pending'&&<>{!embedded&&<p className="device-note">{w(paused?'自动核对已暂停，网页确认后请点击重新核对。':'完成确认后，此处会自动更新。')}</p>}{showConfirmationUrl&&<details className="binding-url"><summary>{w(embedded?'切换详情':'确认网址')}</summary>{transactionDetails}{embedded&&<p>{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p>}<p>{pairing.verification_url}</p>{embedded&&<div className="binding-actions"><Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button><Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>}</details>}</>}
-   {!embedded&&!admin&&phase!=='saving'&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
+   {!embedded&&!admin&&!cancelled&&phase!=='saving'&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
    </>}
   </div>}
   {!(active||issue)&&startupNotice}
@@ -144,13 +144,13 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
   {recoveryStart&&!confirmed&&!active&&!cancelled&&!credentialFault&&issue?.code==='DEVICE_CONTEXT_UNCONFIGURED'&&<HiveRecoveryEntry busy={busy} initialHive={address} initialName={deviceName} start={recoveryStart}/>}
   {!view&&!issue&&!transaction&&!initialLoading&&<p role="status">{w(refreshStatus?.state==='waiting'?'前次设备检查尚未结束，结果待确认。':'设备状态尚未确认，请重新检查设备。')}</p>}
   {copied&&<p className="device-note" role="status">{w(copied)}</p>}{copyError&&<WizardFailure failure={copyError}/>}
-  <Dialog.Root open={!!confirmation} onOpenChange={value=>{if(!value)setConfirmation(null);}}><Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className="dialog-content binding-confirmation" onCloseAutoFocus={event=>{event.preventDefault();const trigger=confirmationTrigger.current;(trigger?.isConnected&&!trigger.disabled?trigger:menuTrigger.current??section.current)?.focus({preventScroll:true});}}>
+  <Dialog.Root open={!!confirmation} onOpenChange={value=>{if(!value)setConfirmation(null);}}><Dialog.Portal><Dialog.Overlay className="dialog-overlay" data-binding-cancel={confirmation?.decision==='cancel_pairing'}/><Dialog.Content className="dialog-content binding-confirmation" data-binding-cancel={confirmation?.decision==='cancel_pairing'} onCloseAutoFocus={event=>{event.preventDefault();const trigger=confirmationTrigger.current;(trigger?.isConnected&&!trigger.disabled?trigger:menuTrigger.current??section.current)?.focus({preventScroll:true});}}>
    <Dialog.Title>{w(confirmation?.decision==='cancel_pairing'?'取消重新绑定？':confirmation?.decision==='adopt_owner'?'确认采用新归属':confirmation?.decision==='restart_pairing'?(locallyExpired?'重新获取配对码':'重新配对'):initialPairing?'绑定设备':'重新绑定 Hive')}</Dialog.Title>
-   <Dialog.Description>{w(confirmation?.decision==='cancel_pairing'?'取消后将停止后续替换。旧设备不会自动恢复接单，已完成的处理不会撤回。':confirmation?.decision==='restart_pairing'?'Bee 先向 Hive 确认结束旧申请。若旧绑定已经成功，Bee 会恢复原成功结果，不再生成新码。':confirmation?.decision==='adopt_owner'?'请确认采用上方的新归属账号。旧账号选择与运行意图不会迁移，贡献保持停止。':initialPairing?'请前往 Hive 网页确认设备归属。':'请前往 Hive 网页核对原设备并确认重新绑定。')}</Dialog.Description>
+   <Dialog.Description asChild><div>{confirmation?.decision==='cancel_pairing'?<><p>{w('取消后将停止后续替换。')}</p><p>{w('旧设备不会自动恢复接单，')}<br/>{w('已完成的处理不会撤回。')}</p></>:<p>{w(confirmation?.decision==='restart_pairing'?'Bee 先向 Hive 确认结束旧申请。若旧绑定已经成功，Bee 会恢复原成功结果，不再生成新码。':confirmation?.decision==='adopt_owner'?'请确认采用上方的新归属账号。旧账号选择与运行意图不会迁移，贡献保持停止。':initialPairing?'请前往 Hive 网页确认设备归属。':'请前往 Hive 网页核对原设备并确认重新绑定。')}</p>}</div></Dialog.Description>
    {!initialPairing&&confirmation?.decision!=='cancel_pairing'&&<p className="repair-impact">{w('重新绑定完成后，需要重新接入 AI 账号。')}</p>}
    {confirmation?.decision==='adopt_owner'&&<p>{confirmation.transaction?.old_identity?.owner_email} → {confirmation.transaction?.new_identity?.owner_email}</p>}
    {submitted&&operationError?<div ref={failureFocus} data-recovery-failure tabIndex={-1}><WizardFailure failure={operationError}/></div>:submitted&&busy&&<p role="status">{w('正在处理设备恢复，请稍候…')}</p>}
-   <div className="dialog-actions"><Dialog.Close asChild><Button variant="outline">{w(confirmation?.decision==='cancel_pairing'?'继续重新绑定':submitted?'关闭':'取消')}</Button></Dialog.Close><Button disabled={busy||!recover} onClick={()=>void submit()}>{w(confirmation?.decision==='cancel_pairing'?'确认取消':confirmation?.decision==='adopt_owner'?'确认采用新归属':confirmation?.decision==='restart_pairing'?(locallyExpired?'确认获取新码':'确认重新配对'):initialPairing?'确认绑定':'确认重新绑定')}</Button></div>
+   <div className="dialog-actions"><Dialog.Close asChild><Button variant={confirmation?.decision==='cancel_pairing'?'default':'outline'}>{w(confirmation?.decision==='cancel_pairing'?'继续重新绑定':submitted?'关闭':'取消')}</Button></Dialog.Close><Button variant={confirmation?.decision==='cancel_pairing'?'outline':'default'} data-cancel-binding={confirmation?.decision==='cancel_pairing'} disabled={busy||!recover} onClick={()=>void submit()}>{w(confirmation?.decision==='cancel_pairing'?'取消重新绑定':confirmation?.decision==='adopt_owner'?'确认采用新归属':confirmation?.decision==='restart_pairing'?(locallyExpired?'确认获取新码':'确认重新配对'):initialPairing?'确认绑定':'确认重新绑定')}</Button></div>
   </Dialog.Content></Dialog.Portal></Dialog.Root>
  </section></>;
 }

@@ -140,6 +140,8 @@ const english:Record<string,string>={
  "请联系 Hive 管理员检查记录。":"Contact the Hive administrator to check these records.",
  "正在处理已保存的请求，请勿重复创建。":"Processing the saved request. Do not create another.",
  "请处理保存失败原因，然后继续保存。":"Resolve the save failure, then continue saving.",
+ "取消后将停止后续替换。":"Cancellation stops further replacement.",
+ "旧设备不会自动恢复接单，":"The previous device will not automatically resume tasks.",
  "已完成的处理不会撤回。":"Completed work will not be reversed.",
  "设备绑定已保存。":"Device binding saved.",
  "请前往 AI 账号核对接入状态。":"Check connection status on the AI accounts page.",

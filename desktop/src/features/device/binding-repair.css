@@ -172,3 +172,11 @@
 .native-shell .overview-accounts-card .native-account-quota .quota-label{font-size:11px;line-height:16.5px;gap:8px;margin-bottom:5px}
 .native-shell .overview-accounts-card .quota-value{font:inherit;color:inherit}
 .native-shell .overview-accounts-card .ui-progress{background:var(--line)}
+
+.dialog-overlay[data-binding-cancel=true]{background:#0003}
+.binding-confirmation[data-binding-cancel=true]{width:min(420px,calc(100vw - 32px));padding:20px;border-radius:8px}
+.binding-confirmation[data-binding-cancel=true] h2{font-size:15px;line-height:1.4;margin:0 0 10px}
+.binding-confirmation[data-binding-cancel=true] p{margin:6px 0;font-size:12px;line-height:1.6}
+.binding-confirmation[data-binding-cancel=true] .dialog-actions{justify-content:flex-start;margin-top:16px}
+.binding-confirmation[data-binding-cancel=true] .ui-button{font-size:12px}
+.binding-confirmation [data-cancel-binding=true]{color:var(--danger,#a24231)}

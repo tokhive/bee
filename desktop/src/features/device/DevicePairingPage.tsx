@@ -2,11 +2,12 @@ import {useEffect,useRef,useState,type ReactNode} from 'react';
 import {Dialog,DropdownMenu} from 'radix-ui';
 import {currentLocale,formatDate} from '../../i18n/index';
 import {Button} from '../../components/ui';
+import {presentFailure} from '../../presentation/problems';
 import {normalizeFailure,type UiFailure} from '../../system/failures';
 import type {NavigationTarget} from '../../app/navigation';
 import type {DeviceView,DeviceRecoveryView,DeviceContext,RecoveryDecision} from '../../system/device';
 import type {RefreshStatus} from '../../system/desktopState';
-import {validateHive,WizardFailure} from './FirstLaunchWizard';
+import {validateHive,WizardFailure,WizardDiagnosticExport} from './FirstLaunchWizard';
 import {wizardText as w} from './first-launch-copy';
 import {deviceProblem} from './devicePresentation';
 import {DeviceFeedback} from './DeviceFeedback';
@@ -58,7 +59,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const cancelling=active&&(cancelSubmitting||transaction?.cancel_requested===true||!!cancelOperation&&cancelOperation===transaction?.operation_id);
  const unknown=active&&['creation_unknown','redemption_unknown'].includes(phase!);
  const problem=issue?deviceProblem(normalizeFailure(issue,'device_binding')):null;
- const canCancel=!embedded&&!cancelling&&!!transaction&&!!recover&&active&&!['saving','awaiting_owner_confirmation','awaiting_confirmation'].includes(phase!);
+ const canCancel=!embedded&&!admin&&!cancelling&&!!transaction&&!!recover&&active&&!['saving','awaiting_owner_confirmation','awaiting_confirmation'].includes(phase!);
  const failures=[...new Map([issue,recoveryError,operationError,transaction?.failure].filter((f):f is UiFailure=>!!f&&!['PAIRING_CLOSED','PAIRING_OBSERVATION_PAUSED','PAIRING_WORK_PENDING'].includes(f.code)).map(f=>[JSON.stringify([f.code,f.message]),normalizeFailure(f,'device_binding')])).values()];
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;copyAttempt.current++;};},[]);
  useEffect(()=>{if(inputDraft&&view?.state==='bound')return;if(view?.hive)setHive(view.hive);if(view?.name)setName(view.name);},[view?.hive,view?.name]);
@@ -71,7 +72,7 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
  const doRepair=(trigger:HTMLButtonElement)=>{if(cancelled){ask(trigger,'restart_pairing');return;}if(active){section.current?.querySelector<HTMLElement>('.device-transaction')?.focus();check();return;}if(repair){setRepairChecking(true);void repair().finally(()=>{if(mounted.current)setRepairChecking(false);});}else if(recoveryStart&&address)void recoveryStart(address,deviceName);else if(recover){confirmationTrigger.current=trigger;setSubmitted(false);setConfirmation({decision:'begin_pairing'});}};
  const check=()=>{if(!busy&&canRefresh)refresh();};
  const recheck=async(trigger?:HTMLButtonElement)=>{if(busy||!canRefresh)return;setQuerying(true);try{if(recover&&transaction&&active&&phase!=='saving')await recover('continue_checking',transaction);else if(problem?.action==='retry'&&retryConnection)await retryConnection();else await refresh();}finally{if(mounted.current){setQuerying(false);requestAnimationFrame(()=>{if(mounted.current)(trigger?.isConnected?trigger:section.current?.previousElementSibling instanceof HTMLElement?section.current.previousElementSibling:section.current)?.focus({preventScroll:true});});}}};
- const headline=repairChecking?'修复设备绑定':cancelSubmitting?'正在取消重新绑定':querying?(!active&&problem?.action==='retry'?'正在连接 Hive':cancelling?'正在核对取消结果…':active?'正在核对绑定结果…':'正在核对 Hive 状态…'):checking?'正在连接 Hive':cancelling?'取消结果尚未确认':cancelled?'设备尚未恢复贡献':!active&&problem?problem.title:locallyExpired?'配对码有效期已到':paused&&!embedded?(initialPairing?'设备绑定尚未完成':'重新绑定尚未完成'):phase==='saving'&&transaction?.failure?'绑定已完成，本机保存失败':phase==='pending'?(embedded?'等待目标 Hive 网页确认':'在 Hive 网页确认设备'):phase==='completed'&&!transaction?.old_identity?'设备已绑定':active?(initialPairing&&phase==='awaiting_confirmation'?'请绑定设备':phaseCopy[phase!]):problem?.title??'无法确认设备状态';
+ const headline=repairChecking?'修复设备绑定':cancelSubmitting?'正在取消重新绑定':querying?(!active&&problem?.action==='retry'?'正在连接 Hive':cancelling?'正在核对取消结果…':active?'正在核对绑定结果…':'正在核对 Hive 状态…'):checking?'正在连接 Hive':cancelling?'取消结果尚未确认':cancelled?'设备尚未恢复贡献':admin?'无法继续重新绑定':!active&&problem?problem.title:locallyExpired?'配对码有效期已到':paused&&!embedded?(initialPairing?'设备绑定尚未完成':'重新绑定尚未完成'):phase==='saving'&&transaction?.failure?'绑定已完成，本机保存失败':phase==='pending'?(embedded?'等待目标 Hive 网页确认':'在 Hive 网页确认设备'):phase==='completed'&&!transaction?.old_identity?'设备已绑定':active?(initialPairing&&phase==='awaiting_confirmation'?'请绑定设备':phaseCopy[phase!]):problem?.title??'无法确认设备状态';
  const feedback=!issue&&repairResult?(repairResult==='healthy'?'设备绑定正常。':'设备绑定已恢复，接单选择保留。'):!issue&&phase==='completed'?'设备绑定已保存。':cancelled?'重新绑定已取消。':'';
  const progressMenu=canCancel&&!querying&&!checking&&<DropdownMenu.Root open={progressOpen} onOpenChange={setProgressOpen}><DropdownMenu.Trigger asChild><Button ref={progressTrigger} variant="ghost" size="icon" aria-label={w('重新绑定操作')}><DeviceMenuIcon/></Button></DropdownMenu.Trigger><DropdownMenu.Portal><DropdownMenu.Content className="device-actions-menu" align="end" sideOffset={4}><DropdownMenu.Item onSelect={event=>{event.preventDefault();setProgressOpen(false);ask(progressTrigger.current!,'cancel_pairing');}}>{w('取消重新绑定')}</DropdownMenu.Item></DropdownMenu.Content></DropdownMenu.Portal></DropdownMenu.Root>;
  const showConfirmationUrl=embedded||!!copyError||failures.some(f=>f.code.startsWith('BROWSER_')||f.check==='browser_open');
@@ -99,14 +100,14 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
    {phase==='awaiting_confirmation'&&<p>{w(initialPairing?'请在 Hive 网页核对配对码，确认设备归属。':'请在 Hive 网页核对配对码与原设备，确认重新绑定。')}</p>}
    {!querying&&!cancelling&&((phase==='pending'||phase==='awaiting_confirmation')&&!!recovery&&!initialPairing||phase==='awaiting_owner_confirmation')&&<p className="repair-impact">{w('重新绑定完成后，需要重新接入 AI 账号。')}</p>}
    {phase==='awaiting_owner_confirmation'&&transaction&&<><dl className="recovery-identities"><div><dt>{w('原归属账号')}</dt><dd>{transaction.old_identity?.owner_email??w('待核对')}</dd></div><div><dt>{w('新归属账号')}</dt><dd>{transaction.new_identity?.owner_email}</dd></div></dl><p>{w('采用新归属后，旧账号选择与运行意图不会迁移。')}</p></>}
-   {phase==='draining'&&<div className="repair-progress" role="status"><p>{w(admin?'Hive 无法确认旧设备的任务处理记录。':'正在等待旧设备的任务、结算和遗留操作完成。')}</p>{transaction?.failure?.code==='PAIRING_WORK_PENDING'&&<details><summary>{w('等待详情')}</summary><pre>{transaction.failure.message}</pre></details>}</div>}
-   {admin&&<p>{w('请联系 Hive 管理员检查记录。')}</p>}
+   {phase==='draining'&&!admin&&<div className="repair-progress" role="status"><p>{w(admin?'Hive 无法确认旧设备的任务处理记录。':'正在等待旧设备的任务、结算和遗留操作完成。')}</p>{transaction?.failure?.code==='PAIRING_WORK_PENDING'&&<details><summary>{w('等待详情')}</summary><pre>{transaction.failure.message}</pre></details>}</div>}
    {!querying&&!cancelling&&phase&&['creating','redeeming'].includes(phase)&&<p className="repair-progress" role="status">{w(phase==='creating'?'正在处理已保存的请求，请勿重复创建。':'Bee 沿原请求核对结果；网页已批准不代表本机已经保存。')}</p>}
 
    {phase==='saving'&&!transaction?.failure&&<p>{w('正在保存设备配置…')}</p>}
    {cancelled&&<><p>{w('旧设备不会自动恢复接单。')}</p><p>{w('已完成的处理不会撤回。')}</p></>}
    {!querying&&(unknown||cancelling)&&failures.length===0&&<p>{w('原请求已保留，结果尚未确认。')}</p>}
    {!querying&&!checking&&failures.filter(failure=>!active||!['device_replaced','invalid_device_credential'].includes(failure.code)).map((failure,index)=><WizardFailure key={index} failure={failure} centered compact summary={savePermissionDenied&&failure.message===transaction?.failure?.message?w('设备配置写入被拒绝。'):index===0&&problem&&!active?w(problem.reason):unknown||cancelling?w(deviceProblem(failure).reason):undefined} manualUrlAvailable={!!pairing}/>)}
+   {admin&&<p>{w('请联系 Hive 管理员检查记录。')}</p>}
    {phase==='saving'&&transaction?.failure&&!querying&&!checking&&<p>{w(savePermissionDenied?'请允许 Bee 写入设备配置，然后继续保存。':'请处理保存失败原因，然后继续保存。')}</p>}
    {!active&&!querying&&!checking&&problem?.title==='Hive 暂不可用'&&<p>{w('请稍后重试连接。')}</p>}
    {active&&!issue&&startupNotice}
@@ -122,12 +123,13 @@ export function DevicePairingPage({embedded=false,transactionIntro,transactionDe
     {recover&&active&&!cancelling&&!unknown&&!admin&&phase==='blocked'&&<Button variant="outline" disabled={busy||!!recoveryError} onClick={event=>ask(event.currentTarget,'restart_pairing')}>{w('重新配对')}</Button>}
     {!active&&issue&&!credentialFault&&canRefresh&&<Button disabled={busy} onClick={event=>void recheck(event.currentTarget)}>{w(querying?(problem?.action==='retry'?'正在连接…':'正在核对…'):checking?'正在连接…':problem?.action==='retry'?'重试连接':'重新核对')}</Button>}
     {!embedded&&!querying&&!cancelling&&pairing&&phase==='pending'&&<Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button>}
-    {(admin||failures.length>0&&problem?.action==='recheck')&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate({page:'diagnostics'})}>{w('查看诊断')}</Button>}
+    {admin&&<WizardDiagnosticExport primary details={failures.map(failure=>presentFailure(failure,currentLocale()).details).join('\n\n')}/>}
+    {!admin&&failures.length>0&&problem?.action==='recheck'&&onNavigate&&<Button variant="ghost" onClick={()=>onNavigate({page:'diagnostics'})}>{w('查看诊断')}</Button>}
     {phase==='pending'&&progressMenu}
     {extraActions}
    </div>
    {!querying&&!cancelling&&pairing&&phase==='pending'&&<>{!embedded&&<p className="device-note">{w(paused?'自动核对已暂停，网页确认后请点击重新核对。':'完成确认后，此处会自动更新。')}</p>}{showConfirmationUrl&&<details className="binding-url"><summary>{w(embedded?'切换详情':'确认网址')}</summary>{transactionDetails}{embedded&&<p>{w('有效期至')} {formatDate(pairing.expires_at,currentLocale())}</p>}<p>{pairing.verification_url}</p>{embedded&&<div className="binding-actions"><Button variant="ghost" onClick={()=>void copy(pairing.code,'配对码已复制')}>{w('复制配对码')}</Button><Button variant="ghost" onClick={()=>void copy(pairing.verification_url,'确认网址已复制')}>{w('复制确认网址')}</Button></div>}</details>}</>}
-   {!embedded&&phase!=='saving'&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
+   {!embedded&&!admin&&phase!=='saving'&&transaction?.failure?.details?.observed_at&&<p className="device-note">{w('上次核对')}：{formatDate(transaction.failure.details.observed_at,currentLocale())}</p>}
    </>}
   </div>}
   {!(active||issue)&&startupNotice}

@@ -50,9 +50,9 @@ function useDiagnosticExport(details:string){
  useEffect(()=>{setExportNotice('');},[details]);
  return {exporting,exportNotice,exportEvidence};
 }
-function WizardDiagnosticExport({details}:{details:string}){
+export function WizardDiagnosticExport({details,primary=false}:{details:string;primary?:boolean}){
  const {exporting,exportNotice,exportEvidence}=useDiagnosticExport(details);
- return <><Button type="button" variant="ghost" disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button>{exportNotice&&<p role="status">{w(exportNotice)}</p>}</>;
+ return <><Button type="button" variant={primary?'default':'ghost'} disabled={exporting} onClick={()=>void exportEvidence()}>{w(exporting?'正在导出…':'导出诊断')}</Button>{exportNotice&&<p role="status">{w(exportNotice)}</p>}</>;
 }
 
 export function WizardFailure({failure,manualUrlAvailable=false,summary:summaryOverride,compact=false,centered=false}:{failure:UiFailure;manualUrlAvailable?:boolean;summary?:string;compact?:boolean;centered?:boolean}){

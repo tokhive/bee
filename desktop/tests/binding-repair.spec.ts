@@ -207,3 +207,25 @@ test('binding repair distinguishes checking the original identity from reconnect
  await page.getByRole('button',{name:'修复设备绑定',exact:true}).click();const card=page.getByRole('region',{name:'设备与 Hive',exact:true});await expect(card.getByRole('heading',{name:'修复设备绑定',exact:true})).toBeVisible();await expect(card.getByRole('status')).toHaveText('正在检查原绑定…');await expect(card).not.toContainText('正在重试连接');await expect(card).not.toContainText('正在连接 Hive');expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
  await expect.poll(()=>page.evaluate(()=>typeof (window as any).finishRepairCheck)).toBe('function');await page.evaluate(()=>(window as any).finishRepairCheck());await expect(card.getByRole('heading',{name:'请重新绑定',exact:true})).toBeVisible();expect((await calls(page)).filter(c=>c.command==='device_recovery_start')).toHaveLength(1);
 });
+
+ test('administrator-only binding failure exports the actual evidence without restarting pairing',async({page},testInfo)=>{
+ await page.setViewportSize({width:1000,height:672});await page.clock.install();await open(page,'recovery-draining');
+ await page.evaluate(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   const reply=await invoke(command,args);
+   if(reply.result?.recovery)reply.result.recovery.failure={code:'PAIRING_ADMIN_REQUIRED',message:'Hive old device dev-1 is blocked: task task-17: required processing record missing',details:{check:'pairing_work',observed_at:new Date().toISOString(),evidence:{}}};
+   return reply;
+  };
+ });
+ await page.clock.runFor(10001);
+ await expect(page.getByRole('heading',{name:'无法继续重新绑定',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'重新绑定操作',exact:true})).toHaveCount(0);
+ await page.screenshot({path:testInfo.outputPath('formal-admin-light.png')});
+ await expect(page.getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);
+ const download=page.waitForEvent('download');await page.getByRole('button',{name:'导出诊断',exact:true}).click();
+ const result=await download;expect(result.suggestedFilename()).toBe('bee-device-diagnostics.txt');
+ const stream=await result.createReadStream();let text='';for await(const chunk of stream!)text+=chunk.toString();
+ expect(text).toContain('task-17');expect(text).toContain('required processing record missing');
+ expect((await calls(page)).filter(c=>replacements.has(c.command))).toEqual([]);
+ });

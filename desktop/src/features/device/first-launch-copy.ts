@@ -136,6 +136,7 @@ const english:Record<string,string>={
  "Hive 无法确认旧设备的任务处理记录。":"Hive cannot verify task records for the previous device.",
  "正在等待旧设备的任务、结算和遗留操作完成。":"Waiting for previous tasks, settlement, and unfinished operations.",
  "等待详情":"Waiting details",
+ "无法继续重新绑定":"Cannot continue rebinding",
  "请联系 Hive 管理员检查记录。":"Contact the Hive administrator to check these records.",
  "正在处理已保存的请求，请勿重复创建。":"Processing the saved request. Do not create another.",
  "请处理保存失败原因，然后继续保存。":"Resolve the save failure, then continue saving.",

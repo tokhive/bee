@@ -210,8 +210,12 @@ func validateDesktopHiveCapabilities(c beewire.Capabilities, platform string, no
 }
 func (a *DesktopAccounts) accountIssues(p *desktopAccountPlatform, platform, devicePath string, b desktopAccountBinding, problems []string, recovery bool) {
 	p.snapshot.Issues = []DesktopAccountIssue{}
+	var fingerprint *string
+	if b.fingerprint != "" {
+		fingerprint = accountString(b.fingerprint)
+	}
 	for _, code := range problems {
-		p.snapshot.Issues = append(p.snapshot.Issues, DesktopAccountIssue{Code: code, Platform: platform, Fingerprint: accountString(b.fingerprint), Message: code})
+		p.snapshot.Issues = append(p.snapshot.Issues, DesktopAccountIssue{Code: code, Platform: platform, Fingerprint: fingerprint, Message: code})
 	}
 	for _, code := range []string{"offline", "source_unavailable", "authorization_rejected", "confirmation_required", "quota_exhausted", "rate_limited"} {
 		active := slices.Contains(problems, code)

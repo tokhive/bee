@@ -433,6 +433,7 @@ for(const recovery of ['automatic','manual','still-reconnecting'] as const)test(
    if(command==='runtime_start'){w.calls.push({command,args});throw new Error('must not start an already running worker');}
    const reply=await invoke(command,args);
    if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{revision:w.connectionRecovered?746:377,local:'running',run_id:'a'.repeat(32),connection:w.connectionRecovered?'connected':'reconnecting',connection_detail:w.connectionRecovered?null:{failure:{code:'connection_refused',stage:'connect',occurred_at:new Date().toISOString(),message:'dial tcp 127.0.0.1:18080: connect: connection refused',evidence:{path:'/api/bee/agent',target_origin:'http://127.0.0.1:18080'}},retry:'scheduled',next_retry_at:new Date(Date.now()+15000).toISOString()}});
+   if(command==='runtime_snapshot')reply.result.runtime.platforms.claude.account.issues=[{code:'offline',platform:'claude',fingerprint:null,message:'offline',notify:false}];
    return reply;
   };
  });

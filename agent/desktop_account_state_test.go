@@ -321,3 +321,26 @@ func TestDesktopAccountsIssuesUnknownAndStaleDoNotRecover(t *testing.T) {
 		})
 	}
 }
+
+func TestDesktopOfflineIssueWithoutSelectedAccountHasNoFingerprint(t *testing.T) {
+	for _, platform := range []string{"openai", "claude"} {
+		for _, fingerprint := range []string{"", strings.Repeat("a", 64)} {
+			t.Run(platform+"/"+fingerprint, func(t *testing.T) {
+				a := NewDesktopAccounts(nil)
+				p := a.platforms[platform]
+				a.accountIssues(p, platform, filepath.Join(t.TempDir(), "device.json"), desktopAccountBinding{hive: "https://hive.example", owner: "owner", device: "device", fingerprint: fingerprint}, []string{"offline"}, false)
+				if len(p.snapshot.Issues) != 1 || p.snapshot.Issues[0].Code != "offline" {
+					t.Fatalf("offline evidence missing: %+v", p.snapshot.Issues)
+				}
+				got := p.snapshot.Issues[0].Fingerprint
+				if fingerprint == "" {
+					if got != nil {
+						t.Fatalf("unselected account fingerprint=%q; required=null, not an empty identifier", *got)
+					}
+				} else if got == nil || *got != fingerprint {
+					t.Fatal("selected account fingerprint was lost")
+				}
+			})
+		}
+	}
+}

@@ -36,8 +36,10 @@ function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubm
  return <Dialog.Root open={confirmation!==undefined} onOpenChange={open=>{if(!open)setConfirmation(undefined);}}>
   <div><Dialog.Trigger asChild><Button variant="outline" disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
   <Dialog.Portal><Dialog.Overlay className="dialog-overlay"/><Dialog.Content className={`dialog-content${action==='authorize'?' openai-login-confirm':''}`} onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
-   {action==='authorize'&&<Dialog.Close asChild><Button variant="ghost" className="openai-login-close">{t('关闭')}</Button></Dialog.Close>}
+   <header>
    <Dialog.Title>{t(action==='clear_selection'?'取消接入':action==='select'?'接入 OpenAI 账号':action==='confirm_change'?'确认更换 OpenAI 账号':view?.selection.state==='selected'?'重新登录 OpenAI':'登录 OpenAI')}</Dialog.Title>
+   {action==='authorize'&&<Dialog.Close asChild><Button variant="ghost" className="openai-login-close">{t('关闭')}</Button></Dialog.Close>}
+   </header>
    <Dialog.Description>{t(action==='clear_selection'?'仅取消尚未在 Hive 注册的本地选择；不会移除已注册的 Hive 账号。':action==='authorize'?'调用已安装的 Codex 官方客户端，可能改变客户端当前登录账号。':'接单将使用该账号的订阅额度。')}</Dialog.Description>
    {action==='authorize'?<p className="openai-login-impact">{t(view?.selection.state==='selected'?'将暂停此平台接单，已有请求可继续收尾。登录后仍暂停；不同账号需另行确认换号。':'登录后核验账号，由你确认是否接入 Bee。接入保留已有接单选择。')}</p>:action==='clear_selection'?null:<>
     <dl className="account-detail-facts">{action==='confirm_change'&&<div><dt>{t('已接入账号')}</dt><dd>{confirmation?.selected?.slice(0,16)}</dd></div>}<div><dt>{t('目标账号')}</dt><dd>{confirmation?.target?.slice(0,16)??t('尚未确认')}</dd></div></dl>

@@ -412,3 +412,33 @@ test('missing login before first intake keeps the sidebar empty state rather tha
  await expect(page.locator('.desktop-side-status')).toHaveText('尚未接入 AI 账号');
  expect(await writes(page)).toEqual([]);
 });
+
+for(const state of ['pending','running'] as const)test(`accepted ${state} intake shows progress until the original result becomes uncertain`,async({page})=>{
+ await page.clock.install();await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ await page.evaluate(state=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.actionPending=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_action'){w.accounts.openai.operation.state=state;w.accounts.openai.authorization={state:'unconfirmed',fingerprint:null,observed_at:null,error:{platform:'openai',code:'operation_pending',check:'platform_operation',message:'platform operation is still running; showing the last published account observation',evidence:{}}};result.result.account=structuredClone(w.accounts.openai);}return result;};},state);
+ await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在接入账号…');
+ await expect(wizard(page).getByRole('status')).toHaveText('已提交你确认的账号，正在等待接入结果。');
+ await expect(wizard(page).getByRole('button',{name:'核对结果',exact:true})).toHaveCount(0);
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.operation.state='reconciling';a.operation.revision=++a.revision;});await page.clock.runFor(1100);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
+ await wizard(page).getByRole('button',{name:'核对结果',exact:true}).click();
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
+});
+
+test('a stopped query cannot keep presenting a stale pending intake as live progress',async({page})=>{
+ await page.clock.install();await setup(page);await wizard(page).getByRole('button',{name:'OpenAI',exact:true}).click();
+ await expect(wizard(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.actionPending=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_action'){w.accounts.openai.operation.state='pending';result.result.account.operation.state='pending';}return result;};});
+ await wizard(page).getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在接入账号…');
+ await page.clock.runFor(61000);
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
+ await expect(wizard(page)).toContainText('自动核对已达 60 秒，尚未确认原操作结果。');
+ await expect(wizard(page).locator('.add-account-progress-icon')).toHaveCount(0);
+ await wizard(page).getByRole('button',{name:'核对结果',exact:true}).click();
+ await expect(wizard(page).getByRole('heading',{level:3})).toHaveText('正在接入账号…');
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
+});

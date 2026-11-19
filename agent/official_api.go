@@ -2,8 +2,6 @@ package bee
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"io"
 	"net"
@@ -127,12 +125,9 @@ func (s *officialAPISource) synchronize(ctx context.Context, state localState, l
 	if !(force || s.registeredLease != lease || s.registeredKey != print || time.Since(s.reportedAt) >= 10*time.Second) {
 		return nil
 	}
-	var inbox tee.InboxPublic
-	if err = callState(ctx, httpClient(), state, "/api/bee/credential-key", "GET", nil, &inbox); err != nil {
+	inbox, err := fetchInboxKey(ctx, state, inboxKeyID)
+	if err != nil {
 		return err
-	}
-	if sha256.Sum256(inbox.PublicKey) != inbox.KeyID || inboxKeyID != "" && hex.EncodeToString(inbox.KeyID[:]) != inboxKeyID {
-		return errInboxIdentity
 	}
 	envelope, err := tee.EncryptCredential(inbox, beewire.ProviderID(state.Identity.ID), p.secret(key))
 	if err != nil {

@@ -32,7 +32,6 @@ func TestEgressConfigurationErrorsNameCodeAndPlace(t *testing.T) {
 		{"no source", `{"targets": ["chatgpt.com:443"]}`, "BEE-CONFIG-NO-SOURCE", ""},
 		{"static mixed", `{"targets": ["chatgpt.com:443"], "codex": {"home": "/x", "store": "file"}, "credential": {"Token": "t", "Header": "authorization", "Scheme": "Bearer"}}`, "BEE-CONFIG-STATIC-MIXED", ""},
 		{"static credential", `{"targets": ["upstream.example:443"], "inbox_key_id": "` + inboxKey + `", "credential": {"Header": "authorization"}}`, "BEE-CONFIG-STATIC-CREDENTIAL", ""},
-		{"static without inbox key", `{"targets": ["upstream.example:443"], "credential": {"Token": "t", "Header": "authorization", "Scheme": "Bearer"}}`, "BEE-CONFIG-INBOX-KEY", ""},
 		{"malformed inbox key", `{"targets": ["chatgpt.com:443"], "inbox_key_id": "abc", "codex": {"home": "/x", "store": "file"}}`, "BEE-CONFIG-INBOX-KEY", ""},
 		{"claude store", `{"targets": ["api.anthropic.com:443"], "claude": {"store": "plaintext"}}`, "BEE-CONFIG-CLAUDE-STORE", `"plaintext"`},
 		{"capabilities without codex", `{"targets": ["api.anthropic.com:443"], "claude": {"store": "keychain"}, "capabilities": {}}`, "BEE-CONFIG-CAPABILITIES-SOURCE", ""},
@@ -54,6 +53,13 @@ func TestEgressConfigurationErrorsNameCodeAndPlace(t *testing.T) {
 				t.Fatalf("summary %q lacks %q, or no fix", summary, test.detail)
 			}
 		})
+	}
+}
+
+func TestStaticCredentialNeedsNoInboxPin(t *testing.T) {
+	_, err := readEgress(context.Background(), writeEgress(t, `{"targets": ["upstream.example:443"], "credential": {"Token": "t", "Header": "authorization", "Scheme": "Bearer"}}`, 0600))
+	if err != nil {
+		t.Fatalf("a static credential without an inbox pin was refused: %v", err)
 	}
 }
 

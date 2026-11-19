@@ -94,10 +94,21 @@ func call(ctx context.Context, client *http.Client, origin, path, method, secret
 }
 
 func callState(ctx context.Context, client *http.Client, state localState, path, method string, input, output any) error {
-	return callWithEpoch(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, input, output)
+	return callStateLimit(ctx, client, state, path, method, 65536, input, output)
 }
 
-func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) (failure error) {
+// callStateLimit is callState with a caller-chosen response ceiling. The
+// credential-key statement is the one answer that can legitimately exceed the
+// default: it carries the enclave's evidence inline.
+func callStateLimit(ctx context.Context, client *http.Client, state localState, path, method string, limit int64, input, output any) error {
+	return callWithEpochLimit(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, limit, input, output)
+}
+
+func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
+	return callWithEpochLimit(ctx, client, origin, path, method, secret, epoch, 65536, input, output)
+}
+
+func callWithEpochLimit(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, limit int64, input, output any) (failure error) {
 	defer func() { failure = recordRequestFailure(ctx, "hive_request", failure, secret) }()
 	var body io.Reader
 	if input != nil {
@@ -143,7 +154,7 @@ func callWithEpoch(ctx context.Context, client *http.Client, origin, path, metho
 		}
 		return &connectionRequestFailure{cause: failure, origin: origin, path: path, credential: secret}
 	}
-	decoder := json.NewDecoder(io.LimitReader(response.Body, 65536))
+	decoder := json.NewDecoder(io.LimitReader(response.Body, limit))
 	slog.Debug("Hive request", "module", "request", "method", method, "path", path, "status", response.StatusCode, "duration_ms", time.Since(started).Milliseconds())
 	if output != nil {
 		if err := decoder.Decode(output); err != nil {

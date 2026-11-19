@@ -156,6 +156,8 @@ Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-lo
 
 每项检查为 `id,platform,status,observed_at,code,evidence,next_action`。全局 device/runtime/hive/proxy 的 platform 为 null；每个平台各有 source/authorization/quota/capabilities/account/supply，共 16 项。status 为 pass/warning/fail/skipped，code 和 evidence 使用公开白名单；未知检查不转成通过。next_action 仅 overview/accounts/diagnostics/settings，不是命令或 URL。前端按 instance、run_id、network_revision 拒绝过期上下文；切页不新建报告。
 
+接单诊断仅在 `ready=false`、`paused=true` 且唯一原因为 `manually_paused` 时返回 `pass/supply_paused`，表示已确认用户暂停，不表示可接单。保留这四项证据；Rust 和前端同时验证后才接收该通过结果。存在其它原因或状态矛盾时继续报告阻塞／未确认。
+
 `paths` 精确字段为 relay/official/hive/official_login：relay 为 direct/local_proxy；official 为 `openai=<path>;claude=<path>`，每项 path 为 direct/environment_proxy/local_proxy；Hive 固定 process_environment，官方登录固定 official_client。只公开路径类别，不回显环境代理原文。测试 checks 固定依次为 local_proxy/openai_read_only/claude_read_only，每项含 id/status/message/path/http_status；status 为 ok/failed/skipped，HTTP 状态为整数或 null。401/403/429 只能证明收到 HTTP 响应，不能证明账号、额度或贡献可用。
 
 通知 facts 最多 8 项，每项为 `identity,platform,problem,active,eligible,recovered`：identity 为 64 位不透明摘要，problem 仅 authorization_rejected/confirmation_required/offline/quota_exhausted。eligible 必须同时 active，recovered 不可同时 active；来源、邮箱、完整账号指纹及自定义通知正文不进入此通道。Rust 持有独立 OS 提交去重记录，提交已接受不等于用户已读。

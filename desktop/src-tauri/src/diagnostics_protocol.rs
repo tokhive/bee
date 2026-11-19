@@ -121,7 +121,10 @@ pub fn validate_report(value: &Value, instance: &str) -> Result<DiagnosticReport
             "supply" => "taking_new_work",
             _ => "",
         };
-        if (c.status == "pass" && c.code != pass_code)
+        let confirmed_pause = c.id == "supply" && c.code == "supply_paused"
+            && [("ready", "false"), ("paused", "true"), ("reasons_count", "1"), ("reason", "manually_paused")]
+                .iter().all(|(key, value)| c.evidence.get(*key).is_some_and(|actual| actual == value));
+        if (c.status == "pass" && c.code != pass_code && !confirmed_pause)
             || !(general || platform)
             || !seen.insert((&c.id, &c.platform))
             || !["pass", "warning", "fail", "skipped"].contains(&c.status.as_str())

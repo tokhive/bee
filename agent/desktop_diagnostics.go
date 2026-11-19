@@ -652,9 +652,18 @@ func (d *DesktopDiagnostics) inspectHivePlatform(ctx context.Context, id string,
 		d.set(id, "supply", p, "fail", "supply_result_unconfirmed", "overview", map[string]string{"platform_match": "false"})
 		return
 	}
+	status, code, evidence := diagnosticSupplyResult(p, supply)
+	d.set(id, "supply", p, status, code, "overview", evidence)
+}
+
+func diagnosticSupplyResult(p string, supply beewire.PlatformSupply) (string, string, map[string]string) {
 	checks := doctorSupplyChecks(p, supply, "")
 	status, code := "pass", "taking_new_work"
 	evidence := map[string]string{"ready": strconv.FormatBool(supply.Ready), "paused": strconv.FormatBool(supply.Paused), "reasons_count": strconv.Itoa(len(supply.Reasons))}
+	if !supply.Ready && supply.Paused && len(supply.Reasons) == 1 && supply.Reasons[0] == beewire.ReasonManuallyPaused {
+		evidence["reason"] = beewire.ReasonManuallyPaused
+		return "pass", "supply_paused", evidence
+	}
 	for _, c := range checks {
 		if c.Status != "pass" {
 			status = "fail"
@@ -667,7 +676,7 @@ func (d *DesktopDiagnostics) inspectHivePlatform(ctx context.Context, id string,
 			break
 		}
 	}
-	d.set(id, "supply", p, status, code, "overview", evidence)
+	return status, code, evidence
 }
 
 func diagnosticQuotaResult(capabilities DesktopAccountCapabilities, now time.Time) (string, string, map[string]string) {

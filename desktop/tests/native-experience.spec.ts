@@ -832,3 +832,16 @@ test('native failure before the first Hive scope retains evidence and reconnects
  await expect(page.getByRole('navigation')).toBeVisible();expect(await page.evaluate(()=>(window as any).nativeRetries)).toBe(1);
  for(const command of ['device_begin','device_recovery_start','runtime_start','account_action'])expect(await calls(page,command)).toEqual([]);
 });
+
+test('manual pause diagnostic stays out of failures and does not resume supply',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+  const reply=await invoke(command,args);
+  if(['diagnostics_start','diagnostics_snapshot'].includes(command))reply.result.report.checks.push({id:'supply',platform:'openai',status:'pass',observed_at:new Date().toISOString(),code:'supply_paused',evidence:{ready:'false',paused:'true',reasons_count:'1',reason:'manually_paused'},next_action:'overview'});
+  return reply;
+ };});
+ await completeReport(page);
+ await expect(page.getByText('需要处理的问题',{exact:true})).toHaveCount(0);
+ await expect(page.getByTestId('passed-checks')).toContainText('已按你的选择暂停接单');
+ expect(await calls(page,'supply_set_paused')).toEqual([]);
+});

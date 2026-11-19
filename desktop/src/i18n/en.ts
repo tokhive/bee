@@ -1284,6 +1284,7 @@ export const en: Record<string, string> = {
   "账号在检查期间发生变化": "Account changed during this check",
   "能力已同步": "Capabilities synchronized",
   "可以接收新任务": "Accepting new tasks",
+  "已按你的选择暂停接单": "Accepting tasks is paused as requested",
   "当前未接收新任务": "Not accepting new tasks",
   "域名解析失败": "DNS lookup failed",
   "安全连接校验失败": "Secure connection verification failed",

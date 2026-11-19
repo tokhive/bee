@@ -51,6 +51,7 @@ export function HiveSwitchProgress({model}:{model:HiveSwitchModel}){
   {!rechecking&&!targetVisible&&failure&&<p className="switch-failure">{failureSummary}<Dialog.Root><Dialog.Trigger asChild><Button variant="ghost" className="switch-error-info" aria-label={t('查看切换错误详情')}>ⓘ</Button></Dialog.Trigger><Dialog.Portal><Dialog.Overlay className="dialog-overlay switch-error-overlay"/><Dialog.Content className="dialog-content switch-error-dialog" aria-describedby={undefined}><Dialog.Title>{t('错误详情')}</Dialog.Title><pre>{presentFailure(failure,currentLocale()).details}</pre><div className="switch-error-actions"><Dialog.Close asChild><Button variant="outline">{t('关闭')}</Button></Dialog.Close></div></Dialog.Content></Dialog.Portal></Dialog.Root></p>}
   {!targetActive&&!rechecking&&model.foreground!=='cancel'&&route}
   {!rechecking&&!unknown&&!cancelling&&pending&&operation.phase==='draining_source'&&<p className="hive-switch-work">{work?t('正在执行 {running} · 结果待确认 {unknown} · 未结算 {unsettled}',{running:work.executions,unknown:work.unknown_terminations,unsettled:work.unsettled}):t('任务和结算数量待核对。')}</p>}
+  {!unknown&&!cancelling&&operation.phase==='connecting_target'&&operation.source.workers_stopped&&operation.source.child_reaped&&operation.source.ipc_empty&&<p>{t('原后台已安全退出，正在核验目标连接。')}</p>}
   {!targetActive&&!unknown&&!cancelling&&pending&&snapshot.observation.state==='paused'&&<p className="device-note">{t('自动核对暂停后，原切换和停止派单保护继续保留。')}</p>}
 
   {operation.committed&&<p className="device-note">{t('当前 Hive 已保存为目标地址；账号问题请在此 Hive 内处理。')}</p>}
@@ -68,5 +69,5 @@ export function HiveSwitchProgress({model}:{model:HiveSwitchModel}){
 export function HiveSwitchFeedback({model}:{model:HiveSwitchModel}){
  const operation=model.snapshot?.operation;
  if(!operation||!['succeeded','cancelled'].includes(operation.phase))return null;
- return <DeviceFeedback id={operation.id+':'+operation.phase} message={operation.phase==='succeeded'?'Hive 已切换。':'已取消切换，继续使用原 Hive。'} label="关闭切换结果提示"/>;
+ return <DeviceFeedback id={operation.id+':'+operation.phase} message={operation.phase==='succeeded'?'Hive 已切换。':'切换已取消，仍使用原 Hive。'} label="关闭切换结果提示"/>;
 }

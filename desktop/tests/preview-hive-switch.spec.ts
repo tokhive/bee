@@ -164,7 +164,7 @@ test('pending switch cancellation shows progress before its confirmed result',as
  await expect(progress.getByRole('button')).toHaveCount(0);
  expect(await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).cancelSubmissions)).toBe(1);
  await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>(frame.contentWindow as any).releaseCancelSwitch());
- await expect(app.getByText('已取消切换，继续使用原 Hive。',{exact:true})).toBeVisible();
+ await expect(app.getByText('切换已取消，仍使用原 Hive。',{exact:true})).toBeVisible();
  await expect(progress).toHaveCount(0);await expect(app.locator('.device-card-facts').first()).toContainText('https://hive.example');
  await app.getByRole('button',{name:'关闭切换结果提示',exact:true}).click();
  await expect(app.getByRole('button',{name:'设备操作',exact:true})).toBeFocused();
@@ -258,4 +258,23 @@ test('generic startup recovery uses the approved standalone region and returns t
  await emit('ready',101);
  await expect(notice).toHaveCount(0);await expect(app.getByRole('heading',{name:'设备与 Hive',exact:true})).toBeVisible();
  await expect(app.getByText('后台已连接，服务未启动。',{exact:true})).toHaveCount(0);
+});
+
+test('handoff explains confirmed source shutdown without requesting a device recheck',async({page})=>{
+ const app=await open(page,'switch-handoff');
+ const progress=app.getByLabel('Hive 切换进度');
+ await expect(progress).toContainText('原后台已安全退出，正在核验目标连接。');
+ await expect(app.getByText('设备状态尚未确认，请重新检查设备。',{exact:true})).toHaveCount(0);
+ await page.locator('iframe').evaluate((frame:HTMLIFrameElement)=>{
+  const w=frame.contentWindow as any,prior=w.__TAURI_INTERNALS__.invoke;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
+   const reply=await prior(command,args);
+   if(reply?.operation)reply.operation.source.ipc_empty=false;
+   return reply;
+  };
+ });
+ await progress.getByRole('button',{name:'重新核对',exact:true}).click();
+ await expect(progress.locator('.pairing-phase')).toHaveText('正在连接目标 Hive');
+ await expect(progress).not.toContainText('原后台已安全退出，正在核验目标连接。');
+ expect((await calls(page)).filter((c:any)=>['hive_switch_start','hive_switch_cancel','device_begin','runtime_start','supply_set_paused'].includes(c.command))).toEqual([]);
 });

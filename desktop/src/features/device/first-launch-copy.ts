@@ -177,7 +177,7 @@ const english:Record<string,string>={
  "关闭绑定结果提示":"Dismiss binding result",
  "关闭切换结果提示":"Dismiss switch result",
  "Hive 已切换。":"Hive switched.",
- "已取消切换，继续使用原 Hive。":"Switch cancelled. The original Hive remains current.",
+ "切换已取消，仍使用原 Hive。":"Switch cancelled. The original Hive remains current.",
  "设备尚未恢复贡献":"Device contribution has not resumed",
  "正在核对取消结果…":"Checking cancellation result…",
  "正在核对绑定结果…":"Checking binding result…",

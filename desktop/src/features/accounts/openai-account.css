@@ -256,3 +256,6 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 :is(.claude-source-form,.openai-source-form) select{appearance:none;-webkit-appearance:none;padding-right:28px;box-shadow:none}
 :is(.claude-source-form,.openai-source-form) label:has(>select)::after{content:"";position:absolute;right:12px;bottom:15px;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);pointer-events:none}
 @media(forced-colors:active){:is(.claude-source-form,.openai-source-form) select{appearance:auto;-webkit-appearance:auto}:is(.claude-source-form,.openai-source-form) label:has(>select)::after{display:none}}
+
+.account-page-problem{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.account-page-problem>p{margin:0;font-size:13px;line-height:1.5}

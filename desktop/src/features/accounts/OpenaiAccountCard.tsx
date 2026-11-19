@@ -58,7 +58,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  const ready=current&&runtime.view?.local==='running'&&runtime.view.connection==='connected'&&supplyView?.ready&&!supplyView.paused&&supplyView.reasons.length===0;
  const preparing=view?.authorization.state==='preparing'||!!view&&['pending','running'].includes(op?.state??'')&&op?.kind!=='authorize';
  const problems:UiFailure[]=[];
- for(const value of [accounts.cancelUnconfirmed.openai?.failure,accounts.errors.openai,accounts.sourceReadFailed.openai,accounts.loginOpenError,progress?.blocker,maintenance?.error,op?.error,view?.candidate.error,view?.authorization.error,view?.hive.error,...view?.capabilities.map(c=>c.error)??[],supply?.state.errors.openai,runtime.view?.local==='failed'?runtime.view.operation?.error:null]){
+ for(const value of [accounts.sharedFailure,accounts.cancelUnconfirmed.openai?.failure,accounts.errors.openai,accounts.sourceReadFailed.openai,accounts.loginOpenError,progress?.blocker,maintenance?.error,op?.error,view?.candidate.error,view?.authorization.error,view?.hive.error,...view?.capabilities.map(c=>c.error)??[],supply?.state.errors.openai,runtime.view?.local==='failed'?runtime.view.operation?.error:null]){
   if(value&&value.code!=='quota_exhausted'){const error=normalizeFailure(value,'account_operation');if(!problems.some(previous=>sameAccountFailure(previous,error)))problems.push(error);}
  }
  for(const issue of view?.issues??[])if(issue.code!=='quota_exhausted'&&!problems.some(error=>error.code===issue.code&&error.message===issue.message))problems.push(normalizeFailure(issue,'account_issue'));
@@ -110,6 +110,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(uncertain&&!liveLogin){title='账号操作结果待核对';note='尚未取得原操作的确定结果，不能据此再次提交。';}
  if(failed&&(!liveLogin||accounts.loginOpenError)){title=accounts.loginOpenError?'无法打开登录页面':sourceProblem?(sourceProblem.code==='source_missing'&&sourceProblem.check==='read_keyring'?'钥匙串中未找到 Codex 登录项':presentFailure(sourceProblem,currentLocale()).summary):problem?.check==='official_identity'?'无法核验账号':problem?.check==='official_process_cleanup'?'尚未确认登录进程已结束':problem?.code==='client_missing'?'未找到 Codex 官方客户端':problem?.code==='expired'?'登录已过期':op?.kind==='authorize'?'官方登录未完成':op?.kind==='confirm_change'?'更换账号未完成':op?.kind==='select'?'接入账号未完成':'无法更新账号状态';note='';}
  if(failed&&problem&&sameAccountFailure(problem,supply?.state.errors.openai)&&!liveLogin){const failure=presentFailure(problem,currentLocale());title=failure.summary;note=failure.impact??'';}
+ if(accounts.sharedFailure&&!liveLogin&&!sourceProblem&&!intakeUnconfirmed){const shared=presentFailure(accounts.sharedFailure,currentLocale());title=shared.summary;note=shared.impact??'';}
  if(preparationFailed&&!liveLogin&&!sourceProblem){
   const cause=view.authorization.error??view.hive.error??op?.error??problem;
   title=presentFailure(normalizeFailure(cause,'account_operation'),currentLocale()).summary;
@@ -166,6 +167,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
     {query?.phase==='stopped'&&<Button variant="outline" onClick={()=>void accounts.queryLogin()}>{t('刷新登录进度')}</Button>}
    </>:intakeUnconfirmed?<Button disabled={accounts.originalAccountQuery?.phase==='reading'} onClick={()=>void accounts.queryOriginalAccount()}>{t(accounts.originalAccountQuery?.phase==='reading'?'正在核对…':'核对结果')}</Button>
    :maintenance?.can_recheck&&!(different&&maintenance.phase==='confirmation_required')?<Button disabled={!!accounts.busy.openai||!!accounts.writeBusy.openai||!!progress?.recheck_in_flight} onClick={()=>accounts.refresh('openai')}>{t('核对维护结果')}</Button>
+   :accounts.sharedFailure&&onNavigate?<Button onClick={()=>onNavigate({page:'overview',section:'device'})}>{t('前往概览')}</Button>
    :sourceProblem?<Button onClick={()=>{setPanel('settings');setDetails(true);}}>{t('修改凭证读取设置')}</Button>
    :op?.kind==='authorize'&&['cancelled','failed'].includes(op.state)&&(!problem||['authorization_timeout','authorization_process_failed'].includes(problem.code))?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
    :credentialExpired||problem?.code==='expired'?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>

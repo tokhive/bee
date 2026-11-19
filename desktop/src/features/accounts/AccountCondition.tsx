@@ -24,7 +24,7 @@ export function AccountCondition({accounts,platform,runtime,supply,onNavigate,no
  const uncertain=accounts.uncertain[platform]||op?.state==='reconciling';
  const current=!!supply&&!supply.blocked&&!accounts.readFailures[platform]&&supplyFresh(supply.state,platform,now)&&!runtime.error&&!runtime.uncertain;
  const errors:UiFailure[]=[];
- const candidates=[runtime.view?.local==='failed'?runtime.view.operation?.error:null,accounts.errors[platform],accounts.sourceReadFailed[platform],supply?.state.errors[platform],op?.error,...(!dirty?[account?.candidate.error,account?.authorization.error,account?.hive.error,...account?.capabilities.map(c=>c.error)??[],...account?.issues??[]]:[])];
+ const candidates=[compact?accounts.sharedFailure:null,runtime.view?.local==='failed'?runtime.view.operation?.error:null,accounts.errors[platform],accounts.sourceReadFailed[platform],supply?.state.errors[platform],op?.error,...(!dirty?[account?.candidate.error,account?.authorization.error,account?.hive.error,...account?.capabilities.map(c=>c.error)??[],...account?.issues??[]]:[])];
  for(const value of candidates){
   if(!value)continue;
   const error=normalizeFailure(value,'account_condition');

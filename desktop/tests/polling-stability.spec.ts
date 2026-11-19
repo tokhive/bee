@@ -166,7 +166,7 @@ test('an account confirmation waiting for a failed device read is cancelled with
  const confirm=page.getByRole('button',{name:'确认接入',exact:true});await expect(confirm).toBeEnabled();
  await hold(page,'device_status');await page.clock.runFor(10100);await expect.poll(()=>page.evaluate(()=>(window as any).held)).toBe(true);
  await confirm.click();await page.evaluate(()=>{const w=window as any;w.failHeldRead=true;w.release();});
- const sharedProblem=page.getByRole('alert').filter({hasText:'本次设备状态不可确认，依赖设备身份的操作保持不可用。'});await expect(sharedProblem).toHaveCount(1);await expect(sharedProblem).toBeVisible();await expect(page.getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();await expect(sharedProblem.locator('pre')).toContainText('GET fixture HTTP 503');expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
+ const sharedProblem=page.locator('.account-page-problem');await expect(sharedProblem).toHaveCount(1);await expect(sharedProblem.getByRole('alert')).toBeVisible();await expect(page.getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();await sharedProblem.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('GET fixture HTTP 503');expect(await calls(page,'account_action')).toHaveLength(0);expect(pageErrors).toEqual([]);
 });
 
 // Legacy stop receipt floors are covered at the TS client and Go/Rust layers.
@@ -325,5 +325,26 @@ test('overview recheck recovers OpenAI supply after bounded retries are exhauste
  await expect.poll(()=>page.evaluate(()=>(window as any).supplyAttempts)).toBe(5);
  await expect(card.getByText('状态待更新',{exact:true})).toHaveCount(0);
  await expect(card.getByRole('button',{name:'暂停接单',exact:true})).toBeEnabled();
+ for(const method of ['runtime_start','runtime_stop','account_action','supply_set_paused'])expect(await calls(page,method)).toHaveLength(0);
+});
+
+test('account page keeps a shared device timeout in its account row with evidence and overview recovery',async({page})=>{
+ await scene(page,'running');
+ await page.evaluate(()=>{
+  const w=window as any,original=w.__TAURI_INTERNALS__.invoke;w.identityUnavailable=true;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='device_status'&&w.identityUnavailable)throw {code:'timeout',message:'GET identity response timed out',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{failure_kind:'timeout',method:'GET',path:'/api/bee/identity'}}};
+   return original(command,args);
+  };
+ });
+ await page.clock.runFor(10000);
+ await page.getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(page.locator('.problem-notice')).toHaveCount(0);
+ const card=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await card.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('/api/bee/identity');
+ await page.keyboard.press('Escape');
+ await card.getByRole('button',{name:'前往概览',exact:true}).click();
+ await expect(page.getByRole('region',{name:'设备与 Hive',exact:true})).toContainText('连接 Hive 超时');
  for(const method of ['runtime_start','runtime_stop','account_action','supply_set_paused'])expect(await calls(page,method)).toHaveLength(0);
 });

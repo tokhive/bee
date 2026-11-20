@@ -244,7 +244,7 @@ for(const locale of ['zh','en'])test('wizard failures use '+locale+' reasons and
  const alert=page.getByRole('alert');
  await check('tls_failed','TLS certificate verify failed; required=trusted issuer; target=https://hive.example?token=SECRET');
  await expect(alert).toContainText(locale==='zh'?'Hive 安全连接验证失败。':'Hive TLS verification failed.');
- await expect(alert).toContainText(locale==='zh'?'依赖设备身份的操作保持不可用':'Actions requiring its identity remain unavailable');
+ await expect(alert).not.toContainText(locale==='zh'?'依赖设备身份的操作保持不可用':'Actions requiring its identity remain unavailable');
  await expect(alert).toContainText(locale==='zh'?'核对 Hive 地址与服务证书':'Check the Hive address and server certificate');
  const details=page.getByRole('button',{name:locale==='zh'?'查看错误详情':'View error details',exact:true});
  await details.focus();await page.keyboard.press('Enter');
@@ -306,7 +306,7 @@ test('browser launch failure keeps pending pairing actionable without transactio
  const button=await reopen.boundingBox();expect(alert!.y+alert!.height).toBeLessThanOrEqual(button!.y);
  await reopen.click();await expect(page.getByLabel('Fixture actions')).toHaveText('open');
  await page.evaluate(()=>window.setWizardProps({error:{code:'DEVICE_READ_FAILED',check:'device_status',observedAt:null,evidence:{},message:'device status failed: connection refused'}}));
- await expect(page.getByRole('button',{name:'继续核对原请求',exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'重新核对',exact:true})).toBeVisible();
 });
 
 test('configuration failure exports its evidence beside retry without navigating away',async({page})=>{
@@ -321,4 +321,38 @@ test('configuration failure exports its evidence beside retry without navigating
  await expect(page.getByText('诊断已导出。',{exact:true})).toHaveCount(0);
  await expect(page.getByLabel('Fixture actions')).toHaveText('');
  await expect(page.getByRole('button',{name:'重新检查设备',exact:true})).toBeEnabled();
+});
+
+test('expired pending request keeps one fault summary and one check action with all evidence available',async({page})=>{
+ await page.setViewportSize({width:1000,height:672});
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({
+  view:{...pending,recovery:{...transaction,new_identity:null,phase:'pending',pairing:{...pairing,expires_at:'2000-01-01T00:00:00Z'},failure:{code:'PAIRING_OBSERVATION_PAUSED',message:'automatic pairing observation paused: round deadline or query retry budget exhausted'}}},
+  error:{code:'connection_refused',message:'dial tcp 127.0.0.1:18080: connect: connection refused',check:'device_identity',observedAt:null,evidence:{}},
+  startupFailure:{code:'RUNTIME_RESTORE_FAILED',message:'device recovery transaction unresolved: phase=pending revision=4; start/account writes blocked',check:'startup',observedAt:null,evidence:{}},
+ }),{pending,transaction,pairing});
+ await expect(page.getByRole('alert')).toHaveCount(1);
+ await expect(page.getByRole('alert')).toContainText('Hive 拒绝网络连接');
+ await expect(page.getByText('自动核对已暂停，请重新核对。',{exact:true})).toBeVisible();
+ await expect(page.getByRole('button',{name:'重新检查设备',exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'继续核对原请求',exact:true})).toHaveCount(0);
+ const check=page.getByRole('button',{name:'重新核对',exact:true});await expect(check).toBeVisible();
+ expect(await check.evaluate(e=>e.getBoundingClientRect().bottom<=innerHeight)).toBe(true);
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('connection refused');
+ await expect(page.getByRole('dialog')).toContainText('PAIRING_OBSERVATION_PAUSED');
+ await expect(page.getByRole('dialog')).toContainText('device recovery transaction unresolved');
+ await page.keyboard.press('Escape');
+ await check.click();await expect(page.getByLabel('Fixture actions')).toHaveText('recover continue_checking');
+ await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'返回设备设置',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('recover continue_checking');
+ await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeFocused();
+});
+
+test('paused observation retains read recovery when binding evidence is invalid',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({view:{...pending,recovery:{...transaction,new_identity:null,phase:'pending',pairing,failure:{code:'PAIRING_OBSERVATION_PAUSED',message:'observation paused'}}},error:{code:'FIRST_LAUNCH_STALE_RESULT',message:'receipt revision regressed',check:'first_launch_revision',observedAt:null,evidence:{}}}),{pending,transaction,pairing});
+ await page.getByRole('button',{name:'重新检查设备',exact:true}).click();
+ await expect(page.getByLabel('Fixture actions')).toHaveText('refresh');
 });

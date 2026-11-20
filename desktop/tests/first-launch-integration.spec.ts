@@ -196,3 +196,13 @@ test('a completed begin receipt survives the same-instance saved configuration r
  await expect(page.getByRole('navigation')).toHaveCount(0);
  expect((await calls(page)).filter(c=>c.command==='device_begin')).toHaveLength(1);
 });
+
+test('pending binding owns the page when startup is blocked by that same transaction',async({page})=>{
+ await open(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const w=window as any,s=await w.__TAURI_INTERNALS__.invoke('startup_status');const failure={code:'RUNTIME_RESTORE_FAILED',message:'device recovery transaction unresolved: phase=pending revision=4; start/account writes blocked'};w.__firstLaunchTest.startupOverride={...s,state:'blocked',revision:s.revision+10,failure};w.emitStartup(w.__firstLaunchTest.startupOverride);});
+ await expect(page.getByTestId('startup-recovery')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
+ await page.getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('device recovery transaction unresolved');
+ expect((await calls(page)).filter(c=>['device_begin','device_recovery_confirm','startup_retry'].includes(c.command))).toEqual([]);
+});

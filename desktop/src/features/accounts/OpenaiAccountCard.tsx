@@ -20,7 +20,7 @@ import './openai-account.css';
 function ErrorEvidence({error}:{error:UiFailure}){return <pre className="oa-error-evidence">{presentFailure(error,currentLocale()).details}</pre>;}
 
 type Props={accounts:AccountsModel;runtime:RuntimeModel;supply?:SharedSupply;navigationRequest?:NavigationRequest;onNavigate?:(target:NavigationTarget)=>void;now:number};
-function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubmitted}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string;onConfirmationChange?:(open:boolean)=>void;onSubmitted?:()=>void}){
+function OpenaiAction({accounts,runtime,action,label,primary=false,onConfirmationChange,onSubmitted}:{accounts:AccountsModel;runtime:RuntimeModel;action:AccountAction;label:string;primary?:boolean;onConfirmationChange?:(open:boolean)=>void;onSubmitted?:()=>void}){
  const view=accounts.views.openai;
  const [confirmation,setConfirmation]=useState<{stamp:string;target?:string|null;selected?:string|null}>();
  const [invalid,setInvalid]=useState(false);
@@ -34,7 +34,7 @@ function OpenaiAction({accounts,runtime,action,label,onConfirmationChange,onSubm
  const block=()=>accountActionBlock(action,{autoService:true,view,platform:'openai',now:Date.now(),dirty:!!accounts.dirty.openai,busy:!!accounts.writeBusy.openai||accounts.sourceSaving,unknown:!!accounts.uncertain.openai||!!accounts.readFailures.openai,submissionBlocked:accounts.submissionBlocked,sharedReadFailure:accounts.sharedReadFailure,defaultsReady:!!accounts.defaults,runtime:runtime.view,runtimeBlocked:!!runtime.error||runtime.uncertain||runtime.stalled});
  const reason=block();
  return <Dialog.Root open={confirmation!==undefined} onOpenChange={open=>{if(!open)setConfirmation(undefined);}}>
-  <div><Dialog.Trigger asChild><Button variant="outline" disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
+  <div><Dialog.Trigger asChild><Button variant={primary?'default':'outline'} disabled={!!reason} onClick={()=>{setInvalid(false);setConfirmation({stamp:stamp(),target:view?.candidate.fingerprint,selected:view?.selection.fingerprint});}}>{t(label)}</Button></Dialog.Trigger>{reason&&<p className="oa-help">{t(reason.message)}</p>}</div>
   <Dialog.Portal><Dialog.Overlay className={`dialog-overlay${action==='authorize'?' openai-login-overlay':''}`}/><Dialog.Content className={`dialog-content${action==='authorize'?' openai-login-confirm':''}`} onEscapeKeyDown={event=>{event.preventDefault();event.stopImmediatePropagation();setConfirmation(undefined);}}>
    <header>
    <Dialog.Title>{t(action==='clear_selection'?'取消接入':action==='select'?'接入 OpenAI 账号':action==='confirm_change'?'确认更换 OpenAI 账号':view?.selection.state==='selected'?'重新登录 OpenAI':'登录 OpenAI')}</Dialog.Title>
@@ -139,7 +139,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
  if(repairChecking){title='正在核验账号…';note='';}
  if(accounts.sourceSaving){title=accounts.sourceSavePhase==='saving'?'正在保存设置…':accounts.sourceSavePhase==='verifying'?'正在核验账号…':'正在读取登录凭证…';note='';}
  if(completion){title=journey.kind==='change'?'账号更换成功':journey.kind==='repair'?'账号读取已修复':journey.kind==='relogin'?'重新登录成功':'账号接入成功！';note=(journey.kind==='change'?'已更换账号':journey.kind==='repair'?'已读取并核验账号':journey.kind==='relogin'?'已完成重新登录':'账号已接入')+(supplyView?.paused?'，接单保持暂停。':ready?'，可以接单了。':reasons.length===1&&reasons[0]==='quota_exhausted'?'，等待额度恢复后接单。':'，等待接单条件恢复。');}
- const kind=different?'change':journey?.kind??(preparationFailed||preparing?(op?.kind==='confirm_change'?'change':'intake'):undefined);
+ const kind=different?'change':journey?.kind??(preparationFailed||preparing?(op?.kind==='confirm_change'?'change':'intake'):credentialExpired?'relogin':undefined);
  const steps=kind==='first'?['登录','核验账号','确认接入','准备接单']:kind==='intake'?['确认接入','准备接单']:kind==='change'?['核对账号','确认换号','准备接单']:kind==='repair'?['修复读取','核验账号']:kind==='relogin'?['重新登录','核验账号']:[];
  if(preparing&&(kind==='repair'||kind==='relogin'))steps.push('准备接单');
  let step=completion?steps.length:kind==='first'?liveLogin?(progress?.phase==='verifying'?1:0):candidate&&!selected?2:selected?3:0:kind==='change'?preparing?2:journey?.kind==='change'?1:0:kind==='intake'?selected?1:0:preparing?2:accounts.dirty.openai||liveLogin&&progress?.phase!=='verifying'?0:1;
@@ -175,7 +175,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    {showSteps&&accountDetails}
   </div>
   {showSteps&&<ol className="oa-steps" aria-label={t('OpenAI 当前流程')}>{steps.map((label,index)=>{const state=index<step?'done':index===step?failed?'failed':'current':'pending';return <li key={label} className={state} aria-current={state==='current'?'step':undefined}><span className="oa-step-dot" aria-hidden="true">{index+1}</span><span>{t(label)}</span><span className="sr-only">{t(state==='done'?'已完成':state==='failed'?'失败':state==='current'?'当前阶段':'未开始')}</span></li>;})}</ol>}
-  <div className={`oa-body ${showSteps?'oa-with-steps':''}`}><div className="oa-status-line"><p className={`oa-title ${(failed||credentialExpired)&&!intakeUnconfirmed&&!cancelUnknown?'oa-error':completion||ready&&!observing?'oa-good':''}`} role="status">{t(title)}</p>{!completion&&!cancelUnknown&&problems.some(p=>p.code!=='operation_pending')&&<AccountErrorPopover errors={problems.filter(p=>p.code!=='operation_pending')}/>}</div>{note&&<p className="oa-note">{t(note)}</p>}</div>
+  <div className={`oa-body ${showSteps?'oa-with-steps':''}`}><div className="oa-status-line"><p className={`oa-title ${failed&&title!=='授权已过期'&&!intakeUnconfirmed&&!cancelUnknown?'oa-error':completion||ready&&!observing?'oa-good':''}`} role="status">{t(title)}</p>{!completion&&!cancelUnknown&&problems.some(p=>p.code!=='operation_pending')&&<AccountErrorPopover errors={problems.filter(p=>p.code!=='operation_pending')}/>}</div>{note&&<p className="oa-note">{t(note)}</p>}</div>
   <div className="oa-actions">
    {completion?<Button onClick={accounts.dismissOpenai}>{t('完成')}</Button>:repairChecking?null:cancelUnknown?(query?.phase==='stopped'?<Button variant="outline" onClick={()=>void accounts.queryLogin()}>{t('核对登录结果')}</Button>:null):liveLogin?<>
     {progress?.actions.open&&<Button disabled={accounts.openingLogin} onClick={()=>void accounts.openLoginPage()}>{t(accounts.openingLogin?'正在打开…':accounts.loginOpenError?'重新打开登录页面':'打开登录页面')}</Button>}
@@ -186,7 +186,7 @@ export function OpenaiAccountCard({accounts,runtime,supply,navigationRequest,onN
    :accounts.sharedFailure&&onNavigate?<Button onClick={()=>onNavigate({page:'overview',section:'device'})}>{t('前往概览')}</Button>
    :sourceProblem?<Button onClick={()=>{setPanel('settings');setDetails(true);}}>{t('修改凭证读取设置')}</Button>
    :op?.kind==='authorize'&&['cancelled','failed'].includes(op.state)&&(!problem||['authorization_timeout','authorization_process_failed'].includes(problem.code))?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
-   :credentialExpired||problem?.code==='expired'?<OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
+   :credentialExpired||problem?.code==='expired'?<OpenaiAction primary accounts={accounts} runtime={runtime} action="authorize" label="重新登录"/>
    :problem?.code==='client_missing'?<><Button onClick={()=>{setPanel('install');setDetails(true);}}>{t('查看安装说明')}</Button><OpenaiAction accounts={accounts} runtime={runtime} action="authorize" label="重试"/></>
    :different?<Button onClick={()=>{setPanel('compare');setDetails(true);}}>{t('核对账号变更')}</Button>
    :preparationFailed?<Button disabled={!!accounts.busy.openai||runtime.busy||runtime.startBlocked} onClick={()=>void retryPreparation()}>{t('重试')}</Button>

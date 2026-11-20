@@ -240,3 +240,24 @@ for(const platform of ['openai','claude'] as const)for(const paused of [false,tr
  await page.addInitScript(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(c:string,a:any={})=>{if(c==='supply_set_paused'){w.calls.push({command:c,args:a});throw {code:'RESPONSE_TIMEOUT',message:'supply response timed out; result unconfirmed'};}return invoke(c,a);};});
  await page.goto('/');await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();const row=page.getByRole('region',{name:platform==='claude'?'Claude 账号':'OpenAI 账号',exact:true});await row.getByRole('button',{name:paused?'恢复接单':'暂停接单',exact:true}).click();await expect(page.locator('[data-desktop-status]')).toHaveAttribute('data-desktop-status','unconfirmed');await expect(row).toContainText('等待 Bee 响应超时');await expect(row.getByRole('button',{name:paused?'恢复接单':'暂停接单',exact:true})).toHaveCount(0);await expect(row).not.toContainText('当前平台接单状态待核对，暂不能修改暂停。');expect(await page.evaluate(p=>(window as any).paused[p],platform)).toBe(paused);await page.clock.runFor(1000);expect((await writes(page)).filter((x:any)=>x.command==='supply_set_paused')).toHaveLength(1);
 });
+
+for(const paused of [false,true])test(`expired OpenAI starts the approved relogin flow without changing ${paused?'paused':'allowed'} supply`,async({page})=>{
+ if(paused)await page.route('**/bee-preview/fixture.mjs',async route=>{const response=await route.fetch();await route.fulfill({response,body:(await response.text()).replace('let local=','w.paused.openai=true;let local=')});});
+ await page.goto('/tests/fixtures/bee-preview/app.html?scene=account-expired');
+ await page.waitForFunction(()=>(window as any).__beePreviewReady);
+ const row=page.getByRole('region',{name:'OpenAI 账号',exact:true});
+ await expect(row.getByRole('status')).toHaveText('授权已过期');
+ const steps=row.getByRole('list',{name:'OpenAI 当前流程',exact:true});
+ await expect(steps).toBeVisible();await expect(steps.locator('li')).toHaveCount(2);
+ await expect(steps.locator('li[aria-current="step"]')).toContainText('重新登录');
+ await expect(steps.locator('li').nth(1)).toContainText('核验账号');
+ await expect(row.getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();
+ await expect(row.getByRole('button',{name:/^(恢复接单|暂停接单)$/})).toHaveCount(0);
+ if(paused)await expect(row).toContainText('接单保持暂停。');
+ await row.getByRole('button',{name:'重新登录',exact:true}).click();
+ const dialog=page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true});
+ await expect(dialog).toBeVisible();await expect(dialog).toContainText('登录后仍暂停');
+ await dialog.getByRole('button',{name:'取消',exact:true}).click();await expect(dialog).toHaveCount(0);
+ await expect(row.getByRole('button',{name:'重新登录',exact:true})).toBeFocused();
+ expect(await page.evaluate(()=>(window as any).calls.filter((c:any)=>['account_action','authorize_start','supply_set_paused'].includes(c.command)))).toEqual([]);
+});

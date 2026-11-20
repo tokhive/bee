@@ -2,26 +2,62 @@
 
 2026-11-20（Asia/Shanghai）。适用范围：打开 App → 设备配对／修复 → 启动核验 → 退出／重启。沿用已认可的自动恢复、显式接入和暂停规则；不新增依赖、界面或业务授权。
 
-## 实际流程与责任
+## 修复前后对照
+
+图例：**红色「原问题」**表示旧版错误行为，**绿色「已修复」**表示本次修改，**橙色「安全保护」**表示必须继续阻塞的真正未知结果，灰色表示既有正常步骤。每个节点同时有文字标签，颜色不是唯一识别方式。D1／D2／D3 与下方验收表对应；虚线仅表示修复对应关系，不表示运行时调用。
+
+```mermaid
+flowchart TB
+    subgraph D1["D1：配对尚未完成时，启动检查怎么处理？"]
+        direction LR
+        O1["原问题 D1<br/>检查漏掉配对屏障，返回 idle<br/>随后提交 Restore，才被 Go 拒绝"]
+        F1["已修复 D1<br/>检查设备配对／修复屏障<br/>未完成就返回 blocked，不创建启动尝试"]
+        O1 -. 修复为 .-> F1
+    end
+    subgraph D2["D2：检查后发生变化，Restore 明确拒绝时怎么记？"]
+        direction LR
+        O2["原问题 D2<br/>运行操作尚未创建，已有明确拒绝回包<br/>Rust 却保存 unknown，并进入失败清理"]
+        F2["已修复 D2<br/>保存 failed／RUNTIME_RESTORE_REJECTED<br/>保留原错误和管理进程，不对不存在的 worker 执行 Stop"]
+        O2 -. 修复为 .-> F2
+    end
+    subgraph D3["D3：配对已经完成，旧错误记录如何收尾？"]
+        direction LR
+        O3["原问题 D3<br/>旧 journal 仍是 unknown，operation_id 为空<br/>持续查询不存在的运行操作，重启仍阻塞"]
+        F3["已修复 D3<br/>依据明确受理前拒绝证据识别旧误记<br/>重检当前条件；新启动关联并原样归档旧记录"]
+        O3 -. 修复为 .-> F3
+    end
+    S["安全保护仍生效<br/>只有空编号、超时或回包丢失，不能证明未受理<br/>继续核对原操作；证据不足时保持阻塞"]
+    classDef old fill:#fee2e2,stroke:#b91c1c,color:#7f1d1d,stroke-width:2px;
+    classDef fixed fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px;
+    classDef guard fill:#fef3c7,stroke:#b45309,color:#78350f,stroke-width:2px;
+    class O1,O2,O3 old;
+    class F1,F2,F3 fixed;
+    class S guard;
+```
+
+## 修复后的完整流程与责任
+
+下图绿色节点标明本次具体修复点；正常的失败处理不是旧问题，使用灰色或橙色表示。
 
 ```mermaid
 flowchart TD
     A[打开 App：Rust 创建固定 profile 的 Go 管理进程] --> B[核对原启动记录与本地恢复资格]
     B --> C{设备配对或修复尚未完成？}
-    C -->|是| D[Go 返回 RECOVERY_DEVICE_UNRESOLVED；不提交运行恢复]
+    C -->|是| D["已修复 D1：检查配对屏障<br/>Go 返回 RECOVERY_DEVICE_UNRESOLVED；不提交运行恢复"]
     D --> E[用户完成原配对；Go 核对 Hive 原申请并保存 completed]
     E --> F[Rust 重检绑定、账号数据和网络；恢复管理能力]
     F --> G[用户显式接入账号；原有贡献与暂停规则继续生效]
     C -->|否| H{原启动尝试是否未决？}
-    H -->|明确受理前拒绝| I[保留旧记录；重新核验当前上下文]
+    H -->|明确受理前拒绝| T["已修复 D3：识别具有明确拒绝证据的旧误记<br/>原件完整保留；不再查询不存在的操作"]
+    T --> I[重新核验当前上下文；新尝试归档并关联已有记录]
     H -->|已受理或无法证明| J[核对原操作；跨实例须满足原会话退役协议]
     H -->|无记录或已安全结束| I
-    J -->|证据仍不足| K[阻塞并保留诊断；不提交新恢复]
+    J -->|证据仍不足| K["安全保护：证据不足<br/>阻塞并保留诊断；不提交新恢复"]
     J -->|已安全结束| I
     I --> L[Rust 保存 submitted；Go 在生命周期锁内重复受理检查]
-    L -->|明确拒绝| M[保存 failed 和 RUNTIME_RESTORE_REJECTED；保持管理进程]
+    L -->|明确拒绝| M["已修复 D2：明确受理前拒绝<br/>保存 failed／RUNTIME_RESTORE_REJECTED；保持管理进程"]
     L -->|返回带编号操作| N[先保存 operation_id，再回读终态]
-    L -->|超时或回包不可信| O[unknown；不得按空编号推定失败]
+    L -->|超时或回包不可信| O["安全保护：真正 unknown<br/>不得按空编号推定未受理"]
     N -->|运行、等待账号或原停止意图得到证实| P[succeeded]
     N -->|原操作明确失败或取消| Q[failed；按既有流程清理并等待人工处理]
     N -->|回读或落盘结果不明| O
@@ -29,6 +65,11 @@ flowchart TD
     O --> J
     P --> R[退出保存原意图、暂停选择和会话收尾证据]
     R -->|重新打开| A
+    classDef default fill:#f1f5f9,stroke:#64748b,color:#334155;
+    classDef fixed fill:#dcfce7,stroke:#15803d,color:#14532d,stroke-width:2px;
+    classDef guard fill:#fef3c7,stroke:#b45309,color:#78350f,stroke-width:2px;
+    class D,T,M fixed;
+    class J,K,O guard;
 ```
 
 已核实的源码边界：

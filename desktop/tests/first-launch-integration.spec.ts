@@ -231,3 +231,12 @@ test('confirmed expiry owns the startup gate but preserves unrelated failures',a
  await page.evaluate(()=>{const w=window as any;w.__firstLaunchTest.startupOverride={...w.__firstLaunchTest.startupOverride,revision:200,failure:{code:'RUNTIME_RESTORE_FAILED',message:'permission denied writing runtime state'}};w.emitStartup(w.__firstLaunchTest.startupOverride);});
  await expect(page.getByRole('alert')).toContainText('permission denied writing runtime state');
 });
+
+for(const scene of ['device-pending','device-expired'])test('successful recovery gate is not a pairing failure: '+scene,async({page})=>{
+ await open(page,'?scene='+scene);await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const w=window as any,s=await w.__TAURI_INTERNALS__.invoke('startup_status');w.__firstLaunchTest.startupOverride={...s,state:'blocked',revision:s.revision+10,failure:{code:'DEVICE_RECOVERY_RECHECK_REQUIRED',message:'device recovery phase=pending; contribution remains stopped; recheck startup prerequisites after recovery completes'}};w.emitStartup(w.__firstLaunchTest.startupOverride);});
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ await expect(page.getByTestId('startup-recovery')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:/^重新检查设备$|^重新核对$|^取消本次重绑$/})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:scene==='device-pending'?'打开 Hive 确认网页':'重新生成配对码',exact:true})).toBeVisible();
+});

@@ -29,9 +29,10 @@ export function createDesktopState(deps:DesktopDeps){
  let currentScope=deps.scope;
  let unlistenSettled:(()=>void)|undefined;
  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
- let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0;
+ let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0,startupReleased=false;
  let startupBegan=Date.now(),startupRetrying=false;
- const startupOwnsDevice=()=>startupRetrying||!!deps.bridge.startupStatus&&(!state.startup||state.startup.state==='checking');
+ const STARTUP_READ_BUDGET_MS=2000;
+ const startupOwnsDevice=()=>startupRetrying||!startupReleased&&!!deps.bridge.startupStatus&&(!state.startup||state.startup.state==='checking');
  const startupUnverified=()=>deps.bridge.startupStatus?state.startup?.state!=='ready':!!state.startup&&state.startup.state!=='ready';
  let runtimeReceiptRevision=-1,accountReceiptRevisions:Partial<Record<AccountPlatform,number>>={};
  let deviceObservedAt:string|null=null,diagnosticObservedAt:string|null=null;
@@ -85,19 +86,39 @@ export function createDesktopState(deps:DesktopDeps){
  const repair=()=>{for(const [key,g]of gates)if(g.terminal)gates.delete(key);blocked=false;};
  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
  const reset=()=>({recovery:undefined,recoveryError:null,recoveryObservation:undefined,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
+ const surfaceRejectedStartup=(next:StartupStatus,actual:string,required:string)=>{
+  if(disposed)return;
+  const nativeInstance=state.native.metadata?.instance;
+  if(next.instance&&nativeInstance&&next.instance!==nativeInstance)return;
+  startupReleased=true;
+  const observed=next.failure?{...next.failure,evidence:{...next.failure.evidence,actual,required}}:failure({code:'STARTUP_STATUS_REJECTED',message:`startup ${next.state} receipt rejected: actual=${actual}; required=${required}`},'startup_status');
+  if(next.failure)publish({...(state.deviceError?{}:{deviceError:observed}),startupReadError:null});
+  else if(!state.startup)publish({startupReadError:observed});
+  if(state.native.state==='ready'&&!pending)void refresh();
+ };
  const acceptStartup=(next:StartupStatus)=>{
-  if(currentScope!==undefined&&(!currentScope||next.instance!==currentScope.instance))return;
+  if(currentScope!==undefined&&(!currentScope||next.instance!==currentScope.instance)){
+   if(next.state!=='checking')surfaceRejectedStartup(next,`instance=${next.instance}`,`current_scope.instance=${currentScope?.instance??'null'}`);
+   return;
+  }
   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
   if(next.state!=='checking'){
-   if(state.bindingRevision!==undefined&&next.binding_revision!==null&&next.binding_revision!==state.bindingRevision)return;
-   if(state.runtime&&next.network_revision!==null&&next.network_revision!==state.runtime.network_revision)return;
+   if(state.bindingRevision!==undefined&&next.binding_revision!==null&&next.binding_revision!==state.bindingRevision){
+    surfaceRejectedStartup(next,`binding_revision=${next.binding_revision}`,`binding_revision=${state.bindingRevision}`);
+    return;
+   }
+   if(state.runtime&&next.network_revision!==null&&next.network_revision!==state.runtime.network_revision){
+    surfaceRejectedStartup(next,`network_revision=${next.network_revision}`,`network_revision=${state.runtime.network_revision}`);
+    return;
+   }
   }
   if(state.startup&&next.revision<state.startup.revision)return;
   const becameReady=next.state==='ready'&&state.startup?.state!=='ready',generation=epoch;
   if(next.state==='checking'&&state.startup?.state!=='checking'){
-   startupBegan=Date.now();startupFailures=0;clearTimeout(startupTimer);
+   startupBegan=Date.now();startupFailures=0;startupReleased=false;clearTimeout(startupTimer);
    if(!startupReading)startupTimer=setTimeout(()=>void readStartup(),2000);
   }
+  startupReleased=next.state!=='checking';
   publish({startup:next,startupReadError:null});
   if(next.state!=='checking'){clearTimeout(startupTimer);publish({startupObservation:'idle'});}
   if(becameReady)void Promise.resolve(pending).then(()=>{if(!disposed&&epoch===generation&&state.startup?.state==='ready')void refresh();});
@@ -107,7 +128,7 @@ export function createDesktopState(deps:DesktopDeps){
   if(currentScope!==undefined&&(native.profile_id!==undefined&&native.profile_id!==currentScope?.profile_id||native.state==='ready'&&(!currentScope||native.metadata?.instance!==currentScope.instance)))return;
   const changed=native.metadata?.instance!==state.native.metadata?.instance||native.profile_id!==state.native.profile_id||native.state!==state.native.state;
   if(!changed){publish({native});return;}
-  epoch++;startupReading=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
+  epoch++;startupReading=false;startupReleased=false;if(state.startup?.instance!==native.metadata?.instance)clearTimeout(startupTimer);blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);
   const generation=epoch,instance=native.metadata?.instance,startup=(!instance&&native.state!=='ready'||state.startup?.instance===instance)?state.startup:undefined;
   publish({...reset(),native,startup,busy:false});
   if(native.state==='ready')queueMicrotask(async()=>{if(!disposed&&epoch===generation&&state.native.metadata?.instance===instance){if(state.startup?.instance!==instance)await readStartup();if(!disposed&&epoch===generation)void refresh();}});
@@ -115,12 +136,34 @@ export function createDesktopState(deps:DesktopDeps){
  async function readStartup(){
   if(disposed||startupReading||!deps.bridge.startupStatus)return;
   const generation=epoch;startupReading=true;publish({startupObservation:'active'});
-  try{const next=await deps.bridge.startupStatus();if(disposed||generation!==epoch)return;startupFailures=0;publish({startupReadError:null});acceptStartup(next);}
-  catch(cause){if(!disposed&&generation===epoch){startupFailures++;publish({startupReadError:failure(cause,'startup_status')});}}
+  const budgetTimer=setTimeout(()=>{
+   if(disposed||generation!==epoch||startupReleased)return;
+   startupReleased=true;
+   if(!state.startup&&!state.deviceError)publish({startupReadError:failure({code:'STARTUP_READ_TIMEOUT',message:`startup_status did not return within ${STARTUP_READ_BUDGET_MS}ms; required=native startup snapshot for instance=${state.native.metadata?.instance??'none'}`},'startup_status')});
+   if(state.native.state==='ready'&&!pending)void refresh();
+  },STARTUP_READ_BUDGET_MS);
+  try{
+   const next=await deps.bridge.startupStatus();
+   if(disposed||generation!==epoch)return;
+   startupFailures=0;acceptStartup(next);
+  }catch(cause){
+   if(!disposed&&generation===epoch){
+    startupFailures++;
+    publish({startupReadError:failure(cause,'startup_status')});
+    if(state.startup?.state!=='checking'){
+     startupReleased=true;
+     if(state.native.state==='ready'&&!pending)void refresh();
+    }
+   }
+  }
   finally{
+   clearTimeout(budgetTimer);
    if(generation===epoch)startupReading=false;
-   if(!disposed&&generation===epoch&&state.startup?.state!=='ready'&&state.startup?.state!=='blocked'){
-    if(startupFailures>3||Date.now()-startupBegan>=60000)publish({startupObservation:'stopped'});
+   if(!disposed&&generation===epoch&&state.startup?.state!=='ready'&&state.startup?.state!=='blocked'&&!startupReleased){
+    if(startupFailures>3||Date.now()-startupBegan>=60000){
+     startupReleased=true;publish({startupObservation:'stopped'});
+     if(state.native.state==='ready'&&!pending)void refresh();
+    }
     else startupTimer=setTimeout(()=>void readStartup(),Math.min(startupFailures?[1000,2000,4000][startupFailures-1]:2000,60000-(Date.now()-startupBegan)));
    }
   }
@@ -129,7 +172,7 @@ export function createDesktopState(deps:DesktopDeps){
   if(started||disposed)return;started=true;let received=false;
   void deps.bridge.onStatus(v=>{received=true;accept(v);}).then(off=>{if(disposed)off();else unlisten=off;},e=>publish({error:failure(e)}));
   if(deps.bridge.onRequestSettled)void deps.bridge.onRequestSettled(acceptSettled).then(off=>{if(disposed)off();else unlistenSettled=off;},e=>publish({error:failure(e,'pending_requests')}));
-  if(deps.bridge.onStartup)void deps.bridge.onStartup(acceptStartup).then(off=>{if(disposed)off();else unlistenStartup=off;},e=>publish({startupReadError:failure(e,'startup_status')}));
+  if(deps.bridge.onStartup)void deps.bridge.onStartup(acceptStartup,cause=>{if(disposed)return;startupReleased=true;publish({startupReadError:failure(cause,'startup_status')});if(state.native.state==='ready'&&!pending)void refresh();}).then(off=>{if(disposed)off();else unlistenStartup=off;},e=>publish({startupReadError:failure(e,'startup_status')}));
   if(deps.bridge.startupStatus)void readStartup();
   void deps.bridge.status().then(v=>{if(!received)accept(v);},e=>{if(!received)publish({error:failure(e)});});
  }
@@ -186,10 +229,10 @@ export function createDesktopState(deps:DesktopDeps){
    }catch(cause){if(current()){const error=failure(cause,'device_context');fail('context',error);publish({deviceError:error,deviceContextFailure:error});}return;}
   }
   if(!current())return;
-  if(problem){if(problem.code!=='REQUEST_RESOURCE_BUSY')publish({deviceError:problem});fail('device',problem);await readPending();}
+  if(problem){if(problem.code!=='REQUEST_RESOURCE_BUSY')publish({deviceError:problem,...(state.startupReadError?.code==='STARTUP_READ_TIMEOUT'?{startupReadError:null}:{})});fail('device',problem);await readPending();}
   else{
    succeed('device');deviceObservedAt=new Date().toISOString();
-   publish({device,deviceError:null,...(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt)?{diagnosticFailure:null}:{})});
+   publish({device,deviceError:null,...(state.startupReadError?.code==='STARTUP_READ_TIMEOUT'?{startupReadError:null}:{}),...(!diagnosticObservedAt||Date.parse(deviceObservedAt)>Date.parse(diagnosticObservedAt)?{diagnosticFailure:null}:{})});
   }
  }
  async function refreshDevice(){
@@ -274,7 +317,7 @@ export function createDesktopState(deps:DesktopDeps){
     publish({recovery,recoveryError,recoveryObservation});
     // A replaced binding invalidates its startup receipt along with scoped data.
     // Obtain the new receipt before deciding who owns remote device checks.
-    if(!state.startup&&deps.bridge.startupStatus){await readStartup();if(!current())return;}
+    if(!state.startup&&deps.bridge.startupStatus&&!startupReleased){await readStartup();if(!current())return;}
     if(!startupOwnsDevice()&&!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED')&&!laneBlocked()&&allowed('device'))startRead('device',instance,()=>observeDevice(instance,generation));
     // Observe first. Advancing an existing approved transaction has a separate
     // owner and must never keep runtime/account observations waiting for HTTP.
@@ -396,7 +439,7 @@ export function createDesktopState(deps:DesktopDeps){
  return {
   setCurrentScope(scope:{profile_id:string;instance:string}|null){
    if(currentScope!==undefined&&JSON.stringify(currentScope)===JSON.stringify(scope))return;
-   currentScope=scope;epoch++;startupReading=false;startupFailures=0;blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);clearTimeout(startupTimer);
+   currentScope=scope;epoch++;startupReading=false;startupReleased=false;startupFailures=0;blocked=false;gates.clear();nativePending=[];advancementError=null;runtimeReceiptRevision=-1;accountReceiptRevisions={};deviceObservedAt=diagnosticObservedAt=null;clearTimeout(timer);clearTimeout(startupTimer);
    publish({...reset(),currentProfile:scope?.profile_id??null,native:{state:'starting'},startup:undefined,startupReadError:null,busy:false});
    const generation=epoch;
    if(scope)void deps.bridge.status().then(v=>{if(!disposed&&generation===epoch){accept(v);void readStartup();}},cause=>{if(!disposed&&generation===epoch)publish({error:failure(cause,'bridge_status')});});
@@ -418,7 +461,7 @@ export function createDesktopState(deps:DesktopDeps){
     await refresh();acceptStartup(next);
    }finally{startupRetrying=false;}
   },
-  async recheckStartup(){await readPending();if(nativePending.length)return refresh();if(!deps.bridge.startupRecheck){repair();return refreshDevice();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refreshDevice();acceptStartup(next);},
+  async recheckStartup(){await readPending();if(nativePending.length)return refresh();gates.delete('device');if(!deps.bridge.startupRecheck){repair();return refreshDevice();}const next=await deps.bridge.startupRecheck();if(next.state==='ready')repair();await refreshDevice();acceptStartup(next);},
   async recheckRuntime(){
    const generation=epoch;await pending;
    if(disposed||generation!==epoch)return;

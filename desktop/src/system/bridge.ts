@@ -77,7 +77,7 @@ export interface SystemBridge {
  startupRecheck?():Promise<StartupStatus>;
  startupQuery?():Promise<StartupStatus>;
  startupRetry?():Promise<StartupStatus>;
- onStartup?(listener:(status:StartupStatus)=>void):Promise<Unlisten>;
+ onStartup?(listener:(status:StartupStatus)=>void,onError?:(cause:unknown)=>void):Promise<Unlisten>;
   status(): Promise<BridgeStatus>;
   ping(): Promise<BridgeReply>;
   onStatus(listener: (status: BridgeStatus) => void): Promise<Unlisten>;
@@ -111,7 +111,7 @@ export function createSystemBridge(): SystemBridge {
  startupRecheck: async()=>decodeStartupStatus(await invoke('startup_recheck')),
  startupQuery: async()=>decodeStartupStatus(await invoke('startup_query')),
  startupRetry: async()=>decodeStartupStatus(await invoke('startup_retry')),
- async onStartup(listener){let active=true;const off=await listen<unknown>('bee://startup-status',event=>{if(active)listener(decodeStartupStatus(event.payload));});return()=>{active=false;off();};},
+ async onStartup(listener,onError){let active=true;const off=await listen<unknown>('bee://startup-status',event=>{if(!active)return;try{listener(decodeStartupStatus(event.payload));}catch(cause){onError?.(cause);}});return()=>{active=false;off();};},
     ping: () => invoke<BridgeReply>('bridge_request', { method: 'ping' }),
     async onNotification(listener) {
       let active=true;

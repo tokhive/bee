@@ -113,3 +113,112 @@ test('manual startup retry refreshes context before accepting a newer network re
  assert.equal(model.getSnapshot().runtime?.network_revision,1);
  assert.equal(model.getSnapshot().startup?.state,'ready');
 });
+
+const settle=async()=>{for(let i=0;i<12;i++)await tick();};
+const boundContext={hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:1};
+const stoppedRuntime={revision:1,network_revision:0,local:'stopped',run_id:null,platforms:{}};
+const identityBody='{"error":{"code":"invalid_device_credential","message":"invalid device credential","param":null,"type":"authentication_error"}}';
+function identityDetails(code:string,kind:string,http?:string,extra:Record<string,string>={}){
+ const evidence:Record<string,string>={elapsed_ms:'3',failure_kind:kind,method:'GET',path:'/api/bee/identity',phase:'http_error',...(http?{http_status:http}:{}),...(code==='invalid_device_credential'?{remote_code:code}:{}),...extra};
+ return {check:'device_identity',observed_at:new Date().toISOString(),evidence};
+}
+function identityThrow(code:string,kind:string,http?:string,message?:string){
+ return {code,message:message??`${code}: GET /api/bee/identity${http?' HTTP '+http:''}`,details:identityDetails(code,kind,http)};
+}
+function blockedIdentity(instance:string,code:string,kind:string,http?:string,revision=2,binding=1,network=0){
+ const failure=identityThrow(code,kind,http);
+ return {state:'blocked' as const,failure:{code:failure.code,check:'device_identity' as const,observedAt:failure.details.observed_at,evidence:failure.details.evidence,message:failure.message},instance,binding_revision:binding,network_revision:network,observed_at:failure.details.observed_at,revision,can_retry:false,recovering:false};
+}
+const identityCases=[
+ {code:'invalid_device_credential',kind:'http_rejected',http:'401'},
+ {code:'http_rejected',kind:'http_rejected',http:'503'},
+ {code:'timeout',kind:'timeout'},
+ {code:'connection_refused',kind:'connection_refused'},
+] as const;
+function boundIdentityDeps(instance:string,overrides:any){
+ let remoteReads=0;
+ const device={
+  context:async()=>boundContext,
+  recoveryStatus:async()=>{throw {code:'DEVICE_RECOVERY_NONE',message:'no device recovery transaction exists; prepare explicitly first'};},
+  status:async()=>{remoteReads++;throw identityThrow(overrides.code,overrides.kind,overrides.http);},
+  ...(overrides.device??{}),
+ };
+ return {remoteReads:()=>remoteReads,deps:{scope:{profile_id:'1'.repeat(32),instance},bridge:{status:async()=>({state:'ready',profile_id:'1'.repeat(32),metadata:{instance}}),onStatus:async()=>()=>{},onStartup:async()=>()=>{},...(overrides.bridge??{})},device,runtime:()=>({snapshot:async()=>stoppedRuntime}),intervalMs:100000,...(overrides.deps??{})}};
+}
+function visibleIdentity(snapshot:ReturnType<ReturnType<typeof createDesktopState>['getSnapshot']>,code:string){
+ const failure=snapshot.deviceError??(snapshot.startup?.state==='blocked'?snapshot.startup.failure:null)??snapshot.startupReadError??null;
+ assert.ok(failure,`identity failure ${code} must leave loading; startup=${snapshot.startup?.state??'none'} deviceError=${snapshot.deviceError?.code??'none'} startupReadError=${snapshot.startupReadError?.code??'none'}`);
+ assert.equal(failure!.code,code);
+ assert.ok(snapshot.deviceContext?.device_id&&snapshot.deviceContext.owner_id&&(snapshot.deviceError||snapshot.recoveryError||snapshot.startup?.state==='blocked'),`saved bound identity ${code} must admit workspace after backend failure`);
+}
+
+test('startup decoder keeps invalid_device_credential from the observed identity HTTP 401 evidence',()=>{
+ const observed_at='2026-11-20T02:54:08.321Z';
+ const failure={code:'invalid_device_credential',message:'bound desktop device rejected; automatic pairing forbidden: invalid_device_credential: GET /api/bee/identity: HTTP 401, code="invalid_device_credential", error_json_valid=true: Hive request rejected: HTTP 401; code="invalid_device_credential"; required=HTTP 2xx; invalid device credential; verify the Hive address and local configuration; response_body='+identityBody,details:{check:'device_identity',observed_at,evidence:{elapsed_ms:'3',failure_kind:'http_rejected',http_status:'401',method:'GET',path:'/api/bee/identity',phase:'http_error',remote_code:'invalid_device_credential',response_body:identityBody,target_origin:'http://127.0.0.1:18080'}}};
+ const status={state:'blocked',failure,instance:'a'.repeat(32),binding_revision:1,network_revision:0,observed_at:'2026-11-20T02:54:09.122Z',revision:2,can_retry:false,recovering:false};
+ const decoded=decodeStartupStatus(status);
+ assert.equal(decoded.state,'blocked');
+ assert.equal(decoded.failure?.code,'invalid_device_credential');
+ assert.equal(decoded.failure?.check,'device_identity');
+ assert.equal(decoded.failure?.evidence.remote_code,'invalid_device_credential');
+ assert.equal(decoded.failure?.evidence.http_status,'401');
+ assert.match(decoded.failure!.evidence.response_body,/invalid_device_credential/);
+});
+
+for(const variant of identityCases)test(`hung startup_status still surfaces bound ${variant.code} and then reads the device`,async t=>{
+ t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-11-20T02:54:08Z')});
+ const instance='a'.repeat(32);
+ const {remoteReads,deps}=boundIdentityDeps(instance,{...variant,bridge:{startupStatus:()=>new Promise(()=>{})}});
+ const model=createDesktopState(deps as any);t.after(()=>model.dispose());model.subscribe(()=>{});
+ await settle();
+ assert.equal(model.getSnapshot().startup,undefined);
+ assert.equal(model.getSnapshot().deviceError,null);
+ assert.equal(model.getSnapshot().startupReadError??null,null);
+ assert.equal(remoteReads(),0);
+ t.mock.timers.tick(2000);await settle();
+ assert.ok(remoteReads()>0,`device.status must run after hung startup_status for ${variant.code}`);
+ visibleIdentity(model.getSnapshot(),variant.code);
+});
+
+test('blocked identity receipt rejected for a newer local binding still keeps the concrete failure',async t=>{
+ const instance='a'.repeat(32);let binding=1,remoteReads=0,revision=1;
+ const failure=blockedIdentity(instance,'invalid_device_credential','http_rejected','401',2);
+ const model=createDesktopState({scope:{profile_id:'1'.repeat(32),instance},bridge:{status:async()=>({state:'ready',profile_id:'1'.repeat(32),metadata:{instance}}),onStatus:async()=>()=>{},startupStatus:async()=>binding===1?{...failure,state:'ready',failure:null,revision,binding_revision:1,network_revision:0}:{...failure,revision:revision+1,binding_revision:1}} as any,device:{context:async()=>({...boundContext,binding_revision:binding}),recoveryStatus:async()=>{throw {code:'DEVICE_RECOVERY_NONE',message:'no device recovery transaction exists; prepare explicitly first'};},status:async()=>{remoteReads++;if(binding===1)return {state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.test'}};throw identityThrow('invalid_device_credential','http_rejected','401');}} as any,runtime:()=>({snapshot:async()=>stoppedRuntime}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await settle();
+ assert.equal(model.getSnapshot().startup?.state,'ready');
+ const firstReads=remoteReads;
+ binding=2;revision=2;await model.refresh();await settle();
+ assert.ok(remoteReads>firstReads,'dropped blocked identity must not keep owning device_status');
+ visibleIdentity(model.getSnapshot(),'invalid_device_credential');
+});
+
+test('blocked identity before onStartup registration is recovered from startup_status',async t=>{
+ const instance='a'.repeat(32);
+ const blocked=blockedIdentity(instance,'timeout','timeout');
+ let registered=false;
+ const {remoteReads,deps}=boundIdentityDeps(instance,{code:'timeout',kind:'timeout',bridge:{onStartup:async()=>{await tick();registered=true;return()=>{};},startupStatus:async()=>blocked}});
+ const model=createDesktopState(deps as any);t.after(()=>model.dispose());model.subscribe(()=>{});await settle();
+ assert.equal(registered,true);
+ visibleIdentity(model.getSnapshot(),'timeout');
+ assert.ok(model.getSnapshot().startup?.state==='blocked'||remoteReads()>0);
+});
+
+test('undecodable startup receipt releases device reads and keeps the identity failure',async t=>{
+ const instance='a'.repeat(32);
+ const {remoteReads,deps}=boundIdentityDeps(instance,{code:'connection_refused',kind:'connection_refused',bridge:{startupStatus:async()=>{throw new Error('STARTUP_STATUS_INVALID: details evidence rejected at key=response_body; required=fixed safe fields at most 32768 bytes');}}});
+ const model=createDesktopState(deps as any);t.after(()=>model.dispose());model.subscribe(()=>{});await settle();
+ assert.ok(remoteReads()>0);
+ visibleIdentity(model.getSnapshot(),'connection_refused');
+});
+
+test('bound identity recovers after startup_recheck then fails again with the same code',async t=>{
+ t.mock.timers.enable({apis:['Date','setTimeout'],now:Date.parse('2026-11-20T02:54:08Z')});
+ const instance='a'.repeat(32);let blocked=true,remoteReads=0;
+ const model=createDesktopState({scope:{profile_id:'1'.repeat(32),instance},bridge:{status:async()=>({state:'ready',profile_id:'1'.repeat(32),metadata:{instance}}),onStatus:async()=>()=>{},startupStatus:()=>new Promise(()=>{}),startupRecheck:async()=>blocked?blockedIdentity(instance,'http_rejected','http_rejected','503',blocked?2:3):{state:'ready',failure:null,instance,binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:3,can_retry:false}} as any,device:{context:async()=>boundContext,recoveryStatus:async()=>{throw {code:'DEVICE_RECOVERY_NONE',message:'no device recovery transaction exists; prepare explicitly first'};},status:async()=>{remoteReads++;if(blocked)throw identityThrow('http_rejected','http_rejected','503');return {state:'bound',hive:'https://hive.example',name:'Saved Mac',identity:{id:'device',name:'Saved Mac',owner_id:'owner',owner_email:'owner@example.test'}};}} as any,runtime:()=>({snapshot:async()=>stoppedRuntime}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await settle();t.mock.timers.tick(2000);await settle();
+ visibleIdentity(model.getSnapshot(),'http_rejected');assert.ok(remoteReads>0);
+ blocked=false;await model.recheckStartup();await settle();
+ assert.equal(model.getSnapshot().startup?.state,'ready');assert.equal(model.getSnapshot().deviceError,null);
+ blocked=true;await model.recheckStartup();await settle();
+ visibleIdentity(model.getSnapshot(),'http_rejected');
+});

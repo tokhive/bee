@@ -53,6 +53,14 @@ function supplyWriteContext(snapshot:DesktopSnapshot,local:Partial<Record<'opena
  }));
 }
 const identityFailure=(s:DesktopSnapshot)=>s.deviceError??s.recoveryError??s.diagnosticFailure??(s.startup?.state==='blocked'?s.startup.failure:null);
+const identityDeviceFailure=(s:DesktopSnapshot)=>{
+ const blocked=s.startup?.state==='blocked'?s.startup.failure:null;
+ if(blocked?.check==='device_identity')return blocked;
+ const device=s.deviceError;
+ if(!device)return null;
+ if(device.check==='device_identity'||['invalid_device_credential','device_replaced','connection_refused','timeout','http_rejected'].includes(device.code)||device.evidence.path==='/api/bee/identity')return device;
+ return null;
+};
 const initial:DesktopSnapshot={native:{state:'starting'},deviceError:null,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},error:null,busy:false,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}};
 function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedback,admission,onIntent,onReceipt,firstProfile=false,onScopeRefresh,profileFailure}:{profileFailure?:UiFailure|null;firstProfile?:boolean;onScopeRefresh:()=>Promise<unknown>;props:NativeProps;snapshot:DesktopSnapshot;model:DesktopState|undefined;admission:ReturnType<typeof firstLaunchAdmission>;onIntent:(hive:string,name:string)=>void;onReceipt:(view:DeviceView)=>void;onNavigate:(page:'accounts'|'overview')=>void;nativeLanguageFeedback:ReactNode}){
  const [diagnostic,setDiagnostic]=useState(false),[busy,setBusy]=useState(false),[checking,setChecking]=useState(false),[operationError,setOperationError]=useState<UiFailure|null>(null);
@@ -86,7 +94,7 @@ function NativeFirstLaunch({props,snapshot,model,onNavigate,nativeLanguageFeedba
   finally{if(attempt===sequence.current){working.current=false;if(mounted.current)(check?setChecking:setBusy)(false);}}
  };
  const problem=snapshot.deviceContextFailure?.code!=='DEVICE_CONTEXT_UNCONFIGURED'?snapshot.deviceContextFailure:null;
- const error=firstProfile?null:admission.failure??problem??snapshot.recoveryError??snapshot.deviceError??snapshot.error??snapshot.startupReadError??(snapshot.native.error?normalizeFailure(snapshot.native.error,'bridge_startup'):null)??null;
+ const error=firstProfile?null:admission.failure??problem??snapshot.recoveryError??snapshot.deviceError??(snapshot.startup?.state==='blocked'?snapshot.startup.failure:null)??snapshot.error??snapshot.startupReadError??(snapshot.native.error?normalizeFailure(snapshot.native.error,'bridge_startup'):null)??null;
  const startupReadFailed=!firstProfile&&!nativeUnavailable&&!localRecovery&&!activeRecovery&&!!snapshot.startupReadError&&error?.code===snapshot.startupReadError.code;
  const fresh=firstProfile||snapshot.native.state==='ready'&&snapshot.bindingRevision!==undefined&&snapshot.deviceContextFailure?.code==='DEVICE_CONTEXT_UNCONFIGURED'&&snapshot.recoveryObservation==='absent'&&snapshot.device?.state==='unbound'&&!error&&snapshot.startup?.state==='ready';
  return <>
@@ -231,7 +239,7 @@ function NativeWorkspace({props,snapshot,model,page,setPage,preferences,preferen
  const savedSwitchDevice=switchSourceIdentity&&switchSourceOrigin?{hive:switchSourceOrigin,name:switchSourceIdentity.name,ownerEmail:switchSourceIdentity.owner_email}:undefined;
  const sharedProblem=snapshot.error??identityFailure(snapshot)??null;
  const showSharedProblem=ready&&!startupReadOnly&&!!sharedProblem&&sharedProblem!==snapshot.startup?.failure;
- const startupDeviceFailure=snapshot.startup?.state==='blocked'&&snapshot.startup.failure?.check==='device_identity'?snapshot.startup.failure:null;
+ const startupDeviceFailure=identityDeviceFailure(snapshot);
  const duplicateStartupProblem=!!startupDeviceFailure||snapshot.startup?.state==='blocked'&&!!sharedProblem&&snapshot.startup.failure?.code===sharedProblem.code&&['device_replaced','invalid_device_credential'].includes(sharedProblem.code);
  const startupOwnsProblem=startupReadOnly&&snapshot.startup?.state==='blocked'&&!duplicateStartupProblem;
  const startupOverview=page==='overview'&&!firstProfile&&!switchingPending&&startupReadOnly&&!duplicateStartupProblem&&(!snapshot.recovery||snapshot.recovery.phase==='completed')&&(!view||!['pending','draining','expired'].includes(view.state));

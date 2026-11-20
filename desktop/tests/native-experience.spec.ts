@@ -4,6 +4,36 @@ import {accountFixture,installAccountFixture} from './fixtures/native-accounts.m
 const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((call:any)=>call.command===command),command);
 const nav=(page:Page,name:string)=>page.getByRole('navigation').getByRole('button',{name,exact:true});
 const tab=(page:Page,name:string)=>page.getByRole('tab',{name,exact:true});
+
+for(const matches of [true,false])test(`startup network receipt ${matches?'converges automatically':'stays blocked until a matching read-only query'}`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;
+  w.startupReceipt={state:'checking',failure:null,instance:'b'.repeat(32),binding_revision:1,network_revision:0,observed_at:new Date().toISOString(),revision:1,can_retry:false};
+  w.__TAURI_INTERNALS__.invoke=(command:string,args:unknown)=>{
+   if(command==='startup_status'||command==='startup_query'){w.calls.push({command,args});return Promise.resolve(structuredClone(w.startupReceipt));}
+   return invoke(command,args);
+  };
+ });
+ await page.clock.install();await page.goto('/');
+ await expect.poll(async()=>(await calls(page,'runtime_snapshot')).length).toBeGreaterThan(0);
+ await page.evaluate(matches=>{
+  const w=window as any;w.networkRevision=matches?1:0;
+  w.startupReceipt={...w.startupReceipt,state:'ready',network_revision:1,revision:2};w.emitStartup(w.startupReceipt);
+ },matches);
+ if(!matches){
+  const notice=page.getByTestId('startup-recovery');
+  await expect(notice).toContainText('状态待核对');await expect(notice).toContainText('network_revision=1');
+  await expect(page.locator('.native-account-row-actions button:enabled')).toHaveCount(0);
+  await page.evaluate(()=>(window as any).networkRevision=1);
+  await notice.getByRole('button',{name:'重新核对',exact:true}).click();
+ }
+ await expect(page.getByTestId('startup-recovery')).toHaveCount(0);
+ await expect(page.getByRole('heading',{name:'概览',exact:true})).toBeVisible();
+ await expect(page.getByText('owner@example.test',{exact:true})).toBeVisible();
+ for(const command of ['startup_retry','runtime_restore','runtime_start','runtime_stop','account_action','supply_set_paused'])expect(await calls(page,command)).toEqual([]);
+});
+
 async function expectPrimaryContrast(page:Page,selector:string){
  const button=page.locator(selector);await button.hover();
  const contrast=await button.evaluate(element=>{

@@ -31,9 +31,13 @@ export function createDesktopState(deps:DesktopDeps){
  let unlisten:(()=>void)|undefined,unlistenStartup:(()=>void)|undefined,timer:ReturnType<typeof setTimeout>|undefined,pending:Promise<void>|undefined,nextRefresh:Promise<void>|undefined;
  let startupTimer:ReturnType<typeof setTimeout>|undefined,startupReading=false,startupFailures=0,startupReleased=false;
  let startupBegan=Date.now(),startupRetrying=false;
+ let startupConfirmation:{receipt:StartupStatus;generation:number}|undefined;
+ // Advance only after a shared read validates both local context and runtime.
+ let localObservations=0;
+ const confirmingStartup=()=>startupConfirmation?.generation===epoch;
  const STARTUP_READ_BUDGET_MS=2000;
- const startupOwnsDevice=()=>startupRetrying||!startupReleased&&!!deps.bridge.startupStatus&&(!state.startup||state.startup.state==='checking');
- const startupUnverified=()=>deps.bridge.startupStatus?state.startup?.state!=='ready':!!state.startup&&state.startup.state!=='ready';
+ const startupOwnsDevice=()=>startupRetrying||confirmingStartup()||!startupReleased&&!!deps.bridge.startupStatus&&(!state.startup||state.startup.state==='checking');
+ const startupUnverified=()=>confirmingStartup()||(deps.bridge.startupStatus?state.startup?.state!=='ready':!!state.startup&&state.startup.state!=='ready');
  let runtimeReceiptRevision=-1,accountReceiptRevisions:Partial<Record<AccountPlatform,number>>={};
  let deviceObservedAt:string|null=null,diagnosticObservedAt:string|null=null;
  const listeners=new Set<()=>void>();
@@ -86,33 +90,58 @@ export function createDesktopState(deps:DesktopDeps){
  const repair=()=>{for(const [key,g]of gates)if(g.terminal)gates.delete(key);blocked=false;};
  const mapStatus=(map:DesktopSnapshot['accountRefresh'],kind:RefreshStatus['state'],at:string|null=null)=>Object.fromEntries(platforms.map(p=>[p,status(map[p],kind,at)]));
  const reset=()=>({recovery:undefined,recoveryError:null,recoveryObservation:undefined,device:undefined,deviceContext:undefined,bindingRevision:undefined,deviceContextFailure:undefined,deviceError:null,runtime:undefined,defaults:undefined,accounts:{},accountErrors:{},supplies:{},supplyErrors:{},supplyPlatform:null,error:null,diagnosticFailure:null,refresh:idleRefresh(),accountRefresh:{},supplyRefresh:{}});
- const surfaceRejectedStartup=(next:StartupStatus,actual:string,required:string)=>{
+ const surfaceRejectedStartup=(next:StartupStatus,actual:string,required:string,cause?:UiFailure)=>{
   if(disposed)return;
   const nativeInstance=state.native.metadata?.instance;
   if(next.instance&&nativeInstance&&next.instance!==nativeInstance)return;
   startupReleased=true;
-  const observed=next.failure?{...next.failure,evidence:{...next.failure.evidence,actual,required}}:failure({code:'STARTUP_STATUS_REJECTED',message:`startup ${next.state} receipt rejected: actual=${actual}; required=${required}`},'startup_status');
+  const observed=cause??(next.failure?{...next.failure,evidence:{...next.failure.evidence,actual,required}}:failure({code:'STARTUP_STATUS_REJECTED',message:`startup ${next.state} receipt rejected: actual=${actual}; required=${required}`},'startup_status'));
   if(next.failure)publish({...(state.deviceError?{}:{deviceError:observed}),startupReadError:null});
-  else if(!state.startup)publish({startupReadError:observed});
+  else publish({startupReadError:observed,startupObservation:'stopped',...(state.startup?.state==='ready'?{startup:undefined}:{})});
   if(state.native.state==='ready'&&!pending)void refresh();
  };
- const acceptStartup=(next:StartupStatus)=>{
+ const acceptStartup=(next:StartupStatus,confirmNewerNetwork=true)=>{
   if(currentScope!==undefined&&(!currentScope||next.instance!==currentScope.instance)){
    if(next.state!=='checking')surfaceRejectedStartup(next,`instance=${next.instance}`,`current_scope.instance=${currentScope?.instance??'null'}`);
    return;
   }
   if(disposed||next.instance&&state.native.metadata?.instance&&next.instance!==state.native.metadata.instance)return;
+  if(state.startup&&next.revision<state.startup.revision)return;
+  if(confirmingStartup()){
+   if(next.revision<startupConfirmation!.receipt.revision)return;
+   if(confirmNewerNetwork&&next.revision===startupConfirmation!.receipt.revision)return;
+  }
+  startupConfirmation=undefined;
   if(next.state!=='checking'){
    if(state.bindingRevision!==undefined&&next.binding_revision!==null&&next.binding_revision!==state.bindingRevision){
     surfaceRejectedStartup(next,`binding_revision=${next.binding_revision}`,`binding_revision=${state.bindingRevision}`);
     return;
    }
    if(state.runtime&&next.network_revision!==null&&next.network_revision!==state.runtime.network_revision){
+    if(confirmNewerNetwork&&next.state==='ready'&&next.network_revision>state.runtime.network_revision){
+     // Native bootstrap advances the network before emitting ready. A UI cache
+     // read before that commit cannot disprove the receipt. Join any old read,
+     // then request a fresh shared observation; never replay startup/Restore.
+     const confirmation={receipt:next,generation:epoch};startupConfirmation=confirmation;
+     publish({startupObservation:'active'});
+     void Promise.resolve(pending).then(async()=>{
+      if(disposed||epoch!==confirmation.generation||startupConfirmation!==confirmation)return;
+      const before=localObservations;
+      await refresh();
+      if(disposed||epoch!==confirmation.generation||startupConfirmation!==confirmation)return;
+      startupConfirmation=undefined;
+      if(localObservations===before){
+       surfaceRejectedStartup(next,`local_observations=${localObservations}`,`fresh binding and runtime observation after startup revision=${next.revision}`,state.deviceContextFailure??state.error??undefined);
+       return;
+      }
+      acceptStartup(next,false);
+     });
+     return;
+    }
     surfaceRejectedStartup(next,`network_revision=${next.network_revision}`,`network_revision=${state.runtime.network_revision}`);
     return;
    }
   }
-  if(state.startup&&next.revision<state.startup.revision)return;
   const becameReady=next.state==='ready'&&state.startup?.state!=='ready',generation=epoch;
   if(next.state==='checking'&&state.startup?.state!=='checking'){
    startupBegan=Date.now();startupFailures=0;startupReleased=false;clearTimeout(startupTimer);
@@ -274,7 +303,7 @@ export function createDesktopState(deps:DesktopDeps){
    try{
     await readPending();if(!current())return;
     const runtime=deps.runtime(instance),accounts=deps.accounts?.(instance);
-    let deviceContext=state.deviceContext,bindingRevision=state.bindingRevision,deviceContextFailure=state.deviceContextFailure,scopeMayHaveChanged=false;
+    let deviceContext=state.deviceContext,bindingRevision=state.bindingRevision,deviceContextFailure=state.deviceContextFailure,scopeMayHaveChanged=false,contextRead=!deps.device.context;
     const observeContext=(local:Awaited<ReturnType<NonNullable<DeviceClient['context']>>>)=>{
      if(deviceError===deviceContextFailure)deviceError=null;
      bindingRevision=local.binding_revision;
@@ -282,7 +311,7 @@ export function createDesktopState(deps:DesktopDeps){
      deviceContextFailure='failure'in local?local.failure:undefined;
      if(deviceContextFailure&&deviceContextFailure.code!=='DEVICE_CONTEXT_UNCONFIGURED')deviceError=deviceContextFailure;
     };
-    if(deps.device.context&&allowed('context'))try{const local=await deps.device.context();if(!current())return;observeContext(local);succeed('context');}
+    if(deps.device.context&&allowed('context'))try{const local=await deps.device.context();if(!current())return;observeContext(local);succeed('context');contextRead=true;}
     catch(e){if(!current())return;deviceContextFailure=deviceError=failure(e,'device_context');fail('context',deviceError);await readPending();}
     if(!current())return;
     if(state.bindingRevision!==undefined&&bindingRevision!==state.bindingRevision){
@@ -346,6 +375,7 @@ export function createDesktopState(deps:DesktopDeps){
      message:'runtime revision actual='+next.revision+'; required>='+minimum+' from confirmed operation receipt; network actual='+next.network_revision+' required>='+(state.runtime?.network_revision??0)
     };
     const networkChanged=state.runtime&&state.runtime.network_revision!==next.network_revision;
+    if(runtimeRead&&contextRead&&!gate('context').failures&&(!deviceContextFailure||deviceContextFailure.code==='DEVICE_CONTEXT_UNCONFIGURED'))localObservations++;
     if(networkChanged){repair();diagnosticObservedAt=null;publish({diagnosticFailure:null});}
     if(!deviceObservedAt||deviceError||recoveryError||startupUnverified()){
      // Local runtime observations may confirm login/cancellation, but never resume an old Hive write worker.

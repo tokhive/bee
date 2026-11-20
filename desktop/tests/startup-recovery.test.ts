@@ -115,6 +115,88 @@ test('manual startup retry refreshes context before accepting a newer network re
 });
 
 const settle=async()=>{for(let i=0;i<12;i++)await tick();};
+
+for(const initial of ['checking','unavailable'])test(`automatic startup confirms a newer network receipt after ${initial}`,async t=>{
+ const instance='a'.repeat(32);let network=0,listener:any;
+ const checking={...startup(instance),state:'checking',failure:null};
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async()=>()=>{},onStartup:async(fn:any)=>{listener=fn;return()=>{};},startupStatus:async()=>{if(initial==='unavailable')throw {code:'STARTUP_READ_TIMEOUT',message:'startup read timed out'};return checking;}} as any,device:{context:async()=>({binding_revision:1}),status:async()=>({state:'unbound'})} as any,runtime:()=>({snapshot:async()=>({revision:network+1,network_revision:network,local:'waiting',run_id:null,platforms:{}})}) as any,intervalMs:100000});
+ t.after(()=>model.dispose());model.subscribe(()=>{});await settle();
+ assert.equal(model.getSnapshot().runtime?.network_revision,0);
+ network=1;
+ listener({...checking,state:'ready',network_revision:1,revision:2});
+ await settle();
+ assert.equal(model.getSnapshot().runtime?.network_revision,1);
+ assert.equal(model.getSnapshot().startup?.state,'ready');
+ assert.equal(model.getSnapshot().startupReadError,null);
+});
+
+function startupNetworkFixture(){
+ const instance='a'.repeat(32);
+ let listener:any,nativeListener:any,network=0,binding=1,runtimeReads=0,accountReads=0,contextError:any,runtimeError:any;
+ let readOverride:(()=>Promise<any>)|undefined;
+ const checking={...startup(instance),state:'checking',failure:null};
+ const snapshot=()=>({revision:network+1,network_revision:network,local:'waiting',run_id:null,platforms:{}});
+ const model=createDesktopState({bridge:{status:async()=>({state:'ready',metadata:{instance}}),onStatus:async(fn:any)=>{nativeListener=fn;return()=>{};},onStartup:async(fn:any)=>{listener=fn;return()=>{};},startupStatus:async()=>checking} as any,device:{context:async()=>{if(contextError)throw contextError;return {binding_revision:binding};},status:async()=>({state:'unbound'})} as any,runtime:()=>({snapshot:async()=>{runtimeReads++;if(runtimeError)throw runtimeError;return readOverride?readOverride():snapshot();}}) as any,accounts:()=>({defaults:async()=>{accountReads++;return {platforms:[]};},snapshot:async()=>{accountReads++;throw Error('no account in fixture');}}) as any,intervalMs:100000});
+ return {model,snapshot,ready:(revision=2)=>({...checking,state:'ready',network_revision:1,revision}),emit:(v:any)=>listener(v),emitNative:(v:any)=>nativeListener(v),network:(v:number)=>{network=v;},binding:(v:number)=>{binding=v;},hold:(fn?:()=>Promise<any>)=>{readOverride=fn;},failContext:(v:any)=>{contextError=v;},failRuntime:(v:any)=>{runtimeError=v;},reads:()=>runtimeReads,accountReads:()=>accountReads};
+}
+
+test('network confirmation joins an old read then observes again and coalesces duplicate receipts',async t=>{
+ const f=startupNetworkFixture();t.after(()=>f.model.dispose());f.model.subscribe(()=>{});await settle();
+ const old=f.snapshot();let release!:(v:any)=>void;
+ f.hold(()=>new Promise(resolve=>{release=resolve;}));const pending=f.model.refresh();await settle();
+ const before=f.reads();f.network(1);f.emit(f.ready());f.emit(f.ready());await settle();
+ assert.equal(f.reads(),before);assert.equal(f.accountReads(),0);assert.notEqual(f.model.getSnapshot().startup?.state,'ready');
+ f.hold();release(old);await pending;await settle();
+ assert.ok(f.reads()>before,'must issue a read after the old in-flight observation');
+ assert.equal(f.model.getSnapshot().runtime?.network_revision,1);assert.equal(f.model.getSnapshot().startup?.state,'ready');
+});
+
+for(const actual of [0,2])test(`fresh network ${actual} cannot confirm a ready receipt for network 1`,async t=>{
+ const f=startupNetworkFixture();t.after(()=>f.model.dispose());f.model.subscribe(()=>{});await settle();
+ f.network(actual);f.emit(f.ready());await settle();
+ assert.notEqual(f.model.getSnapshot().startup?.state,'ready');assert.equal(f.accountReads(),0);
+ assert.equal(f.model.getSnapshot().startupReadError?.code,'STARTUP_STATUS_REJECTED');
+ assert.match(f.model.getSnapshot().startupReadError!.message,new RegExp(`required=network_revision=${actual}`));
+ const reads=f.reads();await settle();assert.equal(f.reads(),reads,'failed confirmation must not create a retry loop');
+});
+
+for(const source of ['context','runtime'])test(`failed ${source} observation cannot confirm a newer startup receipt`,async t=>{
+ const f=startupNetworkFixture();t.after(()=>f.model.dispose());f.model.subscribe(()=>{});await settle();
+ const error={code:'READ_FAILED',message:`${source} observation unavailable`};
+ f.network(1);if(source==='context')f.failContext(error);else f.failRuntime(error);
+ f.emit(f.ready());await settle();
+ assert.notEqual(f.model.getSnapshot().startup?.state,'ready');assert.equal(f.accountReads(),0);
+ assert.equal(f.model.getSnapshot().startupReadError?.code,'READ_FAILED');
+});
+
+for(const replacement of ['blocked','instance','binding','disposed'])test(`pending network confirmation cannot survive ${replacement}`,async t=>{
+ const f=startupNetworkFixture(),published:string[]=[];t.after(()=>f.model.dispose());f.model.subscribe(()=>{published.push(f.model.getSnapshot().startup?.state??'none');});await settle();
+ let release!:(v:any)=>void;f.hold(()=>new Promise(resolve=>{release=resolve;}));
+ // Binding changes must be seen by the fresh read after the older in-flight read.
+ if(replacement==='binding'){void f.model.refresh();await settle();}
+ f.network(1);f.emit(f.ready());await settle();
+ if(replacement==='blocked')f.emit({...startup('a'.repeat(32),3),network_revision:0});
+ if(replacement==='instance')f.emitNative({state:'ready',metadata:{instance:'b'.repeat(32)}});
+ if(replacement==='binding')f.binding(2);
+ if(replacement==='disposed')f.model.dispose();
+ f.hold();release(f.snapshot());await settle();
+ if(replacement==='binding')await f.model.refresh();
+ assert.notEqual(f.model.getSnapshot().startup?.state,'ready');assert.equal(f.accountReads(),0);
+ assert.ok(!published.includes('ready'),'must never transiently unlock a superseded receipt');
+ if(replacement==='blocked')assert.equal(f.model.getSnapshot().startup?.failure?.code,'device_replaced');
+});
+
+test('an older startup event cannot cancel a newer confirmation or unlock a wrong binding',async t=>{
+ const f=startupNetworkFixture();t.after(()=>f.model.dispose());f.model.subscribe(()=>{});await settle();
+ let release!:(v:any)=>void;f.hold(()=>new Promise(resolve=>{release=resolve;}));f.network(1);f.emit(f.ready(4));await settle();
+ f.emit({...startup('a'.repeat(32),3),network_revision:0});
+ f.hold();release(f.snapshot());await settle();
+ assert.equal(f.model.getSnapshot().startup?.state,'ready');assert.equal(f.model.getSnapshot().startup?.revision,4);
+ f.emit({...f.ready(5),binding_revision:2});await settle();
+ assert.notEqual(f.model.getSnapshot().startup?.state,'ready');
+ assert.match(f.model.getSnapshot().startupReadError!.message,/binding_revision=2/);
+});
+
 const boundContext={hive:'https://hive.example',name:'Saved Mac',device_id:'device',owner_id:'owner',binding_revision:1};
 const stoppedRuntime={revision:1,network_revision:0,local:'stopped',run_id:null,platforms:{}};
 const identityBody='{"error":{"code":"invalid_device_credential","message":"invalid device credential","param":null,"type":"authentication_error"}}';

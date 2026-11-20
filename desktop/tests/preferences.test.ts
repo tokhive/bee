@@ -38,3 +38,13 @@ test('OpenAI source is optional for old preferences, strictly validated and sent
  const calls:string[]=[];const client=createPreferencesClient(async(command)=>{calls.push(command);return {preferences:{...updated,revision:1},error:null};});
  await client.save(0,updated);assert.deepEqual(calls,['preferences_save']);
 });
+
+test('Claude source settings survive the strict schema without accepting OpenAI stores or credentials',async()=>{
+ const old=defaultPreferences();assert.ok(!('claude_source'in old));
+ for(const store of ['file','keychain']){
+  const updated={...old,openai_source:{directory:'/tmp/codex-kept',store:'file'},claude_source:{directory:'/tmp/claude-selected',store}};
+  assert.deepEqual(decodePreferences({preferences:updated,error:null}).preferences,updated);
+  const commands:string[]=[];const client=createPreferencesClient(async command=>{commands.push(command);return {preferences:{...updated,revision:1},error:null};});await client.save(0,updated);assert.deepEqual(commands,['preferences_save']);
+ }
+ for(const source of [null,{directory:null,store:'auto'},{directory:null,store:'keyring'},{directory:'relative',store:'file'},{directory:'/'+ '界'.repeat(1400),store:'keychain'},{directory:'/tmp/bad\u0000path',store:'file'},{directory:null,store:'keychain',token:'PRIVATE_SECRET'}])assert.throws(()=>decodePreferences({preferences:{...old,claude_source:source},error:null}),e=>e instanceof Error&&!e.message.includes('PRIVATE_SECRET'));
+});

@@ -30,6 +30,64 @@ async fn observe(bridge: &Bridge, predicate: impl Fn(&Value) -> bool) -> Value {
 
 #[tokio::test]
 #[ignore = "build go test -c ./agent and set BEE_NATIVE_BRIDGE_TEST_BINARY"]
+async fn native_pairing_admission_recovery_through_real_go() {
+    let program = PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
+    let dir = tempfile::tempdir().unwrap();
+    let control = dir.path().join("pairing-control");
+    let bytes = std::fs::read(&program).unwrap();
+    let bridge = Bridge::start(LaunchSpec {
+        diagnostics: None, program, bundle: None,
+        args: vec!["-test.run=^TestDesktopNativeBridgeProcess$".into(), format!("-bee-native-fixture-audit={}", control.display()), "-bee-native-pairing-fixture".into()],
+        source: BuildSource {
+            revision: "controlled-go-fixture".into(), tee_revision: "controlled-go-fixture".into(), target: "controlled-go-fixture".into(),
+            goos: std::env::consts::OS.replace("macos", "darwin"),
+            goarch: if cfg!(target_arch = "aarch64") { "arm64" } else { "amd64" }.into(),
+            go: "controlled-go-fixture".into(), bee_version: "native-fixture".into(), binary_sha256: format!("{:x}", Sha256::digest(bytes)),
+        }, timeout: Duration::from_secs(15),
+    });
+    let manager = crate::updater::UpdateManager::new("0.1.0", crate::updater::UpdateStore::new(dir.path().join("update.json"))).unwrap();
+    let preferences = crate::preferences::PreferencesStore::new(dir.path().join("preferences.json"));
+    let journal = bridge.startup_journal(manager.store.path());
+    timeout(Duration::from_secs(20), async {
+        while bridge.status().state == BridgePhase::Starting { sleep(Duration::from_millis(10)).await; }
+    }).await.unwrap();
+    assert_eq!(bridge.status().state, BridgePhase::Ready, "{:?}", bridge.status().error);
+    let inspected = bridge.inspect_recovery().await.unwrap();
+    assert_eq!(inspected.failure.unwrap().code, "RECOVERY_DEVICE_UNRESOLVED");
+    let blocked = crate::update_install::verify_startup_progress(&manager, &bridge, preferences.read(), "stable", &|_| {}, false).await.unwrap_err();
+    assert_eq!(blocked.code, "RECOVERY_DEVICE_UNRESOLVED");
+    assert!(journal.load().unwrap().is_none());
+    // Recreate the old bug using an actual correlated Go refusal, not a
+    // synthetic error string. Only the old Rust persistence behavior is seeded.
+    let refused = bridge.runtime_restore().await.unwrap_err();
+    assert_eq!(refused.code, "RUNTIME_OPERATION_FAILED");
+    let runtime = bridge.runtime_snapshot().await.unwrap();
+    assert!(runtime.result["runtime"]["operation"].is_null());
+    let old = crate::startup_recovery::RecoveryRecord {
+        version: 1, attempt_id: "a".repeat(32), instance: runtime.instance,
+        binding_revision: inspected.binding_revision, binding_identity: None,
+        network_revision: 0, previous_run_id: None, account_revision: None,
+        intent_running: false, trigger: "automatic".into(), previous_attempt_id: None,
+        operation_id: None, phase: "unknown".into(), failure: Some(refused),
+    };
+    journal.save(&old).unwrap();
+    std::fs::write(control.with_extension("approve"), b"synthetic user approved").unwrap();
+    let paired = bridge.device_recovery_status().await.unwrap();
+    assert_eq!(paired.result["recovery"]["phase"], "completed");
+    crate::update_install::verify_startup_progress(&manager, &bridge, preferences.read(), "stable", &|_| {}, false).await.unwrap();
+    let completed = journal.load().unwrap().unwrap();
+    assert_eq!(completed.phase, "succeeded");
+    assert_eq!(completed.previous_attempt_id.as_ref(), Some(&old.attempt_id));
+    let runtime = bridge.runtime_snapshot().await.unwrap();
+    assert_eq!(runtime.result["runtime"]["local"], "waiting");
+    assert!(runtime.result["runtime"]["run_id"].is_null());
+    let archive: Value = serde_json::from_slice(&std::fs::read(dir.path().join(format!("desktop-startup-recovery-{}.json", old.attempt_id))).unwrap()).unwrap();
+    assert_eq!(archive, serde_json::to_value(old).unwrap());
+    bridge.prepare_owned_exit(OwnedExitReason::AppExit).await.unwrap();
+}
+
+#[tokio::test]
+#[ignore = "build go test -c ./agent and set BEE_NATIVE_BRIDGE_TEST_BINARY"]
 async fn native_auto_service_through_real_go_transport_and_controlled_hive() {
     let program = PathBuf::from(std::env::var_os("BEE_NATIVE_BRIDGE_TEST_BINARY").unwrap());
     let audit = tempfile::tempdir().unwrap();

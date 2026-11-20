@@ -76,3 +76,14 @@ fn diagnostic_detailed_supply_reason_evidence_is_preserved() {
         }
     }
 }
+
+#[test]
+fn manual_pause_pass_requires_consistent_supply_evidence() {
+ let mut v=report();
+ v["report"]["checks"][0]=serde_json::json!({"id":"supply","platform":"openai","status":"pass","observed_at":"2026-10-27T00:00:00Z","code":"supply_paused","evidence":{"ready":"false","paused":"true","reasons_count":"1","reason":"manually_paused"},"next_action":"overview"});
+ assert!(validate_report(&v,&"b".repeat(32)).is_ok());
+ for (key,value) in [("ready","true"),("paused","false"),("reasons_count","2"),("reason","supply_not_enabled")] {
+  let mut changed=v.clone();changed["report"]["checks"][0]["evidence"][key]=serde_json::json!(value);
+  assert!(validate_report(&changed,&"b".repeat(32)).is_err());
+ }
+}

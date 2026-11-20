@@ -21,7 +21,8 @@ function installOpenaiReplies(){
    w.calls.push({command,args});
    if(w.queryFailure)throw {code:'RESPONSE_TIMEOUT',message:'controlled progress query response unavailable'};
    const operation=w.accounts.openai.operation;
-   const progress={operation,sequence:1,phase:['pending','running'].includes(operation.state)?'waiting_authorization':'finished',stop_reason:operation.state==='cancelled'?'cancelled':null,recheck_in_flight:false,actions:{open:operation.state==='running',cancel:operation.state==='running',retry:false,recheck:false,restart:false},blocker:null};
+   const phase=['pending','running'].includes(operation.state)?w.loginPhase??'waiting_authorization':'finished';
+   const progress={operation,sequence:w.progressSequence=(w.progressSequence??0)+1,phase,stop_reason:operation.state==='cancelled'?'cancelled':null,recheck_in_flight:false,actions:{open:operation.state==='running'&&phase==='waiting_authorization',cancel:operation.state==='running',retry:false,recheck:false,restart:false},blocker:null};
    return {instance:'b'.repeat(32),result:command==='authorize_open'?{open:{opened:true,error:null,progress}}:{progress}};
   }
   const reply=await original(command,args);
@@ -73,13 +74,13 @@ test('source draft survives navigation and failed save; successful settings are 
  await page.evaluate(()=>(window as any).preferencesFail=false);
  await dialog.getByRole('button',{name:'保存',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.directory==='/tmp/controlled-source'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);
- expect(await writes(page)).toEqual([]);
+ await expect(dialog).toHaveCount(0);expect(await writes(page)).toEqual([]);
 });
 test('open and exhausted queries retain the original login without starting another process',async({page})=>{
  await page.clock.install();await setup(page,true);
  await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
  await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
- await page.getByRole('dialog').getByRole('button',{name:'关闭',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
  await card(page).getByRole('button',{name:'打开登录页面',exact:true}).click();
  await page.evaluate(()=>(window as any).queryFailure=true);
@@ -94,7 +95,7 @@ test('open and exhausted queries retain the original login without starting anot
 test('account reconciliation stops after 60 seconds and manual checks never replay the action',async({page})=>{
  await page.clock.install();await setup(page);await page.evaluate(()=>(window as any).actionPending=true);
  await page.getByRole('button',{name:'确认接入',exact:true}).click();
- await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('status')).toHaveText('账号操作结果待核对');
+ await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
  const id=await page.evaluate(()=>(window as any).accounts.openai.operation.id);
  await page.clock.runFor(61000);
  await expect(page.getByRole('region',{name:'添加账号',exact:true}).getByText('自动核对已达 60 秒，尚未确认原操作结果。',{exact:true})).toBeVisible();
@@ -117,7 +118,7 @@ test('account reconciliation stops after 60 seconds and manual checks never repl
 
 test('credential failures retain quota, deduplicate one cause and preserve independent faults and pause',async({page})=>{
  await page.clock.install();await page.setViewportSize({width:820,height:680});await setup(page,true);
- await page.evaluate(()=>{document.documentElement.dataset.theme='dark';});
+ await page.evaluate(()=>{document.documentElement.dataset.theme='light';});
  await page.evaluate(()=>{
   const w=window as any,a=w.accounts.openai;w.paused.openai=true;
   const source={code:'permission_denied',check:'source_read',platform:'openai',message:'Controlled credential access denied: EACCES',evidence:{permission_denied:'true'}};
@@ -126,17 +127,17 @@ test('credential failures retain quota, deduplicate one cause and preserve indep
  });
  await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('没有读取所选凭证来源的权限。');
- await expect(card(page).locator('.oa-note')).toHaveCount(0);
+ await expect(card(page).locator('.oa-note')).toHaveText('接单保持暂停。');
  await expect(card(page).locator('.oa-quota')).toHaveCount(1);
  await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);
  await expect(card(page).getByText('接单保持暂停。',{exact:true})).toBeVisible();
  await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();
  await expect(page.getByRole('dialog',{name:'错误详情'}).locator('pre')).toHaveCount(1);
  await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('EACCES');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('HTTP 403');
- await page.screenshot({path:resolve(evidence,'formal-independent-errors-dark-narrow.png')});
+ await page.screenshot({path:resolve(evidence,'formal-independent-errors-light-narrow.png')});
  await page.keyboard.press('Escape');await card(page).getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
  await expect(page.getByRole('dialog').getByLabel('读取目录')).toBeVisible();expect(await writes(page)).toEqual([]);
- await page.screenshot({path:resolve(evidence,'formal-source-details-dark-narrow.png')});
+ await page.screenshot({path:resolve(evidence,'formal-source-details-light-narrow.png')});
 });
 
 const evidence=resolve(import.meta.dirname,'../test-results/compact-list');
@@ -180,7 +181,7 @@ test('keyring missing keeps true quota and one repair action; unknown quota is n
   a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:'2099-01-01T00:00:00Z'},{scope:'',seconds:604800,used_percent:20,reset_at:null}];a.revision++;
  });await page.clock.runFor(11000);
  await expect(card(page).getByRole('status')).toHaveText('凭证缺失');
- await expect(card(page).getByText('已用 100%',{exact:true})).toBeVisible();await expect(card(page).getByText('已用 20%',{exact:true})).toBeVisible();
+ await expect(card(page).getByText('100%',{exact:true})).toBeVisible();await expect(card(page).getByText('20%',{exact:true})).toBeVisible();
  await expect(card(page).getByRole('button',{name:'修改凭证读取设置',exact:true})).toHaveCount(1);
  await expect(card(page).getByText('查看接单条件',{exact:true})).toHaveCount(0);
  const fault=await card(page).boundingBox();expect(fault!.height-normal!.height).toBeLessThan(90);
@@ -203,6 +204,7 @@ test('different identity opens review before confirmation and Escape restores fo
  expect(await writes(page)).toEqual([]);
  await page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true}).click();
  await expect(page.getByRole('dialog').last().getByRole('heading')).toHaveText('确认更换 OpenAI 账号');expect(await writes(page)).toEqual([]);
+ await expect(page.getByRole('dialog').last().getByRole('button',{name:'取消',exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await expect(page.getByRole('dialog').getByRole('button',{name:'确认换号',exact:true})).toBeFocused();
 });
 
@@ -227,7 +229,7 @@ test('login maintenance requiring a different account keeps the explicit change 
 
 test('main preview keeps quota in a read failure',async({page})=>{
  {
-  await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=dark&size=narrow`);
+  await page.goto(`/approved-preview/index.html?scene=read-failed-allowed&theme=light&size=narrow`);
   const app=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号'});
   await expect(app).toHaveClass(/oa-compact/);await expect(app.getByRole('progressbar')).toHaveCount(2);
   await expect(app.locator('.workflow')).toHaveCount(0);
@@ -235,7 +237,7 @@ test('main preview keeps quota in a read failure',async({page})=>{
   await app.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.frameLocator('iframe').locator('#list-error-popover')).toContainText('EACCES');await page.keyboard.press('Escape');
   await app.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.frameLocator('iframe').getByLabel('读取目录')).toBeVisible();
  }
- await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-dark-narrow.png')});
+ await page.locator('iframe').screenshot({path:resolve(evidence,'approved-source-settings-light-narrow.png')});
 });
 
 // Mixed account/read failures must resolve to one current action, as in the main preview.
@@ -322,4 +324,213 @@ for(const [size,width,height] of [['wide',1080,700],['narrow',860,680]] as const
  await expect(approved.getByRole('button',{name:'重试',exact:true})).toBeVisible();
  await expect(approved).toContainText('账号已接入');await expect(approved.getByRole('progressbar')).toHaveCount(2);
  await page.locator('iframe').screenshot({path:resolve(evidence,`approved-prepare-failed-${size}.png`)});
+});
+
+
+test('cancelling relogin keeps account details open and confirmation reveals the login flow',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();
+ const details=page.getByRole('dialog',{name:'OpenAI 账号详情',exact:true});await details.getByRole('button',{name:'重新登录',exact:true}).click();
+ await expect(details).toBeHidden();
+ await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'关闭',exact:true})).toBeVisible();
+ await page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'取消',exact:true}).click();await expect(details).toBeVisible();expect(await writes(page)).toEqual([]);
+ for(const dismiss of ['close','escape']){
+  await details.getByRole('button',{name:'重新登录',exact:true}).click();await expect(details).toBeHidden();
+  if(dismiss==='close')await page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'关闭',exact:true}).click();else await page.keyboard.press('Escape');
+  await expect(details).toBeVisible();await expect(details.getByRole('button',{name:'重新登录',exact:true})).toBeFocused();expect(await writes(page)).toEqual([]);
+ }
+ await details.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).getByRole('button',{name:'开始官方登录',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+ test('confirmed relogin progress retains the approved steps without enabling another submission',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
+ await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
+ const steps=card(page).getByRole('list',{name:'OpenAI 当前流程'});
+ await expect(steps).toBeVisible();await expect(steps.locator('li')).toHaveText(['1重新登录当前阶段','2核验账号未开始']);
+ await page.evaluate(()=>(window as any).loginPhase='verifying');
+ await expect(card(page).getByRole('status')).toHaveText('正在核验账号…');
+ await expect(steps.locator('.done')).toHaveCount(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });
+
+ test('unconfirmed relogin cancellation only queries the original operation',async({page})=>{
+ await page.clock.install();await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();
+ await expect(card(page).getByRole('button',{name:'取消登录',exact:true})).toBeVisible();
+ await page.evaluate(()=>(window as any).accountScenarios.cancelUnknown=true);await card(page).getByRole('button',{name:'取消登录',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('暂时无法确认取消结果');await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toHaveCount(0);
+ await expect(card(page).getByRole('button',{name:'核对登录结果',exact:true})).toHaveCount(0);await page.evaluate(()=>(window as any).queryFailure=true);await page.clock.runFor(8100);await card(page).getByRole('button',{name:'核对登录结果',exact:true}).click();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect((await writes(page)).filter((c:any)=>c.command==='authorize_cancel')).toHaveLength(1);
+ expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });
+ test('confirmed cancellation offers explicit relogin without resuming supply',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();await card(page).getByRole('button',{name:'取消登录',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('已取消登录');await expect(card(page).getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();
+ await card(page).getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true})).toBeVisible();
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+ });
+
+test('expired selected authorization offers relogin without automatically changing supply',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any;w.expiry=new Date(Date.now()-60000).toISOString();w.accounts.openai.candidate.expires_at=w.expiry;w.accounts.openai.revision++;});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('授权已过期');await expect(card(page).getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();await expect(card(page).getByRole('button',{name:'暂停接单',exact:true})).toHaveCount(0);
+ await card(page).getByRole('button',{name:'重新登录',exact:true}).click();await expect(page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true})).toBeVisible();expect(await writes(page)).toEqual([]);
+});
+for(const [code,check,title,completed] of [
+ ['client_missing','official_executable','未找到 Codex',0],
+ ['authorization_timeout','official_version','登录已超时',0],
+ ['authorization_timeout','official_process','登录已超时',0],
+ ['authorization_timeout','official_source_recheck','登录已超时',1],
+] as const)test(`login failure only completes proven prior steps: ${code}/${check}`,async({page})=>{
+ await page.clock.install();await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录'}).click();await expect(card(page).getByRole('button',{name:'取消登录',exact:true})).toBeVisible();
+ await page.evaluate(({code,check})=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'failed'});w.accounts.openai.operation.error={platform:'openai',code,check,message:`controlled failure at ${check}`,evidence:{}};},{code,check});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText(title);await expect(card(page).locator('.oa-steps .done')).toHaveCount(completed);await expect(card(page).locator('.oa-steps .failed')).toHaveCount(1);
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+for(const [size,width,height] of [['narrow',820,680],['wide',1080,700]] as const)test(`light login confirmation matches approved geometry — ${size}`,async({page})=>{
+ await page.setViewportSize({width,height});await setup(page,true);
+ await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+ await page.getByRole('dialog',{name:'OpenAI 账号详情',exact:true}).getByRole('button',{name:'重新登录',exact:true}).click();
+ const confirmation=page.getByRole('dialog',{name:'重新登录 OpenAI',exact:true});
+ const actual=await confirmation.boundingBox();
+ await page.screenshot({path:resolve(evidence,`formal-login-confirm-light-${size}.png`)});
+ expect(await writes(page)).toEqual([]);
+ await page.goto(`/approved-preview/index.html?scene=add-list&theme=light&size=${size}`);
+ const app=page.frameLocator('iframe');
+ await app.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await app.getByRole('button',{name:'重新登录',exact:true}).click();
+ const approved=await app.getByRole('dialog',{name:'重新登录 OpenAI',exact:true}).boundingBox();
+ await page.locator('iframe').screenshot({path:resolve(evidence,`approved-login-confirm-light-${size}.png`)});
+ expect(Math.abs(actual!.width-approved!.width)).toBeLessThanOrEqual(0.1);
+ expect(Math.abs(actual!.height-approved!.height)).toBeLessThanOrEqual(0.1);
+});
+
+test('rejected relogin preserves admission evidence after background refresh and never completes a step',async({page})=>{
+ await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:any)=>{if(command==='authorize_start'){w.calls.push({command,args});return Promise.reject({code:'AUTHORIZE_OPERATION_FAILED',message:'authorize revision changed: actual=71 expected=61'});}return invoke(command,args);};});
+ await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录'}).click();
+ await expect(card(page).getByRole('status')).toHaveText('官方登录未完成');
+ await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('官方登录未完成');
+ await expect(card(page).locator('.oa-steps .done')).toHaveCount(0);
+ await expect(card(page).getByRole('button',{name:'重新登录',exact:true})).toBeEnabled();
+ await card(page).getByRole('button',{name:'查看错误详情'}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('actual=71 expected=61');
+ expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(false);
+});
+
+for(const changedIdentity of [false,true])test(`relogin rereads account revision and ${changedIdentity?'rejects changed identity':'submits the fresh revision'}`,async({page})=>{
+ await setup(page,true);
+ await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();
+ await page.evaluate(changed=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let changedOnce=false;w.__TAURI_INTERNALS__.invoke=(command:string,args:any)=>{if(command==='account_snapshot'&&args.platform==='openai'&&!changedOnce){changedOnce=true;w.accounts.openai.revision+=10;if(changed)w.accounts.openai.selection.fingerprint='c'.repeat(64);}return invoke(command,args);};},changedIdentity);
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录'}).click();
+ if(changedIdentity){await expect(card(page).getByRole('status')).toHaveText('官方登录未完成');expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(0);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(false);}
+ else {await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();expect((await writes(page)).filter((c:any)=>c.command==='authorize_start')).toHaveLength(1);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);}
+});
+
+for(const [size,width,height]of [['narrow',820,680],['wide',1080,700]] as const)test(`relogin completion matches approved copy and preserves pause — light ${size}`,async({page},testInfo)=>{
+ await page.clock.install();await page.setViewportSize({width,height});await setup(page,true);
+ await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录'}).click();await expect(card(page).getByRole('button',{name:'打开登录页面',exact:true})).toBeVisible();
+ await page.evaluate(()=>{const w=window as any;w.__beeMockControls['login-result']({platform:'openai',operationId:w.accounts.openai.operation.id,value:'succeeded-same'});const a=w.accounts.openai;a.authorization={...a.authorization,state:'synchronized',fingerprint:a.selection.fingerprint};a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1};a.revision++;});await page.clock.runFor(11000);
+ // The fixture's login command only detects credentials; supply the separate
+ // completed Hive preparation receipt after that detection settles.
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.authorization={...a.authorization,state:'synchronized',fingerprint:a.selection.fingerprint};a.hive={...a.hive,state:'ready',fingerprint:a.selection.fingerprint,generation:1};a.revision++;});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('重新登录成功');await expect(card(page).locator('.oa-note')).toHaveText('已完成重新登录，接单保持暂停。');await expect(card(page).locator('.oa-steps .done')).toHaveCount(2);await expect(card(page).getByRole('progressbar')).toHaveCount(0);
+ const actualBox=await card(page).boundingBox();
+ await card(page).screenshot({path:testInfo.outputPath(`formal-relogin-complete-${size}.png`)});
+ const before=await writes(page);await card(page).getByRole('button',{name:'完成',exact:true}).click();await expect(card(page).getByRole('status')).toHaveText('已暂停');expect(await writes(page)).toEqual(before);
+ await page.goto(`/approved-preview/index.html?scene=complete-relogin-paused&theme=light&size=${size}`);
+ // The preview toolbar size includes its iframe border. Calibrate the test
+ // surface only, so the unchanged design renders at the same content size.
+ await page.locator('iframe').evaluate(frame=>{frame.style.boxSizing='content-box';});
+ expect(await page.frameLocator('iframe').locator('html').evaluate(el=>[el.clientWidth,el.clientHeight])).toEqual([width,height]);
+ const approved=page.frameLocator('iframe').getByRole('region',{name:'OpenAI 账号',exact:true});await expect(approved.getByRole('status')).toHaveText('重新登录成功');await expect(approved).toContainText('已完成重新登录，接单保持暂停。');await expect(approved.getByRole('progressbar')).toHaveCount(0);
+ const approvedBox=await approved.boundingBox();
+ expect(Math.abs(actualBox!.width-approvedBox!.width)).toBeLessThanOrEqual(0.1);expect(Math.abs(actualBox!.height-approvedBox!.height)).toBeLessThanOrEqual(0.1);
+ await approved.screenshot({path:testInfo.outputPath(`approved-relogin-complete-${size}.png`)});
+});
+
+test('restored cancelled login drops stale progress blocker without resuming supply',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai,problem={code:'source_missing',check:'read_file',platform:'openai',message:'source file missing during cancelled login',evidence:{not_found:'true'}},op={id:'d'.repeat(48),kind:'authorize',platform:'openai',state:'cancelled',revision:++a.revision,error:{...problem,code:'authorization_cancelled',check:'official_process',message:'context canceled'}};
+  a.operation=op;a.login_maintenance={operation:op,phase:'blocked',source:a.candidate.source,started_at:new Date().toISOString(),can_recheck:true,error:problem};w.paused.openai=true;
+  const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='authorize_progress')reply.result.progress.blocker=problem;return reply;};
+ });await page.clock.runFor(11000);
+ await expect(card(page).getByRole('button',{name:'核对维护结果',exact:true})).toBeVisible();
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.login_maintenance={...a.login_maintenance,phase:'restored',can_recheck:false,error:null};a.revision++;});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('已取消登录');await expect(card(page).getByRole('button',{name:'查看错误详情'})).toHaveCount(0);await expect(card(page)).toContainText('接单保持暂停');expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(true);
+});
+
+test('saved source closes the drawer and cannot report repaired before its read completes',async({page})=>{
+ await setup(page,true);await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let held=false;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{if(command==='account_detect'&&args.request.platform==='openai'&&!held){held=true;await new Promise<void>(resolve=>{w.releaseSourceRead=resolve;});}return invoke(command,args);};});
+ await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('status')).toHaveText('正在读取登录凭证…');await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);
+ await page.evaluate(()=>(window as any).releaseSourceRead());await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);expect(await writes(page)).toEqual([]);
+});
+
+test('source verification pending after save keeps the verification state and hides resume',async({page})=>{
+ await setup(page,true);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.paused.openai=true;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_detect'&&args.request.platform==='openai'&&args.request.mode==='official'){const a=w.accounts.openai;a.capabilities[0]={...a.capabilities[0],status:'unknown',observed_at:null,valid_until:null,windows:[]};reply.result.account=structuredClone(a);}return reply;};});
+ await card(page).getByRole('button',{name:'OpenAI 详情'}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'保存',exact:true}).click();
+ await expect.poll(()=>page.evaluate(()=>(window as any).calls.filter((c:any)=>c.command==='account_detect'&&c.args.request.mode==='official').length)).toBeGreaterThan(0);
+ await expect(page.getByRole('dialog')).toHaveCount(0);await expect(card(page).getByRole('status')).toHaveText('正在核验账号…');await expect(card(page).getByRole('button',{name:'恢复接单',exact:true})).toHaveCount(0);await expect(card(page).getByRole('button',{name:'完成',exact:true})).toHaveCount(0);expect(await writes(page)).toEqual([]);
+});
+
+test('official transport failure keeps last quota and explains no HTTP response without replaying writes',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai;w.paused.openai=true;Object.assign(a.capabilities[1],{status:'unknown',observed_at:null,valid_until:null,windows:[]});Object.assign(a.capabilities[0],{status:'ready',observed_at:new Date().toISOString(),valid_until:'2099-01-01T00:00:00Z',windows:[{scope:'',seconds:18000,used_percent:7,reset_at:null},{scope:'',seconds:604800,used_percent:23,reset_at:null}]});a.revision++;});
+ await page.clock.runFor(11000);await expect(card(page).locator('.quota-value')).toHaveText(['7%','23%']);
+ const before=await writes(page);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=(command:string,args:any)=>command==='account_detect'&&args.request?.platform==='openai'?Promise.resolve({instance:'b'.repeat(32),result:{account:structuredClone(a)}}):invoke(command,args);Object.assign(a.capabilities[0],{status:'unknown',observed_at:new Date().toISOString(),valid_until:null,windows:[],error:{code:'official_check_failed',check:'capabilities',platform:'openai',message:'proxyconnect tcp: dial tcp 127.0.0.1:1087: connect: connection refused',evidence:{http_status:'0',transport_failed:'true'}}});a.revision++;});
+ await page.clock.runFor(11000);await expect(card(page).locator('.quota-value')).toHaveText(['7%','23%']);await expect(card(page).locator('.account-list-quota')).toContainText('上次记录');
+ await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('未收到 HTTP 响应');await expect(page.getByRole('dialog',{name:'错误详情'})).toContainText('127.0.0.1:1087');
+ await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'查看错误详情',exact:true})).toBeFocused();expect(await writes(page)).toEqual(before);
+});
+
+for(const paused of [false,true])test(`preparing account focuses progress and prevents adding another account until settled ${paused}`,async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(paused=>{const w=window as any,a=w.accounts.openai;w.paused.openai=paused;a.authorization.state='preparing';a.revision++;const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(a.authorization.state==='preparing')for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=[...(paused?['manually_paused']:[]),'authorization_unavailable'];}return reply;};},paused);await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('正在准备接单…');
+ await expect(page.locator('.page-heading').getByRole('button',{name:'添加账号',exact:true})).toBeDisabled();
+ await expect(card(page).locator('.oa-quota')).toHaveCount(0);
+ await expect(card(page)).not.toContainText('Hive 没有可用的加密授权');
+ const before=await writes(page);
+ await page.evaluate(()=>{const a=(window as any).accounts.openai;a.authorization.state='synchronized';a.revision++;});await page.clock.runFor(11000);
+ await expect(page.locator('.page-heading').getByRole('button',{name:'添加账号',exact:true})).toBeEnabled();
+ await expect(card(page).getByRole('progressbar')).toHaveCount(2);
+ expect(await writes(page)).toEqual(before);expect(await page.evaluate(()=>(window as any).paused.openai)).toBe(paused);
+});
+test('preparation does not hide an independently exhausted quota',async({page})=>{
+ await page.clock.install();await setup(page,true);
+ await page.evaluate(()=>{const w=window as any,a=w.accounts.openai,invoke=w.__TAURI_INTERNALS__.invoke;a.authorization.state='preparing';a.revision++;a.capabilities[0].windows=[{scope:'',seconds:18000,used_percent:100,reset_at:null}];w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=['quota_exhausted'];}return reply;};});await page.clock.runFor(11000);
+ await expect(card(page).getByRole('status')).toHaveText('正在准备接单…');
+ await expect(card(page).getByRole('progressbar')).toHaveCount(2);
+ await expect(card(page).locator('.quota-value')).toHaveText(['100%','—']);
+ expect(await writes(page)).toEqual([]);
+});
+
+for(const condition of ['quota','quota-and-market','paused'] as const)test(`intake completion explains ${condition} without claiming request readiness`,async({page})=>{
+ await setup(page);
+ await page.evaluate(condition=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_action')w.paused.openai=condition==='paused';for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.paused=condition==='paused';value.reasons=condition==='paused'?['manually_paused','quota_exhausted']:condition==='quota'?['quota_exhausted']:['quota_exhausted','market_not_open'];}return reply;};},condition);
+ await page.getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('账号接入成功！');
+ await expect(card(page)).toContainText(condition==='paused'?'账号已接入，接单保持暂停。':condition==='quota'?'账号已接入，等待额度恢复后接单。':'账号已接入，等待接单条件恢复。');
+ await expect(card(page)).not.toContainText('可以接单了');
+ const before=await writes(page);await card(page).getByRole('button',{name:'完成',exact:true}).click();expect(await writes(page)).toEqual(before);
+ expect(before.filter((c:any)=>c.command==='supply_set_paused')).toEqual([]);
+});
+
+test('a proven synchronization reset keeps one repair action and the original error details',async({page})=>{
+ await setup(page);
+ await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='account_action'){const a=w.accounts.openai;a.authorization={...a.authorization,state:'unconfirmed',error:{platform:'openai',code:'runtime_platform_unconfirmed',check:'authorization_sync',message:'write tcp 127.0.0.1:50000->127.0.0.1:18080: write: connection reset by peer',evidence:{}}};reply.result.account=structuredClone(a);}for(const value of [reply?.result?.supply,reply?.result?.runtime?.platforms?.openai?.supply])if(value?.platform==='openai'){value.ready=false;value.reasons=[...(value.paused?['manually_paused']:[]),'authorization_unavailable'];}return reply;};});
+ await page.getByRole('button',{name:'确认接入',exact:true}).click();
+ await expect(card(page).getByRole('status')).toHaveText('授权同步失败：连接已中断');
+ await expect(page.locator('.desktop-side-status')).toHaveText('授权同步失败：连接已中断');
+ await expect(card(page)).toContainText('账号已接入。请在连接恢复后重试，无需重新确认接入。');
+ await expect(card(page)).not.toContainText('Hive 没有可用的加密授权');
+ await expect(card(page).getByRole('button',{name:'重试',exact:true})).toHaveCount(1);
+ await card(page).getByRole('button',{name:'查看错误详情',exact:true}).click();
+ await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('write tcp 127.0.0.1:50000->127.0.0.1:18080: write: connection reset by peer');
+ await page.keyboard.press('Escape');await expect(card(page).getByRole('button',{name:'查看错误详情',exact:true})).toBeFocused();
+ expect((await writes(page)).filter((c:any)=>c.command==='account_action')).toHaveLength(1);
 });

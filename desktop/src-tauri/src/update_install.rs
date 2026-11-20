@@ -230,7 +230,7 @@ pub(crate) async fn verify_startup_progress(
         journal.retire_previous(&inspection,&current_instance)?;
         let previous=journal.observe(bridge).await?;
         if let Some(old)=previous.as_ref() {
-            if old.phase=="failed" && manual_retry {bridge.0.restored.store(false,std::sync::atomic::Ordering::SeqCst);}
+            if old.rejected_before_admission() || old.phase=="failed" && manual_retry {bridge.0.restored.store(false,std::sync::atomic::Ordering::SeqCst);}
             else if !["succeeded","retired"].contains(&old.phase.as_str()) {
                 return Err(old.failure.clone().unwrap_or_else(||error("RECOVERY_RESULT_UNCONFIRMED",format!("prior recovery attempt={} operation={:?} phase={}; query original result before retry; no restore submitted",old.attempt_id,old.operation_id,old.phase))));
             }
@@ -247,6 +247,9 @@ pub(crate) async fn verify_startup_progress(
         journal.save(&record)?;
         restore_attempted = true;
         let restored=bridge.restore_with_progress(&|p| { progress(p); }, Some((&journal,&mut record))).await;
+        // An explicit pre-admission refusal owns no worker/session to stop.
+        // Stopping here would replace the very receipt we need to diagnose.
+        restore_attempted = !record.rejected_before_admission();
         if record.phase!="failed" {
             record.phase=if restored.is_ok(){"succeeded"}else{"unknown"}.into();
             record.failure=restored.as_ref().err().cloned();

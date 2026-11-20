@@ -4,7 +4,7 @@ import {useEffect,useMemo,useSyncExternalStore} from 'react';
 import type {SupplyClient,SupplyPlatform,SupplyView} from '../../system/supply';
 export const platforms:SupplyPlatform[]=['openai','claude'];
 export const failure=(cause:unknown,check='supply_read'):UiFailure=>normalizeFailure(cause,check);
-export interface SupplyState {views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null;refreshStatus?:RefreshStatus;supplyRefresh?:Partial<Record<SupplyPlatform,RefreshStatus>>}
+export interface SupplyState {pendingChoices?:Partial<Record<SupplyPlatform,boolean>>;views:Partial<Record<SupplyPlatform,SupplyView>>;errors:Partial<Record<SupplyPlatform,UiFailure>>;busy:boolean;writeBusy:boolean;now:number;operation:'idle'|'read'|'write';activePlatform:SupplyPlatform|null;retryAt:number|null;refreshStatus?:RefreshStatus;supplyRefresh?:Partial<Record<SupplyPlatform,RefreshStatus>>}
 export function supplyFresh(state:SupplyState,platform:SupplyPlatform,now=Date.now()):boolean {
  const view=state.views[platform];
  return Boolean(view&&!['waiting','blocked'].includes(state.supplyRefresh?.[platform]?.state??'')&&!state.errors[platform]&&Math.max(state.now,now)-Date.parse(view.checked_at)<=30000);
@@ -98,7 +98,7 @@ export function createSupplyModel(client:SupplyClient){
   if(coordinatedSnapshot)adopt(coordinatedSnapshot());
   if(!writes.every(w=>canWrite(w.platform,w.paused))){publish({now:Date.now()});return Promise.resolve();}
   const epoch=generation,intent=writes.map(w=>({...w,version:writeVersions[w.platform]})),waitForCentral=externalBusy;
-  publish({writeBusy:true});
+  publish({writeBusy:true,pendingChoices:Object.fromEntries(intent.map(w=>[w.platform,w.paused]))});
   return (async()=>{
    if(pending)await pending;
    if(!active||epoch!==generation)return;
@@ -113,11 +113,11 @@ export function createSupplyModel(client:SupplyClient){
     if(coordinatedSnapshot)adopt(coordinatedSnapshot());
    }
    await run(intent);
-  })().catch(cause=>{if(active&&epoch===generation)readFailed(cause,writes.map(w=>w.platform));}).finally(()=>{if(active&&epoch===generation)publish({writeBusy:false});});
+  })().catch(cause=>{if(active&&epoch===generation)readFailed(cause,writes.map(w=>w.platform));}).finally(()=>{if(active&&epoch===generation)publish({writeBusy:false,pendingChoices:undefined});});
  }
  return {subscribe(listener:()=>void){listeners.add(listener);return()=>{listeners.delete(listener);};},getSnapshot:()=>state,setBlocked(value:boolean){blocked=value;},setPending(value:SupplyPlatform[]){for(const p of platforms)if(value.includes(p)!==pendingPlatforms.includes(p))writeVersions[p]++;pendingPlatforms=value;},setWriteContext,
   setCoordinated(refresh?:()=>Promise<void>,pause?:()=>void,snapshot?:()=>SupplyObservation,beforeWrite?:CoordinatedSupply['beforeWrite']){coordinatedBeforeWrite=beforeWrite;coordinatedRefresh=refresh;coordinatedPause=pause;coordinatedSnapshot=snapshot;if(refresh)clearTimeout(timer);},adopt,
-  start(){if(active)return;active=true;generation++;},stop(){active=false;generation++;localBusy=false;awaitingExplicitAdoption=false;clearTimeout(timer);clearTimeout(expiry);publish({busy:false,writeBusy:false,operation:'idle',activePlatform:null,retryAt:null});},
+  start(){if(active)return;active=true;generation++;},stop(){active=false;generation++;localBusy=false;awaitingExplicitAdoption=false;clearTimeout(timer);clearTimeout(expiry);publish({busy:false,writeBusy:false,pendingChoices:undefined,operation:'idle',activePlatform:null,retryAt:null});},
   read:()=>run(),write:(platform:SupplyPlatform,paused:boolean)=>write([{platform,paused}]),writeAll:(paused:boolean)=>write(platforms.map(platform=>({platform,paused}))),canWrite};
 }
 export type SupplyModel=ReturnType<typeof createSupplyModel>;

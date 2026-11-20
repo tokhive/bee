@@ -1,4 +1,4 @@
-import {decodeDeviceReply,decodeDeviceRecoveryReply,type DeviceClient,type DeviceInvoke} from './device.ts';
+import {decodeDeviceReply,decodeDeviceRecoveryReply,type DeviceClient,type DeviceInvoke,type DeviceView,type DeviceRecoveryView} from './device.ts';
 import type {BridgeError} from './bridge.ts';
 import {decodeBridgeError} from './failures.ts';
 export const switchPhases=['preparing_target','draining_source','stopping_source','connecting_target','committing_current','releasing_target','restoring_source','succeeded','failed','cancelled'] as const;
@@ -47,11 +47,14 @@ export function decodeHiveSwitchSnapshot(value:unknown):HiveSwitchSnapshot {
 }
 export const switchPending=(s:HiveSwitchSnapshot|undefined)=>!!s?.operation&&!['succeeded','failed','cancelled'].includes(s.operation.phase);
 export interface HiveSwitchClient {
- snapshot():Promise<HiveSwitchSnapshot>;start(origin:string,name:string):Promise<HiveSwitchSnapshot>;observe():Promise<HiveSwitchSnapshot>;cancel():Promise<HiveSwitchSnapshot>;continue():Promise<HiveSwitchSnapshot>;quit(decision:'continue_waiting'|'cancel_and_quit'):Promise<HiveSwitchSnapshot>;target:DeviceClient;
+ snapshot():Promise<HiveSwitchSnapshot>;start(origin:string,name:string):Promise<HiveSwitchSnapshot>;observe():Promise<HiveSwitchSnapshot>;cancel():Promise<HiveSwitchSnapshot>;continue():Promise<HiveSwitchSnapshot>;quit(decision:'continue_waiting'|'cancel_and_quit'):Promise<HiveSwitchSnapshot>;target:Omit<DeviceClient,'open'|'recoveryOpen'>&{open():Promise<DeviceView|DeviceRecoveryView>;recoveryOpen():Promise<DeviceView|DeviceRecoveryView>};
  onExitRequest?(listener:(operationId:string)=>void):Promise<()=>void>;
 }
 export function createHiveSwitchClient(invoke:DeviceInvoke,onExitRequest?:HiveSwitchClient['onExitRequest']):HiveSwitchClient {
  const snapshot=async(command:string,args?:Record<string,unknown>)=>decodeHiveSwitchSnapshot(await invoke(command,args));
+ // Native opening returns the validated device view for initial pairing and the
+ // recovery view when a rejected credential requires the recovery browser path.
+ const openTarget=async()=>{const reply=await invoke('hive_switch_target_open');return object(reply)&&object(reply.result)&&'recovery'in reply.result?decodeDeviceRecoveryReply(reply):decodeDeviceReply(reply);};
  return {snapshot:()=>snapshot('hive_switch_snapshot'),start:(origin,name)=>snapshot('hive_switch_start',{origin,name}),observe:()=>snapshot('hive_switch_observe'),cancel:()=>snapshot('hive_switch_cancel'),continue:()=>snapshot('hive_switch_continue'),quit:decision=>snapshot('hive_switch_quit',{decision}),onExitRequest,
- target:{status:async()=>decodeDeviceReply(await invoke('hive_switch_target_status')),begin:async(_hive,name)=>decodeDeviceReply(await invoke('hive_switch_target_begin',{name})),open:async()=>decodeDeviceReply(await invoke('hive_switch_target_open')),recoveryPrepare:async()=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_prepare')),recoveryStatus:async()=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_status')),recoveryConfirm:async(operationId,expectedRevision,decision)=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_confirm',{operationId,expectedRevision,decision})),recoveryOpen:async()=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_open'))}};
+ target:{status:async()=>decodeDeviceReply(await invoke('hive_switch_target_status')),begin:async(_hive,name)=>decodeDeviceReply(await invoke('hive_switch_target_begin',{name})),open:openTarget,recoveryPrepare:async()=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_prepare')),recoveryStatus:async()=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_status')),recoveryConfirm:async(operationId,expectedRevision,decision)=>decodeDeviceRecoveryReply(await invoke('hive_switch_target_recovery_confirm',{operationId,expectedRevision,decision})),recoveryOpen:openTarget}};
 }

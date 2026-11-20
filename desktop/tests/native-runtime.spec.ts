@@ -5,7 +5,7 @@ const card=(page:Page,p='OpenAI')=>page.getByRole('region',{name:p==='OpenAI'?/^
 async function chooseOpenai(page:Page){if(await page.getByRole('button',{name:'OpenAI',exact:true}).count())await page.getByRole('button',{name:'OpenAI',exact:true}).click();}
 async function setup(page:Page){await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});await page.goto('/');}
 async function reconcile(page:Page){const before=await page.evaluate(()=>(window as any).runtimeReadCount);await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);}
-async function openDetails(page:Page,p='OpenAI'){if(p==='Claude'&&!await card(page,p).count()){if(await page.getByRole('button',{name:'Claude',exact:true}).count())await page.getByRole('button',{name:'Claude',exact:true}).click();else {await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();}}if(await page.getByRole('dialog').count()===0)await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();}
+async function openDetails(page:Page,p='OpenAI'){if(p==='Claude'&&!await card(page,p).count()){if(await page.getByRole('button',{name:'Claude',exact:true}).count())await page.getByRole('button',{name:'Claude',exact:true}).click();else {await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'更换连接方式',exact:true}).click();await page.getByRole('region',{name:'添加账号',exact:true}).getByRole('button',{name:'返回',exact:true}).click();await page.getByRole('button',{name:'Claude',exact:true}).click();}}if(await page.getByRole('dialog').count()===0)await card(page,p).getByRole('button',{name:`${p} 详情`,exact:true}).click();}
 const calls=(page:Page,command:string)=>page.evaluate(command=>(window as any).calls.filter((c:any)=>c.command===command),command);
 const runtimeSummary=(page:Page)=>page.getByRole('region',{name:'服务状态',exact:true});
 async function noDailyControls(page:Page){await expect(page.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);await expect(page.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);}
@@ -38,20 +38,20 @@ test('zero-account waiting offers account connection and permits first login wit
  const sheet=page.getByRole('dialog').first();
  await sheet.getByRole('button',{name:'登录 Claude',exact:true}).click();
  const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
- await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await expect(login.getByRole('button',{name:'取消登录',exact:true})).toBeEnabled();
  expect(await calls(page,'runtime_start')).toEqual([]);
  expect(await calls(page,'account_action')).toEqual([]);
  expect(await calls(page,'authorize_start')).toHaveLength(1);
 });
-test('coordinated hooks share initial reads, the ten-second poll and explicit runtime refresh',async({page})=>{
+test('coordinated hooks share initial reads, the ten-second poll and subsequent device polls',async({page})=>{
  const now=new Date('2026-10-27T03:00:00Z');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await setup(page);
  await expect(page.getByRole('region',{name:'服务状态'}).getByText('尚未接入 AI 账号',{exact:true})).toBeVisible();
  const counts=()=>page.evaluate(()=>Object.fromEntries(['runtime_snapshot','account_defaults','account_snapshot','supply_status'].map(command=>[command,(window as any).calls.filter((call:any)=>call.command===command).length])));
  expect(await counts()).toEqual({runtime_snapshot:1,account_defaults:1,account_snapshot:2,supply_status:2});
  await page.clock.runFor(9999);expect(await counts()).toEqual({runtime_snapshot:1,account_defaults:1,account_snapshot:2,supply_status:2});
  await page.clock.runFor(1);await expect.poll(counts).toEqual({runtime_snapshot:2,account_defaults:1,account_snapshot:4,supply_status:4});
- await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await observeNextDevicePoll(page);
  await expect.poll(counts).toEqual({runtime_snapshot:3,account_defaults:1,account_snapshot:6,supply_status:6});
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
 });
@@ -88,14 +88,14 @@ test('paired proxy testing leaves effective paths unchanged until the confirmed 
 for(const command of ['account_action','runtime_start'])for(const outcome of ['success','failure'])test(`late ${command} ${outcome} from the previous owner cannot refresh or pause the current instance`,async({page})=>{
  const now=new Date('2026-10-27T03:00:00Z');await page.clock.pauseAt(new Date(await page.evaluate(()=>Date.now()+1000)));await setup(page);
  if(command==='account_action'){await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();}
- else{await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await page.getByRole('button',{name:'重新核对设备',exact:true}).click();}
+ else{await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await observeNextDevicePoll(page);}
  await page.evaluate(({command,outcome})=>{const w=window as any,native=w.__TAURI_INTERNALS__,invoke=native.invoke;native.invoke=async(name:string,args:unknown)=>{if(name===command){const result=outcome==='success'?await invoke(name,args):undefined;w.oldWriteStarted=true;return new Promise((resolve,reject)=>{w.finishOldWrite=()=>outcome==='success'?resolve(result):reject(new Error('old owner response failed after replacement'));});}return invoke(name,args);};},{command,outcome});
  if(command==='account_action'){await page.getByRole('button',{name:'确认接入',exact:true}).click();}
  else await page.getByRole('button',{name:'重试准备',exact:true}).click();
  await expect.poll(()=>page.evaluate(()=>(window as any).oldWriteStarted)).toBe(true);
  const before=await page.evaluate(()=>{const w=window as any;w.emit('d'.repeat(32));return w.runtimeReadCount;});await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
  if(command==='account_action')await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
- await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
  const reads=await page.evaluate(()=>{const w=window as any;w.finishOldWrite();return w.runtimeReadCount;});await page.clock.runFor(9999);
  expect(await page.evaluate(()=>(window as any).runtimeReadCount)).toBe(reads);await page.clock.runFor(1);
  await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(page.getByText('等待自动重试…',{exact:true})).toHaveCount(0);
@@ -112,10 +112,10 @@ test('selected stopped service can retry preparation without exposing daily star
 test('uncertain account writes reconcile with reads only and passive runtime cannot clear them',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();
  await page.evaluate(()=>{(window as any).actionUnknown=true;(window as any).actionPending=true;});
- await page.getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByRole('heading')).toHaveText(/无法更新账号状态|账号操作结果待核对/);
+ await page.getByRole('button',{name:'确认接入',exact:true}).click();await expect(card(page).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
  await page.getByRole('button',{name:'诊断',exact:true}).click();await page.getByText('运行详情',{exact:true}).click();await expect(page.locator('pre')).toContainText('RESPONSE_TIMEOUT: account action result unconfirmed');await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
- const reads=await page.evaluate(()=>(window as any).runtimeReadCount);await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByRole('heading')).toHaveText(/无法更新账号状态|账号操作结果待核对/);
- await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);const snapshots=(await calls(page,'account_snapshot')).length;await page.clock.runFor(10001);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBeGreaterThan(snapshots);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);await expect(card(page).getByRole('heading')).toHaveText(/无法更新账号状态|账号操作结果待核对/);expect(await calls(page,'account_action')).toHaveLength(1);
+ const reads=await page.evaluate(()=>(window as any).runtimeReadCount);await page.clock.runFor(10001);await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(reads);await expect(card(page).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');
+ await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);const snapshots=(await calls(page,'account_snapshot')).length;await page.clock.runFor(10001);await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBeGreaterThan(snapshots);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toHaveCount(0);await expect(card(page).getByRole('heading',{level:3})).toHaveText('暂时无法确认接入结果');expect(await calls(page,'account_action')).toHaveLength(1);
 });
 test('official login supports cancellation and completed login remains a candidate',async({page})=>{
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
@@ -127,14 +127,14 @@ test('official login supports cancellation and completed login remains a candida
 test('uncertain runtime start is never replayed and requires a fresh query',async({page})=>{
  await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;(window as any).runtimeUnknown=true;});
  await reconcile(page);await page.getByRole('button',{name:'重试准备',exact:true}).click();await expect(page.getByRole('region',{name:'服务状态'})).toContainText('等待已安排的核对');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toBeDisabled();
- await reconcile(page);await expect(page.getByRole('region',{name:'服务状态',exact:true}).locator('.native-runtime-health')).toContainText('贡献已启动');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);expect(await calls(page,'runtime_start')).toHaveLength(1);
+ await reconcile(page);await expect(page.getByRole('region',{name:'服务状态',exact:true}).locator('.native-runtime-health')).toContainText('Bee 运行中');await expect(page.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);expect(await calls(page,'runtime_start')).toHaveLength(1);
 });
 
 test('completed login cannot clear a later source edit, and write admission locks the source',async({page})=>{
  await setup(page);await page.evaluate(()=>{for(const a of Object.values((window as any).accounts) as any[])a.selection={...a.selection,state:'selected',fingerprint:'b'.repeat(64)};});await reconcile(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await openDetails(page);const sheet=page.getByRole('dialog').first();await page.evaluate(()=>{(window as any).loginAdmissionDelay=600;});
- await sheet.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await sheet.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(sheet.getByLabel('读取目录')).toBeDisabled();await page.keyboard.press('Escape');await card(page).getByRole('button',{name:'取消登录',exact:true}).click();await expect(card(page)).toContainText('已取消登录');
+ await sheet.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await openDetails(page);await sheet.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(sheet.getByLabel('读取目录')).toBeDisabled();await page.keyboard.press('Escape');await card(page).getByRole('button',{name:'取消登录',exact:true}).click();await expect(card(page)).toContainText('已取消登录');
  await page.evaluate(()=>{(window as any).loginAdmissionDelay=0;(window as any).loginComplete=true;});await openDetails(page);await sheet.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').last().getByRole('button',{name:'开始官方登录',exact:true}).click();await expect.poll(()=>page.evaluate(()=>(window as any).accounts.openai.operation.state)).toBe('succeeded');
- await sheet.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.evaluate(()=>{(window as any).delay=30000;});await sheet.getByLabel('读取目录').fill('/tmp/another-account');await sheet.getByRole('button',{name:'保存',exact:true}).click();await reconcile(page);await expect(sheet.getByLabel('读取目录')).toHaveValue('/tmp/another-account');await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.platform==='openai').at(-1)?.args.request.directory).toBe('/tmp/another-account');expect(await calls(page,'account_action')).toEqual([]);
+ await openDetails(page);await sheet.getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.evaluate(()=>{(window as any).delay=30000;});await sheet.getByLabel('读取目录').fill('/tmp/another-account');await sheet.getByRole('button',{name:'保存',exact:true}).click();await reconcile(page);await expect(sheet.getByLabel('读取目录')).toHaveValue('/tmp/another-account');await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.platform==='openai').at(-1)?.args.request.directory).toBe('/tmp/another-account');expect(await calls(page,'account_action')).toEqual([]);
 });
 
 test('account change remains paused and a platform failure leaves the other platform visible',async({page})=>{
@@ -270,7 +270,7 @@ test('start preserves paused platforms and uncertain start recovers by reading o
  await page.evaluate(()=>{(window as any).runtimeUnknown=true;});
  await page.getByRole('button',{name:'重试准备',exact:true}).click();
  await expect(page.getByRole('region',{name:'服务状态'})).toContainText('等待已安排的核对');
- await page.clock.runFor(10001);await expect(runtimeSummary(page).locator('.native-runtime-health')).toContainText('贡献已启动');
+ await page.clock.runFor(10001);await expect(runtimeSummary(page).locator('.native-runtime-health')).toContainText('Bee 运行中');
  const starts=await calls(page,'runtime_start');expect(starts).toHaveLength(1);
  expect(starts[0].args.request.resume_platforms).toEqual([]);
  expect(await calls(page,'supply_set_paused')).toEqual([]);
@@ -282,8 +282,8 @@ test('unregistered selection can be cancelled only after confirmation and never 
 });
 
 for(const denial of ['device','diagnostic','recovery'])test('identity '+denial+' preserves feedback without exposing daily runtime writes',async({page})=>{
- await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await page.getByRole('button',{name:'重新核对设备',exact:true}).click();
- await page.getByRole('button',{name:'重试准备',exact:true}).click();await expect(runtimeSummary(page).locator('.native-runtime-health')).toContainText('贡献已启动');
+ await setup(page);await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await observeNextDevicePoll(page);
+ await page.getByRole('button',{name:'重试准备',exact:true}).click();await expect(runtimeSummary(page).locator('.native-runtime-health')).toContainText('Bee 运行中');
  if(denial==='device'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>command==='device_status'?{result:{error:{code:'DEVICE_OPERATION_FAILED',message:'GET /api/bee/identity HTTP 401 device_replaced',details:{check:'device_identity',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',remote_code:'device_replaced'}}}}}:invoke(command,args);});await reconcile(page);}
  else if(denial==='recovery'){await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_snapshot'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);});await reconcile(page);}
  else{await page.clock.runFor(100);await page.evaluate(async()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;const currentRuntime=(await invoke('runtime_snapshot')).result.runtime;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='diagnostics_start'||command==='diagnostics_snapshot'){result.result.report.run_id=currentRuntime.run_id;result.result.report.checks[0]={...result.result.report.checks[0],status:'fail',code:'device_replaced',observed_at:new Date().toISOString(),evidence:{http_status:'401',path:'/api/bee/identity',server_code:'device_replaced'},next_action:'overview'};}return result;};});await page.getByRole('navigation').getByRole('button',{name:'诊断',exact:true}).click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();await page.clock.runFor(900);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status','rejected');await page.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();}
@@ -318,7 +318,7 @@ test('recovery-only failure hides ready supply, blocks resume, and is visible be
 for(const command of ['account_action','runtime_start'])test('known unsent '+command+' recovers at the same revision without replay',async({page})=>{
  await setup(page);
  if(command==='account_action'){await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeEnabled();}
- else {await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await page.getByRole('button',{name:'重新核对设备',exact:true}).click();}
+ else {await page.evaluate(()=>{const a=(window as any).accounts.openai;a.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};a.revision++;});await observeNextDevicePoll(page);}
  await page.evaluate(command=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.unsentAttempts=0;w.__TAURI_INTERNALS__.invoke=async(name:string,args:any)=>{if(name===command&&++w.unsentAttempts===1)throw {code:'REQUEST_QUEUE_TIMEOUT',message:'fixture queue expired before first byte; no bytes sent'};return invoke(name,args);};},command);
  if(command==='account_action'){await page.getByRole('button',{name:'确认接入',exact:true}).click();}
  else await page.getByRole('button',{name:'重试准备',exact:true}).click();
@@ -332,8 +332,8 @@ for(const command of ['account_action','runtime_start'])test('known unsent '+com
 for(const [connection,kind,copy] of [['connecting','connecting','正在连接 Hive'],['reconnecting','connecting','正在连接 Hive'],['disconnected','disconnected','Hive 连接已中断'],['rejected','rejected','设备身份被拒绝'],['occupied','occupied','设备连接已被占用']] as const)test(`shared ${connection} status never presents running as ready`,async({page})=>{
  await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
  await page.addInitScript(({connection})=>{const w=window as any;w.accounts.openai.selection={state:'selected',fingerprint:'b'.repeat(64),observed_at:new Date().toISOString(),error:null};const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const reply=await invoke(command,args);if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{local:'running',run_id:'a'.repeat(32),connection,connection_detail:{failure:{code:'http_rejected',stage:'connect',occurred_at:new Date().toISOString(),message:'HTTP 503 preview busy',evidence:{http_status:'503',path:'/api/bee/connect'}},retry:connection==='rejected'?'halted':'scheduled',next_retry_at:connection==='rejected'?null:new Date(Date.now()+15000).toISOString()}});return reply;};},{connection});
- await page.goto('/');const region=page.getByRole('region',{name:'服务状态'});await expect(region.getByRole('heading',{name:copy,exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
- await expect(region.getByRole('heading',{name:'贡献已启动',exact:true})).toHaveCount(0);await expect(region.locator('.native-runtime-health').getByText('贡献已启动',{exact:true})).toBeVisible();await expect(region.getByText('HTTP 503 preview busy',{exact:false})).toHaveCount(1);await noDailyControls(page);
+ await page.goto('/');const region=page.getByRole('region',{name:'服务状态'});await expect(page.getByRole('heading',{name:'Hive 暂不可用',exact:true})).toBeVisible();await expect(page.locator('.desktop-side-status')).toHaveText(copy);await expect(page.locator('.app-shell')).toHaveAttribute('data-desktop-status',kind);
+ await expect(region.getByRole('heading',{name:'Bee 运行中',exact:true})).toHaveCount(0);await expect(region).toBeHidden();await expect(page.getByRole('heading',{name:'Hive 暂不可用',exact:true})).toBeVisible();await page.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('HTTP 503 preview busy');await noDailyControls(page);
 });
 
 for(const connection of ['connected','reconnecting','rejected','occupied'] as const)test(`idle presence ${connection} remains independent from contribution`,async({page})=>{
@@ -348,15 +348,17 @@ for(const connection of ['connected','reconnecting','rejected','occupied'] as co
  },{connection});
  await page.goto('/');
  const region=page.getByRole('region',{name:'服务状态'}),health=region.locator('.native-runtime-health');
- await expect(health.getByText('贡献未启动',{exact:true})).toBeVisible();
+ if(connection==='connected')await expect(health.getByText('贡献未启动',{exact:true})).toBeVisible();else await expect(region).toBeHidden();
  const copy={connected:'Hive 已连接',reconnecting:'正在重新连接 Hive',rejected:'Hive 拒绝连接',occupied:'设备连接已被占用'};
- await expect(health.getByText(copy[connection],{exact:true})).toBeVisible();
+ if(connection==='connected')await expect(health.getByText(copy[connection],{exact:true})).toBeVisible();
  await expect(region.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);await noDailyControls(page);
  if(connection!=='connected'){
-  await expect(region.getByText('Hive 拒绝了本次请求（HTTP 503）。',{exact:true})).toBeVisible();
-  await region.getByText('查看失败详情',{exact:true}).click();
-  await expect(region.getByText('HTTP 503 idle connection unavailable',{exact:false})).toBeVisible();
-  await expect(region.getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeVisible();
+  const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
+  await expect(device.getByRole('heading',{name:'Hive 暂不可用',exact:true})).toBeVisible();
+  await device.getByRole('button',{name:'查看错误详情',exact:true}).click();
+  await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('HTTP 503 idle connection unavailable');
+  await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('导出诊断');await page.keyboard.press('Escape');
+  await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
  }
  expect(await calls(page,'runtime_start')).toEqual([]);expect(await calls(page,'account_action')).toEqual([]);
 });
@@ -365,13 +367,13 @@ test('Claude official login warns about official account, supports cancellation,
  await setup(page);await page.getByRole('button',{name:'AI 账号',exact:true}).click();await openDetails(page,'Claude');
  await page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true}).click();
  const login=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});
- await expect(login).toContainText('可能改变该客户端当前账号');
- await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await expect(page.getByRole('dialog')).toContainText('可能改变客户端当前登录账号');
+ await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  const cancel=login.getByRole('button',{name:'取消登录',exact:true});await expect(cancel).toBeEnabled();await cancel.click();
  await expect(login.getByText('本次登录已取消',{exact:true})).toBeVisible();
  await expect(login).toContainText('官方客户端可能已保存登录，可以检查当前登录后继续。');
  await page.evaluate(()=>{(window as any).loginComplete=true;});
- await login.getByRole('button',{name:'重新登录',exact:true}).click();await login.getByRole('button',{name:'继续登录',exact:true}).click();
+ await login.getByRole('button',{name:'重新登录',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await expect(login.getByText('已登录 Claude，尚未接入',{exact:true})).toBeVisible();
  await expect(card(page,'Claude').getByText('已有登录，尚未接入',{exact:true})).toBeVisible();expect(await calls(page,'authorize_cancel')).toHaveLength(1);expect(await calls(page,'account_action')).toEqual([]);expect(await calls(page,'runtime_start')).toEqual([]);
 });
@@ -381,7 +383,7 @@ for(const denial of ['device','recovery'])test('Claude '+denial+' failure allows
  await setup(page);await page.evaluate(denial=>{const w=window as any;if(denial==='device')w.deviceFail=true;else{const invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>command==='device_recovery_snapshot'?{result:{error:{code:'DEVICE_RECOVERY_FAILED',message:'recovery admission rejected: account_workers=1'}}}:invoke(command,args);}},denial);await reconcile(page);await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();await chooseOpenai(page);
  await expect(card(page).getByRole('button',{name:'确认接入',exact:true})).toBeDisabled();await openDetails(page,'Claude');
  const login=page.getByRole('dialog').getByRole('button',{name:'登录 Claude',exact:true});await expect(login).toBeEnabled();await login.click();
- const loginStatus=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await loginStatus.getByRole('button',{name:'继续登录',exact:true}).click();
+ const loginStatus=card(page,'Claude').getByRole('region',{name:'Claude 登录状态',exact:true});await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
  await expect.poll(async()=>(await calls(page,'authorize_start')).length).toBe(1);await page.keyboard.press('Escape');
  const cancel=loginStatus.getByRole('button',{name:'取消登录',exact:true});await expect(cancel).toBeEnabled();await cancel.click();await expect.poll(async()=>(await calls(page,'authorize_cancel')).length).toBe(1);
  await expect(loginStatus.getByText('本次登录已取消',{exact:true})).toBeVisible();await expect(loginStatus).toContainText('官方客户端可能已保存登录，可以检查当前登录后继续。');expect(await calls(page,'account_action')).toHaveLength(0);expect(consoleErrors).toEqual([]);
@@ -399,13 +401,13 @@ test('initial account reads wait for the authoritative Hive scope and start only
  await page.goto('/');await expect.poll(()=>page.evaluate(()=>(window as any).initialScopeRequested)).toBe(true);
  expect(await calls(page,'runtime_snapshot')).toHaveLength(0);expect(await calls(page,'account_snapshot')).toHaveLength(0);expect(await calls(page,'supply_status')).toHaveLength(0);
  await page.evaluate(()=>(window as any).releaseInitialScope());
- await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
  await expect.poll(async()=>(await calls(page,'account_snapshot')).length).toBe(2);
  expect(await calls(page,'runtime_snapshot')).toHaveLength(1);
 });
 
 test('a bridge event during a pending Hive read rechecks the authoritative scope after that read',async({page})=>{
- await setup(page);await expect(page.getByRole('button',{name:'重新核对设备',exact:true})).toBeEnabled();
+ await setup(page);await expect(page.getByRole('button',{name:'设备操作',exact:true})).toBeEnabled();
  await page.evaluate(()=>{
   const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;let held=false;
   w.__TAURI_INTERNALS__.invoke=async(command:string,args:unknown)=>{
@@ -419,4 +421,36 @@ test('a bridge event during a pending Hive read rechecks the authoritative scope
  await page.evaluate(()=>(window as any).releaseScopeRead());
  await expect.poll(()=>page.evaluate(()=>(window as any).runtimeReadCount)).toBeGreaterThan(before);
  expect(await calls(page,'runtime_start')).toHaveLength(0);expect(await calls(page,'account_action')).toHaveLength(0);
+});
+
+async function observeNextDevicePoll(page:Page){await reconcile(page);}
+
+for(const recovery of ['automatic','manual','still-reconnecting'] as const)test(`a running Hive connection ${recovery} clears old failure without starting or pausing the worker`,async({page})=>{
+ await page.addInitScript(installAccountFixture,{runtimeEnabled:true,accounts:{openai:accountFixture('openai'),claude:accountFixture('claude')}});
+ await page.addInitScript(()=>{
+  const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.connectionRecovered=false;
+  w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{
+   if(command==='runtime_start'){w.calls.push({command,args});throw new Error('must not start an already running worker');}
+   const reply=await invoke(command,args);
+   if(command==='runtime_snapshot')Object.assign(reply.result.runtime,{revision:w.connectionRecovered?746:377,local:'running',run_id:'a'.repeat(32),connection:w.connectionRecovered?'connected':'reconnecting',connection_detail:w.connectionRecovered?null:{failure:{code:'connection_refused',stage:'connect',occurred_at:new Date().toISOString(),message:'dial tcp 127.0.0.1:18080: connect: connection refused',evidence:{path:'/api/bee/agent',target_origin:'http://127.0.0.1:18080'}},retry:'scheduled',next_retry_at:new Date(Date.now()+15000).toISOString()}});
+   if(command==='runtime_snapshot')reply.result.runtime.platforms.claude.account.issues=[{code:'offline',platform:'claude',fingerprint:null,message:'offline',notify:false}];
+   return reply;
+  };
+ });
+ await page.goto('/');const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
+ await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+ const before=await page.evaluate(()=>JSON.stringify({accounts:(window as any).accounts,paused:(window as any).paused}));
+ if(recovery!=='still-reconnecting')await page.evaluate(()=>(window as any).connectionRecovered=true);
+ if(recovery==='automatic')await page.clock.runFor(11000);
+ else await device.getByRole('button',{name:'重试连接',exact:true}).click();
+ if(recovery==='still-reconnecting'){
+  await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toBeVisible();
+  await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
+ }else{
+  await expect(device.getByRole('heading',{name:'无法连接 Hive',exact:true})).toHaveCount(0);
+  await expect(device).toContainText('Hive 已连接');
+ }
+ await expect(page.getByText(/must not start an already running worker/)).toHaveCount(0);
+ for(const command of ['runtime_start','runtime_stop','supply_set_paused','account_action'])expect(await calls(page,command)).toEqual([]);
+ expect(await page.evaluate(()=>JSON.stringify({accounts:(window as any).accounts,paused:(window as any).paused}))).toBe(before);
 });

@@ -68,6 +68,20 @@ open "desktop/src-tauri/target/debug/bundle/macos/Bee S1 Dev.app"
 
 `make build` 继续只编译 CLI；本命令不使用演示模式，也不执行登录、接入或贡献操作。当前设计、分层接口和验收缺口见[文档总入口](../docs/desktop/README.md)。
 
+## 一键构建 macOS DMG
+
+在仓库根目录执行：
+
+```sh
+make dmg
+```
+
+沿用 `make app` 的工具链要求及 `APP_NODE_BIN`、`CARGO_HOME`、`RUSTUP_TOOLCHAIN` 配置，检查工具链、准备 TEE 和前端依赖后，调用 `prepare-release.mjs --mode candidate --build` 重建内置 Bee 并生成 release 模式的候选安装包。仅支持在 macOS 上构建本机架构，不会启动或安装 App。
+
+DMG 及包含 SHA-256、源码 revision 的 `release-manifest.json` 位于 `.cache/desktop-release/`；Tauri 原始 DMG 位于 `desktop/src-tauri/target/release/bundle/dmg/`（设置 `CARGO_TARGET_DIR` 时跟随该目录）。候选包使用 ad-hoc 签名，不代表已完成 Developer ID 签名、公证或正式发布验收。
+
+如果 `.cache/desktop-release/release-manifest.json` 已存在，发布脚本会拒绝覆盖；先将上一轮 `.cache/desktop-release/` 整目录移到独立的留存位置，再运行 `make dmg`。构建失败后也按此处理，保留失败记录。若原始 bundle 目录残留多个 DMG，需先移走旧安装包，使本轮只留下一个 DMG。
+
 ## 当前原生行为与文档
 
 首次启动在可信确认未配置且无未完成事务后，显示“连接 Hive → 绑定设备”向导；绑定前不显示主导航。完成后由用户选择进入账号页或概览，再次启动已绑定设备直接进入概览。读取故障与未完成事务沿原阶段恢复，不能当作新设备。见[设备配对说明](../docs/desktop/device-pairing.md)与[首次向导验收](../docs/desktop/evidence/2026-11-12-first-launch/validation.md)。

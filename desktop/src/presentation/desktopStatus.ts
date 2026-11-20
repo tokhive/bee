@@ -1,23 +1,27 @@
 import type {DesktopSnapshot} from '../system/desktopState';
 import {normalizeFailure,type UiFailure} from '../system/failures.ts';
 import type {NavigationTarget} from '../app/navigation';
+import {isAuthorizationSyncDisconnected} from './problems.ts';
 import type {AccountPlatform} from '../system/accounts';
 export interface DesktopPresentation {
- kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'ready'|'blocked';
+ kind:'loading'|'unconfirmed'|'failed'|'rejected'|'occupied'|'unbound'|'pairing'|'starting'|'preparing_accounts'|'changing_account'|'change_unconfirmed'|'stopping'|'no_accounts'|'stopped'|'connecting'|'disconnected'|'paused'|'pausing'|'resuming'|'quota_exhausted'|'quota_checking'|'ready'|'blocked';
  severity:'neutral'|'info'|'warning'|'error'|'success';
  readyPlatforms:AccountPlatform[];blockedPlatforms:AccountPlatform[];problem:UiFailure|null;primaryTarget:NavigationTarget|null;
  preparationStep:'bind'|'confirm_device'|'connect_account'|null;
 }
 const platforms=['openai','claude'] as const;
-const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',ready:'success',blocked:'warning'};
+const severities:Record<DesktopPresentation['kind'],DesktopPresentation['severity']>={loading:'info',unconfirmed:'warning',failed:'error',rejected:'error',occupied:'error',unbound:'info',pairing:'info',starting:'info',preparing_accounts:'info',changing_account:'info',change_unconfirmed:'warning',stopping:'info',no_accounts:'info',stopped:'neutral',connecting:'info',disconnected:'warning',paused:'neutral',pausing:'info',resuming:'info',quota_exhausted:'neutral',quota_checking:'info',ready:'success',blocked:'warning'};
 /** Read-only presentation of confirmed facts. It never schedules work or authorizes a write. */
-export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoService=false):DesktopPresentation {
+export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoService=false,pendingChoices:Partial<Record<AccountPlatform,boolean>>={},checkingQuota:AccountPlatform[]=[]):DesktopPresentation {
  const s=snapshot,r=s.runtime;
  const startup=s.startup&&(!s.startup.instance||s.startup.instance===s.native.metadata?.instance)&&(s.startup.binding_revision===null||s.startup.binding_revision===s.bindingRevision)&&(s.startup.network_revision===null||s.startup.network_revision===r?.network_revision)?s.startup:undefined;
  const selected=platforms.filter(p=>s.accounts[p]?.selection.state==='selected');
  const accountKnown=(p:AccountPlatform)=>!!s.accounts[p]&&!s.accountErrors[p]&&!!s.accountRefresh[p]?.lastConfirmedAt;
+ const accountBusy=(p:AccountPlatform)=>{const a=s.accounts[p];return a?.authorization.state==='preparing'||!!a?.operation&&['pending','running','reconciling'].includes(a.operation.state)||!!a?.login_maintenance&&a.login_maintenance.phase!=='restored';};
+ const missingCredential=(p:AccountPlatform)=>[s.accountErrors[p],s.accounts[p]?.candidate.error,s.accounts[p]?.authorization.error].find(error=>error?.code==='source_missing');
+ const synchronizationFailure=(p:AccountPlatform)=>{const error=s.accounts[p]?.authorization.error;return error&&isAuthorizationSyncDisconnected(normalizeFailure(error,'authorization_sync'))?error:undefined;};
  const readyPlatforms=selected.filter(p=>{
-  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
+  const v=s.supplies[p];return !s.error&&!s.deviceError&&!s.recoveryError&&!s.diagnosticFailure&&startup?.state!=='blocked'&&startup?.state!=='checking'&&r?.local==='running'&&r.connection==='connected'&&accountKnown(p)&&!missingCredential(p)&&!synchronizationFailure(p)&&!accountBusy(p)&&pendingChoices[p]===undefined&&!s.supplyErrors[p]&&!!v&&now-Date.parse(v.checked_at)<=30000&&v.ready&&!v.paused&&v.reasons.length===0&&s.device?.state==='bound'&&v.device_id===s.device.identity?.id&&v.hive===s.device.hive;
  });
  const blockedPlatforms=platforms.filter(p=>!readyPlatforms.includes(p)&&(!!s.accountErrors[p]||!!s.supplyErrors[p]||selected.includes(p)));
  const result=(kind:DesktopPresentation['kind'],problem:UiFailure|null=null,primaryTarget:NavigationTarget|null=null,preparationStep:DesktopPresentation['preparationStep']=null):DesktopPresentation=>({kind,severity:severities[kind],readyPlatforms:kind==='ready'?readyPlatforms:[],blockedPlatforms,problem,primaryTarget,preparationStep});
@@ -45,7 +49,21 @@ export function deriveDesktopStatus(snapshot:DesktopSnapshot,now:number,autoServ
  if(r.connection==='connecting'||r.connection==='reconnecting')return result('connecting',null,{page:'overview',section:'connection'});
  if(r.connection!=='connected')return result('disconnected',null,{page:'overview',section:'connection'});
  if(readyPlatforms.length)return result('ready',null,blockedPlatforms.length?{page:'accounts',section:'account',platform:blockedPlatforms[0]}:null);
+ const supplyUnknown=selected.find(p=>s.supplyErrors[p]);
+ if(supplyUnknown)return result('unconfirmed',s.supplyErrors[supplyUnknown]!,{page:'accounts',section:'account',platform:supplyUnknown});
+ const pending=selected.find(p=>pendingChoices[p]!==undefined);
+ if(pending)return result(pendingChoices[pending]?'pausing':'resuming',null,{page:'accounts',section:'account',platform:pending});
+ const changing=selected.find(p=>accountKnown(p)&&s.accounts[p]?.operation?.kind==='confirm_change'&&['pending','running','reconciling'].includes(s.accounts[p]?.operation?.state??''));
+ if(changing)return result(s.accounts[changing]?.operation?.state==='reconciling'?'change_unconfirmed':'changing_account',null,{page:'accounts',section:'account',platform:changing});
+ const preparing=selected.find(p=>accountKnown(p)&&s.accounts[p]?.authorization.state==='preparing');
+ if(preparing)return result('preparing_accounts',null,{page:'accounts',section:'account',platform:preparing});
+ const missing=selected.find(p=>missingCredential(p));
+ if(missing)return result('blocked',normalizeFailure(missingCredential(missing)!,'source_read'),{page:'accounts',section:'source',platform:missing});
+ const interrupted=selected.find(p=>synchronizationFailure(p));
+ if(interrupted)return result('blocked',normalizeFailure(synchronizationFailure(interrupted)!,'authorization_sync'),{page:'accounts',section:'account',platform:interrupted});
  const current=(p:AccountPlatform)=>{const v=s.supplies[p];return accountKnown(p)&&!s.supplyErrors[p]&&v&&now-Date.parse(v.checked_at)<=30000;};
- if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
+ if(selected.every(p=>current(p)&&s.supplies[p]?.paused&&(!autoService||s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted'))))return result('paused',null,{page:'accounts',section:'account',platform:selected[0]});
+ const quota=selected.find(p=>current(p)&&s.supplies[p]?.reasons.includes('quota_exhausted'));
+ if(quota&&selected.every(p=>current(p)&&s.supplies[p]?.reasons.every(r=>r==='manually_paused'||r==='quota_exhausted')))return result(checkingQuota.includes(quota)?'quota_checking':'quota_exhausted',null,{page:'accounts',section:'account',platform:quota});
  return result('blocked',s.accountErrors[selected[0]]??s.supplyErrors[selected[0]]??null,{page:'accounts',section:'account',platform:blockedPlatforms[0]??selected[0]});
 }

@@ -408,3 +408,27 @@ for(const slow of ['device','openai','claude'] as const)test(`continuous observa
  assert.equal(m.getSnapshot().busy,false,'unrelated writes must not join the slow resource');
  release(slow==='device'?{state:'unbound'}:{platform:slow,revision:1,issues:[]});await tick();
 });
+
+test('a failed runtime read stays visible while the device is offline and after it recovers',async t=>{
+ const f=fixture();let broken=false;
+ const problem={code:'RUNTIME_REPLY_INVALID',message:'runtime observation rejected by contract'};
+ f.deps.runtime=()=>({snapshot:async()=>{if(broken)throw problem;return runtime();}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ broken=true;f.deps.device.status=async()=>{throw {code:'connection_refused',message:'Hive offline'};};
+ await m.refresh();await tick();
+ assert.equal(m.getSnapshot().error?.code,'RUNTIME_REPLY_INVALID');
+ f.deps.device.status=async()=>({state:'bound'});
+ await m.refresh();await tick();
+ assert.equal(m.getSnapshot().error?.code,'RUNTIME_REPLY_INVALID');
+ assert.equal(m.getSnapshot().refresh.state,'blocked');
+});
+
+test('explicit runtime recheck recovers a blocked read without dropping the receipt floor',async t=>{
+ const f=fixture();let broken=false;
+ f.deps.runtime=()=>({snapshot:async()=>{if(broken)throw {code:'RUNTIME_REPLY_INVALID',message:'invalid snapshot'};return {...runtime(),revision:10,connection:'connected'};}});
+ const m=createDesktopState(f.deps);t.after(()=>m.dispose());m.subscribe(()=>{});await tick();
+ broken=true;await m.refresh();assert.equal(m.getSnapshot().error?.code,'RUNTIME_REPLY_INVALID');
+ broken=false;await m.recheckRuntime();assert.equal(m.getSnapshot().error,null);assert.equal(m.getSnapshot().runtime?.connection,'connected');
+ m.recordRuntimeReceipt(11);await m.recheckRuntime();assert.equal(m.getSnapshot().error?.code,'DESKTOP_STALE_RESULT');
+ assert.equal(m.getSnapshot().runtime?.revision,10);
+});

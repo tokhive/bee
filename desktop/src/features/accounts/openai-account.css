@@ -81,11 +81,11 @@
 .account-list-compact .account-status-block{margin:0}
 .account-list-compact .native-account-row-actions .account-action-help{text-align:left}
 .account-list-quota{min-width:0;display:grid;gap:10px}
-.account-quota-caption{display:flex;justify-content:space-between;gap:6px;font-size:11px;color:var(--muted)}
-.account-list-window{display:grid;grid-template-columns:minmax(36px,auto) minmax(12px,1fr) auto;gap:4px 7px;align-items:center;font-size:11px;min-width:0}
-.account-list-window .quota-value{font-size:11px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.account-quota-caption{display:flex;justify-content:space-between;gap:6px;font-size:10px;color:var(--muted)}
+.account-list-window{display:grid;grid-template-columns:36px minmax(12px,1fr) 34px;gap:4px 7px;align-items:center;font-size:11px;min-width:0}
+.account-list-window .quota-value{font-size:11px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
 .account-list-window .quota-window-name{overflow-wrap:anywhere;max-width:80px}
-.account-list-window .quota-reset{grid-column:2/-1;margin:0;font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.account-list-window .quota-reset{grid-column:2/-1;margin:0;font-size:10px;color:var(--muted);overflow-wrap:anywhere}
 .account-list-window.is-exhausted [data-slot=progress-indicator]{background:var(--oa-danger,#a24231)}
 .account-list-quota .quota-history{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
 .oa-status-line{display:flex;align-items:center;gap:3px}
@@ -99,3 +99,180 @@ button.account-error-trigger{width:26px;min-width:26px;min-height:26px;padding:4
 @container(max-width:320px){.auto-service-accounts .account-list-compact .native-account-row.oa-compact,.auto-service-accounts .account-list-compact .account-compact-row{grid-template-columns:1fr}.account-list-compact .openai-account.oa-compact .oa-body,.account-list-compact .account-list-condition,.account-list-compact .openai-account.oa-compact .oa-actions,.auto-service-accounts .account-list-compact .native-account-row-actions,.account-list-compact .openai-account.oa-compact>.oa-quota,.account-list-compact .account-compact-row>.account-list-quota{grid-column:1;grid-row:auto}}
 @media(max-width:760px){[data-radix-popper-content-wrapper]:has(>.account-error-popover){position:fixed!important;inset:auto 12px 12px!important;transform:none!important;width:calc(100vw - 24px)!important;min-width:0!important}.account-error-popover{width:100%;max-height:70vh;border-radius:12px}}
 @media(pointer:coarse){button.account-error-trigger{width:44px;min-height:44px}}
+
+/* Shared page geometry from the approved account-list preview. */
+.native-shell:has(.account-list-compact) main{padding:26px 29px 20px;scrollbar-gutter:stable;scrollbar-width:auto}
+.native-shell:has(.account-list-compact) .page-heading{align-items:flex-start;margin-bottom:20px}
+.native-shell:has(.account-list-compact) .page-heading h1{font-weight:650;letter-spacing:-.5px}
+.native-shell:has(.account-list-compact) .page-heading p{margin-top:6px;line-height:18px}
+.native-shell:has(.account-list-compact) .account-heading-actions{min-height:31.2px;align-items:center}
+.native-shell .native-account-list.account-list-compact{box-shadow:none}
+@media(max-width:720px){.native-shell:has(.account-list-compact) main{padding:20px 16px}}
+
+.native-shell[data-page=accounts] nav{gap:6px}
+.native-shell[data-page=accounts] nav button{gap:11px;padding:5px 12px 5px 13px;border:1px solid transparent;line-height:19.5px}
+.native-shell[data-page=accounts] nav button[aria-current=page]{border-color:var(--line);background:var(--paper);box-shadow:0 1px 3px #00000008}
+.native-shell[data-page=accounts] nav svg{width:16px;height:16px;stroke-width:1.6}
+
+/* OpenAI details use the approved compact fact list; keep its accessible description. */
+.detail-sheet:has(.oa-sheet-actions)>p:first-of-type{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.detail-sheet:has(.oa-sheet-actions){padding:24px}
+.detail-sheet:has(.oa-sheet-actions) header{margin-bottom:18px}
+.detail-sheet:has(.oa-sheet-actions) header h2{font-size:16px;font-weight:600;margin:0}
+.detail-sheet:has(.oa-sheet-actions) header button{border-color:transparent;background:transparent;color:var(--muted);padding-inline:4px}
+.detail-sheet:has(.oa-sheet-actions) .account-detail-facts{margin:0}
+.detail-sheet:has(.oa-sheet-actions) .account-detail-facts>div{grid-template-columns:90px minmax(0,1fr);gap:12px;margin:0 0 12px}
+.detail-sheet:has(.oa-sheet-actions) .account-detail-facts dt{color:var(--muted)}
+.detail-sheet:has(.oa-sheet-actions) .account-detail-facts dd{font-size:12px;line-height:18px}
+.detail-sheet .oa-sheet-actions{margin:16px 0;gap:8px}
+.detail-sheet .oa-sheet-actions .ui-button{padding:5px 12px;font-size:13px;font-weight:400;box-shadow:none}
+
+.dialog-overlay.openai-detail-overlay,.dialog-overlay.claude-detail-overlay{background:#202b3e40}
+:root[data-theme=dark] .dialog-overlay.openai-detail-overlay,:root[data-theme=dark] .dialog-overlay.claude-detail-overlay{background:#0008}
+
+/* Match the approved expanded workflow without stretching quota tracks. */
+.openai-account.oa-flow .account-list-window{max-width:360px}
+.openai-account.oa-flow .oa-steps .current{color:inherit;font-weight:600}
+.openai-account.oa-flow .oa-note{max-width:64ch;line-height:1.7}
+
+/* Expired Claude authorization uses the approved expanded recovery flow. */
+.auto-service-accounts .account-list-compact .native-account-row.claude-expired-flow{display:grid;grid-template-columns:minmax(0,1fr);gap:0;padding:22px 19px;position:relative}
+.account-list-compact .claude-expired-flow .platform-mark{display:grid}
+.account-list-compact .claude-expired-flow .native-account-copy{padding-right:92px}
+.account-list-compact .claude-expired-flow .native-platform-name h3{font-size:16px;line-height:24px}
+.account-list-compact .claude-expired-flow .native-account-identity{grid-column:1;grid-row:1;gap:11px}
+.account-list-compact .claude-expired-flow>.oa-steps{grid-column:1;grid-row:2}
+.account-list-compact .claude-expired-flow>.account-list-condition{grid-column:1;grid-row:3;margin-left:43px;min-height:72px}
+.account-list-compact .claude-expired-flow .native-account-condition{margin:0;line-height:22px;color:var(--ink);font-size:13px}
+.account-list-compact .claude-expired-flow .account-action-help{margin-top:8px;font-size:12px;line-height:20px}
+.auto-service-accounts .account-list-compact .claude-expired-flow>.native-account-row-actions{grid-column:1;grid-row:4;margin:8px 0 0 43px;justify-self:start;align-self:start;min-height:34px}
+.account-list-compact .claude-expired-flow>.native-account-row-actions>button[aria-label]{position:absolute;right:19px;top:22px}
+.account-list-compact .claude-expired-flow>.account-list-quota{grid-column:1;grid-row:5;margin:14px 0 0 43px}
+.account-list-compact .claude-expired-flow .account-list-window{max-width:360px}
+
+.account-list-compact .claude-expired-flow .account-status-block .native-account-condition{color:var(--ink);font-size:13px}
+.account-list-compact .claude-expired-flow .platform-mark.claude{color:var(--oa-accent);background:var(--surface-soft,#f8f7f4);border-color:var(--oa-line)}
+
+.claude-login-confirm>p{margin-top:12px}
+.claude-login-confirm .claude-login-impact{padding:12px;background:var(--panel);border-radius:6px;font-size:12px;color:var(--ink)}
+.claude-login-confirm .claude-login-close{position:absolute;right:22px;top:22px;color:var(--muted);padding:0;min-height:24px}
+
+.account-list-compact .claude-login-flow>.native-account-login{grid-column:1;grid-row:2;margin:0 0 0 43px;padding:0;border:0;display:block}
+.claude-login-expanded .account-login-icon{display:none}
+.claude-login-expanded .account-login-copy{display:block}
+.claude-login-expanded .account-login-message h4{font-size:13px;line-height:22px;font-weight:400}
+.claude-login-expanded .account-login-message p{font-size:12px;line-height:20px;margin-top:8px}
+.openai-account .claude-login-expanded .oa-steps{margin:18px 0 16px}
+.claude-login-expanded .account-login-actions{justify-content:flex-start;margin-top:16px}
+.auto-service-accounts .account-list-compact .claude-login-flow>.native-account-row-actions{grid-row:1;min-height:0;margin:0}
+.account-list-compact .claude-login-flow>.account-list-condition{grid-row:3;margin:12px 0 0 43px;min-height:0}
+.account-list-compact .claude-login-flow>.account-list-quota{grid-row:4}
+.account-flow-evidence{font-size:12px}
+.account-flow-evidence p{display:inline;line-height:20px}
+.account-flow-evidence>div{margin-top:8px}
+.account-flow-evidence .ui-button{margin-left:4px}
+
+.claude-login-expanded .account-login-actions{padding-left:0}
+.claude-login-expanded .account-login-actions .ui-button{min-height:32px}
+.claude-login-expanded .account-login-message p{max-width:none}
+
+.claude-login-complete .account-login-message h4{color:var(--oa-good)}
+.account-list-compact .claude-login-flow:has(.claude-login-complete)>.account-list-quota{display:none}
+
+.account-list-compact .claude-compact-login-row>.claude-login-compact{display:contents}
+.claude-login-compact .account-login-copy{grid-column:2;grid-row:1;display:block;min-width:0}
+.claude-login-compact .account-login-icon{display:none}
+.claude-login-compact .account-login-message h4{font-size:12px;font-weight:400;line-height:20px}
+.claude-login-compact .account-login-message p{font-size:11px;line-height:18px;margin-top:8px}
+.claude-login-compact .account-login-actions{grid-column:4;grid-row:1;align-self:start;justify-content:flex-start;padding:0;margin:18px 0 0}
+.claude-login-compact .account-login-actions .ui-button{min-height:32px}
+.auto-service-accounts .account-list-compact .claude-compact-login-row>.native-account-row-actions{margin-top:45px;justify-self:start;align-self:center}
+.account-list-compact .claude-compact-login-row>.account-list-condition{grid-column:1/-1;grid-row:3}
+.claude-login-record{grid-column:1/-1;grid-row:2;border-top:1px solid var(--line);padding-top:10px;font-size:12px;color:var(--muted)}
+.claude-login-record summary{cursor:pointer}
+.claude-login-record pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;margin-top:8px}
+@container(max-width:620px){.claude-login-compact .account-login-actions{grid-column:2;grid-row:2;margin-top:0}.claude-login-record{grid-row:3}.account-list-compact .claude-compact-login-row>.account-list-condition{grid-row:4}}
+@container(max-width:320px){.claude-login-compact .account-login-copy,.claude-login-compact .account-login-actions{grid-column:1;grid-row:auto}.claude-login-record{grid-row:auto}}
+
+/* Claude sheets reuse the approved preview's drawer and form geometry. */
+.detail-sheet:has(.claude-detail-actions),.detail-sheet:has(:is(.claude-source-form,.openai-source-form)),.detail-sheet:has(.claude-compare-panel){padding:24px;border-top:0;border-bottom:0;border-right:0}
+.detail-sheet:has(.claude-detail-actions)>header,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header,.detail-sheet:has(.claude-compare-panel)>header{margin-bottom:18px}
+.detail-sheet:has(.claude-detail-actions)>header h2,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header h2,.detail-sheet:has(.claude-compare-panel)>header h2{margin:0;font-weight:600;letter-spacing:normal}
+.detail-sheet:has(.claude-detail-actions)>header button,.detail-sheet:has(:is(.claude-source-form,.openai-source-form))>header button,.detail-sheet:has(.claude-compare-panel)>header button{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;color:var(--muted);padding:5px 4px;font-size:13px;line-height:19.5px}
+.detail-sheet:has(.claude-detail-actions)>.account-detail-facts{display:grid;gap:12px;margin:17px 0}
+.detail-sheet:has(.claude-detail-actions)>.account-detail-facts>div{grid-template-columns:90px minmax(0,1fr);gap:12px;margin:0;font-size:12px;line-height:18px}
+.detail-sheet:has(.claude-detail-actions) .account-detail-facts dd,.detail-sheet:has(.claude-detail-actions) .native-account-condition{line-height:18px}
+.account-detail-facts .account-status-block .native-account-condition{margin:0}
+.claude-detail-actions{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;margin:16px 0}
+.claude-detail-actions .account-actions{display:flex;gap:8px;flex-wrap:wrap}
+:is(.claude-source-form,.openai-source-form) label{display:grid;gap:6px;margin-bottom:14px;font-size:12px}
+:is(.claude-source-form,.openai-source-form) input,:is(.claude-source-form,.openai-source-form) select{width:100%;min-width:0;height:34px;border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:6px;padding:7px 9px;font:inherit}
+.detail-sheet :is(.claude-source-form,.openai-source-form) p{font-size:13px;line-height:1.65;color:var(--muted)}
+:is(.claude-source-form,.openai-source-form) .dialog-actions{margin:22px 0 12px}
+.detail-sheet :is(.claude-source-form,.openai-source-form) .ui-button,.claude-detail-actions .ui-button{font-size:13px;font-weight:400;line-height:19.5px;padding:5px 12px;box-shadow:none}
+
+:is(.claude-source-form,.openai-source-form) input::placeholder{color:var(--muted);opacity:1}
+
+.account-list-compact .claude-expired-flow .native-account-fingerprint{line-height:16.5px}
+.account-list-compact .claude-expired-flow .native-account-condition{line-height:19.5px}
+.account-list-compact .claude-expired-flow .account-action-help{line-height:20.4px}
+.account-list-compact .claude-preparation-flow>.native-account-row-actions>.account-action-help{margin:0}
+
+.detail-sheet :is(.claude-source-form,.openai-source-form) .claude-source-error{color:#a24231;margin-top:12px}
+[data-theme=dark] .detail-sheet :is(.claude-source-form,.openai-source-form) .claude-source-error{color:#f2a38f}
+.detail-sheet :is(.claude-source-form,.openai-source-form) .account-error-trigger{width:16px;height:16px;min-height:16px;padding:0;vertical-align:middle}
+@media(max-width:950px){.auto-service-accounts .account-list-compact .native-account-row.claude-expired-flow{padding:22px 16px}}
+@media(max-width:720px){
+ .account-list-compact .claude-expired-flow>.oa-steps,.account-list-compact .claude-expired-flow>.account-list-condition,.account-list-compact .claude-expired-flow>.account-list-quota,.account-list-compact .claude-login-flow>.native-account-login,.auto-service-accounts .account-list-compact .claude-expired-flow>.native-account-row-actions{margin-left:0}
+ .account-list-compact .claude-expired-flow>.native-account-row-actions>button[aria-label]{right:16px}
+}
+
+.claude-change-review-hidden{visibility:hidden}
+.dialog-overlay.claude-change-overlay-hidden{background:transparent}
+.claude-compare-panel .account-detail-facts{display:grid;gap:12px;margin:0 0 17px}
+.claude-compare-panel .account-detail-facts>div{grid-template-columns:90px minmax(0,1fr);gap:12px;margin:0;font-size:12px;line-height:18px}
+.claude-compare-panel .account-detail-facts dd{line-height:18px}
+.detail-sheet .claude-compare-panel>p{font-size:13px;line-height:1.65;margin:12px 0}
+.claude-compare-panel .account-actions button{font-size:13px;font-weight:400;box-shadow:none}
+.dialog-content.claude-change-confirm{width:min(400px,calc(100vw - 32px));padding:24px;border-radius:8px}
+.dialog-content.claude-change-confirm h2{font-size:17px;font-weight:600;letter-spacing:normal;padding-right:42px;margin-bottom:24px}
+.claude-change-confirm>p{font-size:13px;line-height:1.65;margin:12px 0}
+.claude-change-confirm .claude-login-close{position:absolute;right:24px;top:24px;padding:5px 4px;color:var(--muted);font-weight:400}
+
+.claude-change-confirm .dialog-actions button{font-size:13px;font-weight:400;box-shadow:none}
+
+.claude-change-record{grid-column:1/-1;border-top:1px solid var(--line);padding-top:10px;font-size:12px;color:var(--muted)}
+.claude-change-record summary{cursor:pointer}
+.account-list-compact .account-list-condition>.native-account-condition{color:var(--ink)}
+
+.account-list-compact .claude-change-complete .native-account-condition{color:var(--oa-good)}
+.account-list-compact .claude-change-complete>.native-account-row-actions>.ui-button.primary{min-width:0;padding:6px 12px;font-size:13px;font-weight:400;min-height:34px;box-shadow:none}
+
+.detail-sheet:has(.openai-source-form)>p:empty{display:none}
+.detail-sheet:has(:is(.claude-source-form,.openai-source-form)) :focus-visible{outline-color:var(--accent-ink)}
+
+/* Use the approved flat select surface in WKWebView as well as Chromium. */
+:is(.claude-source-form,.openai-source-form) label:has(>select){position:relative}
+:is(.claude-source-form,.openai-source-form) select{appearance:none;-webkit-appearance:none;padding-right:28px;box-shadow:none}
+:is(.claude-source-form,.openai-source-form) label:has(>select)::after{content:"";position:absolute;right:12px;bottom:15px;width:5px;height:5px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg);pointer-events:none}
+@media(forced-colors:active){:is(.claude-source-form,.openai-source-form) select{appearance:auto;-webkit-appearance:auto}:is(.claude-source-form,.openai-source-form) label:has(>select)::after{display:none}}
+
+.account-page-problem{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.account-page-problem>p{margin:0;font-size:13px;line-height:1.5}
+
+/* Keep the detail context mounted for cancel/focus restoration, but show one layer. */
+.account-confirmation-background{visibility:hidden}
+.dialog-overlay.openai-login-overlay{background:#202b3e40}
+.dialog-content.openai-login-confirm{padding:24px;border-radius:10px;box-shadow:0 12px 45px #0002}
+.openai-login-confirm header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.dialog-content.openai-login-confirm h2{margin:0;line-height:1.5}
+.dialog-content.openai-login-confirm>p{margin:12px 0;line-height:1.65}
+.dialog-content.openai-login-confirm .openai-login-impact{margin:0;padding:11px 13px;background:var(--panel);border-radius:6px;font-size:12px;line-height:1.7;color:var(--ink)}
+.openai-login-confirm .ui-button{padding:5px 12px;font-size:13px;font-weight:400;line-height:1.5;box-shadow:none}
+.openai-login-confirm .openai-login-close{color:var(--muted);padding:5px 4px;min-height:32px}
+.openai-login-confirm .dialog-actions{margin-top:22px}
+
+/* Approved workflow cards keep 22px vertical padding at both review widths. */
+.auto-service-accounts .native-account-row.openai-account.oa-flow{padding-block:22px}
+.openai-account.oa-flow .oa-title{line-height:1.5}
+.openai-account.oa-flow .oa-note{line-height:1.7}

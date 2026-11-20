@@ -4,19 +4,131 @@
 
 [打开唯一主预览](index.html) · [历史版本与确认记录](http://127.0.0.1:15500/docs/preview/history/README.md) · [维护规范](../standard/html-preview.md)
 
-整个 App 使用同一个主入口。2026-11-09 用户已认可连续流程新版，首次登录、已登录账号接入、重新登录／授权恢复、读取修复、换号及相关准备重试的步骤与完成反馈已纳入主预览。首次启动设备绑定向导及错误详情、等待文案已于 2026-11-12 认可并纳入。三步添加 OpenAI 账号向导及叹号错误详情已于 2026-11-13 认可并纳入。同时保留 Hive 切换的 17 个入口；当前 536 个入口用于静态评审，不代表全部真实接口已验收。
+整个 App 使用同一个主入口。2026-11-18 用户确认当前草稿并要求“更新到主预览”。主预览现已纳入紧凑设备卡、正常菜单移除修复入口、连接故障重试，以及绑定／切换／取消结果的“重新核对”，共 638 个场景；原主预览 588 个场景全部保留。
 
-页面使用模拟数据，不接真实登录或业务。[当前待评审稿 draft.html](draft.html?scene=setup-unknown) 和 [新版对比页](flow-comparison.html) 保留用于对比。正式登录必须等待真实官方结果再核验；预览固定延时不代表正式产品自动跳过授权。
+[打开当前主预览](index.html?scene=device-service&theme=light&size=narrow) · [已认可冻结版](http://127.0.0.1:15500/docs/preview/history/20261119-182800-approved-selected-account-lists/index.html?scene=paused&theme=light&size=narrow)。`draft.html` 保留 11 月 18 日设备故障评审稿；11 月 19 日已确认的账号列表统一直接纳入主预览，后续未确认调整仍在草稿进行。
 
-本轮按用户要求仅在 `bee-desktop-ui` worktree 维护；本 worktree 的 `docs/preview/index.html` 是当前工作入口。
+本次只同步 HTML 与说明，不修改正式应用代码。2026-11-17 的正式 React 组件记录仍见[历史冻结记录](http://127.0.0.1:15500/desktop/tests/fixtures/bee-preview/history/20261117-153033-approved-binding-repair/SOURCE.md)。页面使用模拟数据，不接真实登录或业务，HTML 认可不代表正式应用或真实 Hive 已验收。
+
+以下章节记录各轮交付时的范围与状态；2026-11-17 概览简化和 2026-11-18 故障核对草稿现均已获本次认可并纳入主预览。完整交互验证沿用草稿验证，本次另核对场景完整性、主入口显示与关键操作。
+
+## 已认可：统一已接入账号列表（2026-11-19）
+
+用户确认沿用“已添加列表 · 仅有 OpenAI”的规则，并统一旧场景。账号列表不展示未接入平台占位卡，正在进行的接入流程仍保留；通过“添加账号”选择其它平台，取消返回原账号和接单选择，已接入平台不可重复添加。进行中的账号操作不会被新的添加操作替换。
+
+原 638 个场景名称、分组和入口全部保留。验证包括 OpenAI／Claude 正常与暂停、读取故障、双平台已接入、添加／取消与焦点、进行中保护、尺寸切换和重置。真实 App 暂停页已做浅色两尺寸目视对照；不等于全量像素验收，剩余差异继续记录。
+
+## 已认可：设备故障与重新核对（2026-11-18）
+
+[打开当前草稿](draft.html?scene=device-service&theme=light&size=narrow) · [正常菜单](draft.html?scene=device-normal-menu&size=narrow) · [连接超时](draft.html?scene=device-connection-timeout&size=narrow) · [未知错误](draft.html?scene=device-status-unknown&size=narrow) · [结果未确认](draft.html?scene=device-binding-unknown&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261118-112829-device-fault-actions/draft.html?scene=device-service&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
+
+落实用户确认的文字 UI：正常设备菜单只保留“切换 Hive”；设备凭据确实失效时显示“修复设备绑定”。连接拒绝、HTTP 503 和超时显示具体原因及“重试连接”，不据此推荐重绑或升级。未识别错误保留实际错误摘要、详情与“重新核对”。绑定、切换和取消结果未确认时统一使用“重新核对”，查询期间不可重复点击，结束后区分成功、仍未完成和仍未知。切换结果未知保留“取消切换”，取消结果未知不重复取消。
+
+沿用上轮紧凑布局：当前故障与操作集中在设备卡，设备资料在卡底；保留账号自身问题、身份、暂停选择及 OpenAI 双窗口额度。绑定或切换确认完成后，接入入口仍位于账号区。
+
+新增“设备与 Hive / 故障与核对”分组，含 40 个可直接选择的正常、故障、错误详情、核对进行中及结果分支；原 598 个入口保留，共 638 个。默认打开 HTTP 503。用户已确认本版 HTML，现已同步到 `index.html`；正式应用代码未在本轮更新。
+
+验证包括受影响场景的浅色紧凑／深色宽屏显示、重试成功与失败、状态／绑定／切换／取消核对结果、恢复后保留暂停、详情与键盘焦点、重置和场景切换取消旧模拟操作。所有数据和结果都是本地预设，不访问真实 Hive。
+
+修改前复用字节一致的 `20261117-211505-compact-device-overview/draft.html`；交付冻结于 `20261118-112829-device-fault-actions`，包含本轮草稿、修改前稿、认可主预览和全部对照 HTML。
+
+## 上一轮待评审：概览设备区简化（2026-11-17）
+
+[打开当前草稿](draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-211505-compact-device-overview/draft.html?scene=compact-startup-failure&theme=light&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)
+
+针对真实截图中“切换已取消、设备绑定完成、当前网络故障、账号接入引导”同时展开的问题：设备卡只展开当前故障与操作，设备身份放在底部；已结束的切换和绑定收成可关闭的简短反馈；接入入口留在账号区。只有进行中的绑定与 Hive 切换保留展开步骤。独立账号故障、已知身份、暂停选择和 OpenAI 双窗口额度仍保留；未知值显示 —。
+
+新增 10 个“概览 / 设备区简化”入口，原有 588 个入口保留，共 598 个。包含截图组合故障、诊断、重试进行中、重试失败／成功、独立授权过期、绑定完成、配对中、切换中及正常状态。默认打开截图组合场景。该稿待评审，`index.html` 和正式应用代码未修改。
+
+已检查浅／深色、820 × 680／1080 × 700、关闭反馈不隐藏故障且重试后不重新弹出、诊断详情与焦点返回、键盘菜单、主题／尺寸保留弹层输入、重试失败／恢复后保留暂停和独立故障、网页明确确认后完成绑定、切换进行中及取消、重置和切场景中断旧模拟任务。HTTP 503 与连接拒绝分别保留具体证据，不据此推断协议不兼容。全是静态预设，不访问真实 Hive。
+
+修改前草稿复用 `20261117-153033-approved-binding-repair/draft.html`，已核对字节一致；本轮冻结新草稿、修改前草稿、认可主预览及全部对照 HTML，独立打开后交付。
+
+当前开发 worktree：`/Users/dayong/myspace/mywork/tokenhive/.worktrees/bee-setup-failure-preview`，分支 `codex/bee-setup-failure-preview`。历史版本与确认记录在独立档案库；下方其它 worktree 和旧端口为历史记录。
 
 在本 worktree 根目录运行：
 
 ```sh
-python3 -m http.server 1496 --bind 127.0.0.1 --directory docs/preview
+python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview
 ```
 
-固定访问地址：<http://127.0.0.1:1496/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
+固定访问地址：<http://127.0.0.1:1497/index.html>。支持 `scene=onboarding|recovery|ready`、`theme=light|dark`、`size=narrow|wide`。
+
+## 待评审：设备绑定修复视觉优化（2026-11-17）
+
+[绑定故障](draft.html?scene=rebind-fault&theme=light&size=narrow) · [配对确认](draft.html?scene=rebind-pair&theme=dark&size=narrow) · [恢复进度](draft.html?scene=rebind-tasks&size=narrow) · [完成](draft.html?scene=rebind-complete&size=narrow) · [启动恢复](draft.html?scene=rebind-config) · [修改前同场景](http://127.0.0.1:15500/docs/preview/history/20261116-175535-inline-binding-repair/draft.html?scene=rebind-fault&size=narrow) · [设备操作菜单](draft.html?scene=rebind-device-menu&size=narrow) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-114138-switch-hive-in-device-menu/draft.html?scene=rebind-fault&size=narrow) · [上一版冻结稿](http://127.0.0.1:15500/docs/preview/history/20261117-111736-binding-repair-visual-polish/draft.html?scene=rebind-fault&size=narrow) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md)。
+
+用户确认视觉方案后只调整 `draft.html` 的样式与修复区域的标记结构；文案、场景和流程沿用下方 2026-11-16 方案，`index.html` 和正式代码未修改。本轮 HTML 待视觉评审。
+
+同日补充：用户评审指出设备凭据失效场景下“切换 Hive”按钮不协调，从四个候选中确认把入口收进卡片标题的“⋯”菜单。这一项改变了已认可主预览中“切换 Hive”的入口位置，仅在草稿内生效；纳入主预览前需单独确认。
+
+- 概览设备卡：修复区域以一条分隔线接在设备信息下方，沿用主预览 Hive 切换区的字号与行距（12px 正文、12px 加粗标题），取代原先比卡片标题更大的 16px 标题；卡片标题的更多入口改为 28px 图标按钮，菜单向下展开。
+- 故障提示：恢复顶部状态圆点，“设备绑定待修复”用强调色、“等待设备绑定修复”用中性色，不再以表示正常的绿色显示；错误详情入口缩为 24px。
+- 配对确认：标签、配对码和有效期收为一行，影响告知改为浅底提示条；紧凑窗口下配对态卡片高度由 564px 降至 365px，AI 账号卡回到首屏。
+- 按钮层级：按钮高度由 36px 回到基线 32px，每个状态只保留一个主按钮；取消等低频操作收入操作行右侧的“⋯”菜单，取消确认弹窗的取消按钮用危险色。概览内服务故障不再重复显示第二个菜单入口。
+- 恢复进度：按用户要求与主预览进行中场景的呈现方式一致，不新增转圈或步骤条。概览内为标题行加普通状态行，同 Hive 切换进行中；启动恢复页使用设备设置页已有的左侧强调线状态块。
+- “切换 Hive”入口：原为信息行右侧的 66×32 描边按钮，按钮文字比同行 11px 信息低约 7.5px，并与标题行的“⋯”上下并列。现与“修复设备绑定”同列于卡片标题的“⋯”菜单，信息行只保留文字（48px → 33px）。菜单打开时聚焦第一个可用项；修复进行中“切换 Hive”在菜单内置灰并保留原提示；Hive 列表与确认弹窗关闭后焦点回到“⋯”。在非修复场景打开该菜单不再改动场景下拉。
+- 弹窗与完成态：确认弹窗、证据浮层对齐 Hive 切换弹窗的尺寸、圆角与字号；完成态的设备、Hive、归属账号按设备摘要样式单行排列。
+
+与确认方案文字的三处差异，均由“与主预览场景呈现方式一致”这一补充要求引出：概览内修复区域整体采用 Hive 切换区的 12px 字阶，未使用方案中的 14px 标题和 13px 原因；进度不加转圈；启动恢复页的配对码保持主预览设备设置页的上下排列，未改单行。
+
+验证：46 个修复相关入口在浅色紧凑、深色宽屏下逐一渲染，无横向溢出、缺失文本或越出卡片的元素。浏览器演练故障→检查→配对→网页确认（含错误配对码、切换主题与尺寸保留输入）→完成→空账号页；“⋯”菜单键盘操作与焦点返回、取消确认到已取消；正常检查；HTTP 503 证据浮层与重试；停止核对后继续；启动恢复地址校验至完成；直接选中的进行中场景停留、切场景取消旧任务、重置；Hive 切换等待场景及 Claude 模板。“切换 Hive”入口调整后，另对 17 个 Hive 切换入口、43 个带概览的修复入口和 2 个概览入口共 62 个场景，按浅色紧凑、深色宽屏复查：信息行无按钮、菜单内入口唯一、无横向溢出；演练从菜单打开 Hive 列表、选择目标到切换成功、地址校验报错、切换主题与尺寸保留列表输入、归属与重新绑定确认弹窗、通知来源提示、概览与账号页往返、重置。紧凑窗口下配对与配对码过期两个状态仍略高于一屏（713／689px 对 678px），需在概览内滚动。直接打开 `rebind-complete` 时场景下拉显示“尚未登录 · 首次接入”，修改前后一致，本轮未改。全部为页面内模拟数据，不连接真实 Hive，不代表正式应用验收。
+
+留版：视觉优化修改前复用字节一致的 `20261116-175535-inline-binding-repair`，交付版为 `20261117-111736-binding-repair-visual-polish`；“切换 Hive”入口调整修改前复用字节一致的 `20261117-111736-binding-repair-visual-polish`，新完整留版为 `20261117-114138-switch-hive-in-device-menu`，其中 `before-visual-polish.html` 为视觉优化前完整稿、`before-switch-menu.html` 为入口调整前完整稿，并带齐全部对照 HTML。
+
+## 上一轮待评审：概览内设备绑定修复（2026-11-16，交互方案沿用，视觉见上方）
+
+[概览正常态](draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](draft.html?scene=rebind-fault&size=narrow) · [网页确认与影响告知](draft.html?scene=rebind-pair&theme=dark&size=narrow) · [启动恢复](draft.html?scene=rebind-config) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-175535-inline-binding-repair/draft.html?scene=rebind-device)。
+
+本轮落实用户确认的四项重审结论：取消独立设备页；概览设备区更多菜单提供“修复设备绑定”；检查、恢复反馈、配对码和等待进度在设备区原地展开；确需替换设备时，在前往 Hive 网页确认之前提示“重新绑定完成后，需要重新接入 AI 账号。”。首次启动无法进入概览时复用恢复内容，取消仍需弹窗确认。正常检查仅给出简短结果，不重置绑定、不影响原接单选择。
+
+沿用原概览和账号模型，返回 AI 账号页保留原状态；绑定故障以独立条件说明暂不可贡献，正常绑定检查不引入这个阻塞。替换结果确认完成后才进入空账号状态。HTTP 503 重试后重新检查原绑定，不直接新建配对。保留已有主预览的 Hive 切换实现和 17 个起点；修复与切换进行中避免混用两个操作，切换完成后修复使用当前 Hive。
+
+草稿共 588 个直接入口，其中 46 个修复相关入口复用同一内容组件，17 个 Hive 切换入口来自已认可主预览。旧 `rebind-device` 链接现打开概览设备区，页面下拉不再列出独立“设备”页；左下角恢复原有身份展示。旧服务故障链接继续映射到对应修复状态。
+
+验证包括修复入口与正常结果、网页确认到完成及空账号页、取消、HTTP 503 重试、主题尺寸保留输入、概览／账号往返保留暂停与配对码、直接进行中场景停留、切场景取消旧操作、Hive 切换入口及深浅色紧凑布局。全部为页面内模拟，不证明正式应用或 Hive 业务验收。`index.html` 和正式代码未修改；本轮 HTML 待视觉与交互评审。
+
+修改前复用字节一致的 `20261116-165613-rebind-interaction`；新完整留版为 `20261116-175535-inline-binding-repair`，包括全部对照 HTML。
+
+## 历史讨论：独立设备页与重新绑定交互（2026-11-16，已被上方方案替代）
+
+### 后续重审（四项调整已确认，已落实至上方候选稿）
+
+用户已确认两项调整：取消本稿新增的独立设备页，复用概览设备区承载设备资料和低频恢复入口，保留已有“切换 Hive”；常驻恢复入口改名“修复设备绑定”，确需网页重新确认归属时显示“请重新绑定”和“重新绑定 Hive”。普通连接故障仍提供与原因匹配的处理入口，如“重试连接”。
+
+用户随后确认另外两项调整：修复过程在概览设备区原地展开，检查正常或恢复成功时用简短结果反馈结束，需要网页确认时展示配对码、有效期及相关操作；取消确认使用弹窗。首次启动无法进入概览时，在启动恢复页复用同一组内容。确需替换设备时，在前往 Hive 确认的主按钮前说明“重新绑定完成后，需要重新接入 AI 账号。”；直接恢复原绑定时不显示这项影响。
+
+此前已确认的恢复边界继续适用：网页打开不等于用户批准，必须核对配对码并明确确认；确认后显示当前实际等待阶段，停止自动核对时提供“继续核对”，不重新获取配对码；关闭页面不等于取消。取消结果须经确认，取消不自动恢复旧设备接单，也不撤回已完成处理；绑定已经完成则展示完成结果。本机保存失败只继续保存。替换完成后引导重新接入 AI 账号，不自动开始贡献；恢复原绑定则保留账号及接单选择。
+
+恢复机制文档中的“重新绑定 Hive”仍指包含优先恢复原绑定的完整流程；以上是面向用户的动作名称、展示位置与告知时机调整，不改变恢复机制。这四项调整已落实至上方候选稿；下面保留上一轮 HTML 的交付记录，便于与冻结版对照。
+
+### 上一轮 HTML 交付记录
+
+[正常设备页](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device&theme=light&size=narrow) · [绑定故障](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-fault&size=narrow) · [网页确认与配对码](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-pair&size=narrow) · [停止核对](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-paused) · [取消确认](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-cancel-dialog) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-165613-rebind-interaction/draft.html?scene=rebind-device)。
+
+依据本会话已确认线框制作；HTML 仍待视觉与交互评审，尚未纳入主预览或正式应用。正常设备页把「重新绑定 Hive」放入右上角更多菜单，绑定故障和配置损坏时直接提供入口。沿用页面内状态提示，不将错误堆到窗口顶部。37 个新增直接入口，加上 9 个旧服务故障链接兼容映射，草稿共 571 个入口；旧故障方案保留在历史快照。
+
+本轮包括原绑定正常／恢复、缺少地址、配对码与有效期、原请求继续核对、Hive 网页明确确认、旧任务与结算等待、停止自动核对、替换与保存、取消确认及未知结果、绑定已提交后的取消核对、完成后重新接入 AI 账号。HTTP 503 提供重试连接；只有明确兼容性证据才提示更新 Bee 或升级 Hive；记录缺失提供管理员处理与诊断出口。正常往返设备页保留原账号页面及暂停状态，替换成功进入现有空账号页。
+
+所有操作都是固定模拟数据；Hive 网页在模态窗口中模拟，需输入配对码并明确确认。确认网址只使用 Hive 同源 `/devices/pair`，不承诺自动填码。更新检查预设为暂无兼容版本；不连接真实更新服务。网页、诊断与剪贴板仅包含示例数据。关闭网页弹窗继续原请求；预览页刷新按 URL 场景起点恢复，不能据此宣称真实应用重启持久化已验收。
+
+验证：46 个相关直接入口能渲染且无横向溢出；9 个直接选中的进行中阶段保持静态。浏览器演练正常检查、错误配对码校验、网页明确确认到替换完成、取消终态、继续保存、确认前换码／确认后续查、账号页往返仍暂停、切场景取消旧任务；检查主题与尺寸保留弹窗输入、菜单键盘与焦点、深浅色紧凑布局。主预览和正式代码未修改。
+
+修改前复用字节一致的 `20261116-154817-setup-service-failure`；交付版本冻结至 `20261116-165613-rebind-interaction`，含全部对照 HTML。来源为本节上方标明的 worktree 与分支。
+
+## 历史讨论：首次启动服务故障与身份核对（2026-11-16，已被上方方案替代）
+
+[打开本轮待评审稿](draft.html?scene=setup-service-blocked&theme=dark&size=narrow) · [Hive 已恢复但身份未确认](draft.html?scene=setup-service-available) · [当前主预览](index.html?scene=setup-unknown) · [历史索引](http://127.0.0.1:15500/docs/preview/history/README.md) · [完整冻结稿](http://127.0.0.1:15500/docs/preview/history/20261116-154817-setup-service-failure/draft.html?scene=setup-service-blocked)。
+
+用户同意先补组合故障预览，再按认可结果同步主预览与正式实现。本轮 HTML 待评审。工作入口是当前 Bee checkout 的 `docs/preview/draft.html`；下方早期 worktree 限定为历史记录。主预览 `index.html` 保持原内容。
+
+故障统一放入居中的设备设置内容区，主状态为“绑定结果待确认”；分别保留 HTTP 503 和设备身份不足以应用网络设置的事实。一个主要按钮打开 Hive 控制台，次要操作检查原绑定结果。叹号详情保留两项证据、独立启动状态核对及诊断入口。Hive 可访问不代表绑定已确认，不生成新配对码、不开始贡献。
+
+在原草稿 525 个入口上新增 9 个可直接选择的子场景，共 534 个：服务不可用、检查绑定中、检查后仍不可用、服务恢复但身份未确认、错误详情、启动核对中、启动核对后身份未确认、控制台、诊断。此前草稿内容保留；它与主预览的场景集合不同，后续纳入主预览时只合入本轮认可部分。
+
+已在浏览器验证新增入口、两种窗口尺寸（820 × 680、1080 × 700）、浅深色、无横向溢出、叹号和 Escape 焦点返回、外观/尺寸切换保留详情、原绑定及启动核对、控制台返回、诊断返回与模拟 JSON 导出、重置和切场景取消旧检查；原配对网址异常入口作定点回归。历史稿独立打开复查。全部为静态预设，不访问真实 Hive，不代表真实故障修复或恢复流程验收。
+
+启动当前预览：在 Bee 根目录运行 `python3 -m http.server 1497 --bind 127.0.0.1 --directory docs/preview`，打开 <http://127.0.0.1:1497/draft.html?scene=setup-service-blocked&theme=dark&size=narrow>。产品资源全部内联；冻结稿带齐本轮对照 HTML，早期版本的进一步历史跳转可能需要档案库 15500 服务。
 
 ## 待评审：首次绑定异常页操作层级（2026-11-13）
 

@@ -71,6 +71,8 @@ Bee depends on the TEE client library [`github.com/tokhive/tee`](https://github.
 
 For the macOS desktop development App, run `make app`. It prepares dependencies and builds the native Bee, frontend, and Tauri bundle. See the [desktop build guide](desktop/README.md#一键构建-macos-app) for toolchain requirements and the output path.
 
+For a locally ad-hoc-signed macOS candidate installer, run `make dmg`. The DMG and release manifest are written to `.cache/desktop-release/`. See the [DMG build guide](desktop/README.md#一键构建-macos-dmg) for details and rebuild instructions.
+
 The examples below call `bee`; with a source build, put `bin/bee` on your `PATH` or call it as `./bin/bee`.
 
 To run the tests:

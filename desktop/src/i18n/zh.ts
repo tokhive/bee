@@ -1,5 +1,12 @@
 import {en} from './en.ts';
 export const zh: Record<string, string> = {...Object.fromEntries(Object.keys(en).map(key => [key, key])),
+ "desktop.status.changing_account": "正在更换账号…",
+ "desktop.status.change_unconfirmed": "换号结果待核对",
+ "desktop.status.pausing": "正在暂停接单…",
+ "desktop.status.resuming": "正在恢复接单…",
+ "desktop.status.quota_checking": "正在核验额度…",
+ "desktop.status.quota_exhausted": "额度已耗尽",
+ "desktop.status.preparing_accounts": "正在准备接单…",
  "desktop.status.loading":"正在读取设备与账号状态",
  "desktop.status.unconfirmed":"状态待确认",
  "desktop.status.failed":"贡献未启动或已中断",

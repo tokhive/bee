@@ -99,3 +99,14 @@ test('runtime rejects unsafe original origin structures and non-loopback HTTP ho
   assert.throws(()=>decodeRuntimeSnapshot(reply({...fixture.snapshot,connection_detail:d}),'current'),/origin/,origin);
  }
 });
+
+test('offline issues from an unselected platform do not reject the whole runtime snapshot',()=>{
+ const snapshot=structuredClone(fixture.snapshot);
+ snapshot.platforms.claude.account.issues=[{code:'offline',platform:'claude',fingerprint:null,message:'offline',notify:false}];
+ snapshot.local='running';snapshot.connection='reconnecting';snapshot.run_id='a'.repeat(32);
+ const view=decodeRuntimeSnapshot(reply(snapshot),'current');
+ assert.equal(view.platforms.claude.account.issues[0].fingerprint,null);
+ assert.equal(view.connection,'reconnecting');
+ snapshot.connection='connected';snapshot.revision++;
+ assert.equal(decodeRuntimeSnapshot(reply(snapshot),'current').connection,'connected');
+});

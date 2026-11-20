@@ -16,6 +16,7 @@ function Fixture(){
  return <><FirstLaunchWizard busy={false} error={null}
   begin={(hive,name)=>{record(`begin ${hive} ${name}`);return new Promise(()=>{});}}
   refresh={()=>record('refresh')} open={()=>record('open')}
+  recover={async decision=>{record(`recover ${decision}`);return true;}}
   onNavigate={page=>record(`navigate ${page}`)} onDiagnostics={()=>record('diagnostics')}
   {...props}/><output aria-label="Fixture actions" style={{display:'none'}}>{events.join('\n')}</output></>;
 }

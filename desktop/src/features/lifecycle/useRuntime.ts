@@ -5,7 +5,7 @@ import type {RuntimeClient,RuntimeSnapshot} from '../../system/runtime';
 import type {AccountPlatform} from '../../system/accounts';
 import {failure} from '../supply/useSupply';
 
-export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus;refresh:()=>Promise<void>;beforeWrite?:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus}}
+export interface CoordinatedRuntime {view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus;refresh:()=>Promise<void>;recheck?:()=>Promise<void>;beforeWrite?:()=>Promise<void>;pause?:()=>void;generation?:()=>number;recordReceipt?:(revision:number)=>void;snapshot?:()=>{view?:RuntimeSnapshot;error:UiFailure|null;identityError?:UiFailure|null;busy:boolean;refreshStatus?:RefreshStatus}}
 export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordinated?:CoordinatedRuntime){
  const [localView,setView]=useState<RuntimeSnapshot>(),[error,setError]=useState<UiFailure|null>(null),[busy,setBusy]=useState(false),[refreshing,setRefreshing]=useState(false),[uncertain,setUncertain]=useState(false);
  const [settled,setSettled]=useState(0);
@@ -28,7 +28,7 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   setRefreshing(true);const started=central.current?.generation?.();
   const request=(async()=>{
    try{
-    if(refreshCentral){await refreshCentral();return active.current&&central.current?.generation?.()===started?observe():false;}
+    if(refreshCentral){await (central.current?.recheck??refreshCentral)();return active.current&&central.current?.generation?.()===started?observe():false;}
     const next=await client.snapshot();if(active.current){latest.current=next;verified.current=true;setView(next);setError(null);setUncertain(false);return true;}return false;
    }catch(cause){if(active.current&&central.current?.generation?.()===started){verified.current=false;setError(failure(cause,'runtime_operation'));}return false;}
   })().finally(()=>{if(reading.current===request)reading.current=undefined;if(active.current){setRefreshing(false);setSettled(v=>v+1);}});
@@ -65,7 +65,15 @@ export function useRuntime(client:RuntimeClient|undefined,enabled:boolean,coordi
   }catch(cause){if(current()){const problem=failure(cause,'runtime_operation');verified.current=false;resolution.current={previous:latest.current};if(!requestNotExecuted(problem))central.current?.pause?.();setError(problem);setUncertain(!requestNotExecuted(problem));}}
   finally{writing.current=false;if(active.current)setBusy(false);}
  };
- return {view,error,startBlocked:!!coordinated?.identityError,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error||coordinated?.refreshStatus?.state==='waiting'&&!!coordinated.refreshStatus.lastConfirmedAt&&Date.now()-Date.parse(coordinated.refreshStatus.lastConfirmedAt)>30000,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
+ const retryConnection=async()=>{
+  if(writing.current||!await read())return;
+  const current=latest.current;
+  // A live worker owns reconnects. Refresh its observation instead of starting it again.
+  if(!current||['running','starting','stopping'].includes(current.local)||current.connection==='connected')return;
+  if(current.local==='waiting'&&current.connection_detail?.retry!=='halted')return;
+  await write('start');
+ };
+ return {view,error:error??coordinated?.error??null,retryConnection,startBlocked:!!coordinated?.identityError,refreshStatus:coordinated?.refreshStatus,stalled:!!coordinated?.error||coordinated?.refreshStatus?.state==='waiting'&&!!coordinated.refreshStatus.lastConfirmedAt&&Date.now()-Date.parse(coordinated.refreshStatus.lastConfirmedAt)>30000,busy,refreshing:refreshing||!!coordinated?.busy,uncertain,refresh:read,
   start:(resume:AccountPlatform[])=>write('start',resume),stop:()=>write('stop')};
 }
 export type RuntimeModel=ReturnType<typeof useRuntime>;

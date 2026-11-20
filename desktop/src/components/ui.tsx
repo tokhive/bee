@@ -18,6 +18,6 @@ export function Progress({ value, ...props }: Omit<ComponentProps<typeof Progres
   const drawn = value === null ? null : Math.max(0, Math.min(100, value));
   return <ProgressPrimitive.Root data-slot="progress" className="ui-progress" value={drawn} {...props}>
     <ProgressPrimitive.Indicator data-slot="progress-indicator"
-      style={{ transform: `translateX(-${100 - (drawn ?? 0)}%)` }} />
+      style={{ visibility: drawn === null ? 'hidden' : undefined, transform: `translateX(-${100 - (drawn ?? 0)}%)` }} />
   </ProgressPrimitive.Root>;
 }

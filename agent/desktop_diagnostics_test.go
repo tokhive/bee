@@ -634,3 +634,36 @@ func TestDesktopDiagnosticsAbsentAndCorruptRecordsShareContextRevision(t *testin
 		}
 	}
 }
+
+func TestDesktopDiagnosticsManualPauseIsKnownButOtherBlockersStillFail(t *testing.T) {
+	for _, tc := range []struct {
+		name                 string
+		ready, paused        bool
+		reasons              []string
+		wantStatus, wantCode string
+	}{
+		{"manual pause", false, true, []string{beewire.ReasonManuallyPaused}, "pass", "supply_paused"},
+		{"ready", true, false, nil, "pass", "taking_new_work"},
+		{"pause plus unknown blocker", false, true, []string{beewire.ReasonManuallyPaused, "future_reason"}, "fail", "supply_result_unconfirmed"},
+		{"inconsistent ready", true, true, []string{beewire.ReasonManuallyPaused}, "fail", "supply_result_unconfirmed"},
+		{"no reasons", false, true, nil, "fail", "supply_result_unconfirmed"},
+		{"duplicate pause reasons", false, true, []string{beewire.ReasonManuallyPaused, beewire.ReasonManuallyPaused}, "fail", "supply_blocked"},
+		{"pause flag absent", false, false, []string{beewire.ReasonManuallyPaused}, "fail", "supply_blocked"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			status, code, evidence := diagnosticSupplyResult("openai", beewire.PlatformSupply{Platform: "openai", Ready: tc.ready, Paused: tc.paused, Reasons: tc.reasons})
+			if status != tc.wantStatus || code != tc.wantCode {
+				t.Fatalf("got status=%s code=%s evidence=%v; want %s/%s", status, code, evidence, tc.wantStatus, tc.wantCode)
+			}
+		})
+	}
+}
+
+func TestDesktopDiagnosticsPauseDoesNotHideIndependentSupplyFailure(t *testing.T) {
+	for _, reasons := range [][]string{{beewire.ReasonManuallyPaused, beewire.ReasonSupplyNotEnabled}, {beewire.ReasonSupplyNotEnabled, beewire.ReasonManuallyPaused}} {
+		status, code, evidence := diagnosticSupplyResult("openai", beewire.PlatformSupply{Platform: "openai", Ready: false, Paused: true, Reasons: reasons})
+		if status != "fail" || code != "supply_blocked" || evidence["reason"] != beewire.ReasonSupplyNotEnabled {
+			t.Fatalf("independent blocker hidden: status=%s code=%s evidence=%v", status, code, evidence)
+		}
+	}
+}

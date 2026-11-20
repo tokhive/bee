@@ -18,7 +18,7 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
  useEffect(()=>{mounted.current=true;return()=>{mounted.current=false;};},[]);
  useEffect(()=>{if(startup?.state==='checking'){observedChecking.current=true;setCompletedOperation(null);}else if(startup?.state==='ready'&&observedChecking.current){observedChecking.current=false;if(startup.recovering&&startup.progress?.operation_id)setCompletedOperation(startup.progress.operation_id);}},[startup?.state,startup?.recovering,startup?.progress?.operation_id]);
  useEffect(()=>{setElapsed(0);if(!pending){pendingSince.current=null;setTotalElapsed(0);return;}const began=Date.now();pendingSince.current??=began;const timer=setInterval(()=>{setElapsed(Date.now()-began);setTotalElapsed(Date.now()-pendingSince.current!);},1000);return()=>clearInterval(timer);},[phase,pending]);
- const currentProblem=startup?.failure??(native.error?normalizeFailure(native.error,'bridge_startup'):snapshot.startupReadError??null);
+ const currentProblem=localError??startup?.failure??(native.error?normalizeFailure(native.error,'bridge_startup'):snapshot.startupReadError??null);
  if(currentProblem)previousProblem.current=currentProblem;
  else if(!pending)previousProblem.current=null;
  const problem=currentProblem??(pending?previousProblem.current:null);
@@ -41,7 +41,7 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
  return <section className="startup-recovery-notice" data-testid="startup-recovery" role={!pending&&problem?'alert':undefined} aria-busy={pending&&!waiting}>
   <div className="startup-recovery-main"><div aria-live="polite"><h2 ref={heading} tabIndex={-1}>{t(title)}</h2><p>{subtitle}</p></div>
    {(!pending||waiting)&&<div className="inline-actions">
-    {!pending&&(native.state==='failed'||native.state==='stopped'||recoveryAvailable&&startup?.can_retry)?<button disabled={busy} onClick={event=>void run(onRetry,event.currentTarget)}>{t(native.state==='ready'?(problem?.code==='RECOVERY_REMOTE_DRAINING'||problem?.code==='RECOVERY_RETIREMENT_UNCONFIRMED'?'继续恢复':'重试恢复'):'重新连接')}</button>:queryUseful&&<button disabled={busy} onClick={event=>void run(onQuery,event.currentTarget)}>{t('核对结果')}</button>}
+    {!pending&&(native.state==='failed'||native.state==='stopped'||recoveryAvailable&&startup?.can_retry)?<button disabled={busy} onClick={event=>void run(onRetry,event.currentTarget)}>{t(native.state==='ready'?(problem?.code==='RECOVERY_REMOTE_DRAINING'||problem?.code==='RECOVERY_RETIREMENT_UNCONFIRMED'?'继续恢复':'重试恢复'):'重新连接')}</button>:queryUseful&&<button disabled={busy} onClick={event=>void run(onQuery,event.currentTarget)}>{t(busy?'正在核对…':'重新核对')}</button>}
     {!diagnostics&&<button className="quiet" onClick={onDiagnostics}>{t('查看诊断')}</button>}
    </div>}
   </div>
@@ -49,7 +49,6 @@ export function StartupRecoveryNotice({snapshot,onQuery,onRetry,onDiagnostics,di
   {waiting&&startup?.observed_at&&<small>{t('上次确认：{time}',{time:formatDate(startup.observed_at,currentLocale(),{dateStyle:"short",timeStyle:"medium"})})}</small>}
   {problem&&<details><summary>{t('错误详情')}</summary><pre>{presentFailure(problem,currentLocale()).details}</pre></details>}
   {snapshot.startupReadError&&snapshot.startupReadError!==currentProblem&&<p role="alert">{safeFailureText(snapshot.startupReadError.message)}</p>}
-  {localError&&<p role="alert">{safeFailureText(localError.message)}</p>}
   {diagnostics&&<><p className="startup-diagnostic-hint">{t('此记录由 App 保留；后台不可用时不会执行实时检查。')}</p><button disabled={exporting} onClick={()=>void exportEvidence()}>{t('导出启动诊断')}</button>{exportResult&&<p role="status">{t(exportResult)}</p>}</>}
  </section>;
 }

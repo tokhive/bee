@@ -1,41 +1,52 @@
-import {useEffect} from 'react';
+import {ShieldCheck} from 'lucide-react';
+import {useEffect,useRef} from 'react';
 import {Button} from '../../components/ui';
 import {AddAccountWizard} from './AddAccountWizard';
 import {platforms} from '../supply/useSupply';
-import {FailureNotice} from '../../components/ProblemNotice';
+import {AccountErrorPopover} from './AccountErrorPopover';
+import {presentFailure} from '../../presentation/problems';
+import {sameAccountFailure} from './accountPresentation';
 import type {UiFailure} from '../../system/failures';
 import type {NavigationRequest,NavigationTarget} from '../../app/navigation';
-import type {AccountsModel} from './useAccounts';
+import {accountPending,type AccountsModel} from './useAccounts';
 import type {RuntimeModel} from '../lifecycle/useRuntime';
 import type {SharedSupply} from '../supply/useSupply';
 import {NativeAccountList} from './NativeAccountList';
-import {t} from '../../i18n/index';
+import {t,currentLocale} from '../../i18n/index';
 function accountPageState(accounts:AccountsModel){
  const selected=platforms.filter(p=>accounts.views[p]?.selection.state==='selected');
  const known=platforms.every(p=>!!accounts.views[p]);
  const activeOpenai=accounts.views.openai?.operation&&['pending','running','reconciling','unknown'].includes(accounts.views.openai.operation.state)||accounts.uncertain.openai;
  const adding=accounts.setupPlatform;
  const setup=selected.includes('openai')&&adding==='openai'?null:adding??(!selected.length&&known?(activeOpenai?'openai':'choose'):null);
- return {selected,known,setup};
+ const canCancelClaude=setup==='claude'&&!selected.includes('claude')&&!accountPending(accounts.views.claude)&&!accounts.writeBusy.claude&&!accounts.uncertain.claude&&!accounts.cancelUnconfirmed.claude&&accounts.views.claude?.operation?.state!=='unknown'&&!accounts.claudeSourceSaving;
+ return {selected,known,setup,canCancelClaude};
 }
 export function NativeAccountHeadingActions({accounts,readOnly}:{accounts:AccountsModel;readOnly:boolean}){
- const {selected,known,setup}=accountPageState(accounts);
+ const {selected,known,setup,canCancelClaude}=accountPageState(accounts);
+ const addButton=useRef<HTMLButtonElement>(null),previousSetup=useRef(setup);
+ useEffect(()=>{if(previousSetup.current!==null&&setup===null)addButton.current?.focus();previousSetup.current=setup;},[setup]);
  const confirmed=!readOnly&&known&&!platforms.some(p=>accounts.readFailures[p]);
- return <div className="account-heading-actions"><span className="account-page-count">{confirmed?t('{count} 个已接入',{count:selected.length}):t('接入数量待确认')}</span>{!readOnly&&known&&selected.length<platforms.length&&setup===null&&<Button onClick={()=>accounts.setSetupPlatform('choose')}>{t('添加账号')}</Button>}</div>;
+ return <div className="account-heading-actions"><span className="account-page-count">{confirmed?t('{count} 个已接入',{count:selected.length}):t('接入数量待确认')}</span>{canCancelClaude&&<Button variant="ghost" onClick={()=>accounts.setSetupPlatform(selected.length?null:'choose')}>{t(selected.length?'取消添加':'返回')}</Button>}{!readOnly&&known&&selected.length<platforms.length&&setup===null&&<Button ref={addButton} disabled={platforms.some(p=>accounts.views[p]?.authorization.state==='preparing')} onClick={()=>accounts.setSetupPlatform('choose')}>{t('添加账号')}</Button>}</div>;
 }
 export function NativeAccountsPage({accounts,supply,deviceError,runtime,onNavigate,navigationRequest}:{navigationRequest?:NavigationRequest;accounts:AccountsModel;supply:SharedSupply|undefined;deviceError:UiFailure|null;onNavigate?:(target:NavigationTarget)=>void;runtime:RuntimeModel}){
  const adding=accounts.setupPlatform,setAdding=accounts.setSetupPlatform;
  useEffect(()=>{const target=navigationRequest?.target;if(target?.page==='accounts'&&target.platform&&accounts.views[target.platform]?.selection.state!=='selected')setAdding(target.platform);},[navigationRequest?.sequence]);
  const {selected,known,setup}=accountPageState(accounts);
+ const platformHeading=useRef<HTMLHeadingElement>(null);
+ useEffect(()=>{if(accounts.autoService&&setup==='choose')platformHeading.current?.focus();},[setup,accounts.autoService]);
+ const hasAccountRows=!accounts.autoService||(setup===null||setup==='claude')&&selected.length>0;
+ const sharedFailure=deviceError??accounts.sharedFailure;
+ const rowAccounts=sharedFailure?{...accounts,sharedFailure}:accounts;
+ const pageErrors=[accounts.defaultsError,...(!hasAccountRows?[sharedFailure]:[]),...platforms.filter(p=>!accounts.views[p]).map(p=>accounts.errors[p])].filter((error,index,all):error is UiFailure=>!!error&&!all.slice(0,index).some(previous=>sameAccountFailure(previous,error))&&!(hasAccountRows&&sameAccountFailure(error,sharedFailure)));
  useEffect(()=>{if(adding&&adding!=='choose'&&selected.includes(adding))setAdding(null);},[adding,selected.join(',')]);
  return <>
-  {accounts.defaultsError&&<FailureNotice failure={accounts.defaultsError} check="account_defaults" onNavigate={onNavigate}/>}
-  {deviceError&&<div className="accounts-device-problem"><FailureNotice failure={deviceError} check="device_status" onNavigate={onNavigate}/></div>}
-  {platforms.filter(p=>!accounts.views[p]&&accounts.errors[p]&&accounts.errors[p]!==accounts.defaultsError).map(p=><FailureNotice key={p} failure={accounts.errors[p]} check="account_read" onNavigate={onNavigate}/>)}
+  {pageErrors.map(error=>{const problem=presentFailure(error,currentLocale()),shared=sameAccountFailure(error,sharedFailure),target=shared?{page:'overview' as const,section:'device' as const}:problem.action;return <div className="account-page-problem" key={JSON.stringify([error.code,error.check,error.message])}><p role="alert">{problem.summary}</p><AccountErrorPopover errors={[error]}/>{target&&onNavigate&&<Button variant="outline" onClick={()=>onNavigate(target)}>{shared?t('前往概览'):problem.actionLabel??t('查看详情')}</Button>}</div>;})}
   {!known&&<p role="status">{t('正在读取账号状态…')}</p>}
-  {accounts.autoService&&setup==='choose'?<section className="add-account" aria-label={t('添加账号')}><ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} aria-current={i===0?'step':undefined}><span>{i+1}</span>{t(label)}</li>)}</ol><h2>{t('选择要添加的平台')}</h2><p>{t('只会在列表中展示你已添加的账号。')}</p><div className="add-account-platforms">{platforms.filter(p=>!selected.includes(p)).map(p=><Button key={p} variant="outline" onClick={()=>setAdding(p)}>{p==='openai'?'OpenAI':'Claude'}</Button>)}</div>{selected.length>0&&<Button variant="outline" onClick={()=>setAdding(null)}>{t('返回')}</Button>}</section>:
+  {accounts.autoService&&setup==='choose'?<><section className="add-account" aria-label={t('添加账号')}><header className="add-account-top"><h2>{t('添加账号')}</h2>{selected.length>0&&<Button variant="ghost" onClick={()=>setAdding(null)}>{t('取消添加')}</Button>}</header><ol className="add-account-steps" aria-label={t('添加账号步骤')}>{['选择平台','连接账号','确认接入'].map((label,i)=><li key={label} aria-current={i===0?'step':undefined}><span>{i+1}</span>{t(label)}</li>)}</ol><div className="add-account-body"><h3 ref={platformHeading} tabIndex={-1}>{t(selected.length?'添加另一个平台':'添加第一个账号')}</h3><p>{t('选择要接入的平台。接入后，你可以在这里管理账号和接单。')}</p><div className="add-account-platforms">{platforms.map(p=><Button disabled={selected.includes(p)} key={p} aria-label={p==='openai'?'OpenAI':'Claude'} variant="outline" onClick={()=>setAdding(p)}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={p==='openai'?'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z':'M12 2v20 M2 12h20 M5 5l14 14 M5 19L19 5'}/></svg><span><strong>{p==='openai'?'OpenAI':'Claude'}</strong><small>{t(selected.includes(p)?'已接入，可在账号详情中换号':p==='openai'?'通过 Codex 连接':'通过 Claude Code 连接')}</small></span></Button>)}</div></div></section><p className="add-account-privacy"><ShieldCheck aria-hidden="true"/>{t('授权信息保留在本机')}</p></>:
+
    accounts.autoService&&setup==='openai'?<AddAccountWizard accounts={accounts} runtime={runtime} supply={supply} navigationRequest={navigationRequest} onNavigate={onNavigate} onBack={()=>setAdding('choose')}/>:
-   <>{setup==='claude'&&!selected.includes('claude')&&<Button variant="ghost" onClick={()=>setAdding('choose')}>{t('返回')}</Button>}
-  <NativeAccountList visiblePlatforms={accounts.autoService?(setup==='claude'?[...new Set([...selected,'claude' as const])]:selected):undefined} navigationRequest={navigationRequest} onNavigate={onNavigate} context="accounts" accounts={accounts} runtime={runtime} supply={supply}/></>}
+   <>
+  <NativeAccountList visiblePlatforms={accounts.autoService?(setup==='claude'?[...new Set([...selected,'claude' as const])]:selected):undefined} navigationRequest={navigationRequest} onNavigate={onNavigate} context="accounts" accounts={rowAccounts} runtime={runtime} supply={supply}/></>}
  </>;
 }

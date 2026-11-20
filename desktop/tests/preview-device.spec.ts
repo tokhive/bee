@@ -15,14 +15,14 @@ async function event(page:Page,action='device-approval',value='approve'){
  await expect(page.locator('#control-status')).not.toContainText('失败');
 }
 const commands=(page:Page)=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).calls as {command:string;args:any}[]);
-const writes=new Set(['device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
+const writes=new Set(['device_recovery_start','device_begin','device_recovery_prepare','device_recovery_confirm','runtime_start','runtime_stop','account_action','authorize_start','supply_set_paused']);
 
 test('formal first pairing saves the entered Hive and name and becomes online without starting contribution',async({page})=>{
  const app=await open(page,'device-unbound'),wizard=app.locator('.first-launch-wizard');
  await wizard.getByLabel('Hive 地址',{exact:true}).fill('https://design-hive.example');await wizard.getByLabel('设备名称',{exact:true}).fill('Design Laptop');
  await wizard.getByRole('button',{name:'继续绑定设备',exact:true}).click();
  await expect(wizard.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
- await expect(wizard).toContainText('https://design-hive.example/devices/pair?code=ABCD-EFGH');await expect(app.getByRole('navigation')).toHaveCount(0);
+ await page.locator('iframe').evaluate((el:HTMLIFrameElement)=>{const w=el.contentWindow as any;Object.defineProperty(w.navigator,'clipboard',{configurable:true,value:{writeText:async(value:string)=>{w.copiedPairingUrl=value;}}});});await wizard.getByRole('button',{name:'复制确认网址',exact:true}).click();await expect.poll(()=>page.locator('iframe').evaluate((el:HTMLIFrameElement)=>(el.contentWindow as any).copiedPairingUrl)).toBe('https://design-hive.example/devices/pair?code=ABCD-EFGH');await expect(app.getByRole('navigation')).toHaveCount(0);
  await event(page);await page.clock.runFor(2100);
  await expect(wizard.getByRole('heading',{name:'设备已绑定',exact:true})).toBeFocused();await expect(wizard).toContainText('Design Laptop');await expect(wizard).toContainText('new-owner@example.test');
  await expect(app.getByRole('navigation')).toHaveCount(0);await wizard.getByRole('button',{name:'进入概览',exact:true}).click();
@@ -35,21 +35,22 @@ test('formal first pairing saves the entered Hive and name and becomes online wi
 
 test('revoked credential recovery requires consent and explicit owner adoption and keeps all pages usable',async({page})=>{
  const app=await open(page,'device-revoked-source-missing');
- const device=app.getByRole('region',{name:'设备配对',exact:true}),rebind=device.getByRole('button',{name:'重新绑定设备',exact:true});
- await expect(device).toContainText('上次保存的设备信息');
+ const device=app.getByRole('region',{name:'设备与 Hive',exact:true});await device.getByRole('button',{name:'修复设备绑定',exact:true}).click();const rebind=device.getByRole('button',{name:'重新绑定 Hive',exact:true});
+ await expect(device.locator('.device-card-facts')).toHaveAttribute('aria-label','上次确认的设备，当前待核对。');
  await rebind.click();
  await app.getByRole('dialog').getByRole('button',{name:'取消',exact:true}).click();
  await page.clock.runFor(0);
  await expect(rebind).toBeFocused();
- expect((await commands(page)).filter(c=>writes.has(c.command))).toEqual([]);
+ expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['device_recovery_start']);
+ expect((await commands(page)).filter(c=>c.command==='device_recovery_confirm')).toEqual([]);
  await rebind.click();
  await app.getByRole('dialog').getByRole('button',{name:'确认重新绑定',exact:true}).click();
- await expect(device.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(device.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  await device.getByRole('button',{name:'打开 Hive 确认网页',exact:true}).click();
- await expect(device.locator('.pairing-phase')).toHaveText('等待网页确认');
+ await expect(device.locator('.pairing-phase')).toHaveText('在 Hive 网页确认设备');
  await event(page);
- await device.getByRole('button',{name:'重新核对设备',exact:true}).click();
- await expect(device.locator('.pairing-phase')).toHaveText('新设备归属与原设备不同');
+ // One tick advances the transaction; the next observes its confirmed receipt.
+ await expect.poll(async()=>{await page.clock.runFor(2100);return device.locator('.pairing-phase').textContent();}).toBe('新设备归属与原设备不同');
  await device.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await expect(app.getByRole('dialog')).toContainText('owner@example.test');
  await expect(app.getByRole('dialog')).toContainText('new-owner@example.test');
@@ -57,8 +58,8 @@ test('revoked credential recovery requires consent and explicit owner adoption a
  await expect(device.locator('.pairing-phase')).toHaveText('新设备归属与原设备不同');
  await device.getByRole('button',{name:'确认采用新归属',exact:true}).click();
  await app.getByRole('dialog').getByRole('button',{name:'确认采用新归属',exact:true}).click();
- await expect(device).toContainText('设备已绑定。');
- await expect(device.locator('.pairing-phase')).toContainText('未自动开始贡献');await device.getByRole('button',{name:'重新核对设备',exact:true}).click();
+ await expect(device).toContainText('new-owner@example.test');
+ await expect(device.locator('.pairing-phase')).toHaveCount(0);await page.clock.runFor(2100);
  const runtime=app.getByRole('region',{name:'服务状态',exact:true});
  await expect(runtime).toContainText('贡献未启动');await expect(runtime).toContainText('Hive 已连接');
  await app.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
@@ -71,7 +72,7 @@ test('revoked credential recovery requires consent and explicit owner adoption a
  await app.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await expect(runtime).toContainText('Hive 已连接');
  const calls=(await commands(page)).filter(c=>writes.has(c.command));
- expect(calls.map(c=>c.command)).toEqual(['device_recovery_prepare','device_recovery_confirm','device_recovery_confirm']);
+ expect(calls.map(c=>c.command)).toEqual(['device_recovery_start','device_recovery_confirm','device_recovery_confirm']);
  expect(calls.filter(c=>c.command==='device_recovery_confirm').map(c=>c.args.decision)).toEqual(['begin_pairing','adopt_owner']);
 });
 

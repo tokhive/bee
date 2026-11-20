@@ -34,7 +34,7 @@ test('service preparation retry preserves platform pause and keeps the device on
  await app.getByRole('navigation').getByRole('button',{name:'概览',exact:true}).click();
  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);
- await expect(region.locator('.native-runtime-health')).toContainText('贡献已启动');
+ await expect(region.locator('.native-runtime-health')).toContainText('Bee 运行中');
  await expect(region.locator('.native-runtime-health')).toContainText('Hive 已连接');
  expect((await commands(page)).filter(c=>c.command==='runtime_start')).toHaveLength(1);
  expect((await commands(page)).filter(c=>c.command==='runtime_stop')).toHaveLength(0);
@@ -47,10 +47,11 @@ test('preview network controls use formal read backoff and recover without repla
  await expect(account.getByText('可接单',{exact:true})).toBeVisible();
  await event(page,'runtime-connection','offline');
  await page.clock.runFor(10300);
- await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('正在重新连接 Hive');
+ await expect(app.getByRole('region',{name:'设备与 Hive',exact:true})).toContainText('Preview websocket heartbeat connection closed');
  await expect(account.getByText('可接单',{exact:true})).toHaveCount(0);
  await expect(account.getByRole('button',{name:'暂停接单',exact:true})).toBeDisabled();
- await expect(app.getByRole('region',{name:'平台账号列表',exact:true}).getByText('等待自动重试…',{exact:true})).toBeVisible();
+ await expect(account).toContainText('等待设备状态核对');
+ await account.locator('summary').filter({hasText:'查看原因'}).click();
  await expect(account).toContainText('HTTP 503');
  const failedReads=(await commands(page)).filter(c=>c.command==='supply_status'&&c.args.platform==='claude').length;
  await event(page,'runtime-connection','online');
@@ -62,10 +63,10 @@ test('preview network controls use formal read backoff and recover without repla
  for(const value of ['rejected','occupied']){
   await event(page,'runtime-connection',value);
   await page.clock.runFor(10100);
-  const region=app.getByRole('region',{name:'服务状态',exact:true});
-  await expect(region).toContainText('自动重连已停止，请先处理当前问题。');
+  const region=app.getByRole('region',{name:'设备与 Hive',exact:true});
+  await expect(region).toContainText(value==='rejected'?'HTTP 401':'HTTP 409');
   await expect(account.getByText('可接单',{exact:true})).toHaveCount(0);
-  await expect(region.getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeVisible();
+  await expect(region.getByRole('button',{name:'查看诊断',exact:true})).toBeVisible();
  }
 });
 
@@ -77,7 +78,7 @@ test('an unknown preparation receipt is reconciled through one write and a stabl
  await expect(region).toContainText('等待已安排的核对');
  const original=await page.locator('iframe').evaluate(async(el:HTMLIFrameElement)=>(await (el.contentWindow as any).__TAURI_INTERNALS__.invoke('runtime_snapshot')).result.runtime.operation.id);
  await page.clock.runFor(10300);
- await expect(region.locator('.native-runtime-health')).toContainText('贡献已启动');
+ await expect(region.locator('.native-runtime-health')).toContainText('Bee 运行中');
  await expect(region.getByRole('button',{name:'重试准备',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'开始贡献',exact:true})).toHaveCount(0);
  await expect(app.getByRole('button',{name:'停止贡献',exact:true})).toHaveCount(0);

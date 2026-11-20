@@ -1,4 +1,34 @@
 use super::*;
+#[tokio::test]
+async fn explicit_startup_query_reconciles_original_accounts_without_admitting_new_work() {
+    for unresolved in [false, true] {
+        let (dir, bridge, app)=fixture(serde_json::json!({"pending_account":true,"account_still_unknown":unresolved}));
+        crate::update_install::hold_startup(&bridge);
+        startup(app.handle().clone(),bridge.clone()).await;
+        assert_eq!(app.state::<StartupGate>().snapshot().failure.unwrap().code,"RECOVERY_OPERATION_UNRESOLVED");
+        assert_eq!(bridge.account_snapshot(crate::protocol::SupplyPlatform::Openai,true).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+        let result=query(app.handle(),&bridge).await;
+        assert_eq!(result.is_ok(),!unresolved,"{result:?}");
+        assert_eq!(app.state::<StartupGate>().snapshot().can_retry,!unresolved);
+        assert!(!bridge.0.startup_verified.load(Ordering::SeqCst));
+        assert_eq!(bridge.account_snapshot(crate::protocol::SupplyPlatform::Openai,true).await.unwrap_err().code,"STARTUP_VERIFICATION_PENDING");
+        let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        assert!(calls.lines().any(|method|method=="account_snapshot"));
+        assert!(!calls.lines().any(|method|["account_action","runtime_restore","runtime_start","supply_set_paused"].contains(&method)),"{calls}");
+        bridge.stop().await.unwrap();
+    }
+}
+#[tokio::test]
+async fn original_account_query_does_not_skip_device_verification() {
+    let (dir,bridge,app)=fixture(serde_json::json!({"pending_account":true,"rejected":true}));
+    crate::update_install::hold_startup(&bridge);
+    startup(app.handle().clone(),bridge.clone()).await;
+    assert_eq!(query(app.handle(),&bridge).await.unwrap_err().code,"device_replaced");
+    let calls=std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|method|method=="account_snapshot"));
+    assert!(!app.state::<StartupGate>().snapshot().can_retry);
+    bridge.stop().await.unwrap();
+}
 #[test]
 fn startup_business_check_never_changes_real_management_status() {
     let gate = StartupGate::default();
@@ -1420,6 +1450,74 @@ fn unknown_startup_record() -> crate::startup_recovery::RecoveryRecord {
         operation_id: Some("a".repeat(48)), phase: "unknown".into(),
         failure: Some(BridgeError::new("RECOVERY_RESULT_UNCONFIRMED", "original receipt lost".into())),
     }
+}
+
+#[tokio::test]
+async fn startup_continues_after_legacy_pairing_admission_rejection() {
+    for same_instance in [false, true] {
+        let (dir, bridge, app) = fixture(serde_json::json!({"apply":true}));
+        let manager = app.state::<UpdateManager>();
+        let journal = bridge.startup_journal(manager.store.path());
+        let mut original = unknown_startup_record();
+        original.operation_id = None;
+        original.previous_run_id = None;
+        original.intent_running = false;
+        original.failure = Some(BridgeError::new("RUNTIME_OPERATION_FAILED", "device recovery transaction unresolved: phase=pending revision=4; start/account writes blocked".into()));
+        if same_instance { original.instance = "f".repeat(32); }
+        journal.save(&original).unwrap();
+        startup(app.handle().clone(), bridge.clone()).await;
+        let status = app.state::<StartupGate>().snapshot();
+        let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+        bridge.stop().await.unwrap();
+        assert_eq!(status.state, "ready", "same_instance={same_instance}: {:?}", status.failure);
+        let current = journal.load().unwrap().unwrap();
+        assert_eq!(current.phase, "succeeded");
+        assert_eq!(current.previous_attempt_id.as_ref(), Some(&original.attempt_id));
+        let archived: serde_json::Value = serde_json::from_slice(&std::fs::read(dir.path().join(format!("desktop-startup-recovery-{}.json", original.attempt_id))).unwrap()).unwrap();
+        assert_eq!(archived, serde_json::to_value(original).unwrap());
+        assert_eq!(calls.lines().filter(|m| *m == "runtime_restore").count(), 1);
+        assert!(!calls.lines().any(|m| m == "runtime_reconcile_recovery"));
+    }
+}
+
+#[tokio::test]
+async fn restore_admission_refusal_keeps_management_without_stopping_and_allows_recheck() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"restore_error":{
+        "code":"RUNTIME_OPERATION_FAILED","message":"device recovery transaction unresolved: phase=pending revision=4; start/account writes blocked"
+    }}));
+    startup(app.handle().clone(), bridge.clone()).await;
+    let journal = bridge.startup_journal(app.state::<UpdateManager>().store.path());
+    let refused = journal.load().unwrap().unwrap();
+    assert_eq!(refused.phase, "failed");
+    assert_eq!(refused.failure.as_ref().unwrap().code, "RUNTIME_RESTORE_REJECTED");
+    assert!(refused.operation_id.is_none());
+    assert_eq!(bridge.status().state, BridgePhase::Ready);
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|m| m == "runtime_stop"));
+    std::fs::write(dir.path().join("context.json"), r#"{"apply":true}"#).unwrap();
+    assert!(query(app.handle(), &bridge).await.unwrap().can_retry);
+    assert_eq!(retry(app.handle().clone(), bridge.clone()).await.state, "ready");
+    assert_eq!(journal.load().unwrap().unwrap().previous_attempt_id, Some(refused.attempt_id));
+    bridge.stop().await.unwrap();
+}
+
+#[tokio::test]
+async fn completed_pairing_rechecks_legacy_refusal_without_restoring_contribution() {
+    let (dir, bridge, app) = fixture(serde_json::json!({"apply":true,"recovery_phase":"completed"}));
+    wait_bridge(&bridge).await.unwrap();
+    let journal = bridge.startup_journal(app.state::<UpdateManager>().store.path());
+    let mut old = unknown_startup_record();
+    old.operation_id = None;
+    old.failure = Some(BridgeError::new("RUNTIME_OPERATION_FAILED", "pairing owns admission".into()));
+    journal.save(&old).unwrap();
+    let gate = app.state::<StartupGate>();
+    gate.finish(Err(old.failure.clone().unwrap()));
+    recover_device(app.handle(), &bridge, None, false).await.unwrap();
+    assert_eq!(gate.snapshot().state, "ready", "{:?}", gate.snapshot().failure);
+    let calls = std::fs::read_to_string(dir.path().join("context.json.calls")).unwrap();
+    assert!(!calls.lines().any(|m| ["runtime_start", "runtime_restore", "supply_set_paused"].contains(&m)));
+    assert_eq!(serde_json::to_value(journal.load().unwrap().unwrap()).unwrap(), serde_json::to_value(old).unwrap());
+    bridge.stop().await.unwrap();
 }
 
 #[tokio::test]

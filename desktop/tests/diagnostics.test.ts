@@ -216,3 +216,13 @@ test('safe request lifecycle logs preserve bounded retry and HTTP failure eviden
  for(const code of ['request_settled','request_http_started','request_http_finished','request_http_failed'])assert.equal(decodeLogPage({entries:[{...entry,code,evidence:{method:'POST',phase:'http_error',elapsed_ms:'12000',retry_after_seconds:'30',failure_kind:'dns_temporary',path:'/api/bee/pairings/redeem'}}],next_cursor:null,truncated:false}).entries[0].code,code);
  for(const value of ['temporary_network','tls_failure','secret'])assert.throws(()=>decodeLogPage({entries:[{...entry,evidence:{failure_kind:value}}],next_cursor:null,truncated:false}),/contract/);
 });
+
+
+test('diagnostics accepts a proven manual pause without claiming readiness and rejects contradictory evidence',()=>{
+ const report=diagnosticReport() as import('../src/system/diagnostics.ts').DiagnosticReport;
+ report.checks=[{id:'supply',platform:'openai',status:'pass',observed_at:'2026-10-26T03:30:01Z',code:'supply_paused',evidence:{ready:'false',paused:'true',reasons_count:'1',reason:'manually_paused'},next_action:'overview'}];
+ assert.deepEqual(decodeDiagnosticReport({instance,result:{report}},instance),report);
+ for(const [key,value] of [['ready','true'],['paused','false'],['reasons_count','2'],['reason','supply_not_enabled']]){
+  const changed=structuredClone(report);changed.checks[0].evidence[key]=value;assert.throws(()=>decodeDiagnosticReport({instance,result:{report:changed}},instance));
+ }
+});

@@ -8,11 +8,38 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync/atomic"
 	"testing"
 
 	"github.com/tokhive/bee/beewire"
 )
+
+func TestDesktopPreparationConflictRetainsHTTPEvidenceInAccountOperation(t *testing.T) {
+	f := newDesktopAutoMaintenanceFixture(t)
+	f.mu.Lock()
+	f.beforeRequest = func(w http.ResponseWriter, q *http.Request) bool {
+		if q.Method != "PUT" || q.URL.Path != "/api/bee/platforms/openai" {
+			return false
+		}
+		w.WriteHeader(http.StatusConflict)
+		io.WriteString(w, `{"error":{"code":"preparation_conflict","message":"another preparation is active; reconcile the original operation"}}`)
+		return true
+	}
+	f.mu.Unlock()
+	candidate := f.detect("openai")
+	if _, err := f.accounts.Action(context.Background(), DesktopAccountActionRequest{Platform: "openai", Revision: candidate.Revision, CandidateRef: *candidate.Candidate.Reference, Action: "select", Confirmed: true}); err != nil {
+		t.Fatal(err)
+	}
+	result := waitSelection(t, f.accounts, "openai")
+	if result.Operation.State != "reconciling" || result.Selection.State == "selected" {
+		t.Fatalf("conflict must retain the pending operation without selecting: %+v", result.Operation)
+	}
+	failure := result.Operation.Error
+	if failure == nil || failure.Evidence["http_status"] != "409" || failure.Evidence["remote_code"] != "preparation_conflict" || !strings.Contains(failure.Evidence["response_body"], "another preparation is active") || !strings.Contains(failure.Message, "state=absent required=active") {
+		t.Fatalf("account boundary lost preparation evidence: %+v", failure)
+	}
+}
 
 // Called under the enclosing synthetic Hive fixture's mutex.
 func encodeDesktopPreparationFixture(w http.ResponseWriter, r *http.Request, supply beewire.PlatformSupply, operations map[string]string) {

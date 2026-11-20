@@ -57,6 +57,12 @@ func (r *DesktopRuntime) inspectRecoveryLocked(ctx context.Context) DesktopRecov
 	if err != nil {
 		return reject("STARTUP_DATA_INVALID", err)
 	}
+	// Pairing owns the same admission barrier as Restore. Inspect it before
+	// Rust persists a submitted recovery attempt; completion will be rechecked
+	// through the normal binding path. This read never advances pairing.
+	if err = r.device.recoveryWriteBarrier(); err != nil {
+		return reject("RECOVERY_DEVICE_UNRESOLVED", err)
+	}
 	if err = r.accounts.verifyStoredAccountState(session); err != nil {
 		return reject("STARTUP_DATA_INVALID", err)
 	}

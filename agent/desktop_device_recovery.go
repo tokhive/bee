@@ -37,13 +37,15 @@ type DesktopRecoveryFailure struct {
 	Details *DesktopFailureDetails `json:"details,omitempty"`
 }
 type DeviceRecoveryView struct {
-	OperationID string                  `json:"operation_id"`
-	Revision    int64                   `json:"revision"`
-	Phase       string                  `json:"phase"`
-	OldIdentity *beewire.Identity       `json:"old_identity"`
-	NewIdentity *beewire.Identity       `json:"new_identity"`
-	Pairing     *DesktopRecoveryPairing `json:"pairing"`
-	Failure     *DesktopRecoveryFailure `json:"failure"`
+	Purpose         string                  `json:"purpose,omitempty"`
+	CancelRequested bool                    `json:"cancel_requested,omitempty"`
+	OperationID     string                  `json:"operation_id"`
+	Revision        int64                   `json:"revision"`
+	Phase           string                  `json:"phase"`
+	OldIdentity     *beewire.Identity       `json:"old_identity"`
+	NewIdentity     *beewire.Identity       `json:"new_identity"`
+	Pairing         *DesktopRecoveryPairing `json:"pairing"`
+	Failure         *DesktopRecoveryFailure `json:"failure"`
 }
 type desktopRecoveryDecision struct {
 	OperationID      string `json:"operation_id"`
@@ -208,7 +210,19 @@ func saveDesktopRecovery(s *desktopDeviceSession, r *desktopRecoveryRecord) erro
 	return nil
 }
 func (r *desktopRecoveryRecord) view() DeviceRecoveryView {
-	v := DeviceRecoveryView{OperationID: r.OperationID, Revision: r.Revision, Phase: r.Phase, OldIdentity: r.OldIdentity, NewIdentity: r.NewIdentity, Failure: r.Failure}
+	v := DeviceRecoveryView{Purpose: r.Purpose, OperationID: r.OperationID, Revision: r.Revision, Phase: r.Phase, OldIdentity: r.OldIdentity, NewIdentity: r.NewIdentity, Failure: r.Failure}
+	// The accepted decisions survive a restart. Continuing observation preserves
+	// cancellation; only an explicit restart/renewal changes that intent.
+	if r.Phase != "completed" && !(r.Failure != nil && r.Failure.Code == "PAIRING_CLOSED") {
+		for i := len(r.Accepted) - 1; i >= 0; i-- {
+			decision := r.Accepted[i].Decision
+			if decision == "continue_checking" {
+				continue
+			}
+			v.CancelRequested = decision == "cancel_pairing"
+			break
+		}
+	}
 	if r.Pairing != nil {
 		v.Pairing = &DesktopRecoveryPairing{Code: r.Pairing.UserCode, VerificationURL: r.Pairing.VerificationURI + "?code=" + url.QueryEscape(r.Pairing.UserCode), ExpiresAt: r.Pairing.ExpiresAt}
 	}
@@ -497,11 +511,16 @@ func (d *DesktopDevice) recoveryOperate(ctx context.Context, decision *desktopRe
 			r.ConfirmedOwner = r.NewIdentity.OwnerID
 			r.Phase = "saving"
 		} else {
-			credential, e := recoveryCredential()
-			if e != nil {
-				return DeviceRecoveryView{}, e
+			// Initial pairing already saved its credential before the identity
+			// check. Rotating it here would invalidate the binding guard before
+			// the first request is sent. Replacement recovery uses a new one.
+			if r.Purpose != "initial_pairing" {
+				credential, e := recoveryCredential()
+				if e != nil {
+					return DeviceRecoveryView{}, e
+				}
+				r.Credential = credential
 			}
-			r.Credential = credential
 			r.Pairing = nil
 			r.CreateAttempted = true
 			r.RedeemAttempted = false

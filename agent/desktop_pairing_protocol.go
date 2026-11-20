@@ -89,10 +89,10 @@ func pairingCapabilities(ctx context.Context, r *desktopRecoveryRecord) error {
 	}
 	err := desktopCall(ctx, localState{Hive: r.Hive}, beewire.PairingRecoveryCapabilitiesPath, http.MethodGet, "", nil, &capabilities)
 	if err != nil {
-		return fmt.Errorf("check Hive pairing recovery capability: %w; upgrade Hive before generating a new pairing code", err)
+		return fmt.Errorf("check Hive pairing recovery capability: %w", err)
 	}
 	if capabilities.Version != 1 || capabilities.PairingRecovery != 1 {
-		return fmt.Errorf("Hive pairing recovery capability rejected: version=%d recovery=%d; required=1,1; upgrade Hive", capabilities.Version, capabilities.PairingRecovery)
+		return fmt.Errorf("Hive pairing recovery capability rejected: version=%d recovery=%d; required=1,1", capabilities.Version, capabilities.PairingRecovery)
 	}
 	return nil
 }

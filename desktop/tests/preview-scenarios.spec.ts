@@ -92,13 +92,13 @@ test('preview controls reject stale sessions and messages from other sources',as
 });
 
 const cases:[string,string|RegExp][]=[
- ['device-unbound','设置这台设备'],['device-pending','在 Hive 网页确认设备归属'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备已绑定。'],['device-error','HTTP 503'],
- ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Hive 未连接'],['runtime-disconnected',/Hive 未连接|正在重新连接 Hive/],['runtime-unknown','等待已安排的核对'],
- ['account-reading','正在读取并核验账号'],['account-empty','选择要添加的平台'],['account-candidate','选择要添加的平台'],['account-selected','已用 3%'],['account-error','没有读取所选凭证来源的权限'],['account-expired','上次记录'],['account-change','尚未核对'],
+ ['device-unbound','设置这台设备'],['device-pending','在 Hive 网页确认设备归属'],['device-expired','Hive 已确认配对码过期'],['device-bound','设备与 Hive'],['device-error','HTTP 503'],
+ ['stopped','贡献尚未启动'],['runtime-starting','正在启动贡献'],['running','可接单'],['runtime-stopping','正在停止贡献'],['runtime-offline','Preview websocket heartbeat connection closed'],['runtime-disconnected','Preview websocket heartbeat connection closed'],['runtime-unknown','等待已安排的核对'],
+ ['account-reading','正在检查本机登录'],['account-empty','添加第一个账号'],['account-candidate','添加第一个账号'],['account-selected',/已用额度[\s\S]*5 小时3%/],['account-error','没有读取所选凭证来源的权限'],['account-expired','上次记录'],['account-change','尚未取得数据'],
  ['supply-ready','可接单'],['supply-paused','恢复接单'],['supply-blocked','管理员尚未配置套餐并发上限'],['supply-partial','等待自动重试'],
  ['check-background','可接单'],['check-expired','核对中…'],['check-waiting','等待自动重试…'],['check-retrying','重试中…'],['check-recovered','可接单'],['check-sequence','可接单'],
- ['quota-normal','已用 3%'],['quota-unknown','尚未核对'],['quota-expired','上次记录'],['quota-multiple','7 日 · opus'],['quota-over','已用 120%'],
- ['confirm-login','登录 OpenAI'],['confirm-select','确认接入'],['confirm-change','确认更换'],['confirm-clear','确认取消接入'],['account-detail','凭证读取方式'],
+ ['quota-normal',/已用额度[\s\S]*5 小时3%/],['quota-unknown','尚未取得数据'],['quota-expired','上次记录'],['quota-multiple','7 日 · opus'],['quota-over',/已用额度[\s\S]*5 小时120%/],
+ ['confirm-login','登录 OpenAI'],['confirm-select','确认接入'],['confirm-change','确认更换'],['confirm-clear','确认取消接入'],['account-detail','修改凭证读取设置'],
 ];
 for(const [scene,copy] of cases)test('scene renders formal state without invalid data or unintended writes: '+scene,async({page})=>{
  const errors:string[]=[];page.on('pageerror',e=>errors.push(e.message));
@@ -143,10 +143,10 @@ test('review selector covers approved groups and preserves scene when theme or s
   expect(facts.selections).toEqual(['not_selected','not_selected']);
   if(scene==='runtime-no-accounts'){
    await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('接入账号后，Bee 将自动准备服务。');
-   await expect(app.getByRole('button',{name:'前往准备账号',exact:true})).toBeVisible();
+   await expect(app.getByRole('button',{name:'前往接入',exact:true}).first()).toBeVisible();
   }else{
-   await expect(app.getByText('接入数量待确认',{exact:true})).toBeVisible();
-   await expect(app.getByRole('region',{name:'服务状态',exact:true})).toContainText('贡献状态待确认');
+   await expect(app.getByRole('region',{name:'设备与 Hive',exact:true})).toContainText('暂时无法确认 Hive 状态');
+   await expect(app.getByRole('region',{name:'平台账号列表',exact:true})).toContainText('账号状态尚未确认');
    await expect(app.locator('main')).not.toContainText('0 个已接入');
    expect(facts.calls.filter((c:any)=>c.command==='account_snapshot')).toEqual([]);
   }
@@ -211,14 +211,14 @@ for(const scene of ['confirm-change','account-change'])test('confirmed changed i
   await page.getByRole('button',{name:'确认换号',exact:true}).click();
  }
  await page.getByRole('button',{name:'确认更换',exact:true}).click();
- await page.getByRole('button',{name:'关闭',exact:true}).click();
+ await expect(page.getByRole('dialog')).toHaveCount(0);
  await expect.poll(()=>page.evaluate(()=>(window as any).accounts.openai.operation?.state)).toBe('succeeded');
  const state=await page.evaluate(()=>{const w=window as unknown as {accounts:{openai:{candidate:{fingerprint:string};selection:{fingerprint:string};authorization:{fingerprint:string};capabilities:{windows:unknown[]}[]}};paused:{openai:boolean}};return {account:w.accounts.openai,paused:w.paused.openai};});
  expect(state.account.selection.fingerprint).toBe('f'.repeat(64));
  expect(state.account.authorization.fingerprint).toBe(state.account.candidate.fingerprint);
  expect(state.account.capabilities.every(c=>c.windows.length===0)).toBe(true);
  expect(state.paused).toBe(true);
- await expect(card(page).getByText('尚未核对',{exact:true})).toBeVisible();
+ await expect(card(page).getByText('尚未取得数据',{exact:true})).toBeVisible();
  expect((await commands(page)).filter(c=>writes.has(c.command)).map(c=>c.command)).toEqual(['account_action']);
 });
 

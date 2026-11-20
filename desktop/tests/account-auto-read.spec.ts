@@ -21,7 +21,7 @@ test('selected matching candidate automatically reads official quota once and re
  await page.goto('/');await page.getByRole('button',{name:'AI 账号',exact:true}).click();
  await expect.poll(async()=>(await calls(page,'account_detect')).filter((c:any)=>c.args.request.mode==='official').length).toBe(1);
  await page.waitForTimeout(500);expect(await calls(page,'account_detect')).toHaveLength(3);
- await expect(card(page).getByText('已用 120%',{exact:true})).toBeVisible();
+ await expect(card(page).getByText(/^120%$/)).toBeVisible();
 });
 
 async function hookHarness(page:Page){

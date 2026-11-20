@@ -80,7 +80,7 @@ async function setup(page:Page,scenario:Scenario={}){
  const accounts={openai:preparedAccount('openai',scenario),claude:preparedAccount('claude',{})};
  await page.addInitScript({content:`(${installAccountFixture.toString()})(${JSON.stringify({runtimeEnabled:true,accounts})});(${installAutoServiceReplies.toString()})(${JSON.stringify(scenario)});`});
  await page.goto('/');
- await expect(service(page)).toBeVisible();
+ if(scenario.connection==='occupied')await expect(page.getByRole('region',{name:'设备与 Hive',exact:true})).toBeVisible();else await expect(service(page)).toBeVisible();
 }
 async function accountsPage(page:Page){
  await page.getByRole('navigation').getByRole('button',{name:'AI 账号',exact:true}).click();
@@ -129,7 +129,7 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await row.getByRole('button',{name:'Claude 详情',exact:true}).click();
   await page.getByRole('dialog').last().getByRole('button',{name:'登录 Claude',exact:true}).click();
   const login=row.getByRole('region',{name:'Claude 登录状态',exact:true});
-  await login.getByRole('button',{name:'继续登录',exact:true}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'开始官方登录',exact:true}).click();
   await expect(login).toContainText('请完成 Claude 官方登录');
   await page.evaluate(()=>{
    const w=window as any;
@@ -138,7 +138,6 @@ test.describe('native automatic service — frontend mock contract',()=>{
   });
   await page.clock.runFor(10001);
   await expect(login.getByText('官方登录进程执行失败。',{exact:true})).toBeVisible();
-  await row.locator('.account-conditions>summary').click();
   const summary=row.getByText('官方登录进程执行失败。',{exact:true});
   await expect(summary).toHaveCount(1);
   await expect(summary).toBeVisible();
@@ -193,13 +192,13 @@ test.describe('native automatic service — frontend mock contract',()=>{
   await setup(page,{selected:true});
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=true;});
   await reconcile(page);
-  await expect(service(page)).toContainText('贡献状态待确认');
-  await expect(service(page).getByRole('button',{name:'核对服务状态',exact:true})).toBeEnabled();
+  await expect(page.getByRole('heading',{name:'暂时无法确认 Hive 状态',exact:true})).toBeVisible();
+  await expect(page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true})).toBeEnabled();
   await page.evaluate(()=>{(window as any).autoServiceMock.readFailure=false;});
   const before=(await calls(page,'runtime_snapshot')).length;
-  await service(page).getByRole('button',{name:'核对服务状态',exact:true}).click();
+  await page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true}).click();
   await expect.poll(async()=>(await calls(page,'runtime_snapshot')).length).toBeGreaterThan(before);
-  await expect(service(page).getByRole('button',{name:'核对服务状态',exact:true})).toHaveCount(0);
+  await expect(page.getByRole('region',{name:'设备与 Hive',exact:true}).getByRole('button',{name:'重新核对',exact:true})).toHaveCount(0);
   await noDailyControls(page);
   expect(await calls(page,'runtime_start')).toHaveLength(0);
   expect(await calls(page,'runtime_stop')).toHaveLength(0);
@@ -207,12 +206,13 @@ test.describe('native automatic service — frontend mock contract',()=>{
 
  test('halted waiting presence offers explicit reconnect and connection diagnostics without daily controls',async({page})=>{
   await setup(page,{connection:'occupied'});
-  await expect(service(page)).toContainText('自动重连已停止');
-  await expect(service(page)).toContainText('设备连接已被占用');
-  await expect(service(page).getByRole('button',{name:'检查 Hive 连接',exact:true})).toBeEnabled();
-  await expect(service(page).getByRole('button',{name:'重新连接 Hive',exact:true})).toBeEnabled();
+  const device=page.getByRole('region',{name:'设备与 Hive',exact:true});
+  await expect(device).toContainText('Hive 连接归属未确认');
+  await expect(page.locator('.desktop-side-status')).toContainText('设备连接已被占用');
+  await device.getByRole('button',{name:'查看错误详情',exact:true}).click();await expect(page.getByRole('dialog',{name:'错误详情',exact:true})).toContainText('owned_session=false');await page.keyboard.press('Escape');
+  await expect(device.getByRole('button',{name:'重试连接',exact:true})).toBeEnabled();
   await noDailyControls(page);
-  await service(page).getByRole('button',{name:'重新连接 Hive',exact:true}).click();
+  await device.getByRole('button',{name:'重试连接',exact:true}).click();
   await expect(service(page)).toContainText('Hive 已连接');
   expect((await calls(page,'runtime_start')).map((call:any)=>call.args.request.resume_platforms)).toEqual([[]]);
   expect(await calls(page,'runtime_stop')).toHaveLength(0);
@@ -220,3 +220,13 @@ test.describe('native automatic service — frontend mock contract',()=>{
   expect(await page.evaluate(()=>(window as any).autoServiceMock.local)).toBe('waiting');
  });
 });
+
+ test('settled account details omit resolved maintenance chatter',async({page})=>{
+  await setup(page,{selected:true,maintenance:'restored'});
+  await accountsPage(page);
+  await card(page).getByRole('button',{name:'OpenAI 详情',exact:true}).click();
+  const detail=page.getByRole('dialog');
+  await expect(detail).not.toContainText('此平台的账号维护已恢复。');
+  await expect(detail).not.toContainText('查看账号信息，管理凭证读取方式。');
+  await expect(detail.getByRole('button',{name:'修改凭证读取设置',exact:true})).toBeEnabled();
+ });

@@ -11,7 +11,7 @@ const control=w.__firstLaunchTest={
  releaseReceipt(command){const item=receipts.get(command);receipts.delete(command);item?.release();},
  recoveryFailure:null,contextFailure:null,contextOverride:null,deviceOverride:null,beginFailure:null,completeBeginReceipt:false,devicePatch:null,completedMutation:null,recordRevision:params.has('recordRevision')?Number(params.get('recordRevision')):null,loseCompletion:false,holdAfterLost:false,
  async refresh(){w.dispatchEvent(new Event('focus'));w.emitStartup(await invoke('startup_status'));},
- async forceRefresh(){const instance=(await invoke('bridge_status')).metadata.instance;const base={instance,failure:null,network_revision:null,observed_at:new Date().toISOString()};w.emitStartup({...base,state:'checking',binding_revision:null,revision:100});w.emitStartup({...base,state:'ready',binding_revision:lastBinding,revision:101});},
+ async forceRefresh(){const instance=(await invoke('bridge_status')).metadata.instance;const base={instance,failure:null,network_revision:w.networkRevision??0,binding_revision:this.contextOverride?.binding_revision??lastBinding,observed_at:new Date().toISOString()};this.startupOverride={...base,state:'ready',revision:101};w.emitStartup({...base,state:'checking',revision:100});w.emitStartup({...this.startupOverride,binding_revision:lastBinding});},
 };
 const emitInstance=w.emit;w.emit=instance=>{control.instance=instance;emitInstance(instance);};
 if(params.get('hold'))control.hold(params.get('hold'));
@@ -27,6 +27,8 @@ w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
  if(['device_recovery_status','device_recovery_snapshot'].includes(command)&&control.recoveryFailure)return {result:{error:control.recoveryFailure}};
  if(command==='device_context'&&control.contextFailure)return {result:{binding_revision:w.bindingRevision??1,error:control.contextFailure}};
  const result=await invoke(command,args);
+ if(command==='device_recovery_confirm'&&control.initialRecoveryReply){control.deviceOverride=structuredClone(control.initialRecoveryReply);control.devicePatch=null;result.result={recovery:structuredClone(control.initialRecoveryReply.recovery)};}
+ if(command==='startup_status'&&control.startupOverride)return structuredClone(control.startupOverride);
  if(replyInstance&&command==='hive_switch_snapshot'&&result.current_scope)result.current_scope.instance=replyInstance;
  if(replyInstance&&command==='bridge_status'&&result.metadata)result.metadata.instance=replyInstance;
  if(replyInstance&&result&&Object.hasOwn(result,'instance'))result.instance=replyInstance;

@@ -78,10 +78,10 @@ test('Claude inline source recovery keeps its platform, drafts and return focus 
  await open(page,true);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const result=await invoke(command,args);if(command==='account_detect'&&args.request.platform==='claude'){result.result.account.candidate.error={code:'permission_denied',check:'source_read',platform:'claude',message:'Claude fixture directory read denied',evidence:{permission_denied:'true'}};w.accounts.claude=result.result.account;}return result;};});
  await nav(page,'AI 账号').click();
  for(const [platform,draft] of [['OpenAI','/tmp/openai-draft'],['Claude','/tmp/claude-draft']]){
-  await page.getByRole('button',{name:platform+' 详情',exact:true}).click();if(platform==='OpenAI')await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByLabel(platform==='OpenAI'?'读取目录':'自定义目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
+  await page.getByRole('button',{name:platform+' 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await page.getByRole('dialog').getByLabel(platform==='OpenAI'?'读取目录':'配置目录',{exact:true}).fill(draft);await page.keyboard.press('Escape');
  }
  const row=page.getByRole('region',{name:'Claude 账号',exact:true});await row.locator('.account-conditions>summary').click();await row.getByRole('button',{name:'打开读取设置',exact:true}).first().click();
- const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('Claude 账号详情');await expect(dialog.getByLabel('自定义目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
+ const dialog=page.getByRole('dialog');await expect(dialog).toHaveAccessibleName('凭证读取设置');await expect(dialog.getByLabel('配置目录',{exact:true})).toHaveValue('/tmp/claude-draft');await expect(dialog.getByLabel('配置目录',{exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(row).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
  await page.getByRole('button',{name:'OpenAI 详情',exact:true}).click();await page.getByRole('dialog').getByRole('button',{name:'修改凭证读取设置',exact:true}).click();await expect(page.getByRole('dialog').getByLabel('读取目录',{exact:true})).toHaveValue('/tmp/openai-draft');
  for(const command of ['account_action','authorize_start','authorize_cancel','runtime_start','supply_set_paused'])expect(await calls(page,command)).toBe(0);
@@ -90,7 +90,7 @@ test('Claude inline source recovery keeps its platform, drafts and return focus 
 test('T8 diagnostic source recovery targets Claude credentials and returns focus to its original check without writes',async({page})=>{
  await open(page);await page.evaluate(()=>{const w=window as any,invoke=w.__TAURI_INTERNALS__.invoke;w.__TAURI_INTERNALS__.invoke=async(command:string,args:any)=>{const value=await invoke(command,args);if(command==='diagnostics_start'){const r=value.result.report;r.state='completed';r.finished_at=r.started_at;r.checks=[{id:'source',platform:'claude',status:'fail',code:'source_missing',observed_at:r.started_at,evidence:{source_type:'file'},next_action:'accounts'}];}return value;};});
  await nav(page,'诊断').click();await page.getByRole('button',{name:'运行诊断',exact:true}).click();const check=page.locator('.nd-checks>li[data-nav-platform="claude"]');await check.getByRole('button',{name:'前往账号',exact:true}).click();
- const dialog=page.getByRole('dialog',{name:'Claude 账号详情'});await expect(dialog).toBeVisible();await expect(dialog.getByLabel('自定义目录',{exact:true})).toBeFocused();
+ const dialog=page.getByRole('dialog',{name:'凭证读取设置'});await expect(dialog).toBeVisible();await expect(dialog.getByLabel('配置目录',{exact:true})).toBeFocused();
  await page.keyboard.press('Escape');await page.getByRole('button',{name:'返回原处',exact:true}).click();await expect(check).toBeFocused();await expect(page.getByRole('dialog')).toHaveCount(0);
  expect(await calls(page,'diagnostics_start')).toBe(1);for(const command of ['account_action','authorize_start','runtime_start','network_save_proxy'])expect(await calls(page,command)).toBe(0);
 });

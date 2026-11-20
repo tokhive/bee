@@ -156,6 +156,8 @@ Codex 登录详细进度及安全打开的[扩展契约与静态样本](codex-lo
 
 每项检查为 `id,platform,status,observed_at,code,evidence,next_action`。全局 device/runtime/hive/proxy 的 platform 为 null；每个平台各有 source/authorization/quota/capabilities/account/supply，共 16 项。status 为 pass/warning/fail/skipped，code 和 evidence 使用公开白名单；未知检查不转成通过。next_action 仅 overview/accounts/diagnostics/settings，不是命令或 URL。前端按 instance、run_id、network_revision 拒绝过期上下文；切页不新建报告。
 
+接单诊断仅在 `ready=false`、`paused=true` 且唯一原因为 `manually_paused` 时返回 `pass/supply_paused`，表示已确认用户暂停，不表示可接单。保留这四项证据；Rust 和前端同时验证后才接收该通过结果。存在其它原因或状态矛盾时继续报告阻塞／未确认。
+
 `paths` 精确字段为 relay/official/hive/official_login：relay 为 direct/local_proxy；official 为 `openai=<path>;claude=<path>`，每项 path 为 direct/environment_proxy/local_proxy；Hive 固定 process_environment，官方登录固定 official_client。只公开路径类别，不回显环境代理原文。测试 checks 固定依次为 local_proxy/openai_read_only/claude_read_only，每项含 id/status/message/path/http_status；status 为 ok/failed/skipped，HTTP 状态为整数或 null。401/403/429 只能证明收到 HTTP 响应，不能证明账号、额度或贡献可用。
 
 通知 facts 最多 8 项，每项为 `identity,platform,problem,active,eligible,recovered`：identity 为 64 位不透明摘要，problem 仅 authorization_rejected/confirmation_required/offline/quota_exhausted。eligible 必须同时 active，recovered 不可同时 active；来源、邮箱、完整账号指纹及自定义通知正文不进入此通道。Rust 持有独立 OS 提交去重记录，提交已接受不等于用户已读。
@@ -298,7 +300,9 @@ Rust 新增固定 Tauri 命令 `startup_query({})`、`startup_retry({})`，保�
 
 StartupStatus 保留 `state/failure/instance/binding_revision/network_revision/observed_at/revision`，增加 `can_retry`、`recovering` 和可选 `progress:{stage,operation_id,completed,total}`。stage 为 connecting／checking_previous／checking_device／preparing_accounts／confirming_service；operation_id 为 48 位小写十六进制或 null；计数成对存在，仅 preparing_accounts 可用，`0 <= completed <= total <= 2` 且 total 非零。Go runtime 快照可选 `startup_progress`，必须绑定当前 operation；失败准备不计入 completed。Rust／TS 严格解码，不用计时器推进阶段或估算百分比。
 
-`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。没有运行真实用户账号恢复；[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。2026-11-11 阶段未运行真实用户账号恢复，见该阶段[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+
+启动检查必须包含设备配对／修复写屏障，未完成时返回 `RECOVERY_DEVICE_UNRESOLVED`，不创建启动尝试。检查与实际受理之间仍可能发生变化：`runtime_restore` 的相关响应若返回 `RUNTIME_OPERATION_FAILED`，表示 Go 尚未创建运行操作；Rust 保存 `failed / RUNTIME_RESTORE_REJECTED` 及原错误，不执行无对应 worker 的失败清理。超时、连接丢失、无效响应不能使用此例外。旧版 `unknown + operation_id=null + failure.code=RUNTIME_OPERATION_FAILED` 具有同样的明确拒绝证据；按已核实的调用边界识别，不解析错误文案，也不把所有空编号当作未受理。原记录保持原样，下一次合格启动完整归档并关联它。配对完成重检仅恢复管理能力，App 启动恢复仍检查当前绑定、运行意图和暂停状态。完整流程及验证映射见[启动受理与配对衔接](startup-admission.md)。
 
 
 ### 旧会话安全结束扩展（2026-11-11）
@@ -309,8 +313,10 @@ RecoveryInspection 增可选 `binding_identity`（64 位小写 hex，原设备�
 
 Go 私有原子文件 `desktop-session-retirement.json` 保存原 scope、原 guard、设备绑定摘要、请求和 proof，完成后保留；新结束操作先归档至 `desktop-session-retirement-<id>.json`。任何部分保存中断均沿用同 ID、同 proof 继续，未完成记录继续阻塞普通 Restore。
 
-Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要的旧未知记录继续阻塞。
+Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要且没有上述明确受理前拒绝证据的旧未知记录继续阻塞。
 
 Hive 未支持时返回 `RECOVERY_SERVER_UNSUPPORTED`；任务未排空为 `RECOVERY_REMOTE_DRAINING`，原回执待核对为 `RECOVERY_RETIREMENT_UNCONFIRMED`，明确 HTTP 拒绝为 `RECOVERY_RETIREMENT_CONFLICT`，本地原记录损坏为 `RECOVERY_RETIREMENT_INVALID`。排空／未知时显示“继续恢复”，仍使用原操作；不支持、冲突或损坏时保留诊断，隐藏无效核对入口。查询不会清除继续恢复资格。
 
 Hive HTTP 结构、迁移与部署顺序见[配套补丁](integrations/hive-session-retirement/README.md)。设备配置新增可选 `runtime_epoch`；旧客户端严格解码与降级限制同见该文档。上文“凭据恢复不改变 CLI localState”只指设备配对恢复扩展，本次会话隔离会增加该字段。
+
+设备恢复视图可包含 `cancel_requested: true`，表示原取消决定已经持久化，结果尚未终结；字段缺省表示没有待确认的取消。该标记由原恢复记录的已接受决定恢复，`continue_checking` 保留取消意图，完成或确认关闭后不再输出。界面据此只提供重新核对原操作，不再次提交取消。

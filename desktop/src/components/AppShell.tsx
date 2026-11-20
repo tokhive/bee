@@ -1,3 +1,4 @@
+import {isAuthorizationSyncDisconnected} from '../presentation/problems';
 import type {DesktopPresentation} from '../presentation/desktopStatus';
 import { t } from '../i18n/index';
 import {useEffect,useRef,type ReactNode} from 'react';
@@ -5,12 +6,18 @@ import { Monitor } from 'lucide-react';
 import { navigation,demoNavigation,navigationSelector,validNavigationTarget,type NavigationRequest } from '../app/navigation';
 import type { Page } from '../client/types';
 import logo from '../assets/app-icon-dark.svg';
+const approvedNavigationPaths:Record<string,string>={
+ overview:'M3 10l9-7 9 7v10H3z M9 20v-7h6v7',
+ accounts:'M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2 M16 3a4 4 0 010 8 M22 21v-2a4 4 0 00-3-3.87 M13 7a4 4 0 11-8 0 4 4 0 018 0',
+ diagnostics:'M2 12h4l3-8 5 16 3-8h5',
+ settings:'M4 6h16 M4 12h16 M4 18h16 M8 3v6 M16 9v6 M10 15v6',
+};
 export function AppShell({
   page,
   onNavigate,
   demo, autoService=false,
   deviceMode = false,
-  deviceName, hive, connected = false,
+  deviceName, hive, connected = false, switching = false,
   children,
   debug,
   navigationRequest,desktopStatus,
@@ -20,7 +27,7 @@ export function AppShell({
   demo: boolean;
   autoService?:boolean;
   deviceMode?: boolean;
-  deviceName?: string; hive?: string; connected?: boolean;
+  deviceName?: string; hive?: string; connected?: boolean; switching?: boolean;
   children: ReactNode;
   debug?: ReactNode;
   navigationRequest?:NavigationRequest;desktopStatus?:DesktopPresentation;
@@ -46,7 +53,7 @@ export function AppShell({
   const items = demo && !deviceMode ? demoNavigation : navigation;
   const current = items.find((item) => item.id === page) ?? items[0];
   return (
-    <div data-desktop-status={desktopStatus?.kind} className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
+    <div data-page={page} data-desktop-status={desktopStatus?.kind} className={`app-shell${deviceMode ? ' native-shell' : ''}`}>
       <aside className="sidebar">
         <div className="brand">
           <img src={logo} alt="" />
@@ -55,14 +62,14 @@ export function AppShell({
         <nav aria-label={t("主导航")}>
           {items.map(({ id, label, icon: Icon }) => (
             <button key={id} aria-current={id === page ? 'page' : undefined} onClick={() => onNavigate(id)}>
-              <Icon aria-hidden="true" />
+              <>{deviceMode&&approvedNavigationPaths[id]?<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"><path d={approvedNavigationPaths[id]}/></svg>:<Icon aria-hidden="true" />}</>
               {t(label)}
             </button>
           ))}
         </nav>
         <div className="sidebar-bottom">
           <div className="side-note">
-            <span className={`dot ${(desktopStatus?desktopStatus.severity==='success':connected) ? '' : 'muted-dot'}`} />{hive ? new URL(hive).host : t(deviceMode ? desktopStatus&&['loading','unconfirmed'].includes(desktopStatus.kind)?'连接状态待确认':'尚未连接 Hive' : '尚未接通真实供给')}<p className={desktopStatus?'desktop-side-status':undefined} data-severity={desktopStatus?.severity}>{desktopStatus?t(`desktop.status.${desktopStatus.kind}`):t(connected ? 'Hive 已连接' : 'Hive 未连接')}</p>
+            <span className={`dot ${(!switching&&(desktopStatus?desktopStatus.severity==='success':connected)) ? '' : 'muted-dot'}`} />{hive ? new URL(hive).host : t(deviceMode ? desktopStatus&&['loading','unconfirmed'].includes(desktopStatus.kind)?'连接状态待确认':'尚未连接 Hive' : '尚未接通真实供给')}<p className={desktopStatus?'desktop-side-status':undefined} data-severity={desktopStatus?.severity}>{switching?t('Hive 切换中'):desktopStatus?t(desktopStatus.kind==='paused'?'已暂停':desktopStatus.kind==='blocked'&&desktopStatus.problem?.code==='source_missing'?'凭证缺失':desktopStatus.kind==='blocked'&&desktopStatus.problem&&isAuthorizationSyncDisconnected(desktopStatus.problem)?'授权同步失败：连接已中断':`desktop.status.${desktopStatus.kind}`):t(connected ? 'Hive 已连接' : 'Hive 未连接')}</p>
           </div>
           <div className="identity">
             <span className="avatar"><Monitor aria-hidden="true" /></span>
@@ -72,25 +79,25 @@ export function AppShell({
         </div>
       </aside>
       <div className="workspace">
-        <header className="toolbar">
+        {!(deviceMode && page === 'overview') && <header className="toolbar">
           <div className="toolbar-right">
             <span className="device">
               <Monitor aria-hidden="true" />{t("本机设备")}</span>
             {demo && <span className="demo-badge">{t("演示数据")}</span>}
           </div>
-        </header>
+        </header>}
         <main ref={main}>
           <div className="page-heading">
             <div>
               <h1 tabIndex={-1}>{t(current.label)}</h1>
               {!(deviceMode && page === 'overview') && <p>{t(autoService&&page==='accounts'?'接入本机账号，管理平台接单。':current.description)}</p>}
             </div>
-            {debug}
+            {!(deviceMode && page === 'overview') && debug}
           </div>
           {children}
         </main>
-        <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : autoService ? '自动维护账号 · 按平台管理接单' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
-        </footer>
+        {!(deviceMode && page === 'overview') && <footer>{demo ? t('Bee · 开发版本') : 'Bee'}<span>{t(demo ? '演示操作不会影响真实账号或资金' : autoService ? 'Bee 自动运行，按平台管理接单' : deviceMode ? '设备绑定不自动开始贡献' : '真实业务未接通')}</span>
+        </footer>}
       </div>
     </div>
   );

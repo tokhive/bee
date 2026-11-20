@@ -32,3 +32,41 @@ test('recovery read failure retains its evidence and blocks every ready platform
 test('paused keeps independent blockers in the original snapshot',()=>{const s=fixture();for(const v of Object.values(s.supplies) as any[]){v.paused=true;v.ready=false;v.reasons=['manually_paused','quota_unknown'];}const p=derive(s);assert.equal(p.kind,'paused');assert.deepEqual(p.blockedPlatforms,['openai','claude']);assert.deepEqual(s.supplies.openai.reasons,['manually_paused','quota_unknown']);});
 test('preparation closes after a selected account, including ordinary stop',()=>{const s=fixture();s.runtime.local='stopped';assert.equal(derive(s).preparationStep,null);for(const a of Object.values(s.accounts) as any[])a.selection.state='not_selected';assert.equal(derive(s).preparationStep,'connect_account');});
 for(const phase of ['awaiting_confirmation','creation_unknown','redemption_unknown','saving','awaiting_owner_confirmation'])test('initial transaction '+phase+' stays pairing',()=>{const s=fixture();s.device={state:'pairing',recovery:{phase,old_identity:null}};const p=derive(s);assert.equal(p.kind,'pairing');assert.equal(p.preparationStep,'confirm_device');});
+for(const state of ['preparing','running','reconciling','maintenance'])test('account '+state+' cannot reuse an earlier ready supply report',()=>{
+ const s=fixture();s.accounts.openai.selection.state='not_selected';const a=s.accounts.claude;
+ if(state==='preparing')a.authorization.state='preparing';else if(state==='maintenance')a.login_maintenance={phase:'authorizing'};else a.operation={kind:'select',state};
+ const p=derive(s);assert.notEqual(p.kind,'ready');if(state==='preparing')assert.equal(p.kind,'preparing_accounts');assert.deepEqual(p.readyPlatforms,[]);assert.equal(s.supplies.claude.ready,true);
+});
+test('preparing Claude does not hide another confirmed ready platform',()=>{const s=fixture();s.accounts.claude.authorization.state='preparing';const p=derive(s);assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['openai']);});
+
+for(const state of ['pending','running','reconciling'])test('Claude change '+state+' precedes pause but preserves another ready platform',()=>{const s=fixture();s.accounts.claude.operation={kind:'confirm_change',state};assert.deepEqual(derive(s).readyPlatforms,['openai']);s.accounts.openai.selection.state='not_selected';s.supplies.claude.paused=true;s.supplies.claude.ready=false;s.supplies.claude.reasons=['manually_paused'];const p=derive(s);assert.equal(p.kind,state==='reconciling'?'change_unconfirmed':'changing_account');assert.equal(p.primaryTarget?.platform,'claude');assert.equal(s.supplies.claude.paused,true);});
+
+test('confirmed quota keeps the explicit pause primary without hiding independent failures',()=>{const s=fixture();s.accounts.openai.selection.state='not_selected';s.supplies.claude.ready=false;s.supplies.claude.reasons=['quota_exhausted'];assert.equal(module.deriveDesktopStatus!(s,now,true).kind,'quota_exhausted');s.supplies.claude.paused=true;s.supplies.claude.reasons.push('manually_paused');assert.equal(module.deriveDesktopStatus!(s,now,true).kind,'paused');s.supplies.claude.reasons.push('claude_source_unavailable');assert.equal(module.deriveDesktopStatus!(s,now,true).kind,'blocked');});
+
+for(const paused of [true,false])test('pending supply intent '+paused+' excludes stale readiness without changing confirmed choice',()=>{const s=fixture();const original=s.supplies.claude.paused;let p=module.deriveDesktopStatus!(s,now,true,{claude:paused});assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['openai']);s.accounts.openai.selection.state='not_selected';p=module.deriveDesktopStatus!(s,now,true,{claude:paused});assert.equal(p.kind,paused?'pausing':'resuming');assert.equal(p.primaryTarget?.platform,'claude');assert.deepEqual(p.readyPlatforms,[]);assert.equal(s.supplies.claude.paused,original);s.deviceError=failure;assert.equal(module.deriveDesktopStatus!(s,now,true,{claude:paused}).kind,'rejected');});
+
+test('unconfirmed supply write cannot retain a ready badge for that platform',()=>{const s=fixture();s.supplyErrors.claude={...failure,code:'RESPONSE_TIMEOUT',check:'supply_write'};assert.deepEqual(derive(s).readyPlatforms,['openai']);s.accounts.openai.selection.state='not_selected';const p=derive(s);assert.equal(p.kind,'unconfirmed');assert.equal(p.problem,s.supplyErrors.claude);assert.equal(p.primaryTarget?.platform,'claude');assert.deepEqual(p.readyPlatforms,[]);});
+
+test('quota checking reflects an active stale observation but preserves pause and independent blockers',()=>{const s=fixture();s.accounts.openai.selection.state='not_selected';s.supplies.claude.ready=false;s.supplies.claude.reasons=['quota_exhausted'];assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'quota_checking');s.supplies.claude.paused=true;s.supplies.claude.reasons.push('manually_paused');assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'paused');s.supplies.claude.reasons.push('claude_source_unavailable');assert.equal(module.deriveDesktopStatus!(s,now,true,{},['claude']).kind,'blocked');});
+
+for(const platform of ['openai','claude'] as const)for(const paused of [false,true])test(`${platform} missing credential overrides stale supply readiness and pause`,()=>{
+ const s=fixture();s.accounts[platform==='openai'?'claude':'openai'].selection.state='not_selected';
+ const missing={code:'source_missing',check:'read_keyring',platform,message:'controlled missing credential',evidence:{not_found:'true'}};
+ s.accounts[platform].candidate.error=missing;s.supplies[platform].paused=paused;
+ const p=module.deriveDesktopStatus!(s,now,true);
+ assert.equal(p.kind,'blocked');assert.equal(p.problem?.code,'source_missing');assert.equal(p.primaryTarget?.platform,platform);assert.deepEqual(p.readyPlatforms,[]);assert.equal(s.supplies[platform].paused,paused);
+ s.accounts[platform].candidate.error=null;s.supplies[platform].ready=!paused;s.supplies[platform].reasons=paused?['manually_paused']:[];
+ assert.equal(module.deriveDesktopStatus!(s,now,true).kind,paused?'paused':'ready');
+});
+test('missing credential preserves another confirmed ready platform',()=>{
+ const s=fixture();s.accounts.openai.candidate.error={code:'source_missing',check:'read_keyring',message:'controlled missing credential',evidence:{not_found:'true'}};
+ const p=derive(s);assert.equal(p.kind,'ready');assert.deepEqual(p.readyPlatforms,['claude']);assert.deepEqual(p.blockedPlatforms,['openai']);
+});
+
+test('current authorization synchronization failure overrides stale ready supply for the affected platform',()=>{
+ const s=fixture();s.accounts.claude.selection.state='not_selected';
+ s.accounts.openai.authorization.error={platform:'openai',code:'runtime_platform_unconfirmed',check:'authorization_sync',message:'write tcp: connection reset by peer',evidence:{}};
+ s.accounts.openai.authorization.state='unconfirmed';
+ const status=derive(s);assert.equal(status.kind,'blocked');assert.equal(status.problem?.check,'authorization_sync');assert.deepEqual(status.readyPlatforms,[]);
+ s.accounts.openai.authorization.error=null;s.accounts.openai.authorization.state='synchronized';assert.equal(derive(s).kind,'ready');
+});

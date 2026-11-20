@@ -5,6 +5,17 @@ import {presentFailure} from '../src/presentation/problems.ts';
 import {formatDate,formatNumber,translate} from '../src/i18n/index.ts';
 import {validNavigationTarget} from '../src/app/navigation.ts';
 const observed='2026-10-30T12:00:00Z';
+test('pending account preparation shows the specific HTTP conflict without flooding the page',()=>{
+ const message='preparation begin unconfirmed: state=absent required=active; original operation retained';
+ const value=normalizeFailure({code:'account_operation_unconfirmed',check:'account_operation_commit',platform:'openai',message,evidence:{http_status:'409',remote_code:'preparation_conflict',response_body:'another preparation is active'}},'account_operation');
+ for(const locale of ['zh','en'] as const){
+  const problem=presentFailure(value,locale);
+  assert.match(problem.summary,/409/);assert.ok(problem.summary.length<120);
+  assert.doesNotMatch(problem.summary,/state=absent/);
+  if(locale==='en')assert.doesNotMatch(problem.summary,/\p{Script=Han}/u);
+  assert.ok(problem.details.includes(message));assert.match(problem.details,/another preparation is active/);
+ }
+});
 const failure=(code='http_rejected')=>normalizeFailure({code,message:'GET /api/bee/identity: HTTP 503; upstream maintenance',details:{check:'device_identity',observed_at:observed,evidence:{target_origin:'https://hive.test',path:'/api/bee/identity',http_status:'503',response_body:'upstream maintenance'}}},'device_status');
 test('account failure displays its original HTTP observation time without inventing the render time',()=>{
  const account={code:'connection_closed',check:'identity',platform:'openai',message:'GET /api/bee/identity: unexpected EOF',evidence:{observed_at:observed,failure_kind:'connection_closed',elapsed_ms:'1174'}};
@@ -200,4 +211,31 @@ test('resource conflict identifies an unexecuted attempt without claiming no pip
  assert.equal(problem.summary,'已有冲突操作正在进行，本次操作未执行。');
  assert.match(problem.details,/account_detect/);
  assert.match(problem.impact,/状态查询仍可继续/);
+});
+
+test('account registration mismatch keeps the exact identities check and generation evidence',()=>{
+ for(const match of ['true','false']){const message=`registered account differs from saved selection: fingerprint_match=${match} generation=2 expected=1`,value=normalizeFailure({code:'account_operation_unconfirmed',check:'account_operation_commit',platform:'claude',message,evidence:{}},'account_operation');for(const locale of ['zh','en'] as const){const p=presentFailure(value,locale);assert.match(p.summary,/2/);assert.match(p.summary,/1/);assert.ok(p.details.includes(message));if(locale==='zh')assert.ok(p.summary.includes(match==='false'?'身份':'版本'));else assert.doesNotMatch(p.summary,/\p{Script=Han}/u);}}
+});
+
+test('only an explicit login-start admission rejection proves that no login started',async()=>{
+ const {requestNotExecuted}=await import('../src/system/failures.ts');
+ assert.equal(requestNotExecuted(normalizeFailure({code:'AUTHORIZE_OPERATION_FAILED',message:'authorize revision changed: actual=71 expected=61'},'authorize_start')),true);
+ for(const check of ['authorize_status','authorize_cancel','account_snapshot'])assert.equal(requestNotExecuted(normalizeFailure({code:'AUTHORIZE_OPERATION_FAILED',message:'original operation unavailable'},check)),false);
+ for(const code of ['RESPONSE_TIMEOUT','CONNECTION_LOST','AUTHORIZE_REPLY_INVALID'])assert.equal(requestNotExecuted(normalizeFailure({code,message:'login result unconfirmed'},'authorize_start')),false);
+});
+
+test('transport status zero is explained as no HTTP response while original facts remain visible',()=>{
+ const failure=normalizeFailure({code:'official_check_failed',check:'capabilities',platform:'openai',message:'proxyconnect tcp: dial tcp 127.0.0.1:1087: connect: connection refused',evidence:{http_status:'0',transport_failed:'true'}},'capabilities');
+ const zh=presentFailure(failure,'zh');assert.match(zh.details,/未收到 HTTP 响应/);assert.doesNotMatch(zh.details,/HTTP 状态: 0/);assert.match(zh.details,/127\.0\.0\.1:1087/);
+ assert.match(presentFailure(failure,'en').details,/No HTTP response/);
+ const rejected=presentFailure({...failure,evidence:{http_status:'503',transport_failed:'false'}},'zh');assert.match(rejected.details,/HTTP 状态: 503/);
+});
+
+test('authorization synchronization names a proven socket reset while retaining the original evidence',()=>{
+ const message='write tcp 127.0.0.1:50000->127.0.0.1:18080: write: connection reset by peer';
+ const value=normalizeFailure({code:'runtime_platform_unconfirmed',platform:'openai',check:'authorization_sync',message,evidence:{}},'account_operation');
+ assert.equal(presentFailure(value,'zh').summary,'授权同步失败：连接已中断');
+ assert.doesNotMatch(presentFailure(value,'en').summary,/\p{Script=Han}/u);
+ assert.ok(presentFailure(value,'zh').details.includes(message));
+ for(const other of [{...value,check:'authorization_readback'},{...value,message:'decode response: unexpected EOF'},{...value,message:'HTTP 503: unavailable'},{...value,code:'source_unavailable'}])assert.notEqual(presentFailure(other,'zh').summary,'授权同步失败：连接已中断');
 });

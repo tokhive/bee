@@ -4,7 +4,7 @@ import {normalizeFailure,safeFailureText,type UiFailure} from './failures';
 import {currentLocale} from '../i18n';
 
 interface InitialAttempt {operationId?:string;hive:string;name:string;revision:number;view?:DeviceView}
-export interface FirstLaunchSession {instance?:string;attempt?:InitialAttempt;dismissed?:string;knownBinding?:boolean}
+export interface FirstLaunchSession {instance?:string;profile?:string|null;attempt?:InitialAttempt;dismissed?:string;knownBinding?:boolean}
 const transaction=(view?:DeviceView)=>view?.recovery?.old_identity===null?view.recovery:undefined;
 const sameIdentity=(a:NonNullable<DeviceView['identity']>,b:NonNullable<DeviceView['identity']>)=>a.id===b.id&&a.name===b.name&&a.owner_id===b.owner_id&&a.owner_email===b.owner_email;
 // Bound view names follow the Hive identity; context.name is the local requested name.
@@ -15,7 +15,10 @@ function savedIdentity(snapshot:DesktopSnapshot){
 /** Session state belongs above the binding-revision workspace. It contains no persistent flag. */
 export function observeFirstLaunch(previous:FirstLaunchSession,snapshot:DesktopSnapshot):FirstLaunchSession {
  const instance=snapshot.native.metadata?.instance;
- let session=previous.instance===instance?previous:{instance};
+ const sameProfile=previous.profile===snapshot.currentProfile;
+ // Keep only the workspace admission fact while its process is unavailable.
+ // Pairing receipts remain instance-scoped and never cross a process restart.
+ let session=previous.instance===instance&&sameProfile?previous:{instance,profile:snapshot.currentProfile,knownBinding:sameProfile&&!instance&&snapshot.native.state!=='ready'?previous.knownBinding:undefined};
  const view=snapshot.device,record=transaction(view),attempt=session.attempt;
  if(record&&!snapshot.deviceError&&record.phase!=='completed'){
   if(!attempt?.operationId||attempt.operationId!==record.operation_id||record.revision>=attempt.revision){

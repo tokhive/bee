@@ -300,7 +300,9 @@ Rust 新增固定 Tauri 命令 `startup_query({})`、`startup_retry({})`，保�
 
 StartupStatus 保留 `state/failure/instance/binding_revision/network_revision/observed_at/revision`，增加 `can_retry`、`recovering` 和可选 `progress:{stage,operation_id,completed,total}`。stage 为 connecting／checking_previous／checking_device／preparing_accounts／confirming_service；operation_id 为 48 位小写十六进制或 null；计数成对存在，仅 preparing_accounts 可用，`0 <= completed <= total <= 2` 且 total 非零。Go runtime 快照可选 `startup_progress`，必须绑定当前 operation；失败准备不计入 completed。Rust／TS 严格解码，不用计时器推进阶段或估算百分比。
 
-`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。没有运行真实用户账号恢复；[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+`desktop-startup-recovery.json` 与更新存储同目录，使用私有原子写。记录 attempt、实例、绑定／网络／账号范围、原意图、原会话、触发来源、前次 attempt、operation 与 submitted／succeeded／failed／unknown／retired。提交前保存；回执未知时只观察原 operation。新实例无法证明旧结果、跨文件崩溃或损坏记录均阻塞；终态不可改写，新尝试先归档前次终态。2026-11-11 阶段未运行真实用户账号恢复，见该阶段[验收边界](evidence/2026-11-11-startup-recovery/README.md)。
+
+启动检查必须包含设备配对／修复写屏障，未完成时返回 `RECOVERY_DEVICE_UNRESOLVED`，不创建启动尝试。检查与实际受理之间仍可能发生变化：`runtime_restore` 的相关响应若返回 `RUNTIME_OPERATION_FAILED`，表示 Go 尚未创建运行操作；Rust 保存 `failed / RUNTIME_RESTORE_REJECTED` 及原错误，不执行无对应 worker 的失败清理。超时、连接丢失、无效响应不能使用此例外。旧版 `unknown + operation_id=null + failure.code=RUNTIME_OPERATION_FAILED` 具有同样的明确拒绝证据；按已核实的调用边界识别，不解析错误文案，也不把所有空编号当作未受理。原记录保持原样，下一次合格启动完整归档并关联它。配对完成重检仅恢复管理能力，App 启动恢复仍检查当前绑定、运行意图和暂停状态。完整流程及验证映射见[启动受理与配对衔接](startup-admission.md)。
 
 
 ### 旧会话安全结束扩展（2026-11-11）
@@ -311,7 +313,7 @@ RecoveryInspection 增可选 `binding_identity`（64 位小写 hex，原设备�
 
 Go 私有原子文件 `desktop-session-retirement.json` 保存原 scope、原 guard、设备绑定摘要、请求和 proof，完成后保留；新结束操作先归档至 `desktop-session-retirement-<id>.json`。任何部分保存中断均沿用同 ID、同 proof 继续，未完成记录继续阻塞普通 Restore。
 
-Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要的旧未知记录继续阻塞。
+Rust `desktop-startup-recovery.json` 新记录保存可选 `binding_identity`。只有不同旧实例的相同持久设备绑定取得真实结束证明，才可将 submitted／unknown 旧会话记为 `retired`；failure 必须为 `RECOVERY_PREVIOUS_RETIRED`，保留原 operation、未知结果和原失败。此状态不代表原操作成功或失败，终态仍不可改写；新尝试关联并归档前次。缺少绑定摘要且没有上述明确受理前拒绝证据的旧未知记录继续阻塞。
 
 Hive 未支持时返回 `RECOVERY_SERVER_UNSUPPORTED`；任务未排空为 `RECOVERY_REMOTE_DRAINING`，原回执待核对为 `RECOVERY_RETIREMENT_UNCONFIRMED`，明确 HTTP 拒绝为 `RECOVERY_RETIREMENT_CONFLICT`，本地原记录损坏为 `RECOVERY_RETIREMENT_INVALID`。排空／未知时显示“继续恢复”，仍使用原操作；不支持、冲突或损坏时保留诊断，隐藏无效核对入口。查询不会清除继续恢复资格。
 

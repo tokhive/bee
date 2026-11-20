@@ -82,11 +82,27 @@ impl Bridge {
             }
         }
         self.check_restore_admission()?;
-        let admitted = checked(
+        let admission = checked(
             self.request("runtime_restore", json!({}), Duration::from_secs(5))
                 .await?,
             RuntimeReplyKind::Operation,
-        )?;
+        );
+        let admitted = match admission {
+            Err(cause) if cause.code == "RUNTIME_OPERATION_FAILED" => {
+                // This correlated Go reply precedes operation creation. A
+                // timeout/transport error above is deliberately not classified.
+                let mut rejected = cause.clone();
+                rejected.code = "RUNTIME_RESTORE_REJECTED".into();
+                rejected.message = format!("{}: {}; runtime_restore rejected before operation creation; no recovery worker admitted", cause.code, cause.message);
+                if let Some((store, record)) = journal.as_mut() {
+                    record.phase = "failed".into();
+                    record.failure = Some(rejected.clone());
+                    store.save(record)?;
+                }
+                return Err(rejected);
+            }
+            other => other?,
+        };
         let operation = &admitted.result["operation"];
         if let Some((store,record))=journal.as_mut() {
             record.operation_id=operation["id"].as_str().map(str::to_owned);

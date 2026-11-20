@@ -288,7 +288,7 @@ async fn startup_mode<R:tauri::Runtime>(app:tauri::AppHandle<R>,bridge:Bridge,ma
             if current_instance.as_deref() == Some(old.instance.as_str()) {
                 journal.observe(&bridge).await?;
             }
-            if old.phase == "failed" && !manual_retry {
+            if old.phase == "failed" && !manual_retry && !old.rejected_before_admission() {
                 return Err(old.failure.expect("validated terminal failure"));
             }
         }
@@ -368,7 +368,7 @@ pub(crate) async fn query<R: tauri::Runtime>(
     let journal = bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
     let result=async {
         if let Some(record)=journal.observe(bridge).await? {
-            if let Some(cause)=record.failure{return Err(cause);}
+            if let Some(cause)=record.blocking_failure(){return Err(cause);}
         }
         let previous=gate.snapshot();
         // Only this failed preparation can be superseded by an already verified
@@ -698,7 +698,7 @@ async fn recheck_binding<R: tauri::Runtime>(
             let journal =
                 bridge.startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
             if let Some(record) = journal.observe(bridge).await? {
-                if let Some(cause) = record.failure {
+                if let Some(cause) = record.blocking_failure() {
                     return Err(cause);
                 }
             }
@@ -739,7 +739,7 @@ async fn recheck_binding<R: tauri::Runtime>(
                 let journal = bridge
                     .startup_journal(app.state::<crate::updater::UpdateManager>().store.path());
                 if let Some(record) = journal.observe(bridge).await? {
-                    if let Some(cause) = record.failure {
+                    if let Some(cause) = record.blocking_failure() {
                         return Err(cause);
                     }
                 }

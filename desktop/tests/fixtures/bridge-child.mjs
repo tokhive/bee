@@ -77,6 +77,7 @@ input.on('line', line => {
         if(!config.apply||request.params.reason!=='network_change'||request.params.expected_revision!==startupRuntimeRevision)throw new Error('invalid network stop');
         startupOperation={id:'b'.repeat(48),kind:'stop',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
       case 'runtime_restore':
+        if(config.restore_error){reply({error:config.restore_error});return;}
         if(!config.apply)throw new Error('startup recheck repeated runtime restore');
         startupOperation={id:'c'.repeat(48),kind:'start',platform:null,state:'succeeded',revision:++startupRuntimeRevision,error:null};reply({operation:startupOperation});return;
       case 'runtime_start':

@@ -12,6 +12,7 @@ import (
 
 var nativeBridgeAudit = flag.String("bee-native-fixture-audit", "", "controlled native integration process audit output")
 var nativeLoginFixture = flag.Bool("bee-native-login-fixture", false, "enable controlled official subprocess and browser launcher")
+var nativePairingFixture = flag.Bool("bee-native-pairing-fixture", false, "start with a controlled pending pairing")
 var nativeHiveFixture = flag.String("bee-native-hive-fixture", "", "isolated Hive integration fixture file")
 var nativeSwitchProfile = flag.String("bee-native-switch-profile", "", "fixed isolated switch profile")
 var nativeSwitchMode = flag.String("bee-native-switch-mode", "", "fixed production profile mode")
@@ -29,7 +30,9 @@ func TestDesktopNativeBridgeProcess(t *testing.T) {
 		var accounts *bee.DesktopAccounts
 		var runner *bee.DesktopRuntime
 		var network *bee.DesktopNetwork
-		if *nativeSwitchProfile != "" {
+		if *nativePairingFixture {
+			device, accounts, runner, network = bee.NewDesktopNativePairingFixture(t, *nativeBridgeAudit)
+		} else if *nativeSwitchProfile != "" {
 			device, accounts, runner, network = bee.NewDesktopHiveSwitchFixture(t, *nativeSwitchProfile, *nativeSwitchMode, *nativeSwitchFixture)
 		} else if *nativeHiveFixture != "" {
 			device, accounts, runner, network = bee.NewDesktopHiveRetirementFixture(t, *nativeHiveFixture, *nativeHiveRoot)

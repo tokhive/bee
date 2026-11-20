@@ -156,3 +156,51 @@ func TestDesktopRecoveryInspectionHasNoSideEffects(t *testing.T) {
 		})
 	}
 }
+
+func TestDesktopRecoveryInspectionBlocksPendingPairingBeforeRestore(t *testing.T) {
+	h, d, path := newRecoveryHive(t)
+	a := NewDesktopAccounts(d)
+	defer a.Close()
+	r := NewDesktopRuntime(context.Background(), d, a)
+	defer r.Close()
+	reopen := func() {
+		r.Close()
+		a.Close()
+		closeDesktopTestDevice(t, d)
+		d = newDesktopTestDevice(t, path)
+		a = NewDesktopAccounts(d)
+		r = NewDesktopRuntime(context.Background(), d, a)
+		t.Cleanup(a.Close)
+		t.Cleanup(r.Close)
+	}
+	v, err := d.RecoveryPrepare(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	v, err = d.RecoveryConfirm(context.Background(), v.OperationID, v.Revision, "begin_pairing")
+	if err != nil || v.Phase != "pending" {
+		t.Fatalf("pairing: %+v %v", v, err)
+	}
+	reopen() // Exit during pairing; the persisted barrier still owns admission.
+	before := r.InspectRecovery(context.Background())
+	op, err := r.Restore(context.Background())
+	if err == nil || op.ID != "" {
+		t.Fatalf("pending pairing admitted restore: %+v %v", op, err)
+	}
+	snapshot, err := r.Snapshot(context.Background())
+	if err != nil || snapshot.Operation != nil || snapshot.RunID != nil {
+		t.Fatalf("rejection created work: %+v %v", snapshot, err)
+	}
+	if before.State != "blocked" || before.Failure == nil || before.Failure.Code != "RECOVERY_DEVICE_UNRESOLVED" {
+		t.Fatalf("inspection missed the actual admission barrier: %+v", before)
+	}
+	h.approved = true
+	v, err = d.RecoveryStatus(context.Background())
+	if err != nil || v.Phase != "completed" {
+		t.Fatalf("completion: %+v %v", v, err)
+	}
+	reopen() // Completion must also survive another manager, not just a UI read.
+	if after := r.InspectRecovery(context.Background()); after.Failure != nil {
+		t.Fatalf("completed pairing still blocks: %+v", after)
+	}
+}

@@ -119,6 +119,22 @@ pub(crate) struct RecoveryRecord {
     pub phase: String,
     pub failure: Option<BridgeError>,
 }
+impl RecoveryRecord {
+    /// The Go Restore contract returns RUNTIME_OPERATION_FAILED only before
+    /// creating a start operation. After admission, failures belong to that
+    /// operation and Rust saves its ID before any result queries. Older builds
+    /// incorrectly stored this explicit rejection as unknown. Do not infer
+    /// rejection from a missing ID or from human-readable error text alone.
+    pub fn rejected_before_admission(&self) -> bool {
+        self.operation_id.is_none() && self.failure.as_ref().is_some_and(|failure| {
+            self.phase == "unknown" && failure.code == "RUNTIME_OPERATION_FAILED"
+                || self.phase == "failed" && failure.code == "RUNTIME_RESTORE_REJECTED"
+        })
+    }
+    pub fn blocking_failure(&self) -> Option<BridgeError> {
+        if self.rejected_before_admission() { None } else { self.failure.clone() }
+    }
+}
 pub(crate) struct RecoveryJournal {
     path: PathBuf,
 }
@@ -185,6 +201,7 @@ impl RecoveryJournal {
     pub fn retire_previous(&self, inspection:&RecoveryInspection, instance:&str) -> Result<(),BridgeError> {
         let Some(proof)=inspection.retirement_id.as_ref() else {return Ok(());};
         let Some(mut old)=self.load()? else {return Ok(());};
+        if old.rejected_before_admission() {return Ok(());}
         if !["submitted","unknown"].contains(&old.phase.as_str()) {return Ok(());}
         if old.instance==instance || old.binding_identity.is_none() || old.binding_identity!=inspection.binding_identity {
             return Err(error("RECOVERY_CONTEXT_CHANGED", "retirement cannot be bound to a previous management instance and original device binding"));
@@ -200,7 +217,7 @@ impl RecoveryJournal {
         let Some(mut record) = self.load()? else {
             return Ok(None);
         };
-        if !["submitted", "unknown"].contains(&record.phase.as_str()) {
+        if record.rejected_before_admission() || !["submitted", "unknown"].contains(&record.phase.as_str()) {
             return Ok(Some(record));
         }
         let reply = bridge.runtime_snapshot().await?;
@@ -250,6 +267,7 @@ impl RecoveryJournal {
             }
             if old.attempt_id != v.attempt_id
                 && ["submitted", "unknown"].contains(&old.phase.as_str())
+                && !old.rejected_before_admission()
             {
                 return Err(error(
                     "RECOVERY_RESULT_UNCONFIRMED",
@@ -318,6 +336,21 @@ impl RecoveryJournal {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn missing_operation_alone_never_proves_admission_rejection() {
+        let mut r = record();
+        for phase in ["submitted", "unknown", "failed", "succeeded"] {
+            for code in ["RESPONSE_TIMEOUT", "PROTOCOL_VIOLATION", "OWNED_EXIT_UNCONFIRMED", "RUNTIME_OPERATION_FAILED", "RUNTIME_RESTORE_REJECTED"] {
+                for operation in [None, Some("b".repeat(48))] {
+                    r.phase = phase.into();
+                    r.operation_id = operation.clone();
+                    r.failure = Some(error(code, "device recovery transaction unresolved: phase=pending revision=4; start/account writes blocked"));
+                    assert_eq!(r.rejected_before_admission(), operation.is_none() && (phase == "unknown" && code == "RUNTIME_OPERATION_FAILED" || phase == "failed" && code == "RUNTIME_RESTORE_REJECTED"), "{phase} {code} {operation:?}");
+                }
+            }
+        }
+    }
     fn record() -> RecoveryRecord {
         RecoveryRecord {
             version: 1,

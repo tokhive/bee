@@ -504,7 +504,16 @@ func (cfg *egressConfig) register(ctx context.Context, state localState, lease s
 		metadata := cfg.authorization.metadata()
 		codex = &metadata
 	}
-	key, err := fetchInboxKey(ctx, state, cfg.InboxKeyID)
+	// A static credential is sealed to the key its operator pinned. An official
+	// Codex source follows the keys Hive rotates in through maintenance tasks,
+	// as it always has: the task's key is checked below, and a release still
+	// verifies the TEE's signature over it. A leftover pin from an older
+	// static setup must not stop that source at the first TEE restart.
+	pin := cfg.InboxKeyID
+	if cfg.Codex != nil {
+		pin = ""
+	}
+	key, err := fetchInboxKey(ctx, state, pin)
 	if err != nil {
 		return err
 	}

@@ -237,6 +237,9 @@ func TestFetchInboxKeyNeedsAnAttestedOrPinnedKey(t *testing.T) {
 	if _, err := fetchInboxKey(context.Background(), state, ""); err != nil {
 		t.Fatalf("a development build refused its fixture: %v", err)
 	}
+	if _, err := fetchInboxKey(context.Background(), state, strings.Repeat("0", 64)); !errors.Is(err, errInboxIdentity) {
+		t.Fatalf("a development build accepted a key that contradicts its pin: %v", err)
+	}
 }
 
 func digest(data []byte) []byte {

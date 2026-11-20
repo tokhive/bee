@@ -35,8 +35,14 @@ import (
 var (
 	// TEEApplicationIDs is the comma-separated allowlist of measured images
 	// ("snp-app:<sha256>") this release trusts. Two entries cover the window
-	// of a coordinated TEE rollout; remove the old one once it is retired.
-	TEEApplicationIDs = "snp-app:83f877b9b046972daa9b0310b40ca8d642647d3a33e7ccf2031d0f90e7ab73c7"
+	// of a coordinated TEE rollout between two images that both sign their
+	// inbox key; remove the old one once it is retired. An image older than
+	// TEE 0.3.0 can't sign it, so pinning one keeps nothing working.
+	//
+	// snp-app:df38d993… is TEE 0.3.1, which production has run since
+	// 2026-11-20T02:55:13Z (tokhive/tee releases/catalog.json). Staging runs a
+	// different build of the same source and needs a build override.
+	TEEApplicationIDs = "snp-app:df38d99343f65e66ff10423dbf3148812d2e891af8f5e5db5d8255e9d608bbb5"
 
 	// TEEPolicyHash is the SHA-256 of the whitelist the TEE attests it loaded.
 	// On SEV-SNP the whitelist is baked into the measured image, so this is a

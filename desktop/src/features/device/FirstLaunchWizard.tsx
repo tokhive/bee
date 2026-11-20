@@ -108,18 +108,18 @@ export function FirstLaunchWizard({startupNotice,startupFailure,recover,recovery
  const identity=view?.identity;
  const complete=completed&&view?.state==='bound'&&!!identity&&!!context&&!error&&!operationError&&!phaseFailure&&!transaction?.failure&&context.hive===view.hive&&view.name===identity.name&&context.device_id===identity.id&&context.owner_id===identity.owner_id&&(!transaction||(['id','name','owner_id','owner_email'] as const).every(key=>transaction.new_identity?.[key]===identity[key]));
  const transactionFailure=view?.recovery?.failure?normalizeFailure(view.recovery.failure,'device_pairing'):null;
- const failures=[error,operationError,transactionFailure,phaseFailure,startupFailure].filter((failure):failure is UiFailure=>!!failure);
+ const failures=[error,operationError,transactionFailure,phaseFailure,startupFailure].filter((failure):failure is UiFailure=>!!failure&&!(phase==='expired'&&failure.code==='PAIRING_OBSERVATION_PAUSED'));
  const showConfirmationUrl=!!copyFailure;
  const browserOpenFailed=!!operationError?.code.startsWith('BROWSER_');
  const needsRecoveryAction=['creation_unknown','redemption_unknown','blocked','expired'].includes(phase??'')||!!error||!!transactionFailure||!!phaseFailure||!!operationError&&!browserOpenFailed||refreshStatus?.state==='blocked';
  const savePermissionDenied=phase==='saving'&&!!transaction?.new_identity&&!!transactionFailure&&/\bEACCES\b/.test(transactionFailure.message)&&/config|device\.json/i.test(transactionFailure.message);
  const inlineDiagnostics=readBlocked||phase==='saving'&&!!transactionFailure;
  const diagnosticDetails=failures.map(failure=>presentFailure(failure,currentLocale()).details).join('\n\n');
- const paused=transaction?.failure?.code==='PAIRING_OBSERVATION_PAUSED';
+ const paused=phase!=='expired'&&transaction?.failure?.code==='PAIRING_OBSERVATION_PAUSED';
  const compactPairing=!!pairing&&(waiting||phase==='expired');
  const invalidBindingEvidence=failures.some(failure=>failure.code.startsWith('FIRST_LAUNCH_')||failure.code==='DESKTOP_STALE_RESULT'||failure.code==='DEVICE_REPLY_INVALID'||failure.message.includes('DEVICE_REPLY_INVALID'));
  const pairingFailures=failures.filter(failure=>failure.code!=='PAIRING_OBSERVATION_PAUSED');
- const pairingFailure=pairingFailures[0]??transactionFailure;
+ const pairingFailure=pairingFailures[0]??failures.find(failure=>failure.code==='PAIRING_OBSERVATION_PAUSED');
  const failureNotices=compactPairing?(pairingFailure?<WizardFailure failure={pairingFailure} compact manualUrlAvailable={!!pairing&&waiting&&!expired} summary={pairingFailure.code==='PAIRING_OBSERVATION_PAUSED'?w('自动核对已暂停，请重新核对。'):pairingFailure===startupFailure?w('设备绑定尚未完成。'):undefined} relatedFailures={failures.filter(failure=>failure!==pairingFailure)}/>:null):failures.map((failure,index)=><WizardFailure key={`${phase}-${failure.code}-${index}`} failure={failure} summary={savePermissionDenied&&failure===transactionFailure?w('设备身份已确认，但系统拒绝保存配置（EACCES）。'):undefined} compact={phase==='saving'&&failure===transactionFailure} manualUrlAvailable={!!pairing&&waiting&&!expired}/>);
  useEffect(()=>{if(complete)title.current?.focus({preventScroll:true});},[complete]);
  useEffect(()=>{

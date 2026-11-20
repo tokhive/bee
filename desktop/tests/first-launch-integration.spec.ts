@@ -206,3 +206,28 @@ test('pending binding owns the page when startup is blocked by that same transac
  await expect(page.getByRole('dialog')).toContainText('device recovery transaction unresolved');
  expect((await calls(page)).filter(c=>['device_begin','device_recovery_confirm','startup_retry'].includes(c.command))).toEqual([]);
 });
+
+test('checking an expired initial request preserves the first-launch layout',async({page})=>{
+ await open(page,'?scene=device-pending');await expect(page.getByText('ABCD-EFGH',{exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const w=window as any,reply=await w.__TAURI_INTERNALS__.invoke('device_status'),view=reply.result.device;const recovery={...view.recovery,purpose:'initial_pairing',pairing:{...view.recovery.pairing,expires_at:'2000-01-01T00:00:00Z'}};w.__firstLaunchTest.devicePatch={expires_at:recovery.pairing.expires_at,recovery:{...recovery,failure:{code:'PAIRING_OBSERVATION_PAUSED',message:'observation paused'}}};w.__firstLaunchTest.initialRecoveryReply={...view,state:'expired',expires_at:recovery.pairing.expires_at,recovery:{...recovery,phase:'expired',revision:recovery.revision+1,failure:null}};await w.__firstLaunchTest.forceRefresh();});
+ await page.getByRole('button',{name:'重新核对',exact:true}).click();
+ await expect(page.getByRole('heading',{name:'设置这台设备',exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'在 Hive 网页确认设备归属',exact:true})).toBeVisible();
+ await expect(page.getByText('Hive 已确认配对码过期',{exact:true})).toBeVisible();
+ await expect(page.getByRole('heading',{name:'设备与 Hive',exact:true})).toHaveCount(0);
+ await page.getByRole('button',{name:'重新生成配对码',exact:true}).click();
+ await expect(page.getByRole('dialog')).toBeVisible();
+ await page.getByRole('button',{name:'返回设备设置',exact:true}).click();
+ expect((await calls(page)).filter(c=>c.command==='device_recovery_confirm').map(c=>c.args.decision)).toEqual(['continue_checking']);
+ });
+
+test('confirmed expiry owns the startup gate but preserves unrelated failures',async({page})=>{
+ await open(page,'?scene=device-expired');
+ await expect(page.getByText('Hive 已确认配对码过期',{exact:true})).toBeVisible();
+ await page.evaluate(async()=>{const w=window as any,s=await w.__TAURI_INTERNALS__.invoke('startup_status');w.__firstLaunchTest.startupOverride={...s,state:'blocked',revision:s.revision+10,failure:{code:'RUNTIME_RESTORE_FAILED',message:'device recovery transaction unresolved: phase=expired revision=5; start/account writes blocked'}};w.emitStartup(w.__firstLaunchTest.startupOverride);});
+ await expect(page.getByTestId('startup-recovery')).toHaveCount(0);
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeVisible();
+ await page.evaluate(()=>{const w=window as any;w.__firstLaunchTest.startupOverride={...w.__firstLaunchTest.startupOverride,revision:200,failure:{code:'RUNTIME_RESTORE_FAILED',message:'permission denied writing runtime state'}};w.emitStartup(w.__firstLaunchTest.startupOverride);});
+ await expect(page.getByRole('alert')).toContainText('permission denied writing runtime state');
+});

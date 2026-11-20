@@ -356,3 +356,12 @@ test('paused observation retains read recovery when binding evidence is invalid'
  await page.getByRole('button',{name:'重新检查设备',exact:true}).click();
  await expect(page.getByLabel('Fixture actions')).toHaveText('refresh');
 });
+
+test('confirmed expiry supersedes a previous observation pause',async({page})=>{
+ await page.goto('/tests/fixtures/first-launch-wizard.html');
+ await page.evaluate(({pending,transaction,pairing})=>window.setWizardProps({view:{...pending,state:'expired',recovery:{...transaction,new_identity:null,phase:'expired',pairing,failure:{code:'PAIRING_OBSERVATION_PAUSED',message:'previous observation paused'}}}}),{pending,transaction,pairing});
+ await expect(page.getByText('Hive 已确认配对码过期',{exact:true})).toBeVisible();
+ await expect(page.getByRole('alert')).toHaveCount(0);
+ await expect(page.getByText('自动核对已暂停，请重新核对。',{exact:true})).toHaveCount(0);
+ await expect(page.getByRole('button',{name:'重新生成配对码',exact:true})).toBeVisible();
+});

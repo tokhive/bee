@@ -27,6 +27,7 @@ w.__TAURI_INTERNALS__.invoke=async(command,args={})=>{
  if(['device_recovery_status','device_recovery_snapshot'].includes(command)&&control.recoveryFailure)return {result:{error:control.recoveryFailure}};
  if(command==='device_context'&&control.contextFailure)return {result:{binding_revision:w.bindingRevision??1,error:control.contextFailure}};
  const result=await invoke(command,args);
+ if(command==='device_recovery_confirm'&&control.initialRecoveryReply){control.deviceOverride=structuredClone(control.initialRecoveryReply);control.devicePatch=null;result.result={recovery:structuredClone(control.initialRecoveryReply.recovery)};}
  if(command==='startup_status'&&control.startupOverride)return structuredClone(control.startupOverride);
  if(replyInstance&&command==='hive_switch_snapshot'&&result.current_scope)result.current_scope.instance=replyInstance;
  if(replyInstance&&command==='bridge_status'&&result.metadata)result.metadata.instance=replyInstance;

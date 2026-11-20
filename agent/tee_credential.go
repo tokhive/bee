@@ -322,9 +322,10 @@ func fetchInboxKey(ctx context.Context, state localState, staticPin string) (tee
 
 	// An unsigned answer is only acceptable when it is pinned directly, which
 	// is what every Bee did before the TEE signed its inbox key. Builds from
-	// source skip that requirement so local fixtures keep working; a release
+	// source may run without a pin so local fixtures keep working; a release
 	// without a pin refuses, because a key only the relay vouches for is the
-	// hole this path closes.
+	// hole this path closes. A pin, when one is configured, binds every build:
+	// an operator who wrote one down asked for exactly that key.
 	if staticPin == "" && Version != "dev" {
 		return tee.InboxPublic{}, fmt.Errorf("%w: Hive returned no attestation and no inbox_key_id pins a key", errInboxAttestation)
 	}
@@ -336,7 +337,7 @@ func fetchInboxKey(ctx context.Context, state localState, staticPin string) (tee
 	if sha256.Sum256(key.PublicKey) != key.KeyID {
 		return tee.InboxPublic{}, errInboxIdentity
 	}
-	if staticPin != "" && Version != "dev" && hex.EncodeToString(key.KeyID[:]) != staticPin {
+	if staticPin != "" && hex.EncodeToString(key.KeyID[:]) != staticPin {
 		return tee.InboxPublic{}, errInboxIdentity
 	}
 	return key, nil

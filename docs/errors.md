@@ -109,6 +109,22 @@ The top-level `capabilities` only enables model and quota reports for Codex, so 
 
 `capabilities.local_url` is not an HTTP address on a loopback IP. The field is only for local test fixtures; remove it for real supply.
 
+### BEE-CONFIG-EGRESS-KEY
+
+`residential.hive_key` is not 32 bytes in base64. It must hold the same key Hive signs egress leases with (`HIVE_EGRESS_KEY`); the Bee verifies every lease against it.
+
+### BEE-CONFIG-EGRESS-PORT
+
+`residential.ports` names a port other than 80 or 443. Residential egress is a web proxy, so only those two ports are reachable.
+
+### BEE-CONFIG-EGRESS-PRIVATE
+
+`residential.allow_private` is set. The field exists only for tests: a shipped Bee must not be turned into a LAN proxy.
+
+### BEE-CONFIG-EGRESS-RULE
+
+`residential.rules` has an empty or malformed `suffix`, or a negative `bps`. A rule needs a domain suffix such as `example.com` or `cn` and a rate in bits per second; `bps: 0` refuses that suffix and its subdomains. The longest matching suffix wins.
+
 ### BEE-CONFIG-RESELLER
 
 `reseller.reseller` names an API reseller Bee does not know. The only supported reseller is `wokey`. An API reseller is the market's fallback supply and only a Bee signed in to the platform's administrator account may supply one; see [API resellers](../README.md#api-resellers).

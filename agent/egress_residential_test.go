@@ -238,3 +238,77 @@ func TestResidentialAdmission(t *testing.T) {
 		t.Fatal("exhausted lease admitted")
 	}
 }
+
+func TestResidentialDomainRules(t *testing.T) {
+	plane, err := newResidential(&residentialConfig{
+		Enabled: true,
+		HiveKey: base64.RawURLEncoding.EncodeToString(residentialKey()),
+		Rules: []residentialRule{
+			{Suffix: "CN", BPS: 0},
+			{Suffix: ".example.cn", BPS: 1000},
+			{Suffix: "example.com", BPS: 2000},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		host    string
+		bps     int64
+		allowed bool
+	}{
+		{"a.example.cn", 1000, true},
+		{"b.cn", 0, false},
+		{"example.com", 2000, true},
+		{"notexample.com", 0, true},
+		{"example.cn.evil.net", 0, true},
+	} {
+		bps, allowed := plane.rule(test.host)
+		if bps != test.bps || allowed != test.allowed {
+			t.Fatalf("%q rule = (%d, %v), want (%d, %v)", test.host, bps, allowed, test.bps, test.allowed)
+		}
+	}
+}
+
+func TestResidentialRuleValidation(t *testing.T) {
+	for _, rule := range []residentialRule{
+		{Suffix: "", BPS: 1000},
+		{Suffix: " ", BPS: 1000},
+		{Suffix: "a/b", BPS: 0},
+		{Suffix: "example.com", BPS: -1},
+	} {
+		_, err := newResidential(&residentialConfig{
+			Enabled: true,
+			HiveKey: base64.RawURLEncoding.EncodeToString(residentialKey()),
+			Rules:   []residentialRule{rule},
+		})
+		if err == nil {
+			t.Fatalf("accepted rule %+v", rule)
+		}
+	}
+}
+
+func TestResidentialRuleDeniesStream(t *testing.T) {
+	plane, key := residentialForTest(t, "127.0.0.1:1", true)
+	plane.rules, _ = residentialRules([]residentialRule{{Suffix: "blocked.test", BPS: 0}})
+	dialled := false
+	plane.dial = func(context.Context, string, string) (net.Conn, error) {
+		dialled = true
+		return nil, errEgressLease
+	}
+	client, server := net.Pipe()
+	defer client.Close()
+	done := make(chan struct{})
+	go func() {
+		plane.serve(context.Background(), server, "blocked.test:80", residentialToken(t, key, beewire.EgressLease{}))
+		close(done)
+	}()
+	client.SetReadDeadline(time.Now().Add(2 * time.Second))
+	if n, err := client.Read(make([]byte, 1)); n != 0 || err == nil {
+		t.Fatalf("denied stream read n=%d err=%v", n, err)
+	}
+	<-done
+	if dialled {
+		t.Fatal("a denied host was dialled")
+	}
+}

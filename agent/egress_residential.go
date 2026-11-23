@@ -8,7 +8,9 @@ import (
 	"net"
 	"net/netip"
 	"slices"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -30,9 +32,21 @@ type residentialConfig struct {
 	MaxBPS int64 `json:"max_bps,omitempty"`
 	// MaxStreams caps concurrent streams per lease.
 	MaxStreams int `json:"max_streams,omitempty"`
+	// Rules cap or refuse destinations by domain suffix. Country blocks are
+	// just TLD suffixes: a rule with "cn" and bps 0 refuses every .cn host.
+	Rules []residentialRule `json:"rules,omitempty"`
 	// AllowPrivate lets tests reach a loopback target. validate refuses it in
 	// a real configuration so a shipped Bee cannot be turned into a LAN proxy.
 	AllowPrivate bool `json:"allow_private,omitempty"`
+}
+
+// residentialRule caps one domain suffix and its subdomains. A zero rate
+// refuses the suffix, which is how a seller blocks a site without shipping a
+// blocklist service. The longest matching suffix wins, so "example.cn" beats
+// "cn".
+type residentialRule struct {
+	Suffix string `json:"suffix"`
+	BPS    int64  `json:"bps"`
 }
 
 var (
@@ -50,6 +64,7 @@ type residential struct {
 	maxBPS       int64
 	maxStreams   int
 	allowPrivate bool
+	rules        []residentialRule
 
 	mu     sync.Mutex
 	leases map[string]*residentialLease
@@ -86,12 +101,17 @@ func newResidential(cfg *residentialConfig) (*residential, error) {
 	if maxStreams <= 0 {
 		maxStreams = 8
 	}
+	rules, err := residentialRules(cfg.Rules)
+	if err != nil {
+		return nil, err
+	}
 	return &residential{
 		key:          key,
 		ports:        allowed,
 		maxBPS:       cfg.MaxBPS,
 		maxStreams:   maxStreams,
 		allowPrivate: cfg.AllowPrivate,
+		rules:        rules,
 		leases:       make(map[string]*residentialLease),
 		now:          time.Now,
 		lookup:       net.DefaultResolver.LookupNetIP,
@@ -120,6 +140,11 @@ func (r *residential) serve(ctx context.Context, stream io.ReadWriteCloser, host
 		residentialReject(hostport, "target", errEgressLease)
 		return
 	}
+	ruleBPS, allowed := r.rule(host)
+	if !allowed {
+		residentialReject(hostport, "rule", errEgressLease)
+		return
+	}
 	addresses, err := r.lookup(ctx, "ip", host)
 	if err != nil || len(addresses) == 0 {
 		residentialReject(hostport, "resolve", err)
@@ -144,7 +169,11 @@ func (r *residential) serve(ctx context.Context, stream io.ReadWriteCloser, host
 	}
 	defer upstream.Close()
 
+	// The buyer paid for lease.BPS and the seller's rule may only tighten it.
 	bps := lease.BPS
+	if ruleBPS > 0 && (bps <= 0 || ruleBPS < bps) {
+		bps = ruleBPS
+	}
 	if r.maxBPS > 0 && (bps <= 0 || bps > r.maxBPS) {
 		bps = r.maxBPS
 	}
@@ -158,6 +187,34 @@ func (r *residential) serve(ctx context.Context, stream io.ReadWriteCloser, host
 	egressDebug("residential stream opened for %q via %s", hostport, target)
 	relay.Bridge(ctx, stream, meter)
 	egressDebug("residential stream for %q closed after %d bytes", hostport, state.used.Load())
+}
+
+// residentialRules normalises the configured suffixes and orders them longest
+// first, so matching needs no per-request sort. Hosts are lowercased when
+// parsed, so the suffix is too.
+func residentialRules(config []residentialRule) ([]residentialRule, error) {
+	rules := make([]residentialRule, 0, len(config))
+	for _, rule := range config {
+		suffix := strings.ToLower(strings.TrimSpace(rule.Suffix))
+		suffix = strings.TrimPrefix(suffix, ".")
+		if suffix == "" || rule.BPS < 0 || strings.ContainsAny(suffix, "/* \t:@") {
+			return nil, fail("BEE-CONFIG-EGRESS-RULE", rule.Suffix)
+		}
+		rules = append(rules, residentialRule{Suffix: suffix, BPS: rule.BPS})
+	}
+	sort.Slice(rules, func(i, j int) bool { return len(rules[i].Suffix) > len(rules[j].Suffix) })
+	return rules, nil
+}
+
+// rule returns the rate the matching suffix allows and whether the host may be
+// reached at all.
+func (r *residential) rule(host string) (bps int64, allowed bool) {
+	for _, rule := range r.rules {
+		if host == rule.Suffix || strings.HasSuffix(host, "."+rule.Suffix) {
+			return rule.BPS, rule.BPS > 0
+		}
+	}
+	return 0, true
 }
 
 // destination picks the first resolved address the policy allows, preferring

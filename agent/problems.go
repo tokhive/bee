@@ -96,6 +96,22 @@ var problems = map[string]problem{
 		"capabilities.local_url is not an HTTP address at a loopback IP",
 		"remove local_url; it exists only for local test fixtures",
 	},
+	"BEE-CONFIG-EGRESS-KEY": {
+		"residential.hive_key is not 32 bytes in base64",
+		"copy the key Hive signs egress leases with (HIVE_EGRESS_KEY), base64 encoded",
+	},
+	"BEE-CONFIG-EGRESS-PORT": {
+		"residential.ports names a port other than 80 or 443",
+		"keep only 80 and 443, or remove ports to accept both",
+	},
+	"BEE-CONFIG-EGRESS-PRIVATE": {
+		"residential.allow_private is set, which would make the Bee a LAN proxy",
+		"remove allow_private; it exists only for tests",
+	},
+	"BEE-CONFIG-EGRESS-RULE": {
+		"a residential rule has an empty or malformed suffix, or a negative rate",
+		"give each rule a domain suffix such as example.com or cn and a bps of zero or more; zero refuses the suffix",
+	},
 	"BEE-CONFIG-OPENAI-API": {
 		"official OpenAI API supply configuration is invalid",
 		"select 1 to 512 distinct model IDs; local_url is only for loopback test fixtures",

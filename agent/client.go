@@ -255,7 +255,7 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 				// is the tunnel torn down. Ending both at once would close
 				// the connection before the close frame could be written.
 				sessionCtx, stopSession := context.WithCancel(context.WithoutCancel(beeSession(ctx)))
-				session := egress.start(sessionCtx, conn, out)
+				session := egress.start(sessionCtx, conn, out, state.Identity)
 				stopLeaving := context.AfterFunc(ctx, func() {
 					leave(conn, beewire.CloseStopping)
 					stopSession()

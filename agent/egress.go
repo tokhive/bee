@@ -42,6 +42,8 @@ type egressConfig struct {
 	ClaudeAPI               *officialAPISource `json:"claude_api,omitempty"`
 	Reseller                *resellerSource    `json:"reseller,omitempty"`
 	Capabilities            *capabilitySource  `json:"capabilities,omitempty"`
+	Residential             *residentialConfig `json:"residential,omitempty"`
+	residential             *residential
 	capabilitySequence      int64
 	accountGeneration       int64
 	authorization           *codexCredential
@@ -199,7 +201,8 @@ func jsonKind(t reflect.Type) string {
 }
 
 func (cfg *egressConfig) validate() error {
-	if len(cfg.Targets) == 0 {
+	residentialEnabled := cfg.Residential != nil && cfg.Residential.Enabled
+	if len(cfg.Targets) == 0 && !residentialEnabled {
 		return fail("BEE-CONFIG-NO-TARGETS", "")
 	}
 	if len(cfg.Targets) > 16 {
@@ -212,11 +215,15 @@ func (cfg *egressConfig) validate() error {
 			return fail("BEE-CONFIG-TARGET-FORMAT", strconv.Quote(target))
 		}
 	}
+	residentialOnly := residentialEnabled && len(cfg.Targets) == 0
 	if cfg.dynamicAuthorization() {
 		if cfg.Credential != (tee.Secret{}) {
 			return fail("BEE-CONFIG-STATIC-MIXED", "")
 		}
 		// The live synchronizer reads the source so re-login can recover without restarting Bee.
+	} else if residentialOnly {
+		// A Bee selling only residential egress has no model credential to
+		// register. It still authenticates to Hive with its device credential.
 	} else if cfg.Credential == (tee.Secret{}) {
 		return fail("BEE-CONFIG-NO-SOURCE", "")
 	} else if cfg.Credential.Token == "" || cfg.Credential.Validate() != nil {
@@ -278,6 +285,16 @@ func (cfg *egressConfig) validate() error {
 				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", "reseller", target)
 			}
 		}
+	}
+	if residentialEnabled {
+		if cfg.Residential.AllowPrivate {
+			return fail("BEE-CONFIG-EGRESS-PRIVATE", "")
+		}
+		plane, err := newResidential(cfg.Residential)
+		if err != nil {
+			return err
+		}
+		cfg.residential = plane
 	}
 	if cfg.ConnectProxy != "" {
 		address, err := localConnectProxy(cfg.ConnectProxy)
@@ -584,9 +601,18 @@ func (c *countingConn) Write(p []byte) (int, error) {
 	return n, err
 }
 
-func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io.Writer) *relay.Session {
+func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io.Writer, identity *beewire.Identity) *relay.Session {
 	if cfg.failures == nil {
 		cfg.failures = newEgressFailures()
+	}
+	if cfg.residential != nil {
+		if identity != nil {
+			// The device ID is what Hive lists and dials by, so the token must
+			// name the same seller or the lease is refused here.
+			cfg.residential.seller = identity.ID
+		} else {
+			slog.Warn("residential egress unusable: Bee has no identity", "module", "egress")
+		}
 	}
 	return relay.New(ctx, conn, tunnel.High, cfg.serveStream(out), relay.Options{MaxStreams: relay.BeeStreams})
 }
@@ -595,16 +621,25 @@ func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io
 func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunnel.Stream, []byte) {
 	return func(live context.Context, stream *tunnel.Stream, metadata []byte) {
 		var open struct {
-			Host string `json:"host"`
+			Host  string `json:"host"`
+			Lease string `json:"lease,omitempty"`
 			beewire.Control
 		}
-		if len(metadata) > 1024 || json.Unmarshal(metadata, &open) != nil {
+		if len(metadata) > 4096 || json.Unmarshal(metadata, &open) != nil {
 			egressDebug("stream rejected: unreadable open metadata (%d bytes)", len(metadata))
 			cfg.failures.report(out, failf("BEE-EGRESS-METADATA", "%d bytes", len(metadata)), "")
 			return
 		}
 		if open.Control.Control != "" {
 			cfg.control(open.Control)
+			return
+		}
+		if open.Lease != "" {
+			if cfg.residential == nil {
+				egressDebug("stream rejected: residential egress is not configured")
+				return
+			}
+			cfg.residential.serve(live, stream, open.Host, open.Lease)
 			return
 		}
 		egressDebug("stream opened for %q", open.Host)

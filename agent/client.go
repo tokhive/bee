@@ -232,7 +232,11 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
 		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}
 		if egress != nil {
-			header.Set(beewire.ControlsHeader, beewire.ControlCapabilities)
+			controls := beewire.ControlCapabilities
+			if egress.residential != nil {
+				controls += "," + beewire.ControlEgress
+			}
+			header.Set(beewire.ControlsHeader, controls)
 		}
 		conn, response, err := websocket.Dial(handshake, endpoint, &websocket.DialOptions{HTTPClient: client, HTTPHeader: header})
 		cancel()

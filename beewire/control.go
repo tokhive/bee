@@ -12,6 +12,12 @@ const ControlsHeader = "X-Bee-Controls"
 // upstream quota refusal's cooldown has run, and a request is waiting for it.
 const ControlCapabilities = "capabilities"
 
+// ControlEgress is not a control stream: a Bee that runs the residential role
+// names it on the same header, so Hive offers that device as an egress seller
+// and never sends a lease to a Bee that would refuse it. Older Bees omit it
+// and are simply not offered, which keeps a mixed fleet working.
+const ControlEgress = "egress"
+
 // Control is the open metadata of a control stream, which Hive closes as soon
 // as it is open; an upstream stream's metadata names a host instead.
 type Control struct {

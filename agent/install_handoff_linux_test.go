@@ -52,23 +52,13 @@ func TestInstallHandoffNative(t *testing.T) {
 			t.Fatal(err)
 		}
 		t.Cleanup(func() { _ = cmd.Process.Kill(); _ = cmd.Wait() })
-		deadline := time.Now().Add(5 * time.Second)
-		for time.Now().Before(deadline) {
-			lock, err := os.OpenFile(path+".lock", os.O_RDWR, 0)
-			if err == nil {
-				err = syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-				_ = lock.Close()
-				if errors.Is(err, syscall.EWOULDBLOCK) {
-					if err := os.Remove(copyPath); err != nil {
-						t.Fatal(err)
-					}
-					return path, cmd
-				}
-			}
-			time.Sleep(10 * time.Millisecond)
+		if err := handoffWaitForLockHolder(path, cmd.Process.Pid); err != nil {
+			t.Fatal(err)
 		}
-		t.Fatal("Bee did not acquire its configuration lock")
-		return "", nil
+		if err := os.Remove(copyPath); err != nil {
+			t.Fatal(err)
+		}
+		return path, cmd
 	}
 	if os.Getenv("BEE_HANDOFF_TEST_NO_PIDFD") == "1" {
 		path, cmd := start(t)
@@ -152,13 +142,11 @@ func TestInstallHandoffNative(t *testing.T) {
 	})
 	t.Run("lock_replaced_during_confirmation_is_rejected", func(t *testing.T) {
 		path, cmd := start(t)
-		reader := &handoffInput{before: func() {
+		reader := &handoffInput{before: func() error {
 			if err := os.Rename(path+".lock", path+".old-lock"); err != nil {
-				t.Fatal(err)
+				return err
 			}
-			if err := os.WriteFile(path+".lock", nil, 0600); err != nil {
-				t.Fatal(err)
-			}
+			return os.WriteFile(path+".lock", nil, 0600)
 		}, Reader: strings.NewReader("y\n")}
 		err := handoffWithInput(context.Background(), path, reader, io.Discard, time.Second)
 		if err == nil || !strings.Contains(err.Error(), "lock file changed") {
@@ -193,15 +181,15 @@ func TestInstallHandoffNative(t *testing.T) {
 	})
 	t.Run("lock_holder_changes_during_confirmation", func(t *testing.T) {
 		path, cmd := start(t)
-		reader := &handoffInput{before: func() {
+		reader := &handoffInput{before: func() error {
 			_ = cmd.Process.Signal(syscall.SIGTERM)
 			_ = cmd.Wait()
 			replacement := exec.Command(binary, "run", "--config", path)
 			if err := replacement.Start(); err != nil {
-				t.Fatal(err)
+				return err
 			}
 			t.Cleanup(func() { _ = replacement.Process.Kill(); _ = replacement.Wait() })
-			handoffWaitForBusyLock(t, path)
+			return handoffWaitForLockHolder(path, replacement.Process.Pid)
 		}, Reader: strings.NewReader("y\n")}
 		err := handoffWithInput(context.Background(), path, reader, io.Discard, time.Second)
 		if err == nil || !strings.Contains(err.Error(), "lock holder changed") {
@@ -256,15 +244,20 @@ func TestInstallHandoffNative(t *testing.T) {
 	})
 }
 
+// handoffInput runs before on the first read, while the handoff waits for its
+// answer. Read runs on the handoff's reader goroutine, where t.Fatal would hang
+// the test instead of failing it, so a setup failure becomes the read error.
 type handoffInput struct {
 	io.Reader
-	before func()
+	before func() error
 }
 
 func (r *handoffInput) Read(p []byte) (int, error) {
-	if r.before != nil {
-		r.before()
+	if before := r.before; before != nil {
 		r.before = nil
+		if err := before(); err != nil {
+			return 0, fmt.Errorf("test setup: %w", err)
+		}
 	}
 	return r.Reader.Read(p)
 }
@@ -463,23 +456,30 @@ func handoffTerminal(t *testing.T, binary, path, lang, answer string) (int, stri
 	}
 }
 
-func handoffWaitForBusyLock(t *testing.T, path string) {
-	t.Helper()
-	deadline := time.Now().Add(time.Second)
+// handoffWaitForLockHolder reads /proc/locks instead of probing with flock.
+// Bee takes its lock with LOCK_NB, so a probe that briefly holds the lock can
+// make a starting Bee exit as if another Bee were running.
+func handoffWaitForLockHolder(path string, pid int) error {
+	deadline := time.Now().Add(5 * time.Second)
 	for {
-		file, err := os.OpenFile(path+".lock", os.O_RDWR, 0)
-		if err != nil {
-			t.Fatal(err)
-		}
-		err = syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
-		_ = file.Close()
-		if errors.Is(err, syscall.EWOULDBLOCK) {
-			return
+		var stat unix.Stat_t
+		err := unix.Stat(path+".lock", &stat)
+		if err == nil {
+			var data []byte
+			if data, err = os.ReadFile("/proc/locks"); err == nil {
+				var owner int
+				if owner, err = handoffLockOwner(data, &stat); err == nil {
+					if owner == pid {
+						return nil
+					}
+					err = fmt.Errorf("lock is held by PID %d", owner)
+				}
+			}
 		}
 		if time.Now().After(deadline) {
-			t.Fatal("replacement did not lock configuration")
+			return fmt.Errorf("Bee PID %d did not lock its configuration: %w", pid, err)
 		}
-		time.Sleep(time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 

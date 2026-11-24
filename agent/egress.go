@@ -623,6 +623,11 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 		var open struct {
 			Host  string `json:"host"`
 			Lease string `json:"lease,omitempty"`
+			// Entry names the Hive endpoint the buyer came in through (a
+			// CONNECT proxy or the VLESS listener). The Bee serves both the
+			// same way; it is here so an operator can tell which path a
+			// refused or stalled stream used.
+			Entry string `json:"entry,omitempty"`
 			beewire.Control
 		}
 		if len(metadata) > 4096 || json.Unmarshal(metadata, &open) != nil {
@@ -639,6 +644,7 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 				egressDebug("stream rejected: residential egress is not configured")
 				return
 			}
+			egressDebug("residential stream for %q entered through %q", open.Host, open.Entry)
 			cfg.residential.serve(live, stream, open.Host, open.Lease)
 			return
 		}

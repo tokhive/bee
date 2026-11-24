@@ -51,29 +51,6 @@ func (c Config) start(spec beewire.WorkspaceSpec, volume, state string) (*proces
 // legal, not unique across machines.
 func containerID(id string) string { return "ws-" + volumeName(id) }
 
-// startProcess runs the sandbox on the Provider's own machine. It is the
-// development runtime: it isolates nothing, and Config.Validate only admits it
-// when it was asked for by name.
-func startProcess(spec beewire.WorkspaceSpec, dir string) (*process, error) {
-	command := spec.Command
-	if len(command) == 0 {
-		command = []string{"/bin/sh"}
-	}
-	cmd := exec.Command(command[0], command[1:]...)
-	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "HOME="+dir)
-	cmd.Stderr = io.Discard
-	setGroup(cmd)
-	stdin, stdout, err := pipes(cmd)
-	if err != nil {
-		return nil, err
-	}
-	if err := cmd.Start(); err != nil {
-		return nil, err
-	}
-	return &process{cmd: cmd, stdin: stdin, stdout: stdout, kill: func() { signalGroup(cmd) }}, nil
-}
-
 func pipes(cmd *exec.Cmd) (io.WriteCloser, io.ReadCloser, error) {
 	stdin, err := cmd.StdinPipe()
 	if err != nil {

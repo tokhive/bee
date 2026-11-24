@@ -14,10 +14,12 @@ import (
 const ControlWorkspaces = "workspaces"
 
 // A workspace stream's action. Attach starts the sandbox if it is not running
-// and streams its terminal; stop takes the whole sandbox down.
+// and streams its terminal; stop takes the whole sandbox down; status reports
+// what the Bee still holds, without starting anything.
 const (
 	WorkspaceAttach = "attach"
 	WorkspaceStop   = "stop"
+	WorkspaceStatus = "status"
 )
 
 // WorkspaceSpec is the open metadata of a workspace stream. It is the whole
@@ -35,12 +37,15 @@ type WorkspaceSpec struct {
 }
 
 // Workspace frame kinds. Data carries terminal bytes in either direction; the
-// other three are JSON and travel Bee to Hive only.
+// others are JSON and travel Bee to Hive only. Status answers a status stream:
+// it says whether the sandbox is still live, so Hive can decide about the next
+// block without charging for a machine that is gone.
 const (
-	FrameData  byte = 1
-	FrameExit  byte = 2
-	FrameError byte = 3
-	FrameReady byte = 4
+	FrameData   byte = 1
+	FrameExit   byte = 2
+	FrameError  byte = 3
+	FrameReady  byte = 4
+	FrameStatus byte = 5
 )
 
 // MaxWorkspaceFrame bounds one frame. The tunnel carries frames of up to 1 MiB
@@ -62,10 +67,26 @@ type WorkspaceError struct {
 	Message string `json:"message"`
 }
 
-// WorkspaceReady is the frame a sandbox sends once its terminal is live. Hive
-// counts a workspace as running from it, not from the attach.
+// WorkspaceReady is the frame a sandbox sends once its terminal is live. It is
+// a health signal, not a billing one: Hive starts a workspace's clock on the
+// buyer's first successful data frame, not on this.
 type WorkspaceReady struct {
 	ID string `json:"id"`
+}
+
+// Workspace status values. "unknown" means the Bee holds no record: the
+// sandbox either never existed here or was lost with a Bee restart.
+const (
+	WorkspaceRunning = "running"
+	WorkspaceExited  = "exited"
+	WorkspaceUnknown = "unknown"
+)
+
+// WorkspaceStatusReport answers a status stream.
+type WorkspaceStatusReport struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	Code  int    `json:"code,omitempty"`
 }
 
 // WriteWorkspaceFrame writes one framed message. The payload is copied into a
@@ -95,7 +116,7 @@ func ReadWorkspaceFrame(r io.Reader) (byte, []byte, error) {
 		return 0, nil, ErrWorkspaceFrame
 	}
 	switch kind {
-	case FrameData, FrameExit, FrameError, FrameReady:
+	case FrameData, FrameExit, FrameError, FrameReady, FrameStatus:
 	default:
 		return 0, nil, ErrWorkspaceFrame
 	}

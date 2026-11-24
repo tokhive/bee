@@ -12,7 +12,9 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
+	"io/fs"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -34,10 +36,29 @@ var (
 	errDetached = errors.New("workspace: detached")
 )
 
+// exitedError reports an attach to a sandbox that already ran and ended. It
+// carries the exit code so the attach can answer like the original stream did
+// instead of starting a second sandbox.
+type exitedError struct{ code int }
+
+func (e *exitedError) Error() string {
+	return fmt.Sprintf("workspace: sandbox exited with code %d", e.code)
+}
+
 // maxBuffered bounds the output held for a buyer who is not attached. Past it
 // the oldest bytes are dropped: a build that prints more than this while
 // nobody is watching is not worth the Provider's memory.
 const maxBuffered = 256 << 10
+
+const (
+	// diskCheckEvery is how often a sandbox volume is measured. The runtime has
+	// no disk quota of its own, so this watchdog is what bounds it.
+	diskCheckEvery = 15 * time.Second
+	// finishedRetention is how long an exit code is remembered for a status
+	// query or a reattach. A day covers any Hive retry; the sandbox itself is
+	// already gone and its volume deleted.
+	finishedRetention = 24 * time.Hour
+)
 
 // Config is the Provider's consent to host workspaces: how many, with which
 // runtime, and how much of the machine one may take.
@@ -61,20 +82,34 @@ type Config struct {
 	Command []string `json:"command,omitempty"`
 	// MemoryMB is the default memory ceiling.
 	MemoryMB int `json:"memory_mb,omitempty"`
-	// AllowNetwork gives sandboxes outbound network. Off by default.
+	// AllowNetwork is refused: v1 sandboxes have no outbound network, because
+	// model traffic stays on the Hub path and a NAT to the Provider's LAN is
+	// exactly what the isolation boundary exists to prevent.
 	AllowNetwork bool `json:"allow_network,omitempty"`
+	// VolumeMB bounds one sandbox's writable volume. The runtime has no disk
+	// quota, so a watcher measures the volume and stops a sandbox over it.
+	VolumeMB int `json:"volume_mb,omitempty"`
 	// MaxSessions is how many sandboxes may run at once.
 	MaxSessions int `json:"max_sessions,omitempty"`
 }
 
 // Validate rejects a configuration that cannot work, before a stream arrives.
 func (c Config) Validate() error {
+	if c.AllowNetwork {
+		return errors.New("workspace: sandbox network is disabled: model traffic stays on the Hub path, and a sandbox NAT would expose the Provider's LAN")
+	}
 	switch c.Runtime {
 	case "gvisor":
+		if !c.Cgroups {
+			return errors.New("workspace: cgroups must be enabled for gvisor sessions: delegate a cgroup subtree to the bee so memory, CPU and pids are enforced")
+		}
 		if err := checkGVisor(c); err != nil {
 			return err
 		}
 	case "process":
+		if !processRuntimeEnabled {
+			return errors.New("workspace: the process runtime runs buyer commands on the Provider's own machine and is not in this build; rebuild with -tags workspace_process for development only")
+		}
 	default:
 		return ErrUnsupportedRuntime
 	}
@@ -92,13 +127,21 @@ func (c Config) runsc() string {
 	return "runsc"
 }
 
+// exitedSandbox is what is left of a sandbox after it ended: the code, and
+// when it ended. The volume is gone; this is only enough to answer Hive.
+type exitedSandbox struct {
+	code int
+	at   time.Time
+}
+
 // Manager owns the sandboxes this Bee is running.
 type Manager struct {
 	cfg  Config
 	root string
 
-	mu   sync.Mutex
-	live map[string]*sandbox
+	mu       sync.Mutex
+	live     map[string]*sandbox
+	finished map[string]exitedSandbox
 }
 
 // New prepares the workspace root and returns a Manager. root is where every
@@ -117,28 +160,54 @@ func New(cfg Config, root string) (*Manager, error) {
 	if cfg.MemoryMB <= 0 {
 		cfg.MemoryMB = 1024
 	}
+	if cfg.VolumeMB <= 0 {
+		cfg.VolumeMB = 2048
+	}
 	if !filepath.IsAbs(root) {
 		return nil, errors.New("workspace: root must be absolute")
 	}
 	if err := os.MkdirAll(root, 0o700); err != nil {
 		return nil, err
 	}
-	return &Manager{cfg: cfg, root: root, live: map[string]*sandbox{}}, nil
+	// Refuse a bad environment before touching anything: a Bee that cannot host
+	// must not reap the orphans, let alone someone else's state.
+	if err := scanEnvironment(cfg.Environment); err != nil {
+		return nil, err
+	}
+	// A previous Bee may have died with sandboxes still running. They belong to
+	// sessions this process cannot serve, so they are killed and their volumes
+	// removed before the first stream arrives.
+	reapOrphans(cfg, root)
+	return &Manager{
+		cfg: cfg, root: root,
+		live: map[string]*sandbox{}, finished: map[string]exitedSandbox{},
+	}, nil
 }
 
-// Serve handles one workspace stream: attach to a sandbox, or stop it.
+// Serve handles one workspace stream: attach to a sandbox, stop it, or report
+// what this Bee still holds.
 func (m *Manager) Serve(ctx context.Context, rw io.ReadWriteCloser, spec beewire.WorkspaceSpec) {
 	defer rw.Close()
 	if spec.ID == "" || len(spec.ID) > 128 {
 		writeProblem(rw, "BEE-WORKSPACE-SPEC", "workspace id missing or too long")
 		return
 	}
-	if spec.Action == beewire.WorkspaceStop {
+	switch spec.Action {
+	case beewire.WorkspaceStop:
 		m.Stop(spec.ID)
+		return
+	case beewire.WorkspaceStatus:
+		state, code := m.status(spec.ID)
+		_ = writeFrame(rw, beewire.FrameStatus, beewire.WorkspaceStatusReport{ID: spec.ID, State: state, Code: code})
 		return
 	}
 	sb, err := m.target(spec)
 	if err != nil {
+		var exited *exitedError
+		if errors.As(err, &exited) {
+			_ = writeExit(rw, exited.code)
+			return
+		}
 		slog.Warn("workspace did not start", "module", "workspace", "workspace", spec.ID, "error", err)
 		writeProblem(rw, "BEE-WORKSPACE-START", err.Error())
 		return
@@ -149,6 +218,29 @@ func (m *Manager) Serve(ctx context.Context, rw io.ReadWriteCloser, spec beewire
 	}
 }
 
+// status answers a status stream without changing anything. A sandbox that
+// exited is reported with its code; one this Bee never had is unknown, which
+// Hive treats as a lost Provider rather than a free restart.
+func (m *Manager) status(id string) (string, int) {
+	m.mu.Lock()
+	sb := m.live[id]
+	record, recorded := m.finished[id]
+	m.mu.Unlock()
+	if sb != nil {
+		sb.mu.Lock()
+		exited, stopped, code := sb.exited, sb.stopped, sb.code
+		sb.mu.Unlock()
+		if exited || stopped {
+			return beewire.WorkspaceExited, code
+		}
+		return beewire.WorkspaceRunning, 0
+	}
+	if recorded {
+		return beewire.WorkspaceExited, record.code
+	}
+	return beewire.WorkspaceUnknown, 0
+}
+
 // target returns the sandbox for spec, starting one if this is its first
 // attach. A sandbox that already exited is reported, not restarted: the buyer
 // pays for a session, not for however many attempts it takes.
@@ -156,11 +248,19 @@ func (m *Manager) target(spec beewire.WorkspaceSpec) (*sandbox, error) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	if sb := m.live[spec.ID]; sb != nil {
-		if !sb.finished() {
-			return sb, nil
+		sb.mu.Lock()
+		exited, code, stopped := sb.exited, sb.code, sb.stopped
+		sb.mu.Unlock()
+		if stopped {
+			return nil, ErrStopped
 		}
-		delete(m.live, spec.ID)
-		sb.discard()
+		if exited {
+			return nil, &exitedError{code: code}
+		}
+		return sb, nil
+	}
+	if record, ok := m.finished[spec.ID]; ok {
+		return nil, &exitedError{code: record.code}
 	}
 	if len(m.live) >= m.cfg.MaxSessions {
 		return nil, ErrTooMany
@@ -185,18 +285,32 @@ func (m *Manager) target(spec beewire.WorkspaceSpec) (*sandbox, error) {
 		ttl = 600
 	}
 	// The TTL is the Bee's own backstop. Hive ends a workspace on its clock;
-	// this only catches a Hive that stopped talking.
-	time.AfterFunc(time.Duration(ttl)*time.Second, func() { m.Stop(spec.ID) })
+	// this only catches a Hive that stopped talking. It is bound to this
+	// sandbox so a timer left over from an exited session cannot erase the exit
+	// record a later status query depends on.
+	time.AfterFunc(time.Duration(ttl)*time.Second, func() { m.expire(spec.ID, sb) })
 	slog.Info("workspace started", "module", "workspace", "workspace", spec.ID,
 		"runtime", m.cfg.Runtime, "environment", m.cfg.Environment, "ttl_s", ttl)
 	return sb, nil
 }
 
-// Stop takes a sandbox down and forgets it.
+// expire stops the sandbox a TTL was armed for, if it is still the live one.
+func (m *Manager) expire(id string, sb *sandbox) {
+	m.mu.Lock()
+	current := m.live[id] == sb
+	m.mu.Unlock()
+	if current {
+		m.Stop(id)
+	}
+}
+
+// Stop takes a sandbox down and forgets it, including any exit record: Hive
+// saying stop is the end of the session, not a question about it.
 func (m *Manager) Stop(id string) {
 	m.mu.Lock()
 	sb := m.live[id]
 	delete(m.live, id)
+	delete(m.finished, id)
 	m.mu.Unlock()
 	if sb == nil {
 		return
@@ -248,7 +362,51 @@ func newSandbox(spec beewire.WorkspaceSpec, proc *process, dir string, m *Manage
 	sb := &sandbox{id: spec.ID, spec: spec, proc: proc, dir: dir, m: m}
 	sb.cond = sync.NewCond(&sb.mu)
 	go sb.collect()
+	go sb.watchDisk()
 	return sb
+}
+
+// watchDisk stops the sandbox when its volume outgrows the Provider's quota.
+// The runtime has no disk quota, so this poll is the only bound; 15 s is short
+// enough that a runaway build fills a few hundred MiB, not the whole disk.
+func (sb *sandbox) watchDisk() {
+	ticker := time.NewTicker(diskCheckEvery)
+	defer ticker.Stop()
+	limit := int64(sb.m.cfg.VolumeMB) << 20
+	for range ticker.C {
+		sb.mu.Lock()
+		done := sb.exited || sb.stopped
+		sb.mu.Unlock()
+		if done {
+			return
+		}
+		size, err := treeSize(sb.dir)
+		if err != nil || size <= limit {
+			continue
+		}
+		slog.Warn("workspace volume over its quota; stopping", "module", "workspace",
+			"workspace", sb.id, "bytes", size, "limit_bytes", limit)
+		sb.stop()
+		return
+	}
+}
+
+// treeSize adds up the regular files under root. A file that vanished while
+// the scan ran is not a reason to fail the measurement.
+func treeSize(root string) (int64, error) {
+	var total int64
+	err := filepath.WalkDir(root, func(_ string, entry fs.DirEntry, err error) error {
+		if err != nil || entry.IsDir() {
+			return nil
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return nil
+		}
+		total += info.Size()
+		return nil
+	})
+	return total, err
 }
 
 // collect copies the sandbox's output into the buffer until it exits.
@@ -278,17 +436,32 @@ func (sb *sandbox) run() {
 	sb.exited, sb.code = true, code
 	sb.mu.Unlock()
 	sb.cond.Broadcast()
-	sb.m.discard(sb)
+	sb.m.retire(sb, code)
 }
 
-// discard removes the sandbox's volume and forgets it, if it is still current.
-func (m *Manager) discard(sb *sandbox) {
+// retire removes the sandbox, keeps its exit code for status and reattach, and
+// deletes its volume. A detached exit is visible this way instead of vanishing
+// with the sandbox.
+func (m *Manager) retire(sb *sandbox, code int) {
 	m.mu.Lock()
 	if m.live[sb.id] == sb {
 		delete(m.live, sb.id)
+		m.recordFinished(sb.id, code)
 	}
 	m.mu.Unlock()
 	sb.discard()
+}
+
+// recordFinished stores an exit code and prunes records older than the
+// retention window. The map is bounded by the number of sessions a day.
+func (m *Manager) recordFinished(id string, code int) {
+	now := time.Now()
+	for key, record := range m.finished {
+		if now.Sub(record.at) > finishedRetention {
+			delete(m.finished, key)
+		}
+	}
+	m.finished[id] = exitedSandbox{code: code, at: now}
 }
 
 func (sb *sandbox) discard() {
@@ -298,12 +471,6 @@ func (sb *sandbox) discard() {
 	if err := os.RemoveAll(sb.dir); err != nil {
 		slog.Warn("workspace volume not removed", "module", "workspace", "workspace", sb.id, "error", err)
 	}
-}
-
-func (sb *sandbox) finished() bool {
-	sb.mu.Lock()
-	defer sb.mu.Unlock()
-	return sb.exited || sb.stopped
 }
 
 func (sb *sandbox) stop() {

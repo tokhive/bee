@@ -1,8 +1,13 @@
+//go:build workspace_process
+
 package workspace
 
 import (
 	"context"
+	"encoding/json"
 	"io"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -215,6 +220,103 @@ func TestStopActionEndsSandbox(t *testing.T) {
 func TestUnconfiguredManagerRejected(t *testing.T) {
 	if _, err := New(Config{Runtime: "nowhere"}, t.TempDir()); err == nil {
 		t.Fatal("expected an unsupported runtime to be rejected")
+	}
+}
+
+// An exit is remembered: status says so, and a reattach gets the exit instead
+// of a second sandbox the buyer did not ask for.
+func TestExitedSandboxIsReportedNotRestarted(t *testing.T) {
+	m := newTestManager(t, 2)
+	spec := beewire.WorkspaceSpec{ID: "ws-done", Action: beewire.WorkspaceAttach, Command: []string{"/bin/sh", "-c", "echo done; exit 7"}}
+	sandbox, hive := pair()
+	go func() { m.Serve(context.Background(), sandbox, spec) }()
+	frames := collect(hive)
+	awaitKind(t, frames, beewire.FrameReady)
+	awaitKind(t, frames, beewire.FrameExit)
+	waitFor(t, func() bool { return m.Live() == 0 })
+
+	if state, code := m.status("ws-done"); state != beewire.WorkspaceExited || code != 7 {
+		t.Fatalf("status = %s/%d, want exited/7", state, code)
+	}
+
+	again, againHive := pair()
+	go func() { m.Serve(context.Background(), again, spec) }()
+	awaitKind(t, collect(againHive), beewire.FrameExit)
+	if m.Live() != 0 {
+		t.Fatalf("live sandboxes = %d after reattach to an exited session", m.Live())
+	}
+}
+
+// A status stream is answered with one frame and starts nothing.
+func TestStatusStreamAnswers(t *testing.T) {
+	m := newTestManager(t, 1)
+	sandbox, hive := pair()
+	go m.Serve(context.Background(), sandbox, beewire.WorkspaceSpec{ID: "ws-ask", Action: beewire.WorkspaceStatus})
+	kind, payload, err := beewire.ReadWorkspaceFrame(hive)
+	if err != nil || kind != beewire.FrameStatus {
+		t.Fatalf("status frame = %d %v", kind, err)
+	}
+	var report beewire.WorkspaceStatusReport
+	if err := json.Unmarshal(payload, &report); err != nil || report.State != beewire.WorkspaceUnknown {
+		t.Fatalf("status report = %+v, %v", report, err)
+	}
+	if m.Live() != 0 {
+		t.Fatalf("status started %d sandboxes", m.Live())
+	}
+}
+
+// Status answers the reaper without starting anything, and a session this Bee
+// never had is unknown rather than a free restart.
+func TestStatusReportsRunningExitedUnknown(t *testing.T) {
+	m := newTestManager(t, 1)
+	if state, _ := m.status("ws-missing"); state != beewire.WorkspaceUnknown {
+		t.Fatalf("unknown session reported as %s", state)
+	}
+
+	sandbox, hive := pair()
+	spec := beewire.WorkspaceSpec{ID: "ws-live", Action: beewire.WorkspaceAttach, Command: []string{"/bin/cat"}}
+	go func() { m.Serve(context.Background(), sandbox, spec) }()
+	awaitKind(t, collect(hive), beewire.FrameReady)
+	if state, _ := m.status("ws-live"); state != beewire.WorkspaceRunning {
+		t.Fatalf("live session reported as %s", state)
+	}
+	m.Stop("ws-live")
+	waitFor(t, func() bool { return m.Live() == 0 })
+	if state, _ := m.status("ws-live"); state != beewire.WorkspaceUnknown {
+		t.Fatalf("stopped session reported as %s", state)
+	}
+}
+
+// A stop is the end of the session: the next status must not resurrect an exit
+// record the buyer already ended.
+func TestStopClearsExitRecord(t *testing.T) {
+	m := newTestManager(t, 1)
+	spec := beewire.WorkspaceSpec{ID: "ws-clear", Action: beewire.WorkspaceAttach, Command: []string{"/bin/sh", "-c", "exit 3"}}
+	sandbox, hive := pair()
+	go func() { m.Serve(context.Background(), sandbox, spec) }()
+	awaitKind(t, collect(hive), beewire.FrameExit)
+	waitFor(t, func() bool { return m.Live() == 0 })
+	m.Stop("ws-clear")
+	if state, _ := m.status("ws-clear"); state != beewire.WorkspaceUnknown {
+		t.Fatalf("exit record survived stop: %s", state)
+	}
+}
+
+// The disk watchdog measures the volume it would stop.
+func TestTreeSizeAddsFiles(t *testing.T) {
+	root := t.TempDir()
+	if err := os.WriteFile(filepath.Join(root, "a"), make([]byte, 10), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(filepath.Join(root, "nested"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "nested", "b"), make([]byte, 5), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	size, err := treeSize(root)
+	if err != nil || size != 15 {
+		t.Fatalf("treeSize = %d, %v; want 15", size, err)
 	}
 }
 

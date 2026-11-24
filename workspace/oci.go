@@ -18,9 +18,10 @@ import (
 // is executed directly on the bundle. That is the difference between using
 // Docker's formats and installing Docker.
 
-// The sandbox's environment. HOME is the volume because the official CLIs keep
-// their state there (~/.claude, ~/.codex) and the root filesystem is read-only;
-// PATH puts /usr/local/bin ahead of the system so a CLI installed by npm or the
+// The sandbox's environment. HOME is the volume because the root filesystem is
+// read-only and build tools write caches under it; it contains no credentials,
+// because nothing in a v1 sandbox holds the Provider's login state. PATH puts
+// /usr/local/bin ahead of the system so a toolchain installed by npm or an
 // installer script is found, and keeps ~/.local/bin working for installs that
 // do not need root.
 var sandboxEnv = []string{
@@ -178,19 +179,18 @@ func buildSpec(c Config, spec beewire.WorkspaceSpec, volume string, hostUID, hos
 		{Destination: "/tmp", Type: "tmpfs", Source: "tmpfs",
 			Options: []string{"nosuid", "nodev", "mode=1777", "size=" + strconv.Itoa(sandboxTmpMB) + "m"}},
 	}
-	if c.AllowNetwork {
-		// DNS travels the same path as the sandbox's traffic, so the host's
-		// resolver is what the sandbox sees.
-		mounts = append(mounts,
-			ociMount{Destination: "/etc/resolv.conf", Type: "bind", Source: "/etc/resolv.conf",
-				Options: []string{"rbind", "ro", "nosuid", "nodev"}},
-			ociMount{Destination: "/etc/hosts", Type: "bind", Source: "/etc/hosts",
-				Options: []string{"rbind", "ro", "nosuid", "nodev"}},
-		)
-	}
+	// No host resolver or hosts file: v1 sandboxes have no network at all. Model
+	// traffic stays on the Hub path, and the Provider's LAN must not be one
+	// route away from a buyer's command.
 	memory := c.MemoryMB
 	if memory <= 0 {
 		memory = 1024
+	}
+	// The tier asks for a ceiling; the Provider's configuration is the consent
+	// ceiling above it. Taking the minimum means a tier can lower memory but
+	// never exceed what this Provider agreed to rent.
+	if spec.MemoryMB > 0 && spec.MemoryMB < memory {
+		memory = spec.MemoryMB
 	}
 	denySetgroups := false
 	out := ociSpec{
@@ -243,25 +243,15 @@ func buildSpec(c Config, spec beewire.WorkspaceSpec, volume string, hostUID, hos
 	return json.MarshalIndent(out, "", "  ")
 }
 
-// gvisorArgs is the command line for one session. Network is off unless the
-// Provider allowed it, and the sandbox always runs rootless: it is mapped to
-// the account running the Bee, so it can write its volume and nothing else of
-// the host.
-func gvisorArgs(c Config, state, id, bundle string) []string {
-	network := "none"
-	if c.AllowNetwork {
-		network = "sandbox"
-	}
+// gvisorArgs is the command line for one session. Network is always off: v1
+// sandboxes are tools, not model clients. The sandbox always runs rootless and
+// mapped to the account running the Bee, so it can write its volume and nothing
+// else of the host; cgroups stay enabled so memory, CPU and pids are enforced.
+func gvisorArgs(state, id, bundle string) []string {
 	args := []string{
 		"--root=" + filepath.Join(state, "runsc"),
-		"--network=" + network,
+		"--network=none",
 		"--rootless",
-	}
-	if !c.Cgroups {
-		// Without a cgroup tree delegated to the Bee, runsc cannot write the
-		// host's; the spec still declares the ceilings for hosts that have
-		// one, and MaxSessions is what bounds the machine otherwise.
-		args = append(args, "--ignore-cgroups")
 	}
 	return append(args, "run", "--bundle", bundle, id)
 }

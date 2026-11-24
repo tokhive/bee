@@ -18,6 +18,12 @@ import (
 // checkGVisor refuses a configuration this machine cannot honor, before a buyer
 // is charged for a session that would fail to start.
 func checkGVisor(c Config) error {
+	// gVisor maps the sandbox's root to the Bee's account. If that account is
+	// root, a runtime escape is the whole machine; a dedicated user makes the
+	// same escape a normal user's problem.
+	if os.Geteuid() == 0 {
+		return errors.New("workspace: run the bee as a dedicated non-root user, not root")
+	}
 	if c.Environment == "" {
 		return errors.New("workspace: gvisor needs an environment: set environment to an unpacked root filesystem")
 	}
@@ -42,11 +48,10 @@ func checkGVisor(c Config) error {
 // the runtime executes, so a session costs a boot and nothing else.
 func startGVisor(c Config, spec beewire.WorkspaceSpec, volume, state string) (*process, error) {
 	// The environment is the Provider's, not the one Hive named: a Bee hosts
-	// the image its operator prepared, and saying so beats pretending the two
-	// are the same file.
+	// the image its operator prepared. Accepting a buyer's image name and
+	// silently running something else would be a lie about what the buyer got.
 	if spec.Image != "" {
-		slog.Warn("workspace image ignored: this Bee runs its own environment",
-			"module", "workspace", "workspace", spec.ID, "requested", spec.Image, "environment", c.Environment)
+		return nil, errors.New("workspace: this bee runs its own environment; a requested image is not supported")
 	}
 	if err := os.MkdirAll(state, 0o700); err != nil {
 		return nil, err
@@ -59,8 +64,8 @@ func startGVisor(c Config, spec beewire.WorkspaceSpec, volume, state string) (*p
 			_ = os.RemoveAll(state)
 		}
 	}()
-	// The CLIs keep their state under HOME, which is the read-only root's
-	// writable neighbour; both directories must exist before the first prompt.
+	// Tools write caches under HOME, which is the read-only root's writable
+	// neighbour; it must exist before the first command.
 	if err := os.MkdirAll(filepath.Join(volume, ".tmp"), 0o700); err != nil {
 		return nil, err
 	}
@@ -81,7 +86,7 @@ func startGVisor(c Config, spec beewire.WorkspaceSpec, volume, state string) (*p
 		return nil, err
 	}
 	id := containerID(spec.ID)
-	cmd := exec.Command(c.runsc(), gvisorArgs(c, state, id, bundle)...)
+	cmd := exec.Command(c.runsc(), gvisorArgs(state, id, bundle)...)
 	cmd.Stderr = logFile
 	setGroup(cmd)
 	stdin, stdout, err := pipes(cmd)
@@ -123,4 +128,34 @@ func runsc(c Config, args ...string) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	_ = exec.CommandContext(ctx, c.runsc(), args...).Run()
+}
+
+// reapOrphans removes sandboxes and volumes a previous Bee process left
+// behind. Their state directories are the only record of them: this process has
+// no live map, and a session it cannot serve would otherwise keep holding
+// memory, pids and disk until the machine reboots.
+func reapOrphans(c Config, root string) {
+	if c.Runtime == "gvisor" {
+		if entries, err := os.ReadDir(filepath.Join(root, "run")); err == nil {
+			for _, entry := range entries {
+				name := entry.Name()
+				state := filepath.Join(root, "run", name)
+				killGVisor(c, state, "ws-"+name)
+				_ = os.RemoveAll(state)
+				slog.Info("workspace orphan reaped", "module", "workspace", "workspace", name)
+			}
+		}
+	}
+	// A volume with no live sandbox is an orphan too, including one left by a
+	// crash between creating the volume and starting the runtime.
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return
+	}
+	for _, entry := range entries {
+		if entry.Name() == "run" {
+			continue
+		}
+		_ = os.RemoveAll(filepath.Join(root, entry.Name()))
+	}
 }

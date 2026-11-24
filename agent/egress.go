@@ -605,13 +605,16 @@ type workspaceSettings struct {
 	// Runsc is the gVisor binary; empty means "runsc" from PATH.
 	Runsc string `json:"runsc,omitempty"`
 	// Cgroups enforces each sandbox's memory, CPU and process ceilings through
-	// the host's cgroups; it needs a cgroup tree delegated to the Bee.
+	// the host's cgroups; it needs a cgroup tree delegated to the Bee and is
+	// required for gvisor sessions.
 	Cgroups bool `json:"cgroups,omitempty"`
 	// Command is the default terminal command when Hive names none.
 	Command []string `json:"command,omitempty"`
 	// MemoryMB is the default memory ceiling for one sandbox.
 	MemoryMB int `json:"memory_mb,omitempty"`
-	// AllowNetwork gives sandboxes outbound network.
+	// VolumeMB bounds one sandbox's writable volume; zero means 2048.
+	VolumeMB int `json:"volume_mb,omitempty"`
+	// AllowNetwork is refused: v1 sandboxes have no outbound network.
 	AllowNetwork bool `json:"allow_network,omitempty"`
 	// MaxSessions is how many sandboxes may run at once.
 	MaxSessions int `json:"max_sessions,omitempty"`
@@ -641,6 +644,7 @@ func (cfg *egressConfig) workspaces() (*workspace.Manager, error) {
 			Cgroups:      cfg.Workspace.Cgroups,
 			Command:      cfg.Workspace.Command,
 			MemoryMB:     cfg.Workspace.MemoryMB,
+			VolumeMB:     cfg.Workspace.VolumeMB,
 			AllowNetwork: cfg.Workspace.AllowNetwork,
 			MaxSessions:  cfg.Workspace.MaxSessions,
 		}, root)

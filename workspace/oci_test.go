@@ -2,6 +2,8 @@ package workspace
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -68,17 +70,33 @@ func TestBuildSpecMountsOnlyTheVolumeFromTheHost(t *testing.T) {
 	}
 }
 
-// Without network the sandbox must not even get a resolver, and with it the
-// resolver has to arrive the same way the traffic does.
-func TestBuildSpecGatesTheNetwork(t *testing.T) {
+// A v1 sandbox has no network, so it gets no resolver even if an old config
+// still asks for one.
+func TestBuildSpecHasNoHostNetwork(t *testing.T) {
 	spec := beewire.WorkspaceSpec{ID: "ws-1"}
-	off := bundle(t, Config{Environment: "/env"}, spec, "/vol")
-	if mountAt(off, "/etc/resolv.conf") != nil {
-		t.Fatal("resolver mounted without network")
+	for _, cfg := range []Config{{Environment: "/env"}, {Environment: "/env", AllowNetwork: true}} {
+		out := bundle(t, cfg, spec, "/vol")
+		if mountAt(out, "/etc/resolv.conf") != nil || mountAt(out, "/etc/hosts") != nil {
+			t.Fatalf("host resolver mounted with config %+v", cfg)
+		}
 	}
-	on := bundle(t, Config{Environment: "/env", AllowNetwork: true}, spec, "/vol")
-	if mountAt(on, "/etc/resolv.conf") == nil {
-		t.Fatal("resolver missing with network")
+	if err := (Config{Runtime: "gvisor", Environment: "/env", Cgroups: true, AllowNetwork: true}).Validate(); err == nil {
+		t.Fatal("allow_network was accepted")
+	}
+}
+
+// The tier asks for a ceiling; the Provider's configuration is the consent
+// ceiling above it. Neither can exceed the other silently.
+func TestBuildSpecCapsMemoryAtTheProvider(t *testing.T) {
+	cfg := Config{Environment: "/env", MemoryMB: 2048}
+	if out := bundle(t, cfg, beewire.WorkspaceSpec{ID: "ws-1", MemoryMB: 4096}, "/vol"); out.Linux.Resources.Memory.Limit != 2048<<20 {
+		t.Fatalf("memory limit %d, want the provider ceiling", out.Linux.Resources.Memory.Limit)
+	}
+	if out := bundle(t, cfg, beewire.WorkspaceSpec{ID: "ws-1", MemoryMB: 512}, "/vol"); out.Linux.Resources.Memory.Limit != 512<<20 {
+		t.Fatalf("memory limit %d, want the tier ceiling", out.Linux.Resources.Memory.Limit)
+	}
+	if out := bundle(t, cfg, beewire.WorkspaceSpec{ID: "ws-1"}, "/vol"); out.Linux.Resources.Memory.Limit != 2048<<20 {
+		t.Fatalf("memory limit %d, want the provider default", out.Linux.Resources.Memory.Limit)
 	}
 }
 
@@ -104,9 +122,8 @@ func TestBuildSpecMapsOneRootlessID(t *testing.T) {
 	}
 }
 
-// Claude Code and Codex keep their state under HOME and are installed under
-// /usr/local/bin or ~/.local/bin. A sandbox that points either somewhere else
-// makes the two official clients fail on first run.
+// Tools installed under /usr/local/bin or ~/.local/bin must be found, and
+// their caches belong on the writable volume.
 func TestBuildSpecHomeIsTheVolumeAndOnPath(t *testing.T) {
 	out := bundle(t, Config{Environment: "/env"}, beewire.WorkspaceSpec{ID: "ws-1"}, "/vol")
 	env := map[string]string{}
@@ -132,25 +149,48 @@ func TestBuildSpecHomeIsTheVolumeAndOnPath(t *testing.T) {
 	}
 }
 
-// The runtime is driven directly: no daemon, no pull, and the network and
-// cgroups flags say what the Provider consented to.
+// The runtime is driven directly: no daemon, no pull, no network, and cgroups
+// stay on so the declared ceilings are enforced.
 func TestGVisorArgs(t *testing.T) {
-	off := strings.Join(gvisorArgs(Config{}, "/state", "ws-1", "/state/bundle"), " ")
-	want := "--root=/state/runsc --network=none --rootless --ignore-cgroups run --bundle /state/bundle ws-1"
-	if off != want {
-		t.Fatalf("args:\n got %s\nwant %s", off, want)
-	}
-	on := strings.Join(gvisorArgs(Config{AllowNetwork: true, Cgroups: true}, "/state", "ws-1", "/bundle"), " ")
-	want = "--root=/state/runsc --network=sandbox --rootless run --bundle /bundle ws-1"
-	if on != want {
-		t.Fatalf("args:\n got %s\nwant %s", on, want)
+	got := strings.Join(gvisorArgs("/state", "ws-1", "/state/bundle"), " ")
+	want := "--root=/state/runsc --network=none --rootless run --bundle /state/bundle ws-1"
+	if got != want {
+		t.Fatalf("args:\n got %s\nwant %s", got, want)
 	}
 }
 
 // A Bee hosts nothing until it is told how, and the supported runtime needs an
 // environment to run sessions from.
 func TestNewRejectsGVisorWithoutAnEnvironment(t *testing.T) {
-	if _, err := New(Config{}, t.TempDir()); err == nil {
+	if _, err := New(Config{Runtime: "gvisor", Cgroups: true}, t.TempDir()); err == nil {
 		t.Fatal("gvisor started with no environment")
+	}
+}
+
+// A root Bee gives a runtime escape the whole machine, so it is refused even
+// before the environment is checked. The cgroups check runs on every platform.
+func TestGVisorRequiresCgroups(t *testing.T) {
+	err := (Config{Runtime: "gvisor", Environment: "/env", Cgroups: false}).Validate()
+	if err == nil || !strings.Contains(err.Error(), "cgroups") {
+		t.Fatalf("validate: %v", err)
+	}
+}
+
+// An environment that carries the Provider's login state is refused before the
+// first buyer can read it.
+func TestScanEnvironmentRefusesCredentials(t *testing.T) {
+	root := t.TempDir()
+	if err := scanEnvironment(root); err != nil {
+		t.Fatalf("clean environment rejected: %v", err)
+	}
+	path := filepath.Join(root, "home", "seller", ".claude")
+	if err := os.MkdirAll(path, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(path, ".credentials.json"), []byte("{}"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := scanEnvironment(root); err == nil {
+		t.Fatal("credentials in a home directory were accepted")
 	}
 }

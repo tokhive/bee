@@ -19,3 +19,7 @@ func checkGVisor(Config) error {
 func startGVisor(Config, beewire.WorkspaceSpec, string, string) (*process, error) {
 	return nil, fmt.Errorf("%w: gvisor runs on Linux only", ErrUnsupportedRuntime)
 }
+
+// reapOrphans has nothing to do here: this build never starts a gVisor
+// sandbox, so it cannot have left one behind.
+func reapOrphans(Config, string) {}

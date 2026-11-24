@@ -13,6 +13,32 @@ import (
 // declaration is what keeps the two sides apart.
 const ControlWorkspaces = "workspaces"
 
+// WorkspaceLimitsHeader announces, on a Bee's connection request, the
+// workspace capacity Hive may schedule against. Without it Hive assumes one
+// sandbox per Bee, which is the Manager's own default and the safe minimum.
+const WorkspaceLimitsHeader = "X-Bee-Workspace"
+
+// WorkspaceLimits is the JSON value of WorkspaceLimitsHeader.
+type WorkspaceLimits struct {
+	MaxSessions int `json:"max_sessions"`
+}
+
+// WorkspaceEvent is the open metadata of a Bee-initiated notification stream:
+// {"workspace_event":{...}}. It is how an exit reaches Hive while no buyer
+// stream is attached. The tunnel is already authenticated, and Hive checks the
+// workspace belongs to this Provider before acting on it.
+type WorkspaceEvent struct {
+	ID    string `json:"id"`
+	State string `json:"state"`
+	Code  int    `json:"code,omitempty"`
+}
+
+// WorkspaceLost says the Bee destroyed the sandbox because it could not reach
+// Hive for the whole disconnect grace period. Hive treats it as a lost
+// Provider, not as the buyer ending the session, so the block is refunded by
+// the platform.
+const WorkspaceLost = "lost"
+
 // A workspace stream's action. Attach starts the sandbox if it is not running
 // and streams its terminal; stop takes the whole sandbox down; status reports
 // what the Bee still holds, without starting anything.

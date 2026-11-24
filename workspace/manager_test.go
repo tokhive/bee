@@ -5,6 +5,7 @@ package workspace
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -317,6 +318,72 @@ func TestTreeSizeAddsFiles(t *testing.T) {
 	size, err := treeSize(root)
 	if err != nil || size != 15 {
 		t.Fatalf("treeSize = %d, %v; want 15", size, err)
+	}
+}
+
+// A sandbox outlives a lost tunnel only for the grace period; after it, the
+// Provider destroys it and queues the loss for the next connection.
+func TestDisconnectDestroysSandboxesAfterGrace(t *testing.T) {
+	m := newTestManager(t, 2)
+	sandbox, hive := pair()
+	spec := beewire.WorkspaceSpec{ID: "ws-offline", Action: beewire.WorkspaceAttach, Command: []string{"/bin/cat"}}
+	go m.Serve(context.Background(), sandbox, spec)
+	frames := collect(hive)
+	awaitKind(t, frames, beewire.FrameReady)
+	m.Disconnected(20 * time.Millisecond)
+	waitFor(t, func() bool { return m.Live() == 0 })
+	if state, _ := m.status("ws-offline"); state != beewire.WorkspaceUnknown {
+		t.Fatalf("destroyed sandbox reported %q, want unknown", state)
+	}
+	lost := m.TakeLost()
+	if len(lost) != 1 || lost[0] != "ws-offline" {
+		t.Fatalf("lost = %v, want [ws-offline]", lost)
+	}
+	if again := m.TakeLost(); len(again) != 0 {
+		t.Fatalf("lost not drained: %v", again)
+	}
+	_ = hive.Close()
+}
+
+// A reconnect inside the grace period cancels the destruction.
+func TestConnectedCancelsDisconnectDestruction(t *testing.T) {
+	m := newTestManager(t, 2)
+	sandbox, hive := pair()
+	defer hive.Close()
+	spec := beewire.WorkspaceSpec{ID: "ws-back", Action: beewire.WorkspaceAttach, Command: []string{"/bin/cat"}}
+	go m.Serve(context.Background(), sandbox, spec)
+	frames := collect(hive)
+	awaitKind(t, frames, beewire.FrameReady)
+	m.Disconnected(80 * time.Millisecond)
+	m.Connected()
+	time.Sleep(150 * time.Millisecond)
+	if m.Live() != 1 {
+		t.Fatalf("sandbox destroyed after reconnect: live=%d", m.Live())
+	}
+	m.Stop("ws-back")
+}
+
+// A natural exit with nobody attached is reported so Hive does not have to
+// wait for the next status poll.
+func TestExitNotifierFiresOnNaturalExit(t *testing.T) {
+	m := newTestManager(t, 2)
+	exits := make(chan string, 1)
+	m.SetExitNotifier(func(id string, code int) {
+		exits <- fmt.Sprintf("%s:%d", id, code)
+	})
+	sandbox, hive := pair()
+	spec := beewire.WorkspaceSpec{ID: "ws-natural", Action: beewire.WorkspaceAttach, Command: []string{"/bin/sh", "-c", "sleep 0.1"}}
+	go m.Serve(context.Background(), sandbox, spec)
+	frames := collect(hive)
+	awaitKind(t, frames, beewire.FrameReady)
+	_ = hive.Close()
+	select {
+	case got := <-exits:
+		if got != "ws-natural:0" {
+			t.Fatalf("notified %q, want ws-natural:0", got)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("natural exit was not reported")
 	}
 }
 

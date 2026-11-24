@@ -58,6 +58,11 @@ const (
 	// query or a reattach. A day covers any Hive retry; the sandbox itself is
 	// already gone and its volume deleted.
 	finishedRetention = 24 * time.Hour
+	// DisconnectGrace is how long a sandbox outlives the tunnel to Hive. Hive
+	// is the only authority that may keep a sandbox alive, so once it has been
+	// unreachable for this long the Provider destroys what it can no longer be
+	// told to stop. The window covers a reconnect with backoff.
+	DisconnectGrace = 60 * time.Second
 )
 
 // Config is the Provider's consent to host workspaces: how many, with which
@@ -142,6 +147,15 @@ type Manager struct {
 	mu       sync.Mutex
 	live     map[string]*sandbox
 	finished map[string]exitedSandbox
+	// notify reports a natural exit to Hive while no buyer stream is attached.
+	// It is set by the agent and may be nil before the first tunnel.
+	notify func(id string, code int)
+	// lost holds the sandboxes this Provider destroyed while Hive was
+	// unreachable. They are reported on the next connection, so Hive refunds
+	// them instead of waiting for the next status poll.
+	lost []string
+	// offline is the armed destruction deadline, nil while Hive is reachable.
+	offline *time.Timer
 }
 
 // New prepares the workspace root and returns a Manager. root is where every
@@ -319,9 +333,76 @@ func (m *Manager) Stop(id string) {
 	slog.Info("workspace stopped", "module", "workspace", "workspace", id)
 }
 
+// SetExitNotifier installs the callback that reports a natural exit while no
+// buyer stream is attached. It is called from a goroutine, so it may block.
+func (m *Manager) SetExitNotifier(fn func(id string, code int)) {
+	m.mu.Lock()
+	m.notify = fn
+	m.mu.Unlock()
+}
+
+// Disconnected arms the destruction of every sandbox unless Hive is reachable
+// again within the grace period. Re-arming replaces the previous deadline.
+func (m *Manager) Disconnected(after time.Duration) {
+	m.mu.Lock()
+	if m.offline != nil {
+		m.offline.Stop()
+	}
+	m.offline = time.AfterFunc(after, m.destroyOffline)
+	m.mu.Unlock()
+}
+
+// Connected cancels a destruction deadline armed by Disconnected.
+func (m *Manager) Connected() {
+	m.mu.Lock()
+	if m.offline != nil {
+		m.offline.Stop()
+		m.offline = nil
+	}
+	m.mu.Unlock()
+}
+
+// destroyOffline kills what the Provider can no longer be told to stop. The
+// sandboxes are not recorded as finished: they were not the buyer's exit, and
+// a status query must answer unknown so Hive refunds the lost block. Their IDs
+// are kept for the next successful connection.
+func (m *Manager) destroyOffline() {
+	m.mu.Lock()
+	m.offline = nil
+	live := m.live
+	m.live = map[string]*sandbox{}
+	ids := make([]string, 0, len(live))
+	for id := range live {
+		ids = append(ids, id)
+	}
+	m.lost = append(m.lost, ids...)
+	m.mu.Unlock()
+	for _, sb := range live {
+		sb.stop()
+	}
+	if len(ids) > 0 {
+		slog.Warn("workspace sandboxes destroyed while Hive was unreachable",
+			"module", "workspace", "count", len(ids))
+	}
+}
+
+// TakeLost drains the sandboxes destroyed during a disconnect, for reporting
+// on the next connection.
+func (m *Manager) TakeLost() []string {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	lost := m.lost
+	m.lost = nil
+	return lost
+}
+
 // Close takes every sandbox down, for shutdown.
 func (m *Manager) Close() {
 	m.mu.Lock()
+	if m.offline != nil {
+		m.offline.Stop()
+		m.offline = nil
+	}
 	live := m.live
 	m.live = map[string]*sandbox{}
 	m.mu.Unlock()
@@ -444,12 +525,17 @@ func (sb *sandbox) run() {
 // with the sandbox.
 func (m *Manager) retire(sb *sandbox, code int) {
 	m.mu.Lock()
-	if m.live[sb.id] == sb {
+	natural := m.live[sb.id] == sb
+	if natural {
 		delete(m.live, sb.id)
 		m.recordFinished(sb.id, code)
 	}
+	notify := m.notify
 	m.mu.Unlock()
 	sb.discard()
+	if natural && notify != nil {
+		go notify(sb.id, code)
+	}
 }
 
 // recordFinished stores an exit code and prunes records older than the

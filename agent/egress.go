@@ -48,6 +48,10 @@ type egressConfig struct {
 	workspaceOnce           sync.Once
 	workspaceMgr            *workspace.Manager
 	workspaceErr            error
+	workspaceLive           atomic.Pointer[workspace.Manager]
+	sessionMu               sync.Mutex
+	session                 *relay.Session
+	sessionGen              uint64
 	capabilitySequence      int64
 	accountGeneration       int64
 	authorization           *codexCredential
@@ -648,15 +652,104 @@ func (cfg *egressConfig) workspaces() (*workspace.Manager, error) {
 			AllowNetwork: cfg.Workspace.AllowNetwork,
 			MaxSessions:  cfg.Workspace.MaxSessions,
 		}, root)
+		if cfg.workspaceErr == nil {
+			cfg.workspaceMgr.SetExitNotifier(cfg.reportWorkspaceExit)
+			cfg.workspaceLive.Store(cfg.workspaceMgr)
+		}
 	})
 	return cfg.workspaceMgr, cfg.workspaceErr
+}
+
+// workspaceLimits is what Hive may schedule against. An unset ceiling means the
+// Manager's default of one sandbox.
+func (cfg *egressConfig) workspaceLimits() beewire.WorkspaceLimits {
+	limits := beewire.WorkspaceLimits{MaxSessions: 1}
+	if cfg != nil && cfg.Workspace != nil && cfg.Workspace.MaxSessions > 0 {
+		limits.MaxSessions = cfg.Workspace.MaxSessions
+	}
+	return limits
+}
+
+// reportLost sends the sandboxes the previous tunnel could not be told about.
+func (cfg *egressConfig) reportLost() {
+	mgr := cfg.workspaceLive.Load()
+	if mgr == nil {
+		return
+	}
+	for _, id := range mgr.TakeLost() {
+		cfg.sendWorkspaceEvent(beewire.WorkspaceEvent{ID: id, State: beewire.WorkspaceLost})
+	}
+}
+
+// closeWorkspaces destroys every sandbox when the Bee itself is going away.
+func (cfg *egressConfig) closeWorkspaces() {
+	if mgr := cfg.workspaceLive.Load(); mgr != nil {
+		mgr.Close()
+	}
+}
+
+// reportWorkspaceExit tells Hive that a sandbox ended while nobody was
+// attached. It runs in its own goroutine and skips reporting when the tunnel
+// is gone; the status query on the next connection covers that case.
+func (cfg *egressConfig) reportWorkspaceExit(id string, code int) {
+	cfg.sendWorkspaceEvent(beewire.WorkspaceEvent{ID: id, State: beewire.WorkspaceExited, Code: code})
+}
+
+// sendWorkspaceEvent opens a Bee-initiated stream carrying one notification.
+// The stream carries no payload: the metadata is the message, and Hive closes
+// it after reading.
+func (cfg *egressConfig) sendWorkspaceEvent(event beewire.WorkspaceEvent) {
+	cfg.sessionMu.Lock()
+	session := cfg.session
+	cfg.sessionMu.Unlock()
+	if session == nil || session.Context.Err() != nil {
+		return
+	}
+	metadata, err := json.Marshal(struct {
+		WorkspaceEvent beewire.WorkspaceEvent `json:"workspace_event"`
+	}{WorkspaceEvent: event})
+	if err != nil {
+		return
+	}
+	stream, err := session.Mux.Dial(metadata)
+	if err != nil {
+		egressDebug("workspace event %s for %s not reported: %v", event.State, event.ID, err)
+		return
+	}
+	_ = stream.Close()
 }
 
 func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io.Writer) *relay.Session {
 	if cfg.failures == nil {
 		cfg.failures = newEgressFailures()
 	}
-	return relay.New(ctx, conn, tunnel.High, cfg.serveStream(out), relay.Options{MaxStreams: relay.BeeStreams})
+	session := relay.New(ctx, conn, tunnel.High, cfg.serveStream(out), relay.Options{MaxStreams: relay.BeeStreams})
+	// Online and offline transitions are serialized on sessionMu together with
+	// the generation, so a slow disconnect handler cannot arm the destruction
+	// deadline after the next connection has already cancelled it.
+	cfg.sessionMu.Lock()
+	cfg.session = session
+	cfg.sessionGen++
+	generation := cfg.sessionGen
+	if mgr := cfg.workspaceLive.Load(); mgr != nil {
+		mgr.Connected()
+	}
+	cfg.sessionMu.Unlock()
+	go cfg.reportLost()
+	go func() {
+		<-session.Context.Done()
+		cfg.sessionMu.Lock()
+		if cfg.session != session || cfg.sessionGen != generation {
+			cfg.sessionMu.Unlock()
+			return
+		}
+		cfg.session = nil
+		if mgr := cfg.workspaceLive.Load(); mgr != nil {
+			mgr.Disconnected(workspace.DisconnectGrace)
+		}
+		cfg.sessionMu.Unlock()
+	}()
+	return session
 }
 
 // serveStream bridges one stream Hive opened to its upstream target.

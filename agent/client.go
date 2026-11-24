@@ -206,6 +206,12 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 	endpoint := strings.Replace(strings.Replace(state.Hive, "https:", "wss:", 1), "http:", "ws:", 1) + path
 	metrics := beeMetrics(ctx)
 	defer metrics.disconnect()
+	if egress != nil {
+		// Whatever the reason this loop ends, this Bee will not be told to stop
+		// anything again; leaving sandboxes behind would only hide them until
+		// the next startup reaps them.
+		defer egress.closeWorkspaces()
+	}
 	attempted := false
 	delay := time.Second
 	conflicts := 0
@@ -235,6 +241,10 @@ func connectObservedOwned(ctx context.Context, state localState, egress *egressC
 			controls := beewire.ControlCapabilities
 			if egress.Workspace != nil {
 				controls += "," + beewire.ControlWorkspaces
+				limits, err := json.Marshal(egress.workspaceLimits())
+				if err == nil {
+					header.Set(beewire.WorkspaceLimitsHeader, string(limits))
+				}
 			}
 			header.Set(beewire.ControlsHeader, controls)
 		}

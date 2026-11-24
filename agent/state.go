@@ -44,7 +44,7 @@ func readState(path string) (localState, error) {
 	if err = decoder.Decode(new(any)); err != io.EOF {
 		return state, failf("BEE-DEVICE-CONFIG", "%s: extra content after the device JSON object at byte %d; keep exactly one JSON object", path, decoder.InputOffset())
 	}
-	if decoded.RuntimeEpoch != "" && !desktopHexID(decoded.RuntimeEpoch, 24) {
+	if decoded.RuntimeEpoch != "" && !hexID(decoded.RuntimeEpoch, 24) {
 		return state, failf("BEE-DEVICE-CONFIG", "%s: Bee runtime epoch rejected: bytes=%d; required=48 lowercase hex characters", path, len(decoded.RuntimeEpoch))
 	}
 	return *decoded, nil

@@ -37,7 +37,7 @@ func safeResponseBody(raw []byte, secrets ...string) string {
 				}
 				return v
 			case string:
-				return desktopSafeText(v, secrets...)
+				return safeText(v, secrets...)
 			default:
 				return v
 			}
@@ -45,7 +45,7 @@ func safeResponseBody(raw []byte, secrets ...string) string {
 		safe, _ := json.Marshal(redact(value))
 		return boundedFailureText(string(safe), 24000)
 	}
-	return boundedFailureText(desktopSafeText(string(raw), secrets...), 24000)
+	return boundedFailureText(safeText(string(raw), secrets...), 24000)
 }
 
 func boundedFailureText(value string, limit int) string {

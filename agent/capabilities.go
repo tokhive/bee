@@ -216,7 +216,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	observed := observedOfficialTransport(s.transport)
 	defer func() {
 		if failure != "" {
-			failure = finishOfficialFailure(ctx, observed, errors.New(failure), credential.Secret.Token).Error()
+			failure = finishOfficialFailure(observed, errors.New(failure)).Error()
 		}
 	}()
 
@@ -262,7 +262,7 @@ func (s capabilitySource) query(ctx context.Context, credential codexCredential,
 	}
 	decoder := json.NewDecoder(io.LimitReader(res.Body, 1<<20))
 	if err := decoder.Decode(target); err != nil {
-		return fmt.Sprintf("decode %s response HTTP %d: %s; required=capability JSON", reference.Path, res.StatusCode, desktopSafeText(err.Error(), credential.Secret.Token)), time.Time{}, false
+		return fmt.Sprintf("decode %s response HTTP %d: %s; required=capability JSON", reference.Path, res.StatusCode, safeText(err.Error(), credential.Secret.Token)), time.Time{}, false
 	}
 	if err := decoder.Decode(new(any)); err != io.EOF {
 		return fmt.Sprintf("decode %s response: trailing JSON result=%v; required=EOF", reference.Path, err), time.Time{}, false

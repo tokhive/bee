@@ -48,12 +48,6 @@ func Run(ctx context.Context, args []string, out io.Writer) error {
 
 func run(ctx context.Context, args []string, out io.Writer) error {
 	command := args[0]
-	if command == "desktop-login-terminal" {
-		return desktopLoginTerminal(ctx, args[1:], os.Stdin, out)
-	}
-	if command == "desktop-login-supervisor" {
-		return desktopLoginSupervisor(ctx, args[1:])
-	}
 	if command == "install-handoff" {
 		return installHandoff(ctx, args[1:], out)
 	}

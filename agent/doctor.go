@@ -314,7 +314,7 @@ func checkPlatform(ctx context.Context, report *doctorReport, state localState, 
 	report.Checks = append(report.Checks, doctorSupplyChecks(platform, supply, explained)...)
 }
 
-// doctorSupplyChecks is shared by CLI doctor and desktop diagnostics. It only
+// doctorSupplyChecks backs the supply section of bee doctor. It only
 // interprets a supplied observation; it never reads credentials or changes state.
 func doctorSupplyChecks(platform string, supply beewire.PlatformSupply, explained string) []check {
 	var report doctorReport

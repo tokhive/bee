@@ -11,6 +11,8 @@ import (
 )
 
 type localState struct {
+	// RuntimeEpoch is read only so that a configuration the removed desktop
+	// app wrote still loads; readState discards it and saveState drops it.
 	RuntimeEpoch string            `json:"runtime_epoch,omitempty"`
 	Hive         string            `json:"hive"`
 	Name         string            `json:"name"`
@@ -44,9 +46,7 @@ func readState(path string) (localState, error) {
 	if err = decoder.Decode(new(any)); err != io.EOF {
 		return state, failf("BEE-DEVICE-CONFIG", "%s: extra content after the device JSON object at byte %d; keep exactly one JSON object", path, decoder.InputOffset())
 	}
-	if decoded.RuntimeEpoch != "" && !hexID(decoded.RuntimeEpoch, 24) {
-		return state, failf("BEE-DEVICE-CONFIG", "%s: Bee runtime epoch rejected: bytes=%d; required=48 lowercase hex characters", path, len(decoded.RuntimeEpoch))
-	}
+	decoded.RuntimeEpoch = ""
 	return *decoded, nil
 }
 

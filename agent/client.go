@@ -90,7 +90,7 @@ func httpClient() *http.Client {
 }
 
 func call(ctx context.Context, client *http.Client, origin, path, method, secret string, input, output any) error {
-	return callWithEpoch(ctx, client, origin, path, method, secret, "", input, output)
+	return callLimit(ctx, client, origin, path, method, secret, 65536, input, output)
 }
 
 func callState(ctx context.Context, client *http.Client, state localState, path, method string, input, output any) error {
@@ -101,14 +101,10 @@ func callState(ctx context.Context, client *http.Client, state localState, path,
 // credential-key statement is the one answer that can legitimately exceed the
 // default: it carries the enclave's evidence inline.
 func callStateLimit(ctx context.Context, client *http.Client, state localState, path, method string, limit int64, input, output any) error {
-	return callWithEpochLimit(ctx, client, state.Hive, path, method, state.Credential, state.RuntimeEpoch, limit, input, output)
+	return callLimit(ctx, client, state.Hive, path, method, state.Credential, limit, input, output)
 }
 
-func callWithEpoch(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, input, output any) error {
-	return callWithEpochLimit(ctx, client, origin, path, method, secret, epoch, 65536, input, output)
-}
-
-func callWithEpochLimit(ctx context.Context, client *http.Client, origin, path, method, secret, epoch string, limit int64, input, output any) (failure error) {
+func callLimit(ctx context.Context, client *http.Client, origin, path, method, secret string, limit int64, input, output any) (failure error) {
 	var body io.Reader
 	if input != nil {
 		data, err := json.Marshal(input)
@@ -124,9 +120,6 @@ func callWithEpochLimit(ctx context.Context, client *http.Client, origin, path, 
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("X-Hive-Request", "1")
 	req.Header.Set("User-Agent", userAgent())
-	if epoch != "" {
-		req.Header.Set(beewire.RuntimeEpochHeader, epoch)
-	}
 	if secret != "" {
 		req.Header.Set("Authorization", "Bearer "+secret)
 	}
@@ -205,7 +198,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
-		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}, beewire.RuntimeEpochHeader: []string{state.RuntimeEpoch}}
+		header := http.Header{"Authorization": []string{"Bearer " + state.Credential}, "User-Agent": []string{userAgent()}}
 		if egress != nil {
 			header.Set(beewire.ControlsHeader, beewire.ControlCapabilities)
 		}

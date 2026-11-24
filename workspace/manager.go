@@ -30,7 +30,7 @@ var (
 	// ErrTooMany reports the Provider's configured ceiling on live sandboxes.
 	ErrTooMany = errors.New("workspace: too many live sandboxes")
 	// ErrStopped reports an attach to a sandbox that is being taken down.
-	ErrStopped = errors.New("workspace: stopped")
+	ErrStopped  = errors.New("workspace: stopped")
 	errDetached = errors.New("workspace: detached")
 )
 
@@ -42,9 +42,21 @@ const maxBuffered = 256 << 10
 // Config is the Provider's consent to host workspaces: how many, with which
 // runtime, and how much of the machine one may take.
 type Config struct {
-	// Runtime is "docker" or "process". The process runtime isolates nothing
-	// and exists for development.
+	// Runtime is "gvisor" (the supported one) or "process" (no isolation,
+	// development only). Empty means gvisor.
 	Runtime string `json:"runtime"`
+	// Environment is the absolute path of an unpacked root filesystem — an
+	// OCI image the Provider built once with docker, podman or buildah and
+	// exported. Every session runs from it read-only, so it is also the only
+	// environment this Bee can offer.
+	Environment string `json:"environment,omitempty"`
+	// Runsc is the gVisor binary; empty means "runsc" from PATH.
+	Runsc string `json:"runsc,omitempty"`
+	// Cgroups enforces the memory, CPU and process ceilings through the host's
+	// cgroups. It is off by default because a rootless runtime needs a cgroup
+	// tree delegated to the Bee before it can write one; with it off, a session
+	// is still bounded by MaxSessions but not by its own ceilings.
+	Cgroups bool `json:"cgroups,omitempty"`
 	// Command is the default entrypoint when a spec names none.
 	Command []string `json:"command,omitempty"`
 	// MemoryMB is the default memory ceiling.
@@ -58,7 +70,11 @@ type Config struct {
 // Validate rejects a configuration that cannot work, before a stream arrives.
 func (c Config) Validate() error {
 	switch c.Runtime {
-	case "docker", "process":
+	case "gvisor":
+		if err := checkGVisor(c); err != nil {
+			return err
+		}
+	case "process":
 	default:
 		return ErrUnsupportedRuntime
 	}
@@ -66,6 +82,14 @@ func (c Config) Validate() error {
 		return errors.New("workspace: max_sessions must not be negative")
 	}
 	return nil
+}
+
+// runsc is the gVisor binary this Bee drives.
+func (c Config) runsc() string {
+	if c.Runsc != "" {
+		return c.Runsc
+	}
+	return "runsc"
 }
 
 // Manager owns the sandboxes this Bee is running.
@@ -81,6 +105,9 @@ type Manager struct {
 // sandbox volume lives; it is created 0700 and never points at a home
 // directory.
 func New(cfg Config, root string) (*Manager, error) {
+	if cfg.Runtime == "" {
+		cfg.Runtime = "gvisor"
+	}
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
@@ -142,7 +169,11 @@ func (m *Manager) target(spec beewire.WorkspaceSpec) (*sandbox, error) {
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return nil, err
 	}
-	proc, err := m.cfg.start(spec, dir)
+	// The runtime's own state sits beside the volume, never inside it: a buyer
+	// is root in the sandbox and could otherwise reach the sockets that are
+	// running it.
+	state := filepath.Join(m.root, "run", volumeName(spec.ID))
+	proc, err := m.cfg.start(spec, dir, state)
 	if err != nil {
 		return nil, err
 	}
@@ -156,7 +187,8 @@ func (m *Manager) target(spec beewire.WorkspaceSpec) (*sandbox, error) {
 	// The TTL is the Bee's own backstop. Hive ends a workspace on its clock;
 	// this only catches a Hive that stopped talking.
 	time.AfterFunc(time.Duration(ttl)*time.Second, func() { m.Stop(spec.ID) })
-	slog.Info("workspace started", "module", "workspace", "workspace", spec.ID, "image", spec.Image, "runtime", m.cfg.Runtime, "ttl_s", ttl)
+	slog.Info("workspace started", "module", "workspace", "workspace", spec.ID,
+		"runtime", m.cfg.Runtime, "environment", m.cfg.Environment, "ttl_s", ttl)
 	return sb, nil
 }
 
@@ -260,6 +292,9 @@ func (m *Manager) discard(sb *sandbox) {
 }
 
 func (sb *sandbox) discard() {
+	if sb.proc.cleanup != nil {
+		sb.proc.cleanup()
+	}
 	if err := os.RemoveAll(sb.dir); err != nil {
 		slog.Warn("workspace volume not removed", "module", "workspace", "workspace", sb.id, "error", err)
 	}

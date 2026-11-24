@@ -594,9 +594,19 @@ func (c *countingConn) Write(p []byte) (int, error) {
 // absent by default: a Bee that never asks to host one is never sent one, and
 // its connection does not advertise the capability.
 type workspaceSettings struct {
-	// Runtime is "docker" (isolated, the supported path) or "process" (no
-	// isolation, development only).
+	// Runtime is "gvisor" (one OCI container per session, rootless, the
+	// supported path) or "process" (no isolation, development only).
 	Runtime string `json:"runtime"`
+	// Environment is the absolute path of an unpacked root filesystem that
+	// every session runs from, read-only. The Provider builds it once with
+	// docker, podman or buildah and exports it; nothing here installs or runs
+	// Docker itself.
+	Environment string `json:"environment,omitempty"`
+	// Runsc is the gVisor binary; empty means "runsc" from PATH.
+	Runsc string `json:"runsc,omitempty"`
+	// Cgroups enforces each sandbox's memory, CPU and process ceilings through
+	// the host's cgroups; it needs a cgroup tree delegated to the Bee.
+	Cgroups bool `json:"cgroups,omitempty"`
 	// Command is the default terminal command when Hive names none.
 	Command []string `json:"command,omitempty"`
 	// MemoryMB is the default memory ceiling for one sandbox.
@@ -626,6 +636,9 @@ func (cfg *egressConfig) workspaces() (*workspace.Manager, error) {
 		}
 		cfg.workspaceMgr, cfg.workspaceErr = workspace.New(workspace.Config{
 			Runtime:      cfg.Workspace.Runtime,
+			Environment:  cfg.Workspace.Environment,
+			Runsc:        cfg.Workspace.Runsc,
+			Cgroups:      cfg.Workspace.Cgroups,
 			Command:      cfg.Workspace.Command,
 			MemoryMB:     cfg.Workspace.MemoryMB,
 			AllowNetwork: cfg.Workspace.AllowNetwork,

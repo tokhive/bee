@@ -29,20 +29,19 @@ import (
 )
 
 type egressConfig struct {
-	desktop                 *DesktopRuntime
-	desktopAction           func(context.Context, localState, string, io.Writer) (<-chan error, func())
-	synchronized            *desktopSynchronizationReceipt
-	ConnectProxy            string             `json:"connect_proxy,omitempty"`
-	Targets                 []string           `json:"targets"`
-	InboxKeyID              string             `json:"inbox_key_id"`
-	Credential              tee.Secret         `json:"credential"`
-	Codex                   *codexSource       `json:"codex,omitempty"`
-	Claude                  *claudeSource      `json:"claude,omitempty"`
-	OpenAIAPI               *openaiAPISource   `json:"openai_api,omitempty"`
-	ClaudeAPI               *officialAPISource `json:"claude_api,omitempty"`
-	Reseller                *resellerSource    `json:"reseller,omitempty"`
-	Capabilities            *capabilitySource  `json:"capabilities,omitempty"`
-	capabilitySequence      int64
+	ConnectProxy       string             `json:"connect_proxy,omitempty"`
+	Targets            []string           `json:"targets"`
+	InboxKeyID         string             `json:"inbox_key_id"`
+	Credential         tee.Secret         `json:"credential"`
+	Codex              *codexSource       `json:"codex,omitempty"`
+	Claude             *claudeSource      `json:"claude,omitempty"`
+	OpenAIAPI          *openaiAPISource   `json:"openai_api,omitempty"`
+	ClaudeAPI          *officialAPISource `json:"claude_api,omitempty"`
+	Reseller           *resellerSource    `json:"reseller,omitempty"`
+	Capabilities       *capabilitySource  `json:"capabilities,omitempty"`
+	capabilitySequence int64
+	// synchronizeOverride replaces the platform workers in connection tests.
+	synchronizeOverride     func(context.Context, localState, string, io.Writer) (<-chan error, func())
 	accountGeneration       int64
 	authorization           *codexCredential
 	lastRegistration        time.Time
@@ -319,7 +318,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.desktopAction != nil || cfg.desktop != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
+	return cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {
@@ -340,7 +339,6 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if !force && sourceErr == nil && !changed && !capabilityRequestDue(&cfg.capabilityWanted, cfg.lastCapabilityAttempt) && cfg.pacer.skip(time.Now()) {
 		return nil
 	}
-	cfg.synchronized = nil
 	// The previous cycle's response already carried the account version this
 	// one has to claim, so the read is only for a cycle that has none.
 	observed, known := cfg.pacer.expected()
@@ -437,8 +435,6 @@ func (cfg *egressConfig) synchronize(ctx context.Context, state localState, leas
 	if result.Task == nil && cfg.authorization != nil && !cfg.capabilityReportPending {
 		cfg.pacer.settled(result.Account, time.Now(), cfg.capabilityWorkAt())
 	}
-	auth := credential.metadata()
-	cfg.synchronized = &desktopSynchronizationReceipt{lease: lease, generation: cfg.accountGeneration, fingerprint: auth.AccountFingerprint, revision: auth.CredentialRevision}
 	return nil
 }
 
@@ -614,9 +610,6 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 				allowed = true
 				break
 			}
-		}
-		if cfg.desktop != nil {
-			allowed = cfg.desktop.allowsTarget(open.Host)
 		}
 		if !allowed {
 			egressDebug("stream rejected: %q is not in the target allowlist %v", open.Host, cfg.Targets)

@@ -23,11 +23,8 @@ func (w *synchronizedWriter) Write(p []byte) (int, error) {
 // Each platform observes its source independently. A slow OAuth/profile query must
 // not prevent another platform from renewing its Hive source observation deadline.
 func (cfg *egressConfig) startSynchronization(ctx context.Context, state localState, lease string, out io.Writer) (<-chan error, func()) {
-	if cfg.desktopAction != nil {
-		return cfg.desktopAction(ctx, state, lease, out)
-	}
-	if cfg.desktop != nil {
-		return cfg.desktop.startSynchronization(ctx, state, lease, out)
+	if cfg.synchronizeOverride != nil {
+		return cfg.synchronizeOverride(ctx, state, lease, out)
 	}
 	failures := make(chan error, 1)
 	var workers sync.WaitGroup

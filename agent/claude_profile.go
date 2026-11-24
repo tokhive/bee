@@ -45,7 +45,7 @@ func (identity claudeIdentity) fingerprint() string {
 func queryClaudeProfile(ctx context.Context, credential claudeCredential, transport http.RoundTripper) (identity claudeIdentity, failure error) {
 	observed := observedOfficialTransport(transport)
 	transport = observed
-	defer func() { failure = finishOfficialFailure(ctx, observed, failure, credential.secret.Token) }()
+	defer func() { failure = finishOfficialFailure(observed, failure) }()
 
 	var empty claudeIdentity
 	if !credential.available(time.Now()) {

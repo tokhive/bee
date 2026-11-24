@@ -2,7 +2,6 @@ package bee
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -11,7 +10,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestHiveFailurePreservesResponseEvidence(t *testing.T) {
@@ -51,7 +49,7 @@ func TestHiveFailureRedactsEchoedSecrets(t *testing.T) {
 
 func TestOfficialTransportPreservesSafeCauseAndType(t *testing.T) {
 	cause := &net.DNSError{Err: "no such host", Name: "chatgpt.com", IsNotFound: true}
-	transport := &desktopObservationTransport{base: claudeTransport(func(*http.Request) (*http.Response, error) { return nil, cause })}
+	transport := &officialObservationTransport{base: claudeTransport(func(*http.Request) (*http.Response, error) { return nil, cause })}
 	req, _ := http.NewRequest("GET", "https://chatgpt.com/backend-api/codex/models", nil)
 	_, err := transport.RoundTrip(req)
 	var dns *net.DNSError
@@ -60,63 +58,6 @@ func TestOfficialTransportPreservesSafeCauseAndType(t *testing.T) {
 	}
 }
 
-func TestHiveFailureRecordsBeforeReturning(t *testing.T) {
-	var events []DesktopDiagnosticEvent
-	ctx := WithDesktopFailureRecorder(context.Background(), func(e DesktopDiagnosticEvent) error { events = append(events, e); return nil })
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(503)
-		io.WriteString(w, `{"error":{"code":"tee_unavailable","message":"inbox missing"}}`)
-	}))
-	defer server.Close()
-	err := call(ctx, server.Client(), server.URL, "/api/bee/maintenance", "POST", "", nil, nil)
-	if err == nil || len(events) != 1 || !strings.Contains(events[0].Evidence["failure_message"], "inbox missing") {
-		t.Fatalf("failure not recorded: err=%v events=%+v", err, events)
-	}
-}
-
-func TestFailureEvidenceRecorderRejectsSilentWriteLoss(t *testing.T) {
-	ctx := WithDesktopFailureRecorder(context.Background(), func(DesktopDiagnosticEvent) error { return io.ErrClosedPipe })
-	cause := &net.DNSError{Err: "no such host", Name: "chatgpt.com"}
-	err := recordRequestFailure(ctx, "official_request", cause)
-	if !errors.Is(err, io.ErrClosedPipe) || !errors.Is(err, cause) || !strings.Contains(err.Error(), "no such host") {
-		t.Fatalf("lost recorder or original failure: %v", err)
-	}
-}
-func TestPublicFailureHistoryKeepsTransitionsWithoutDuplicatingSnapshots(t *testing.T) {
-	var events []DesktopDiagnosticEvent
-	ctx := WithDesktopFailureRecorder(context.Background(), func(e DesktopDiagnosticEvent) error { events = append(events, e); return nil })
-	raw := []byte(`{"result":{"account":{"candidate":{"error":{"code":"source_missing","check":"source_read","message":"open login file: permission denied","evidence":{"permission_denied":"true"}}}}}}`)
-	for i := 0; i < 2; i++ {
-		if err := RecordDesktopReplyFailures(ctx, "account_snapshot", "openai", raw); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if len(events) != 1 || !strings.Contains(events[0].Evidence["failure_message"], "permission_denied") {
-		t.Fatalf("snapshot history=%+v", events)
-	}
-	if err := RecordDesktopReplyFailures(ctx, "account_snapshot", "openai", []byte(`{"result":{"account":{"candidate":{"error":null}}}}`)); err != nil {
-		t.Fatal(err)
-	}
-	if err := RecordDesktopReplyFailures(ctx, "account_snapshot", "openai", raw); err != nil {
-		t.Fatal(err)
-	}
-	if len(events) != 2 {
-		t.Fatal("a new failure following recovery was lost")
-	}
-}
-func TestPublicFailureReplyDoesNotDuplicateItsRecordedHTTPFailure(t *testing.T) {
-	var events []DesktopDiagnosticEvent
-	ctx := WithDesktopFailureRecorder(context.Background(), func(e DesktopDiagnosticEvent) error { events = append(events, e); return nil })
-	cause := errors.New("Hive request: HTTP 503; TEE inbox unavailable")
-	_ = recordRequestFailure(ctx, "hive_request", cause)
-	raw, _ := json.Marshal(map[string]any{"error": map[string]string{"code": "runtime_platform_unconfirmed", "check": "authorization_sync", "message": "account sync: " + cause.Error()}})
-	if err := RecordDesktopReplyFailures(ctx, "runtime_snapshot", "openai", raw); err != nil {
-		t.Fatal(err)
-	}
-	if len(events) != 1 {
-		t.Fatalf("same failure logged %d times", len(events))
-	}
-}
 func TestFailureEvidenceSanitizesStructuredAndPlainResponses(t *testing.T) {
 	for _, body := range []string{
 		`{"error":{"message":"dial refused","details":{"refresh_token":"refresh-MARKER","private_key":"key-MARKER","email":"person-MARKER@example.com"}}}`,
@@ -164,20 +105,5 @@ func TestFailureEvidenceSanitizesIncompleteSecrets(t *testing.T) {
 		if strings.Contains(safe, "MARKER") || !strings.Contains(safe, "upstream failed") {
 			t.Fatalf("unsafe incomplete evidence: %q", safe)
 		}
-	}
-}
-
-func TestDirectHTTPFailureSnapshotDoesNotDuplicateSourceRecord(t *testing.T) {
-	var events []DesktopDiagnosticEvent
-	ctx := WithDesktopFailureRecorder(context.Background(), func(e DesktopDiagnosticEvent) error { events = append(events, e); return nil })
-	failure := desktopHTTPFailure(localState{Hive: "https://hive.example"}, "/api/bee/identity", "device_identity", "GET", time.Now(), &apiFailure{Status: 503, Code: "tee_unavailable"}, 503, []byte(`{"error":{"message":"inbox missing"}}`), "")
-	_ = recordRequestFailure(ctx, "device_identity", failure)
-	detailed := failure.(*DesktopFailure)
-	raw, _ := json.Marshal(map[string]any{"result": map[string]any{"error": map[string]any{"code": detailed.Code, "message": detailed.Message, "details": detailed.Details}}})
-	if err := RecordDesktopReplyFailures(ctx, "device_status", "", raw); err != nil {
-		t.Fatal(err)
-	}
-	if len(events) != 1 || !strings.Contains(events[0].Evidence["failure_message"], "/api/bee/identity") {
-		t.Fatalf("source evidence missing or duplicated: %+v", events)
 	}
 }

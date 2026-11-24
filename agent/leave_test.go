@@ -51,7 +51,7 @@ func TestConnectTellsHiveWhyItLeaves(t *testing.T) {
 			defer hive.Close()
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			cfg := &egressConfig{Targets: []string{}, desktopAction: func(context.Context, localState, string, io.Writer) (<-chan error, func()) {
+			cfg := &egressConfig{Targets: []string{}, synchronizeOverride: func(context.Context, localState, string, io.Writer) (<-chan error, func()) {
 				failures := make(chan error, 1)
 				if tc.syncFailure {
 					failures <- fmt.Errorf("authorization sync: %w", errInboxIdentity)
@@ -59,7 +59,7 @@ func TestConnectTellsHiveWhyItLeaves(t *testing.T) {
 				return failures, func() {}
 			}}
 			done := make(chan error, 1)
-			go func() { done <- connectObserved(ctx, localState{Hive: hive.URL}, cfg, io.Discard, nil) }()
+			go func() { done <- connect(ctx, localState{Hive: hive.URL}, cfg, io.Discard) }()
 			select {
 			case <-connected:
 			case <-time.After(3 * time.Second):

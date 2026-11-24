@@ -43,7 +43,6 @@ type claudeSource struct {
 	metadataLease      string
 	pacer              syncPacer
 	reportedAuth       beewire.Authorization
-	synchronized       *desktopSynchronizationReceipt
 	// suspended is the last unavailable source this Bee told Hive about: why,
 	// on which connection, and when. See unavailableReportInterval.
 	suspended struct {
@@ -153,7 +152,6 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 	if !force && err == nil && auth == source.reportedAuth && !capabilityRequestDue(source.capabilityWanted, source.lastCapabilityAttempt) && source.pacer.skip(time.Now()) {
 		return nil
 	}
-	source.synchronized = nil
 	path := "/api/bee/platforms/claude/account"
 	// The previous cycle's response already carried the account version this
 	// one has to claim, so the read is only for a cycle that has none.
@@ -313,6 +311,5 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		source.reportedAuth = auth
 		source.pacer.settled(result.Account, time.Now(), source.capabilityWorkAt())
 	}
-	source.synchronized = &desktopSynchronizationReceipt{lease: lease, generation: result.Account.Generation, fingerprint: auth.AccountFingerprint, revision: auth.CredentialRevision}
 	return nil
 }

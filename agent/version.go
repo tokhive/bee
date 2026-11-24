@@ -11,7 +11,7 @@ import (
 var Version = "dev"
 
 // BuildVersion is Version, or for a source build "dev+<commit>", with
-// "-dirty" when the tree had local changes. CLI and desktop metadata share it.
+// "-dirty" when the tree had local changes. CLI output and Hive metadata share it.
 func BuildVersion() string {
 	// The commit is Bee's only when Bee is the main module; built through
 	// Hive's workspace, Go records Hive's.

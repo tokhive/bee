@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/tokhive/bee/beewire"
 	"github.com/tokhive/bee/logx"
 	"github.com/tokhive/bee/relay"
+	"github.com/tokhive/bee/workspace"
 	"github.com/tokhive/tee/tee"
 	"github.com/tokhive/tee/tunnel"
 )
@@ -42,6 +44,10 @@ type egressConfig struct {
 	ClaudeAPI               *officialAPISource `json:"claude_api,omitempty"`
 	Reseller                *resellerSource    `json:"reseller,omitempty"`
 	Capabilities            *capabilitySource  `json:"capabilities,omitempty"`
+	Workspace               *workspaceSettings `json:"workspace,omitempty"`
+	workspaceOnce           sync.Once
+	workspaceMgr            *workspace.Manager
+	workspaceErr            error
 	capabilitySequence      int64
 	accountGeneration       int64
 	authorization           *codexCredential
@@ -584,6 +590,51 @@ func (c *countingConn) Write(p []byte) (int, error) {
 	return n, err
 }
 
+// workspaceSettings is the Provider's consent to host buyer sandboxes. It is
+// absent by default: a Bee that never asks to host one is never sent one, and
+// its connection does not advertise the capability.
+type workspaceSettings struct {
+	// Runtime is "docker" (isolated, the supported path) or "process" (no
+	// isolation, development only).
+	Runtime string `json:"runtime"`
+	// Command is the default terminal command when Hive names none.
+	Command []string `json:"command,omitempty"`
+	// MemoryMB is the default memory ceiling for one sandbox.
+	MemoryMB int `json:"memory_mb,omitempty"`
+	// AllowNetwork gives sandboxes outbound network.
+	AllowNetwork bool `json:"allow_network,omitempty"`
+	// MaxSessions is how many sandboxes may run at once.
+	MaxSessions int `json:"max_sessions,omitempty"`
+}
+
+// workspaces builds the sandbox manager on first use. The root is kept out of
+// the egress schema so an older Bee that only reads that file still loads.
+func (cfg *egressConfig) workspaces() (*workspace.Manager, error) {
+	cfg.workspaceOnce.Do(func() {
+		if cfg.Workspace == nil {
+			cfg.workspaceErr = errors.New("workspace hosting is not configured")
+			return
+		}
+		root := os.Getenv("BEE_WORKSPACE_ROOT")
+		if root == "" {
+			directory, err := os.UserConfigDir()
+			if err != nil {
+				cfg.workspaceErr = err
+				return
+			}
+			root = filepath.Join(directory, "tokhive", "workspaces")
+		}
+		cfg.workspaceMgr, cfg.workspaceErr = workspace.New(workspace.Config{
+			Runtime:      cfg.Workspace.Runtime,
+			Command:      cfg.Workspace.Command,
+			MemoryMB:     cfg.Workspace.MemoryMB,
+			AllowNetwork: cfg.Workspace.AllowNetwork,
+			MaxSessions:  cfg.Workspace.MaxSessions,
+		}, root)
+	})
+	return cfg.workspaceMgr, cfg.workspaceErr
+}
+
 func (cfg *egressConfig) start(ctx context.Context, conn *websocket.Conn, out io.Writer) *relay.Session {
 	if cfg.failures == nil {
 		cfg.failures = newEgressFailures()
@@ -597,6 +648,7 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 		var open struct {
 			Host string `json:"host"`
 			beewire.Control
+			Workspace *beewire.WorkspaceSpec `json:"workspace,omitempty"`
 		}
 		if len(metadata) > 1024 || json.Unmarshal(metadata, &open) != nil {
 			egressDebug("stream rejected: unreadable open metadata (%d bytes)", len(metadata))
@@ -605,6 +657,16 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 		}
 		if open.Control.Control != "" {
 			cfg.control(open.Control)
+			return
+		}
+		if open.Workspace != nil {
+			manager, err := cfg.workspaces()
+			if err != nil {
+				egressDebug("workspace stream rejected: %v", err)
+				cfg.failures.report(out, failf("BEE-WORKSPACE-CONFIG", "%v", err), "")
+				return
+			}
+			manager.Serve(live, stream, *open.Workspace)
 			return
 		}
 		egressDebug("stream opened for %q", open.Host)

@@ -31,9 +31,28 @@ configuration (`tokhive/bee.json` in the user configuration directory, or
   from 1 to 30 seconds when it exits, and on quit asks it to stop (SIGTERM) so
   it can tell Hive and finish its requests, killing it only after 15 seconds.
 
-Closing the window keeps the app in the tray. Quitting from the tray, the Dock
-or the app menu stops the app's own Bee. Opening the app again shows the
-running one.
+Closing the window keeps the app in the tray; the first time, a notification
+says Bee is still sharing. On a Linux desktop that shows no tray icons (GNOME
+without an extension) closing minimises instead, and with *keep in tray* turned
+off closing quits. Quitting from the tray, the Dock or the app menu stops the
+app's own Bee. Opening the app again shows the running one.
+
+## Settings, start at login and notifications
+
+The app keeps its preferences in `settings.json` in its config directory
+(`~/Library/Application Support/ai.tokhive.bee` on macOS): start at login, keep
+in tray, notifications and language (`system`, `zh` or `en`). The window reads
+and changes them with the `get_settings` and `set_settings` commands.
+
+- **Start at login** is on by default: a release enables the login item the
+  first time it runs, which starts the app with `--background`, tray only.
+  Development builds never touch login items unless the setting is changed.
+- **Notifications** are raised only for what the person must handle (a sign-in
+  to renew, an account switch to confirm, an account used elsewhere, a TokHive
+  restriction, a revoked device, or a background service stopped for over a
+  minute), never for what clears by itself, and the same problem at most once a
+  day, also across restarts (`notifications.json`). Their words come from Bee's
+  `/v1/explanations`.
 
 ## Develop against the mock
 
@@ -60,6 +79,7 @@ go run ./desktop/mock-bee -config /tmp/beedev/bee.json -switch paused
 | --- | --- |
 | `BEE_DESKTOP_CONFIG` | Device configuration whose control socket the app uses. |
 | `BEE_DESKTOP_ATTACH_ONLY` | Never start the bundled Bee; only use one already running. |
+| `BEE_DESKTOP_DATA` | Directory for the app's own settings and notification history, so a development run leaves the installed app's alone. |
 | `BEE_DESKTOP_EXIT_AFTER` | Debug builds only: quit through the normal path after this many seconds. |
 
 `npm run bee:build` builds `src-tauri/binaries/bee-<target triple>`, which

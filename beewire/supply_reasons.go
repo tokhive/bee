@@ -27,6 +27,22 @@ const (
 	ReasonAccountNotAdmitted       = "account_not_admitted"
 )
 
+// Reasons only an official key gives, in OfficialAPISupply.Reasons.
+const (
+	// ReasonAPIKeyNotRegistered: Hive holds no key for the Provider.
+	ReasonAPIKeyNotRegistered = "api_key_not_registered"
+	// ReasonAPIKeyUnverified: no Bee has read the key's model listing since
+	// the key was registered or retried.
+	ReasonAPIKeyUnverified = "api_key_unverified"
+	// ReasonAPIKeyNoModels: the listing shows none of the selected models
+	// that Hive sells and the upstream has not refused.
+	ReasonAPIKeyNoModels = "api_key_no_models"
+	// ReasonAPIKeyInvalid: the upstream rejected the key.
+	ReasonAPIKeyInvalid = "api_key_invalid"
+	// ReasonAPIKeyOutOfCredit: the upstream refused a call for lack of credit.
+	ReasonAPIKeyOutOfCredit = "api_key_out_of_credit"
+)
+
 // AccountReason is the supply reason for an account status other than ready
 // or not_configured, prefixed by platform: codex_ for openai, claude_ for
 // claude.

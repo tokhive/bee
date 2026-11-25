@@ -189,6 +189,7 @@ func (s *runStatus) subscribe() (<-chan controlEvent, func()) {
 
 // controlServer serves one running Bee.
 type controlServer struct {
+	configPath string
 	// pairer pairs the device through this interface; nil for a Bee started
 	// from the command line, which pairs with bee login.
 	pairer pairer
@@ -231,6 +232,8 @@ type controlSource struct {
 
 // controlPlatform is Hive's view of one platform on this device.
 type controlPlatform struct {
+	// Sharing is the one conclusion to show; Supply keeps every reason.
+	Sharing      sharingState           `json:"sharing"`
 	Supply       beewire.PlatformSupply `json:"supply"`
 	Capabilities beewire.Capabilities   `json:"capabilities"`
 }
@@ -252,7 +255,8 @@ func (c *controlServer) handler() http.Handler {
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 		var result controlPlatform
-		if err := callState(ctx, c.client, state, "/api/bee/platforms/"+platform, "GET", nil, &result.Supply); err != nil {
+		// The detailed reasons tell apart what the person and TokHive must fix.
+		if err := callState(ctx, c.client, state, "/api/bee/platforms/"+platform+"?reason_detail=1", "GET", nil, &result.Supply); err != nil {
 			writeControlError(w, http.StatusBadGateway, "hive_unavailable", err.Error())
 			return
 		}
@@ -260,6 +264,7 @@ func (c *controlServer) handler() http.Handler {
 			writeControlError(w, http.StatusBadGateway, "hive_unavailable", err.Error())
 			return
 		}
+		result.Sharing = sharingOf(result.Supply)
 		writeControlJSON(w, http.StatusOK, result)
 	})
 	mux.HandleFunc("PUT /v1/platforms/{platform}/supply", func(w http.ResponseWriter, r *http.Request) {
@@ -386,6 +391,20 @@ func (c *controlServer) handler() http.Handler {
 			return
 		}
 		writeControlJSON(w, http.StatusOK, account)
+	})
+	mux.HandleFunc("GET /v1/explanations", func(w http.ResponseWriter, r *http.Request) {
+		writeControlJSON(w, http.StatusOK, map[string]any{"explanations": allExplanations()})
+	})
+	mux.HandleFunc("GET /v1/diagnostics", func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), time.Minute)
+		defer cancel()
+		raw, err := c.diagnostics(ctx)
+		if err != nil {
+			writeControlError(w, http.StatusInternalServerError, "error", err.Error())
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(raw)
 	})
 	mux.HandleFunc("GET /v1/events", c.events)
 	return mux
@@ -514,7 +533,7 @@ func serveControl(configPath string, egress *egressConfig, status *runStatus, pa
 		notify(out, slog.LevelWarn, "control", "local control interface unavailable; the desktop app cannot manage this Bee", "path", path, "error", err.Error())
 		return func() {}
 	}
-	server := &http.Server{Handler: (&controlServer{pairer: pairer, manager: managerOf(pairer), egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Handler: (&controlServer{configPath: configPath, pairer: pairer, manager: managerOf(pairer), egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
 	slog.Info("local control interface listening", "module", "control", "path", path)
 	served := make(chan struct{})
 	go func() {

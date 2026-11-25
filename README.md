@@ -222,7 +222,7 @@ On macOS and Linux, `bee run` serves a local control interface for the desktop a
 | Request | Purpose |
 | --- | --- |
 | `GET /v1/overview` | Version, mode (`cli` or `desktop`), Hive, binding (`unpaired`, `paired`, `replaced` or `invalid`), paired device, any pairing in progress, connection state (`connecting`, `connected` or `disconnected`), the problem keeping it from connecting, and configured account sources. |
-| `GET /v1/platforms/{openai,claude}` | Hive's supply state and the account's plan and quota windows. |
+| `GET /v1/platforms/{openai,claude}` | Hive's supply state with its detailed reasons, the one conclusion to show (`sharing`: `sharing`, `syncing`, `paused`, `waiting`, `action`, `restricted` or `offline`, and the reason that decided it), and the account's plan and quota windows. |
 | `PUT /v1/platforms/{openai,claude}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
 | `POST /v1/pairing` | Desktop mode only: start pairing a new device credential, optionally with `{"hive": "...", "name": "..."}`; returns the code and the link to confirm it. The current device keeps running until the new one is confirmed. |
 | `GET /v1/pairing`, `DELETE /v1/pairing` | Desktop mode only: read or cancel the pairing (`pending`, `completed`, `expired`, `cancelled` or `failed`). |
@@ -231,6 +231,8 @@ On macOS and Linux, `bee run` serves a local control interface for the desktop a
 | `POST /v1/accounts` | Desktop mode only: add an account with `{"platform": "openai"\|"claude", "source": "local"}` to share the official client's sign-in, or `"source": "import", "file": "/path"` to import Codex's `auth.json` or Claude Code's `.credentials.json`. It starts sharing at once, and a switch from the account Hive last knew is confirmed. |
 | `DELETE /v1/accounts/{id}` | Desktop mode only: pause the platform in Hive, wait up to a minute for its open streams, stop the account and forget it. |
 | `POST /v1/accounts/{id}/confirm` | Desktop mode only: accept the account the official client switched to. |
+| `GET /v1/explanations` | Every reason and error code with an English and Chinese title, cause and fix, its category and the action that fixes it, for the desktop app to show. |
+| `GET /v1/diagnostics` | A diagnostic report to attach to a support request: the overview and every `bee doctor` check, with the home directory and email addresses masked. It holds no credential. |
 | `GET /v1/events` | Server-sent events: `overview` first, then `connection`, `binding`, `pairing`, `problem` and `supply` changes. |
 
 Accounts the desktop app adds are recorded in `accounts.json` beside the device configuration (no credential, only the id, platform, source, email, plan and fingerprint) and written to `egress.json`, so `bee run` and `bee status` see them too. An imported credential file is copied into a private `accounts/<id>/` directory; Bee renews an imported Claude sign-in itself (`claude.refresh`), since no official client does.

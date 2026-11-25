@@ -170,7 +170,7 @@ func TestControlSupplyAndEvents(t *testing.T) {
 	expect("connection") // an unchanged state is not repeated
 
 	var platform controlPlatform
-	if code := getJSON(t, client, "GET", "/v1/platforms/claude", "", &platform); code != 200 || !platform.Supply.Ready || platform.Capabilities.Plan != "max" || len(platform.Capabilities.Windows) != 1 {
+	if code := getJSON(t, client, "GET", "/v1/platforms/claude", "", &platform); code != 200 || !platform.Supply.Ready || platform.Sharing.State != categorySharing || platform.Capabilities.Plan != "max" || len(platform.Capabilities.Windows) != 1 {
 		t.Fatalf("platform: %d %+v", code, platform)
 	}
 }
@@ -229,5 +229,34 @@ func TestControlPathTooLong(t *testing.T) {
 	stop()
 	if !strings.Contains(out.String(), "local control interface unavailable") {
 		t.Fatalf("no warning: %q", out.String())
+	}
+}
+
+func TestControlExplanationsAndDiagnostics(t *testing.T) {
+	hive := httptest.NewServer(http.NotFoundHandler())
+	defer hive.Close()
+	client, _, state := startControl(t, hive.URL, nil)
+
+	var catalog struct {
+		Explanations []explanation `json:"explanations"`
+	}
+	if code := getJSON(t, client, "GET", "/v1/explanations", "", &catalog); code != 200 || len(catalog.Explanations) != len(explanations) {
+		t.Fatalf("explanations: %d, %d entries", code, len(catalog.Explanations))
+	}
+
+	req, _ := http.NewRequest("GET", "http://bee/v1/diagnostics", nil)
+	res, err := client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := io.ReadAll(res.Body)
+	res.Body.Close()
+	text := string(raw)
+	if res.StatusCode != 200 || strings.Contains(text, state.Credential) || strings.Contains(text, "owner@example.com") || !strings.Contains(text, "o***@example.com") {
+		t.Fatalf("diagnostics %d: %s", res.StatusCode, text)
+	}
+	var report diagnosticReport
+	if err := json.Unmarshal(raw, &report); err != nil || len(report.Doctor.Checks) == 0 || report.OS == "" || report.Overview.Binding != bindingPaired {
+		t.Fatalf("report = %+v, %v", report, err)
 	}
 }

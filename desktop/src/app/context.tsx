@@ -24,6 +24,11 @@ type AppValue = {
   syncingSince: Record<string, number>;
   /** When the connection to TokHive was last seen dropping. */
   disconnectedSince: number | null;
+  /**
+   * Whether Bee's explanations have been read (or could not be), so a card
+   * never shows a general sentence for a moment before its real words.
+   */
+  explanationsReady: boolean;
 };
 
 const AppContext = React.createContext<AppValue | null>(null);
@@ -39,6 +44,7 @@ export function AppProvider({ shell, children }: { shell: Shell; children: React
   const [settings, setSettings] = React.useState<Settings | null>(null);
   const [info, setInfo] = React.useState<AppInfo | null>(null);
   const [catalog, setCatalog] = React.useState<Record<string, Explanation>>({});
+  const [explanationsReady, setExplanationsReady] = React.useState(false);
   const [toastText, setToastText] = React.useState<string | null>(null);
   const [syncingSince, setSyncingSince] = React.useState<Record<string, number>>({});
   const [disconnectedSince, setDisconnectedSince] = React.useState<number | null>(null);
@@ -67,7 +73,11 @@ export function AppProvider({ shell, children }: { shell: Shell; children: React
         for (const entry of answer.explanations ?? []) byCode[entry.code] = entry;
         setCatalog(byCode);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setExplanationsReady(true));
+    // Do not hold the window back for long if Bee is slow to answer.
+    const giveUp = window.setTimeout(() => setExplanationsReady(true), 3000);
+    return () => window.clearTimeout(giveUp);
   }, [shell, reachable, catalogEmpty]);
 
   // Track how long accounts sync and how long TokHive has been unreachable.
@@ -127,6 +137,6 @@ export function AppProvider({ shell, children }: { shell: Shell; children: React
     [shell],
   );
 
-  const value: AppValue = { shell, snapshot, settings, info, language, t, explain, updateSettings, toast, toastText, syncingSince, disconnectedSince };
+  const value: AppValue = { shell, snapshot, settings, info, language, t, explain, updateSettings, toast, toastText, syncingSince, disconnectedSince, explanationsReady };
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 }

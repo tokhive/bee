@@ -125,8 +125,8 @@ func init() {
 		say("Keep Bee running; it usually takes a few minutes.", "请保持 Bee 运行，通常需要几分钟。"))
 	explain(beewire.ReasonMarketNotOpen, categoryWaiting, "",
 		say("Not open yet", "暂未开放"),
-		say("TokHive is not trading this platform right now.", "TokHive 目前暂不交易这个平台。"),
-		say("Nothing to do. Sharing starts when TokHive opens it.", "不用处理，TokHive 开放后会自动开始共享。"))
+		say("TokHive has no model on sale for this platform right now, so there is nothing for this account to serve.", "TokHive 目前没有上架这个平台的模型，所以这个账号暂时没有可接的单。"),
+		say("Nothing to do. Sharing starts by itself once TokHive puts a model on sale.", "不用处理，TokHive 上架模型后会自动开始共享。"))
 	explain(beewire.ReasonSupplyNotEnabled, categoryRestricted, actionContactSupport,
 		say("Not accepted on TokHive", "TokHive 暂不接受"),
 		say("TokHive does not accept shared subscriptions for this platform yet.", "TokHive 暂时不接受这个平台的订阅共享。"),

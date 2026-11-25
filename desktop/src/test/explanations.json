@@ -613,12 +613,12 @@
     "zh": "暂未开放"
    },
    "cause": {
-    "en": "TokHive is not trading this platform right now.",
-    "zh": "TokHive 目前暂不交易这个平台。"
+    "en": "TokHive has no model on sale for this platform right now, so there is nothing for this account to serve.",
+    "zh": "TokHive 目前没有上架这个平台的模型，所以这个账号暂时没有可接的单。"
    },
    "fix": {
-    "en": "Nothing to do. Sharing starts when TokHive opens it.",
-    "zh": "不用处理，TokHive 开放后会自动开始共享。"
+    "en": "Nothing to do. Sharing starts by itself once TokHive puts a model on sale.",
+    "zh": "不用处理，TokHive 上架模型后会自动开始共享。"
    }
   },
   {

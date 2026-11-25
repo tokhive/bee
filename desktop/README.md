@@ -110,6 +110,38 @@ cd desktop && BEE_DEV_CONFIG=/tmp/beedev/bee.json npm run dev   # http://localho
 Tauri bundles next to the app; a build needs it even when developing against
 the mock.
 
+## Package for macOS
+
+```sh
+BEE_VERSION=0.1.0 sh scripts/package-macos.sh        # this machine's architecture
+BEE_VERSION=0.1.0 sh scripts/package-macos.sh x64    # or arm64
+```
+
+This builds the window, the `bee` it bundles (reporting `BEE_VERSION`) and the
+app, and leaves `Bee.app` and `Bee_<version>_<arch>.dmg` under
+`src-tauri/target/<triple>/release/bundle/`. `BEE_VERSION` is
+major.minor.patch and is the version of both the app and its `bee`; leave it
+out for a development package, whose `bee` stays `dev` and so works against a
+software TEE such as the Hive repository's `hive-local`. A `bee` with a release
+version trusts only a real TEE's attestation. The app runs on macOS 12 and
+later.
+
+Without a certificate the bundle is signed ad hoc: it runs on the machine that
+built it, and on another Mac Gatekeeper refuses it until the person opens it
+from the context menu (Open). A release signs with a Developer ID certificate
+and notarises, which Tauri does when these are set:
+
+| Variable | Meaning |
+| --- | --- |
+| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: Name (TEAMID)` |
+| `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` | The certificate as a base64 `.p12` and its password, when it is not already in the keychain. |
+| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | Notarisation with an Apple ID and an app-specific password. |
+| `APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_PATH` | Notarisation with an App Store Connect API key instead. |
+
+Quitting the app from its menu, the Dock or the tray stops the `bee` it
+started, whichever way macOS ends the process. A `bee` that was already
+running, from the command line or a service, is left alone.
+
 ## Tests
 
 ```sh

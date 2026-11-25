@@ -43,7 +43,8 @@ func startControl(t *testing.T, hive string, egress *egressConfig) (*http.Client
 	config := shortConfigPath(t)
 	state := localState{Hive: hive, Name: "laptop", Credential: "bee_" + strings.Repeat("c", 43), Identity: &beewire.Identity{ID: "dev_1", Name: "laptop", OwnerID: "u1", OwnerEmail: "owner@example.com"}}
 	status := newRunStatus()
-	stop := serveControl(config, state, egress, status, io.Discard)
+	status.setDevice(state, bindingPaired)
+	stop := serveControl(config, egress, status, nil, io.Discard)
 	t.Cleanup(stop)
 	return unixClient(controlSocketPath(config)), status, state
 }
@@ -203,7 +204,7 @@ func TestControlSocketIsPrivateAndReplacesStale(t *testing.T) {
 	if err := os.WriteFile(path, []byte("stale"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	stop := serveControl(config, localState{}, nil, newRunStatus(), io.Discard)
+	stop := serveControl(config, nil, newRunStatus(), nil, io.Discard)
 	dir, _ := os.Stat(filepath.Dir(path))
 	socket, err := os.Stat(path)
 	if err != nil {
@@ -224,7 +225,7 @@ func TestControlPathTooLong(t *testing.T) {
 	}
 	// A Bee whose socket cannot be opened keeps running and says why.
 	var out strings.Builder
-	stop := serveControl("/tmp/"+strings.Repeat("y", maxSocketPath)+"/bee.json", localState{}, nil, newRunStatus(), &out)
+	stop := serveControl("/tmp/"+strings.Repeat("y", maxSocketPath)+"/bee.json", nil, newRunStatus(), nil, &out)
 	stop()
 	if !strings.Contains(out.String(), "local control interface unavailable") {
 		t.Fatalf("no warning: %q", out.String())

@@ -145,7 +145,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
 | `bee login [--hive URL] [--name NAME]` | Pair this machine with a Hive account, or resume a pairing that was interrupted. |
 | `bee setup [--platform openai,claude] [--yes]` | Detect local subscription logins and write the egress configuration. |
-| `bee run [--egress-config PATH]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. |
+| `bee run [--egress-config PATH] [--desktop]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. `--desktop` is the mode the desktop app uses; see [Local control interface](#local-control-interface). |
 | `bee doctor [--egress-config PATH] [--json]` | Run every check in order and report `ok`, `WARN`, `FAIL` or `skip`, each with a fix. Read-only, so it is safe to run while `bee run` is running. |
 | `bee supply-status --platform P` | Show whether Hive is currently sending work to the account on platform `P`, and why not. |
 | `bee pause` / `bee resume --platform P` | Stop or restart new work for one platform. |
@@ -221,10 +221,14 @@ On macOS and Linux, `bee run` serves a local control interface for the desktop a
 
 | Request | Purpose |
 | --- | --- |
-| `GET /v1/overview` | Version, Hive, paired device, connection state (`connecting`, `connected` or `disconnected`) and configured account sources. |
+| `GET /v1/overview` | Version, mode (`cli` or `desktop`), Hive, binding (`unpaired`, `paired`, `replaced` or `invalid`), paired device, any pairing in progress, connection state (`connecting`, `connected` or `disconnected`), the problem keeping it from connecting, and configured account sources. |
 | `GET /v1/platforms/{openai,claude}` | Hive's supply state and the account's plan and quota windows. |
 | `PUT /v1/platforms/{openai,claude}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
-| `GET /v1/events` | Server-sent events: `overview` first, then `connection` and `supply` changes. |
+| `POST /v1/pairing` | Desktop mode only: start pairing a new device credential, optionally with `{"hive": "...", "name": "..."}`; returns the code and the link to confirm it. The current device keeps running until the new one is confirmed. |
+| `GET /v1/pairing`, `DELETE /v1/pairing` | Desktop mode only: read or cancel the pairing (`pending`, `completed`, `expired`, `cancelled` or `failed`). |
+| `GET /v1/events` | Server-sent events: `overview` first, then `connection`, `binding`, `pairing`, `problem` and `supply` changes. |
+
+`bee run --desktop` is how the desktop app runs Bee. It starts without a device configuration and pairs through the control interface, keeps the tunnel open with no account configured, and when Hive revokes the device it keeps running and reports it instead of exiting. A confirmed pairing saves the new device configuration, keeps a private copy of the previous one in a `bee.json.backup.*` directory beside it, and reconnects as the new device.
 
 Errors are `{"error": {"code": "...", "message": "..."}}`. If the socket cannot be opened, for example because its path is longer than 103 bytes, Bee keeps running without it and logs why.
 

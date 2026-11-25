@@ -93,8 +93,10 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if command == "confirm-account" {
 		flags.StringVar(&fingerprint, "account-fingerprint", "", "full account fingerprint to confirm")
 	}
+	desktop := false
 	if command == "run" {
 		flags.StringVar(&egressPath, "egress-config", "", "encrypted egress configuration file")
+		flags.BoolVar(&desktop, "desktop", false, "run for the desktop app: start unpaired, pair through the local control interface and keep running when the device is replaced")
 	}
 	if command == "login" {
 		flags.StringVar(&origin, "hive", "", "Hive address (default "+DefaultHive+")")
@@ -122,6 +124,9 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 			return err
 		}
 		defer unlock()
+	}
+	if command == "run" && desktop {
+		return runDesktop(ctx, *configPath, egressPath, out)
 	}
 	state, err := readState(*configPath)
 	if err != nil {
@@ -197,8 +202,9 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 			notify(console, slog.LevelWarn, "connect", summary, "code", code, "fix", fix)
 		}
 		status := newRunStatus()
+		status.setDevice(state, bindingPaired)
 		ctx = withRunStatus(ctx, status)
-		defer serveControl(*configPath, state, egress, status, console)()
+		defer serveControl(*configPath, egress, status, nil, console)()
 		return runWithTelemetry(ctx, func(live context.Context) error { return connect(live, state, egress, console) })
 	}
 	return status(ctx, client, *configPath, state, out)

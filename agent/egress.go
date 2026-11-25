@@ -68,6 +68,9 @@ type egressConfig struct {
 	// sourceSet holds the account sources, which can change while connected.
 	sourcesOnce sync.Once
 	sourceSet   *sourceSet
+	// liveSources keeps the tunnel and synchronization running with no
+	// account source, so one can be added while connected.
+	liveSources bool
 }
 
 // useStateDirectory points the sources at a Bee-owned directory for the small
@@ -322,7 +325,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
+	return cfg.liveSources || cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

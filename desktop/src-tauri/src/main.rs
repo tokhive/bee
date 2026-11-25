@@ -5,6 +5,7 @@
 mod alerts;
 mod control;
 mod logs;
+mod occupied;
 mod service;
 mod settings;
 mod state;
@@ -36,6 +37,8 @@ struct Shared {
     snapshot: Mutex<Snapshot>,
     refresh: Notify,
     status_item: Mutex<Option<MenuItem<tauri::Wry>>>,
+    /// The tray menu's fixed items, whose words follow the language setting.
+    menu_items: Mutex<Option<(MenuItem<tauri::Wry>, MenuItem<tauri::Wry>)>>,
     settings: Mutex<Settings>,
     store: Mutex<Option<Store>>,
     history: Mutex<Option<alerts::History>>,
@@ -155,7 +158,16 @@ async fn refresh(app: &AppHandle, shared: &Shared) {
             }
         }
     }
-    let snapshot = Snapshot::new(service, overview, platforms);
+    let language = shared.settings.lock().unwrap().resolved_language();
+    let mut snapshot = Snapshot::in_language(service, overview, platforms, language);
+    // No Bee answers, yet something holds the device configuration: an older
+    // Bee that serves no control interface. The app's own Bee cannot start.
+    if service == ServiceState::Stopped {
+        snapshot.occupied = occupied::holder(&shared.service.config);
+        if snapshot.occupied.is_some() {
+            snapshot.summary = if language == "en" { "An older Bee is using the configuration".into() } else { "旧版 Bee 占用了配置".into() };
+        }
+    }
     raise_alerts(app, shared, &snapshot);
     let changed = {
         let mut current = shared.snapshot.lock().unwrap();
@@ -361,7 +373,31 @@ fn set_settings(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>, change: S
         result.map_err(|err| format!("autostart: {err}"))?;
     }
     save_settings(&shared, &updated);
+    if change.language.is_some() {
+        // The tray's words follow the language: the fixed items now, the
+        // summary with the next read, which this asks for.
+        if let Some((open, quit)) = shared.menu_items.lock().unwrap().as_ref() {
+            let words = menu_words(updated.resolved_language());
+            let _ = open.set_text(words.open);
+            let _ = quit.set_text(words.quit);
+        }
+        shared.refresh.notify_one();
+    }
     Ok(settings_view(&shared))
+}
+
+struct MenuWords {
+    starting: &'static str,
+    open: &'static str,
+    quit: &'static str,
+}
+
+fn menu_words(language: &str) -> MenuWords {
+    if language == "en" {
+        MenuWords { starting: "Starting the background service…", open: "Open Bee", quit: "Quit" }
+    } else {
+        MenuWords { starting: "正在启动后台服务…", open: "打开 Bee", quit: "退出" }
+    }
 }
 
 /// Closing the window: keep Bee in the tray, minimise where there is no tray,
@@ -401,6 +437,7 @@ fn main() {
         service,
         refresh: Notify::new(),
         status_item: Mutex::new(None),
+        menu_items: Mutex::new(None),
         settings: Mutex::new(Settings::default()),
         store: Mutex::new(None),
         history: Mutex::new(None),
@@ -454,11 +491,13 @@ fn main() {
             } else {
                 show_main(app.handle());
             }
-            let status = MenuItem::with_id(app, "status", "正在启动后台服务…", false, None::<&str>)?;
-            let open = MenuItem::with_id(app, "open", "打开 Bee", true, None::<&str>)?;
-            let exit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
+            let words = menu_words(shared.settings.lock().unwrap().resolved_language());
+            let status = MenuItem::with_id(app, "status", words.starting, false, None::<&str>)?;
+            let open = MenuItem::with_id(app, "open", words.open, true, None::<&str>)?;
+            let exit = MenuItem::with_id(app, "quit", words.quit, true, None::<&str>)?;
             let menu = Menu::with_items(app, &[&status, &open, &exit])?;
             *shared.status_item.lock().unwrap() = Some(status);
+            *shared.menu_items.lock().unwrap() = Some((open.clone(), exit.clone()));
             TrayIconBuilder::with_id("main")
                 .icon(tray_icon(TrayState::Off))
                 .icon_as_template(true)

@@ -9,10 +9,13 @@ export const PLATFORMS: PlatformId[] = ["claude", "openai"];
 export const STUCK_SYNCING_MS = 10 * 60 * 1000;
 
 /** A problem that hides every account's conclusion behind one banner. */
-export type GlobalIssue = "starting" | "down" | "replaced" | "invalid" | "reconnect";
+export type GlobalIssue = "starting" | "down" | "occupied" | "replaced" | "invalid" | "reconnect";
 
 export function globalIssue(snapshot: Snapshot): GlobalIssue | null {
   const overview = snapshot.overview;
+  // An older Bee that serves no control interface holds the configuration, so
+  // the app's own cannot start: say that, not just that nothing runs.
+  if (snapshot.service === "stopped" && snapshot.occupied) return "occupied";
   if (snapshot.service === "stopped" || (!overview && snapshot.service !== "starting")) return "down";
   if (!overview) return "starting";
   if (overview.binding === "replaced") return "replaced";

@@ -17,7 +17,7 @@ export function Header() {
   const overview = snapshot?.overview ?? null;
   const issue = snapshot ? globalIssue(snapshot) : "down";
   let connection: [string, string];
-  if (issue === "down" || issue === "replaced" || issue === "invalid" || overview?.connection === "disconnected") connection = ["bg-bad", t.header.offline];
+  if (issue === "down" || issue === "occupied" || issue === "replaced" || issue === "invalid" || overview?.connection === "disconnected") connection = ["bg-bad", t.header.offline];
   else if (issue === "reconnect" || issue === "starting") connection = ["bg-warn", t.header.connecting];
   else connection = ["bg-good", t.header.connected];
   const owner = maskEmail(overview?.device?.owner_email);
@@ -119,6 +119,30 @@ export function Banner() {
         {t.banner.downBefore}
         <Term help={t.terms.serviceHelp}>{t.terms.service}</Term>
         {t.banner.downAfter}
+      </BannerRow>,
+    );
+  }
+  if (issue === "occupied") {
+    const pid = snapshot.occupied?.pid ?? null;
+    rows.push(
+      <BannerRow
+        key="occupied"
+        tone="bad"
+        actions={
+          pid && (
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                await shell.copy(`kill ${pid}`);
+                toast(t.banner.stopCopied);
+              }}
+            >
+              {t.banner.copyStop}
+            </Button>
+          )
+        }
+      >
+        {t.banner.occupied(pid)}
       </BannerRow>,
     );
   }

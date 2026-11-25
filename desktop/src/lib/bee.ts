@@ -69,6 +69,8 @@ export type Snapshot = {
   platforms: Record<string, PlatformState>;
   tray: "good" | "attention" | "paused" | "off";
   summary: string;
+  /** Set while no Bee answers but another process holds the device configuration. */
+  occupied?: { pid: number | null } | null;
 };
 
 export type Detection = {

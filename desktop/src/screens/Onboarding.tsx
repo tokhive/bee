@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { BeeGlyph, Callout } from "../components/ui/bits";
 import { toBeeError, type Pairing } from "../lib/bee";
 import { maskEmail } from "../lib/format";
-import { accountsOf } from "../lib/model";
+import { accountsOf, cardStatus } from "../lib/model";
 import { cn, isMac } from "../lib/utils";
 
 export function Flow({ center, children, className }: { center?: boolean; children: React.ReactNode; className?: string }) {
@@ -269,16 +269,20 @@ export function Wait({ mode, hive }: { mode: BindMode; hive?: string }) {
 }
 
 export function Done() {
-  const { t, snapshot } = useApp();
+  const { t, snapshot, syncingSince } = useApp();
   const { finishOnboarding } = useNav();
   const account = accountsOf(snapshot?.overview ?? null)[0];
+  // Say what is true: the account may still be syncing or need the person.
+  const state = account && snapshot ? cardStatus(account, snapshot, syncingSince[account.platform])?.state : undefined;
+  const name = account ? t.platforms[account.platform].name : "";
+  const title = !account ? t.done.bound : state === "sharing" ? t.done.sharing(name) : state === "syncing" || state === undefined ? t.done.syncing(name) : state === "action" || state === "restricted" ? t.done.attention(name) : t.done.added(name);
   const owner = maskEmail(snapshot?.overview?.device?.owner_email);
   return (
     <Flow center>
       <div className="text-[40px] text-good" aria-hidden="true">
         ✓
       </div>
-      <FlowTitle>{account ? t.done.sharing(t.platforms[account.platform].name) : t.done.bound}</FlowTitle>
+      <FlowTitle>{title}</FlowTitle>
       {owner && <p className="m-0 text-muted">{t.done.boundTo(owner)}</p>}
       <p className="m-0 text-muted">{t.done.tray(isMac)}</p>
       <Button size="big" onClick={finishOnboarding} autoFocus>

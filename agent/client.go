@@ -195,6 +195,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 			metrics.reconnect()
 		}
 		attempted = true
+		runStatusFrom(ctx).setConnection(connectionConnecting)
 		connectStart := time.Now()
 		handshake, cancel := context.WithTimeout(ctx, 10*time.Second)
 		slog.Info("connecting to Hive", "module", "connect", "endpoint", endpoint, "delay_backoff", delay.String())
@@ -209,6 +210,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 		if handshakeConnected {
 			delay, conflicts = time.Second, 0
 			notifyConnected(out, endpoint)
+			runStatusFrom(ctx).setConnection(connectionConnected)
 			var live context.Context
 			var end func()
 			var syncFailures <-chan error
@@ -307,6 +309,7 @@ func connect(ctx context.Context, state localState, egress *egressConfig, out io
 				conn.CloseNow()
 			}
 			metrics.disconnect()
+			runStatusFrom(ctx).setConnection(connectionDisconnected)
 			end()
 			// Join synchronization before choosing a reconnect. The transport
 			// may close at the same time a worker queues a terminal failure;

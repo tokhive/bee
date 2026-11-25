@@ -114,6 +114,19 @@ func (s *sourceSet) remove(name string) bool {
 	return true
 }
 
+// sourceInfo names a configured source and its platform.
+type sourceInfo struct{ name, platform string }
+
+func (s *sourceSet) list() []sourceInfo {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	list := make([]sourceInfo, 0, len(s.entries))
+	for _, entry := range s.entries {
+		list = append(list, sourceInfo{entry.name, entry.platform})
+	}
+	return list
+}
+
 func (s *sourceSet) names() []string {
 	s.mu.Lock()
 	defer s.mu.Unlock()

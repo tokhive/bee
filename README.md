@@ -215,6 +215,19 @@ Bee reads the key file on every synchronization, seals the key for the TEE and r
 When upgrading, rename the old `TOKHIVE_` logging and timing variables to
 `HIVE_`; old names are no longer read. Bee-specific `BEE_` variables are unchanged.
 
+### Local control interface
+
+On macOS and Linux, `bee run` serves a local control interface for the desktop app at `control/bee.sock` next to the device configuration, for example `~/Library/Application Support/tokhive/control/bee.sock`. It is HTTP + JSON on a Unix socket in a directory only the user running Bee can enter, and Bee refuses connections from any other user. It never returns a credential.
+
+| Request | Purpose |
+| --- | --- |
+| `GET /v1/overview` | Version, Hive, paired device, connection state (`connecting`, `connected` or `disconnected`) and configured account sources. |
+| `GET /v1/platforms/{openai,claude}` | Hive's supply state and the account's plan and quota windows. |
+| `PUT /v1/platforms/{openai,claude}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
+| `GET /v1/events` | Server-sent events: `overview` first, then `connection` and `supply` changes. |
+
+Errors are `{"error": {"code": "...", "message": "..."}}`. If the socket cannot be opened, for example because its path is longer than 103 bytes, Bee keeps running without it and logs why.
+
 ## Running as a service
 
 `bee start` and `bee run` run in the foreground. The Linux installer enables `/etc/systemd/system/tokhive-bee.service`, which runs `bee run` as the installing user. This is a **system-level** service: no `--user` commands or lingering are needed. It requires systemd 243 or newer for the configuration checks.

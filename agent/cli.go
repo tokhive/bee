@@ -196,6 +196,9 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 			code, summary, fix, _ := Coded(fail("BEE-SETUP-NEEDED", ""))
 			notify(console, slog.LevelWarn, "connect", summary, "code", code, "fix", fix)
 		}
+		status := newRunStatus()
+		ctx = withRunStatus(ctx, status)
+		defer serveControl(*configPath, state, egress, status, console)()
 		return runWithTelemetry(ctx, func(live context.Context) error { return connect(live, state, egress, console) })
 	}
 	return status(ctx, client, *configPath, state, out)

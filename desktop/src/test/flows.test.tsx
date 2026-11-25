@@ -106,6 +106,16 @@ describe("first run and linking", () => {
     expect(await screen.findByRole("heading", { name: "绑定 TokHive 账号" })).toBeInTheDocument();
   });
 
+  it("a Bee that knows no Hive yet shows a hint and links without an address", async () => {
+    const shell = show(snapshot({ overview: overview({ binding: "unpaired", connection: "disconnected", device: null, hive: "", accounts: undefined }), platforms: {} }));
+    shell.answer(() => pending);
+    await userEvent.click(await screen.findByRole("button", { name: "开始" }));
+    await userEvent.click(screen.getByText("高级：更改服务地址"));
+    expect(screen.getByRole("textbox", { name: "服务地址" })).toHaveAttribute("placeholder", "留空使用 TokHive 官方服务");
+    await userEvent.click(screen.getByRole("button", { name: "登录 TokHive 并绑定这台电脑" }));
+    await waitFor(() => expect(shell.calls).toContainEqual({ method: "POST", path: "/v1/pairing", body: {} }));
+  });
+
   it("another service address is sent with the pairing", async () => {
     const shell = show(unpaired());
     shell.answer(() => pending);
@@ -173,7 +183,7 @@ describe("adding an account", () => {
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     await userEvent.click(await screen.findByRole("button", { name: "下一步" }));
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Claude Code 的登录已经过期。 打开一次 Claude Code，让它自动续期。");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Claude Code 的登录已经过期。打开一次 Claude Code，让它自动续期。");
     expect(screen.getByRole("heading", { name: "确认添加" })).toBeInTheDocument();
   });
 
@@ -192,7 +202,7 @@ describe("adding an account", () => {
     expect(screen.getByText("config.toml")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
     expect(shell.calls).toContainEqual({ method: "POST", path: "/v1/accounts", body: { platform: "openai", source: "import", file: "/home/a/config.toml" } });
-    expect(await screen.findByRole("alert")).toHaveTextContent("config.toml · 这个文件不是这个平台可用的登录。");
+    expect(await screen.findByRole("alert")).toHaveTextContent("config.toml · 这个文件不是这个平台可用的登录。Codex 用的是 auth.json，Claude Code 用的是 .credentials.json。请选择这个平台对应的文件。");
     expect(screen.getByRole("heading", { name: "导入 ChatGPT 凭证文件" })).toBeInTheDocument();
 
     shell.answer(() => codex);

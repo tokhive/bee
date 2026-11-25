@@ -309,6 +309,7 @@ relay/       multiplexed tunnel sessions over WebSocket
 logx/        structured logging
 telemetry/   metrics and diagnostic timing logs
 docs/        error code reference
+desktop/     desktop app: Tauri shell, React window and a mock Bee (see desktop/README.md)
 ```
 
 ## License

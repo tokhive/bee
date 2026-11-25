@@ -106,6 +106,16 @@ describe("first run and linking", () => {
     expect(await screen.findByRole("heading", { name: "绑定 TokHive 账号" })).toBeInTheDocument();
   });
 
+  it("a Bee that knows no Hive yet shows a hint and links without an address", async () => {
+    const shell = show(snapshot({ overview: overview({ binding: "unpaired", connection: "disconnected", device: null, hive: "", accounts: undefined }), platforms: {} }));
+    shell.answer(() => pending);
+    await userEvent.click(await screen.findByRole("button", { name: "开始" }));
+    await userEvent.click(screen.getByText("高级：更改服务地址"));
+    expect(screen.getByRole("textbox", { name: "服务地址" })).toHaveAttribute("placeholder", "留空使用 TokHive 官方服务");
+    await userEvent.click(screen.getByRole("button", { name: "登录 TokHive 并绑定这台电脑" }));
+    await waitFor(() => expect(shell.calls).toContainEqual({ method: "POST", path: "/v1/pairing", body: {} }));
+  });
+
   it("another service address is sent with the pairing", async () => {
     const shell = show(unpaired());
     shell.answer(() => pending);

@@ -251,6 +251,10 @@ func (m *mock) overview() overview {
 	if m.w.mode == "desktop" {
 		o.Pairing, o.Accounts = m.pairing, append([]account{}, m.w.accounts...)
 	}
+	// Like Bee, which knows no Hive address until a device is linked.
+	if m.w.binding == "unpaired" {
+		o.Hive = ""
+	}
 	if m.w.binding != "unpaired" {
 		o.Device = &device{ID: "dev_mock", Name: "MacBook", OwnerEmail: "a.chen@gmail.com"}
 	}

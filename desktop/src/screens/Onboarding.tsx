@@ -97,6 +97,7 @@ export function Bind({ mode }: { mode: BindMode }) {
           <input
             aria-label={t.bind.hive}
             value={hive}
+            placeholder={t.bind.hiveDefault}
             onChange={(e) => setHive(e.target.value)}
             spellCheck={false}
             className="w-[300px] rounded-md border border-line bg-page px-2 py-[5px] text-[13px] text-fg"

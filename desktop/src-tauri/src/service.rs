@@ -42,6 +42,8 @@ pub struct Service {
     stopped: Notify,
     state: Mutex<ServiceState>,
     changed: Notify,
+    /// Cuts a restart's backoff short when the person asks to try again.
+    retry: Notify,
 }
 
 /// How long a stopping Bee may take before it is killed.
@@ -60,6 +62,7 @@ impl Service {
             stopped: Notify::new(),
             state: Mutex::new(ServiceState::Starting),
             changed: Notify::new(),
+            retry: Notify::new(),
         }
     }
 
@@ -82,6 +85,20 @@ impl Service {
         }
     }
 
+    /// Tries again now instead of after the backoff.
+    pub fn retry(&self) {
+        self.retry.notify_one();
+    }
+
+    /// Waits for the backoff to pass, or for a retry; a retry starts the
+    /// backoff over.
+    async fn back_off(&self, delay: &mut Duration) {
+        tokio::select! {
+            _ = tokio::time::sleep(*delay) => *delay = (*delay * 2).min(Duration::from_secs(30)),
+            _ = self.retry.notified() => *delay = Duration::from_secs(1),
+        }
+    }
+
     async fn answers(&self) -> bool {
         self.control.get("/v1/overview").await.is_ok()
     }
@@ -100,7 +117,8 @@ impl Service {
             }
             if self.attach_only {
                 self.set_state(ServiceState::Stopped);
-                tokio::time::sleep(Duration::from_secs(1)).await;
+                let mut wait = Duration::from_secs(1);
+                self.back_off(&mut wait).await;
                 continue;
             }
             self.set_state(ServiceState::Starting);
@@ -109,8 +127,7 @@ impl Service {
                 Err(err) => {
                     eprintln!("[bee-desktop] cannot start bee: {err}");
                     self.set_state(ServiceState::Stopped);
-                    tokio::time::sleep(delay).await;
-                    delay = (delay * 2).min(Duration::from_secs(30));
+                    self.back_off(&mut delay).await;
                     continue;
                 }
             };
@@ -129,8 +146,7 @@ impl Service {
             if started.elapsed() > Duration::from_secs(60) {
                 delay = Duration::from_secs(1);
             }
-            tokio::time::sleep(delay).await;
-            delay = (delay * 2).min(Duration::from_secs(30));
+            self.back_off(&mut delay).await;
         }
         self.stopped.notify_waiters();
     }

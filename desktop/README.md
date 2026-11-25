@@ -7,7 +7,7 @@ interface*).
 
 ```text
 desktop/
-├── src/            React + TypeScript window
+├── src/            React + TypeScript window (Tailwind, shadcn/ui-style Radix components)
 ├── src-tauri/      Rust shell: background service, tray, single instance
 ├── mock-bee/       a stand-in for bee run --desktop with canned scenarios
 └── scripts/        build helpers
@@ -35,7 +35,9 @@ Closing the window keeps the app in the tray; the first time, a notification
 says Bee is still sharing. On a Linux desktop that shows no tray icons (GNOME
 without an extension) closing minimises instead, and with *keep in tray* turned
 off closing quits. Quitting from the tray, the Dock or the app menu stops the
-app's own Bee. Opening the app again shows the running one.
+app's own Bee; the tray's Quit first asks in the window, since that stops
+sharing, unless the Bee was started elsewhere. Opening the app again shows
+the running one.
 
 ## Settings, start at login and notifications
 
@@ -69,10 +71,32 @@ cd desktop && npm install && npm run bee:build
 BEE_DESKTOP_CONFIG=/tmp/beedev/bee.json BEE_DESKTOP_ATTACH_ONLY=1 npm run tauri dev
 ```
 
-Switch the running mock to another scenario (`-list` prints them):
+Switch the running mock to another scenario (`-list` prints them, `-v` logs
+every request):
 
 ```sh
 go run ./desktop/mock-bee -config /tmp/beedev/bee.json -switch paused
+```
+
+The scenarios cover what the window shows: `unpaired` (first run; the code is
+confirmed five seconds after pairing starts), `pairexpired` and `pairoffline`
+(pairing that expires or cannot reach TokHive), `sharing`, `empty`, `syncing`,
+`paused`, `quota`, `auth` and `authimport` (a sign-in to renew, here or
+imported), `switched` (the official client changed accounts), `inuse`,
+`restricted`, `opfail` (pause, resume, remove and switch fail), `reconnect`,
+`replaced`, `invalid` and `cli` (a Bee run from the command line). The mock
+answers `/v1/explanations` with Bee's own catalog. An import is judged by the
+file's name: `auth.json` or `.credentials.json` imports, a name containing
+`expired` or `scope` fails as such, and any other name is not a credential
+file. Stop the mock to see the background service stopped.
+
+The window also runs in an ordinary browser against the mock, which is quicker
+for working on pages: the dev server forwards `/__bee/v1/...` to the control
+socket of `BEE_DEV_CONFIG`, and a stand-in for the shell keeps settings in
+local storage (file choice asks for a path).
+
+```sh
+cd desktop && BEE_DEV_CONFIG=/tmp/beedev/bee.json npm run dev   # http://localhost:1420
 ```
 
 | Variable | Effect |
@@ -89,5 +113,9 @@ the mock.
 ## Tests
 
 ```sh
-cd desktop/src-tauri && cargo test
+cd desktop && npm test                 # the window: Vitest + Testing Library
+cd desktop/src-tauri && cargo test     # the shell
 ```
+
+The window's tests run against a fake shell; `src/test/explanations.json` is
+Bee's catalog as `/v1/explanations` returns it, to refresh when it changes.

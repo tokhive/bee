@@ -22,6 +22,7 @@ use tauri::menu::{Menu, MenuItem};
 use tauri::tray::TrayIconBuilder;
 use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_notification::NotificationExt;
 use tokio::sync::Notify;
 
@@ -210,6 +211,18 @@ fn show_main(app: &AppHandle) {
     }
 }
 
+/// The tray's Quit. Quitting stops the app's own Bee and with it sharing, so
+/// the window asks first; a Bee the app did not start keeps running, so the
+/// app just quits.
+fn request_quit(app: &AppHandle) {
+    if app.state::<Arc<Shared>>().service.owns_bee() {
+        show_main(app);
+        let _ = app.emit("bee://quit-requested", ());
+    } else {
+        quit(app);
+    }
+}
+
 /// Quits the app, stopping its own Bee first. A Bee the app did not start
 /// keeps running.
 fn quit(app: &AppHandle) {
@@ -241,6 +254,55 @@ async fn bee_request(shared: tauri::State<'_, Arc<Shared>>, method: String, path
 #[tauri::command]
 fn quit_app(app: AppHandle) {
     quit(&app);
+}
+
+/// Starts the background service again now rather than after its backoff.
+#[tauri::command]
+fn retry_service(shared: tauri::State<'_, Arc<Shared>>) {
+    shared.service.retry();
+    shared.refresh.notify_one();
+}
+
+#[derive(serde::Serialize)]
+struct AppInfo {
+    version: String,
+    /// The device configuration, shown under technical information.
+    config: String,
+}
+
+#[tauri::command]
+fn app_info(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>) -> AppInfo {
+    AppInfo { version: app.package_info().version.to_string(), config: shared.service.config.display().to_string() }
+}
+
+/// Asks where to save Bee's diagnostic report and saves it there; None when
+/// the person cancels. When Bee cannot be reached, the report says so and
+/// carries what the app knows, so there is still something to send.
+#[tauri::command]
+async fn export_diagnostics(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>) -> Result<Option<String>, control::ControlError> {
+    let (tx, rx) = tokio::sync::oneshot::channel();
+    app.dialog()
+        .file()
+        .set_file_name("bee-diagnostics.json")
+        .add_filter("JSON", &["json"])
+        .save_file(move |path| {
+            let _ = tx.send(path);
+        });
+    let Some(path) = rx.await.ok().flatten().and_then(|p| p.into_path().ok()) else {
+        return Ok(None);
+    };
+    let report = match shared.service.control.get("/v1/diagnostics").await {
+        Ok(report) => report,
+        Err(err) => serde_json::json!({
+            "app_version": app.package_info().version.to_string(),
+            "service": shared.service.state(),
+            "config": shared.service.config.display().to_string(),
+            "error": { "code": err.code, "message": err.message },
+        }),
+    };
+    let raw = serde_json::to_vec_pretty(&report).unwrap_or_default();
+    std::fs::write(&path, raw).map_err(|err| control::ControlError { status: 500, code: "save_failed".into(), message: err.to_string() })?;
+    Ok(Some(path.display().to_string()))
 }
 
 #[derive(serde::Serialize)]
@@ -339,8 +401,10 @@ fn main() {
         .plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| show_main(app)))
         .plugin(tauri_plugin_autostart::init(MacosLauncher::LaunchAgent, Some(vec![BACKGROUND_ARG])))
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_opener::init())
         .manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings])
+        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, app_info, export_diagnostics])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -388,7 +452,7 @@ fn main() {
                 .menu(&menu)
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "open" => show_main(app),
-                    "quit" => quit(app),
+                    "quit" => request_quit(app),
                     _ => {}
                 })
                 .build(app)?;

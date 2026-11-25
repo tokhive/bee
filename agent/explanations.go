@@ -289,6 +289,12 @@ func explainCode(code string) explanation {
 		Fix:   say("Try again. If it keeps happening, export a diagnostic report and contact TokHive support.", "请重试；如果一直出现，请导出诊断报告并联系 TokHive 客服。")}
 }
 
+// ExplanationCatalog is the answer to GET /v1/explanations, for stand-ins of
+// the control interface such as the desktop app's mock Bee.
+func ExplanationCatalog() any {
+	return map[string]any{"explanations": allExplanations()}
+}
+
 // allExplanations is the whole catalog in code order.
 func allExplanations() []explanation {
 	list := make([]explanation, 0, len(explanations))

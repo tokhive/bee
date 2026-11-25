@@ -168,6 +168,17 @@ describe("adding an account", () => {
     expect(screen.getByRole("button", { name: "下一步" })).toBeEnabled();
   });
 
+  it("an expired sign-in is not offered, and says how to renew it", async () => {
+    const shell = show(onlyCodex());
+    shell.answer(() => ({ platform: "claude", available: false, problem: { code: "BEE-CLAUDE-EXPIRED", message: "" } }));
+    await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
+    await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
+    expect(await screen.findByText(/Claude Code 的登录已经过期。打开一次 Claude Code，让它自动续期。/)).toBeInTheDocument();
+    expect(screen.queryByText(/检测到 Claude Code 已登录/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "下一步" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "重新检测" })).toBeInTheDocument();
+  });
+
   it("a sign-in that cannot be shared says why", async () => {
     const shell = show(onlyCodex());
     shell.answer(() => ({ platform: "claude", available: false, problem: { code: "login_scope", message: "" } }));

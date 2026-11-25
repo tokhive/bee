@@ -69,6 +69,9 @@ type desktopRunner struct {
 	// claudeProfile asks Anthropic which account a Claude sign-in is;
 	// tests replace it.
 	claudeProfile func(context.Context, claudeCredential) (claudeIdentity, error)
+	// localClaude reads the official Claude Code sign-in on this machine;
+	// tests replace it so they never touch a real keychain.
+	localClaude func(context.Context) (*claudeSource, claudeCredential, error)
 	// drainTimeout bounds how long removing an account waits for its
 	// streams; confirmWindow and confirmPoll bound confirming a new account.
 	drainTimeout  time.Duration
@@ -91,6 +94,7 @@ func newDesktopRunner(configPath string, egress *egressConfig, status *runStatus
 		claudeProfile: func(ctx context.Context, credential claudeCredential) (claudeIdentity, error) {
 			return queryClaudeProfile(ctx, credential, nil)
 		},
+		localClaude:  readLocalClaude,
 		drainTimeout: time.Minute, confirmWindow: 2 * time.Minute, confirmPoll: 3 * time.Second}
 }
 
@@ -131,6 +135,7 @@ func runDesktop(ctx context.Context, configPath, egressPath string, out io.Write
 	}
 	ctx = withRunStatus(ctx, status)
 	defer serveControl(configPath, egress, status, runner, console)()
+	go runner.completeIdentitiesEvery(ctx, 30*time.Second)
 	return runWithTelemetry(ctx, runner.run)
 }
 

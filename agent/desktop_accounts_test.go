@@ -414,3 +414,93 @@ func TestControlAccountsNeedDesktopMode(t *testing.T) {
 		t.Fatalf("%d %+v", code, failure)
 	}
 }
+
+// signedInClaude makes the runner's local Claude sign-in this credential.
+func signedInClaude(r *desktopRunner, credential claudeCredential) {
+	r.localClaude = func(context.Context) (*claudeSource, claudeCredential, error) {
+		return &claudeSource{Store: claudeStoreFile, Capabilities: true}, credential, nil
+	}
+}
+
+func liveClaudeCredential(expires time.Time) claudeCredential {
+	return claudeCredential{secret: tee.Secret{Token: "synthetic-claude-access"}, expiresAt: expires, plan: "pro", hasInferenceScope: true, hasProfileScope: true}
+}
+
+func TestDetectRefusesAnExpiredClaudeSignIn(t *testing.T) {
+	r := newAccountsRunner(t, "http://127.0.0.1:1")
+	signedInClaude(r, liveClaudeCredential(time.Now().Add(-time.Minute)))
+	found := r.detect(context.Background(), "claude")
+	if found.Available || found.Problem == nil || found.Problem.Code != "BEE-CLAUDE-EXPIRED" {
+		t.Fatalf("detect = %+v", found)
+	}
+	// Adding from it is refused for the same reason, and nothing is saved.
+	_, err := r.addAccount(context.Background(), addAccountRequest{Platform: "claude", Source: "local"})
+	if refusalCode(err) != "BEE-CLAUDE-EXPIRED" || len(r.accounts()) != 0 {
+		t.Fatalf("add = %v, accounts = %v", err, r.accounts())
+	}
+}
+
+func TestDetectOffersALiveClaudeSignInEvenWhenAnthropicDoesNotAnswer(t *testing.T) {
+	r := newAccountsRunner(t, "http://127.0.0.1:1")
+	signedInClaude(r, liveClaudeCredential(time.Now().Add(time.Hour)))
+	r.claudeProfile = func(context.Context, claudeCredential) (claudeIdentity, error) {
+		return claudeIdentity{}, errors.New("anthropic unreachable")
+	}
+	found := r.detect(context.Background(), "claude")
+	if !found.Available || found.Plan != "pro" || found.Email != "" || found.Fingerprint != "" {
+		t.Fatalf("detect = %+v", found)
+	}
+}
+
+func TestIdentityIsCompletedOnceTheSignInSaysWhoItIs(t *testing.T) {
+	r := newAccountsRunner(t, "http://127.0.0.1:1")
+	signedInClaude(r, liveClaudeCredential(time.Now().Add(time.Hour)))
+	identity := claudeIdentity{account: "11111111-1111-1111-1111-111111111111", organization: "22222222-2222-2222-2222-222222222222", email: "claude@example.com"}
+	profile := func(context.Context, claudeCredential) (claudeIdentity, error) { return identity, nil }
+	// The account was added while Anthropic could not say who it was.
+	r.claudeProfile = func(context.Context, claudeCredential) (claudeIdentity, error) {
+		return claudeIdentity{}, errors.New("anthropic unreachable")
+	}
+	record, err := r.addAccount(context.Background(), addAccountRequest{Platform: "claude", Source: "local"})
+	if err != nil || record.Fingerprint != "" || !r.needsIdentity() {
+		t.Fatalf("record = %+v, err = %v", record, err)
+	}
+	events, unsubscribe := r.status.subscribe()
+	defer unsubscribe()
+
+	// Still unanswered: nothing changes.
+	r.completeIdentities(context.Background())
+	if got := r.accounts()[0]; got.Fingerprint != "" {
+		t.Fatalf("completed without an answer: %+v", got)
+	}
+
+	r.claudeProfile = profile
+	r.completeIdentities(context.Background())
+	got := r.accounts()[0]
+	if got.ID != record.ID || got.Email != "claude@example.com" || got.Plan != "pro" || got.Fingerprint != identity.fingerprint() || r.needsIdentity() {
+		t.Fatalf("record = %+v", got)
+	}
+	select {
+	case event := <-events:
+		if event.Name != "accounts" {
+			t.Fatalf("event = %+v", event)
+		}
+	case <-time.After(time.Second):
+		t.Fatal("no accounts event")
+	}
+}
+
+func TestIdentityOfAnImportedAccountIsLeftAlone(t *testing.T) {
+	r := newAccountsRunner(t, "http://127.0.0.1:1")
+	signedInClaude(r, liveClaudeCredential(time.Now().Add(time.Hour)))
+	if err := writeAccounts(r.configPath, []accountRecord{{ID: "acc_import", Platform: "claude", Source: accountSourceImport, AddedAt: time.Now().UTC()}}); err != nil {
+		t.Fatal(err)
+	}
+	if r.needsIdentity() {
+		t.Fatal("an imported account is not completed from this machine's sign-in")
+	}
+	r.completeIdentities(context.Background())
+	if got := r.accounts()[0]; got.Fingerprint != "" || got.Email != "" {
+		t.Fatalf("record = %+v", got)
+	}
+}

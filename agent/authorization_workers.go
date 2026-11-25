@@ -2,11 +2,8 @@ package bee
 
 import (
 	"context"
-	"errors"
 	"io"
-	"log/slog"
 	"sync"
-	"time"
 )
 
 type synchronizedWriter struct {
@@ -26,57 +23,5 @@ func (cfg *egressConfig) startSynchronization(ctx context.Context, state localSt
 	if cfg.synchronizeOverride != nil {
 		return cfg.synchronizeOverride(ctx, state, lease, out)
 	}
-	failures := make(chan error, 1)
-	var workers sync.WaitGroup
-	start := func(synchronize func(context.Context, localState, string, io.Writer, bool) error, report func(io.Writer, string, string), name, platform string) {
-		workers.Go(func() {
-			slog.Info("authorization synchronization started", "module", "sync", "platform", name)
-			first := true
-			for ctx.Err() == nil {
-				if err := synchronize(ctx, state, lease, out, first); err != nil && ctx.Err() == nil {
-					var failure *apiFailure
-					if errors.Is(err, errInboxIdentity) || errors.As(err, &failure) && (failure.Status == 401 || failure.Status == 403) {
-						slog.Error("authorization synchronization stopped", "module", "sync", "platform", name, "error", err.Error())
-						select {
-						case failures <- err:
-						default:
-						}
-						return
-					}
-					// The cause belongs in the line. This branch is the one
-					// that means "something unexpected", and without it a
-					// provider is told only that synchronization did not
-					// confirm — the same sentence for an unreachable Hive, a
-					// rejected lease and a malformed response.
-					report(out, "sync_unconfirmed", name+" authorization synchronization unconfirmed; retrying; Hive will stop dispatching when the authorization synchronization deadline is reached: "+err.Error())
-				}
-				// A reseller key is not a platform account, so Hive has no
-				// platform readiness to report for it.
-				if first && platform != "" {
-					workers.Go(func() { reportReadiness(ctx, state, platform, out) })
-				}
-				first = false
-				if pause(ctx, 2*time.Second) != nil {
-					return
-				}
-			}
-		})
-	}
-	if cfg.Codex != nil {
-		start(cfg.synchronize, cfg.accountMessage, "OpenAI", "openai")
-	}
-	if cfg.Claude != nil {
-		cfg.Claude.capabilityWanted = &cfg.claudeCapabilityWanted
-		start(cfg.Claude.synchronize, cfg.Claude.message, "Claude", "claude")
-	}
-	if cfg.OpenAIAPI != nil {
-		start(cfg.synchronizeOpenAIAPI, cfg.OpenAIAPI.message, "openai_api", "")
-	}
-	if cfg.ClaudeAPI != nil {
-		start(cfg.synchronizeClaudeAPI, cfg.ClaudeAPI.message, "claude_api", "")
-	}
-	if cfg.Reseller != nil {
-		start(cfg.synchronizeReseller, cfg.Reseller.message, cfg.Reseller.Reseller, "")
-	}
-	return failures, workers.Wait
+	return cfg.sources().begin(ctx, state, lease, out)
 }

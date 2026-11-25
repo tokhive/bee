@@ -17,6 +17,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -64,6 +65,9 @@ type egressConfig struct {
 	claudeCapabilityWanted atomic.Bool
 	pacer                  syncPacer
 	failures               *egressFailures
+	// sourceSet holds the account sources, which can change while connected.
+	sourcesOnce sync.Once
+	sourceSet   *sourceSet
 }
 
 // useStateDirectory points the sources at a Bee-owned directory for the small
@@ -446,22 +450,6 @@ func (cfg *egressConfig) capabilityInterval() time.Duration {
 	return beewire.CapabilityUsageInterval
 }
 
-// control acts on a control stream Hive opened. A platform this Bee does not
-// observe is ignored.
-func (cfg *egressConfig) control(control beewire.Control) {
-	if control.Control != beewire.ControlCapabilities {
-		egressDebug("control stream ignored: unknown control %q", control.Control)
-		return
-	}
-	slog.Info("capability report requested by Hive", "module", "sync", "platform", control.Platform)
-	switch {
-	case control.Platform == "openai" && cfg.Capabilities != nil:
-		cfg.capabilityWanted.Store(true)
-	case control.Platform == "claude" && cfg.Claude != nil:
-		cfg.claudeCapabilityWanted.Store(true)
-	}
-}
-
 // capabilityRequestDue reports whether Hive asked for a report and the last
 // attempt is far enough back to make another; until then the request waits.
 func capabilityRequestDue(wanted *atomic.Bool, lastAttempt time.Time) bool {
@@ -604,14 +592,7 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 			return
 		}
 		egressDebug("stream opened for %q", open.Host)
-		allowed := false
-		for _, target := range cfg.Targets {
-			if open.Host == target {
-				allowed = true
-				break
-			}
-		}
-		if !allowed {
+		if !cfg.allowed(open.Host) {
 			egressDebug("stream rejected: %q is not in the target allowlist %v", open.Host, cfg.Targets)
 			cfg.failures.report(out, fail("BEE-EGRESS-NOT-ALLOWED", strconv.Quote(open.Host)), open.Host)
 			return

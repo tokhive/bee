@@ -46,7 +46,27 @@ const (
 type runStatus struct {
 	mu          sync.Mutex
 	connection  string
+	state       localState
+	binding     string
+	problem     *controlProblem
 	subscribers map[chan controlEvent]struct{}
+}
+
+// Binding states a Bee reports.
+const (
+	bindingUnpaired = "unpaired"
+	bindingPaired   = "paired"
+	// bindingReplaced: Hive revoked this device because another Bee replaced it.
+	bindingReplaced = "replaced"
+	// bindingInvalid: Hive no longer accepts this device's credential.
+	bindingInvalid = "invalid"
+)
+
+// controlProblem is why a Bee that should be connected is not, as a stable
+// code and the error's own words.
+type controlProblem struct {
+	Code    string `json:"code"`
+	Message string `json:"message"`
 }
 
 type controlEvent struct {
@@ -68,7 +88,56 @@ func runStatusFrom(ctx context.Context) *runStatus {
 }
 
 func newRunStatus() *runStatus {
-	return &runStatus{connection: connectionConnecting, subscribers: map[chan controlEvent]struct{}{}}
+	return &runStatus{connection: connectionConnecting, binding: bindingUnpaired, subscribers: map[chan controlEvent]struct{}{}}
+}
+
+// setDevice records the device configuration the run uses and how Hive
+// regards it.
+func (s *runStatus) setDevice(state localState, binding string) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	s.state, s.binding = state, binding
+	s.mu.Unlock()
+	s.publish(controlEvent{Name: "binding", Data: map[string]string{"binding": binding}})
+}
+
+func (s *runStatus) device() (localState, string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.state, s.binding
+}
+
+// setProblem records why the Bee is not connected; nil clears it.
+func (s *runStatus) setProblem(problem *controlProblem) {
+	if s == nil {
+		return
+	}
+	s.mu.Lock()
+	unchanged := s.problem == nil && problem == nil || s.problem != nil && problem != nil && *s.problem == *problem
+	s.problem = problem
+	s.mu.Unlock()
+	if !unchanged {
+		s.publish(controlEvent{Name: "problem", Data: problem})
+	}
+}
+
+func (s *runStatus) currentProblem() *controlProblem {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.problem
+}
+
+func problemOf(err error) *controlProblem {
+	if code, summary, _, ok := Coded(err); ok {
+		return &controlProblem{Code: code, Message: summary}
+	}
+	var failure *apiFailure
+	if errors.As(err, &failure) && failure.Code != "" {
+		return &controlProblem{Code: failure.Code, Message: err.Error()}
+	}
+	return &controlProblem{Code: "error", Message: err.Error()}
 }
 
 func (s *runStatus) setConnection(connection string) {
@@ -120,7 +189,9 @@ func (s *runStatus) subscribe() (<-chan controlEvent, func()) {
 
 // controlServer serves one running Bee.
 type controlServer struct {
-	state  localState
+	// pairer pairs the device through this interface; nil for a Bee started
+	// from the command line, which pairs with bee login.
+	pairer pairer
 	egress *egressConfig
 	status *runStatus
 	client *http.Client
@@ -129,11 +200,17 @@ type controlServer struct {
 }
 
 type controlOverview struct {
-	Version    string          `json:"version"`
-	PID        int             `json:"pid"`
+	Version string `json:"version"`
+	PID     int    `json:"pid"`
+	// Mode is "desktop" for a Bee the desktop app runs and "cli" otherwise;
+	// only a desktop Bee pairs through this interface.
+	Mode       string          `json:"mode"`
 	Hive       string          `json:"hive"`
+	Binding    string          `json:"binding"`
 	Device     *controlDevice  `json:"device"`
+	Pairing    *pairingStatus  `json:"pairing,omitempty"`
 	Connection string          `json:"connection"`
+	Problem    *controlProblem `json:"problem,omitempty"`
 	Sources    []controlSource `json:"sources"`
 }
 
@@ -164,14 +241,18 @@ func (c *controlServer) handler() http.Handler {
 		if !ok {
 			return
 		}
+		state, ok := c.paired(w)
+		if !ok {
+			return
+		}
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
 		var result controlPlatform
-		if err := callState(ctx, c.client, c.state, "/api/bee/platforms/"+platform, "GET", nil, &result.Supply); err != nil {
+		if err := callState(ctx, c.client, state, "/api/bee/platforms/"+platform, "GET", nil, &result.Supply); err != nil {
 			writeControlError(w, http.StatusBadGateway, "hive_unavailable", err.Error())
 			return
 		}
-		if err := callState(ctx, c.client, c.state, "/api/bee/platforms/"+platform+"/capabilities", "GET", nil, &result.Capabilities); err != nil {
+		if err := callState(ctx, c.client, state, "/api/bee/platforms/"+platform+"/capabilities", "GET", nil, &result.Capabilities); err != nil {
 			writeControlError(w, http.StatusBadGateway, "hive_unavailable", err.Error())
 			return
 		}
@@ -191,9 +272,13 @@ func (c *controlServer) handler() http.Handler {
 			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"paused": true} or {"paused": false}`)
 			return
 		}
+		state, ok := c.paired(w)
+		if !ok {
+			return
+		}
 		ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 		defer cancel()
-		supply, err := updatePlatformSupply(ctx, c.client, c.state, platform, *input.Paused)
+		supply, err := updatePlatformSupply(ctx, c.client, state, platform, *input.Paused)
 		if err != nil {
 			writeControlError(w, http.StatusBadGateway, "supply_unconfirmed", err.Error())
 			return
@@ -201,14 +286,78 @@ func (c *controlServer) handler() http.Handler {
 		c.status.publish(controlEvent{Name: "supply", Data: supply})
 		writeControlJSON(w, http.StatusOK, supply)
 	})
+	mux.HandleFunc("POST /v1/pairing", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canPair(w) {
+			return
+		}
+		var input struct {
+			Hive string `json:"hive"`
+			Name string `json:"name"`
+		}
+		decoder := json.NewDecoder(io.LimitReader(r.Body, 4096))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil && !errors.Is(err, io.EOF) {
+			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {} or {"hive": "...", "name": "..."}`)
+			return
+		}
+		pairing, err := c.pairer.startPairing(r.Context(), input.Hive, input.Name)
+		if err != nil {
+			problem := problemOf(err)
+			status := http.StatusBadGateway
+			if errors.Is(err, errInvalidPairingInput) {
+				status = http.StatusBadRequest
+			}
+			writeControlError(w, status, problem.Code, problem.Message)
+			return
+		}
+		writeControlJSON(w, http.StatusOK, pairing)
+	})
+	mux.HandleFunc("GET /v1/pairing", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canPair(w) {
+			return
+		}
+		writeControlJSON(w, http.StatusOK, c.pairer.pairingStatus())
+	})
+	mux.HandleFunc("DELETE /v1/pairing", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canPair(w) {
+			return
+		}
+		c.pairer.cancelPairing()
+		writeControlJSON(w, http.StatusOK, c.pairer.pairingStatus())
+	})
 	mux.HandleFunc("GET /v1/events", c.events)
 	return mux
 }
 
+// paired returns the device configuration for a request that needs Hive, or
+// answers that this Bee is not paired.
+func (c *controlServer) paired(w http.ResponseWriter) (localState, bool) {
+	state, binding := c.status.device()
+	if binding != bindingPaired || state.Identity == nil {
+		writeControlError(w, http.StatusConflict, "not_paired", "this Bee is not paired with Hive")
+		return state, false
+	}
+	return state, true
+}
+
+func (c *controlServer) canPair(w http.ResponseWriter) bool {
+	if c.pairer == nil {
+		writeControlError(w, http.StatusConflict, "pairing_unavailable", "this Bee was started from the command line; pair it with bee login")
+		return false
+	}
+	return true
+}
+
 func (c *controlServer) overview() controlOverview {
-	overview := controlOverview{Version: Version, PID: os.Getpid(), Hive: c.state.Hive, Connection: c.status.currentConnection(), Sources: []controlSource{}}
-	if c.state.Identity != nil {
-		overview.Device = &controlDevice{ID: c.state.Identity.ID, Name: c.state.Identity.Name, OwnerEmail: c.state.Identity.OwnerEmail}
+	state, binding := c.status.device()
+	overview := controlOverview{Version: Version, PID: os.Getpid(), Mode: controlMode(c.pairer), Hive: state.Hive, Binding: binding, Connection: c.status.currentConnection(), Problem: c.status.currentProblem(), Sources: []controlSource{}}
+	if state.Identity != nil {
+		overview.Device = &controlDevice{ID: state.Identity.ID, Name: state.Identity.Name, OwnerEmail: state.Identity.OwnerEmail}
+	}
+	if c.pairer != nil {
+		if pairing := c.pairer.pairingStatus(); pairing.Status != pairingNone {
+			overview.Pairing = &pairing
+		}
 	}
 	if c.egress != nil {
 		for _, source := range c.egress.sources().list() {
@@ -275,14 +424,14 @@ func writeControlError(w http.ResponseWriter, status int, code, message string) 
 // serveControl serves the control interface until the returned stop is
 // called. A Bee that cannot open its socket keeps running without one and
 // says why.
-func serveControl(configPath string, state localState, egress *egressConfig, status *runStatus, out io.Writer) (stop func()) {
+func serveControl(configPath string, egress *egressConfig, status *runStatus, pairer pairer, out io.Writer) (stop func()) {
 	path := controlSocketPath(configPath)
 	listener, err := listenControl(path)
 	if err != nil {
 		notify(out, slog.LevelWarn, "control", "local control interface unavailable; the desktop app cannot manage this Bee", "path", path, "error", err.Error())
 		return func() {}
 	}
-	server := &http.Server{Handler: (&controlServer{state: state, egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Handler: (&controlServer{pairer: pairer, egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
 	slog.Info("local control interface listening", "module", "control", "path", path)
 	served := make(chan struct{})
 	go func() {
@@ -301,4 +450,11 @@ func serveControl(configPath string, state localState, egress *egressConfig, sta
 		<-served
 		os.Remove(path)
 	}
+}
+
+func controlMode(p pairer) string {
+	if p == nil {
+		return "cli"
+	}
+	return "desktop"
 }

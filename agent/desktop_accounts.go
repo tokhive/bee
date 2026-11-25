@@ -125,26 +125,103 @@ func (r *desktopRunner) detect(ctx context.Context, platform string) accountDete
 		found.Available, found.codex = true, local.codex
 		found.Email, found.Plan, found.Fingerprint = credential.email, credential.Plan, credential.metadata().AccountFingerprint
 	case "claude":
-		local := detectClaude(ctx, nil, nil)
-		if local.problem != nil {
-			found.Problem = problemOf(local.problem)
-			return found
-		}
-		credential, err := claudeReader(local.claude.Store, local.claude.ConfigDir)(ctx)
+		source, credential, err := r.localClaude(ctx)
 		if err != nil {
-			found.Problem = problemOf(failCause("BEE-CLAUDE-SOURCE", err))
+			found.Problem = problemOf(err)
 			return found
 		}
 		if !credential.hasProfileScope {
 			found.Problem = &controlProblem{Code: "login_scope", Message: "this Claude Code sign-in cannot be shared: it lacks the user:profile permission; sign in to Claude Code again with a subscription account"}
 			return found
 		}
-		found.Available, found.claude, found.Plan = true, local.claude, credential.plan
+		// An expired access token cannot be shared and cannot say whose it
+		// is, so it is not offered: the person is told to open Claude Code,
+		// which renews it, instead of adding an account that cannot work.
+		if !credential.available(time.Now()) {
+			found.Problem = problemOf(fail("BEE-CLAUDE-EXPIRED", "the Claude Code access token has expired"))
+			return found
+		}
+		found.Available, found.claude, found.Plan = true, source, credential.plan
 		if identity, err := r.claudeProfile(ctx, credential); err == nil {
 			found.Email, found.Fingerprint = identity.email, identity.fingerprint()
 		}
 	}
 	return found
+}
+
+// readLocalClaude reads the Claude Code sign-in on this machine.
+func readLocalClaude(ctx context.Context) (*claudeSource, claudeCredential, error) {
+	local := detectClaude(ctx, nil, nil)
+	if local.problem != nil {
+		return nil, claudeCredential{}, local.problem
+	}
+	credential, err := claudeReader(local.claude.Store, local.claude.ConfigDir)(ctx)
+	if err != nil {
+		return nil, claudeCredential{}, failCause("BEE-CLAUDE-SOURCE", err)
+	}
+	return local.claude, credential, nil
+}
+
+// completeIdentities gives a local account whose record lacks the account's
+// email and fingerprint what the official sign-in says now. A Claude sign-in
+// that could not be asked who it was when the account was added, because
+// Anthropic did not answer, leaves such a record, and the app shows no
+// account number for it.
+func (r *desktopRunner) completeIdentities(ctx context.Context) {
+	r.accountsMu.Lock()
+	defer r.accountsMu.Unlock()
+	records, err := readAccounts(r.configPath)
+	if err != nil {
+		return
+	}
+	changed := false
+	for i := range records {
+		record := &records[i]
+		if record.Source != accountSourceLocal || record.Fingerprint != "" {
+			continue
+		}
+		found := r.detect(ctx, record.Platform)
+		if !found.Available || found.Fingerprint == "" {
+			continue
+		}
+		record.Email, record.Plan, record.Fingerprint = found.Email, found.Plan, found.Fingerprint
+		changed = true
+	}
+	if !changed {
+		return
+	}
+	if err := writeAccounts(r.configPath, records); err != nil {
+		slog.Warn("account identity not saved", "module", "accounts", "error", err.Error())
+		return
+	}
+	r.status.publish(controlEvent{Name: "accounts", Data: map[string]string{"completed": "identity"}})
+}
+
+// needsIdentity reports whether a local account's record lacks its fingerprint.
+func (r *desktopRunner) needsIdentity() bool {
+	return slices.ContainsFunc(r.accounts(), func(a accountRecord) bool {
+		return a.Source == accountSourceLocal && a.Fingerprint == ""
+	})
+}
+
+// completeIdentitiesEvery keeps trying until ctx ends, because the sign-in
+// may only recover later, for example when the person signs in again. It
+// asks only while a record is incomplete.
+func (r *desktopRunner) completeIdentitiesEvery(ctx context.Context, interval time.Duration) {
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			if r.needsIdentity() {
+				attempt, cancel := context.WithTimeout(ctx, 30*time.Second)
+				r.completeIdentities(attempt)
+				cancel()
+			}
+		}
+	}
 }
 
 // addAccount adds an account and starts sharing it. The account's source is

@@ -16,6 +16,8 @@ import (
 type claudeIdentity struct {
 	account      string
 	organization string
+	// email is shown to the provider only; it is not part of the fingerprint.
+	email string
 }
 
 var errClaudeProfileRejected = errors.New("official Claude rejected the current access authorization; update the login in Claude Code")
@@ -109,5 +111,5 @@ func queryClaudeProfile(ctx context.Context, credential claudeCredential, transp
 	if strings.TrimSpace(profile.Account.Email) == "" {
 		return empty, errors.New("official Claude profile account.email rejected: actual=empty; required=nonempty email")
 	}
-	return claudeIdentity{account: strings.ToLower(profile.Account.UUID), organization: strings.ToLower(profile.Organization.UUID)}, nil
+	return claudeIdentity{account: strings.ToLower(profile.Account.UUID), organization: strings.ToLower(profile.Organization.UUID), email: strings.TrimSpace(profile.Account.Email)}, nil
 }

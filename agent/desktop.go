@@ -66,6 +66,15 @@ type desktopRunner struct {
 	pollInterval time.Duration
 	// connect is the connection loop; tests replace it.
 	connect func(context.Context, localState, *egressConfig, io.Writer) error
+	// claudeProfile asks Anthropic which account a Claude sign-in is;
+	// tests replace it.
+	claudeProfile func(context.Context, claudeCredential) (claudeIdentity, error)
+	// drainTimeout bounds how long removing an account waits for its
+	// streams; confirmWindow and confirmPoll bound confirming a new account.
+	drainTimeout  time.Duration
+	confirmWindow time.Duration
+	confirmPoll   time.Duration
+	accountsMu    sync.Mutex
 
 	mu      sync.Mutex
 	pairing pairingStatus
@@ -78,7 +87,11 @@ type desktopRunner struct {
 }
 
 func newDesktopRunner(configPath string, egress *egressConfig, status *runStatus, out io.Writer) *desktopRunner {
-	return &desktopRunner{configPath: configPath, egress: egress, status: status, out: out, client: httpClient(), pollInterval: 2 * time.Second, connect: connect, rebound: make(chan struct{}, 1)}
+	return &desktopRunner{configPath: configPath, egress: egress, status: status, out: out, client: httpClient(), pollInterval: 2 * time.Second, connect: connect, rebound: make(chan struct{}, 1),
+		claudeProfile: func(ctx context.Context, credential claudeCredential) (claudeIdentity, error) {
+			return queryClaudeProfile(ctx, credential, nil)
+		},
+		drainTimeout: time.Minute, confirmWindow: 2 * time.Minute, confirmPoll: 3 * time.Second}
 }
 
 // runDesktop is bee run --desktop. The caller holds the configuration lock.
@@ -113,6 +126,9 @@ func runDesktop(ctx context.Context, configPath, egressPath string, out io.Write
 	}
 	status.setDevice(state, binding)
 	runner := newDesktopRunner(configPath, egress, status, console)
+	if err := runner.adoptConfiguredAccounts(); err != nil {
+		notify(console, slog.LevelWarn, "accounts", "account records unavailable", "error", err.Error())
+	}
 	ctx = withRunStatus(ctx, status)
 	defer serveControl(configPath, egress, status, runner, console)()
 	return runWithTelemetry(ctx, runner.run)

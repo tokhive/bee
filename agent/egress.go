@@ -71,6 +71,34 @@ type egressConfig struct {
 	// liveSources keeps the tunnel and synchronization running with no
 	// account source, so one can be added while connected.
 	liveSources bool
+	// streams counts the streams bridged to each upstream right now, so an
+	// account can be removed once its work has finished.
+	streamsMu sync.Mutex
+	streams   map[string]int
+}
+
+func (cfg *egressConfig) streamOpened(host string) func() {
+	cfg.streamsMu.Lock()
+	if cfg.streams == nil {
+		cfg.streams = map[string]int{}
+	}
+	cfg.streams[host]++
+	cfg.streamsMu.Unlock()
+	return func() {
+		cfg.streamsMu.Lock()
+		cfg.streams[host]--
+		if cfg.streams[host] == 0 {
+			delete(cfg.streams, host)
+		}
+		cfg.streamsMu.Unlock()
+	}
+}
+
+// activeStreams is how many streams are bridged to host now.
+func (cfg *egressConfig) activeStreams(host string) int {
+	cfg.streamsMu.Lock()
+	defer cfg.streamsMu.Unlock()
+	return cfg.streams[host]
 }
 
 // useStateDirectory points the sources at a Bee-owned directory for the small
@@ -600,6 +628,7 @@ func (cfg *egressConfig) serveStream(out io.Writer) func(context.Context, *tunne
 			cfg.failures.report(out, fail("BEE-EGRESS-NOT-ALLOWED", strconv.Quote(open.Host)), open.Host)
 			return
 		}
+		defer cfg.streamOpened(open.Host)()
 		live, timing := startBeeStream(live, open.Host, cfg.ConnectProxy != "")
 		upstream, err := cfg.dialEgress(live, open.Host)
 		timing.Open(err)

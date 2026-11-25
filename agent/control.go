@@ -192,9 +192,11 @@ type controlServer struct {
 	// pairer pairs the device through this interface; nil for a Bee started
 	// from the command line, which pairs with bee login.
 	pairer pairer
-	egress *egressConfig
-	status *runStatus
-	client *http.Client
+	// manager adds and removes accounts; nil outside desktop mode.
+	manager accountManager
+	egress  *egressConfig
+	status  *runStatus
+	client  *http.Client
 	// keepalive is how often an idle event stream sends a comment.
 	keepalive time.Duration
 }
@@ -212,6 +214,8 @@ type controlOverview struct {
 	Connection string          `json:"connection"`
 	Problem    *controlProblem `json:"problem,omitempty"`
 	Sources    []controlSource `json:"sources"`
+	// Accounts are the accounts the desktop app added; desktop mode only.
+	Accounts []accountRecord `json:"accounts,omitempty"`
 }
 
 type controlDevice struct {
@@ -325,8 +329,84 @@ func (c *controlServer) handler() http.Handler {
 		c.pairer.cancelPairing()
 		writeControlJSON(w, http.StatusOK, c.pairer.pairingStatus())
 	})
+	mux.HandleFunc("GET /v1/accounts", func(w http.ResponseWriter, r *http.Request) {
+		if c.canManage(w) {
+			writeControlJSON(w, http.StatusOK, map[string]any{"accounts": c.manager.accounts()})
+		}
+	})
+	mux.HandleFunc("GET /v1/platforms/{platform}/login", func(w http.ResponseWriter, r *http.Request) {
+		platform, ok := controlPlatformName(w, r)
+		if ok && c.canManage(w) {
+			ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+			defer cancel()
+			writeControlJSON(w, http.StatusOK, c.manager.detect(ctx, platform))
+		}
+	})
+	mux.HandleFunc("POST /v1/accounts", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canManage(w) {
+			return
+		}
+		var input addAccountRequest
+		decoder := json.NewDecoder(io.LimitReader(r.Body, 8192))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil {
+			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"platform": "openai"|"claude", "source": "local"|"import", "file": "..."}`)
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+		record, err := c.manager.addAccount(ctx, input)
+		if err != nil {
+			writeAccountError(w, err)
+			return
+		}
+		writeControlJSON(w, http.StatusCreated, record)
+	})
+	mux.HandleFunc("DELETE /v1/accounts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canManage(w) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Minute)
+		defer cancel()
+		if err := c.manager.removeAccount(ctx, r.PathValue("id")); err != nil {
+			writeAccountError(w, err)
+			return
+		}
+		writeControlJSON(w, http.StatusOK, map[string]string{"removed": r.PathValue("id")})
+	})
+	mux.HandleFunc("POST /v1/accounts/{id}/confirm", func(w http.ResponseWriter, r *http.Request) {
+		if !c.canManage(w) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+		defer cancel()
+		account, err := c.manager.confirmAccount(ctx, r.PathValue("id"))
+		if err != nil {
+			writeAccountError(w, err)
+			return
+		}
+		writeControlJSON(w, http.StatusOK, account)
+	})
 	mux.HandleFunc("GET /v1/events", c.events)
 	return mux
+}
+
+func (c *controlServer) canManage(w http.ResponseWriter) bool {
+	if c.manager == nil {
+		writeControlError(w, http.StatusConflict, "accounts_unavailable", "this Bee was started from the command line; choose accounts with bee setup")
+		return false
+	}
+	return true
+}
+
+func writeAccountError(w http.ResponseWriter, err error) {
+	var refused *accountError
+	if errors.As(err, &refused) {
+		writeControlError(w, refused.status, refused.problem.Code, refused.problem.Message)
+		return
+	}
+	problem := problemOf(err)
+	writeControlError(w, http.StatusInternalServerError, problem.Code, problem.Message)
 }
 
 // paired returns the device configuration for a request that needs Hive, or
@@ -358,6 +438,9 @@ func (c *controlServer) overview() controlOverview {
 		if pairing := c.pairer.pairingStatus(); pairing.Status != pairingNone {
 			overview.Pairing = &pairing
 		}
+	}
+	if c.manager != nil {
+		overview.Accounts = c.manager.accounts()
 	}
 	if c.egress != nil {
 		for _, source := range c.egress.sources().list() {
@@ -431,7 +514,7 @@ func serveControl(configPath string, egress *egressConfig, status *runStatus, pa
 		notify(out, slog.LevelWarn, "control", "local control interface unavailable; the desktop app cannot manage this Bee", "path", path, "error", err.Error())
 		return func() {}
 	}
-	server := &http.Server{Handler: (&controlServer{pairer: pairer, egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
+	server := &http.Server{Handler: (&controlServer{pairer: pairer, manager: managerOf(pairer), egress: egress, status: status, client: httpClient(), keepalive: 15 * time.Second}).handler(), ReadHeaderTimeout: 5 * time.Second}
 	slog.Info("local control interface listening", "module", "control", "path", path)
 	served := make(chan struct{})
 	go func() {
@@ -457,4 +540,10 @@ func controlMode(p pairer) string {
 		return "cli"
 	}
 	return "desktop"
+}
+
+// managerOf is the account manager of a desktop run, which also pairs.
+func managerOf(p pairer) accountManager {
+	manager, _ := p.(accountManager)
+	return manager
 }

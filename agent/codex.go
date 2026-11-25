@@ -38,8 +38,11 @@ type codexCredential struct {
 	ExpiresAt    time.Time
 	Source       string
 	refreshToken string
-	raw          []byte
-	path         string
+	// email is the sign-in's address as the ID token states it, shown to
+	// the provider only.
+	email string
+	raw   []byte
+	path  string
 }
 
 func (c codexCredential) sameAuthorization(other codexCredential) bool {
@@ -216,7 +219,8 @@ func readCodexKeyring(ctx context.Context, home string) ([]byte, error) {
 
 type codexClaims struct {
 	jwt.RegisteredClaims
-	Auth struct {
+	Email string `json:"email"`
+	Auth  struct {
 		AccountID    string `json:"chatgpt_account_id"`
 		UserID       string `json:"chatgpt_user_id"`
 		LegacyUserID string `json:"user_id"`
@@ -283,7 +287,7 @@ func parseCodexCredential(raw []byte) (codexCredential, error) {
 	if secret.Validate() != nil {
 		return empty, errors.New("invalid Codex access credential format")
 	}
-	return codexCredential{Secret: secret, AccountID: account, UserID: user, Plan: identity.Auth.Plan, ExpiresAt: access.ExpiresAt.Time, refreshToken: tokens.Refresh}, nil
+	return codexCredential{Secret: secret, AccountID: account, UserID: user, Plan: identity.Auth.Plan, ExpiresAt: access.ExpiresAt.Time, refreshToken: tokens.Refresh, email: identity.Email}, nil
 }
 
 func (c codexCredential) metadata() beewire.CodexAuthorization {

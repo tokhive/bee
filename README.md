@@ -226,7 +226,14 @@ On macOS and Linux, `bee run` serves a local control interface for the desktop a
 | `PUT /v1/platforms/{openai,claude}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
 | `POST /v1/pairing` | Desktop mode only: start pairing a new device credential, optionally with `{"hive": "...", "name": "..."}`; returns the code and the link to confirm it. The current device keeps running until the new one is confirmed. |
 | `GET /v1/pairing`, `DELETE /v1/pairing` | Desktop mode only: read or cancel the pairing (`pending`, `completed`, `expired`, `cancelled` or `failed`). |
+| `GET /v1/platforms/{openai,claude}/login` | Desktop mode only: the official client's sign-in on this machine — whether it can be shared, its email, plan and account fingerprint, or why not. |
+| `GET /v1/accounts` | Desktop mode only: the accounts the desktop app added. |
+| `POST /v1/accounts` | Desktop mode only: add an account with `{"platform": "openai"\|"claude", "source": "local"}` to share the official client's sign-in, or `"source": "import", "file": "/path"` to import Codex's `auth.json` or Claude Code's `.credentials.json`. It starts sharing at once, and a switch from the account Hive last knew is confirmed. |
+| `DELETE /v1/accounts/{id}` | Desktop mode only: pause the platform in Hive, wait up to a minute for its open streams, stop the account and forget it. |
+| `POST /v1/accounts/{id}/confirm` | Desktop mode only: accept the account the official client switched to. |
 | `GET /v1/events` | Server-sent events: `overview` first, then `connection`, `binding`, `pairing`, `problem` and `supply` changes. |
+
+Accounts the desktop app adds are recorded in `accounts.json` beside the device configuration (no credential, only the id, platform, source, email, plan and fingerprint) and written to `egress.json`, so `bee run` and `bee status` see them too. An imported credential file is copied into a private `accounts/<id>/` directory; Bee renews an imported Claude sign-in itself (`claude.refresh`), since no official client does.
 
 `bee run --desktop` is how the desktop app runs Bee. It starts without a device configuration and pairs through the control interface, keeps the tunnel open with no account configured, and when Hive revokes the device it keeps running and reports it instead of exiting. A confirmed pairing saves the new device configuration, keeps a private copy of the previous one in a `bee.json.backup.*` directory beside it, and reconnects as the new device.
 

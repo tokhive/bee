@@ -105,7 +105,7 @@ export type Settings = {
 
 export type SettingsChange = Partial<Pick<Settings, "autostart" | "keep_in_tray" | "notify" | "language">>;
 
-export type AppInfo = { version: string; config: string };
+export type AppInfo = { version: string; config: string; logs: string };
 
 /** A failed request: Bee unreachable (status 0) or an error Bee answered with. */
 export class BeeError extends Error {
@@ -136,6 +136,8 @@ export interface Shell {
   getSettings(): Promise<Settings>;
   setSettings(change: SettingsChange): Promise<Settings>;
   appInfo(): Promise<AppInfo>;
+  /** Shows the folder that holds Bee's log in the system's file manager. */
+  openLogs(): Promise<void>;
   /** Asks the shell to start the background service again now. */
   retryService(): Promise<void>;
   /** Saves Bee's diagnostic report where the person chooses; null if cancelled. */

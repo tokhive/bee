@@ -33,7 +33,7 @@ function host(url: string): string {
 }
 
 export function SettingsPage() {
-  const { t, snapshot, settings, info, updateSettings, toast } = useApp();
+  const { t, snapshot, settings, info, shell, updateSettings, toast } = useApp();
   const { go } = useNav();
   const exportReport = useDiagnostics();
   const overview = snapshot?.overview ?? null;
@@ -56,6 +56,14 @@ export function SettingsPage() {
       </span>
     </Row>
   );
+
+  const openLogs = async () => {
+    try {
+      await shell.openLogs();
+    } catch {
+      toast(t.settings.openLogsFailed);
+    }
+  };
 
   const serviceHow =
     snapshot?.service === "running" ? t.settings.runByApp : snapshot?.service === "external" ? t.settings.runExternally : t.settings.notRunning;
@@ -111,9 +119,14 @@ export function SettingsPage() {
         </Section>
         <Section title={t.settings.help}>
           <Row>
-            <Button variant="secondary" onClick={exportReport}>
-              {t.settings.diagnostics}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="secondary" onClick={exportReport}>
+                {t.settings.diagnostics}
+              </Button>
+              <Button variant="secondary" onClick={openLogs}>
+                {t.settings.openLogs}
+              </Button>
+            </div>
           </Row>
         </Section>
         <Section title={t.settings.about}>
@@ -129,6 +142,8 @@ export function SettingsPage() {
               <dd className="m-0 font-mono text-xs [overflow-wrap:anywhere] text-fg">{t.settings.serviceVersion(overview?.version ?? "—", serviceHow)}</dd>
               <dt>{t.settings.config}</dt>
               <dd className="m-0 font-mono text-xs [overflow-wrap:anywhere] text-fg">{info?.config ?? "—"}</dd>
+              <dt>{t.settings.logs}</dt>
+              <dd className="m-0 font-mono text-xs [overflow-wrap:anywhere] text-fg">{info?.logs ?? "—"}</dd>
               <dt>{t.settings.device}</dt>
               <dd className="m-0 font-mono text-xs [overflow-wrap:anywhere] text-fg">{overview?.device?.id ?? "—"}</dd>
               <dt>{t.settings.hive}</dt>

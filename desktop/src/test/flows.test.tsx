@@ -256,6 +256,18 @@ describe("settings, about and quitting", () => {
     expect(screen.getByText("dev_1")).toBeInTheDocument();
   });
 
+  it("opens the logs folder, shows where it is, and says when it cannot", async () => {
+    const shell = show(snapshot());
+    await userEvent.click(await screen.findByRole("button", { name: "设置" }));
+    await userEvent.click(screen.getByRole("button", { name: "打开日志文件夹" }));
+    expect(shell.openLogs).toHaveBeenCalled();
+    await userEvent.click(screen.getByText("技术信息"));
+    expect(screen.getByText("/home/a/Library/Logs/ai.tokhive.bee")).toBeInTheDocument();
+    vi.mocked(shell.openLogs).mockRejectedValue({ status: 500, code: "open_failed", message: "no" });
+    await userEvent.click(screen.getByRole("button", { name: "打开日志文件夹" }));
+    expect(await screen.findByText("无法打开日志文件夹")).toBeInTheDocument();
+  });
+
   it("without a tray, keeping in the tray cannot be turned on and says why", async () => {
     show(snapshot(), { tray_available: false });
     await userEvent.click(await screen.findByRole("button", { name: "设置" }));

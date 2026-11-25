@@ -4,6 +4,7 @@
 
 mod alerts;
 mod control;
+mod logs;
 mod service;
 mod settings;
 mod state;
@@ -24,6 +25,7 @@ use tauri::{AppHandle, Emitter, Manager, RunEvent, WindowEvent};
 use tauri_plugin_autostart::{MacosLauncher, ManagerExt};
 use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_notification::NotificationExt;
+use tauri_plugin_opener::OpenerExt;
 use tokio::sync::Notify;
 
 /// The argument the login item starts the app with: no window, tray only.
@@ -268,11 +270,22 @@ struct AppInfo {
     version: String,
     /// The device configuration, shown under technical information.
     config: String,
+    /// Where Bee's log is kept, shown under technical information.
+    logs: String,
 }
 
 #[tauri::command]
 fn app_info(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>) -> AppInfo {
-    AppInfo { version: app.package_info().version.to_string(), config: shared.service.config.display().to_string() }
+    AppInfo { version: app.package_info().version.to_string(), config: shared.service.config.display().to_string(), logs: logs::dir().display().to_string() }
+}
+
+/// Shows the folder that holds Bee's log in the system's file manager.
+#[tauri::command]
+fn open_logs(app: AppHandle) -> Result<(), control::ControlError> {
+    let dir = logs::dir();
+    let failed = |err: String| control::ControlError { status: 500, code: "open_failed".into(), message: err };
+    std::fs::create_dir_all(&dir).map_err(|err| failed(err.to_string()))?;
+    app.opener().open_path(dir.display().to_string(), None::<&str>).map_err(|err| failed(err.to_string()))
 }
 
 /// Asks where to save Bee's diagnostic report and saves it there; None when
@@ -297,6 +310,7 @@ async fn export_diagnostics(app: AppHandle, shared: tauri::State<'_, Arc<Shared>
             "app_version": app.package_info().version.to_string(),
             "service": shared.service.state(),
             "config": shared.service.config.display().to_string(),
+            "logs": logs::dir().display().to_string(),
             "error": { "code": err.code, "message": err.message },
         }),
     };
@@ -380,7 +394,7 @@ fn close_window(window: &tauri::Window) {
 
 fn main() {
     let attach_only = std::env::var_os("BEE_DESKTOP_ATTACH_ONLY").is_some();
-    let service = Arc::new(Service::new(config_path(), bee_path(), attach_only));
+    let service = Arc::new(Service::new(config_path(), bee_path(), attach_only).with_log_dir(logs::dir()));
     eprintln!("[bee-desktop] config {} socket {}", service.config.display(), service.control.socket().display());
     let shared = Arc::new(Shared {
         snapshot: Mutex::new(Snapshot::new(ServiceState::Starting, None, BTreeMap::new())),
@@ -404,7 +418,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, app_info, export_diagnostics])
+        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, app_info, open_logs, export_diagnostics])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

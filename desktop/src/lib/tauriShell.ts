@@ -48,6 +48,13 @@ export const tauriShell: Shell = {
   getSettings: () => invoke("get_settings"),
   setSettings: (change) => invoke("set_settings", { change }),
   appInfo: () => invoke("app_info"),
+  async openLogs() {
+    try {
+      await invoke("open_logs");
+    } catch (err) {
+      throw toBeeError(err);
+    }
+  },
   retryService: () => invoke("retry_service"),
   async exportDiagnostics() {
     try {

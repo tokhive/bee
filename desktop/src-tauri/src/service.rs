@@ -37,6 +37,8 @@ pub struct Service {
     bee: PathBuf,
     /// Never start the bundled Bee; only use one that is already running.
     attach_only: bool,
+    /// Where Bee's output goes; inherited when None.
+    log_dir: Option<PathBuf>,
     child: Mutex<Option<u32>>,
     quitting: AtomicBool,
     stopped: Notify,
@@ -57,6 +59,7 @@ impl Service {
             control: Control::new(socket),
             bee,
             attach_only,
+            log_dir: None,
             child: Mutex::new(None),
             quitting: AtomicBool::new(false),
             stopped: Notify::new(),
@@ -64,6 +67,12 @@ impl Service {
             changed: Notify::new(),
             retry: Notify::new(),
         }
+    }
+
+    /// Keeps the output of the Bee this service starts in dir.
+    pub fn with_log_dir(mut self, dir: PathBuf) -> Self {
+        self.log_dir = Some(dir);
+        self
     }
 
     pub fn state(&self) -> ServiceState {
@@ -156,10 +165,17 @@ impl Service {
         // long as the child lives (it stays in `Child`). When the app goes
         // away, however it ends, even by being killed, the system closes the
         // pipe and Bee stops itself rather than running on with no app.
-        let child = Command::new(&self.bee)
-            .args(["run", "--desktop", "--stop-with-parent", "--config"])
-            .arg(&self.config)
-            .stdin(Stdio::piped())
+        let mut command = Command::new(&self.bee);
+        command.args(["run", "--desktop", "--stop-with-parent", "--config"]).arg(&self.config).stdin(Stdio::piped());
+        if let Some(dir) = &self.log_dir {
+            match crate::logs::open(dir).and_then(|file| Ok((file.try_clone()?, file))) {
+                Ok((out, err)) => {
+                    command.stdout(Stdio::from(out)).stderr(Stdio::from(err));
+                }
+                Err(err) => eprintln!("[bee-desktop] cannot keep bee's log in {}: {err}", dir.display()),
+            }
+        }
+        let child = command
             .kill_on_drop(false)
             .spawn()?;
         *self.child.lock().unwrap() = child.id();

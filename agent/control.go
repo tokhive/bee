@@ -393,7 +393,7 @@ func (c *controlServer) handler() http.Handler {
 		writeControlJSON(w, http.StatusOK, account)
 	})
 	mux.HandleFunc("GET /v1/explanations", func(w http.ResponseWriter, r *http.Request) {
-		writeControlJSON(w, http.StatusOK, map[string]any{"explanations": allExplanations()})
+		writeControlJSON(w, http.StatusOK, ExplanationCatalog())
 	})
 	mux.HandleFunc("GET /v1/diagnostics", func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), time.Minute)

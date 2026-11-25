@@ -6,7 +6,8 @@ import { localize } from "../lib/format";
 import { messages, type Messages } from "../lib/i18n";
 import { accountsOf } from "../lib/model";
 
-export type Explained = { known: boolean; title: string; cause: string; fix: string; category: string; action?: string };
+/** Bee's explanation in the window's language; `both` is the cause and the fix as one passage. */
+export type Explained = { known: boolean; title: string; cause: string; fix: string; both: string; category: string; action?: string };
 
 type AppValue = {
   shell: Shell;
@@ -96,12 +97,16 @@ export function AppProvider({ shell, children }: { shell: Shell; children: React
   const explain = React.useCallback(
     (code: string | undefined, imported = false): Explained => {
       const entry = code ? catalog[code] : undefined;
-      if (!entry) return { known: false, title: t.errors.generic, cause: t.errors.generic, fix: t.errors.tryAgain, category: "error" };
+      if (!entry) return { known: false, title: t.errors.generic, cause: t.errors.generic, fix: t.errors.tryAgain, both: t.errors.tryAgain, category: "error" };
+      const cause = localize(entry.cause, language);
+      const fix = localize(imported && entry.fix_import ? entry.fix_import : entry.fix, language);
       return {
         known: true,
         title: localize(entry.title, language),
-        cause: localize(entry.cause, language),
-        fix: localize(imported && entry.fix_import ? entry.fix_import : entry.fix, language),
+        cause,
+        fix,
+        // Chinese sentences run on; English ones need a space between.
+        both: language === "zh" ? `${cause}${fix}` : `${cause} ${fix}`,
         category: entry.category,
         action: entry.action,
       };

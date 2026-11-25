@@ -173,7 +173,7 @@ describe("adding an account", () => {
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     await userEvent.click(await screen.findByRole("button", { name: "下一步" }));
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent("Claude Code 的登录已经过期。 打开一次 Claude Code，让它自动续期。");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Claude Code 的登录已经过期。打开一次 Claude Code，让它自动续期。");
     expect(screen.getByRole("heading", { name: "确认添加" })).toBeInTheDocument();
   });
 
@@ -192,7 +192,7 @@ describe("adding an account", () => {
     expect(screen.getByText("config.toml")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
     expect(shell.calls).toContainEqual({ method: "POST", path: "/v1/accounts", body: { platform: "openai", source: "import", file: "/home/a/config.toml" } });
-    expect(await screen.findByRole("alert")).toHaveTextContent("config.toml · 这个文件不是这个平台可用的登录。");
+    expect(await screen.findByRole("alert")).toHaveTextContent("config.toml · 这个文件不是这个平台可用的登录。Codex 用的是 auth.json，Claude Code 用的是 .credentials.json。请选择这个平台对应的文件。");
     expect(screen.getByRole("heading", { name: "导入 ChatGPT 凭证文件" })).toBeInTheDocument();
 
     shell.answer(() => codex);

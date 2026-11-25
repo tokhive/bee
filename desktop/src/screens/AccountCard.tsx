@@ -216,12 +216,12 @@ export function AccountCard({ account, status }: { account: Account; status: Car
     );
   } else if (status?.state === "syncing" || status?.state === "paused") {
     const syncing = status.state === "syncing";
-    const text = syncing ? (status.reason ? `${why.cause}${why.fix}` : `${explain("capabilities_unknown").cause}${explain("capabilities_unknown").fix}`) : why.cause;
+    const text = syncing ? explain(status.reason ?? "capabilities_unknown").both : why.cause;
     reason = <div className="text-[13px] text-muted">{text}</div>;
   } else if (status?.state === "waiting" && status.reason === "quota_exhausted") {
     const out = (platform?.capabilities.windows ?? []).filter((w) => (w.used_percent ?? 0) >= 100);
     const last = out.sort((a, b) => (a.reset_at ?? "").localeCompare(b.reset_at ?? "")).at(-1);
-    reason = <div className="text-[13px]">{last ? t.card.quotaOut(windowName(last, t), resetTime(last.reset_at, t)) : `${why.cause}${why.fix}`}</div>;
+    reason = <div className="text-[13px]">{last ? t.card.quotaOut(windowName(last, t), resetTime(last.reset_at, t)) : why.both}</div>;
   } else if (status?.state === "waiting" || status?.state === "offline") {
     reason = (
       <div className="text-[13px]">

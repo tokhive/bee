@@ -328,6 +328,12 @@ describe("English", () => {
     expect(screen.getByText("View earnings on the web ↗")).toBeInTheDocument();
   });
 
+  it("joins Bee's cause and fix with a space in English", async () => {
+    show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }), { language: "en", resolved_language: "en" });
+    const c = await screen.findByRole("article", { name: /Claude/ });
+    expect(within(c).getByText("Bee is reading this account's models and quota. Nothing to do. It usually takes 1 to 3 minutes.")).toBeInTheDocument();
+  });
+
   it("English failures read naturally", async () => {
     const shell = show(snapshot(), { language: "en", resolved_language: "en" });
     shell.answer(() => refuse(0, "unreachable"));

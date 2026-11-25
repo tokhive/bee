@@ -132,7 +132,7 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
         <div className="mt-0.5 text-[13px] text-muted">
           {known ? (
             <p className="m-0">
-              {known.cause} {known.fix}
+              {known.both}
             </p>
           ) : (
             <>
@@ -227,7 +227,7 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
     } catch (err) {
       const e = toBeeError(err);
       const known = explain(e.code);
-      const text = known.known ? `${known.cause} ${known.fix}` : describeError(err, explain, t).text;
+      const text = known.known ? known.both : describeError(err, explain, t).text;
       if (method === "import") {
         setError(`${file ? basename(file) : ""} · ${text}`);
         setStep("import");
@@ -294,7 +294,7 @@ function Option({ checked, onSelect, label, children }: { checked: boolean; onSe
       )}
       onClick={onSelect}
     >
-      <input id={id} type="radio" name="method" checked={checked} onChange={onSelect} className="mt-1 size-4 flex-none accent-[var(--honey-ink)]" />
+      <input id={id} type="radio" name="method" checked={checked} onChange={onSelect} className="mt-1 grid size-4 flex-none cursor-pointer appearance-none place-content-center rounded-full border-[1.5px] border-line-strong bg-page before:size-2 before:rounded-full before:content-[''] checked:border-honey-ink checked:before:bg-honey-ink" />
       <div>
         <label htmlFor={id} className="cursor-pointer font-semibold">
           {label}

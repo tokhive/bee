@@ -152,10 +152,14 @@ impl Service {
     }
 
     fn spawn(&self) -> std::io::Result<Child> {
+        // Bee gets a pipe on its standard input that this app holds open for as
+        // long as the child lives (it stays in `Child`). When the app goes
+        // away, however it ends, even by being killed, the system closes the
+        // pipe and Bee stops itself rather than running on with no app.
         let child = Command::new(&self.bee)
-            .args(["run", "--desktop", "--config"])
+            .args(["run", "--desktop", "--stop-with-parent", "--config"])
             .arg(&self.config)
-            .stdin(Stdio::null())
+            .stdin(Stdio::piped())
             .kill_on_drop(false)
             .spawn()?;
         *self.child.lock().unwrap() = child.id();

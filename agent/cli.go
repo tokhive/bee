@@ -94,9 +94,11 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 		flags.StringVar(&fingerprint, "account-fingerprint", "", "full account fingerprint to confirm")
 	}
 	desktop := false
+	stopWithParent := false
 	if command == "run" {
 		flags.StringVar(&egressPath, "egress-config", "", "encrypted egress configuration file")
 		flags.BoolVar(&desktop, "desktop", false, "run for the desktop app: start unpaired, pair through the local control interface and keep running when the device is replaced")
+		flags.BoolVar(&stopWithParent, "stop-with-parent", false, "stop when the standard input closes, which is how a parent that started Bee for its own use, such as the desktop app, ends it when the parent itself goes away")
 	}
 	if command == "login" {
 		flags.StringVar(&origin, "hive", "", "Hive address (default "+DefaultHive+")")
@@ -117,6 +119,12 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 			return errors.New("failed to locate user configuration directory; use --config")
 		}
 		*configPath = filepath.Join(directory, "tokhive", "bee.json")
+	}
+	if stopWithParent {
+		var stop context.CancelFunc
+		ctx, stop = context.WithCancel(ctx)
+		defer stop()
+		go stopWhenClosed(os.Stdin, stop)
 	}
 	if command == "login" || command == "run" {
 		unlock, err := lockState(*configPath)

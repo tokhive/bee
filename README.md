@@ -145,7 +145,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
 | `bee login [--hive URL] [--name NAME]` | Pair this machine with a Hive account, or resume a pairing that was interrupted. |
 | `bee setup [--platform openai,claude] [--yes]` | Detect local subscription logins and write the egress configuration. |
-| `bee run [--egress-config PATH] [--desktop]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. `--desktop` is the mode the desktop app uses; see [Local control interface](#local-control-interface). |
+| `bee run [--egress-config PATH] [--desktop] [--stop-with-parent]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. `--desktop` is the mode the desktop app uses; see [Local control interface](#local-control-interface). `--stop-with-parent` also stops when the standard input closes, so a parent that holds a pipe to it ends it by going away; the desktop app starts Bee this way. |
 | `bee doctor [--egress-config PATH] [--json]` | Run every check in order and report `ok`, `WARN`, `FAIL` or `skip`, each with a fix. Read-only, so it is safe to run while `bee run` is running. |
 | `bee supply-status --platform P` | Show whether Hive is currently sending work to the account on platform `P`, and why not. |
 | `bee pause` / `bee resume --platform P` | Stop or restart new work for one platform. |

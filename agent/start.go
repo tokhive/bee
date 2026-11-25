@@ -146,15 +146,19 @@ func status(ctx context.Context, client *http.Client, configPath string, state l
 	if cfg.Claude != nil {
 		platforms = append(platforms, "claude")
 	}
-	fmt.Fprintf(out, "Supply:  %s (%s)\n", strings.Join(platforms, ", "), filepath.Base(egressPath))
+	names := append([]string(nil), platforms...)
+	for _, source := range cfg.officialAPIs() {
+		names = append(names, source.spec().name)
+	}
+	fmt.Fprintf(out, "Supply:  %s (%s)\n", strings.Join(names, ", "), filepath.Base(egressPath))
 	for _, platform := range platforms {
 		var supply beewire.PlatformSupply
 		if err := callState(ctx, client, state, "/api/bee/platforms/"+platform, "GET", nil, &supply); err != nil {
-			fmt.Fprintf(out, "  %-7s state unknown: %v\n", platform, err)
+			fmt.Fprintf(out, "  %-10s state unknown: %v\n", platform, err)
 			continue
 		}
 		if supply.Ready {
-			fmt.Fprintf(out, "  %-7s taking new work\n", platform)
+			fmt.Fprintf(out, "  %-10s taking new work\n", platform)
 			continue
 		}
 		var reasons []string
@@ -165,9 +169,73 @@ func status(ctx context.Context, client *http.Client, configPath string, state l
 			}
 			reasons = append(reasons, label)
 		}
-		fmt.Fprintf(out, "  %-7s not taking work: %s\n", platform, strings.Join(reasons, "; "))
+		fmt.Fprintf(out, "  %-10s not taking work: %s\n", platform, strings.Join(reasons, "; "))
+	}
+	for _, source := range cfg.officialAPIs() {
+		officialAPIStatus(ctx, client, state, source, out)
 	}
 	return nil
+}
+
+// officialReasonLabels says why an official key takes no new work, and what
+// the Provider can do about it.
+var officialReasonLabels = map[string]string{
+	beewire.ReasonManuallyPaused:      "paused in the console",
+	beewire.ReasonBanned:              "banned by administrator",
+	beewire.ReasonOffline:             "no running Bee is carrying this key",
+	beewire.ReasonRateLimited:         "upstream rate limit cooldown active",
+	beewire.ReasonAPIKeyNotRegistered: "key not registered yet; bee run registers it",
+	beewire.ReasonAPIKeyUnverified:    "the key's model listing has not been read; check the key and the connection to the vendor",
+	beewire.ReasonAPIKeyNoModels:      "none of the selected models is on the key's listing and sold by Hive",
+	beewire.ReasonAPIKeyInvalid:       "key rejected by the vendor; replace it, then use Retry after fixing account in the console",
+	beewire.ReasonAPIKeyOutOfCredit:   "out of credit; top up, then use Retry after fixing account in the console",
+}
+
+// officialAPIStatus prints whether Hive sends work to an official key this
+// Bee contributes, and which models it serves.
+func officialAPIStatus(ctx context.Context, client *http.Client, state localState, source *officialAPISource, out io.Writer) {
+	p := source.spec()
+	var supply beewire.OfficialAPISupply
+	if err := callState(ctx, client, state, p.statusPath, "GET", nil, &supply); err != nil {
+		var failure *apiFailure
+		if errors.As(err, &failure) && (failure.Status == http.StatusNotFound || failure.Status == http.StatusMethodNotAllowed) {
+			fmt.Fprintf(out, "  %-10s state unknown: this Hive does not report official API keys; see the console's Bee Device page\n", p.name)
+		} else {
+			fmt.Fprintf(out, "  %-10s state unknown: %v\n", p.name, err)
+		}
+		return
+	}
+	if supply.Platform != p.name {
+		fmt.Fprintf(out, "  %-10s state unknown: Hive answered for %q\n", p.name, supply.Platform)
+		return
+	}
+	var reasons []string
+	// The key file was readable when the configuration was read; a key Hive
+	// does not hold yet is one bee run has not registered.
+	if key, err := source.key(); err == nil && supply.KeyFingerprint != "" && supply.KeyFingerprint != fingerprint(key) {
+		reasons = append(reasons, "Hive holds a different key; bee run registers this one when it next synchronizes")
+	}
+	for _, reason := range supply.Reasons {
+		label, ok := officialReasonLabels[reason]
+		if !ok {
+			label = reason
+		}
+		if reason == beewire.ReasonRateLimited && supply.BlockedUntil != nil {
+			label += " until " + supply.BlockedUntil.Local().Format("15:04")
+		}
+		reasons = append(reasons, label)
+	}
+	if len(reasons) == 0 && supply.Ready {
+		fmt.Fprintf(out, "  %-10s taking new work: %s\n", p.name, strings.Join(supply.Models, ", "))
+	} else {
+		fmt.Fprintf(out, "  %-10s not taking work: %s\n", p.name, strings.Join(reasons, "; "))
+	}
+	if len(supply.UnsoldModels) > 0 {
+		fmt.Fprintf(out, "  %-10s not sold by Hive: %s\n", "", strings.Join(supply.UnsoldModels, ", "))
+	}
+	if len(supply.DeniedModels) > 0 {
+		fmt.Fprintf(out, "  %-10s refused by the vendor: %s\n", "", strings.Join(supply.DeniedModels, ", "))
+	}
 }
 
 func fileExists(path string) bool {

@@ -1,5 +1,7 @@
 package beewire
 
+import "time"
+
 // OfficialAPIKey identifies a Provider's official Platform key, independent of
 // their subscription: an OpenAI Platform key or a Claude Platform key. Only
 // the TEE envelope contains the key itself.
@@ -20,6 +22,32 @@ type OfficialAPIStatus struct {
 
 func (s OfficialAPIStatus) Valid() bool {
 	return s.Lease != "" && validFingerprint(s.KeyFingerprint) && ValidModelIDs(s.Models)
+}
+
+// OfficialAPISupply is Hive's answer to a Bee asking about its Provider's
+// official key (GET /api/bee/openai-api/status or /api/bee/claude-api/status):
+// which key Hive holds, whether it takes new work, and why not.
+type OfficialAPISupply struct {
+	// Platform is openai_api or claude_api.
+	Platform string `json:"platform"`
+	// KeyFingerprint is the key Hive last registered for the Provider, empty
+	// when none is registered. A Bee holding another key has not registered
+	// it yet.
+	KeyFingerprint string `json:"key_fingerprint"`
+	Ready          bool   `json:"ready"`
+	// Reasons say why the key takes no new work: ReasonManuallyPaused,
+	// ReasonBanned, ReasonRateLimited, ReasonOffline or one of the
+	// ReasonAPIKey reasons.
+	Reasons []string `json:"reasons"`
+	// Models are the selected models the key's listing shows that Hive sells
+	// and the upstream has not refused. UnsoldModels are listed models Hive
+	// does not sell; DeniedModels are models the upstream refused the key.
+	Models        []string `json:"models"`
+	UnsoldModels  []string `json:"unsold_models"`
+	DeniedModels  []string `json:"denied_models"`
+	MaxConcurrent int      `json:"max_concurrent"`
+	// BlockedUntil is when an upstream rate limit on the key ends.
+	BlockedUntil *time.Time `json:"blocked_until,omitempty"`
 }
 
 // OpenAIAPIKey and OpenAIAPIStatus are the names the OpenAI source was first

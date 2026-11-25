@@ -1,0 +1,910 @@
+{
+ "explanations": [
+  {
+   "code": "BEE-CLAUDE-EXPIRED",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Claude Code sign-in expired",
+    "zh": "Claude Code 登录已过期"
+   },
+   "cause": {
+    "en": "The Claude Code sign-in has expired.",
+    "zh": "Claude Code 的登录已经过期。"
+   },
+   "fix": {
+    "en": "Open Claude Code once so it renews the sign-in.",
+    "zh": "打开一次 Claude Code，让它自动续期。"
+   }
+  },
+  {
+   "code": "BEE-CLAUDE-SCOPE",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in cannot be shared",
+    "zh": "这个登录不能用于共享"
+   },
+   "cause": {
+    "en": "This Claude Code sign-in lacks a permission sharing needs.",
+    "zh": "这个 Claude Code 登录缺少共享所需的权限。"
+   },
+   "fix": {
+    "en": "Run claude and sign in again with your subscription account.",
+    "zh": "运行 claude，用订阅账号重新登录。"
+   }
+  },
+  {
+   "code": "BEE-CLAUDE-SOURCE",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Claude Code not signed in",
+    "zh": "没有检测到 Claude Code 登录"
+   },
+   "cause": {
+    "en": "Bee cannot read a Claude Code sign-in on this computer.",
+    "zh": "Bee 在这台电脑上读取不到 Claude Code 的登录。"
+   },
+   "fix": {
+    "en": "Install Claude Code, open a terminal, run claude and sign in to your subscription, then check again. On a Mac, allow Bee when macOS asks about the keychain.",
+    "zh": "安装 Claude Code，打开终端运行 claude 登录你的订阅账号，然后重新检测。Mac 上系统询问钥匙串权限时，请选择“始终允许”。"
+   }
+  },
+  {
+   "code": "BEE-CLAUDE-UNSUPPORTED",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in store not supported",
+    "zh": "不支持这种登录存储"
+   },
+   "cause": {
+    "en": "Bee was told to read Claude Code's sign-in from a store this system does not have.",
+    "zh": "Bee 被设置为从一个这台电脑没有的位置读取 Claude Code 登录。"
+   },
+   "fix": {
+    "en": "Remove this account and add it again.",
+    "zh": "删除这个账号后重新添加。"
+   }
+  },
+  {
+   "code": "BEE-CODEX-EXPIRED",
+   "category": "syncing",
+   "title": {
+    "en": "Renewing sign-in",
+    "zh": "正在续期登录"
+   },
+   "cause": {
+    "en": "The Codex sign-in has expired; TokHive renews it while Bee is connected.",
+    "zh": "Codex 登录已过期，Bee 连上 TokHive 后会自动续期。"
+   },
+   "fix": {
+    "en": "Keep Bee running. If it does not recover, run codex login again.",
+    "zh": "请保持 Bee 运行；如果一直没恢复，请重新运行 codex login。"
+   }
+  },
+  {
+   "code": "BEE-CODEX-SOURCE",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Codex sign-in unreadable",
+    "zh": "读取不到 Codex 登录"
+   },
+   "cause": {
+    "en": "Bee cannot use the Codex sign-in on this computer. It must be a ChatGPT sign-in, not an API key.",
+    "zh": "Bee 用不了这台电脑上的 Codex 登录。必须是 ChatGPT 账号登录，不能是 API Key。"
+   },
+   "fix": {
+    "en": "Open a terminal, run codex login and sign in with your ChatGPT account, then check again.",
+    "zh": "打开终端运行 codex login，用 ChatGPT 账号登录，然后重新检测。"
+   }
+  },
+  {
+   "code": "BEE-DEVICE-CONFIG",
+   "category": "error",
+   "action": "contact_support",
+   "title": {
+    "en": "Settings file damaged",
+    "zh": "设置文件损坏"
+   },
+   "cause": {
+    "en": "Bee cannot use its saved link to TokHive.",
+    "zh": "Bee 无法使用保存的绑定信息。"
+   },
+   "fix": {
+    "en": "Export a diagnostic report and contact TokHive support. Do not delete Bee's files.",
+    "zh": "请导出诊断报告并联系 TokHive 客服，不要删除 Bee 的文件。"
+   }
+  },
+  {
+   "code": "BEE-DEVICE-REPLACED",
+   "category": "action",
+   "action": "repair_binding",
+   "title": {
+    "en": "Linked to another computer",
+    "zh": "账号已绑定到另一台电脑"
+   },
+   "cause": {
+    "en": "Your TokHive account was linked to another computer, so this one stopped.",
+    "zh": "你的 TokHive 账号绑定了另一台电脑，所以这台已停止。"
+   },
+   "fix": {
+    "en": "Link this computer again if you want it to share instead.",
+    "zh": "如果想改用这台电脑共享，请重新绑定。"
+   }
+  },
+  {
+   "code": "BEE-HIVE-CREDENTIAL",
+   "category": "action",
+   "action": "repair_binding",
+   "title": {
+    "en": "Link no longer valid",
+    "zh": "绑定已失效"
+   },
+   "cause": {
+    "en": "TokHive no longer accepts this computer's link.",
+    "zh": "TokHive 不再接受这台电脑的绑定。"
+   },
+   "fix": {
+    "en": "Link this computer to your TokHive account again.",
+    "zh": "请重新绑定这台电脑。"
+   }
+  },
+  {
+   "code": "BEE-HIVE-ERROR",
+   "category": "error",
+   "action": "retry",
+   "title": {
+    "en": "TokHive error",
+    "zh": "TokHive 出错"
+   },
+   "cause": {
+    "en": "TokHive answered with an unexpected error.",
+    "zh": "TokHive 返回了意外的错误。"
+   },
+   "fix": {
+    "en": "Try again later. If it keeps happening, export a diagnostic report and contact TokHive support.",
+    "zh": "请稍后重试；如果一直出现，请导出诊断报告并联系 TokHive 客服。"
+   }
+  },
+  {
+   "code": "BEE-HIVE-UNREACHABLE",
+   "category": "offline",
+   "action": "check_network",
+   "title": {
+    "en": "Cannot reach TokHive",
+    "zh": "无法连接 TokHive"
+   },
+   "cause": {
+    "en": "Bee cannot connect to TokHive. The network may be down, or TokHive may be briefly unavailable.",
+    "zh": "Bee 连不上 TokHive，可能是网络断了，也可能是 TokHive 暂时不可用。"
+   },
+   "fix": {
+    "en": "Check the network. If you use a proxy, set it in Settings. Bee keeps retrying.",
+    "zh": "请检查网络；如果需要代理，请在设置里填写。Bee 会自动重试。"
+   }
+  },
+  {
+   "code": "BEE-SETUP-CODEX-NOT-FOUND",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Codex not signed in",
+    "zh": "没有检测到 Codex 登录"
+   },
+   "cause": {
+    "en": "Bee found no Codex sign-in on this computer.",
+    "zh": "Bee 在这台电脑上没有找到 Codex 的登录。"
+   },
+   "fix": {
+    "en": "Install Codex, open a terminal, run codex login and sign in to your ChatGPT subscription, then check again.",
+    "zh": "安装 Codex，打开终端运行 codex login 登录你的 ChatGPT 订阅账号，然后重新检测。"
+   }
+  },
+  {
+   "code": "account_not_admitted",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Account not accepted",
+    "zh": "账号未获准共享"
+   },
+   "cause": {
+    "en": "TokHive only accepts certain accounts on this platform, and this one is not among them.",
+    "zh": "TokHive 在这个平台只接受部分账号，这个账号不在其中。"
+   },
+   "fix": {
+    "en": "Contact TokHive support and give them the account number.",
+    "zh": "请联系 TokHive 客服，并提供账号编号。"
+   }
+  },
+  {
+   "code": "account_not_registered",
+   "category": "syncing",
+   "title": {
+    "en": "Syncing",
+    "zh": "正在同步"
+   },
+   "cause": {
+    "en": "Bee has not registered this account with TokHive yet.",
+    "zh": "Bee 还没把这个账号登记到 TokHive。"
+   },
+   "fix": {
+    "en": "Keep Bee running; it usually takes a few minutes.",
+    "zh": "请保持 Bee 运行，通常需要几分钟。"
+   }
+  },
+  {
+   "code": "authorization_unavailable",
+   "category": "syncing",
+   "title": {
+    "en": "Syncing",
+    "zh": "正在同步"
+   },
+   "cause": {
+    "en": "TokHive has not received a usable authorization from this computer yet.",
+    "zh": "TokHive 还没收到这台电脑发来的可用授权。"
+   },
+   "fix": {
+    "en": "Keep Bee running; this usually clears within a few minutes. If it stays, sign in again in the official app.",
+    "zh": "请保持 Bee 运行，通常几分钟内恢复；如果一直这样，请在官方客户端重新登录。"
+   }
+  },
+  {
+   "code": "banned",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Stopped by TokHive",
+    "zh": "TokHive 暂停了共享"
+   },
+   "cause": {
+    "en": "TokHive has stopped sharing for this account.",
+    "zh": "TokHive 暂停了这个账号的共享。"
+   },
+   "fix": {
+    "en": "Contact TokHive support and give them the account number.",
+    "zh": "请联系 TokHive 客服，并提供账号编号。"
+   }
+  },
+  {
+   "code": "capabilities_unknown",
+   "category": "syncing",
+   "title": {
+    "en": "Syncing",
+    "zh": "正在同步"
+   },
+   "cause": {
+    "en": "Bee is reading this account's models and quota.",
+    "zh": "Bee 正在读取这个账号的模型和额度。"
+   },
+   "fix": {
+    "en": "Nothing to do. It usually takes 1 to 3 minutes.",
+    "zh": "不用处理，通常需要 1 到 3 分钟。"
+   }
+  },
+  {
+   "code": "claude_account_in_use",
+   "category": "action",
+   "action": "remove_account",
+   "title": {
+    "en": "Used by someone else",
+    "zh": "已被他人使用"
+   },
+   "cause": {
+    "en": "This Claude account is already shared from another TokHive account.",
+    "zh": "这个 Claude 账号已被另一个 TokHive 账号使用。"
+   },
+   "fix": {
+    "en": "Use a different account, or ask the other person to release it in TokHive.",
+    "zh": "你可以换用其他账号，或请对方在 TokHive 中释放它。"
+   }
+  },
+  {
+   "code": "claude_authorization_rejected",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in expired",
+    "zh": "登录已失效"
+   },
+   "cause": {
+    "en": "Claude rejected this account's sign-in. It has usually expired.",
+    "zh": "Claude 拒绝了这个账号的授权，通常是登录已失效。"
+   },
+   "fix": {
+    "en": "Open a terminal, run claude and sign in to the same account again.",
+    "zh": "打开终端运行 claude，重新登录同一个账号。"
+   },
+   "fix_import": {
+    "en": "Sign in again on the computer the file came from, export the credential file again and import it here.",
+    "zh": "在导出文件的那台电脑上重新登录，重新导出凭证文件后，在这里重新导入。"
+   }
+  },
+  {
+   "code": "claude_confirmation_required",
+   "category": "action",
+   "action": "confirm_switch",
+   "title": {
+    "en": "Different account signed in",
+    "zh": "客户端换了账号"
+   },
+   "cause": {
+    "en": "Claude Code is now signed in to a different account than the one being shared.",
+    "zh": "Claude Code 现在登录的账号和正在共享的不是同一个。"
+   },
+   "fix": {
+    "en": "Choose Use new account to share it, or remove this account.",
+    "zh": "点“改用新账号”开始共享新账号，或者删除这个账号。"
+   }
+  },
+  {
+   "code": "claude_source_unavailable",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in unavailable",
+    "zh": "读取不到登录"
+   },
+   "cause": {
+    "en": "Bee cannot read the Claude Code sign-in on this computer. You may have signed out.",
+    "zh": "Bee 读取不到这台电脑上 Claude Code 的登录，可能已经退出登录。"
+   },
+   "fix": {
+    "en": "Open a terminal, run claude and sign in to the same account. Bee picks it up by itself.",
+    "zh": "打开终端运行 claude，重新登录同一个账号，Bee 会自动识别。"
+   },
+   "fix_import": {
+    "en": "Sign in again on the computer the file came from, export the credential file again and import it here.",
+    "zh": "在导出文件的那台电脑上重新登录，重新导出凭证文件后，在这里重新导入。"
+   }
+  },
+  {
+   "code": "codex_account_in_use",
+   "category": "action",
+   "action": "remove_account",
+   "title": {
+    "en": "Used by someone else",
+    "zh": "已被他人使用"
+   },
+   "cause": {
+    "en": "This ChatGPT account is already shared from another TokHive account.",
+    "zh": "这个 ChatGPT 账号已被另一个 TokHive 账号使用。"
+   },
+   "fix": {
+    "en": "Use a different account, or ask the other person to release it in TokHive.",
+    "zh": "你可以换用其他账号，或请对方在 TokHive 中释放它。"
+   }
+  },
+  {
+   "code": "codex_authorization_rejected",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in expired",
+    "zh": "登录已失效"
+   },
+   "cause": {
+    "en": "ChatGPT rejected this account's sign-in. It has usually expired.",
+    "zh": "ChatGPT 拒绝了这个账号的授权，通常是登录已失效。"
+   },
+   "fix": {
+    "en": "Open a terminal, run codex login and sign in to the same account again.",
+    "zh": "打开终端运行 codex login，重新登录同一个账号。"
+   },
+   "fix_import": {
+    "en": "Sign in again on the computer the file came from, export the credential file again and import it here.",
+    "zh": "在导出文件的那台电脑上重新登录，重新导出凭证文件后，在这里重新导入。"
+   }
+  },
+  {
+   "code": "codex_confirmation_required",
+   "category": "action",
+   "action": "confirm_switch",
+   "title": {
+    "en": "Different account signed in",
+    "zh": "客户端换了账号"
+   },
+   "cause": {
+    "en": "Codex is now signed in to a different account than the one being shared.",
+    "zh": "Codex 现在登录的账号和正在共享的不是同一个。"
+   },
+   "fix": {
+    "en": "Choose Use new account to share it, or remove this account.",
+    "zh": "点“改用新账号”开始共享新账号，或者删除这个账号。"
+   }
+  },
+  {
+   "code": "codex_source_unavailable",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in unavailable",
+    "zh": "读取不到登录"
+   },
+   "cause": {
+    "en": "Bee cannot read the Codex sign-in on this computer. You may have signed out.",
+    "zh": "Bee 读取不到这台电脑上 Codex 的登录，可能已经退出登录。"
+   },
+   "fix": {
+    "en": "Open a terminal, run codex login and sign in to the same account. Bee picks it up by itself.",
+    "zh": "打开终端运行 codex login，重新登录同一个账号，Bee 会自动识别。"
+   },
+   "fix_import": {
+    "en": "Sign in again on the computer the file came from, export the credential file again and import it here.",
+    "zh": "在导出文件的那台电脑上重新登录，重新导出凭证文件后，在这里重新导入。"
+   }
+  },
+  {
+   "code": "concurrency_full",
+   "category": "waiting",
+   "title": {
+    "en": "Busy",
+    "zh": "正在满负荷工作"
+   },
+   "cause": {
+    "en": "This account is already handling as many requests as its plan allows.",
+    "zh": "这个账号正在处理的请求已经达到套餐允许的上限。"
+   },
+   "fix": {
+    "en": "Nothing to do. It takes new work as current requests finish.",
+    "zh": "不用处理，手头请求完成后就会接新的。"
+   }
+  },
+  {
+   "code": "confirmation_unconfirmed",
+   "category": "error",
+   "action": "retry",
+   "title": {
+    "en": "Could not switch account",
+    "zh": "换号失败"
+   },
+   "cause": {
+    "en": "TokHive did not confirm the switch.",
+    "zh": "TokHive 没有确认换号。"
+   },
+   "fix": {
+    "en": "Check the network and try again.",
+    "zh": "请检查网络后重试。"
+   }
+  },
+  {
+   "code": "device_draining",
+   "category": "waiting",
+   "title": {
+    "en": "Switching computers",
+    "zh": "正在切换电脑"
+   },
+   "cause": {
+    "en": "Your TokHive account is being moved to another computer. This one finishes the requests it has and then stops.",
+    "zh": "你的 TokHive 账号正在换绑到另一台电脑，这台电脑处理完手头的请求后就会停止。"
+   },
+   "fix": {
+    "en": "Nothing to do here. The other computer takes over automatically.",
+    "zh": "这里不用操作，另一台电脑会自动接手。"
+   }
+  },
+  {
+   "code": "hive_unavailable",
+   "category": "error",
+   "action": "retry",
+   "title": {
+    "en": "Cannot reach TokHive",
+    "zh": "无法连接 TokHive"
+   },
+   "cause": {
+    "en": "Bee could not get an answer from TokHive.",
+    "zh": "Bee 没有收到 TokHive 的回应。"
+   },
+   "fix": {
+    "en": "Check the network and try again.",
+    "zh": "请检查网络后重试。"
+   }
+  },
+  {
+   "code": "import_expired",
+   "category": "error",
+   "action": "reimport",
+   "title": {
+    "en": "Sign-in expired",
+    "zh": "登录已过期"
+   },
+   "cause": {
+    "en": "This sign-in has expired and cannot be renewed.",
+    "zh": "这个登录已经过期，而且无法续期。"
+   },
+   "fix": {
+    "en": "Sign in again, then export the file again.",
+    "zh": "请重新登录，然后重新导出文件。"
+   }
+  },
+  {
+   "code": "import_invalid",
+   "category": "error",
+   "action": "reimport",
+   "title": {
+    "en": "Not a credential file",
+    "zh": "不是有效的凭证文件"
+   },
+   "cause": {
+    "en": "This file is not a usable sign-in for this platform. Codex uses auth.json; Claude Code uses .credentials.json.",
+    "zh": "这个文件不是这个平台可用的登录。Codex 用的是 auth.json，Claude Code 用的是 .credentials.json。"
+   },
+   "fix": {
+    "en": "Choose the right file for this platform.",
+    "zh": "请选择这个平台对应的文件。"
+   }
+  },
+  {
+   "code": "import_scope",
+   "category": "error",
+   "action": "reimport",
+   "title": {
+    "en": "Sign-in cannot be shared",
+    "zh": "这个登录不能用于共享"
+   },
+   "cause": {
+    "en": "This sign-in lacks a permission sharing needs.",
+    "zh": "这个登录缺少共享所需的权限。"
+   },
+   "fix": {
+    "en": "Sign in again in Claude Code with your subscription account, then export the file again.",
+    "zh": "在 Claude Code 中用订阅账号重新登录，然后重新导出文件。"
+   }
+  },
+  {
+   "code": "import_unreadable",
+   "category": "error",
+   "action": "reimport",
+   "title": {
+    "en": "File cannot be read",
+    "zh": "文件读取失败"
+   },
+   "cause": {
+    "en": "Bee cannot open the file you chose.",
+    "zh": "Bee 打不开你选择的文件。"
+   },
+   "fix": {
+    "en": "Check the file still exists and choose it again.",
+    "zh": "请确认文件还在，然后重新选择。"
+   }
+  },
+  {
+   "code": "login_scope",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in cannot be shared",
+    "zh": "这个登录不能用于共享"
+   },
+   "cause": {
+    "en": "This Claude Code sign-in lacks a permission sharing needs.",
+    "zh": "这个 Claude Code 登录缺少共享所需的权限。"
+   },
+   "fix": {
+    "en": "Run claude and sign in again with your subscription account, then check again.",
+    "zh": "运行 claude，用订阅账号重新登录，然后重新检测。"
+   }
+  },
+  {
+   "code": "manually_paused",
+   "category": "paused",
+   "action": "resume",
+   "title": {
+    "en": "Paused",
+    "zh": "已暂停"
+   },
+   "cause": {
+    "en": "You paused sharing, so this account takes no new requests.",
+    "zh": "你暂停了共享，这个账号不会接新的请求。"
+   },
+   "fix": {
+    "en": "Choose Start sharing when you want it to take work again.",
+    "zh": "想继续共享时，点“开始共享”。"
+   }
+  },
+  {
+   "code": "market_not_open",
+   "category": "waiting",
+   "title": {
+    "en": "Not open yet",
+    "zh": "暂未开放"
+   },
+   "cause": {
+    "en": "TokHive is not trading this platform right now.",
+    "zh": "TokHive 目前暂不交易这个平台。"
+   },
+   "fix": {
+    "en": "Nothing to do. Sharing starts when TokHive opens it.",
+    "zh": "不用处理，TokHive 开放后会自动开始共享。"
+   }
+  },
+  {
+   "code": "model_unavailable",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Plan not supported",
+    "zh": "套餐暂不支持"
+   },
+   "cause": {
+    "en": "None of the models TokHive offers can run on this account's plan.",
+    "zh": "TokHive 提供的模型在这个账号的套餐下都用不了。"
+   },
+   "fix": {
+    "en": "Check the account's plan in the official app. If it should qualify, contact TokHive support.",
+    "zh": "请在官方客户端确认账号的套餐；如果套餐应该支持，请联系 TokHive 客服。"
+   }
+  },
+  {
+   "code": "no_pending_switch",
+   "category": "error",
+   "title": {
+    "en": "Nothing to confirm",
+    "zh": "没有需要确认的换号"
+   },
+   "cause": {
+    "en": "TokHive is not waiting for an account switch on this platform.",
+    "zh": "TokHive 目前没有在等这个平台的换号确认。"
+   },
+   "fix": {
+    "en": "Nothing to do.",
+    "zh": "不用处理。"
+   }
+  },
+  {
+   "code": "not_configured",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Not available on TokHive",
+    "zh": "TokHive 暂不支持"
+   },
+   "cause": {
+    "en": "TokHive has no account registered for this platform, or does not offer it.",
+    "zh": "TokHive 上没有这个平台的账号记录，或者暂不提供这个平台。"
+   },
+   "fix": {
+    "en": "If you just added the account, wait a few minutes. Otherwise contact TokHive support.",
+    "zh": "如果刚添加账号，请等几分钟；否则请联系 TokHive 客服。"
+   }
+  },
+  {
+   "code": "not_paired",
+   "category": "error",
+   "action": "repair_binding",
+   "title": {
+    "en": "Not linked to TokHive",
+    "zh": "还没有绑定 TokHive"
+   },
+   "cause": {
+    "en": "This computer is not linked to a TokHive account.",
+    "zh": "这台电脑还没有绑定 TokHive 账号。"
+   },
+   "fix": {
+    "en": "Link it to your TokHive account first.",
+    "zh": "请先绑定 TokHive 账号。"
+   }
+  },
+  {
+   "code": "offline",
+   "category": "offline",
+   "action": "check_network",
+   "title": {
+    "en": "Not connected",
+    "zh": "未连接"
+   },
+   "cause": {
+    "en": "TokHive cannot reach this computer right now.",
+    "zh": "TokHive 现在连不上这台电脑。"
+   },
+   "fix": {
+    "en": "Keep Bee running and check this computer's network.",
+    "zh": "请保持 Bee 运行，并检查这台电脑的网络。"
+   }
+  },
+  {
+   "code": "pairing_expired",
+   "category": "error",
+   "action": "repair_binding",
+   "title": {
+    "en": "Linking did not finish",
+    "zh": "绑定没有完成"
+   },
+   "cause": {
+    "en": "TokHive ended the linking before it was confirmed.",
+    "zh": "绑定在确认前就被 TokHive 结束了。"
+   },
+   "fix": {
+    "en": "Start linking again.",
+    "zh": "请重新开始绑定。"
+   }
+  },
+  {
+   "code": "pairing_failed",
+   "category": "error",
+   "action": "repair_binding",
+   "title": {
+    "en": "Linking did not finish",
+    "zh": "绑定没有完成"
+   },
+   "cause": {
+    "en": "TokHive ended the linking before it was confirmed.",
+    "zh": "绑定在确认前就被 TokHive 结束了。"
+   },
+   "fix": {
+    "en": "Start linking again.",
+    "zh": "请重新开始绑定。"
+   }
+  },
+  {
+   "code": "pairing_rejected",
+   "category": "error",
+   "action": "repair_binding",
+   "title": {
+    "en": "Linking did not finish",
+    "zh": "绑定没有完成"
+   },
+   "cause": {
+    "en": "TokHive ended the linking before it was confirmed.",
+    "zh": "绑定在确认前就被 TokHive 结束了。"
+   },
+   "fix": {
+    "en": "Start linking again.",
+    "zh": "请重新开始绑定。"
+   }
+  },
+  {
+   "code": "pause_unconfirmed",
+   "category": "error",
+   "action": "retry",
+   "title": {
+    "en": "Could not pause",
+    "zh": "暂停失败"
+   },
+   "cause": {
+    "en": "TokHive did not confirm the pause, so nothing was changed.",
+    "zh": "TokHive 没有确认暂停，所以什么都没变。"
+   },
+   "fix": {
+    "en": "Check the network and try again.",
+    "zh": "请检查网络后重试。"
+   }
+  },
+  {
+   "code": "plan_not_configured",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Plan not set up on TokHive",
+    "zh": "TokHive 尚未支持这个套餐"
+   },
+   "cause": {
+    "en": "TokHive has not set up sharing for this account's plan yet.",
+    "zh": "TokHive 还没有为这个套餐配置共享。"
+   },
+   "fix": {
+    "en": "Contact TokHive support and give them the account number.",
+    "zh": "请联系 TokHive 客服，并提供账号编号。"
+   }
+  },
+  {
+   "code": "platform_has_account",
+   "category": "error",
+   "action": "remove_account",
+   "title": {
+    "en": "Account already added",
+    "zh": "已添加账号"
+   },
+   "cause": {
+    "en": "This version shares one account per platform.",
+    "zh": "当前版本每个平台支持一个账号。"
+   },
+   "fix": {
+    "en": "Remove the current account first.",
+    "zh": "请先删除已有账号。"
+   }
+  },
+  {
+   "code": "quota_exhausted",
+   "category": "waiting",
+   "title": {
+    "en": "Quota used up",
+    "zh": "额度已用完"
+   },
+   "cause": {
+    "en": "This account has used all of its quota for the current window.",
+    "zh": "这个账号当前时间窗口的额度已经用完。"
+   },
+   "fix": {
+    "en": "Nothing to do. Sharing resumes when the quota resets.",
+    "zh": "不用处理，额度重置后会自动恢复共享。"
+   }
+  },
+  {
+   "code": "quota_unknown",
+   "category": "syncing",
+   "title": {
+    "en": "Checking quota",
+    "zh": "正在读取额度"
+   },
+   "cause": {
+    "en": "Bee could not read this account's quota yet and is trying again.",
+    "zh": "Bee 暂时没读到这个账号的额度，正在重试。"
+   },
+   "fix": {
+    "en": "Nothing to do. Keep Bee running.",
+    "zh": "不用处理，请保持 Bee 运行。"
+   }
+  },
+  {
+   "code": "rate_limited",
+   "category": "waiting",
+   "title": {
+    "en": "Cooling down",
+    "zh": "正在冷却"
+   },
+   "cause": {
+    "en": "The platform is limiting how fast this account can be used.",
+    "zh": "平台正在限制这个账号的使用频率。"
+   },
+   "fix": {
+    "en": "Nothing to do. Sharing resumes when the cooldown ends.",
+    "zh": "不用处理，冷却结束后会自动恢复共享。"
+   }
+  },
+  {
+   "code": "supply_device_restricted",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Set up differently on TokHive",
+    "zh": "TokHive 另有配置"
+   },
+   "cause": {
+    "en": "TokHive has a different setup for your account on this platform, so this computer does not share it.",
+    "zh": "TokHive 为你的账号在这个平台上做了单独配置，所以这台电脑不共享它。"
+   },
+   "fix": {
+    "en": "Contact TokHive support.",
+    "zh": "请联系 TokHive 客服。"
+   }
+  },
+  {
+   "code": "supply_not_enabled",
+   "category": "restricted",
+   "action": "contact_support",
+   "title": {
+    "en": "Not accepted on TokHive",
+    "zh": "TokHive 暂不接受"
+   },
+   "cause": {
+    "en": "TokHive does not accept shared subscriptions for this platform yet.",
+    "zh": "TokHive 暂时不接受这个平台的订阅共享。"
+   },
+   "fix": {
+    "en": "Contact TokHive support if you think this is wrong.",
+    "zh": "如有疑问，请联系 TokHive 客服。"
+   }
+  },
+  {
+   "code": "supply_unconfirmed",
+   "category": "error",
+   "action": "retry",
+   "title": {
+    "en": "Could not change sharing",
+    "zh": "操作失败"
+   },
+   "cause": {
+    "en": "TokHive did not confirm the change, so sharing is as it was.",
+    "zh": "TokHive 没有确认这次操作，共享状态保持不变。"
+   },
+   "fix": {
+    "en": "Check the network and try again.",
+    "zh": "请检查网络后重试。"
+   }
+  }
+ ]
+}

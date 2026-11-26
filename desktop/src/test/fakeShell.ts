@@ -3,7 +3,7 @@
 // GET /v1/explanations (regenerate it from the mock Bee when the catalog
 // changes: curl --unix-socket <dir>/control/bee.sock http://bee/v1/explanations).
 import { vi } from "vitest";
-import { BeeError, type Account, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot } from "../lib/bee";
+import { BeeError, type Account, type Network, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot } from "../lib/bee";
 import catalog from "./explanations.json";
 
 export const claude: Account = {
@@ -74,6 +74,8 @@ export function snapshot(change: Partial<Snapshot> = {}): Snapshot {
   };
 }
 
+export const noProxy: Network = { connect_proxy: "", active_proxy: "", source: "", editable: true, env_override: false, restart_required: false };
+
 type Handler = (method: string, path: string, body: unknown) => unknown;
 
 export type FakeShell = Shell & {
@@ -106,7 +108,10 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
     request: vi.fn(async (method: string, path: string, body?: unknown) => {
       calls.push({ method, path, body });
       if (method === "GET" && path === "/v1/explanations") return catalog;
-      return handler(method, path, body);
+      // A test that answers nothing about it sees a Bee with no proxy.
+      const answered = handler(method, path, body);
+      if (method === "GET" && path === "/v1/network" && typeof (answered as Partial<Network> | undefined)?.connect_proxy !== "string") return noProxy;
+      return answered;
     }) as Shell["request"],
     getSettings: vi.fn(async () => current),
     setSettings: vi.fn(async (change) => {
@@ -117,6 +122,7 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
     appInfo: vi.fn(async () => ({ version: "1.0.0", config: "/home/a/.config/tokhive/bee.json", logs: "/home/a/Library/Logs/ai.tokhive.bee" })),
     openLogs: vi.fn(async () => {}),
     retryService: vi.fn(async () => {}),
+    restartService: vi.fn(async () => true),
     exportDiagnostics: vi.fn(async () => "/tmp/bee-diagnostics.json"),
     quit: vi.fn(async () => {}),
     onQuitRequest: (listener) => {

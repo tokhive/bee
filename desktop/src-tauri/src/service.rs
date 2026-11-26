@@ -99,6 +99,31 @@ impl Service {
         self.retry.notify_one();
     }
 
+    /// Restarts the app's own Bee, for a setting that only applies when it
+    /// starts: asks it to stop (SIGTERM, which it answers by telling Hive and
+    /// finishing its requests) and starts the next one at once instead of
+    /// after the backoff. Returns false when there is no Bee of the app's own.
+    pub fn restart(self: &std::sync::Arc<Self>) -> bool {
+        let Some(pid) = *self.child.lock().unwrap() else { return false };
+        terminate(pid);
+        self.retry();
+        let service = self.clone();
+        // Called from a command thread, which is not inside a runtime.
+        tauri::async_runtime::spawn(async move {
+            let deadline = Instant::now() + STOP_GRACE;
+            while Instant::now() < deadline {
+                tokio::time::sleep(Duration::from_millis(100)).await;
+                if *service.child.lock().unwrap() != Some(pid) {
+                    return;
+                }
+            }
+            // Still the same child after the grace period: it is stuck.
+            eprintln!("[bee-desktop] bee did not stop within {STOP_GRACE:?}; killing it");
+            kill(pid);
+        });
+        true
+    }
+
     /// Waits for the backoff to pass, or for a retry; a retry starts the
     /// backoff over.
     async fn back_off(&self, delay: &mut Duration) {
@@ -309,6 +334,36 @@ mod tests {
         };
         assert!(still_running, "waiting closed the child's stdin");
         let _ = child.kill().await;
+    }
+
+    #[tokio::test]
+    async fn restart_stops_the_running_bee_and_cuts_the_backoff_short() {
+        let service = std::sync::Arc::new(Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true));
+        let mut child = tokio::process::Command::new("sleep").arg("30").spawn().unwrap();
+        *service.child.lock().unwrap() = child.id();
+        assert!(service.restart());
+        let status = tokio::time::timeout(Duration::from_secs(5), child.wait()).await.expect("sleep was not stopped").unwrap();
+        assert!(!status.success(), "sleep ended by a signal, not by itself");
+        // The next Bee is wanted at once: the retry is waiting for the loop.
+        tokio::time::timeout(Duration::from_secs(1), service.retry.notified()).await.expect("no retry was asked for");
+        // And the app is not quitting.
+        assert!(!service.quitting.load(Ordering::SeqCst));
+    }
+
+    #[test]
+    fn restart_can_be_asked_for_outside_an_async_context() {
+        // A Tauri command runs on a plain thread; this panicked there with "no reactor running".
+        let service = std::sync::Arc::new(Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true));
+        let mut child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
+        *service.child.lock().unwrap() = Some(child.id());
+        assert!(service.restart());
+        assert!(!child.wait().unwrap().success(), "sleep ended by a signal, not by itself");
+    }
+
+    #[tokio::test]
+    async fn restart_without_a_bee_of_its_own_does_nothing() {
+        let service = std::sync::Arc::new(Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true));
+        assert!(!service.restart());
     }
 
     #[test]

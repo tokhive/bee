@@ -56,6 +56,7 @@ export const tauriShell: Shell = {
     }
   },
   retryService: () => invoke("retry_service"),
+  restartService: () => invoke<boolean>("restart_service"),
   async exportDiagnostics() {
     try {
       return await invoke<string | null>("export_diagnostics");

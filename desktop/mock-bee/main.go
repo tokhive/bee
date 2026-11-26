@@ -22,6 +22,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"sort"
 	"strings"
@@ -121,11 +122,14 @@ type login struct {
 type world struct {
 	// mode is "desktop" (bee run --desktop) or "cli" (bee run): a Bee run
 	// from the command line neither pairs nor manages accounts.
-	mode       string
-	binding    string
-	connection string
-	problem    *problem
-	accounts   []account
+	mode string
+	// proxy is the saved connect_proxy and activeProxy the one in use; a
+	// real Bee uses a new one only after it restarts.
+	proxy, activeProxy string
+	binding            string
+	connection         string
+	problem            *problem
+	accounts           []account
 	// logins are the official clients' sign-ins on this machine.
 	logins map[string]login
 	// pairWith is how a pairing ends: "confirm" a few seconds after it
@@ -310,6 +314,23 @@ func (m *mock) desktop(w http.ResponseWriter, code, message string) bool {
 		return false
 	}
 	return true
+}
+
+var loopbackProxy = regexp.MustCompile(`^http://(127\.0\.0\.1|\[::1\]):[0-9]{1,5}$`)
+
+// network is GET /v1/network as a Bee of this scenario's mode answers it.
+func (m *mock) network() map[string]any {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	editable := m.w.mode == "desktop"
+	source := ""
+	if m.w.proxy != "" {
+		source = "desktop"
+	}
+	return map[string]any{
+		"connect_proxy": m.w.proxy, "active_proxy": m.w.activeProxy, "source": source,
+		"editable": editable, "env_override": false, "restart_required": editable && m.w.proxy != m.w.activeProxy,
+	}
 }
 
 func writeJSON(w http.ResponseWriter, status int, v any) {
@@ -560,6 +581,49 @@ func (m *mock) handler() http.Handler {
 		writeJSON(w, 200, map[string]any{"platform": platform, "status": "confirmed", "account_fingerprint": found.Fingerprint})
 	})
 	// The real catalog, so the window shows Bee's own words.
+	mux.HandleFunc("GET /v1/network", func(w http.ResponseWriter, r *http.Request) { writeJSON(w, 200, m.network()) })
+	mux.HandleFunc("PUT /v1/network", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			ConnectProxy *string `json:"connect_proxy"`
+		}
+		if json.NewDecoder(r.Body).Decode(&in) != nil || in.ConnectProxy == nil {
+			refuse(w, 400, "invalid_request", `body must be {"connect_proxy": "http://127.0.0.1:7890"}, or an empty string for no proxy`)
+			return
+		}
+		if !m.desktop(w, "network_unavailable", "this Bee was started from the command line; set connect_proxy with bee setup") {
+			return
+		}
+		if *in.ConnectProxy != "" && !loopbackProxy.MatchString(*in.ConnectProxy) {
+			refuse(w, 400, "invalid_proxy", "the proxy must be an unauthenticated HTTP proxy at a loopback IP address and port")
+			return
+		}
+		m.mu.Lock()
+		m.w.proxy = *in.ConnectProxy
+		m.mu.Unlock()
+		writeJSON(w, 200, m.network())
+	})
+	// Port 1 has nobody listening and port 9 refuses; anything else works.
+	mux.HandleFunc("POST /v1/network/check", func(w http.ResponseWriter, r *http.Request) {
+		var in struct {
+			ConnectProxy *string `json:"connect_proxy"`
+		}
+		if json.NewDecoder(r.Body).Decode(&in) != nil || in.ConnectProxy == nil {
+			refuse(w, 400, "invalid_request", `body must be {"connect_proxy": "http://127.0.0.1:7890"}, or an empty string to try without a proxy`)
+			return
+		}
+		if *in.ConnectProxy != "" && !loopbackProxy.MatchString(*in.ConnectProxy) {
+			refuse(w, 400, "invalid_proxy", "the proxy must be an unauthenticated HTTP proxy at a loopback IP address and port")
+			return
+		}
+		result := map[string]any{"ok": true, "target": "chatgpt.com:443"}
+		switch {
+		case strings.HasSuffix(*in.ConnectProxy, ":1"):
+			result = map[string]any{"ok": false, "target": "chatgpt.com:443", "problem": problem{"proxy_unreachable", "nothing answers at the proxy's address"}}
+		case strings.HasSuffix(*in.ConnectProxy, ":9"):
+			result = map[string]any{"ok": false, "target": "chatgpt.com:443", "problem": problem{"proxy_refused", "the proxy answered, but would not open a connection"}}
+		}
+		writeJSON(w, 200, result)
+	})
 	mux.HandleFunc("GET /v1/explanations", func(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, 200, bee.ExplanationCatalog())
 	})

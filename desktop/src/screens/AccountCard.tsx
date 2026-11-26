@@ -37,10 +37,39 @@ function StatusPill({ status }: { status: CardStatus }) {
   );
 }
 
+/** How long a card may show no quota before it suggests a proxy. */
+const NO_QUOTA_BEFORE_PROXY_HINT_MS = 60_000;
+
 export function Quota({ platform, syncing }: { platform?: PlatformState; syncing: boolean }) {
   const { t } = useApp();
+  const { go } = useNav();
   const windows = platform?.capabilities.windows ?? [];
-  if (syncing || !windows.length) return <div className="text-[12.5px] text-muted">{t.quota.none}</div>;
+  const none = syncing || !windows.length;
+  // Bee cannot say it is the network that keeps the quota from being read, so
+  // a card still without one after a minute offers the proxy setting, unless
+  // something else already needs the person (a sign-in, a pause, a limit).
+  const [late, setLate] = React.useState(false);
+  React.useEffect(() => {
+    if (!none) return setLate(false);
+    const timer = setTimeout(() => setLate(true), NO_QUOTA_BEFORE_PROXY_HINT_MS);
+    return () => clearTimeout(timer);
+  }, [none]);
+  const state = platform?.sharing.state;
+  if (none) {
+    return (
+      <div className="text-[12.5px] text-muted">
+        {t.quota.none}
+        {late && state !== "action" && state !== "paused" && state !== "restricted" && (
+          <p className="m-0 mt-1">
+            {t.quota.proxyHint}{" "}
+            <button type="button" className="cursor-pointer underline" onClick={() => go({ name: "settings" })}>
+              {t.quota.proxyLink}
+            </button>
+          </p>
+        )}
+      </div>
+    );
+  }
   const stale = staleMinutes(platform?.capabilities.observed_at);
   return (
     <div>

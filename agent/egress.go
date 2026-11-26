@@ -30,7 +30,10 @@ import (
 )
 
 type egressConfig struct {
-	ConnectProxy       string             `json:"connect_proxy,omitempty"`
+	ConnectProxy string `json:"connect_proxy,omitempty"`
+	// desktopProxy is set when ConnectProxy came from the desktop app's own
+	// network settings rather than from this file.
+	desktopProxy       bool
 	Targets            []string           `json:"targets"`
 	InboxKeyID         string             `json:"inbox_key_id"`
 	Credential         tee.Secret         `json:"credential"`
@@ -339,6 +342,11 @@ func (cfg *egressConfig) validate() error {
 			}
 		}
 	}
+	return cfg.applyProxy()
+}
+
+// applyProxy checks connect_proxy and points every official source at it.
+func (cfg *egressConfig) applyProxy() error {
 	if cfg.ConnectProxy != "" {
 		address, err := localConnectProxy(cfg.ConnectProxy)
 		if err != nil {

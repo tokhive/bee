@@ -117,6 +117,9 @@ func runDesktop(ctx context.Context, configPath, egressPath string, out io.Write
 		egress.useStateDirectory(filepath.Dir(configPath))
 		notify(console, slog.LevelInfo, "connect", "using egress configuration", "path", egressPath)
 	}
+	if err := egress.useDesktopProxy(configPath); err != nil {
+		notify(console, slog.LevelWarn, "connect", "the saved network setting is not used", "error", err.Error())
+	}
 	// The tunnel stays open with no account, so adding the first one needs
 	// no reconnect.
 	egress.liveSources = true

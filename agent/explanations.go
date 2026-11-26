@@ -274,7 +274,7 @@ func init() {
 	explain("BEE-HIVE-UNREACHABLE", categoryOffline, actionCheckNetwork,
 		say("Cannot reach TokHive", "无法连接 TokHive"),
 		say("Bee cannot connect to TokHive. The network may be down, or TokHive may be briefly unavailable.", "Bee 连不上 TokHive，可能是网络断了，也可能是 TokHive 暂时不可用。"),
-		say("Check the network. If you use a proxy, set it in Settings. Bee keeps retrying.", "请检查网络；如果需要代理，请在设置里填写。Bee 会自动重试。"))
+		say("Check the network. Bee keeps retrying.", "请检查网络。Bee 会自动重试。"))
 	explain("BEE-HIVE-CREDENTIAL", categoryAction, actionRepairBinding,
 		say("Link no longer valid", "绑定已失效"),
 		say("TokHive no longer accepts this computer's link.", "TokHive 不再接受这台电脑的绑定。"),

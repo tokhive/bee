@@ -10,6 +10,7 @@ import { maskEmail } from "../lib/format";
 import { managesAccounts } from "../lib/model";
 import { isMac } from "../lib/utils";
 import { BackButton } from "./Onboarding";
+import { NetworkSettings } from "./NetworkSettings";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -116,6 +117,9 @@ export function SettingsPage() {
               </select>
             </span>
           </Row>
+        </Section>
+        <Section title={t.network.title}>
+          <NetworkSettings />
         </Section>
         <Section title={t.settings.help}>
           <Row>

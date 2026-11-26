@@ -67,7 +67,7 @@ func newTestTEE(t *testing.T) *testTEE {
 	}
 	tee.trust = teeTrust{
 		applications: map[string]struct{}{testApplicationID: {}},
-		policyHash:   tee.policy,
+		policyHashes: map[[32]byte]struct{}{tee.policy: {}},
 		checkEvidence: func(identity platform.Identity) error {
 			if identity.ApplicationID != testApplicationID {
 				return errors.New("unexpected application")
@@ -161,6 +161,52 @@ func TestVerifyCredentialKeyRejectsSubstitutionAndReplay(t *testing.T) {
 				t.Fatalf("got %v, want a refusal that halts", err)
 			}
 		})
+	}
+}
+
+// A rollout to an image with a new whitelist pins both whitelists, so one
+// release trusts the TEE on either side of the switch.
+func TestVerifyCredentialKeyTrustsEitherWhitelistOfARollout(t *testing.T) {
+	tee := newTestTEE(t)
+	next := tee.policy
+	next[0] ^= 0xff
+	tee.trust.policyHashes[next] = struct{}{}
+	nonce := make([]byte, credentialKeyNonceLength)
+	for name, policy := range map[string][32]byte{"current": tee.policy, "next": next} {
+		encoded := tee.signed(t, nonce, func(s *credentialKeyStatement) { s.PolicyHash = policy[:] })
+		if _, err := verifyCredentialKey(encoded, nonce, tee.trust); err != nil {
+			t.Fatalf("%s whitelist refused: %v", name, err)
+		}
+	}
+	unknown := next
+	unknown[1] ^= 0xff
+	encoded := tee.signed(t, nonce, func(s *credentialKeyStatement) { s.PolicyHash = unknown[:] })
+	if _, err := verifyCredentialKey(encoded, nonce, tee.trust); !errors.Is(err, errInboxIdentity) {
+		t.Fatalf("an unpinned whitelist was trusted: %v", err)
+	}
+}
+
+// The policy pin is a comma-separated list; any entry that is not a digest
+// fails closed, as an empty pin does.
+func TestLoadTEETrustReadsEveryPolicyPin(t *testing.T) {
+	saved := TEEPolicyHash
+	t.Cleanup(func() { TEEPolicyHash = saved })
+	first, second := strings.Repeat("ab", 32), strings.Repeat("cd", 32)
+
+	TEEPolicyHash = first + ", " + second
+	trust, err := loadTEETrust()
+	if err != nil || len(trust.policyHashes) != 2 {
+		t.Fatalf("two pins: %v %d", err, len(trust.policyHashes))
+	}
+	digest, _ := hex.DecodeString(second)
+	if !trust.trustsPolicy(digest) {
+		t.Fatal("the second pin is not trusted")
+	}
+	for _, pin := range []string{"", first + ",", first + ",not-a-digest", strings.Repeat("ab", 31)} {
+		TEEPolicyHash = pin
+		if _, err := loadTEETrust(); err == nil {
+			t.Fatalf("pin %q was accepted", pin)
+		}
 	}
 }
 

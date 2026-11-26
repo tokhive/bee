@@ -63,6 +63,22 @@ export type PlatformState = {
   };
 };
 
+/** The proxy for Bee's connections to the official services (not to Hive). */
+export type Network = {
+  /** What Bee uses after its next start. */
+  connect_proxy: string;
+  /** What it uses now. */
+  active_proxy: string;
+  /** "desktop" (changeable here), "egress" (set in Bee's own configuration) or "". */
+  source: "" | "desktop" | "egress";
+  editable: boolean;
+  /** The Bee process has HTTPS_PROXY, which wins over connect_proxy. */
+  env_override: boolean;
+  restart_required: boolean;
+};
+
+export type NetworkCheck = { ok: boolean; target: string; problem?: { code: string; message: string } };
+
 export type Snapshot = {
   service: ServiceState;
   overview: Overview | null;
@@ -142,6 +158,8 @@ export interface Shell {
   openLogs(): Promise<void>;
   /** Asks the shell to start the background service again now. */
   retryService(): Promise<void>;
+  /** Restarts the Bee the app started, for a setting that applies at start; false when the Bee is not the app's own. */
+  restartService(): Promise<boolean>;
   /** Saves Bee's diagnostic report where the person chooses; null if cancelled. */
   exportDiagnostics(): Promise<string | null>;
   /** Quits the app, stopping the app's own Bee. */

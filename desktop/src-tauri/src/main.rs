@@ -277,6 +277,15 @@ fn retry_service(shared: tauri::State<'_, Arc<Shared>>) {
     shared.refresh.notify_one();
 }
 
+/// Restarts the Bee the app started, for a setting that applies at start (the
+/// network proxy). False when the Bee is not the app's own.
+#[tauri::command]
+fn restart_service(shared: tauri::State<'_, Arc<Shared>>) -> bool {
+    let restarted = shared.service.restart();
+    shared.refresh.notify_one();
+    restarted
+}
+
 #[derive(serde::Serialize)]
 struct AppInfo {
     version: String,
@@ -455,7 +464,7 @@ fn main() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, app_info, open_logs, export_diagnostics])
+        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, restart_service, app_info, open_logs, export_diagnostics])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();

@@ -85,6 +85,10 @@ export const devShell: Shell = {
   async retryService() {
     await refresh();
   },
+  async restartService() {
+    await refresh();
+    return true;
+  },
   async exportDiagnostics() {
     const report = await call<unknown>("GET", "/v1/diagnostics");
     const link = document.createElement("a");

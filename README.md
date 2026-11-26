@@ -142,7 +142,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 | --- | --- |
 | `bee` | Open the bilingual management menu in an interactive terminal; exiting leaves the background service running. |
 | `bee start [--hive URL] [--name NAME] [--yes]` | Pair, choose the subscriptions and run, skipping the steps already done. The way to start Bee. |
-| `bee status` | Show the build, the Hive, the device and whether each supplied account and each official API key (`openai_api`, `claude_api`) is taking work. |
+| `bee status` | Show the build, the Hive, the device and whether each supplied account and each official API key (`openai_api`, `claude_api`, `gemini_api`) is taking work. |
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
 | `bee login [--hive URL] [--name NAME]` | Pair this machine with a Hive account, or resume a pairing that was interrupted. |
 | `bee setup [--platform openai,claude,google] [--yes]` | Detect local subscription logins and write the egress configuration. |

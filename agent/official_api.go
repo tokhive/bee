@@ -24,7 +24,12 @@ type officialAPIPlatform struct {
 	statusPath        string
 	secret            func(key string) tee.Secret
 	listing           func(req *http.Request, key string)
-	register          func(r *beewire.CredentialRegistration, k *beewire.OfficialAPIKey)
+	// page is the address of one page of the key's model listing, cursor
+	// naming the page after the first; read takes a page apart into the
+	// model IDs on it and the cursor of the next, empty after the last.
+	page     func(origin, cursor string) string
+	read     func(body io.Reader) (ids []string, next string, ok bool)
+	register func(r *beewire.CredentialRegistration, k *beewire.OfficialAPIKey)
 }
 
 var (
@@ -35,6 +40,8 @@ var (
 		listing: func(req *http.Request, key string) {
 			req.Header.Set("Authorization", "Bearer "+key)
 		},
+		page:     func(origin, _ string) string { return origin + "/v1/models" },
+		read:     readDataListing,
 		register: func(r *beewire.CredentialRegistration, k *beewire.OfficialAPIKey) { r.OpenAIAPI = k },
 	}
 	claudeAPI = officialAPIPlatform{
@@ -46,11 +53,81 @@ var (
 			req.Header.Set("X-Api-Key", key)
 			req.Header.Set("Anthropic-Version", "2023-06-01")
 		},
+		page: func(origin, cursor string) string {
+			target := origin + "/v1/models?limit=1000"
+			if cursor != "" {
+				target += "&after_id=" + url.QueryEscape(cursor)
+			}
+			return target
+		},
+		read:     readDataListing,
 		register: func(r *beewire.CredentialRegistration, k *beewire.OfficialAPIKey) { r.ClaudeAPI = k },
+	}
+	// geminiAPI is a Gemini API key made in Google AI Studio. Google takes it
+	// bare in x-goog-api-key and lists models as "models/<id>".
+	geminiAPI = officialAPIPlatform{
+		name: "gemini_api", label: "Gemini API", code: "BEE-CONFIG-GEMINI-API",
+		target: "generativelanguage.googleapis.com:443", origin: "https://generativelanguage.googleapis.com", statusPath: "/api/bee/gemini-api/status",
+		secret: func(key string) tee.Secret { return tee.Secret{Header: "x-goog-api-key", Token: key} },
+		listing: func(req *http.Request, key string) {
+			req.Header.Set("X-Goog-Api-Key", key)
+		},
+		page: func(origin, cursor string) string {
+			target := origin + "/v1beta/models?pageSize=1000"
+			if cursor != "" {
+				target += "&pageToken=" + url.QueryEscape(cursor)
+			}
+			return target
+		},
+		read:     readGeminiListing,
+		register: func(r *beewire.CredentialRegistration, k *beewire.OfficialAPIKey) { r.GeminiAPI = k },
 	}
 )
 
-// officialAPISource contributes one official Platform key (ADR 0033, 0037).
+// readDataListing reads OpenAI's and Anthropic's listing: models under data,
+// and with Anthropic's paging, the last ID as the next page's cursor.
+func readDataListing(body io.Reader) ([]string, string, bool) {
+	var listed struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+		HasMore bool   `json:"has_more"`
+		LastID  string `json:"last_id"`
+	}
+	if json.NewDecoder(body).Decode(&listed) != nil {
+		return nil, "", false
+	}
+	ids := make([]string, 0, len(listed.Data))
+	for _, m := range listed.Data {
+		ids = append(ids, m.ID)
+	}
+	if !listed.HasMore {
+		return ids, "", true
+	}
+	return ids, listed.LastID, true
+}
+
+// readGeminiListing reads Google's listing, which names each model
+// "models/<id>" and pages with a token.
+func readGeminiListing(body io.Reader) ([]string, string, bool) {
+	var listed struct {
+		Models []struct {
+			Name string `json:"name"`
+		} `json:"models"`
+		NextPageToken string `json:"nextPageToken"`
+	}
+	if json.NewDecoder(body).Decode(&listed) != nil {
+		return nil, "", false
+	}
+	ids := make([]string, 0, len(listed.Models))
+	for _, m := range listed.Models {
+		ids = append(ids, strings.TrimPrefix(m.Name, "models/"))
+	}
+	return ids, listed.NextPageToken, true
+}
+
+// officialAPISource contributes one official Platform key (Hive ADR 0033,
+// 0037, 0050).
 // The key file is read again on every cycle, so replacing it needs no restart.
 type officialAPISource struct {
 	LocalURL                       string   `json:"local_url,omitempty"`
@@ -107,6 +184,10 @@ func (cfg *egressConfig) synchronizeClaudeAPI(ctx context.Context, state localSt
 	return cfg.ClaudeAPI.synchronize(ctx, state, lease, out, force, cfg.InboxKeyID)
 }
 
+func (cfg *egressConfig) synchronizeGeminiAPI(ctx context.Context, state localState, lease string, out io.Writer, force bool) error {
+	return cfg.GeminiAPI.synchronize(ctx, state, lease, out, force, cfg.InboxKeyID)
+}
+
 func (s *officialAPISource) synchronize(ctx context.Context, state localState, lease string, out io.Writer, force bool, inboxKeyID string) error {
 	p := s.spec()
 	key, err := s.key()
@@ -157,9 +238,9 @@ func (s *officialAPISource) synchronize(ctx context.Context, state localState, l
 }
 
 // listModels returns the selected models the key's official listing shows,
-// or nil when the listing cannot be read. The Claude listing is paged; both
-// listings may name an unpinned alias by its dated snapshot, which counts as
-// the alias the Provider selected.
+// or nil when the listing cannot be read. The Claude and Gemini listings are
+// paged; a listing may name an unpinned alias by its dated snapshot, which
+// counts as the alias the Provider selected.
 func (s *officialAPISource) listModels(ctx context.Context, key string) []string {
 	p := s.spec()
 	observe, cancel := context.WithTimeout(ctx, 8*time.Second)
@@ -170,42 +251,33 @@ func (s *officialAPISource) listModels(ctx context.Context, key string) []string
 	}
 	client := &http.Client{Transport: s.transport, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
 	found := []string{}
-	after := ""
+	cursor := ""
 	for page := 0; page < 10; page++ {
-		target := origin + "/v1/models"
-		if p == &claudeAPI {
-			target += "?limit=1000"
-			if after != "" {
-				target += "&after_id=" + url.QueryEscape(after)
-			}
-		}
-		req, _ := http.NewRequestWithContext(observe, http.MethodGet, target, nil)
+		req, _ := http.NewRequestWithContext(observe, http.MethodGet, p.page(origin, cursor), nil)
 		p.listing(req, key)
 		res, err := client.Do(req)
 		if err != nil {
 			return nil
 		}
-		var listed struct {
-			Data []struct {
-				ID string `json:"id"`
-			} `json:"data"`
-			HasMore bool   `json:"has_more"`
-			LastID  string `json:"last_id"`
+		var ids []string
+		var next string
+		ok := res.StatusCode == 200
+		if ok {
+			ids, next, ok = p.read(io.LimitReader(res.Body, 2<<20))
 		}
-		ok := res.StatusCode == 200 && json.NewDecoder(io.LimitReader(res.Body, 2<<20)).Decode(&listed) == nil
 		res.Body.Close()
 		if !ok {
 			return nil
 		}
-		for _, m := range listed.Data {
-			if selected := s.selected(m.ID); selected != "" && !slices.Contains(found, selected) {
+		for _, id := range ids {
+			if selected := s.selected(id); selected != "" && !slices.Contains(found, selected) {
 				found = append(found, selected)
 			}
 		}
-		if !listed.HasMore || listed.LastID == "" || listed.LastID == after {
+		if next == "" || next == cursor {
 			return found
 		}
-		after = listed.LastID
+		cursor = next
 	}
 	return found
 }

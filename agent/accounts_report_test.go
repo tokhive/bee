@@ -61,6 +61,35 @@ func TestReadinessSummaryExplainsEachReason(t *testing.T) {
 	}
 }
 
+// The desktop app reads Hive's view of a platform when an account is added,
+// before its first synchronization has finished; the report that follows is
+// what tells it to read again, whether the platform ended up ready or not.
+func TestReadinessReportTellsTheDesktopAppToReadAgain(t *testing.T) {
+	for name, supply := range map[string]beewire.PlatformSupply{
+		"ready":   {Platform: "claude", Ready: true, Reasons: []string{}},
+		"blocked": {Platform: "claude", Reasons: []string{beewire.ReasonPlanNotConfigured}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			hive := readinessHive(beewire.PlatformAccount{Platform: "claude", Status: "ready"}, supply)
+			defer hive.Close()
+			status := newRunStatus()
+			events, unsubscribe := status.subscribe()
+			defer unsubscribe()
+			var out bytes.Buffer
+			reportReadiness(withRunStatus(context.Background(), status), localState{Hive: hive.URL, Credential: "bee-test"}, "claude", newConsole(&out))
+			select {
+			case event := <-events:
+				data, _ := event.Data.(map[string]string)
+				if event.Name != "supply" || data["platform"] != "claude" {
+					t.Fatalf("event = %+v", event)
+				}
+			default:
+				t.Fatal("no event after the readiness report")
+			}
+		})
+	}
+}
+
 func TestReadinessSummaryNamesAnUnreachableHive(t *testing.T) {
 	closed := httptest.NewServer(http.NotFoundHandler())
 	closed.Close()

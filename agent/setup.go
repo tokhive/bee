@@ -16,6 +16,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/tokhive/bee/beewire"
 )
 
 // setupInput is where bee setup reads the provider's answers; tests replace it.
@@ -40,6 +42,8 @@ type detectedAccount struct {
 	problem  error
 	codex    *codexSource
 	claude   *claudeSource
+	// antigravity is the sign-in Bee keeps itself for a Google account.
+	antigravity *antigravitySource
 }
 
 func defaultEgressPath(configPath string) string {
@@ -61,7 +65,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file")
 	egressPath := flags.String("egress-config", "", "egress configuration to write (default: egress.json beside the device configuration)")
-	platformList := flags.String("platform", "", "platforms to supply, comma separated: openai, claude (default: every account found)")
+	platformList := flags.String("platform", "", "platforms to supply, comma separated: openai, claude, google (default: every account found)")
 	codexHome := flags.String("codex-home", "", "official Codex directory (default: $CODEX_HOME, else ~/.codex)")
 	var claudeDir *string
 	flags.Func("claude-config-dir", "Claude Code configuration directory namespace, as for claude-status", func(value string) error {
@@ -94,7 +98,7 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 	if *platformList != "" {
 		for _, platform := range strings.Split(*platformList, ",") {
 			platform = strings.TrimSpace(platform)
-			if platform != "openai" && platform != "claude" {
+			if !supplyPlatform(platform) {
 				return failf("BEE-SETUP-PLATFORM", "%q", platform)
 			}
 			if !slices.Contains(wanted, platform) {
@@ -117,15 +121,18 @@ func setupWith(ctx context.Context, args []string, out io.Writer, standalone boo
 
 	fmt.Fprintln(out, ui.text("Looking for official sign-ins on this machine:", "正在查找本机的官方登录账号："))
 	var detected []detectedAccount
-	for _, platform := range []string{"openai", "claude"} {
+	for _, platform := range supplyPlatforms {
 		if wanted != nil && !slices.Contains(wanted, platform) {
 			continue
 		}
 		var found detectedAccount
-		if platform == "openai" {
+		switch platform {
+		case "openai":
 			found = detectCodex(ctx, *codexHome)
-		} else {
+		case "claude":
 			found = detectClaude(ctx, claudeDir, existing)
+		default:
+			found = detectAntigravity(filepath.Dir(*configPath), ui)
 		}
 		detected = append(detected, found)
 		if found.problem != nil {
@@ -334,14 +341,42 @@ func detectClaudeWithUI(ctx context.Context, directory *string, existing *egress
 	return found
 }
 
+// detectAntigravity looks for the sign-in bee antigravity-login stores beside
+// the device configuration. It reads the file only and contacts no one.
+func detectAntigravity(directory string, ui installUI) detectedAccount {
+	found := detectedAccount{platform: beewire.GooglePlatform}
+	source := &antigravitySource{Capabilities: true, directory: directory}
+	credential, err := source.store().read()
+	if err != nil {
+		found.problem = failCause("BEE-ANTIGRAVITY-SOURCE", err)
+		return found
+	}
+	if problem := antigravityStoredProblem(credential); problem != nil && !credential.renewable(time.Now()) {
+		found.problem = problem
+		return found
+	}
+	found.antigravity = source
+	state := ui.text("expires ", "有效期至 ") + credential.ExpiresAt.Local().Format(time.RFC3339)
+	if !credential.available(time.Now()) {
+		state = ui.text("access token expired; Hive refreshes it once bee run is connected", "访问令牌已过期；bee run 连接后由 Hive 刷新")
+	}
+	found.summary = fmt.Sprintf(ui.text("Antigravity sign-in of %s, account %s, plan %s, %s", "Antigravity 登录账号 %s，账号 %s，方案 %s，%s"), maskEmail(credential.Email), shortFingerprint(credential.fingerprint()), credential.Plan, state)
+	return found
+}
+
 // egressFile is the egress configuration as setup writes it: only the fields
 // a provider supplying official accounts needs.
 type egressFile struct {
-	ConnectProxy string         `json:"connect_proxy,omitempty"`
-	Targets      []string       `json:"targets"`
-	Codex        *codexSource   `json:"codex,omitempty"`
-	Capabilities *struct{}      `json:"capabilities,omitempty"`
-	Claude       *claudeSetting `json:"claude,omitempty"`
+	ConnectProxy string              `json:"connect_proxy,omitempty"`
+	Targets      []string            `json:"targets"`
+	Codex        *codexSource        `json:"codex,omitempty"`
+	Capabilities *struct{}           `json:"capabilities,omitempty"`
+	Claude       *claudeSetting      `json:"claude,omitempty"`
+	Antigravity  *antigravitySetting `json:"antigravity,omitempty"`
+}
+
+type antigravitySetting struct {
+	Capabilities bool `json:"capabilities"`
 }
 
 type claudeSetting struct {
@@ -361,7 +396,7 @@ func buildEgress(chosen []detectedAccount, existing *egressConfig, proxy *string
 	}
 	for _, found := range chosen {
 		for _, platform := range platformTargets {
-			if platform.field == "codex" && found.codex != nil || platform.field == "claude" && found.claude != nil {
+			if platform.field == "codex" && found.codex != nil || platform.field == "claude" && found.claude != nil || platform.field == "antigravity" && found.antigravity != nil {
 				cfg.Targets = append(cfg.Targets, platform.target)
 			}
 		}
@@ -371,6 +406,9 @@ func buildEgress(chosen []detectedAccount, existing *egressConfig, proxy *string
 		}
 		if found.claude != nil {
 			cfg.Claude = &claudeSetting{Store: found.claude.Store, ConfigDir: found.claude.ConfigDir, Refresh: found.claude.Refresh, Capabilities: true}
+		}
+		if found.antigravity != nil {
+			cfg.Antigravity = &antigravitySetting{Capabilities: true}
 		}
 	}
 	return cfg

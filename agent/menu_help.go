@@ -32,6 +32,7 @@ func (m *managementMenu) commandReference() error {
 		{"account-status", "Registered account", "已登记账号"}, {"pause", "Pause supply", "暂停接单"},
 		{"resume", "Resume supply", "恢复接单"}, {"confirm-account", "Confirm account change", "确认账号变更"},
 		{"codex-status", "Codex checks", "Codex 检查"}, {"claude-status", "Claude Code checks", "Claude Code 检查"},
+		{"antigravity-login", "Sign in to Google (Antigravity)", "登录 Google (Antigravity)"}, {"antigravity-status", "Google (Antigravity) checks", "Google (Antigravity) 检查"},
 		{"doctor", "Diagnostics", "诊断"},
 	}
 	actions := make([]menuAction, 0, len(commands)+1)

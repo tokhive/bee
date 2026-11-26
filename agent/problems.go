@@ -70,11 +70,11 @@ var problems = map[string]problem{
 	},
 	"BEE-CONFIG-NO-SOURCE": {
 		"egress configuration has neither an official account source nor a static credential",
-		`add a "codex" or "claude" section naming the official sign-in to supply`,
+		`add a "codex", "claude" or "antigravity" section naming the sign-in to supply`,
 	},
 	"BEE-CONFIG-STATIC-MIXED": {
 		"an official account source is combined with a static credential",
-		`remove "credential"; codex and claude sources may be configured together`,
+		`remove "credential"; codex, claude and antigravity sources may be configured together`,
 	},
 	"BEE-CONFIG-STATIC-CREDENTIAL": {
 		"the static credential is incomplete or malformed",
@@ -172,9 +172,57 @@ var problems = map[string]problem{
 		"the Claude Code sign-in lacks the user:inference scope",
 		"sign in again in Claude Code with a subscription account",
 	},
+	"BEE-ANTIGRAVITY-SOURCE": {
+		"Bee has no usable Antigravity sign-in",
+		"run bee antigravity-login and sign in with the Google account to supply",
+	},
+	"BEE-ANTIGRAVITY-SIGNIN": {
+		"Google no longer accepts the stored Antigravity sign-in",
+		"run bee antigravity-login to sign in again; the running Bee picks the new sign-in up automatically",
+	},
+	"BEE-ANTIGRAVITY-EXPIRED": {
+		"the Antigravity access token has expired",
+		"keep bee run connected so Hive can schedule a refresh; if supply does not resume, run bee antigravity-login",
+	},
+	"BEE-ANTIGRAVITY-LOGIN": {
+		"the Google sign-in did not complete",
+		"run bee antigravity-login again and finish the sign-in in the browser; with --no-browser, paste the whole address the browser was sent to",
+	},
+	"BEE-ANTIGRAVITY-STORE": {
+		"Bee could not save the Antigravity sign-in",
+		"check that the directory of the device configuration belongs to the user running Bee and that its accounts directory is not a link, then run bee antigravity-login again",
+	},
+	"BEE-ANTIGRAVITY-TIER": {
+		"this Google account's Antigravity tier is not one Bee supplies",
+		"sign in with a personal Google account on the free tier, Google AI Pro or Google AI Ultra",
+	},
+	"BEE-ANTIGRAVITY-INELIGIBLE": {
+		"Google does not admit this account to Antigravity",
+		"check the account in the Antigravity app; an account Google does not admit cannot supply",
+	},
+	"BEE-ANTIGRAVITY-PROJECT": {
+		"Google gave this account no Antigravity project",
+		"open the Antigravity app once with this account so Google finishes setting it up, then run bee antigravity-login again",
+	},
+	"BEE-ANTIGRAVITY-VERIFY": {
+		"Google asks you to verify this account before it can use Antigravity",
+		"open the reported address in a browser signed in to this account and finish the verification; Bee tries again by itself",
+	},
+	"BEE-ANTIGRAVITY-DISABLED": {
+		"Google has disabled Antigravity for this account",
+		"the account cannot supply while Google keeps it disabled; if an address is reported, appeal there",
+	},
+	"BEE-ANTIGRAVITY-FORBIDDEN": {
+		"Google refused this account's Antigravity request",
+		"check that the account can use Antigravity in the official app; if it can, run bee antigravity-login to sign in again",
+	},
+	"BEE-ANTIGRAVITY-UPSTREAM": {
+		"a request to Google for the Antigravity sign-in failed",
+		"check the network and HTTPS_PROXY, or connect_proxy in the egress configuration, then try again",
+	},
 	"BEE-SETUP-PLATFORM": {
 		"--platform names a platform Bee does not supply",
-		"use openai, claude, or both separated by a comma",
+		"use openai, claude or google, or several separated by commas",
 	},
 	"BEE-SETUP-CODEX-NOT-FOUND": {
 		"no official Codex directory was found",

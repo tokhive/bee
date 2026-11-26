@@ -355,7 +355,7 @@ func (c *controlServer) handler() http.Handler {
 		decoder := json.NewDecoder(io.LimitReader(r.Body, 8192))
 		decoder.DisallowUnknownFields()
 		if err := decoder.Decode(&input); err != nil {
-			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"platform": "openai"|"claude", "source": "local"|"import", "file": "..."}`)
+			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"platform": "openai"|"claude"|"google", "source": "local"|"import", "file": "..."}`)
 			return
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
@@ -506,8 +506,8 @@ func writeEvent(w io.Writer, event controlEvent) {
 
 func controlPlatformName(w http.ResponseWriter, r *http.Request) (string, bool) {
 	platform := r.PathValue("platform")
-	if platform != "openai" && platform != "claude" {
-		writeControlError(w, http.StatusNotFound, "unknown_platform", "platform must be openai or claude")
+	if !supplyPlatform(platform) {
+		writeControlError(w, http.StatusNotFound, "unknown_platform", "platform must be openai, claude or google")
 		return "", false
 	}
 	return platform, true

@@ -47,9 +47,10 @@ The file contains a field that Bee doesn't recognize, and the error gives its na
 
 | Location | Fields |
 | --- | --- |
-| Top level | `targets`, `codex`, `claude`, `reseller`, `capabilities`, `connect_proxy`, `inbox_key_id`, `credential` |
+| Top level | `targets`, `codex`, `claude`, `antigravity`, `reseller`, `capabilities`, `connect_proxy`, `inbox_key_id`, `credential` |
 | `codex` | `home`, `store`, `keyring_backend` |
 | `claude` | `store`, `config_dir`, `refresh`, `capabilities` |
+| `antigravity` | `capabilities` |
 | `capabilities` | `local_url` (only for local test fixtures) |
 | `reseller` | `reseller`, `key_file` |
 
@@ -75,7 +76,7 @@ A target is not an exact `host:port`; for example, the port is missing. The erro
 
 ### BEE-CONFIG-TARGET-MISSING
 
-An account source is configured for a platform, but `targets` lacks that platform's upstream address. `codex` requires `chatgpt.com:443`, and `claude` requires `api.anthropic.com:443`.
+An account source is configured for a platform, but `targets` lacks that platform's upstream address. `codex` requires `chatgpt.com:443`, and `claude` requires `api.anthropic.com:443`. `antigravity` requires both `cloudcode-pa.googleapis.com:443` and `daily-cloudcode-pa.googleapis.com:443`: a Google account is served from one or the other depending on its plan.
 
 If Bee didn't stop here, it would still report the platform's account to Hive, and Hive would still send work. Bee would then close every connection at the egress allowlist check, which shows up as executions failing with no visible cause. Add the reported address to `targets`.
 
@@ -83,11 +84,11 @@ A configuration where every target is a loopback IP is a local acceptance fixtur
 
 ### BEE-CONFIG-NO-SOURCE
 
-The configuration has no official account source (`codex` or `claude`) and no static `credential`. Add the source for each platform you want to contribute.
+The configuration has no account source (`codex`, `claude` or `antigravity`) and no static `credential`. Add the source for each platform you want to contribute.
 
 ### BEE-CONFIG-STATIC-MIXED
 
-The configuration has both an official account source and a static `credential`. The two can't be combined, so remove `credential`. `codex` and `claude` can be configured together.
+The configuration has both an official account source and a static `credential`. The two can't be combined, so remove `credential`. `codex`, `claude` and `antigravity` can be configured together.
 
 ### BEE-CONFIG-STATIC-CREDENTIAL
 
@@ -131,7 +132,7 @@ Errors from `bee setup`, and from `bee run` when it has no egress configuration.
 
 ### BEE-SETUP-PLATFORM
 
-`--platform` names a platform that Bee doesn't support. Use `openai`, `claude`, or both separated by a comma.
+`--platform` names a platform that Bee doesn't support. Use `openai`, `claude` or `google`, or several separated by commas.
 
 ### BEE-SETUP-CODEX-NOT-FOUND
 
@@ -208,6 +209,60 @@ The Claude Code access token has expired. Open Claude Code so that it renews the
 ### BEE-CLAUDE-SCOPE
 
 The Claude Code login lacks the `user:inference` scope, so it can't be used for inference. Sign in to Claude Code again with a subscription account.
+
+## Google (Antigravity) sign-in
+
+A Google account reaches Gemini models through its Antigravity sign-in. No official client keeps that sign-in where Bee could read it, so Bee signs in itself: `bee antigravity-login` opens Google's sign-in page in a browser and stores the result in `accounts/antigravity/credentials.json` beside the device configuration, readable by the user running Bee alone. `bee antigravity-status` shows what is stored without contacting anyone; `--verify` asks Google which account and tier it is, and `--capabilities` reads its Gemini models and quota windows. The errors below come from those two commands, from `bee setup` and `bee doctor`, and from `bee run` while it supplies the account.
+
+When Hive reports why a Google account takes no work, the account reasons are `antigravity_source_unavailable`, `antigravity_confirmation_required`, `antigravity_account_in_use` and `antigravity_authorization_rejected`. They mean what the `codex_` and `claude_` reasons below mean, and the sign-in to renew is this one: run `bee antigravity-login`.
+
+### BEE-ANTIGRAVITY-SOURCE
+
+Bee has no Antigravity sign-in it can use: none is stored, or the stored file is unreadable, open to other users, a symbolic link, or incomplete. Run `bee antigravity-login` and sign in with the Google account to contribute. `bee setup` reports this for `google` on a machine where no one has signed in; it is only a failure if you asked for that platform.
+
+### BEE-ANTIGRAVITY-SIGNIN
+
+Google refused to renew the stored sign-in (`invalid_grant`, `invalid_client`, `unauthorized_client` or `access_denied`): the access was removed from the Google account, the password changed, or the sign-in went unused for too long. Bee records the refusal and stops offering the dead sign-in to Google. Run `bee antigravity-login`; a running Bee picks the new sign-in up by itself.
+
+### BEE-ANTIGRAVITY-EXPIRED
+
+The stored access token has run out. This is a warning while a refresh token is stored: Hive schedules the refresh while `bee run` is connected. If supply doesn't recover, or no refresh token is stored, run `bee antigravity-login`.
+
+### BEE-ANTIGRAVITY-LOGIN
+
+`bee antigravity-login` did not finish. The detail says where it stopped: the browser never came back, the reply carried a different `state` than the sign-in began with, Google answered with an error such as `access_denied`, or Google did not accept the authorization code. Run the command again. With `--no-browser`, or when port 51121 is in use, paste the whole address the browser was sent to, not only part of it.
+
+### BEE-ANTIGRAVITY-STORE
+
+The sign-in succeeded but could not be saved. The directory of the device configuration must belong to the user running Bee, and `accounts/antigravity` inside it must be a real directory, not a link. Fix that and sign in again.
+
+### BEE-ANTIGRAVITY-TIER
+
+Google reports a tier for this account that Bee does not supply; the error names it. Bee supplies the free tier, Google AI Pro and Google AI Ultra of a personal Google account.
+
+### BEE-ANTIGRAVITY-INELIGIBLE
+
+Google lists this account as not eligible for Antigravity, for example because of its region or account type; the error carries Google's reason. Such an account cannot supply.
+
+### BEE-ANTIGRAVITY-PROJECT
+
+Google gave the account no Antigravity project, and onboarding it did not produce one. Open the Antigravity app once with this account so that Google finishes setting it up, then run `bee antigravity-login` again.
+
+### BEE-ANTIGRAVITY-VERIFY
+
+Google answered an account query with 403 and asks for the account to be verified first. If the answer carried an address, the error shows it: open it in a browser signed in to this account and finish the verification. Bee queries again by itself.
+
+### BEE-ANTIGRAVITY-DISABLED
+
+Google answered an account query with 403 citing its terms of service: it has disabled Antigravity for this account. The account cannot supply while that lasts. If the answer carried an appeal address, the error shows it.
+
+### BEE-ANTIGRAVITY-FORBIDDEN
+
+Google answered an account query with 403 without saying why in a way Bee recognizes. Check that the account can use Antigravity in the official app. If it can, run `bee antigravity-login` to sign in again.
+
+### BEE-ANTIGRAVITY-UPSTREAM
+
+A request to Google failed or was not understood while Bee read the account behind a sign-in. Check the network. Bee's own requests to Google follow `HTTPS_PROXY`, and `connect_proxy` in the egress configuration when `HTTPS_PROXY` is unset.
 
 ## Egress connections
 

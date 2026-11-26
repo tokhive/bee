@@ -205,6 +205,20 @@ func (session *sourceSession) run(ctx context.Context, source syncSource) {
 	}
 }
 
+// supplyPlatforms are the platforms a subscription account is supplied for,
+// in the order they are listed and started.
+var supplyPlatforms = []string{"openai", "claude", beewire.GooglePlatform}
+
+func supplyPlatform(platform string) bool { return slices.Contains(supplyPlatforms, platform) }
+
+// sourceName is the name of the source that supplies a platform's account.
+func sourceName(platform string) string {
+	if platform == beewire.GooglePlatform {
+		return "antigravity"
+	}
+	return platform
+}
+
 // label is the name a source's log lines carry.
 func (source syncSource) label() string {
 	switch source.name {
@@ -212,6 +226,8 @@ func (source syncSource) label() string {
 		return "OpenAI"
 	case "claude":
 		return "Claude"
+	case "antigravity":
+		return "Google"
 	}
 	return source.name
 }
@@ -243,6 +259,11 @@ func (cfg *egressConfig) fileSources() []syncSource {
 		cfg.Claude.capabilityWanted = &cfg.claudeCapabilityWanted
 		sources = append(sources, syncSource{name: "claude", platform: "claude", synchronize: cfg.Claude.synchronize, report: cfg.Claude.message,
 			wanted: func() { cfg.claudeCapabilityWanted.Store(true) }})
+	}
+	if cfg.Antigravity != nil {
+		cfg.Antigravity.capabilityWanted = &cfg.antigravityCapabilityWanted
+		sources = append(sources, syncSource{name: "antigravity", platform: beewire.GooglePlatform, synchronize: cfg.Antigravity.synchronize, report: cfg.Antigravity.message,
+			wanted: func() { cfg.antigravityCapabilityWanted.Store(true) }})
 	}
 	if cfg.OpenAIAPI != nil {
 		sources = append(sources, syncSource{name: "openai_api", synchronize: cfg.synchronizeOpenAIAPI, report: cfg.OpenAIAPI.message})

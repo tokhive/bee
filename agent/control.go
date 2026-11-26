@@ -392,6 +392,48 @@ func (c *controlServer) handler() http.Handler {
 		}
 		writeControlJSON(w, http.StatusOK, account)
 	})
+	mux.HandleFunc("GET /v1/network", func(w http.ResponseWriter, r *http.Request) {
+		network, err := c.network()
+		if err != nil {
+			writeControlError(w, http.StatusInternalServerError, "error", "the network setting cannot be read")
+			return
+		}
+		writeControlJSON(w, http.StatusOK, network)
+	})
+	mux.HandleFunc("PUT /v1/network", func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			ConnectProxy *string `json:"connect_proxy"`
+		}
+		decoder := json.NewDecoder(io.LimitReader(r.Body, 4096))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil || input.ConnectProxy == nil {
+			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"connect_proxy": "http://127.0.0.1:7890"}, or an empty string for no proxy`)
+			return
+		}
+		network, err := c.setNetwork(*input.ConnectProxy)
+		if err != nil {
+			writeAccountError(w, err)
+			return
+		}
+		writeControlJSON(w, http.StatusOK, network)
+	})
+	mux.HandleFunc("POST /v1/network/check", func(w http.ResponseWriter, r *http.Request) {
+		var input struct {
+			ConnectProxy *string `json:"connect_proxy"`
+		}
+		decoder := json.NewDecoder(io.LimitReader(r.Body, 4096))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&input); err != nil || input.ConnectProxy == nil {
+			writeControlError(w, http.StatusBadRequest, "invalid_request", `body must be {"connect_proxy": "http://127.0.0.1:7890"}, or an empty string to try without a proxy`)
+			return
+		}
+		result, err := c.checkNetwork(r.Context(), *input.ConnectProxy)
+		if err != nil {
+			writeAccountError(w, err)
+			return
+		}
+		writeControlJSON(w, http.StatusOK, result)
+	})
 	mux.HandleFunc("GET /v1/explanations", func(w http.ResponseWriter, r *http.Request) {
 		writeControlJSON(w, http.StatusOK, ExplanationCatalog())
 	})

@@ -42,6 +42,7 @@ type egressConfig struct {
 	Antigravity        *antigravitySource `json:"antigravity,omitempty"`
 	OpenAIAPI          *openaiAPISource   `json:"openai_api,omitempty"`
 	ClaudeAPI          *officialAPISource `json:"claude_api,omitempty"`
+	GeminiAPI          *officialAPISource `json:"gemini_api,omitempty"`
 	Reseller           *resellerSource    `json:"reseller,omitempty"`
 	Capabilities       *capabilitySource  `json:"capabilities,omitempty"`
 	capabilitySequence int64
@@ -156,7 +157,7 @@ func (cfg *egressConfig) configures(field string) bool {
 // officialAPIs lists the official Platform keys this Bee contributes.
 func (cfg *egressConfig) officialAPIs() []*officialAPISource {
 	sources := []*officialAPISource{}
-	for _, source := range []*officialAPISource{cfg.OpenAIAPI, cfg.ClaudeAPI} {
+	for _, source := range []*officialAPISource{cfg.OpenAIAPI, cfg.ClaudeAPI, cfg.GeminiAPI} {
 		if source != nil {
 			sources = append(sources, source)
 		}
@@ -305,6 +306,9 @@ func (cfg *egressConfig) validate() error {
 	if cfg.ClaudeAPI != nil {
 		cfg.ClaudeAPI.platform = &claudeAPI
 	}
+	if cfg.GeminiAPI != nil {
+		cfg.GeminiAPI.platform = &geminiAPI
+	}
 	for _, source := range cfg.officialAPIs() {
 		if err := source.validate(); err != nil {
 			return err
@@ -390,7 +394,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.liveSources || cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Antigravity != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
+	return cfg.liveSources || cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Antigravity != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil || cfg.GeminiAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

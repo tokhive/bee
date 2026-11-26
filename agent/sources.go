@@ -295,6 +295,9 @@ func (cfg *egressConfig) fileSources() []syncSource {
 	if cfg.ClaudeAPI != nil {
 		sources = append(sources, syncSource{name: "claude_api", synchronize: cfg.synchronizeClaudeAPI, report: cfg.ClaudeAPI.message})
 	}
+	if cfg.GeminiAPI != nil {
+		sources = append(sources, syncSource{name: "gemini_api", synchronize: cfg.synchronizeGeminiAPI, report: cfg.GeminiAPI.message})
+	}
 	if cfg.Reseller != nil {
 		sources = append(sources, syncSource{name: cfg.Reseller.Reseller, synchronize: cfg.synchronizeReseller, report: cfg.Reseller.message})
 	}

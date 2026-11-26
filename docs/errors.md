@@ -389,3 +389,11 @@ Anthropic rejected the account's authorization. Sign in to Claude Code again.
 ### BEE-CONFIG-CLAUDE-API-KEY
 
 官方 Claude API Key 文件不可读取或内容无效。`claude_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个 Key。Key 不应写入配置文件、日志或命令参数。
+
+### BEE-CONFIG-GEMINI-API
+
+Gemini API 供给配置无效。`gemini_api.models` 必须选择 1–512 个不重复的模型 ID；`local_url` 仅用于全部目标均为 loopback 的本地测试。
+
+### BEE-CONFIG-GEMINI-API-KEY
+
+Gemini API Key 文件不可读取或内容无效。`gemini_api.key_file` 必须是普通文件的绝对路径、仅当前用户可读写（`chmod 600`），内容为单个在 Google AI Studio 创建的 Key。Key 不应写入配置文件、日志或命令参数。

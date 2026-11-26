@@ -200,6 +200,22 @@ describe("adding an account", () => {
     expect(screen.getByRole("button", { name: "下一步" })).toBeEnabled();
   });
 
+  it("a sign-in found but unusable names what is wrong, and asks to sign in again, not to install", async () => {
+    const shell = show(onlyCodex());
+    shell.answer(() => ({
+      platform: "claude",
+      available: false,
+      problem: { code: "BEE-CLAUDE-SOURCE", message: "", reason: { en: "Claude Code accessToken is empty", zh: "Claude Code 的 accessToken 为空" } },
+    }));
+    await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
+    await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
+    expect(await screen.findByText(/Bee 读到的 Claude Code 登录有问题：Claude Code 的 accessToken 为空/)).toBeInTheDocument();
+    expect(screen.queryByText(/没有检测到 Claude Code 的登录/)).not.toBeInTheDocument();
+    expect(screen.queryByText("安装 Claude Code")).not.toBeInTheDocument();
+    expect(screen.getByText("claude")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "下一步" })).toBeDisabled();
+  });
+
   it("an expired sign-in is not offered, and says how to renew it", async () => {
     const shell = show(onlyCodex());
     shell.answer(() => ({ platform: "claude", available: false, problem: { code: "BEE-CLAUDE-EXPIRED", message: "" } }));

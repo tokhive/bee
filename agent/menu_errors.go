@@ -120,20 +120,27 @@ func (m *managementMenu) unknownError(err error) {
 	m.ui.status(m.out, "❌", "31", "This operation could not be completed.", "本次操作未完成。")
 	m.details(err.Error())
 }
+
+// sentinelText is the translated meaning of the Claude Code read failures
+// that are plain sentinel errors.
+func sentinelText(err error) (bilingualText, bool) {
+	switch err {
+	case errClaudeFileMissing:
+		return bilingualText{"Claude Code sign-in file was not found; check the login and claude.config_dir.", "未找到 Claude Code 登录文件；请检查登录状态及 claude.config_dir。"}, true
+	case errClaudeFileUnavailable:
+		return bilingualText{"Cannot read the Claude Code sign-in file; it must be a regular file readable by this user.", "无法读取 Claude Code 登录文件；它必须是当前用户可读取的普通文件。"}, true
+	case errClaudeKeychainMissing:
+		return bilingualText{"The Claude Code Keychain entry was not found; check the configuration directory, sign-in and permissions.", "未找到 Claude Code 钥匙串条目；请检查配置目录、登录状态及系统权限。"}, true
+	case errClaudeKeychainUnavailable:
+		return bilingualText{"Cannot read the Claude Code Keychain; check permissions and unlock the Keychain.", "无法读取 Claude Code 钥匙串；请检查系统权限并解锁钥匙串。"}, true
+	}
+	return bilingualText{}, false
+}
+
 func (m *managementMenu) reportCause(err error) {
 	// These sentinels name stable failures; their full meaning is translated,
 	// while any wrapper carrying extra evidence falls through to original details.
-	var text bilingualText
-	switch err {
-	case errClaudeFileMissing:
-		text = bilingualText{"Claude Code sign-in file was not found; check the login and claude.config_dir.", "未找到 Claude Code 登录文件；请检查登录状态及 claude.config_dir。"}
-	case errClaudeFileUnavailable:
-		text = bilingualText{"Cannot read the Claude Code sign-in file; it must be a regular file readable by this user.", "无法读取 Claude Code 登录文件；它必须是当前用户可读取的普通文件。"}
-	case errClaudeKeychainMissing:
-		text = bilingualText{"The Claude Code Keychain entry was not found; check the configuration directory, sign-in and permissions.", "未找到 Claude Code 钥匙串条目；请检查配置目录、登录状态及系统权限。"}
-	case errClaudeKeychainUnavailable:
-		text = bilingualText{"Cannot read the Claude Code Keychain; check permissions and unlock the Keychain.", "无法读取 Claude Code 钥匙串；请检查系统权限并解锁钥匙串。"}
-	}
+	text, _ := sentinelText(err)
 	if text.en != "" {
 		m.note(text.en, text.zh)
 		return

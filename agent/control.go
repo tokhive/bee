@@ -67,6 +67,30 @@ const (
 type controlProblem struct {
 	Code    string `json:"code"`
 	Message string `json:"message"`
+	// Reason says in both languages what was wrong with a Claude Code sign-in
+	// that was found but cannot be used, when Bee knows.
+	Reason *controlReason `json:"reason,omitempty"`
+}
+
+type controlReason struct {
+	En string `json:"en"`
+	Zh string `json:"zh"`
+}
+
+// reasonOf is the translated reason inside err, if it carries one.
+func reasonOf(err error) *controlReason {
+	var credential *credentialError
+	if errors.As(err, &credential) {
+		if text, ok := credentialProblems[credential.kind]; ok {
+			return &controlReason{text.en, text.zh}
+		}
+	}
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if text, ok := sentinelText(e); ok {
+			return &controlReason{text.en, text.zh}
+		}
+	}
+	return nil
 }
 
 type controlEvent struct {
@@ -131,7 +155,7 @@ func (s *runStatus) currentProblem() *controlProblem {
 
 func problemOf(err error) *controlProblem {
 	if code, summary, _, ok := Coded(err); ok {
-		return &controlProblem{Code: code, Message: summary}
+		return &controlProblem{Code: code, Message: summary, Reason: reasonOf(err)}
 	}
 	var failure *apiFailure
 	if errors.As(err, &failure) && failure.Code != "" {

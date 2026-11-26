@@ -3,7 +3,7 @@
 
 export type ServiceState = "starting" | "running" | "external" | "stopped";
 
-export type Problem = { code: string; message: string };
+export type Problem = { code: string; message: string; reason?: Localized };
 
 export type PairingStatus = "" | "pending" | "completed" | "expired" | "cancelled" | "failed";
 

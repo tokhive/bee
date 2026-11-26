@@ -11,7 +11,8 @@ import (
 	"github.com/tokhive/tee/tee"
 )
 
-// A Google account reaches Gemini models through its Antigravity sign-in. No
+// A Google account reaches Gemini models, and the Claude models Antigravity
+// offers, through its Antigravity sign-in. No
 // official client keeps that sign-in where Bee could read it, so Bee signs in
 // itself (bee antigravity-login) and keeps the result in a private file of its
 // own, which nothing else writes.

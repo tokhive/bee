@@ -142,3 +142,45 @@ func TestAntigravityHostFollowsThePlan(t *testing.T) {
 		t.Fatal("a Google account reason lost its prefix")
 	}
 }
+
+func TestGoogleClaudeWindowsStopOnlyTheClaudeModels(t *testing.T) {
+	now := time.Now()
+	window := func(scope string, seconds, percent int) QuotaWindow {
+		p := percent
+		return QuotaWindow{Scope: scope, Seconds: seconds, UsedPercent: &p, ResetAt: now.Add(time.Hour)}
+	}
+	c := Capabilities{Sequence: 1, ObservedAt: now, Status: "ready", Plan: "ultra",
+		Models:  []string{"gemini-4-carbon", "claude-opus-5-5-high", "claude-opus-4-6-thinking"},
+		Windows: []QuotaWindow{window("", 18000, 20), window("", 604800, 20), window(GoogleClaudeScope, 18000, 20), window(GoogleClaudeScope, 604800, 100)}}
+	if !c.ValidFor(GooglePlatform, now) {
+		t.Fatal("a report with both groups' windows was rejected")
+	}
+	// The Claude group is used up; the Gemini models go on.
+	if c.ReasonFor(GooglePlatform, now, "claude-opus-5-5") != ReasonQuotaExhausted || c.ReasonFor(GooglePlatform, now, "gemini-4-carbon") != "" {
+		t.Fatal("the Claude group's windows did not stop only the Claude models")
+	}
+	// And the other way round.
+	c.Windows = []QuotaWindow{window("", 604800, 100), window(GoogleClaudeScope, 604800, 20)}
+	if !c.ValidFor(GooglePlatform, now) || c.ReasonFor(GooglePlatform, now, "gemini-4-carbon") != ReasonQuotaExhausted || c.ReasonFor(GooglePlatform, now, "claude-opus-5-5") != "" {
+		t.Fatal("the Gemini group's windows did not stop only the Gemini models")
+	}
+	// A Claude model listed only as its thinking variant is still served.
+	if c.ReasonFor(GooglePlatform, now, "claude-opus-4-6") != "" || AntigravityModel(c.Models, "claude-opus-4-6", "") != "claude-opus-4-6-thinking" {
+		t.Fatal("the thinking variant was not found")
+	}
+	for _, windows := range [][]QuotaWindow{
+		{window(GoogleClaudeScope, 604800, 20), window(GoogleClaudeScope, 604800, 20)},
+		{window("opus", 604800, 20)},
+		{window("", 18000, 20), window("", 604800, 20), window(GoogleClaudeScope, 18000, 20), window(GoogleClaudeScope, 604800, 20), window(GoogleClaudeScope, 604800, 20)},
+	} {
+		c.Windows = windows
+		if c.ValidFor(GooglePlatform, now) {
+			t.Fatalf("Google windows accepted: %+v", windows)
+		}
+	}
+	// A Claude account's windows keep their own scopes.
+	claude := Capabilities{Sequence: 1, ObservedAt: now, Status: "ready", Plan: "pro", Models: []string{"claude-opus-5-5"}, Windows: []QuotaWindow{window("", 18000, 20), window("", 604800, 20), window(GoogleClaudeScope, 604800, 20)}}
+	if claude.ValidFor("claude", now) {
+		t.Fatal("the Google Claude scope was accepted on a Claude account")
+	}
+}

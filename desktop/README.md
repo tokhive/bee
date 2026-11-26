@@ -121,6 +121,15 @@ the mock.
 
 ## Package for macOS
 
+From the repository root, one command installs the dependencies and builds:
+
+```sh
+make desktop-macos                                   # development package
+make desktop-macos BEE_VERSION=0.1.0 ARCH=x64        # release version, other architecture
+```
+
+Or run the script directly from `desktop/`:
+
 ```sh
 BEE_VERSION=0.1.0 sh scripts/package-macos.sh        # this machine's architecture
 BEE_VERSION=0.1.0 sh scripts/package-macos.sh x64    # or arm64

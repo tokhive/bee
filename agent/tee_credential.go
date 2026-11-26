@@ -44,9 +44,14 @@ var (
 	// different build of the same source and needs a build override.
 	TEEApplicationIDs = "snp-app:df38d99343f65e66ff10423dbf3148812d2e891af8f5e5db5d8255e9d608bbb5"
 
-	// TEEPolicyHash is the SHA-256 of the whitelist the TEE attests it loaded.
-	// On SEV-SNP the whitelist is baked into the measured image, so this is a
-	// second, explicit assertion rather than the only one.
+	// TEEPolicyHash is the comma-separated allowlist of SHA-256 digests of the
+	// whitelists the TEE may attest it loaded. On SEV-SNP the whitelist is
+	// baked into the measured image, so this is a second, explicit assertion
+	// rather than the only one. A rollout to an image with a new whitelist
+	// lists both digests beside both images, or a Bee would trust only one
+	// side of the switch; remove the old one with the old image.
+	//
+	// 8dde1990… is the whitelist of TEE 0.3.1.
 	TEEPolicyHash = "8dde1990d62099a666bb078a7b626f2c9335cd070e92e9a849d2ced2bff96a40"
 
 	// TEEReleaseKeyPEM is the Secure Boot release-signing public key the TEE
@@ -109,7 +114,7 @@ var (
 // evidence checker; production builds always get sevsnp.
 type teeTrust struct {
 	applications  map[string]struct{}
-	policyHash    [32]byte
+	policyHashes  map[[32]byte]struct{}
 	checkEvidence func(platform.Identity) error
 }
 
@@ -136,12 +141,17 @@ func loadTEETrust() (teeTrust, error) {
 	if len(applications) == 0 {
 		return teeTrust{}, errors.New("this Bee build has no TEE application pins; update Bee")
 	}
-	policy, err := hex.DecodeString(strings.TrimSpace(TEEPolicyHash))
-	if err != nil || len(policy) != sha256.Size {
-		return teeTrust{}, errors.New("this Bee build has no usable TEE policy pin; update Bee")
+	policies := map[[32]byte]struct{}{}
+	for _, entry := range strings.Split(TEEPolicyHash, ",") {
+		policy, err := hex.DecodeString(strings.TrimSpace(entry))
+		if err != nil || len(policy) != sha256.Size {
+			return teeTrust{}, fmt.Errorf("this Bee build has no usable TEE policy pin (%q); update Bee", strings.TrimSpace(entry))
+		}
+		var hash [32]byte
+		copy(hash[:], policy)
+		policies[hash] = struct{}{}
 	}
-	trust := teeTrust{applications: applications}
-	copy(trust.policyHash[:], policy)
+	trust := teeTrust{applications: applications, policyHashes: policies}
 	// The statement names the image it claims; the allowlist above has already
 	// checked that name, so asserting it again in the evidence is what binds
 	// the name to the hardware report.
@@ -149,6 +159,16 @@ func loadTEETrust() (teeTrust, error) {
 		return sevsnp.Verifier{ExpectedApp: identity.ApplicationID}.CheckEvidence(identity)
 	}
 	return trust, nil
+}
+
+// trustsPolicy reports whether a whitelist digest is one this build pins.
+func (t teeTrust) trustsPolicy(digest []byte) bool {
+	for policy := range t.policyHashes {
+		if subtle.ConstantTimeCompare(digest, policy[:]) == 1 {
+			return true
+		}
+	}
+	return false
 }
 
 func validApplicationID(application string) bool {
@@ -182,7 +202,7 @@ func verifyCredentialKey(encoded, nonce []byte, trust teeTrust) (tee.InboxPublic
 	if len(statement.Nonce) != credentialKeyNonceLength || subtle.ConstantTimeCompare(statement.Nonce, nonce) != 1 {
 		return tee.InboxPublic{}, fmt.Errorf("%w: the statement answers a different challenge", errInboxAttestation)
 	}
-	if len(statement.PolicyHash) != sha256.Size || subtle.ConstantTimeCompare(statement.PolicyHash, trust.policyHash[:]) != 1 {
+	if len(statement.PolicyHash) != sha256.Size || !trust.trustsPolicy(statement.PolicyHash) {
 		return tee.InboxPublic{}, fmt.Errorf("%w: the TEE runs a different whitelist than this release trusts", errInboxAttestation)
 	}
 	if len(statement.InboxKeyID) != sha256.Size || len(statement.InboxPublic) == 0 {

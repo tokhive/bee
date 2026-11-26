@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/tokhive/bee/beewire"
 )
 
 func (m *managementMenu) configureAccounts() error {
@@ -39,6 +41,9 @@ func (m *managementMenu) configureAccountsWithNext(offerNext bool) error {
 	}
 	if m.setup.platform == "" || m.setup.platform == "claude" {
 		detected = append(detected, detectClaudeWithUI(m.ctx, m.setup.claudeDir, existing, m.ui))
+	}
+	if m.setup.platform == "" || m.setup.platform == beewire.GooglePlatform {
+		detected = append(detected, detectAntigravity(filepath.Dir(m.configPath), m.ui))
 	}
 	chosen := []detectedAccount{}
 	names := []string{}

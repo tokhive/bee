@@ -13,6 +13,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"github.com/tokhive/bee/beewire"
 )
 
 // An account record is how the desktop app knows an account it added: a
@@ -88,15 +90,16 @@ func writeAccounts(configPath string, records []accountRecord) error {
 	return writePrivateFile(accountsPath(configPath), append(raw, '\n'), ".accounts-*")
 }
 
-// platformTarget is the upstream an official account of platform needs.
-func platformTarget(platform string) string {
-	field := map[string]string{"openai": "codex", "claude": "claude"}[platform]
+// platformUpstreams are the upstreams an account of platform is served from.
+func platformUpstreams(platform string) []string {
+	field := map[string]string{"openai": "codex", "claude": "claude", beewire.GooglePlatform: "antigravity"}[platform]
+	var targets []string
 	for _, entry := range platformTargets {
 		if entry.field == field {
-			return entry.target
+			targets = append(targets, entry.target)
 		}
 	}
-	return ""
+	return targets
 }
 
 // editEgress rewrites the egress configuration through edit, keeping every
@@ -163,9 +166,13 @@ func addEgressSource(ctx context.Context, path, platform string, source any) err
 			fields["capabilities"] = json.RawMessage(`{}`)
 		case "claude":
 			fields["claude"] = encoded
+		case beewire.GooglePlatform:
+			fields["antigravity"] = encoded
 		}
-		if target := platformTarget(platform); !slices.Contains(targets, target) {
-			targets = append(targets, target)
+		for _, target := range platformUpstreams(platform) {
+			if !slices.Contains(targets, target) {
+				targets = append(targets, target)
+			}
 		}
 		return targets
 	})
@@ -180,9 +187,11 @@ func removeEgressSource(ctx context.Context, path, platform string) error {
 			delete(fields, "capabilities")
 		case "claude":
 			delete(fields, "claude")
+		case beewire.GooglePlatform:
+			delete(fields, "antigravity")
 		}
-		target := platformTarget(platform)
-		return slices.DeleteFunc(targets, func(t string) bool { return t == target })
+		upstreams := platformUpstreams(platform)
+		return slices.DeleteFunc(targets, func(t string) bool { return slices.Contains(upstreams, t) })
 	})
 }
 

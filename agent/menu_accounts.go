@@ -10,17 +10,18 @@ import (
 )
 
 func (m *managementMenu) platform() (string, error) {
-	m.option(1, "OpenAI (Codex)")
-	m.option(2, "Claude Code")
+	for i, platform := range supplyPlatforms {
+		m.option(i+1, platformName(platform))
+	}
 	m.option(0, m.text("Back", "返回上级"))
-	n, e := m.choose(m.text("Platform: ", "请选择平台："), 2)
+	n, e := m.choose(m.text("Platform: ", "请选择平台："), len(supplyPlatforms))
 	if e != nil {
 		return "", e
 	}
 	if n == 0 {
 		return "", m.back()
 	}
-	return []string{"openai", "claude"}[n-1], nil
+	return supplyPlatforms[n-1], nil
 }
 func (m *managementMenu) accounts() error {
 	return m.loop(m.text("Supplied accounts", "供给账号"), []menuAction{
@@ -32,6 +33,7 @@ func (m *managementMenu) accounts() error {
 		{"Confirm account change", "确认账号变更", m.confirmAccount},
 		{"Codex checks", "Codex 检查", m.codexChecks},
 		{"Claude Code checks", "Claude Code 检查", m.claudeChecks},
+		{"Google (Antigravity) sign-in and checks", "Google (Antigravity) 登录与检查", m.antigravityChecks},
 	})
 }
 func (m *managementMenu) printAccount(a beewire.PlatformAccount) {

@@ -85,6 +85,8 @@ func (m *managementMenu) reason(r string) string {
 			"codex_authorization_rejected": "Codex 授权被上游拒绝", "claude_authorization_rejected": "Claude 授权被上游拒绝",
 			"codex_source_unavailable": "等待官方 Codex 登录恢复", "claude_source_unavailable": "等待官方 Claude Code 登录恢复",
 			"codex_confirmation_required": "OpenAI 账号已变更，等待确认", "claude_confirmation_required": "Claude 账号已变更，等待确认",
+			"antigravity_account_in_use": "Google 账号已归属其他 Provider", "antigravity_authorization_rejected": "Google 拒绝了 Antigravity 授权",
+			"antigravity_source_unavailable": "等待 Antigravity 登录恢复", "antigravity_confirmation_required": "Google 账号已变更，等待确认",
 		}[r]; ok {
 			return zh
 		}
@@ -179,7 +181,7 @@ func (m *managementMenu) reasonFix(reason string, admin bool) string {
 		return "请联系 Hive 管理员处理套餐、模型或禁用状态。"
 	}
 	switch reason {
-	case "codex_account_in_use", "claude_account_in_use":
+	case "codex_account_in_use", "claude_account_in_use", "antigravity_account_in_use":
 		return "请换用其他账号，或请原 Provider 确认换走账号；断开或暂停 Bee 不会释放归属。"
 	case "manually_paused":
 		return "选择「供给账号 → 恢复接单」。"
@@ -187,8 +189,10 @@ func (m *managementMenu) reasonFix(reason string, admin bool) string {
 		return "启动 Bee，并检查与 Hive 的连接。"
 	case "not_configured":
 		return "选择供给账号并重启 Bee；已配置时，请向管理员确认市场是否开放该平台。"
-	case "codex_confirmation_required", "claude_confirmation_required":
+	case "codex_confirmation_required", "claude_confirmation_required", "antigravity_confirmation_required":
 		return "选择「供给账号 → 确认账号变更」，检查待确认的账号。"
+	case "antigravity_authorization_rejected", "antigravity_source_unavailable":
+		return "运行 bee antigravity-login 重新登录 Google 账号，等待 Bee 同步。"
 	case "codex_authorization_rejected", "codex_source_unavailable":
 		return "运行 codex login 恢复官方登录，等待 Bee 同步。"
 	case "claude_authorization_rejected", "claude_source_unavailable":

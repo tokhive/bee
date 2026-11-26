@@ -1,5 +1,10 @@
 package bee
 
+import (
+	"fmt"
+	"slices"
+)
+
 type menuSetupOptions struct {
 	platform, codexHome string
 	claudeDir, proxy    *string
@@ -15,7 +20,7 @@ func (m *managementMenu) accountSetup(offerNext bool) error {
 		m.configurationPaths()
 		platform := platformName(m.setup.platform)
 		if platform == "" {
-			platform = m.text("Both platforms", "两个平台")
+			platform = m.text("All platforms", "全部平台")
 		}
 		m.field("Platforms", "检测平台", platform)
 		m.field("Codex directory", "Codex 目录", m.setup.codexHome)
@@ -47,16 +52,18 @@ func (m *managementMenu) setupOptions() error {
 	actions := []menuAction{
 		{"Supply file", "供给配置文件", m.selectEgress},
 		{"Platforms to detect", "检测的平台", func() error {
-			m.option(1, "OpenAI (Codex)")
-			m.option(2, "Claude Code")
-			m.option(3, m.text("Both", "两者"))
+			for i, platform := range supplyPlatforms {
+				m.option(i+1, platformName(platform))
+			}
+			all := len(supplyPlatforms) + 1
+			m.option(all, m.text("All", "全部"))
 			m.option(0, m.text("Cancel", "取消"))
-			n, err := m.choose(m.text("Select [0–3]: ", "请选择 [0–3]："), 3)
+			n, err := m.choose(fmt.Sprintf(m.text("Select [0–%d]: ", "请选择 [0–%d]："), all), all)
 			if err != nil {
 				return err
 			}
 			if n != 0 {
-				m.setup.platform = []string{"openai", "claude", ""}[n-1]
+				m.setup.platform = append(slices.Clone(supplyPlatforms), "")[n-1]
 			}
 			return m.back()
 		}},

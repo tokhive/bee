@@ -93,9 +93,13 @@ func ValidCodexClientVersion(version string) bool { return ValidClientVersion(ve
 
 // Claude's plans follow the names Anthropic sells since 2026-10-30: Free, Pro,
 // Max (formerly Max 5x), Ultra (formerly Max 20x), Team and Enterprise.
+//
+// Google's are the tiers Antigravity reports for a personal account: no paid
+// tier, Google AI Pro and Google AI Ultra.
 var subscriptionPlans = map[string][]string{
-	"openai": {"free", "go", "plus", "pro", "prolite", "promax", "team", "business", "enterprise", "edu"},
-	"claude": {"free", "pro", "max", "ultra", "team", "enterprise"},
+	"openai":       {"free", "go", "plus", "pro", "prolite", "promax", "team", "business", "enterprise", "edu"},
+	"claude":       {"free", "pro", "max", "ultra", "team", "enterprise"},
+	GooglePlatform: {"free", "pro", "ultra"},
 }
 
 // SubscriptionPlans lists the plans a ready capability report may name for a
@@ -134,11 +138,20 @@ func (c Capabilities) Valid(now time.Time) bool {
 	return c.ValidFor("openai", now)
 }
 
+// maxCapabilityModels bounds a report's model list. Antigravity lists a model
+// once per thinking level, so a Google account names several times as many.
+func maxCapabilityModels(platform string) int {
+	if platform == GooglePlatform {
+		return 128
+	}
+	return 32
+}
+
 func (c Capabilities) ValidFor(platform string, now time.Time) bool {
-	if platform != "openai" && platform != "claude" {
+	if platform != "openai" && platform != "claude" && platform != GooglePlatform {
 		return false
 	}
-	if c.Sequence < 1 || c.ObservedAt.After(now.Add(5*time.Second)) || !now.Before(c.ObservedAt.Add(CapabilityLifetimeFor(platform))) || len(c.Models) > 32 {
+	if c.Sequence < 1 || c.ObservedAt.After(now.Add(5*time.Second)) || !now.Before(c.ObservedAt.Add(CapabilityLifetimeFor(platform))) || len(c.Models) > maxCapabilityModels(platform) {
 		return false
 	}
 	if c.ClientVersion != "" && (c.Status != "ready" || !ValidClientVersion(c.ClientVersion)) {
@@ -172,6 +185,12 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 			return false
 		}
 		if c.Plan != "" && !KnownPlan(platform, c.Plan) {
+			return false
+		}
+	} else if platform == GooglePlatform {
+		// The five-hour window, the weekly one, or both: a plan without a
+		// paid tier is refreshed weekly only.
+		if len(c.Windows) < 1 || len(c.Windows) > 2 || !KnownPlan(platform, c.Plan) || c.ClientVersion != "" {
 			return false
 		}
 	} else {
@@ -241,6 +260,14 @@ func (c Capabilities) ReasonFor(platform string, now time.Time, model string) st
 		}
 	}
 	if model != "" {
+		if platform == GooglePlatform {
+			// The account lists upstream names, which may carry a thinking
+			// level the catalog's name does not.
+			if AntigravityModel(c.Models, model, "") != "" {
+				return ""
+			}
+			return ReasonModelUnavailable
+		}
 		for _, supported := range c.Models {
 			if supported == model {
 				return ""

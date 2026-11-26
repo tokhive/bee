@@ -537,6 +537,9 @@ fn main() {
                 quit(app);
             }
         }
+        // Whatever way the app ends, its own Bee goes with it. Quitting from
+        // the app menu or the Dock reaches here without waiting for quit().
+        RunEvent::Exit => app.state::<Arc<Shared>>().service.stop_blocking(),
         // macOS: clicking the Dock icon with no window shown reopens it.
         #[cfg(target_os = "macos")]
         RunEvent::Reopen { has_visible_windows: false, .. } => show_main(app),

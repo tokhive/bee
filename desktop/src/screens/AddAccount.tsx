@@ -7,7 +7,7 @@ import { Button } from "../components/ui/button";
 import { Callout, Kbd, PlatformMark } from "../components/ui/bits";
 import { toBeeError, type Account, type Detection, type PlatformId } from "../lib/bee";
 import { describeError } from "../lib/errors";
-import { maskEmail, planLabel } from "../lib/format";
+import { localize, maskEmail, planLabel } from "../lib/format";
 import { accountsOf, PLATFORMS } from "../lib/model";
 import { cn, isMac } from "../lib/utils";
 import { BackButton, Flow, FlowTitle, StepLabel } from "./Onboarding";
@@ -20,7 +20,7 @@ const basename = (path: string) => path.split(/[\\/]/).pop() ?? path;
 type Props = { initialStep: AddStep; platform?: PlatformId; replacing?: Account };
 
 export function AddAccount({ initialStep, platform: initialPlatform, replacing: initialReplacing }: Props) {
-  const { t, snapshot, shell, explain } = useApp();
+  const { t, snapshot, shell, explain, language } = useApp();
   const { go, onboarding } = useNav();
   const [step, setStep] = React.useState<AddStep>(initialPlatform ? initialStep : "platform");
   const [platform, setPlatform] = React.useState<PlatformId | undefined>(initialPlatform);
@@ -128,6 +128,9 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
       detail = <div className="mt-0.5 text-[13px] text-good">{t.add.found(names.cli, maskEmail(found.email), planLabel(found.plan))}</div>;
     } else {
       const known = problem && !NOT_SIGNED_IN.includes(problem.code) ? explain(problem.code) : null;
+      const reason = problem?.reason ? localize(problem.reason, language) : "";
+      const all = t.add.steps(names.cli, names.login).map((text, i) => ({ text, command: i === 1 }));
+      const steps = reason ? all.slice(1) : all;
       detail = (
         <div className="mt-0.5 text-[13px] text-muted">
           {known ? (
@@ -136,10 +139,11 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
             </p>
           ) : (
             <>
-              {t.add.notFound(names.cli)}
+              {reason ? t.add.unusable(names.cli, reason) : t.add.notFound(names.cli)}
               <ol className="mt-1.5 mb-0 list-decimal pl-[18px] text-fg">
-                {t.add.steps(names.cli, names.login).map((line, i) => (
-                  <li key={i}>{i === 1 ? <StepWithCommand line={line} command={names.login} /> : line}</li>
+                {/* A sign-in that was found needs signing in again, not installing. */}
+                {steps.map((line, i) => (
+                  <li key={i}>{line.command ? <StepWithCommand line={line.text} command={names.login} /> : line.text}</li>
                 ))}
               </ol>
             </>

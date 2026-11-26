@@ -34,13 +34,20 @@ func antigravityQuotaFrom(t *testing.T, raw string) antigravityQuota {
 	return summary
 }
 
-func TestAntigravityQuotaReadsTheGeminiWindows(t *testing.T) {
+func TestAntigravityQuotaReadsTheGeminiAndClaudeWindows(t *testing.T) {
 	observed := time.Date(2026, 11, 4, 16, 0, 0, 0, time.UTC)
 	windows, reason := parseAntigravityQuota(antigravityQuotaFrom(t, antigravityCapturedQuota), observed)
-	if reason != "" || len(windows) != 2 {
+	if reason != "" || len(windows) != 4 {
 		t.Fatal(reason, windows)
 	}
 	five, week := windows[0], windows[1]
+	// The Claude group, scoped: its five-hour window has not started, so it
+	// names no reset and cannot reset later than a full window from now.
+	claudeFive, claudeWeek := windows[2], windows[3]
+	if claudeFive.Scope != beewire.GoogleClaudeScope || claudeFive.Seconds != 18000 || *claudeFive.UsedPercent != 0 || !claudeFive.ResetAt.Equal(observed.Add(5*time.Hour)) ||
+		claudeWeek.Scope != beewire.GoogleClaudeScope || claudeWeek.Seconds != 604800 || *claudeWeek.UsedPercent != 0 || !claudeWeek.ResetAt.Equal(time.Date(2026, 11, 11, 15, 52, 48, 0, time.UTC)) {
+		t.Fatalf("Claude windows %+v %+v", claudeFive, claudeWeek)
+	}
 	if five.Seconds != 18000 || *five.UsedPercent != 60 || !five.ResetAt.Equal(time.Date(2026, 11, 4, 20, 52, 48, 0, time.UTC)) || five.Scope != "" {
 		t.Fatalf("five-hour window %+v used=%d", five, *five.UsedPercent)
 	}
@@ -60,7 +67,9 @@ func TestAntigravityQuotaReadsTheGeminiWindows(t *testing.T) {
 		"idle":      {`{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","remainingFraction":1},{"bucketId":"gemini-weekly","window":"weekly","remainingFraction":1}]}]}`, []int{0, 0}},
 		"exhausted": {`{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"2026-11-04T17:00:00Z"},{"bucketId":"gemini-weekly","window":"weekly","resetTime":"2026-11-08T00:00:00Z","remainingFraction":0.004}]}]}`, []int{100, 100}},
 		"weekly":    {`{"groups":[{"buckets":[{"bucketId":"gemini-weekly","window":"weekly","resetTime":"2026-11-08T00:00:00Z","remainingFraction":0.5},{"bucketId":"gemini-monthly","window":"monthly","remainingFraction":0.1}]}]}`, []int{50}},
-		"clamped":   {`{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"2026-11-04T17:00:00Z","remainingFraction":1.4},{"bucketId":"gemini-weekly","window":"weekly","resetTime":"2026-11-08T00:00:00Z","remainingFraction":-3}]}]}`, []int{0, 100}},
+		// An account offered only the partner models still reports them.
+		"claude only": {`{"groups":[{"buckets":[{"bucketId":"3p-weekly","window":"weekly","resetTime":"2026-11-08T00:00:00Z","remainingFraction":0.5}]}]}`, []int{50}},
+		"clamped":     {`{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"2026-11-04T17:00:00Z","remainingFraction":1.4},{"bucketId":"gemini-weekly","window":"weekly","resetTime":"2026-11-08T00:00:00Z","remainingFraction":-3}]}]}`, []int{0, 100}},
 	} {
 		windows, reason := parseAntigravityQuota(antigravityQuotaFrom(t, test.body), observed)
 		if reason != "" || len(windows) != len(test.used) {
@@ -73,13 +82,14 @@ func TestAntigravityQuotaReadsTheGeminiWindows(t *testing.T) {
 		}
 	}
 	for name, body := range map[string]string{
-		"no groups":       `{}`,
-		"no Gemini group": `{"groups":[{"buckets":[{"bucketId":"3p-5h","window":"5h","remainingFraction":1}]}]}`,
-		"empty group":     `{"groups":[{"displayName":"Gemini Models","buckets":[]}]}`,
-		"unknown windows": `{"groups":[{"buckets":[{"bucketId":"gemini-daily","window":"daily","remainingFraction":1}]}]}`,
-		"reset in past":   `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"2026-11-04T15:59:59Z","remainingFraction":0.5}]}]}`,
-		"unreadable time": `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"soon","remainingFraction":0.5}]}]}`,
-		"window twice":    `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","remainingFraction":1},{"bucketId":"gemini-flash-5h","window":"5h","remainingFraction":0.2}]}]}`,
+		"no groups":           `{}`,
+		"no group supplied":   `{"groups":[{"buckets":[{"bucketId":"image-5h","window":"5h","remainingFraction":1}]}]}`,
+		"Claude window twice": `{"groups":[{"buckets":[{"bucketId":"3p-5h","window":"5h","remainingFraction":1},{"bucketId":"3p-claude-5h","window":"5h","remainingFraction":0.2}]}]}`,
+		"empty group":         `{"groups":[{"displayName":"Gemini Models","buckets":[]}]}`,
+		"unknown windows":     `{"groups":[{"buckets":[{"bucketId":"gemini-daily","window":"daily","remainingFraction":1}]}]}`,
+		"reset in past":       `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"2026-11-04T15:59:59Z","remainingFraction":0.5}]}]}`,
+		"unreadable time":     `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","resetTime":"soon","remainingFraction":0.5}]}]}`,
+		"window twice":        `{"groups":[{"buckets":[{"bucketId":"gemini-5h","window":"5h","remainingFraction":1},{"bucketId":"gemini-flash-5h","window":"5h","remainingFraction":0.2}]}]}`,
 	} {
 		if windows, reason := parseAntigravityQuota(antigravityQuotaFrom(t, body), observed); reason == "" || windows != nil {
 			t.Fatalf("%s was read as quota: %v", name, windows)
@@ -144,10 +154,10 @@ func TestAntigravityCapabilitiesReportModelsPlanAndWindows(t *testing.T) {
 	if snapshot.Status != "ready" || source.failure != "" || source.problem != nil {
 		t.Fatal(snapshot.Status, source.failure, source.problem)
 	}
-	if want := []string{"gemini-3.8-flash-tiered", "gemini-4-argon-high", "gemini-4-argon-low", "gemini-4-carbon"}; !slices.Equal(snapshot.Models, want) {
+	if want := []string{"claude-sonnet-4-5", "gemini-3.8-flash-tiered", "gemini-4-argon-high", "gemini-4-argon-low", "gemini-4-carbon"}; !slices.Equal(snapshot.Models, want) {
 		t.Fatalf("models %v, want %v", snapshot.Models, want)
 	}
-	if snapshot.Plan != "pro" || snapshot.ClientVersion != "" || snapshot.Sequence != 7 || snapshot.Credits != nil || len(snapshot.Windows) != 2 ||
+	if snapshot.Plan != "pro" || snapshot.ClientVersion != "" || snapshot.Sequence != 7 || snapshot.Credits != nil || len(snapshot.Windows) != 4 ||
 		snapshot.Windows[0].Seconds != 18000 || *snapshot.Windows[0].UsedPercent != 60 || snapshot.Windows[1].Seconds != 604800 || *snapshot.Windows[1].UsedPercent != 25 {
 		t.Fatalf("snapshot %+v", snapshot)
 	}
@@ -206,8 +216,8 @@ func TestAntigravityCapabilitiesUseTheEndpointOfThePlan(t *testing.T) {
 func TestAntigravityCapabilitiesAreUnknownWhenTheAnswerIsNot(t *testing.T) {
 	credential := antigravitySample(time.Now().Add(time.Hour))
 	for name, change := range map[string]func(*googleFake){
-		"no Gemini group": func(g *googleFake) {
-			g.answer[googleDaily+"retrieveUserQuotaSummary"] = googleAnswer(200, `{"groups":[{"buckets":[{"bucketId":"3p-5h","window":"5h","remainingFraction":1}]}]}`)
+		"no group supplied from": func(g *googleFake) {
+			g.answer[googleDaily+"retrieveUserQuotaSummary"] = googleAnswer(200, `{"groups":[{"buckets":[{"bucketId":"image-5h","window":"5h","remainingFraction":1}]}]}`)
 		},
 		"empty quota":    func(g *googleFake) { g.answer[googleDaily+"retrieveUserQuotaSummary"] = googleAnswer(200, `{}`) },
 		"quota not JSON": func(g *googleFake) { g.answer[googleDaily+"retrieveUserQuotaSummary"] = googleAnswer(200, `<html>`) },
@@ -390,7 +400,7 @@ func TestAntigravityRuntimeReportsCapabilitiesToHive(t *testing.T) {
 	if err := sources[0].synchronize(context.Background(), hive.state(), "lease", &output, true); err != nil {
 		t.Fatal(err)
 	}
-	if len(reports) != 1 || reports[0].Status != "ready" || reports[0].Plan != "pro" || len(reports[0].Models) != 4 || len(reports[0].Windows) != 2 || reports[0].ClientVersion != "" || reports[0].ReuseMetadata ||
+	if len(reports) != 1 || reports[0].Status != "ready" || reports[0].Plan != "pro" || len(reports[0].Models) != 5 || len(reports[0].Windows) != 4 || reports[0].ClientVersion != "" || reports[0].ReuseMetadata ||
 		reports[0].AccountFingerprint != credential.fingerprint() || reports[0].CredentialRevision != antigravityDigest(credential.AccessToken) || !reports[0].ValidFor(beewire.GooglePlatform, time.Now()) {
 		t.Fatalf("reports %+v", reports)
 	}
@@ -404,15 +414,15 @@ func TestAntigravityRuntimeReportsCapabilitiesToHive(t *testing.T) {
 		t.Fatal("Hive's capability request did not reach the source")
 	}
 	cfg.Antigravity.lastCapabilityAttempt = time.Now().Add(-11 * time.Second)
-	if err := cfg.Antigravity.synchronize(context.Background(), hive.state(), "lease", &output, false); err != nil || len(reports) != 2 || !reports[1].ReuseMetadata || reports[1].Plan != "" || len(reports[1].Models) != 0 || len(reports[1].Windows) != 2 || cfg.antigravityCapabilityWanted.Load() {
+	if err := cfg.Antigravity.synchronize(context.Background(), hive.state(), "lease", &output, false); err != nil || len(reports) != 2 || !reports[1].ReuseMetadata || reports[1].Plan != "" || len(reports[1].Models) != 0 || len(reports[1].Windows) != 4 || cfg.antigravityCapabilityWanted.Load() {
 		t.Fatalf("requested report: %v %+v", err, reports)
 	}
 	assertNoAntigravitySecrets(t, output.String())
 }
 
-func TestAntigravityModelsAreTheGeminiTextModels(t *testing.T) {
-	listed := map[string]json.RawMessage{"gemini-pro-agent": nil, "gemini-2.5-flash": nil, "gemini-3-pro-image": nil, "Gemini-upper": nil, "gemini-": nil, "claude-opus-4-5": nil, "models/gemini-2.5-pro": nil}
-	if got := antigravityModels(listed); !slices.Equal(got, []string{"gemini-", "gemini-2.5-flash", "gemini-pro-agent"}) {
+func TestAntigravityModelsAreTheGeminiAndClaudeTextModels(t *testing.T) {
+	listed := map[string]json.RawMessage{"gemini-pro-agent": nil, "gemini-2.5-flash": nil, "gemini-3-pro-image": nil, "Gemini-upper": nil, "gemini-": nil, "claude-opus-4-5": nil, "models/gemini-2.5-pro": nil, "gpt-oss-120b-medium": nil, "tab_flash_lite_preview": nil}
+	if got := antigravityModels(listed); !slices.Equal(got, []string{"claude-opus-4-5", "gemini-", "gemini-2.5-flash", "gemini-pro-agent"}) {
 		t.Fatal(got)
 	}
 	for i := range 200 {

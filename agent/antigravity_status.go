@@ -18,7 +18,7 @@ func antigravityStatusCommand(ctx context.Context, args []string, out io.Writer)
 	flags.SetOutput(out)
 	configPath := flags.String("config", "", "device configuration file; the sign-in is kept in its directory")
 	verify := flags.Bool("verify", false, "read-only verification of the account and its Antigravity tier with Google, using the current access token")
-	capabilities := flags.Bool("capabilities", false, "read-only query of the account's Gemini models and quota windows")
+	capabilities := flags.Bool("capabilities", false, "read-only query of the account's Gemini and Claude models and quota windows")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}

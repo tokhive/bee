@@ -191,14 +191,14 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 	return result
 }
 
-// antigravityModels are the Gemini text models of a listing, under the names
-// the upstream serves them by: a thinking model is listed once per level, and
-// Hive finds a catalog model among those names. Image models are metered
-// apart and are not supplied.
+// antigravityModels are the Gemini and Claude text models of a listing, under
+// the names the upstream serves them by: a thinking model is listed once per
+// level, and Hive finds a catalog model among those names. Image models are
+// metered apart and are not supplied, nor are the other partner models.
 func antigravityModels(listed map[string]json.RawMessage) []string {
 	models := []string{}
 	for id := range listed {
-		if strings.HasPrefix(id, "gemini-") && !strings.Contains(id, "image") && beewire.ValidModelIDs([]string{id}) {
+		if (strings.HasPrefix(id, "gemini-") || beewire.GoogleClaudeModel(id)) && !strings.Contains(id, "image") && beewire.ValidModelIDs([]string{id}) {
 			models = append(models, id)
 		}
 	}
@@ -220,20 +220,32 @@ type antigravityQuota struct {
 	} `json:"groups"`
 }
 
-// parseAntigravityQuota reads the five-hour and weekly windows the Gemini
-// models share. The other groups meter models this account is not supplied
-// for. A window nothing has used carries no reset time: the first request
-// starts it, and it cannot reset later than one full window from now.
+// antigravityQuotaGroups are the quota groups a Google account supplies from,
+// by the prefix of their bucket ids, and the scope their windows are reported
+// under: Gemini's unscoped, and the group Antigravity's Claude models share
+// with its other partner models as "claude".
+var antigravityQuotaGroups = map[string]string{"gemini-": "", "3p-": beewire.GoogleClaudeScope}
+
+// parseAntigravityQuota reads the five-hour and weekly windows of the groups
+// a Google account supplies from. A window nothing has used carries no reset
+// time: the first request starts it, and it cannot reset later than one full
+// window from now.
 func parseAntigravityQuota(summary antigravityQuota, now time.Time) ([]beewire.QuotaWindow, string) {
 	var windows []beewire.QuotaWindow
 	for _, group := range summary.Groups {
 		for _, bucket := range group.Buckets {
 			seconds := map[string]int{"5h": 18000, "weekly": 604800}[bucket.Window]
-			if !strings.HasPrefix(bucket.ID, "gemini-") || seconds == 0 {
+			scope, supplied := "", false
+			for prefix, groupScope := range antigravityQuotaGroups {
+				if strings.HasPrefix(bucket.ID, prefix) {
+					scope, supplied = groupScope, true
+				}
+			}
+			if !supplied || seconds == 0 {
 				continue
 			}
-			if slices.ContainsFunc(windows, func(w beewire.QuotaWindow) bool { return w.Seconds == seconds }) {
-				return nil, "the " + bucket.Window + " window is reported twice"
+			if slices.ContainsFunc(windows, func(w beewire.QuotaWindow) bool { return w.Seconds == seconds && w.Scope == scope }) {
+				return nil, "the " + bucket.ID + " window is reported twice"
 			}
 			reset := now.Add(time.Duration(seconds) * time.Second)
 			if bucket.Reset != "" {
@@ -243,13 +255,18 @@ func parseAntigravityQuota(summary antigravityQuota, now time.Time) ([]beewire.Q
 				}
 			}
 			used := min(max(int(math.Round((1-bucket.Remaining)*100)), 0), 100)
-			windows = append(windows, beewire.QuotaWindow{Seconds: seconds, UsedPercent: &used, ResetAt: reset})
+			windows = append(windows, beewire.QuotaWindow{Scope: scope, Seconds: seconds, UsedPercent: &used, ResetAt: reset})
 		}
 	}
 	if len(windows) == 0 {
-		return nil, "no Gemini quota window"
+		return nil, "no Gemini or Claude quota window"
 	}
-	sort.Slice(windows, func(i, j int) bool { return windows[i].Seconds < windows[j].Seconds })
+	sort.Slice(windows, func(i, j int) bool {
+		if windows[i].Scope != windows[j].Scope {
+			return windows[i].Scope < windows[j].Scope
+		}
+		return windows[i].Seconds < windows[j].Seconds
+	})
 	return windows, ""
 }
 

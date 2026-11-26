@@ -175,7 +175,7 @@ func (m *managementMenu) antigravityChecks() error {
 		{"Sign in to Google · browser elsewhere, paste the address", "登录 Google 账号 · 使用其他设备的浏览器并粘贴地址", func() error { return m.antigravityLogin(true) }},
 		{"Stored sign-in · no network", "已保存的登录 · 不联网", func() error { return m.checkAntigravity("local") }},
 		{"Google account and tier · online", "Google 账号与方案 · 联网验证", func() error { return m.checkAntigravity("verify") }},
-		{"Gemini models and quota · online", "Gemini 模型与额度 · 联网查询", func() error { return m.checkAntigravity("capabilities") }},
+		{"Gemini and Claude models and quota · online", "Gemini 与 Claude 模型及额度 · 联网查询", func() error { return m.checkAntigravity("capabilities") }},
 	})
 }
 

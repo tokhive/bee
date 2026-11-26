@@ -188,9 +188,10 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 			return false
 		}
 	} else if platform == GooglePlatform {
-		// The five-hour window, the weekly one, or both: a plan without a
-		// paid tier is refreshed weekly only.
-		if len(c.Windows) < 1 || len(c.Windows) > 2 || !KnownPlan(platform, c.Plan) || c.ClientVersion != "" {
+		// Per group, the five-hour window, the weekly one, or both: a plan
+		// without a paid tier is refreshed weekly only. The Gemini group's
+		// windows are unscoped and the Claude group's are scoped "claude".
+		if len(c.Windows) < 1 || len(c.Windows) > 4 || !KnownPlan(platform, c.Plan) || c.ClientVersion != "" {
 			return false
 		}
 	} else {
@@ -207,6 +208,7 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 	}
 	windows := map[int]bool{}
 	scopes := map[string]bool{}
+	claudeWindows := map[int]bool{}
 	for _, window := range c.Windows {
 		modelScoped := platform == "claude" && (window.Scope == "sonnet" || window.Scope == "opus")
 		if (window.Seconds != 18000 && window.Seconds != 604800 && (platform != "openai" || len(c.Windows) != 1 || window.Seconds != OpenAISingleWindow(c.Plan))) || window.UsedPercent == nil || *window.UsedPercent < 0 || *window.UsedPercent > 10000 || window.ResetAt.IsZero() || !modelScoped && !window.ResetAt.After(c.ObservedAt) || window.ResetAt.After(c.ObservedAt.Add(time.Duration(window.Seconds)*time.Second+time.Minute)) {
@@ -217,6 +219,11 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 				return false
 			}
 			windows[window.Seconds] = true
+		} else if platform == GooglePlatform {
+			if window.Scope != GoogleClaudeScope || claudeWindows[window.Seconds] {
+				return false
+			}
+			claudeWindows[window.Seconds] = true
 		} else {
 			if platform != "claude" || window.Seconds != 604800 || scopes[window.Scope] || window.Scope != "opus" && window.Scope != "sonnet" && window.Scope != "oauth_apps" {
 				return false
@@ -246,6 +253,11 @@ func (c Capabilities) ReasonFor(platform string, now time.Time, model string) st
 			if model == "" || ClaudeModelFamily(model) != window.Scope {
 				continue
 			}
+		}
+		// A Google account meters its Gemini models and its Claude models
+		// apart: each group's windows stop only that group's models.
+		if platform == GooglePlatform && (window.Scope == GoogleClaudeScope) != (model != "" && GoogleClaudeModel(model)) {
+			continue
 		}
 		if window.UsedPercent == nil {
 			return ReasonQuotaUnknown

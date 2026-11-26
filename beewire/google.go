@@ -1,7 +1,10 @@
 package beewire
 
+import "strings"
+
 // GooglePlatform is the platform of a Google account that reaches Gemini
-// models through its Antigravity sign-in. The account source is called
+// models, and the Claude models Antigravity offers it, through its
+// Antigravity sign-in. The account source is called
 // antigravity where OpenAI's is codex: in the egress configuration, on the
 // wire and in supply reasons.
 const GooglePlatform = "google"
@@ -37,6 +40,15 @@ func AntigravityHostFor(plan string) string {
 	return AntigravityHost
 }
 
+// GoogleClaudeScope is the scope of a Google account's quota windows for the
+// Claude models Antigravity offers it. They share one group of limits, apart
+// from the Gemini models', whose windows are unscoped.
+const GoogleClaudeScope = "claude"
+
+// GoogleClaudeModel reports whether a model a Google account serves is one of
+// Anthropic's, metered in the Claude group rather than with Gemini.
+func GoogleClaudeModel(model string) bool { return strings.HasPrefix(model, "claude-") }
+
 // ValidProjectID reports whether id can be the project of a Google
 // authorization: one bounded token, safe to write into a request body.
 func ValidProjectID(id string) bool { return capabilityModelID.MatchString(id) }
@@ -48,7 +60,9 @@ func ValidProjectID(id string) bool { return capabilityModelID.MatchString(id) }
 // one name per thinking level (gemini-4-argon-low, -medium, -high), where the
 // published name alone is not found. So the level a request asks for is tried
 // first, then the published name, then the levels from the documented default
-// outwards. level is empty for a request that names none.
+// outwards. level is empty for a request that names none. A Claude model the
+// upstream lists only as its thinking variant (claude-opus-4-6-thinking) is
+// reached by that name last.
 func AntigravityModel(listed []string, model, level string) string {
 	has := make(map[string]bool, len(listed))
 	for _, id := range listed {
@@ -62,7 +76,7 @@ func AntigravityModel(listed []string, model, level string) string {
 	if level == "xhigh" {
 		candidates = append(candidates, model+"-high")
 	}
-	candidates = append(candidates, model+"-medium", model+"-high", model+"-low", model+"-tiered")
+	candidates = append(candidates, model+"-medium", model+"-high", model+"-low", model+"-tiered", model+"-thinking")
 	for _, id := range candidates {
 		if has[id] {
 			return id

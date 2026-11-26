@@ -139,6 +139,8 @@ func targetClass(target string) string {
 		return "openai"
 	case "api.anthropic.com":
 		return "claude"
+	case "cloudcode-pa.googleapis.com", "daily-cloudcode-pa.googleapis.com":
+		return "google"
 	default:
 		return "other"
 	}

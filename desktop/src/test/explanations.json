@@ -1,6 +1,73 @@
 {
  "explanations": [
   {
+   "code": "BEE-ANTIGRAVITY-EXPIRED",
+   "category": "syncing",
+   "title": {
+    "en": "Renewing sign-in",
+    "zh": "正在续期登录"
+   },
+   "cause": {
+    "en": "The Google sign-in has expired; TokHive renews it while Bee is connected.",
+    "zh": "Google 登录已过期，Bee 连上 TokHive 后会自动续期。"
+   },
+   "fix": {
+    "en": "Keep Bee running. If it does not recover, run bee antigravity-login again.",
+    "zh": "请保持 Bee 运行；如果一直没恢复，请重新运行 bee antigravity-login。"
+   }
+  },
+  {
+   "code": "BEE-ANTIGRAVITY-SIGNIN",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Google sign-in expired",
+    "zh": "Google 登录已失效"
+   },
+   "cause": {
+    "en": "Google no longer accepts the saved sign-in. You may have removed access or changed the password.",
+    "zh": "Google 不再接受已保存的登录，可能是你撤销了授权或修改了密码。"
+   },
+   "fix": {
+    "en": "Open a terminal, run bee antigravity-login and sign in again.",
+    "zh": "打开终端运行 bee antigravity-login，重新登录。"
+   }
+  },
+  {
+   "code": "BEE-ANTIGRAVITY-SOURCE",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Google not signed in",
+    "zh": "没有检测到 Google 登录"
+   },
+   "cause": {
+    "en": "Bee has no Google sign-in for Antigravity on this computer.",
+    "zh": "Bee 在这台电脑上没有 Antigravity 的 Google 登录。"
+   },
+   "fix": {
+    "en": "Open a terminal, run bee antigravity-login and sign in to your Google account, then check again.",
+    "zh": "打开终端运行 bee antigravity-login 登录你的 Google 账号，然后重新检测。"
+   }
+  },
+  {
+   "code": "BEE-ANTIGRAVITY-TIER",
+   "category": "action",
+   "action": "remove_account",
+   "title": {
+    "en": "Plan not supported",
+    "zh": "套餐暂不支持"
+   },
+   "cause": {
+    "en": "This Google account's Antigravity plan is not one that can be shared.",
+    "zh": "这个 Google 账号的 Antigravity 套餐暂时不能共享。"
+   },
+   "fix": {
+    "en": "Use a personal Google account on the free plan, Google AI Pro or Google AI Ultra.",
+    "zh": "请换用免费版、Google AI Pro 或 Google AI Ultra 的个人 Google 账号。"
+   }
+  },
+  {
    "code": "BEE-CLAUDE-EXPIRED",
    "category": "action",
    "action": "relogin",
@@ -234,6 +301,74 @@
    "fix": {
     "en": "Keep Bee running; it usually takes a few minutes.",
     "zh": "请保持 Bee 运行，通常需要几分钟。"
+   }
+  },
+  {
+   "code": "antigravity_account_in_use",
+   "category": "action",
+   "action": "remove_account",
+   "title": {
+    "en": "Used by someone else",
+    "zh": "已被他人使用"
+   },
+   "cause": {
+    "en": "This Google account is already shared from another TokHive account.",
+    "zh": "这个 Google 账号已被另一个 TokHive 账号使用。"
+   },
+   "fix": {
+    "en": "Use a different account, or ask the other person to release it in TokHive.",
+    "zh": "你可以换用其他账号，或请对方在 TokHive 中释放它。"
+   }
+  },
+  {
+   "code": "antigravity_authorization_rejected",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in expired",
+    "zh": "登录已失效"
+   },
+   "cause": {
+    "en": "Google rejected this account's sign-in. It has usually expired.",
+    "zh": "Google 拒绝了这个账号的授权，通常是登录已失效。"
+   },
+   "fix": {
+    "en": "Open a terminal, run bee antigravity-login and sign in to the same account again.",
+    "zh": "打开终端运行 bee antigravity-login，重新登录同一个账号。"
+   }
+  },
+  {
+   "code": "antigravity_confirmation_required",
+   "category": "action",
+   "action": "confirm_switch",
+   "title": {
+    "en": "Different account signed in",
+    "zh": "客户端换了账号"
+   },
+   "cause": {
+    "en": "Antigravity is now signed in to a different account than the one being shared.",
+    "zh": "Antigravity 现在登录的账号和正在共享的不是同一个。"
+   },
+   "fix": {
+    "en": "Choose Use new account to share it, or remove this account.",
+    "zh": "点“改用新账号”开始共享新账号，或者删除这个账号。"
+   }
+  },
+  {
+   "code": "antigravity_source_unavailable",
+   "category": "action",
+   "action": "relogin",
+   "title": {
+    "en": "Sign-in unavailable",
+    "zh": "读取不到登录"
+   },
+   "cause": {
+    "en": "Bee cannot read the Antigravity sign-in on this computer. You may have signed out.",
+    "zh": "Bee 读取不到这台电脑上 Antigravity 的登录，可能已经退出登录。"
+   },
+   "fix": {
+    "en": "Open a terminal, run bee antigravity-login and sign in to the same account. Bee picks it up by itself.",
+    "zh": "打开终端运行 bee antigravity-login，重新登录同一个账号，Bee 会自动识别。"
    }
   },
   {
@@ -569,6 +704,23 @@
    "fix": {
     "en": "Check the file still exists and choose it again.",
     "zh": "请确认文件还在，然后重新选择。"
+   }
+  },
+  {
+   "code": "import_unsupported",
+   "category": "error",
+   "action": "relogin",
+   "title": {
+    "en": "Cannot be imported",
+    "zh": "不支持导入"
+   },
+   "cause": {
+    "en": "A Google account has no credential file to import; Bee signs in to it directly.",
+    "zh": "Google 账号没有可导入的凭证文件，Bee 需要直接登录。"
+   },
+   "fix": {
+    "en": "Open a terminal on this computer, run bee antigravity-login, then add the account from its sign-in.",
+    "zh": "在这台电脑上打开终端运行 bee antigravity-login，然后从本机登录添加账号。"
    }
   },
   {

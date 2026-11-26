@@ -2,6 +2,7 @@ package bee
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -165,9 +166,66 @@ func (m *managementMenu) checkClaude(mode string) error {
 	return nil
 }
 
+// antigravityChecks is where a Google account is signed in and inspected: Bee
+// keeps this sign-in itself, so there is no official client to send the
+// Provider to.
+func (m *managementMenu) antigravityChecks() error {
+	return m.loop(m.text("Google (Antigravity)", "Google (Antigravity)"), []menuAction{
+		{"Sign in to Google · opens a browser here", "登录 Google 账号 · 在本机打开浏览器", func() error { return m.antigravityLogin(false) }},
+		{"Sign in to Google · browser elsewhere, paste the address", "登录 Google 账号 · 使用其他设备的浏览器并粘贴地址", func() error { return m.antigravityLogin(true) }},
+		{"Stored sign-in · no network", "已保存的登录 · 不联网", func() error { return m.checkAntigravity("local") }},
+		{"Google account and tier · online", "Google 账号与方案 · 联网验证", func() error { return m.checkAntigravity("verify") }},
+		{"Gemini models and quota · online", "Gemini 模型与额度 · 联网查询", func() error { return m.checkAntigravity("capabilities") }},
+	})
+}
+
+// antigravityLogin is bee antigravity-login from the menu; manual is its
+// --no-browser.
+func (m *managementMenu) antigravityLogin(manual bool) error {
+	m.page(m.text("Sign in to Google", "登录 Google 账号"))
+	directory, err := antigravityDirectory(m.configPath)
+	if err != nil {
+		return err
+	}
+	m.note("Bee keeps the sign-in in a private file beside the device configuration.", "Bee 会将登录结果保存在设备配置旁的私有文件中。")
+	login := antigravityLogin{store: antigravityStoreIn(directory), transport: antigravityTransport(m.ctx, directory), listen: antigravityListen, open: openBrowser, out: m.out, manual: manual,
+		paste: func() (string, error) { return m.rawLine("") }}
+	if manual {
+		login.open = nil
+	}
+	return login.report(m.ctx)
+}
+
+func (m *managementMenu) checkAntigravity(mode string) error {
+	m.page(m.text("Google (Antigravity) check", "Google (Antigravity) 检查"))
+	directory, err := antigravityDirectory(m.configPath)
+	if err != nil {
+		return err
+	}
+	store := antigravityStoreIn(directory)
+	if mode == "capabilities" {
+		snapshot, err := readAntigravityCapabilities(m.ctx, store, antigravityTransport(m.ctx, directory))
+		if err != nil {
+			return err
+		}
+		m.showCapabilities(snapshot)
+		return nil
+	}
+	var transport http.RoundTripper
+	if mode == "verify" {
+		transport = antigravityTransport(m.ctx, directory)
+	}
+	report, err := readAntigravityStatus(m.ctx, store, mode == "verify", transport)
+	if err != nil {
+		return err
+	}
+	m.showSignIn(report)
+	return nil
+}
+
 func (m *managementMenu) showSignIn(report map[string]any) {
 	fields := []struct{ key, en, zh string }{
-		{"source", "Source", "凭证来源"}, {"status", "Local status", "本地状态"},
+		{"source", "Source", "凭证来源"}, {"status", "Local status", "本地状态"}, {"email", "Account", "登录账号"},
 		{"account_fingerprint", "Account fingerprint", "账号指纹"}, {"plan", "Plan", "订阅方案"},
 		{"expires_at", "Expires at", "有效期至"}, {"validation", "Validation", "验证方式"},
 		{"refresh_token_present", "Refresh token present", "持有刷新凭证"}, {"inference_scope", "Inference permission", "推理权限"}, {"profile_scope", "Profile permission", "身份查询权限"},
@@ -175,6 +233,8 @@ func (m *managementMenu) showSignIn(report map[string]any) {
 	labels := map[string]string{
 		"local_structure_only":      m.text("Local structure check only; no online identity verification", "仅本地结构检查；尚未在线验证身份"),
 		"official_profile_verified": m.text("Official identity verified", "官方身份已验证"),
+		"google_account_verified":   m.text("Account and tier verified with Google", "已向 Google 验证账号与方案"),
+		"sign_in_rejected":          m.text("Sign-in no longer accepted by Google", "Google 已不再接受此登录"),
 		"available":                 m.text("Available locally", "本地可用"), "expired": m.text("Expired", "已过期"),
 		"missing_inference_scope": m.text("Missing inference permission", "缺少推理权限"), "unknown": m.text("Unknown", "未知"),
 	}

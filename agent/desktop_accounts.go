@@ -35,6 +35,7 @@ type accountDetection struct {
 	Problem     *controlProblem `json:"problem,omitempty"`
 	codex       *codexSource
 	claude      *claudeSource
+	antigravity *antigravitySource
 }
 
 type addAccountRequest struct {
@@ -99,6 +100,9 @@ func (r *desktopRunner) adoptConfiguredAccounts() error {
 		}
 		adopt("claude", home)
 	}
+	if r.egress.Antigravity != nil {
+		adopt(beewire.GooglePlatform, "")
+	}
 	if !changed {
 		return nil
 	}
@@ -143,6 +147,21 @@ func (r *desktopRunner) detect(ctx context.Context, platform string) accountDete
 		if identity, err := r.claudeProfile(ctx, credential); err == nil {
 			found.Email, found.Fingerprint = identity.email, identity.fingerprint()
 		}
+	case beewire.GooglePlatform:
+		// The sign-in is Bee's own; bee antigravity-login puts it there.
+		ui, _ := newInstallUI(io.Discard)
+		local := detectAntigravity(filepath.Dir(r.configPath), ui)
+		if local.problem != nil {
+			found.Problem = problemOf(local.problem)
+			return found
+		}
+		credential, err := local.antigravity.store().read()
+		if err != nil {
+			found.Problem = problemOf(failCause("BEE-ANTIGRAVITY-SOURCE", err))
+			return found
+		}
+		found.Available, found.antigravity = true, local.antigravity
+		found.Email, found.Plan, found.Fingerprint = credential.Email, credential.Plan, credential.fingerprint()
 	}
 	return found
 }
@@ -150,8 +169,8 @@ func (r *desktopRunner) detect(ctx context.Context, platform string) accountDete
 // addAccount adds an account and starts sharing it. The account's source is
 // written to the egress configuration and runs on the live connection.
 func (r *desktopRunner) addAccount(ctx context.Context, request addAccountRequest) (accountRecord, error) {
-	if request.Platform != "openai" && request.Platform != "claude" {
-		return accountRecord{}, refuse(http.StatusNotFound, "unknown_platform", "platform must be openai or claude")
+	if !supplyPlatform(request.Platform) {
+		return accountRecord{}, refuse(http.StatusNotFound, "unknown_platform", "platform must be openai, claude or google")
 	}
 	r.accountsMu.Lock()
 	defer r.accountsMu.Unlock()
@@ -170,6 +189,10 @@ func (r *desktopRunner) addAccount(ctx context.Context, request addAccountReques
 			return accountRecord{}, &accountError{status: http.StatusUnprocessableEntity, problem: *found.Problem}
 		}
 	case accountSourceImport:
+		if request.Platform == beewire.GooglePlatform {
+			// There is no file of another client to import: Bee signs in itself.
+			return accountRecord{}, refuse(http.StatusUnprocessableEntity, "import_unsupported", "a Google account cannot be imported from a file; run bee antigravity-login on this computer, then add the account from its sign-in")
+		}
 		if found, err = r.importCredential(ctx, record.ID, request); err != nil {
 			return accountRecord{}, err
 		}
@@ -185,11 +208,14 @@ func (r *desktopRunner) addAccount(ctx context.Context, request addAccountReques
 
 	// The running source is a separate configuration holding only this
 	// account, so nothing the connection already uses changes under it.
-	sub := &egressConfig{Targets: []string{platformTarget(request.Platform)}, ConnectProxy: r.egress.ConnectProxy}
+	sub := &egressConfig{Targets: platformUpstreams(request.Platform), ConnectProxy: r.egress.ConnectProxy}
 	var setting any
 	if found.codex != nil {
 		sub.Codex, sub.Capabilities = &codexSource{Home: found.codex.Home, Store: found.codex.Store}, &capabilitySource{}
 		setting = codexSource{Home: found.codex.Home, Store: found.codex.Store}
+	} else if found.antigravity != nil {
+		sub.Antigravity = &antigravitySource{Capabilities: true}
+		setting = antigravitySetting{Capabilities: true}
 	} else {
 		sub.Claude = &claudeSource{Store: found.claude.Store, ConfigDir: found.claude.ConfigDir, Refresh: found.claude.Refresh, Capabilities: true}
 		setting = claudeSetting{Store: found.claude.Store, ConfigDir: found.claude.ConfigDir, Refresh: found.claude.Refresh, Capabilities: true}
@@ -353,18 +379,23 @@ func (r *desktopRunner) removeAccount(ctx context.Context, id string) error {
 		if _, err := updatePlatformSupply(ctx, r.client, state, record.Platform, true); err != nil {
 			return refuse(http.StatusBadGateway, "pause_unconfirmed", err.Error())
 		}
-		target := platformTarget(record.Platform)
+		open := func() (n int) {
+			for _, target := range platformUpstreams(record.Platform) {
+				n += r.egress.activeStreams(target)
+			}
+			return n
+		}
 		deadline := time.Now().Add(r.drainTimeout)
-		for r.egress.activeStreams(target) > 0 && time.Now().Before(deadline) {
+		for open() > 0 && time.Now().Before(deadline) {
 			if pause(ctx, 200*time.Millisecond) != nil {
 				return ctx.Err()
 			}
 		}
-		if n := r.egress.activeStreams(target); n > 0 {
+		if n := open(); n > 0 {
 			slog.Warn("removing account with streams still open", "module", "accounts", "platform", record.Platform, "streams", n)
 		}
 	}
-	r.egress.sources().remove(record.Platform)
+	r.egress.sources().remove(sourceName(record.Platform))
 	if err := removeEgressSource(ctx, defaultEgressPath(r.configPath), record.Platform); err != nil {
 		return err
 	}

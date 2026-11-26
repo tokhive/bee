@@ -69,6 +69,12 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if command == "claude-status" {
 		return claudeStatus(ctx, args[1:], out)
 	}
+	if command == "antigravity-login" {
+		return antigravityLoginCommand(ctx, args[1:], out)
+	}
+	if command == "antigravity-status" {
+		return antigravityStatusCommand(ctx, args[1:], out)
+	}
 	if command == "doctor" {
 		return doctor(ctx, args[1:], out)
 	}
@@ -88,7 +94,7 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	var platform string
 	var fingerprint string
 	if control || accountCommand {
-		flags.StringVar(&platform, "platform", "", "supply platform: openai or claude")
+		flags.StringVar(&platform, "platform", "", "supply platform: openai, claude or google")
 	}
 	if command == "confirm-account" {
 		flags.StringVar(&fingerprint, "account-fingerprint", "", "full account fingerprint to confirm")
@@ -108,8 +114,8 @@ func run(ctx context.Context, args []string, out io.Writer) error {
 	if flags.NArg() != 0 {
 		return errors.New("unexpected arguments")
 	}
-	if (control || accountCommand) && platform != "openai" && platform != "claude" {
-		return errors.New("--platform must specify openai or claude")
+	if (control || accountCommand) && !supplyPlatform(platform) {
+		return errors.New("--platform must specify openai, claude or google")
 	}
 	if *configPath == "" {
 		directory, err := os.UserConfigDir()

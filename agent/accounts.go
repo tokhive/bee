@@ -62,6 +62,10 @@ func reportReadiness(ctx context.Context, state localState, platform string, out
 	if ready {
 		notify(out, slog.LevelInfo, "ready", platform+" ready: taking new work", "platform", platform, "account", account)
 	}
+	// What Hive holds for the platform has just settled. The desktop app read
+	// it when the account was added, before the synchronization finished, and
+	// would otherwise show that earlier answer until its next scheduled read.
+	runStatusFrom(ctx).publish(controlEvent{Name: "supply", Data: map[string]string{"platform": platform}})
 }
 
 func accountControl(ctx context.Context, state localState, platform, fingerprint string, confirm bool, out io.Writer) error {

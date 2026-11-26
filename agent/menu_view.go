@@ -68,6 +68,8 @@ func platformName(p string) string {
 		return "OpenAI (Codex)"
 	case "claude":
 		return "Claude Code"
+	case "google":
+		return "Google (Antigravity)"
 	}
 	return p
 }

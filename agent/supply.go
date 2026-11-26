@@ -69,6 +69,11 @@ var supplyReasonLabels = map[string]string{
 	"claude_authorization_rejected": "Claude authorization rejected by upstream",
 	"claude_source_unavailable":     "waiting for official Claude Code authorization recovery",
 	"claude_confirmation_required":  "Claude account changed; awaiting explicit confirmation",
+
+	"antigravity_account_in_use":         "Google account registered to another Provider",
+	"antigravity_authorization_rejected": "Antigravity authorization rejected by Google",
+	"antigravity_source_unavailable":     "waiting for the Antigravity sign-in; run bee antigravity-login",
+	"antigravity_confirmation_required":  "Google account changed; awaiting explicit confirmation",
 }
 
 func updatePlatformSupply(ctx context.Context, client *http.Client, state localState, platform string, paused bool) (beewire.PlatformSupply, error) {

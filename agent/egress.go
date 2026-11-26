@@ -36,6 +36,7 @@ type egressConfig struct {
 	Credential         tee.Secret         `json:"credential"`
 	Codex              *codexSource       `json:"codex,omitempty"`
 	Claude             *claudeSource      `json:"claude,omitempty"`
+	Antigravity        *antigravitySource `json:"antigravity,omitempty"`
 	OpenAIAPI          *openaiAPISource   `json:"openai_api,omitempty"`
 	ClaudeAPI          *officialAPISource `json:"claude_api,omitempty"`
 	Reseller           *resellerSource    `json:"reseller,omitempty"`
@@ -59,12 +60,13 @@ type egressConfig struct {
 	// announceReady is a capability recovery whose readiness line waits for
 	// Hive to accept the report.
 	announceReady bool
-	// capabilityWanted and claudeCapabilityWanted are Hive asking for a
-	// capability report now.
-	capabilityWanted       atomic.Bool
-	claudeCapabilityWanted atomic.Bool
-	pacer                  syncPacer
-	failures               *egressFailures
+	// capabilityWanted, claudeCapabilityWanted and antigravityCapabilityWanted
+	// are Hive asking for a capability report now.
+	capabilityWanted            atomic.Bool
+	claudeCapabilityWanted      atomic.Bool
+	antigravityCapabilityWanted atomic.Bool
+	pacer                       syncPacer
+	failures                    *egressFailures
 	// sourceSet holds the account sources, which can change while connected.
 	sourcesOnce sync.Once
 	sourceSet   *sourceSet
@@ -101,15 +103,22 @@ func (cfg *egressConfig) activeStreams(host string) int {
 	return cfg.streams[host]
 }
 
-// useStateDirectory points the sources at a Bee-owned directory for the small
-// runtime state that must outlive the process. Only the capability cooldown
-// needs it today, and only on Claude, whose quota endpoint is the one that
-// answers a refusal without naming a time to come back.
+// useStateDirectory points the sources at a Bee-owned directory for what must
+// outlive the process: the capability cooldown of the platforms whose quota
+// endpoint may refuse a query without naming a time to come back, and the
+// Antigravity sign-in, which is Bee's own to keep.
 func (cfg *egressConfig) useStateDirectory(directory string) {
-	if cfg == nil || cfg.Claude == nil || directory == "" {
+	if cfg == nil || directory == "" {
 		return
 	}
-	cfg.Claude.capabilities.cooldown = cooldownStore{path: filepath.Join(directory, "capability-cooldown.json")}
+	cooldown := cooldownStore{path: filepath.Join(directory, "capability-cooldown.json")}
+	if cfg.Claude != nil {
+		cfg.Claude.capabilities.cooldown = cooldown
+	}
+	if cfg.Antigravity != nil {
+		cfg.Antigravity.directory = directory
+		cfg.Antigravity.capabilities.cooldown = cooldown
+	}
 }
 
 var errInboxIdentity = errors.New("TEE inbox public key does not match the independently pinned identity; credentials were not submitted")
@@ -117,10 +126,28 @@ var errCodexAuthorization = errors.New("Codex authorization unavailable")
 
 // platformTargets is the upstream address each official account source needs
 // in targets. A platform configured without it registers its account with
-// Hive and then refuses every connection Hive sends for it.
+// Hive and then refuses every connection Hive sends for it. A source served
+// from more than one address is listed once for each: Hive sends an
+// Antigravity account's requests to the address of its plan.
 var platformTargets = []struct{ field, target string }{
 	{"codex", "chatgpt.com:443"},
 	{"claude", "api.anthropic.com:443"},
+	{"antigravity", beewire.AntigravityHost},
+	{"antigravity", beewire.AntigravityDailyHost},
+}
+
+// configures reports whether the configuration has the account source the
+// egress file calls field.
+func (cfg *egressConfig) configures(field string) bool {
+	switch field {
+	case "codex":
+		return cfg.Codex != nil
+	case "claude":
+		return cfg.Claude != nil
+	case "antigravity":
+		return cfg.Antigravity != nil
+	}
+	return false
 }
 
 // officialAPIs lists the official Platform keys this Bee contributes.
@@ -302,8 +329,7 @@ func (cfg *egressConfig) validate() error {
 			}
 		}
 		for _, platform := range platformTargets {
-			configured := platform.field == "codex" && cfg.Codex != nil || platform.field == "claude" && cfg.Claude != nil
-			if configured && !slices.Contains(cfg.Targets, platform.target) {
+			if cfg.configures(platform.field) && !slices.Contains(cfg.Targets, platform.target) {
 				return failf("BEE-CONFIG-TARGET-MISSING", "%q is configured but targets lacks %s", platform.field, platform.target)
 			}
 		}
@@ -332,6 +358,9 @@ func (cfg *egressConfig) validate() error {
 		if cfg.Claude != nil {
 			cfg.Claude.transport = official
 		}
+		if cfg.Antigravity != nil {
+			cfg.Antigravity.transport = official
+		}
 		if cfg.Reseller != nil {
 			cfg.Reseller.transport = official
 		}
@@ -353,7 +382,7 @@ func (cfg *egressConfig) loopbackTargets() bool {
 }
 
 func (cfg *egressConfig) dynamicAuthorization() bool {
-	return cfg.liveSources || cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
+	return cfg.liveSources || cfg.synchronizeOverride != nil || cfg.Codex != nil || cfg.Claude != nil || cfg.Antigravity != nil || cfg.Reseller != nil || cfg.OpenAIAPI != nil || cfg.ClaudeAPI != nil
 }
 
 func (cfg *egressConfig) accountMessage(out io.Writer, state, message string) {

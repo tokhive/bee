@@ -187,6 +187,26 @@ impl Service {
         self.child.lock().unwrap().is_some()
     }
 
+    /// Stops the app's own Bee from the thread that is exiting the app, which
+    /// cannot await. macOS may end the process from the system's own quit
+    /// (the app menu, the Dock, the system shutting down) without waiting for
+    /// the asynchronous stop, which would leave Bee running with no app.
+    pub fn stop_blocking(&self) {
+        self.quitting.store(true, Ordering::SeqCst);
+        let pid = *self.child.lock().unwrap();
+        let Some(pid) = pid else { return };
+        terminate(pid);
+        let deadline = Instant::now() + STOP_GRACE;
+        while alive(pid) {
+            if Instant::now() >= deadline {
+                eprintln!("[bee-desktop] bee did not stop within {STOP_GRACE:?}; killing it");
+                kill(pid);
+                return;
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        }
+    }
+
     /// Stops the app's own Bee, if any, and returns once it has exited.
     pub async fn stop(&self) {
         self.quitting.store(true, Ordering::SeqCst);
@@ -199,6 +219,18 @@ impl Service {
             kill(pid);
         }
     }
+}
+
+#[cfg(unix)]
+fn alive(pid: u32) -> bool {
+    use nix::sys::signal::kill as send;
+    use nix::unistd::Pid;
+    send(Pid::from_raw(pid as i32), None).is_ok()
+}
+
+#[cfg(not(unix))]
+fn alive(_pid: u32) -> bool {
+    false
 }
 
 #[cfg(unix)]
@@ -220,3 +252,30 @@ fn terminate(_pid: u32) {}
 
 #[cfg(not(unix))]
 fn kill(_pid: u32) {}
+
+#[cfg(all(test, unix))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stop_blocking_ends_a_bee_that_is_still_running() {
+        let service = Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true);
+        let mut child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
+        *service.child.lock().unwrap() = Some(child.id());
+        // A real Bee is reaped by the service's own loop; do the same here.
+        let reaper = std::thread::spawn(move || child.wait().unwrap());
+        let started = Instant::now();
+        service.stop_blocking();
+        assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
+        assert!(service.quitting.load(Ordering::SeqCst));
+        assert!(!reaper.join().unwrap().success(), "sleep ended by a signal, not by itself");
+    }
+
+    #[test]
+    fn stop_blocking_without_a_bee_returns_at_once() {
+        let service = Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true);
+        let started = Instant::now();
+        service.stop_blocking();
+        assert!(started.elapsed() < Duration::from_millis(500));
+    }
+}

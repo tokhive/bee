@@ -46,7 +46,8 @@ func TestDetailedSupplyReasonExplanationsPreserveLegacyReasons(t *testing.T) {
 func TestDetailedSupplyReasonsExtendsLegacyWithoutMutatingIt(t *testing.T) {
 	legacy := SupplyReasons()
 	detailed := DetailedSupplyReasons()
-	want := append(SupplyReasons(), "account_not_registered", "market_not_open", "supply_not_enabled", "supply_device_restricted", "account_not_admitted")
+	want := append(SupplyReasons(), "account_not_registered", "market_not_open", "supply_not_enabled", "supply_device_restricted", "account_not_admitted",
+		"antigravity_source_unavailable", "antigravity_confirmation_required", "antigravity_authorization_rejected", "antigravity_account_in_use")
 	if !slices.Equal(detailed, want) {
 		t.Fatalf("detailed reasons=%v required=%v", detailed, want)
 	}

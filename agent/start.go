@@ -24,7 +24,7 @@ Get started (run it again any time to start Bee):
 
 Everyday:
   bee status                 what Bee is connected to and whether each account takes work
-  bee pause --platform P     stop taking new work for openai or claude
+  bee pause --platform P     stop taking new work for openai, claude or google
   bee resume --platform P    take new work again
   bee doctor                 check everything and explain what to fix
   bee version                show this build
@@ -34,11 +34,15 @@ The steps bee start runs for you:
   bee setup                  find the subscriptions signed in here and choose which to supply
   bee run                    stay connected and serve work
 
+Google (Antigravity) has no official sign-in on this machine to read, so Bee keeps its own:
+  bee antigravity-login      sign in to the Google account to supply, then run bee setup
+
 More:
   bee supply-status --platform P       why Hive is or is not sending work to an account
   bee account-status --platform P      the account Hive knows and any change waiting
   bee confirm-account --platform P --account-fingerprint FP
   bee codex-status / bee claude-status inspect the local sign-in without contacting Hive
+  bee antigravity-status               inspect the sign-in Bee keeps for Google
 
 Device commands take --config PATH to use another device configuration.
 codex-status and claude-status use their own official-client directory options.
@@ -139,13 +143,7 @@ func status(ctx context.Context, client *http.Client, configPath string, state l
 		fmt.Fprintf(out, "Supply:  %s cannot be used: %s [%s]; run bee doctor\n", egressPath, summary, code)
 		return nil
 	}
-	var platforms []string
-	if cfg.Codex != nil {
-		platforms = append(platforms, "openai")
-	}
-	if cfg.Claude != nil {
-		platforms = append(platforms, "claude")
-	}
+	platforms := configuredPlatforms(cfg)
 	names := append([]string(nil), platforms...)
 	for _, source := range cfg.officialAPIs() {
 		names = append(names, source.spec().name)

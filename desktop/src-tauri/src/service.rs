@@ -136,7 +136,7 @@ impl Service {
             if ready {
                 self.set_state(ServiceState::Running);
             }
-            let status = child.wait().await;
+            let status = wait_for_exit(&mut child).await;
             *self.child.lock().unwrap() = None;
             if self.quitting.load(Ordering::SeqCst) {
                 break;
@@ -221,6 +221,14 @@ impl Service {
     }
 }
 
+/// Waits for Bee to exit without ever closing the pipe on its standard input:
+/// tokio's `wait` closes a child's stdin first, which Bee would read as the app
+/// going away and stop itself a moment after starting.
+async fn wait_for_exit(child: &mut Child) -> std::io::Result<std::process::ExitStatus> {
+    let _stdin = child.stdin.take();
+    child.wait().await
+}
+
 #[cfg(unix)]
 fn alive(pid: u32) -> bool {
     use nix::sys::signal::kill as send;
@@ -269,6 +277,22 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
         assert!(service.quitting.load(Ordering::SeqCst));
         assert!(!reaper.join().unwrap().success(), "sleep ended by a signal, not by itself");
+    }
+
+    #[tokio::test]
+    async fn waiting_for_bee_keeps_its_stdin_open() {
+        // `cat` ends when its stdin closes, as Bee does with --stop-with-parent.
+        let mut child = Command::new("cat").stdin(Stdio::piped()).spawn().unwrap();
+        let pid = child.id().unwrap();
+        let still_running = tokio::select! {
+            _ = wait_for_exit(&mut child) => false,
+            running = async {
+                tokio::time::sleep(Duration::from_millis(400)).await;
+                alive(pid)
+            } => running,
+        };
+        assert!(still_running, "waiting closed the child's stdin");
+        let _ = child.kill().await;
     }
 
     #[test]

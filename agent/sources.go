@@ -22,6 +22,10 @@ type syncSource struct {
 	platform    string
 	synchronize func(context.Context, localState, string, io.Writer, bool) error
 	report      func(io.Writer, string, string)
+	// state is the account state the source last reported, or nil for a
+	// source that does not report one; it is only read from the goroutine
+	// that runs synchronize.
+	state func() string
 	// targets are upstream addresses this source adds to the egress allowlist
 	// beyond the configuration's own targets.
 	targets []string
@@ -175,8 +179,11 @@ func (s *sourceSet) launch(session *sourceSession, entry *sourceEntry) {
 func (session *sourceSession) run(ctx context.Context, source syncSource) {
 	slog.Info("authorization synchronization started", "module", "sync", "platform", source.label())
 	first := true
+	reported := ""
 	for ctx.Err() == nil {
-		if err := source.synchronize(ctx, session.state, session.lease, session.out, first); err != nil && ctx.Err() == nil {
+		err := source.synchronize(ctx, session.state, session.lease, session.out, first)
+		source.announceStateChange(ctx, &reported)
+		if err != nil && ctx.Err() == nil {
 			var failure *apiFailure
 			if errors.Is(err, errInboxIdentity) || errors.As(err, &failure) && (failure.Status == 401 || failure.Status == 403) {
 				slog.Error("authorization synchronization stopped", "module", "sync", "platform", source.label(), "error", err.Error())
@@ -202,6 +209,21 @@ func (session *sourceSession) run(ctx context.Context, source syncSource) {
 		if pause(ctx, 2*time.Second) != nil {
 			return
 		}
+	}
+}
+
+// announceStateChange tells the desktop app to read the platform again when
+// what the source reports has changed since *reported: recovered after a new
+// sign-in, needs confirmation, rejected. That is a change in what Hive holds
+// for the platform, and the app would otherwise show the earlier answer until
+// its next scheduled read.
+func (source syncSource) announceStateChange(ctx context.Context, reported *string) {
+	if source.state == nil || source.platform == "" {
+		return
+	}
+	if state := source.state(); state != *reported {
+		*reported = state
+		runStatusFrom(ctx).publish(controlEvent{Name: "supply", Data: map[string]string{"platform": source.platform}})
 	}
 }
 
@@ -249,20 +271,22 @@ func (cfg *egressConfig) sources() *sourceSet {
 func (cfg *egressConfig) fileSources() []syncSource {
 	var sources []syncSource
 	if cfg.Codex != nil {
-		source := syncSource{name: "openai", platform: "openai", synchronize: cfg.synchronize, report: cfg.accountMessage}
+		source := syncSource{name: "openai", platform: "openai", synchronize: cfg.synchronize, report: cfg.accountMessage, state: func() string { return cfg.lastAccountState }}
 		if cfg.Capabilities != nil {
 			source.wanted = func() { cfg.capabilityWanted.Store(true) }
 		}
 		sources = append(sources, source)
 	}
 	if cfg.Claude != nil {
-		cfg.Claude.capabilityWanted = &cfg.claudeCapabilityWanted
-		sources = append(sources, syncSource{name: "claude", platform: "claude", synchronize: cfg.Claude.synchronize, report: cfg.Claude.message,
+		claude := cfg.Claude
+		claude.capabilityWanted = &cfg.claudeCapabilityWanted
+		sources = append(sources, syncSource{name: "claude", platform: "claude", synchronize: claude.synchronize, report: claude.message, state: func() string { return claude.lastState },
 			wanted: func() { cfg.claudeCapabilityWanted.Store(true) }})
 	}
 	if cfg.Antigravity != nil {
-		cfg.Antigravity.capabilityWanted = &cfg.antigravityCapabilityWanted
-		sources = append(sources, syncSource{name: "antigravity", platform: beewire.GooglePlatform, synchronize: cfg.Antigravity.synchronize, report: cfg.Antigravity.message,
+		antigravity := cfg.Antigravity
+		antigravity.capabilityWanted = &cfg.antigravityCapabilityWanted
+		sources = append(sources, syncSource{name: "antigravity", platform: beewire.GooglePlatform, synchronize: antigravity.synchronize, report: antigravity.message, state: func() string { return antigravity.lastState },
 			wanted: func() { cfg.antigravityCapabilityWanted.Store(true) }})
 	}
 	if cfg.OpenAIAPI != nil {

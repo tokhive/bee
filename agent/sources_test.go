@@ -182,3 +182,41 @@ func TestAllowedUnionsConfigurationAndSourceTargets(t *testing.T) {
 		t.Error("upstream still allowed after its source was removed")
 	}
 }
+
+// A platform source whose reported state changes tells the desktop app to read
+// the platform again, once per change and not on every cycle.
+func TestSourceStateChangeTellsTheDesktopAppToReadAgain(t *testing.T) {
+	status := newRunStatus()
+	events, unsubscribe := status.subscribe()
+	defer unsubscribe()
+	ctx := withRunStatus(context.Background(), status)
+	state := ""
+	source := syncSource{name: "claude", platform: "claude", state: func() string { return state }}
+	reported := ""
+	expect := func(want int) {
+		t.Helper()
+		if got := len(events); got != want {
+			t.Fatalf("%d events, want %d", got, want)
+		}
+	}
+
+	source.announceStateChange(ctx, &reported)
+	expect(0)
+	state = "source_unavailable"
+	source.announceStateChange(ctx, &reported)
+	source.announceStateChange(ctx, &reported)
+	expect(1)
+	state = "ready"
+	source.announceStateChange(ctx, &reported)
+	expect(2)
+	if event := <-events; event.Name != "supply" || event.Data.(map[string]string)["platform"] != "claude" {
+		t.Fatalf("event = %+v", event)
+	}
+
+	// A source that reports no state, or is not a platform account, says nothing.
+	for _, silent := range []syncSource{{name: "claude", platform: "claude"}, {name: "key", state: func() string { return "ready" }}} {
+		none := ""
+		silent.announceStateChange(ctx, &none)
+	}
+	expect(1)
+}

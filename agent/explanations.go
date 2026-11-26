@@ -142,6 +142,8 @@ func init() {
 	for _, p := range []struct{ prefix, name, app, login string }{
 		{"codex", "ChatGPT", "Codex", "codex login"},
 		{"claude", "Claude", "Claude Code", "claude"},
+		// Bee keeps this sign-in itself, so signing in again is its own command.
+		{"antigravity", "Google", "Antigravity", "bee antigravity-login"},
 	} {
 		explain(p.prefix+"_source_unavailable", categoryAction, actionRelogin,
 			say("Sign-in unavailable", "读取不到登录"),
@@ -195,6 +197,26 @@ func init() {
 		say("Sign-in store not supported", "不支持这种登录存储"),
 		say("Bee was told to read Claude Code's sign-in from a store this system does not have.", "Bee 被设置为从一个这台电脑没有的位置读取 Claude Code 登录。"),
 		say("Remove this account and add it again.", "删除这个账号后重新添加。"))
+	explain("BEE-ANTIGRAVITY-SOURCE", categoryAction, actionRelogin,
+		say("Google not signed in", "没有检测到 Google 登录"),
+		say("Bee has no Google sign-in for Antigravity on this computer.", "Bee 在这台电脑上没有 Antigravity 的 Google 登录。"),
+		say("Open a terminal, run bee antigravity-login and sign in to your Google account, then check again.", "打开终端运行 bee antigravity-login 登录你的 Google 账号，然后重新检测。"))
+	explain("BEE-ANTIGRAVITY-SIGNIN", categoryAction, actionRelogin,
+		say("Google sign-in expired", "Google 登录已失效"),
+		say("Google no longer accepts the saved sign-in. You may have removed access or changed the password.", "Google 不再接受已保存的登录，可能是你撤销了授权或修改了密码。"),
+		say("Open a terminal, run bee antigravity-login and sign in again.", "打开终端运行 bee antigravity-login，重新登录。"))
+	explain("BEE-ANTIGRAVITY-EXPIRED", categorySyncing, "",
+		say("Renewing sign-in", "正在续期登录"),
+		say("The Google sign-in has expired; TokHive renews it while Bee is connected.", "Google 登录已过期，Bee 连上 TokHive 后会自动续期。"),
+		say("Keep Bee running. If it does not recover, run bee antigravity-login again.", "请保持 Bee 运行；如果一直没恢复，请重新运行 bee antigravity-login。"))
+	explain("BEE-ANTIGRAVITY-TIER", categoryAction, actionRemoveAccount,
+		say("Plan not supported", "套餐暂不支持"),
+		say("This Google account's Antigravity plan is not one that can be shared.", "这个 Google 账号的 Antigravity 套餐暂时不能共享。"),
+		say("Use a personal Google account on the free plan, Google AI Pro or Google AI Ultra.", "请换用免费版、Google AI Pro 或 Google AI Ultra 的个人 Google 账号。"))
+	explain("import_unsupported", categoryError, actionRelogin,
+		say("Cannot be imported", "不支持导入"),
+		say("A Google account has no credential file to import; Bee signs in to it directly.", "Google 账号没有可导入的凭证文件，Bee 需要直接登录。"),
+		say("Open a terminal on this computer, run bee antigravity-login, then add the account from its sign-in.", "在这台电脑上打开终端运行 bee antigravity-login，然后从本机登录添加账号。"))
 	explain("login_scope", categoryAction, actionRelogin,
 		say("Sign-in cannot be shared", "这个登录不能用于共享"),
 		say("This Claude Code sign-in lacks a permission sharing needs.", "这个 Claude Code 登录缺少共享所需的权限。"),

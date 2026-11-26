@@ -45,10 +45,13 @@ const (
 
 // AccountReason is the supply reason for an account status other than ready
 // or not_configured, prefixed by platform: codex_ for openai, claude_ for
-// claude.
+// claude, antigravity_ for google.
 func AccountReason(platform, status string) string {
-	if platform == "claude" {
+	switch platform {
+	case "claude":
 		return "claude_" + status
+	case GooglePlatform:
+		return "antigravity_" + status
 	}
 	return "codex_" + status
 }
@@ -74,10 +77,16 @@ func SupplyReasons() []string {
 }
 
 // DetailedSupplyReasons includes legacy reasons and the precise blockers available
-// with reason_detail=1. SupplyReasons stays unchanged for older clients.
+// with reason_detail=1. SupplyReasons stays unchanged for older clients. A
+// Google account's reasons are detailed ones: every Bee that has such an
+// account asks for the detail.
 func DetailedSupplyReasons() []string {
-	return append(SupplyReasons(), ReasonAccountNotRegistered, ReasonMarketNotOpen,
+	reasons := append(SupplyReasons(), ReasonAccountNotRegistered, ReasonMarketNotOpen,
 		ReasonSupplyNotEnabled, ReasonSupplyDeviceRestricted, ReasonAccountNotAdmitted)
+	for _, status := range AccountStatuses {
+		reasons = append(reasons, AccountReason(GooglePlatform, status))
+	}
+	return reasons
 }
 
 // ReasonExplanation says why a platform does not take work and what to do,
@@ -210,5 +219,21 @@ var reasonExplanations = map[string]ReasonExplanation{
 	AccountReason("claude", "authorization_rejected"): {
 		Cause: "Anthropic rejected this account's authorization",
 		Fix:   "sign in again in Claude Code",
+	},
+	AccountReason(GooglePlatform, "account_in_use"): {
+		Cause: "this Google account is registered to another Provider",
+		Fix:   "use a different account, or ask the original Provider to confirm a switch to a different account; disconnecting or pausing Bee does not release account ownership",
+	},
+	AccountReason(GooglePlatform, "source_unavailable"): {
+		Cause: "Bee cannot currently use its Antigravity sign-in",
+		Fix:   "run bee antigravity-login to sign in again; the running Bee synchronizes automatically",
+	},
+	AccountReason(GooglePlatform, "confirmation_required"): {
+		Cause: "the Antigravity sign-in changed to a different Google account",
+		Fix:   "run bee account-status --platform google, then bee confirm-account with the shown fingerprint",
+	},
+	AccountReason(GooglePlatform, "authorization_rejected"): {
+		Cause: "Google rejected this account's authorization",
+		Fix:   "run bee antigravity-login to sign in again; if Google has disabled Antigravity for the account, it cannot supply",
 	},
 }

@@ -48,6 +48,10 @@ type Authorization struct {
 	AccountFingerprint string    `json:"account_fingerprint"`
 	ExpiresAt          time.Time `json:"expires_at"`
 	CredentialRevision string    `json:"credential_revision"`
+	// ProjectID is the Google Cloud project an Antigravity request names in
+	// its body. Only a Google authorization carries one: Hive writes the
+	// request, so it has to know the project, which is no secret.
+	ProjectID string `json:"project_id,omitempty"`
 }
 
 type CodexAuthorization = Authorization
@@ -104,22 +108,29 @@ type MaintenanceRequest struct {
 	Lease              string             `json:"lease"`
 	Codex              CodexAuthorization `json:"codex,omitzero"`
 	Claude             *Authorization     `json:"claude,omitempty"`
+	Antigravity        *Authorization     `json:"antigravity,omitempty"`
 	ExpectedGeneration int64              `json:"expected_generation"`
 	ExpectedRevision   string             `json:"expected_revision"`
 }
 
+// Authorization names the platform a request maintains and its authorization.
+// A request maintains one platform, and only Google's names a project.
 func (r MaintenanceRequest) Authorization() (string, Authorization, bool) {
-	if r.Claude != nil {
-		return "claude", *r.Claude, r.Codex == (Authorization{}) && r.Claude.ValidMetadata()
+	if r.Antigravity != nil {
+		return GooglePlatform, *r.Antigravity, r.Claude == nil && r.Codex == (Authorization{}) && r.Antigravity.ValidMetadata() && ValidProjectID(r.Antigravity.ProjectID)
 	}
-	return "openai", r.Codex, r.Codex.ValidMetadata()
+	if r.Claude != nil {
+		return "claude", *r.Claude, r.Codex == (Authorization{}) && r.Claude.ValidMetadata() && r.Claude.ProjectID == ""
+	}
+	return "openai", r.Codex, r.Codex.ValidMetadata() && r.Codex.ProjectID == ""
 }
 
 type CredentialRegistration struct {
-	Lease    string         `json:"lease"`
-	Envelope tee.Envelope   `json:"envelope"`
-	Codex    *Authorization `json:"codex,omitempty"`
-	Claude   *Authorization `json:"claude,omitempty"`
+	Lease       string         `json:"lease"`
+	Envelope    tee.Envelope   `json:"envelope"`
+	Codex       *Authorization `json:"codex,omitempty"`
+	Claude      *Authorization `json:"claude,omitempty"`
+	Antigravity *Authorization `json:"antigravity,omitempty"`
 	// Reseller registers an API reseller key instead of a subscription
 	// account; it carries no authorization and no maintenance task.
 	// OpenAIAPI and ClaudeAPI register a Provider's official Platform key,

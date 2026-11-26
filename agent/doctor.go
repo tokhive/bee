@@ -140,6 +140,8 @@ func diagnose(ctx context.Context, configPath, egressPath string) doctorReport {
 			report.problem("egress", "", "fail", err)
 		} else {
 			egress = cfg
+			// Where the Antigravity sign-in is read from.
+			egress.useStateDirectory(filepath.Dir(configPath))
 			platforms = configuredPlatforms(cfg)
 			report.pass("egress", "", fmt.Sprintf("%s supplies %s", egressPath, strings.Join(platforms, " and ")))
 		}
@@ -186,6 +188,9 @@ func configuredPlatforms(cfg *egressConfig) []string {
 	if cfg.Claude != nil {
 		platforms = append(platforms, "claude")
 	}
+	if cfg.Antigravity != nil {
+		platforms = append(platforms, beewire.GooglePlatform)
+	}
 	if len(platforms) == 0 {
 		// A static credential supplies through no official account.
 		return nil
@@ -230,6 +235,25 @@ func checkAuthorization(ctx context.Context, report *doctorReport, cfg *egressCo
 			return
 		}
 		report.pass(name, platform, fmt.Sprintf("%s, expires %s", detail, credential.ExpiresAt.Local().Format(time.RFC3339)))
+		return
+	}
+	if platform == beewire.GooglePlatform {
+		credential, err := cfg.Antigravity.store().read()
+		if err != nil {
+			report.problem(name, platform, "fail", failCause("BEE-ANTIGRAVITY-SOURCE", err))
+			return
+		}
+		problem := antigravityStoredProblem(credential)
+		switch {
+		case problem == nil:
+			report.pass(name, platform, fmt.Sprintf("Antigravity sign-in, account %s, plan %s, expires %s", shortFingerprint(credential.fingerprint()), credential.Plan, credential.ExpiresAt.Local().Format(time.RFC3339)))
+		case credential.renewable(time.Now()):
+			// Hive schedules a refresh while bee run is connected, so an
+			// expired access token is not yet a stopped supply.
+			report.problem(name, platform, "warn", problem)
+		default:
+			report.problem(name, platform, "fail", problem)
+		}
 		return
 	}
 	store, err := resolveClaudeStore(cfg.Claude.Store, cfg.Claude.ConfigDir)

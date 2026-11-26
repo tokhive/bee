@@ -133,6 +133,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 - `bee setup` detects the official sign-ins and writes `egress.json` next to the device configuration. Running it again is safe, and is how you add or remove a platform. Use `--platform openai,claude --yes` in scripts.
   - **OpenAI:** Bee reads the Codex login from `--codex-home`, `$CODEX_HOME` or `~/.codex`, in that order. On macOS it falls back to the Keychain.
   - **Claude:** Bee reads the Claude Code login where Claude Code keeps it: the Keychain on macOS, and `~/.claude/.credentials.json` on Linux (`$CLAUDE_CONFIG_DIR/.credentials.json` if you set that variable). `--claude-config-dir` selects a non-default Claude Code configuration. On a Linux server, run `claude` once and sign in, then run `bee setup`.
+  - **Google (Antigravity):** no official client keeps this sign-in where Bee could read it, so Bee keeps its own. Run `bee antigravity-login` first: it opens Google's sign-in page in a browser, waits for it on `localhost:51121`, and stores the sign-in in `accounts/antigravity/credentials.json` beside the device configuration (mode `0600`). On a machine without a browser, or when that port is taken, use `--no-browser`: open the printed address anywhere, sign in, and paste the address the browser is sent to. `bee setup` then offers the account like the others.
 - `bee run` stays connected and serves work.
 
 ## Commands
@@ -144,7 +145,8 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 | `bee status` | Show the build, the Hive, the device and whether each supplied account and each official API key (`openai_api`, `claude_api`) is taking work. |
 | `bee version` | Print the version and platform of this build. `bee run` also logs it when it starts. |
 | `bee login [--hive URL] [--name NAME]` | Pair this machine with a Hive account, or resume a pairing that was interrupted. |
-| `bee setup [--platform openai,claude] [--yes]` | Detect local subscription logins and write the egress configuration. |
+| `bee setup [--platform openai,claude,google] [--yes]` | Detect local subscription logins and write the egress configuration. |
+| `bee antigravity-login [--no-browser]` | Sign in to the Google account to supply through Antigravity and store the sign-in for Bee. Run it again to replace the account or renew a sign-in Google ended. |
 | `bee run [--egress-config PATH] [--desktop]` | Stay connected and serve work in the foreground. Stops on SIGINT or SIGTERM. `--desktop` is the mode the desktop app uses; see [Local control interface](#local-control-interface). |
 | `bee doctor [--egress-config PATH] [--json]` | Run every check in order and report `ok`, `WARN`, `FAIL` or `skip`, each with a fix. Read-only, so it is safe to run while `bee run` is running. |
 | `bee supply-status --platform P` | Show whether Hive is currently sending work to the account on platform `P`, and why not. |
@@ -152,6 +154,7 @@ A remote Hive must be reached over HTTPS; plain HTTP is accepted only for `local
 | `bee account-status --platform P` | Show the confirmed account and any account change waiting for confirmation. |
 | `bee confirm-account --platform P --account-fingerprint FP` | Accept a new account after you switched accounts in the official client. |
 | `bee codex-status` / `bee claude-status` | Inspect the local official login without contacting Hive. |
+| `bee antigravity-status [--verify] [--capabilities]` | Inspect the sign-in Bee keeps for Google. By default it reads the file only; `--verify` asks Google which account and tier it is, and `--capabilities` reads its Gemini models and quota windows. |
 
 Every command accepts `--config PATH` to use a device configuration other than the default. `bee help` lists the commands and `bee <command> -h` shows a command's options.
 
@@ -183,6 +186,7 @@ While running, `login` and `run` hold a lock file next to the configuration, so 
 - `codex` selects the Codex login. `store` is `file`, `keyring` or `auto`. The top-level `capabilities` enables model and quota reports for OpenAI.
 - Model and quota reports go to Hive every five minutes, and sooner when Hive asks: after an upstream quota refusal's cooldown, or while a request waits on the account, Hive opens a control stream on the connection and Bee reports within a few seconds, at most once every ten. Bee announces this in its `X-Bee-Controls` connection header, and Hive asks no Bee that did not.
 - `claude` selects the Claude Code login. `store` is `keychain` (macOS) or `file`, which reads `.credentials.json` in the Claude Code configuration directory; `bee setup` picks the one Claude Code uses on your system, and Bee never falls back from one to the other. `capabilities` enables model and quota reports, which are required for taking work. With `refresh: true`, Hive may also schedule token refreshes, and Bee writes the refreshed token back to the official store. The default `false` only re-seals tokens that the official client has refreshed. `config_dir` selects a non-default Claude Code configuration.
+- `antigravity` (for example `"antigravity": {"capabilities": true}`) supplies the Google account signed in with `bee antigravity-login`. It needs both `cloudcode-pa.googleapis.com:443` and `daily-cloudcode-pa.googleapis.com:443` in `targets`: Google serves an account with a paid plan from the second and every other account from the first. Hive schedules each token refresh, and Bee makes it with the refresh token it keeps, which is sent to Google only. `capabilities` enables model and quota reports, which are required for taking work.
 - `connect_proxy` (optional, for example `http://127.0.0.1:7890`) sends Bee's outbound connections through a local HTTP proxy.
 
 To contribute only one platform, remove the other platform's entry and its target. Pass the file with `bee run --egress-config PATH`. Without the flag, Bee uses the `egress.json` that `setup` wrote. If neither exists, Bee stays online but serves nothing and prints `BEE-SETUP-NEEDED`.
@@ -222,13 +226,13 @@ On macOS and Linux, `bee run` serves a local control interface for the desktop a
 | Request | Purpose |
 | --- | --- |
 | `GET /v1/overview` | Version, mode (`cli` or `desktop`), Hive, binding (`unpaired`, `paired`, `replaced` or `invalid`), paired device, any pairing in progress, connection state (`connecting`, `connected` or `disconnected`), the problem keeping it from connecting, and configured account sources. |
-| `GET /v1/platforms/{openai,claude}` | Hive's supply state with its detailed reasons, the one conclusion to show (`sharing`: `sharing`, `syncing`, `paused`, `waiting`, `action`, `restricted` or `offline`, and the reason that decided it), and the account's plan and quota windows. |
-| `PUT /v1/platforms/{openai,claude}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
+| `GET /v1/platforms/{openai,claude,google}` | Hive's supply state with its detailed reasons, the one conclusion to show (`sharing`: `sharing`, `syncing`, `paused`, `waiting`, `action`, `restricted` or `offline`, and the reason that decided it), and the account's plan and quota windows. |
+| `PUT /v1/platforms/{openai,claude,google}/supply` | Pause or resume new work with `{"paused": true}` or `{"paused": false}`; returns what Hive confirmed. |
 | `POST /v1/pairing` | Desktop mode only: start pairing a new device credential, optionally with `{"hive": "...", "name": "..."}`; returns the code and the link to confirm it. The current device keeps running until the new one is confirmed. |
 | `GET /v1/pairing`, `DELETE /v1/pairing` | Desktop mode only: read or cancel the pairing (`pending`, `completed`, `expired`, `cancelled` or `failed`). |
-| `GET /v1/platforms/{openai,claude}/login` | Desktop mode only: the official client's sign-in on this machine — whether it can be shared, its email, plan and account fingerprint, or why not. |
+| `GET /v1/platforms/{openai,claude,google}/login` | Desktop mode only: the official client's sign-in on this machine (for `google`, the one `bee antigravity-login` stored) — whether it can be shared, its email, plan and account fingerprint, or why not. |
 | `GET /v1/accounts` | Desktop mode only: the accounts the desktop app added. |
-| `POST /v1/accounts` | Desktop mode only: add an account with `{"platform": "openai"\|"claude", "source": "local"}` to share the official client's sign-in, or `"source": "import", "file": "/path"` to import Codex's `auth.json` or Claude Code's `.credentials.json`. It starts sharing at once, and a switch from the account Hive last knew is confirmed. |
+| `POST /v1/accounts` | Desktop mode only: add an account with `{"platform": "openai"\|"claude", "source": "local"}` to share the official client's sign-in, or `"source": "import", "file": "/path"` to import Codex's `auth.json` or Claude Code's `.credentials.json`. `"google"` is added from its stored sign-in only (`"source": "local"`); an import is refused with `import_unsupported`. It starts sharing at once, and a switch from the account Hive last knew is confirmed. |
 | `DELETE /v1/accounts/{id}` | Desktop mode only: pause the platform in Hive, wait up to a minute for its open streams, stop the account and forget it. |
 | `POST /v1/accounts/{id}/confirm` | Desktop mode only: accept the account the official client switched to. |
 | `GET /v1/explanations` | Every reason and error code with an English and Chinese title, cause and fix, its category and the action that fixes it, for the desktop app to show. |

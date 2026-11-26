@@ -52,7 +52,7 @@ describe("first run and linking", () => {
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
     expect(shell.calls).toContainEqual({ method: "POST", path: "/v1/accounts", body: { platform: "claude", source: "local" } });
     shell.push(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
-    expect(await screen.findByRole("heading", { name: "已开始共享 Claude 账号" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "已添加 Claude 账号，正在同步" })).toBeInTheDocument();
     expect(screen.getByText("已绑定到 a***@gmail.com")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "进入主页" }));
     expect(await screen.findByRole("article", { name: /Claude/ })).toBeInTheDocument();
@@ -138,6 +138,38 @@ describe("first run and linking", () => {
     await userEvent.click(screen.getByRole("button", { name: "登录 TokHive 并绑定这台电脑" }));
     expect(await screen.findByText("已切换到新的 TokHive 账号", {}, { timeout: 3000 })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "2 个账号都在共享" })).toBeInTheDocument();
+  });
+});
+
+describe("the page that ends setup says what is true", () => {
+  async function finish(state: ReturnType<typeof platform>) {
+    const shell = show(unpaired());
+    shell.answer((method, path) => {
+      if (path === "/v1/pairing") return method === "POST" ? pending : { status: "completed" };
+      if (path === "/v1/platforms/claude/login") return { platform: "claude", available: true, email: "b.lee@gmail.com", plan: "max" };
+      if (method === "POST" && path === "/v1/accounts") return claude;
+    });
+    await userEvent.click(await screen.findByRole("button", { name: "开始" }));
+    await userEvent.click(screen.getByRole("button", { name: "登录 TokHive 并绑定这台电脑" }));
+    await userEvent.click(await screen.findByRole("button", { name: /Claude/ }, { timeout: 3000 }));
+    await userEvent.click(await screen.findByRole("button", { name: "下一步" }));
+    await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
+    act(() => shell.push(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: state } })));
+  }
+
+  it("sharing", async () => {
+    await finish(platform("sharing"));
+    expect(await screen.findByRole("heading", { name: "已开始共享 Claude 账号" })).toBeInTheDocument();
+  });
+
+  it("an account that needs the person", async () => {
+    await finish(platform("action", "claude_authorization_rejected"));
+    expect(await screen.findByRole("heading", { name: "已添加 Claude 账号，但需要你处理" })).toBeInTheDocument();
+  });
+
+  it("an account that cannot take work for now", async () => {
+    await finish(platform("waiting", "quota_exhausted"));
+    expect(await screen.findByRole("heading", { name: "已添加 Claude 账号" })).toBeInTheDocument();
   });
 });
 
@@ -254,6 +286,18 @@ describe("settings, about and quitting", () => {
     expect(screen.getByText("1.2.3 · started by Bee")).toBeInTheDocument();
     expect(screen.getByText("/home/a/.config/tokhive/bee.json")).toBeInTheDocument();
     expect(screen.getByText("dev_1")).toBeInTheDocument();
+  });
+
+  it("opens the logs folder, shows where it is, and says when it cannot", async () => {
+    const shell = show(snapshot());
+    await userEvent.click(await screen.findByRole("button", { name: "设置" }));
+    await userEvent.click(screen.getByRole("button", { name: "打开日志文件夹" }));
+    expect(shell.openLogs).toHaveBeenCalled();
+    await userEvent.click(screen.getByText("技术信息"));
+    expect(screen.getByText("/home/a/Library/Logs/ai.tokhive.bee")).toBeInTheDocument();
+    vi.mocked(shell.openLogs).mockRejectedValue({ status: 500, code: "open_failed", message: "no" });
+    await userEvent.click(screen.getByRole("button", { name: "打开日志文件夹" }));
+    expect(await screen.findByText("无法打开日志文件夹")).toBeInTheDocument();
   });
 
   it("without a tray, keeping in the tray cannot be turned on and says why", async () => {

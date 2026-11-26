@@ -77,7 +77,10 @@ export const devShell: Shell = {
     return loadSettings();
   },
   async appInfo() {
-    return { version: "0.0.0-dev", config: "(browser preview)" };
+    return { version: "0.0.0-dev", config: "(browser preview)", logs: "(browser preview)" };
+  },
+  async openLogs() {
+    window.alert("open_logs");
   },
   async retryService() {
     await refresh();

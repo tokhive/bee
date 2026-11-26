@@ -37,6 +37,8 @@ pub struct Service {
     bee: PathBuf,
     /// Never start the bundled Bee; only use one that is already running.
     attach_only: bool,
+    /// Where Bee's output goes; inherited when None.
+    log_dir: Option<PathBuf>,
     child: Mutex<Option<u32>>,
     quitting: AtomicBool,
     stopped: Notify,
@@ -57,6 +59,7 @@ impl Service {
             control: Control::new(socket),
             bee,
             attach_only,
+            log_dir: None,
             child: Mutex::new(None),
             quitting: AtomicBool::new(false),
             stopped: Notify::new(),
@@ -64,6 +67,12 @@ impl Service {
             changed: Notify::new(),
             retry: Notify::new(),
         }
+    }
+
+    /// Keeps the output of the Bee this service starts in dir.
+    pub fn with_log_dir(mut self, dir: PathBuf) -> Self {
+        self.log_dir = Some(dir);
+        self
     }
 
     pub fn state(&self) -> ServiceState {
@@ -136,7 +145,7 @@ impl Service {
             if ready {
                 self.set_state(ServiceState::Running);
             }
-            let status = child.wait().await;
+            let status = wait_for_exit(&mut child).await;
             *self.child.lock().unwrap() = None;
             if self.quitting.load(Ordering::SeqCst) {
                 break;
@@ -156,10 +165,17 @@ impl Service {
         // long as the child lives (it stays in `Child`). When the app goes
         // away, however it ends, even by being killed, the system closes the
         // pipe and Bee stops itself rather than running on with no app.
-        let child = Command::new(&self.bee)
-            .args(["run", "--desktop", "--stop-with-parent", "--config"])
-            .arg(&self.config)
-            .stdin(Stdio::piped())
+        let mut command = Command::new(&self.bee);
+        command.args(["run", "--desktop", "--stop-with-parent", "--config"]).arg(&self.config).stdin(Stdio::piped());
+        if let Some(dir) = &self.log_dir {
+            match crate::logs::open(dir).and_then(|file| Ok((file.try_clone()?, file))) {
+                Ok((out, err)) => {
+                    command.stdout(Stdio::from(out)).stderr(Stdio::from(err));
+                }
+                Err(err) => eprintln!("[bee-desktop] cannot keep bee's log in {}: {err}", dir.display()),
+            }
+        }
+        let child = command
             .kill_on_drop(false)
             .spawn()?;
         *self.child.lock().unwrap() = child.id();
@@ -221,6 +237,14 @@ impl Service {
     }
 }
 
+/// Waits for Bee to exit without ever closing the pipe on its standard input:
+/// tokio's `wait` closes a child's stdin first, which Bee would read as the app
+/// going away and stop itself a moment after starting.
+async fn wait_for_exit(child: &mut Child) -> std::io::Result<std::process::ExitStatus> {
+    let _stdin = child.stdin.take();
+    child.wait().await
+}
+
 #[cfg(unix)]
 fn alive(pid: u32) -> bool {
     use nix::sys::signal::kill as send;
@@ -269,6 +293,22 @@ mod tests {
         assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
         assert!(service.quitting.load(Ordering::SeqCst));
         assert!(!reaper.join().unwrap().success(), "sleep ended by a signal, not by itself");
+    }
+
+    #[tokio::test]
+    async fn waiting_for_bee_keeps_its_stdin_open() {
+        // `cat` ends when its stdin closes, as Bee does with --stop-with-parent.
+        let mut child = Command::new("cat").stdin(Stdio::piped()).spawn().unwrap();
+        let pid = child.id().unwrap();
+        let still_running = tokio::select! {
+            _ = wait_for_exit(&mut child) => false,
+            running = async {
+                tokio::time::sleep(Duration::from_millis(400)).await;
+                alive(pid)
+            } => running,
+        };
+        assert!(still_running, "waiting closed the child's stdin");
+        let _ = child.kill().await;
     }
 
     #[test]

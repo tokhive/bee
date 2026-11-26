@@ -19,7 +19,7 @@ export function App({ shell }: { shell: Shell }) {
 }
 
 function Window() {
-  const { snapshot, t, toastText } = useApp();
+  const { snapshot, t, toastText, explanationsReady } = useApp();
   const [screen, setScreen] = React.useState<Screen>({ name: "home" });
   const [onboarding, setOnboarding] = React.useState(false);
   const binding = snapshot?.overview?.binding;
@@ -51,7 +51,9 @@ function Window() {
     },
   };
 
-  if (!snapshot || (snapshot.service === "starting" && !snapshot.overview)) {
+  // Wait for Bee's words too, when Bee answered, so no card shows a general
+  // sentence before its own.
+  if (!snapshot || (snapshot.service === "starting" && !snapshot.overview) || (snapshot.overview && !explanationsReady)) {
     return (
       <main className="flex h-full flex-col items-center justify-center gap-3 text-muted">
         <BeeGlyph size={40} />

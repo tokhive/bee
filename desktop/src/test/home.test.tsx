@@ -310,6 +310,23 @@ describe("global banners", () => {
     expect(within(c).queryByRole("button", { name: "更多操作" })).not.toBeInTheDocument();
   });
 
+  it("an older Bee holds the configuration: says so and offers the stop command", async () => {
+    const shell = show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: 4821 } }));
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("这台电脑上有旧版命令行 Bee 正在运行（进程 4821），请先停止它。");
+    expect(banner).not.toHaveTextContent("后台服务没有运行");
+    await userEvent.click(within(banner).getByRole("button", { name: "复制停止命令" }));
+    expect(shell.copy).toHaveBeenCalledWith("kill 4821");
+    expect(await screen.findByText("停止命令已复制")).toBeInTheDocument();
+  });
+
+  it("an older Bee whose process is unknown has no command to copy", async () => {
+    show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: null } }), { language: "en", resolved_language: "en" });
+    const banner = await screen.findByRole("alert");
+    expect(banner).toHaveTextContent("An older Bee run from the command line is running on this computer. Stop it first.");
+    expect(within(banner).queryByRole("button", { name: /stop command/ })).not.toBeInTheDocument();
+  });
+
   it("starting: waits for the background service", async () => {
     show(snapshot({ service: "starting", overview: null, platforms: {} }));
     expect(await screen.findByText("正在连接后台服务…")).toBeInTheDocument();

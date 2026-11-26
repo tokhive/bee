@@ -114,7 +114,8 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
       if (change.language && change.language !== "system") current.resolved_language = change.language;
       return current;
     }),
-    appInfo: vi.fn(async () => ({ version: "1.0.0", config: "/home/a/.config/tokhive/bee.json" })),
+    appInfo: vi.fn(async () => ({ version: "1.0.0", config: "/home/a/.config/tokhive/bee.json", logs: "/home/a/Library/Logs/ai.tokhive.bee" })),
+    openLogs: vi.fn(async () => {}),
     retryService: vi.fn(async () => {}),
     exportDiagnostics: vi.fn(async () => "/tmp/bee-diagnostics.json"),
     quit: vi.fn(async () => {}),

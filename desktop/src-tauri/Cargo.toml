@@ -25,4 +25,4 @@ bytes = "1"
 dirs = "6"
 
 [target.'cfg(unix)'.dependencies]
-nix = { version = "0.30", features = ["signal"] }
+nix = { version = "0.30", features = ["signal", "fs"] }

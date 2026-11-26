@@ -56,6 +56,15 @@ and changes them with the `get_settings` and `set_settings` commands.
   day, also across restarts (`notifications.json`). Their words come from Bee's
   `/v1/explanations`.
 
+## Logs
+
+The app keeps the output of the `bee` it starts in `bee.log` (rotated at 5 MB
+to `bee.log.1`) in `~/Library/Logs/ai.tokhive.bee` on macOS, the user's state
+directory elsewhere, or `logs/` under `BEE_DESKTOP_DATA` when that is set.
+Settings has a button that opens the folder, and the technical information
+there names it, so a person can find the log to send with a diagnostic report.
+A `bee` the app did not start writes where its own starter sends it.
+
 ## Develop against the mock
 
 The mock serves the control interface with scenarios, so the window and tray

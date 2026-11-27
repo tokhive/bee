@@ -43,8 +43,10 @@ the running one.
 
 The app keeps its preferences in `settings.json` in its config directory
 (`~/Library/Application Support/ai.tokhive.bee` on macOS): start at login, keep
-in tray, notifications and language (`system`, `zh` or `en`). The window reads
-and changes them with the `get_settings` and `set_settings` commands.
+in tray, notifications, language (`system`, `zh` or `en`), colour mode
+(`system`, `light` or `dark`), keeping the computer awake and whether the
+sidebar is collapsed. The window reads and changes them with the
+`get_settings` and `set_settings` commands.
 
 - **Start at login** is on by default: a release enables the login item the
   first time it runs, which starts the app with `--background`, tray only.
@@ -55,15 +57,35 @@ and changes them with the `get_settings` and `set_settings` commands.
   minute), never for what clears by itself, and the same problem at most once a
   day, also across restarts (`notifications.json`). Their words come from Bee's
   `/v1/explanations`.
+- **Keep the computer awake** is off by default. On, the app holds a macOS
+  `PreventUserIdleSystemSleep` assertion named "Bee is sharing AI accounts"
+  while at least one account shares, and lets it go when none does or the app
+  quits (`pmset -g assertions` lists it). The display may still sleep, and
+  closing a laptop's lid still sleeps it. Other systems do nothing yet.
+- **Colour mode** is applied by the window; the last choice is also kept in
+  the window's local storage so the next start paints in it at once.
+
+## Window and menus
+
+The window has a sidebar with four pages: the dashboard, shared accounts, logs
+and settings. On macOS the title bar is drawn over the window (the traffic
+lights sit on the sidebar), and the app's menu bar has the pages as View items
+(⌘1 to ⌘4), Refresh (⌘R, reads Bee again), Settings (⌘,), the usual Edit and
+Window items and Quit (⌘Q, which stops the app's own Bee as quitting from the
+Dock does). Other systems have no menu bar.
 
 ## Logs
 
 The app keeps the output of the `bee` it starts in `bee.log` (rotated at 5 MB
 to `bee.log.1`) in `~/Library/Logs/ai.tokhive.bee` on macOS, the user's state
 directory elsewhere, or `logs/` under `BEE_DESKTOP_DATA` when that is set.
-Settings has a button that opens the folder, and the technical information
-there names it, so a person can find the log to send with a diagnostic report.
-A `bee` the app did not start writes where its own starter sends it.
+The Logs page shows its last 2,000 lines (reaching back into `bee.log.1`),
+read again every 1.5 seconds and followed while the view stays at the end,
+with a level filter (from INFO, WARN or ERROR up) and a search (⌘F). The page
+and Settings have buttons that open the folder and export a diagnostic report,
+and the technical information in Settings names the folder. A `bee` the app
+did not start writes where its own starter sends it, so the page says so
+instead of showing an old log.
 
 ## Icons
 

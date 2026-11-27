@@ -70,7 +70,7 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
       {t.add.later}
     </Button>
   );
-  const leave = () => go({ name: "home" });
+  const leave = () => go({ name: "accounts" });
 
   if (step === "platform" || !platform || !names) {
     return (
@@ -86,7 +86,7 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
                 type="button"
                 aria-disabled={taken}
                 className={cn(
-                  "flex cursor-pointer flex-col gap-1.5 rounded-[10px] border-[1.5px] border-line bg-page p-3.5 text-left hover:border-line-strong",
+                  "flex cursor-pointer flex-col gap-1.5 rounded-[10px] border-[1.5px] border-line bg-card p-3.5 text-left hover:border-line-strong",
                   taken && "cursor-not-allowed bg-sunken opacity-80 hover:border-line",
                 )}
                 onClick={() => {
@@ -227,7 +227,7 @@ export function AddAccount({ initialStep, platform: initialPlatform, replacing: 
       }
       await shell.request("POST", "/v1/accounts", method === "import" ? { platform, source: "import", file } : { platform, source: "local" });
       if (onboarding) go({ name: "done" });
-      else go({ name: "home" });
+      else go({ name: "accounts" });
     } catch (err) {
       const e = toBeeError(err);
       const known = explain(e.code);
@@ -293,12 +293,12 @@ function Option({ checked, onSelect, label, children }: { checked: boolean; onSe
   return (
     <div
       className={cn(
-        "flex max-w-[640px] cursor-pointer gap-3 rounded-[10px] border-[1.5px] border-line bg-page px-3.5 py-3 text-left",
-        checked && "border-honey bg-[color-mix(in_srgb,var(--honey-soft)_50%,var(--page))]",
+        "flex max-w-[640px] cursor-pointer gap-3 rounded-[10px] border-[1.5px] border-line bg-card px-3.5 py-3 text-left",
+        checked && "border-fg bg-card shadow-[0_0_0_1px_var(--fg)]",
       )}
       onClick={onSelect}
     >
-      <input id={id} type="radio" name="method" checked={checked} onChange={onSelect} className="mt-1 grid size-4 flex-none cursor-pointer appearance-none place-content-center rounded-full border-[1.5px] border-line-strong bg-page before:size-2 before:rounded-full before:content-[''] checked:border-honey-ink checked:before:bg-honey-ink" />
+      <input id={id} type="radio" name="method" checked={checked} onChange={onSelect} className="mt-1 grid size-4 flex-none cursor-pointer appearance-none place-content-center rounded-full border-[1.5px] border-line-strong bg-page before:size-2 before:rounded-full before:content-[''] checked:border-fg checked:before:bg-fg" />
       <div>
         <label htmlFor={id} className="cursor-pointer font-semibold">
           {label}

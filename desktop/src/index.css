@@ -1,92 +1,141 @@
 @import "tailwindcss";
 
-/* Colours from the approved prototype. Ink buttons; honey only for the mark
-   and selection, so it is never mistaken for the yellow warning. */
+/* TokHive colours: Graphite #141517, Paper #F2F2EE and Volt #C8F031. Volt is
+   only ever a fill (selection, primary buttons in the dark, the earnings
+   chart); on a light page it fails as text, so light text accents use a deep
+   olive. Status colours stay apart from the brand and always come with words.
+   The colour mode follows the system unless settings pick light or dark,
+   which the window stamps on <html> as data-theme. */
 :root {
-  --page: #ffffff;
-  --sunken: #f4f3ef;
-  --line: #e3e1da;
-  --line-strong: #cfccc2;
-  --fg: #1c1b18;
-  --muted: #6a665c;
-  --faint: #9a958a;
-  --btn: #1c1b18;
-  --btn-fg: #ffffff;
-  --btn2: #f1efe9;
-  --btn2-fg: #1c1b18;
-  --honey: #e9a516;
-  --honey-soft: #fbefd2;
-  --honey-ink: #7a5200;
-  --good: #1d7a45;
-  --good-bg: #e4f3ea;
+  --page: #fafaf8;
+  --card: #ffffff;
+  --side: #f2f2ee;
+  --sunken: #f2f2ee;
+  --hover: #ebebe6;
+  --line: #e4e4de;
+  --line-strong: #cfd0c9;
+  --fg: #141517;
+  --fg2: #3b3d41;
+  --muted: #66686d;
+  --faint: #9a9ca0;
+  --btn: #141517;
+  --btn-fg: #f2f2ee;
+  --btn2: #ffffff;
+  --btn2-fg: #141517;
+  --volt: #c8f031;
+  --on-volt: #141517;
+  --accent: #4f6b00;
+  --accent-soft: #eef8cf;
+  --focus: #2f6fd6;
+  --good: #1a7f37;
+  --good-bg: #e5f4e8;
   --warn: #8a5a00;
   --warn-bg: #fbf0d4;
-  --bad: #b42318;
-  --bad-bg: #fbe6e3;
+  --bad: #c4302b;
+  --bad-bg: #fbe7e5;
   --info: #1f5f9e;
-  --info-bg: #e3edf8;
-  --bar: #3d3b35;
-  --bar-track: #ebe9e2;
-  --claude-bg: #f3e3d8;
-  --claude-fg: #9a4a1e;
-  --codex-bg: #e2e8e6;
-  --codex-fg: #1f3d36;
-  --overlay: rgba(20, 19, 16, 0.36);
-  --shadow: 0 18px 48px rgba(30, 28, 20, 0.18), 0 2px 6px rgba(30, 28, 20, 0.08);
+  --info-bg: #e5eef8;
+  --bar: #3b3d41;
+  --bar-track: #ebebe6;
+  --overlay: rgba(20, 21, 23, 0.32);
+  --shadow: 0 24px 64px rgba(20, 21, 23, 0.2), 0 2px 8px rgba(20, 21, 23, 0.08);
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
-    --page: #1f1f1c;
-    --sunken: #272622;
-    --line: #34332e;
-    --line-strong: #46443d;
-    --fg: #edebe4;
-    --muted: #a6a296;
-    --faint: #7d796f;
-    --btn: #edebe4;
-    --btn-fg: #1a1a17;
-    --btn2: #2d2c28;
-    --btn2-fg: #edebe4;
-    --honey: #f0b43a;
-    --honey-soft: #3a2f17;
-    --honey-ink: #f3c96d;
-    --good: #5fcf8e;
-    --good-bg: #1c3326;
-    --warn: #e8b75a;
-    --warn-bg: #3a2f17;
-    --bad: #f2837a;
-    --bad-bg: #3d211e;
-    --info: #7fb2ea;
-    --info-bg: #1c2b3d;
-    --bar: #cfccc2;
-    --bar-track: #33322d;
-    --claude-bg: #3d2a1f;
-    --claude-fg: #f0b48e;
-    --codex-bg: #23302c;
-    --codex-fg: #a9d6c8;
-    --overlay: rgba(0, 0, 0, 0.5);
-    --shadow: 0 18px 48px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.3);
-    color-scheme: dark;
+  :root:not([data-theme="light"]) {
+  --page: #141517;
+  --card: #1b1c1f;
+  --side: #101113;
+  --sunken: #202226;
+  --hover: #24262a;
+  --line: #2a2c30;
+  --line-strong: #3a3d42;
+  --fg: #f2f2ee;
+  --fg2: #d4d5d0;
+  --muted: #a2a4a8;
+  --faint: #6f7277;
+  --btn: #c8f031;
+  --btn-fg: #141517;
+  --btn2: #24262a;
+  --btn2-fg: #f2f2ee;
+  --volt: #c8f031;
+  --on-volt: #141517;
+  --accent: #c8f031;
+  --accent-soft: #2a3310;
+  --focus: #7fb2ea;
+  --good: #4cc774;
+  --good-bg: #16301f;
+  --warn: #e3b341;
+  --warn-bg: #352a12;
+  --bad: #f07067;
+  --bad-bg: #3a1d1b;
+  --info: #7fb2ea;
+  --info-bg: #1a2a3c;
+  --bar: #d4d5d0;
+  --bar-track: #2a2c30;
+  --overlay: rgba(0, 0, 0, 0.5);
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
   }
+}
+
+:root[data-theme="dark"] {
+  --page: #141517;
+  --card: #1b1c1f;
+  --side: #101113;
+  --sunken: #202226;
+  --hover: #24262a;
+  --line: #2a2c30;
+  --line-strong: #3a3d42;
+  --fg: #f2f2ee;
+  --fg2: #d4d5d0;
+  --muted: #a2a4a8;
+  --faint: #6f7277;
+  --btn: #c8f031;
+  --btn-fg: #141517;
+  --btn2: #24262a;
+  --btn2-fg: #f2f2ee;
+  --volt: #c8f031;
+  --on-volt: #141517;
+  --accent: #c8f031;
+  --accent-soft: #2a3310;
+  --focus: #7fb2ea;
+  --good: #4cc774;
+  --good-bg: #16301f;
+  --warn: #e3b341;
+  --warn-bg: #352a12;
+  --bad: #f07067;
+  --bad-bg: #3a1d1b;
+  --info: #7fb2ea;
+  --info-bg: #1a2a3c;
+  --bar: #d4d5d0;
+  --bar-track: #2a2c30;
+  --overlay: rgba(0, 0, 0, 0.5);
+  --shadow: 0 24px 64px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.3);
+  color-scheme: dark;
 }
 
 @theme inline {
   --color-page: var(--page);
+  --color-card: var(--card);
+  --color-side: var(--side);
   --color-sunken: var(--sunken);
+  --color-hover: var(--hover);
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-fg: var(--fg);
+  --color-fg2: var(--fg2);
   --color-muted: var(--muted);
   --color-faint: var(--faint);
   --color-btn: var(--btn);
   --color-btn-fg: var(--btn-fg);
   --color-btn2: var(--btn2);
   --color-btn2-fg: var(--btn2-fg);
-  --color-honey: var(--honey);
-  --color-honey-soft: var(--honey-soft);
-  --color-honey-ink: var(--honey-ink);
+  --color-volt: var(--volt);
+  --color-on-volt: var(--on-volt);
+  --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-good: var(--good);
   --color-good-bg: var(--good-bg);
   --color-warn: var(--warn);
@@ -97,14 +146,9 @@
   --color-info-bg: var(--info-bg);
   --color-bar: var(--bar);
   --color-bar-track: var(--bar-track);
-  --color-claude-bg: var(--claude-bg);
-  --color-claude-fg: var(--claude-fg);
-  --color-codex-bg: var(--codex-bg);
-  --color-codex-fg: var(--codex-fg);
   --color-overlay: var(--overlay);
   --shadow-pop: var(--shadow);
-  --font-sans: "Inter", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
-  --font-display: "Space Grotesk", "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
@@ -119,14 +163,14 @@ body {
   background: var(--page);
   color: var(--fg);
   font-family: var(--font-sans);
-  font-size: 14px;
-  line-height: 1.55;
+  font-size: 13.5px;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 /* Keyboard focus is always visible; the mouse leaves no ring. */
 :focus-visible {
-  outline: 2px solid var(--honey);
+  outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
 

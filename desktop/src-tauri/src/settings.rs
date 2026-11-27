@@ -17,11 +17,26 @@ pub struct Settings {
     pub language: String,
     /// The one-time "still sharing from the tray" hint has been shown.
     pub close_hint_shown: bool,
+    /// "system", "light" or "dark".
+    pub theme: String,
+    /// Keep the computer from idle sleep while an account is sharing.
+    pub prevent_sleep: bool,
+    /// The window's sidebar shows icons only.
+    pub sidebar_collapsed: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Self { autostart: true, keep_in_tray: true, notify: true, language: "system".into(), close_hint_shown: false }
+        Self {
+            autostart: true,
+            keep_in_tray: true,
+            notify: true,
+            language: "system".into(),
+            close_hint_shown: false,
+            theme: "system".into(),
+            prevent_sleep: false,
+            sidebar_collapsed: false,
+        }
     }
 }
 
@@ -32,6 +47,9 @@ pub struct SettingsChange {
     pub keep_in_tray: Option<bool>,
     pub notify: Option<bool>,
     pub language: Option<String>,
+    pub theme: Option<String>,
+    pub prevent_sleep: Option<bool>,
+    pub sidebar_collapsed: Option<bool>,
 }
 
 impl Settings {
@@ -41,6 +59,18 @@ impl Settings {
                 return Err(format!("unknown language {language:?}"));
             }
             self.language = language.clone();
+        }
+        if let Some(theme) = &change.theme {
+            if !["system", "light", "dark"].contains(&theme.as_str()) {
+                return Err(format!("unknown theme {theme:?}"));
+            }
+            self.theme = theme.clone();
+        }
+        if let Some(v) = change.prevent_sleep {
+            self.prevent_sleep = v;
+        }
+        if let Some(v) = change.sidebar_collapsed {
+            self.sidebar_collapsed = v;
         }
         if let Some(v) = change.autostart {
             self.autostart = v;
@@ -110,6 +140,10 @@ mod tests {
         changed.apply(&SettingsChange { language: Some("en".into()), keep_in_tray: Some(false), ..Default::default() }).unwrap();
         assert!(changed.language == "en" && !changed.keep_in_tray && !changed.notify);
         assert!(changed.apply(&SettingsChange { language: Some("fr".into()), ..Default::default() }).is_err());
+        assert!(settings.theme == "system" && !settings.prevent_sleep && !settings.sidebar_collapsed);
+        changed.apply(&SettingsChange { theme: Some("dark".into()), prevent_sleep: Some(true), sidebar_collapsed: Some(true), ..Default::default() }).unwrap();
+        assert!(changed.theme == "dark" && changed.prevent_sleep && changed.sidebar_collapsed);
+        assert!(changed.apply(&SettingsChange { theme: Some("sepia".into()), ..Default::default() }).is_err());
         assert_eq!(changed.resolved_language(), "en");
     }
 

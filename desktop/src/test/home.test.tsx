@@ -2,12 +2,20 @@ import { render, screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "../app/App";
-import { claude, fakeShell, overview, platform, refuse, snapshot } from "./fakeShell";
-import type { Snapshot } from "../lib/bee";
+import { claude, fakeShell, type FakeShell, overview, platform, refuse, snapshot } from "./fakeShell";
+import type { Settings, Snapshot } from "../lib/bee";
 
-function show(first: Snapshot, settings = {}) {
+/**
+ * Opens the shared accounts page. `prepare` answers Bee before the page asks;
+ * `open: false` stays on the first page, for a window that shows no pages yet.
+ */
+async function show(first: Snapshot, settings: Partial<Settings> = {}, { prepare, open = true }: { prepare?: (shell: FakeShell) => void; open?: boolean } = {}) {
   const shell = fakeShell(first, settings);
+  prepare?.(shell);
   render(<App shell={shell} />);
+  if (!open) return shell;
+  const page = settings.language === "en" ? "Shared accounts" : "共享账号";
+  await userEvent.click(await screen.findByRole("button", { name: page }));
   return shell;
 }
 
@@ -15,7 +23,7 @@ const card = (name: RegExp) => screen.getByRole("article", { name });
 
 describe("account conclusions", () => {
   it("shows both accounts sharing, grouped by platform, without credentials", async () => {
-    show(snapshot());
+    await show(snapshot());
     expect(await screen.findByRole("heading", { name: "2 个账号都在共享" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Claude" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "ChatGPT（Codex）" })).toBeInTheDocument();
@@ -31,7 +39,7 @@ describe("account conclusions", () => {
   });
 
   it("syncing: says what it waits for and shows no quota yet", async () => {
-    show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
+    await show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
     const c = await screen.findByRole("article", { name: /Claude/ });
     expect(within(c).getByText("正在同步")).toBeInTheDocument();
     expect(within(c).getByText(/通常需要 1 到 3 分钟/)).toBeInTheDocument();
@@ -40,13 +48,13 @@ describe("account conclusions", () => {
   });
 
   it("an account not read from Hive yet counts as syncing", async () => {
-    show(snapshot({ platforms: { openai: platform("sharing") } }));
+    await show(snapshot({ platforms: { openai: platform("sharing") } }));
     const c = await screen.findByRole("article", { name: /Claude/ });
     expect(within(c).getByText("正在同步")).toBeInTheDocument();
   });
 
   it("paused: offers to start sharing", async () => {
-    show(snapshot({ platforms: { claude: platform("paused", "manually_paused"), openai: platform("paused", "manually_paused") } }));
+    await show(snapshot({ platforms: { claude: platform("paused", "manually_paused"), openai: platform("paused", "manually_paused") } }));
     expect(await screen.findByRole("heading", { name: "所有共享已暂停" })).toBeInTheDocument();
     const c = card(/Claude/);
     expect(within(c).getByText("已暂停")).toBeInTheDocument();
@@ -59,7 +67,7 @@ describe("account conclusions", () => {
       { seconds: 18000, used_percent: 10, reset_at: new Date(Date.now() + 3600e3).toISOString() },
       { seconds: 604800, used_percent: 100, reset_at: new Date(Date.now() + 3 * 86400e3).toISOString() },
     ];
-    show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("waiting", "quota_exhausted", { windows }) } }));
+    await show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("waiting", "quota_exhausted", { windows }) } }));
     const c = await screen.findByRole("article", { name: /ChatGPT/ });
     expect(within(c).getByText("暂时不能接单")).toBeInTheDocument();
     expect(within(c).getByText(/^本周额度已用完，周. \d\d:\d\d 重置后自动恢复共享。$/)).toBeInTheDocument();
@@ -68,24 +76,24 @@ describe("account conclusions", () => {
   });
 
   it("waiting for other reasons: Bee's cause and that it recovers", async () => {
-    show(snapshot({ platforms: { claude: platform("waiting", "rate_limited"), openai: platform("offline", "offline") } }));
+    await show(snapshot({ platforms: { claude: platform("waiting", "rate_limited"), openai: platform("offline", "offline") } }));
     expect(await within(await screen.findByRole("article", { name: /Claude/ })).findByText("平台正在限制这个账号的使用频率。")).toBeInTheDocument();
     expect(within(card(/ChatGPT/)).getByText("TokHive 现在连不上这台电脑。")).toBeInTheDocument();
   });
 
   it("missing quota windows say there is no data", async () => {
-    show(snapshot({ platforms: { claude: platform("sharing", undefined, { windows: [] }), openai: platform("sharing", undefined, { windows: [{ seconds: 18000, used_percent: null }] }) } }));
+    await show(snapshot({ platforms: { claude: platform("sharing", undefined, { windows: [] }), openai: platform("sharing", undefined, { windows: [{ seconds: 18000, used_percent: null }] }) } }));
     expect(await within(await screen.findByRole("article", { name: /Claude/ })).findByText("额度 · 暂无数据")).toBeInTheDocument();
     expect(within(card(/ChatGPT/)).getByText("暂无数据")).toBeInTheDocument();
   });
 
   it("old quota data says when it was read", async () => {
-    show(snapshot({ platforms: { claude: platform("sharing", undefined, { observed_at: new Date(Date.now() - 40 * 60e3).toISOString() }), openai: platform("sharing") } }));
+    await show(snapshot({ platforms: { claude: platform("sharing", undefined, { observed_at: new Date(Date.now() - 40 * 60e3).toISOString() }), openai: platform("sharing") } }));
     expect(await within(await screen.findByRole("article", { name: /Claude/ })).findByText(/更新于 40 分钟前/)).toBeInTheDocument();
   });
 
   it("sign-in expired here: how to sign in again, and check again", async () => {
-    const shell = show(snapshot({ platforms: { claude: platform("action", "claude_authorization_rejected"), openai: platform("sharing") } }));
+    const shell = await show(snapshot({ platforms: { claude: platform("action", "claude_authorization_rejected"), openai: platform("sharing") } }));
     const c = await screen.findByRole("article", { name: /Claude/ });
     expect(within(c).getByText("需要你处理")).toBeInTheDocument();
     expect(within(c).getByText("Claude 拒绝了这个账号的授权，通常是登录已失效。")).toBeInTheDocument();
@@ -97,7 +105,7 @@ describe("account conclusions", () => {
   });
 
   it("imported sign-in expired: import the file again", async () => {
-    show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("action", "codex_authorization_rejected") } }));
+    await show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("action", "codex_authorization_rejected") } }));
     const c = await screen.findByRole("article", { name: /ChatGPT/ });
     expect(within(c).getByText(/在导出文件的那台电脑上重新登录/)).toBeInTheDocument();
     await userEvent.click(within(c).getByRole("button", { name: "重新导入凭证文件" }));
@@ -105,10 +113,12 @@ describe("account conclusions", () => {
   });
 
   it("client switched accounts: names the new one and confirms the switch", async () => {
-    const shell = show(snapshot({ platforms: { claude: platform("action", "claude_confirmation_required"), openai: platform("sharing") } }));
-    shell.answer((method, path) => {
-      if (path === "/v1/platforms/claude/login") return { platform: "claude", available: true, email: "d.kim@gmail.com", fingerprint: "5b20" };
-      if (method === "POST" && path === "/v1/accounts/acc_claude/confirm") return {};
+    const shell = await show(snapshot({ platforms: { claude: platform("action", "claude_confirmation_required"), openai: platform("sharing") } }), {}, {
+      prepare: (shell) =>
+        shell.answer((method, path) => {
+          if (path === "/v1/platforms/claude/login") return { platform: "claude", available: true, email: "d.kim@gmail.com", fingerprint: "5b20" };
+          if (method === "POST" && path === "/v1/accounts/acc_claude/confirm") return {};
+        }),
     });
     const c = await screen.findByRole("article", { name: /Claude/ });
     expect(await within(c).findByText("检测到 Claude Code 现在登录的是 d***@gmail.com，和之前共享的 b***@gmail.com 不同。")).toBeInTheDocument();
@@ -118,7 +128,7 @@ describe("account conclusions", () => {
   });
 
   it("account used by someone else: offers to remove it", async () => {
-    show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("action", "codex_account_in_use") } }));
+    await show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("action", "codex_account_in_use") } }));
     const c = await screen.findByRole("article", { name: /ChatGPT/ });
     expect(within(c).getByText("这个 ChatGPT 账号已被另一个 TokHive 账号使用。")).toBeInTheDocument();
     await userEvent.click(within(c).getByRole("button", { name: "删除这个账号" }));
@@ -126,7 +136,7 @@ describe("account conclusions", () => {
   });
 
   it("restricted: contact support with the account number", async () => {
-    const shell = show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("restricted", "banned") } }));
+    const shell = await show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("restricted", "banned") } }));
     const c = await screen.findByRole("article", { name: /ChatGPT/ });
     expect(within(c).getByText("平台限制")).toBeInTheDocument();
     expect(within(c).getByText("TokHive 暂停了这个账号的共享。")).toBeInTheDocument();
@@ -137,7 +147,7 @@ describe("account conclusions", () => {
   });
 
   it("syncing for over ten minutes asks the person to look", async () => {
-    const shell = show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
+    const shell = await show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
     await screen.findByRole("article", { name: /Claude/ });
     const realNow = Date.now;
     Date.now = () => realNow() + 11 * 60e3;
@@ -154,7 +164,7 @@ describe("account conclusions", () => {
   });
 
   it("the account number term explains itself on focus", async () => {
-    show(snapshot());
+    await show(snapshot());
     const c = await screen.findByRole("article", { name: /Claude/ });
     const term = within(c).getByRole("button", { name: "编号" });
     term.focus();
@@ -162,7 +172,7 @@ describe("account conclusions", () => {
   });
 
   it("no accounts: an empty state with a big add button", async () => {
-    show(snapshot({ overview: overview({ accounts: undefined }), platforms: {} }));
+    await show(snapshot({ overview: overview({ accounts: undefined }), platforms: {} }));
     expect(await screen.findByRole("heading", { name: "还没有添加 AI 账号" })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "+ 添加 AI 账号" }));
     expect(await screen.findByRole("heading", { name: "添加 AI 账号" })).toBeInTheDocument();
@@ -177,7 +187,7 @@ describe("pause, resume, remove", () => {
   }
 
   it("pausing waits for Bee and then shows the paused card", async () => {
-    const shell = show(snapshot());
+    const shell = await show(snapshot());
     shell.answer(() => ({ paused: true }));
     const c = await pauseClaude();
     expect(shell.calls).toContainEqual({ method: "PUT", path: "/v1/platforms/claude/supply", body: { paused: true } });
@@ -188,7 +198,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("a pause Hive did not confirm leaves the card as it was and can be retried", async () => {
-    const shell = show(snapshot());
+    const shell = await show(snapshot());
     shell.answer(() => refuse(502, "supply_unconfirmed"));
     const c = await pauseClaude();
     expect(await within(c).findByRole("alert")).toHaveTextContent("暂停失败：TokHive 没有确认这次操作，共享状态保持不变。");
@@ -201,7 +211,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("a resume that cannot reach the background service says so", async () => {
-    const shell = show(snapshot({ platforms: { claude: platform("paused", "manually_paused"), openai: platform("sharing") } }));
+    const shell = await show(snapshot({ platforms: { claude: platform("paused", "manually_paused"), openai: platform("sharing") } }));
     shell.answer(() => refuse(0, "unreachable"));
     const c = await screen.findByRole("article", { name: /Claude/ });
     await userEvent.click(within(c).getByRole("button", { name: "开始共享" }));
@@ -210,7 +220,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("removing asks first, then removes", async () => {
-    const shell = show(snapshot());
+    const shell = await show(snapshot());
     shell.answer(() => ({ removed: "acc_claude" }));
     const c = await screen.findByRole("article", { name: /Claude/ });
     await userEvent.click(within(c).getByRole("button", { name: "更多操作" }));
@@ -226,7 +236,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("removing an imported account says its copy goes too; a failure keeps it", async () => {
-    const shell = show(snapshot());
+    const shell = await show(snapshot());
     shell.answer(() => refuse(502, "pause_unconfirmed"));
     const c = await screen.findByRole("article", { name: /ChatGPT/ });
     await userEvent.click(within(c).getByRole("button", { name: "更多操作" }));
@@ -241,7 +251,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("a switch Hive did not confirm keeps the card and says why", async () => {
-    const shell = show(snapshot({ platforms: { claude: platform("action", "claude_confirmation_required"), openai: platform("sharing") } }));
+    const shell = await show(snapshot({ platforms: { claude: platform("action", "claude_confirmation_required"), openai: platform("sharing") } }));
     shell.answer((method) => (method === "POST" ? refuse(502, "confirmation_unconfirmed") : { available: false }));
     const c = await screen.findByRole("article", { name: /Claude/ });
     await userEvent.click(within(c).getByRole("button", { name: "改用新账号" }));
@@ -249,7 +259,7 @@ describe("pause, resume, remove", () => {
   });
 
   it("the menu works from the keyboard", async () => {
-    show(snapshot());
+    await show(snapshot());
     const c = await screen.findByRole("article", { name: /Claude/ });
     within(c).getByRole("button", { name: "更多操作" }).focus();
     await userEvent.keyboard("{Enter}");
@@ -261,7 +271,7 @@ describe("pause, resume, remove", () => {
 
 describe("global banners", () => {
   it("background service not running: retry and export diagnostics", async () => {
-    const shell = show(snapshot({ service: "stopped", overview: null, platforms: {} }));
+    const shell = await show(snapshot({ service: "stopped", overview: null, platforms: {} }));
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("Bee 后台服务没有运行，暂时无法共享。");
     expect(screen.getByRole("heading", { name: "暂时无法显示共享状态" })).toBeInTheDocument();
@@ -274,7 +284,7 @@ describe("global banners", () => {
   });
 
   it("reconnecting: a warning, and cards without a conclusion", async () => {
-    show(snapshot({ overview: overview({ connection: "connecting" }), platforms: {} }));
+    await show(snapshot({ overview: overview({ connection: "connecting" }), platforms: {} }));
     expect(await screen.findByText("正在重新连接 TokHive…")).toBeInTheDocument();
     expect(screen.getByText("连接中")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "暂时无法显示共享状态" })).toBeInTheDocument();
@@ -282,7 +292,7 @@ describe("global banners", () => {
   });
 
   it("replaced: link this computer again", async () => {
-    show(snapshot({ overview: overview({ binding: "replaced", connection: "disconnected" }), platforms: {} }));
+    await show(snapshot({ overview: overview({ binding: "replaced", connection: "disconnected" }), platforms: {} }));
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("这台电脑已不再绑定：你的 TokHive 账号绑定了另一台电脑。");
     await userEvent.click(within(banner).getByRole("button", { name: "重新绑定这台电脑" }));
@@ -290,12 +300,12 @@ describe("global banners", () => {
   });
 
   it("invalid link: says TokHive no longer accepts it", async () => {
-    show(snapshot({ overview: overview({ binding: "invalid", connection: "disconnected" }), platforms: {} }));
+    await show(snapshot({ overview: overview({ binding: "invalid", connection: "disconnected" }), platforms: {} }));
     expect(await screen.findByRole("alert")).toHaveTextContent("TokHive 不再接受这台电脑的绑定");
   });
 
   it("run from the command line: a note, and accounts are managed there", async () => {
-    show(
+    await show(
       snapshot({
         service: "external",
         overview: overview({ mode: "cli", accounts: undefined, sources: [{ name: "claude", platform: "claude" }] }),
@@ -311,7 +321,7 @@ describe("global banners", () => {
   });
 
   it("an older Bee holds the configuration: says so and offers the stop command", async () => {
-    const shell = show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: 4821 } }));
+    const shell = await show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: 4821 } }));
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("这台电脑上有旧版命令行 Bee 正在运行（进程 4821），请先停止它。");
     expect(banner).not.toHaveTextContent("后台服务没有运行");
@@ -321,38 +331,37 @@ describe("global banners", () => {
   });
 
   it("an older Bee whose process is unknown has no command to copy", async () => {
-    show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: null } }), { language: "en", resolved_language: "en" });
+    await show(snapshot({ service: "stopped", overview: null, platforms: {}, occupied: { pid: null } }), { language: "en", resolved_language: "en" });
     const banner = await screen.findByRole("alert");
     expect(banner).toHaveTextContent("An older Bee run from the command line is running on this computer. Stop it first.");
     expect(within(banner).queryByRole("button", { name: /stop command/ })).not.toBeInTheDocument();
   });
 
   it("starting: waits for the background service", async () => {
-    show(snapshot({ service: "starting", overview: null, platforms: {} }));
+    await show(snapshot({ service: "starting", overview: null, platforms: {} }), {}, { open: false });
     expect(await screen.findByText("正在连接后台服务…")).toBeInTheDocument();
   });
 });
 
 describe("English", () => {
   it("shows the home page in English", async () => {
-    show(snapshot({ platforms: { claude: platform("action", "claude_authorization_rejected"), openai: platform("paused", "manually_paused") } }), { language: "en", resolved_language: "en" });
+    await show(snapshot({ platforms: { claude: platform("action", "claude_authorization_rejected"), openai: platform("paused", "manually_paused") } }), { language: "en", resolved_language: "en" });
     expect(await screen.findByRole("heading", { name: "1 account needs your attention" })).toBeInTheDocument();
     const c = card(/Claude/);
     expect(within(c).getByText("Needs your attention")).toBeInTheDocument();
     expect(within(c).getByText("Claude rejected this account's sign-in. It has usually expired.")).toBeInTheDocument();
     expect(within(c).getByRole("button", { name: "I signed in again, check again" })).toBeInTheDocument();
     expect(within(card(/ChatGPT/)).getByRole("button", { name: "Start sharing" })).toBeInTheDocument();
-    expect(screen.getByText("View earnings on the web ↗")).toBeInTheDocument();
   });
 
   it("joins Bee's cause and fix with a space in English", async () => {
-    show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }), { language: "en", resolved_language: "en" });
+    await show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }), { language: "en", resolved_language: "en" });
     const c = await screen.findByRole("article", { name: /Claude/ });
     expect(within(c).getByText("Bee is reading this account's models and quota. Nothing to do. It usually takes 1 to 3 minutes.")).toBeInTheDocument();
   });
 
   it("English failures read naturally", async () => {
-    const shell = show(snapshot(), { language: "en", resolved_language: "en" });
+    const shell = await show(snapshot(), { language: "en", resolved_language: "en" });
     shell.answer(() => refuse(0, "unreachable"));
     const c = await screen.findByRole("article", { name: /Claude/ });
     await userEvent.click(within(c).getByRole("button", { name: "Pause sharing" }));

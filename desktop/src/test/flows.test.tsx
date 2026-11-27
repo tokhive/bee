@@ -11,6 +11,11 @@ function show(first: Snapshot, settings = {}) {
   return shell;
 }
 
+/** Opens the shared accounts page from the sidebar. */
+async function openAccounts() {
+  await userEvent.click(await screen.findByRole("button", { name: "共享账号" }));
+}
+
 const unpaired = () => snapshot({ overview: overview({ binding: "unpaired", connection: "disconnected", device: null, accounts: undefined }), platforms: {} });
 
 const pending: Pairing = {
@@ -54,7 +59,9 @@ describe("first run and linking", () => {
     shell.push(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("syncing", "capabilities_unknown") } }));
     expect(await screen.findByRole("heading", { name: "已添加 Claude 账号，正在同步" })).toBeInTheDocument();
     expect(screen.getByText("已绑定到 a***@gmail.com")).toBeInTheDocument();
-    await userEvent.click(screen.getByRole("button", { name: "进入主页" }));
+    await userEvent.click(screen.getByRole("button", { name: "进入仪表盘" }));
+    expect(await screen.findByRole("heading", { name: "仪表盘" })).toBeInTheDocument();
+    await openAccounts();
     expect(await screen.findByRole("article", { name: /Claude/ })).toBeInTheDocument();
   });
 
@@ -178,6 +185,7 @@ describe("adding an account", () => {
 
   it("a platform that has an account cannot be chosen again", async () => {
     show(onlyCodex());
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     const taken = screen.getByRole("button", { name: /ChatGPT（Codex）/ });
     expect(taken).toHaveAttribute("aria-disabled", "true");
@@ -189,6 +197,7 @@ describe("adding an account", () => {
   it("no sign-in here: steps to sign in, then check again", async () => {
     const shell = show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("sharing") } }));
     shell.answer(() => ({ platform: "openai", available: false, problem: { code: "BEE-SETUP-CODEX-NOT-FOUND", message: "" } }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /ChatGPT（Codex）/ }));
     expect(await screen.findByText("没有检测到 Codex 的登录。")).toBeInTheDocument();
@@ -207,6 +216,7 @@ describe("adding an account", () => {
       available: false,
       problem: { code: "BEE-CLAUDE-SOURCE", message: "", reason: { en: "Claude Code accessToken is empty", zh: "Claude Code 的 accessToken 为空" } },
     }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     expect(await screen.findByText(/Bee 读到的 Claude Code 登录有问题：Claude Code 的 accessToken 为空/)).toBeInTheDocument();
@@ -219,6 +229,7 @@ describe("adding an account", () => {
   it("an expired sign-in is not offered, and says how to renew it", async () => {
     const shell = show(onlyCodex());
     shell.answer(() => ({ platform: "claude", available: false, problem: { code: "BEE-CLAUDE-EXPIRED", message: "" } }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     expect(await screen.findByText(/Claude Code 的登录已经过期。打开一次 Claude Code，让它自动续期。/)).toBeInTheDocument();
@@ -230,6 +241,7 @@ describe("adding an account", () => {
   it("a sign-in that cannot be shared says why", async () => {
     const shell = show(onlyCodex());
     shell.answer(() => ({ platform: "claude", available: false, problem: { code: "login_scope", message: "" } }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     expect(await screen.findByText(/这个 Claude Code 登录缺少共享所需的权限。/)).toBeInTheDocument();
@@ -238,6 +250,7 @@ describe("adding an account", () => {
   it("a local account Bee refuses while adding keeps the confirm page with the reason", async () => {
     const shell = show(onlyCodex());
     shell.answer((method) => (method === "POST" ? refuse(422, "BEE-CLAUDE-EXPIRED") : { platform: "claude", available: true, email: "b.lee@gmail.com", plan: "max" }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /Claude/ }));
     await userEvent.click(await screen.findByRole("button", { name: "下一步" }));
@@ -250,6 +263,7 @@ describe("adding an account", () => {
     const shell = show(snapshot({ overview: overview({ accounts: [claude] }), platforms: { claude: platform("sharing") } }));
     vi.mocked(shell.pickFile).mockResolvedValue("/home/a/config.toml");
     shell.answer((method) => (method === "POST" ? refuse(422, "import_invalid") : { available: false }));
+    await openAccounts();
     await userEvent.click(await screen.findByRole("button", { name: "+ 添加账号" }));
     await userEvent.click(screen.getByRole("button", { name: /ChatGPT（Codex）/ }));
     await userEvent.click(screen.getByRole("radio", { name: "导入凭证文件" }));
@@ -277,6 +291,7 @@ describe("adding an account", () => {
     const shell = show(snapshot({ platforms: { claude: platform("sharing"), openai: platform("action", "codex_authorization_rejected") } }));
     vi.mocked(shell.pickFile).mockResolvedValue("/home/a/auth.json");
     shell.answer(() => ({}));
+    await openAccounts();
     await userEvent.click(await within(await screen.findByRole("article", { name: /ChatGPT/ })).findByRole("button", { name: "重新导入凭证文件" }));
     await userEvent.click(screen.getByRole("button", { name: "选择文件" }));
     await userEvent.click(screen.getByRole("button", { name: "添加并开始共享" }));
@@ -288,8 +303,11 @@ describe("settings, about and quitting", () => {
   it("changes settings through the shell and switches language at once", async () => {
     const shell = show(snapshot());
     await userEvent.click(await screen.findByRole("button", { name: "设置" }));
-    expect(screen.getByText("a***@gmail.com")).toBeInTheDocument();
-    expect(screen.getByText("console.tokhive.ai")).toBeInTheDocument();
+    const account = screen.getByRole("region", { name: "TokHive 账号" });
+    expect(within(account).getByText("a***@gmail.com")).toBeInTheDocument();
+    expect(within(account).getByText("https://console.tokhive.ai")).toBeInTheDocument();
+    await userEvent.click(within(account).getByRole("button", { name: "复制" }));
+    expect(shell.copy).toHaveBeenCalledWith("https://console.tokhive.ai");
     await userEvent.click(screen.getByRole("switch", { name: "开机自动启动" }));
     expect(shell.setSettings).toHaveBeenCalledWith({ autostart: false });
     await userEvent.click(screen.getByRole("switch", { name: "需要处理时发送通知" }));
@@ -335,7 +353,7 @@ describe("settings, about and quitting", () => {
 
   it("the tray's quit asks first, since quitting stops sharing", async () => {
     const shell = show(snapshot());
-    await screen.findByRole("article", { name: /Claude/ });
+    await screen.findByRole("heading", { name: "仪表盘" });
     act(() => shell.requestQuit());
     const dialog = await screen.findByRole("dialog", { name: "退出后将停止共享" });
     expect(within(dialog).getByText("正在处理的请求会先完成。")).toBeInTheDocument();

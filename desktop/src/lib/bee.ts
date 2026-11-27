@@ -117,11 +117,32 @@ export type Settings = {
   keep_in_tray: boolean;
   notify: boolean;
   language: "system" | "zh" | "en";
+  /** The colour mode: follow the system, or always light or dark. */
+  theme: Theme;
+  /** Keep the computer from sleeping while an account is sharing. */
+  prevent_sleep: boolean;
+  /** The sidebar shows icons only. */
+  sidebar_collapsed: boolean;
   resolved_language: Language;
   tray_available: boolean;
 };
 
-export type SettingsChange = Partial<Pick<Settings, "autostart" | "keep_in_tray" | "notify" | "language">>;
+export type Theme = "system" | "light" | "dark";
+
+export type SettingsChange = Partial<Pick<Settings, "autostart" | "keep_in_tray" | "notify" | "language" | "theme" | "prevent_sleep" | "sidebar_collapsed">>;
+
+/** The end of the log of the Bee the app started. */
+export type LogTail = {
+  /** Where the log is kept. */
+  path: string;
+  /** Its last lines, oldest first; empty when there is no log yet. */
+  lines: string[];
+  /** False when the Bee was started elsewhere and writes its log there. */
+  own: boolean;
+};
+
+/** What the app menu asks of the window. */
+export type MenuAction = "dashboard" | "accounts" | "logs" | "settings" | "refresh";
 
 export type AppInfo = { version: string; config: string; logs: string };
 
@@ -168,6 +189,10 @@ export interface Shell {
   appInfo(): Promise<AppInfo>;
   /** Shows the folder that holds Bee's log in the system's file manager. */
   openLogs(): Promise<void>;
+  /** The last lines of Bee's log. */
+  readLog(lines: number): Promise<LogTail>;
+  /** The app menu's page and refresh items. */
+  onMenu(listener: (action: MenuAction) => void): () => void;
   /** Asks the shell to start the background service again now. */
   retryService(): Promise<void>;
   /** Restarts the Bee the app started, for a setting that applies at start; false when the Bee is not the app's own. */

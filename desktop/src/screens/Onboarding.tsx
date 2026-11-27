@@ -41,7 +41,7 @@ function Dots({ step }: { step: number }) {
   return (
     <div className="flex items-center justify-center gap-1.5 text-xs text-faint">
       {[1, 2, 3].map((n) => (
-        <i key={n} className={cn("inline-block size-[7px] rounded-full", n <= step ? "bg-honey" : "bg-line-strong")} aria-hidden="true" />
+        <i key={n} className={cn("inline-block size-[7px] rounded-full", n <= step ? "bg-volt" : "bg-line-strong")} aria-hidden="true" />
       ))}
       <span className="ml-1.5">{t.welcome.dots}</span>
     </div>
@@ -53,17 +53,23 @@ export function Welcome() {
   const { go } = useNav();
   return (
     <Flow center>
-      <BeeGlyph size={56} />
-      <FlowTitle className="font-display text-[30px]">{t.appName}</FlowTitle>
-      <p className="m-0 max-w-[62ch] text-base">{t.welcome.tagline}</p>
-      <ul className="m-0 mt-1 flex list-none flex-col gap-1 p-0 text-left text-[13px] text-muted">
-        {t.welcome.points.map((point) => (
-          <li key={point}>· {point}</li>
+      <BeeGlyph size={64} />
+      <FlowTitle className="mt-1 text-[28px] tracking-[-.01em]">
+        <span className="font-light">Tok</span>Hive {t.appName}
+      </FlowTitle>
+      <p className="m-0 max-w-[62ch] text-[15px] text-fg2">{t.welcome.tagline}</p>
+      <ul className="m-0 mt-3 flex w-full max-w-[460px] list-none flex-col gap-2 p-0 text-left">
+        {t.welcome.points.map(([title, text]) => (
+          <li key={title} className="rounded-xl border border-line bg-card px-3.5 py-3">
+            <div className="font-semibold">{title}</div>
+            <div className="text-[12.5px] text-muted">{text}</div>
+          </li>
         ))}
       </ul>
-      <Button size="big" className="mt-2.5" onClick={() => go({ name: "bind", mode: "onboarding" })} autoFocus>
+      <Button size="big" className="mt-3" onClick={() => go({ name: "bind", mode: "onboarding" })} autoFocus>
         {t.welcome.start}
       </Button>
+      <div className="text-xs text-muted">{t.welcome.time}</div>
       <div className="mt-4">
         <Dots step={1} />
       </div>
@@ -81,7 +87,7 @@ export function Bind({ mode }: { mode: BindMode }) {
     <Flow>
       {mode === "onboarding" && <StepLabel>{t.step(1)}</StepLabel>}
       {mode === "switch" && <BackButton onClick={() => go({ name: "settings" })}>{t.bind.backToSettings}</BackButton>}
-      {mode === "rebind" && <BackButton onClick={() => go({ name: "home" })}>{t.bind.back}</BackButton>}
+      {mode === "rebind" && <BackButton onClick={() => go({ name: "accounts" })}>{t.bind.back}</BackButton>}
       <FlowTitle>{title}</FlowTitle>
       <p className="m-0 max-w-[62ch]">{t.bind.intro}</p>
       <Callout tone="info">{t.bind.onePerAccount}</Callout>
@@ -100,7 +106,7 @@ export function Bind({ mode }: { mode: BindMode }) {
             placeholder={t.bind.hiveDefault}
             onChange={(e) => setHive(e.target.value)}
             spellCheck={false}
-            className="w-[300px] rounded-md border border-line bg-page px-2 py-[5px] text-[13px] text-fg"
+            className="w-[300px] rounded-lg border border-line-strong bg-card px-2 py-[5px] text-[13px] text-fg"
           />
         </div>
       </details>
@@ -131,7 +137,7 @@ export function Wait({ mode, hive }: { mode: BindMode; hive?: string }) {
     if (mode === "onboarding") go({ name: "add", step: "platform" });
     else {
       toast(mode === "switch" ? t.wait.switched : t.wait.relinked);
-      go({ name: "home" });
+      go({ name: "accounts" });
     }
   }, [go, mode, t, toast]);
 
@@ -193,7 +199,7 @@ export function Wait({ mode, hive }: { mode: BindMode; hive?: string }) {
   const cancel = async () => {
     await shell.request("DELETE", "/v1/pairing").catch(() => {});
     if (mode === "switch") go({ name: "settings" });
-    else if (mode === "rebind") go({ name: "home" });
+    else if (mode === "rebind") go({ name: "accounts" });
     else go({ name: "bind", mode });
   };
 

@@ -132,6 +132,7 @@ describe("a card with no quota", () => {
     try {
       const shell = fakeShell(snapshot({ platforms: { claude: platform("sharing", undefined, { status: "unknown", windows: [] }), openai: platform("sharing") } }));
       render(<App shell={shell} />);
+      await userEvent.click(await screen.findByRole("button", { name: "共享账号" }));
       await screen.findAllByText(/额度/);
       expect(screen.queryByText(/一直查不到额度/)).not.toBeInTheDocument();
       await act(async () => {

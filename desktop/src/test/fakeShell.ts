@@ -3,7 +3,7 @@
 // GET /v1/explanations (regenerate it from the mock Bee when the catalog
 // changes: curl --unix-socket <dir>/control/bee.sock http://bee/v1/explanations).
 import { vi } from "vitest";
-import { BeeError, type Account, type Network, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot, type UpdateState } from "../lib/bee";
+import { BeeError, type Account, type LogTail, type MenuAction, type Network, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot, type UpdateState } from "../lib/bee";
 import catalog from "./explanations.json";
 
 export const claude: Account = {
@@ -84,6 +84,10 @@ export type FakeShell = Shell & {
   /** The shell reports a change of the app's update. */
   pushUpdate: (state: UpdateState) => void;
   drop: (path: string) => void;
+  /** The app menu asks for a page. */
+  menu: (action: MenuAction) => void;
+  /** What the log holds. */
+  log: LogTail;
   calls: { method: string; path: string; body: unknown }[];
   answer: (handler: Handler) => void;
 };
@@ -99,8 +103,9 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
   const updates = new Set<(state: UpdateState) => void>();
   let update: UpdateState = { state: "idle" };
   const drops = new Set<(p: string) => void>();
+  const menus = new Set<(action: MenuAction) => void>();
   let handler: Handler = () => ({});
-  let current: Settings = { autostart: true, keep_in_tray: true, notify: true, language: "zh", resolved_language: "zh", tray_available: true, ...settings };
+  let current: Settings = { autostart: true, keep_in_tray: true, notify: true, language: "zh", theme: "system", prevent_sleep: false, sidebar_collapsed: false, resolved_language: "zh", tray_available: true, ...settings };
   const calls: FakeShell["calls"] = [];
   const shell: FakeShell = {
     calls,
@@ -125,6 +130,13 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
     }),
     appInfo: vi.fn(async () => ({ version: "1.0.0", config: "/home/a/.config/tokhive/bee.json", logs: "/home/a/Library/Logs/ai.tokhive.bee" })),
     openLogs: vi.fn(async () => {}),
+    log: { path: "/home/a/Library/Logs/ai.tokhive.bee/bee.log", lines: [], own: true },
+    readLog: vi.fn(async () => shell.log),
+    onMenu: (listener) => {
+      menus.add(listener);
+      return () => menus.delete(listener);
+    },
+    menu: (action) => menus.forEach((listener) => listener(action)),
     retryService: vi.fn(async () => {}),
     restartService: vi.fn(async () => true),
     exportDiagnostics: vi.fn(async () => "/tmp/bee-diagnostics.json"),

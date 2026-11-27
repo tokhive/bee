@@ -9,9 +9,15 @@ export type Screen =
   | { name: "bind"; mode: BindMode }
   | { name: "wait"; mode: BindMode; hive?: string }
   | { name: "done" }
-  | { name: "home" }
+  | { name: "dashboard" }
+  | { name: "accounts" }
+  | { name: "logs" }
   | { name: "settings" }
   | { name: "add"; step: AddStep; platform?: PlatformId; replacing?: Account };
+
+/** The pages the sidebar lists, in order. */
+export const PAGES = ["dashboard", "accounts", "logs", "settings"] as const;
+export type Page = (typeof PAGES)[number];
 
 export type Nav = { screen: Screen; go: (screen: Screen) => void; onboarding: boolean; finishOnboarding: () => void };
 

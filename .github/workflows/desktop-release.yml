@@ -1,0 +1,122 @@
+name: Desktop release
+# Push desktop-vX.Y.Z on the commit of the command-line release vX.Y.Z. This
+# builds, signs and notarises the macOS app for both architectures, publishes
+# the desktop-vX.Y.Z release (never marked Latest) and then points installed
+# apps' updater at it. The same steps run by hand with
+# desktop/scripts/package-macos.sh and desktop/scripts/publish-macos.sh.
+#
+# Secrets:
+#   APPLE_CERTIFICATE              Developer ID Application certificate, base64 .p12
+#   APPLE_CERTIFICATE_PASSWORD     its export password
+#   APPLE_ID, APPLE_TEAM_ID        the Apple account that notarises
+#   APPLE_APP_PASSWORD             an app-specific password of that account
+#   TAURI_SIGNING_PRIVATE_KEY      the updater's private key (the file's content)
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+on:
+  push:
+    tags: ["desktop-v*"]
+permissions:
+  contents: read
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: version
+        run: |
+          version=${GITHUB_REF_NAME#desktop-v}
+          case "$version" in
+            *[!0-9.]*|"") echo "::error::$GITHUB_REF_NAME is not desktop-vX.Y.Z"; exit 1 ;;
+          esac
+          cli=$(git rev-parse --verify --quiet "refs/tags/v$version^{commit}") || { echo "::error::no tag v$version"; exit 1; }
+          if [ "$cli" != "$GITHUB_SHA" ]; then
+            echo "::error::$GITHUB_REF_NAME must be on the commit of v$version ($cli)"
+            exit 1
+          fi
+          pubkey=$(jq -r '.plugins.updater.pubkey' desktop/src-tauri/tauri.conf.json)
+          if [ -z "$pubkey" ]; then
+            echo "::error::desktop/src-tauri/tauri.conf.json has no updater public key"
+            exit 1
+          fi
+          echo "version=$version" >>"$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    strategy:
+      matrix:
+        arch: [arm64, x64]
+    # Both architectures build on Apple silicon; x64 is cross-compiled.
+    runs-on: macos-14
+    env:
+      BEE_VERSION: ${{ needs.version.outputs.version }}
+      BEE_NOTARY_PROFILE: bee-notary
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - name: Keychain with the certificate and the notary profile
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        run: |
+          keychain=$RUNNER_TEMP/bee-release.keychain-db
+          password=$(openssl rand -hex 16)
+          security create-keychain -p "$password" "$keychain"
+          security set-keychain-settings -lut 3600 "$keychain"
+          security unlock-keychain -p "$password" "$keychain"
+          security list-keychains -d user -s "$keychain" $(security list-keychains -d user | tr -d '"')
+          security default-keychain -d user -s "$keychain"
+          printf '%s' "$APPLE_CERTIFICATE" | base64 --decode >"$RUNNER_TEMP/certificate.p12"
+          security import "$RUNNER_TEMP/certificate.p12" -k "$keychain" -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+          rm "$RUNNER_TEMP/certificate.p12"
+          security set-key-partition-list -S apple-tool:,apple: -k "$password" "$keychain" >/dev/null
+          identity=$(security find-identity -v -p codesigning "$keychain" | sed -n 's/.*"\(Developer ID Application: .*\)"/\1/p' | head -1)
+          [ -n "$identity" ] || { echo "::error::no Developer ID Application certificate"; exit 1; }
+          echo "BEE_SIGN_IDENTITY=$identity" >>"$GITHUB_ENV"
+          echo "BEE_NOTARY_KEYCHAIN=$keychain" >>"$GITHUB_ENV"
+          xcrun notarytool store-credentials "$BEE_NOTARY_PROFILE" --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --keychain "$keychain"
+      - name: Build, sign and notarise
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+        run: make desktop-macos ARCH=${{ matrix.arch }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-${{ matrix.arch }}
+          path: desktop/out/macos-*/
+          if-no-files-found: error
+      - name: Remove the keychain
+        if: always()
+        run: security delete-keychain "$RUNNER_TEMP/bee-release.keychain-db" || true
+
+  publish:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/download-artifact@v4
+        with:
+          path: desktop/out
+          merge-multiple: true
+      - name: Publish the release, then the update manifest
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BEE_VERSION: ${{ needs.version.outputs.version }}
+        run: sh desktop/scripts/publish-macos.sh

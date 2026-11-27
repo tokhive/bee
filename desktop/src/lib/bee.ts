@@ -125,6 +125,18 @@ export type SettingsChange = Partial<Pick<Settings, "autostart" | "keep_in_tray"
 
 export type AppInfo = { version: string; config: string; logs: string };
 
+/** The app's own update, as the shell reports it. */
+export type UpdateState =
+  | { state: "idle" }
+  /** This build has no update key (a development build). */
+  | { state: "unconfigured" }
+  | { state: "checking" }
+  | { state: "up_to_date" }
+  | { state: "available"; version: string; notes: string | null }
+  | { state: "downloading"; version: string; downloaded: number; total: number | null }
+  | { state: "restarting"; version: string }
+  | { state: "failed"; stage: "check" | "download" | "install"; message: string; version: string | null };
+
 /** A failed request: Bee unreachable (status 0) or an error Bee answered with. */
 export class BeeError extends Error {
   readonly status: number;
@@ -162,6 +174,12 @@ export interface Shell {
   restartService(): Promise<boolean>;
   /** Saves Bee's diagnostic report where the person chooses; null if cancelled. */
   exportDiagnostics(): Promise<string | null>;
+  updateStatus(): Promise<UpdateState>;
+  onUpdate(listener: (state: UpdateState) => void): () => void;
+  /** Asks the update endpoint now. */
+  checkUpdate(): Promise<UpdateState>;
+  /** Installs the update the last check found and restarts the app. */
+  installUpdate(): Promise<void>;
   /** Quits the app, stopping the app's own Bee. */
   quit(): Promise<void>;
   /** The shell asks the window to confirm quitting (the tray's Quit). */

@@ -9,6 +9,7 @@ mod occupied;
 mod service;
 mod settings;
 mod state;
+mod updates;
 
 use hyper::Method;
 use serde_json::Value;
@@ -47,6 +48,9 @@ struct Shared {
     stopped_since: Mutex<Option<Instant>>,
     /// False on a Linux desktop that shows no tray icons.
     tray_available: bool,
+    updates: updates::Updates,
+    /// The app's own data directory, once known.
+    data_dir: Mutex<Option<PathBuf>>,
 }
 
 /// Whether this desktop shows tray icons. GNOME shows none unless an
@@ -340,6 +344,40 @@ async fn export_diagnostics(app: AppHandle, shared: tauri::State<'_, Arc<Shared>
     Ok(Some(path.display().to_string()))
 }
 
+#[tauri::command]
+fn update_status(shared: tauri::State<'_, Arc<Shared>>) -> updates::UpdateState {
+    shared.updates.state()
+}
+
+#[tauri::command]
+async fn check_update(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>) -> Result<updates::UpdateState, ()> {
+    Ok(shared.updates.check(&app, true).await)
+}
+
+/// Installs the update the last check found and restarts into it. Quitting
+/// stops the app's own Bee on the way out, as any quit does, and the new
+/// version starts it again.
+#[tauri::command]
+async fn install_update(app: AppHandle, shared: tauri::State<'_, Arc<Shared>>) -> Result<(), String> {
+    shared.updates.install(&app).await?;
+    if let Some(dir) = shared.data_dir.lock().unwrap().as_ref() {
+        updates::mark_show_after_update(dir);
+    }
+    app.request_restart();
+    Ok(())
+}
+
+/// Checks for an update a while after the app starts and then every day.
+fn watch_updates(app: AppHandle, shared: Arc<Shared>) {
+    tauri::async_runtime::spawn(async move {
+        tokio::time::sleep(updates::FIRST_CHECK).await;
+        loop {
+            shared.updates.check(&app, false).await;
+            tokio::time::sleep(updates::CHECK_EVERY).await;
+        }
+    });
+}
+
 #[derive(serde::Serialize)]
 struct SettingsView {
     #[serde(flatten)]
@@ -453,6 +491,8 @@ fn main() {
         explanations: Mutex::new(BTreeMap::new()),
         stopped_since: Mutex::new(None),
         tray_available: tray_available(),
+        updates: updates::Updates::new(),
+        data_dir: Mutex::new(None),
     });
     let background = std::env::args().any(|arg| arg == BACKGROUND_ARG);
 
@@ -463,8 +503,9 @@ fn main() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .manage(shared.clone())
-        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, restart_service, app_info, open_logs, export_diagnostics])
+        .invoke_handler(tauri::generate_handler![get_state, bee_request, quit_app, get_settings, set_settings, retry_service, restart_service, app_info, open_logs, export_diagnostics, update_status, check_update, install_update])
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 api.prevent_close();
@@ -495,6 +536,11 @@ fn main() {
             *shared.settings.lock().unwrap() = settings;
             *shared.store.lock().unwrap() = Some(store);
             *shared.history.lock().unwrap() = Some(alerts::History::load(&dir));
+            // An app restarted by an update shows its window: the person
+            // installed it from there, even if this run began at login.
+            let updated = updates::take_show_after_update(&dir);
+            let background = background && !updated;
+            *shared.data_dir.lock().unwrap() = Some(dir);
             if background {
                 eprintln!("[bee-desktop] started in the background");
             } else {
@@ -521,6 +567,7 @@ fn main() {
             let service = shared.service.clone();
             tauri::async_runtime::spawn(async move { service.run().await });
             watch(app.handle().clone(), shared.clone());
+            watch_updates(app.handle().clone(), shared.clone());
             Ok(())
         })
         .build(tauri::generate_context!())

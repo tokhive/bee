@@ -2,7 +2,7 @@
 // ordinary browser (`BEE_DEV_CONFIG=... npm run dev`). It reads Bee through
 // the dev server's /__bee bridge and keeps settings in localStorage, so the
 // window can be worked on against the mock Bee without building the app.
-import { BeeError, type Overview, type PlatformState, type Settings, type Shell, type Snapshot } from "./bee";
+import { BeeError, type Overview, type PlatformState, type Settings, type Shell, type Snapshot, type UpdateState } from "./bee";
 import { copyText } from "./tauriShell";
 
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
@@ -54,6 +54,16 @@ function loadSettings(): Settings {
   return { ...settings, resolved_language: settings.language === "system" ? system : settings.language, tray_available: true };
 }
 
+// A pretend update, so the About section can be worked on: a check finds
+// 9.9.9 and installing it counts up to a restart that never comes.
+let update: UpdateState = { state: "idle" };
+const updateListeners = new Set<(state: UpdateState) => void>();
+function setUpdate(next: UpdateState) {
+  update = next;
+  updateListeners.forEach((listener) => listener(next));
+}
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 export const devShell: Shell = {
   getState: read,
   onState(listener) {
@@ -96,6 +106,27 @@ export const devShell: Shell = {
     link.download = "bee-diagnostics.json";
     link.click();
     return "bee-diagnostics.json";
+  },
+  async updateStatus() {
+    return update;
+  },
+  onUpdate(listener) {
+    updateListeners.add(listener);
+    return () => updateListeners.delete(listener);
+  },
+  async checkUpdate() {
+    setUpdate({ state: "checking" });
+    await pause(600);
+    setUpdate({ state: "available", version: "9.9.9", notes: "Fixes and improvements." });
+    return update;
+  },
+  async installUpdate() {
+    const total = 12_000_000;
+    for (let downloaded = 0; downloaded <= total; downloaded += 1_500_000) {
+      setUpdate({ state: "downloading", version: "9.9.9", downloaded, total });
+      await pause(200);
+    }
+    setUpdate({ state: "restarting", version: "9.9.9" });
   },
   async quit() {
     window.alert("quit_app");

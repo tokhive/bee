@@ -47,5 +47,14 @@
     "macOS": {
       "minimumSystemVersion": "12.0"
     }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "",
+      "endpoints": [
+        "https://github.com/tokhive/bee/releases/download/desktop-latest/latest.json"
+      ],
+      "requireSignedVersion": true
+    }
   }
 }

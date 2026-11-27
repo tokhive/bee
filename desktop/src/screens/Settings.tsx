@@ -11,6 +11,7 @@ import { managesAccounts } from "../lib/model";
 import { isMac } from "../lib/utils";
 import { BackButton } from "./Onboarding";
 import { NetworkSettings } from "./NetworkSettings";
+import { UpdateRow } from "./UpdateRow";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -134,9 +135,7 @@ export function SettingsPage() {
           </Row>
         </Section>
         <Section title={t.settings.about}>
-          <Row>
-            <span>{t.settings.version(info?.version ?? "")}</span>
-          </Row>
+          <UpdateRow />
           <details className="text-[12.5px] text-muted">
             <summary className="cursor-pointer">{t.settings.tech}</summary>
             <dl className="mt-2 mb-0 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">

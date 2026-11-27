@@ -32,6 +32,11 @@ import (
 //	-ldflags "-X github.com/tokhive/bee/agent.TEEApplicationIDs=... -X ..."
 //
 // ) with the new values. An empty application or policy pin fails closed.
+//
+// The pins are the fallback. A release Bee first looks for the signed TEE
+// release catalog (tee_catalog.go), whose signing key is compiled in the same
+// way, and trusts the images it lists as active; the pins apply only while no
+// verified catalog is available.
 var (
 	// TEEApplicationIDs is the comma-separated allowlist of measured images
 	// ("snp-app:<sha256>") this release trusts. Two entries cover the window
@@ -105,7 +110,9 @@ type signedCredentialKey struct {
 
 // errInboxAttestation is an errInboxIdentity: a statement this Bee will not
 // believe means the TEE is not the enclave this build trusts, which retrying
-// cannot fix. It therefore halts and tells the operator to update Bee.
+// cannot fix. It therefore halts and tells the operator to update Bee. The one
+// exception is an image or whitelist the trust does not list yet: with the
+// online release catalog (tee_catalog.go), fetchInboxKey retries that instead.
 var errInboxAttestation = fmt.Errorf("%w: the TEE did not prove the inbox key belongs to a trusted enclave", errInboxIdentity)
 
 var (
@@ -156,14 +163,15 @@ func loadTEETrust() (teeTrust, error) {
 		copy(hash[:], policy)
 		policies[hash] = struct{}{}
 	}
-	trust := teeTrust{applications: applications, policyHashes: policies}
-	// The statement names the image it claims; the allowlist above has already
-	// checked that name, so asserting it again in the evidence is what binds
-	// the name to the hardware report.
-	trust.checkEvidence = func(identity platform.Identity) error {
-		return sevsnp.Verifier{ExpectedApp: identity.ApplicationID}.CheckEvidence(identity)
-	}
-	return trust, nil
+	return teeTrust{applications: applications, policyHashes: policies, checkEvidence: checkTEEEvidence}, nil
+}
+
+// checkTEEEvidence checks the hardware report. The statement names the image
+// it claims; the allowlist has already checked that name, so asserting it
+// again in the evidence is what binds the name to the report. Tests replace
+// it; production builds always use sevsnp.
+var checkTEEEvidence = func(identity platform.Identity) error {
+	return sevsnp.Verifier{ExpectedApp: identity.ApplicationID}.CheckEvidence(identity)
 }
 
 // trustsPolicy reports whether a whitelist digest is one this build pins.
@@ -208,7 +216,7 @@ func verifyCredentialKey(encoded, nonce []byte, trust teeTrust) (tee.InboxPublic
 		return tee.InboxPublic{}, fmt.Errorf("%w: the statement answers a different challenge", errInboxAttestation)
 	}
 	if len(statement.PolicyHash) != sha256.Size || !trust.trustsPolicy(statement.PolicyHash) {
-		return tee.InboxPublic{}, fmt.Errorf("%w: the TEE runs a different whitelist than this release trusts", errInboxAttestation)
+		return tee.InboxPublic{}, fmt.Errorf("%w: %w: the TEE runs a different whitelist than this release trusts", errInboxAttestation, errUntrustedTEE)
 	}
 	if len(statement.InboxKeyID) != sha256.Size || len(statement.InboxPublic) == 0 {
 		return tee.InboxPublic{}, fmt.Errorf("%w: the statement carries no usable inbox key", errInboxAttestation)
@@ -221,7 +229,7 @@ func verifyCredentialKey(encoded, nonce []byte, trust teeTrust) (tee.InboxPublic
 		return tee.InboxPublic{}, err
 	}
 	if _, ok := trust.applications[identity.ApplicationID]; !ok {
-		return tee.InboxPublic{}, fmt.Errorf("%w: attested image %q is not one this release trusts; update Bee", errInboxAttestation, identity.ApplicationID)
+		return tee.InboxPublic{}, fmt.Errorf("%w: %w: attested image %q is not one this release trusts", errInboxAttestation, errUntrustedTEE, identity.ApplicationID)
 	}
 	if err := trust.checkEvidence(identity); err != nil {
 		return tee.InboxPublic{}, fmt.Errorf("%w: %v", errInboxAttestation, err)
@@ -326,7 +334,18 @@ func fetchInboxKey(ctx context.Context, state localState, staticPin string) (tee
 		if err != nil {
 			return tee.InboxPublic{}, fmt.Errorf("%w: %v", errInboxAttestation, err)
 		}
-		key, err := verifyCredentialKey(response.Attestation, nonce, trust)
+		key, err := verifyCredentialKey(response.Attestation, nonce, trust.withCatalog(sharedTEECatalog.current(ctx, false)))
+		if errors.Is(err, errUntrustedTEE) && TEECatalogURL != "" {
+			// A TEE release this Bee has not seen yet: a newer signed catalog
+			// may list it, and the statement still answers this challenge.
+			key, err = verifyCredentialKey(response.Attestation, nonce, trust.withCatalog(sharedTEECatalog.current(ctx, true)))
+			if errors.Is(err, errUntrustedTEE) {
+				// No credential has left this Bee, and the release may simply
+				// not be published yet, so this is worth retrying rather than
+				// halting: the error no longer counts as errInboxIdentity.
+				return tee.InboxPublic{}, fmt.Errorf("%w: credentials were not submitted; waiting for a signed TEE release catalog that admits it: %v", errUntrustedTEE, err)
+			}
+		}
 		if err != nil {
 			return tee.InboxPublic{}, err
 		}

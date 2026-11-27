@@ -25,7 +25,9 @@ import (
 // and its SSHSIG signature, made with the offline release-signing key, and the
 // catalog records which image each environment runs. A Bee downloads it,
 // checks the signature against the key compiled in below, and trusts the
-// images the catalog says the environment currently runs.
+// images the catalog says the environment currently runs, never a revoked
+// one. A TEE is released, with its activation recorded, before Hive switches
+// to it, so Bees already trust the new image at the switch.
 //
 // Nothing about the trust anchor is fetched: the signing key, the namespace
 // and the environment are build inputs, so whoever serves the files can only
@@ -82,6 +84,10 @@ type teeCatalogFile struct {
 		Action        string `json:"action"`
 		At            string `json:"at"`
 	} `json:"deployment_events"`
+	Revocations []struct {
+		ApplicationID string `json:"application_id"`
+		At            string `json:"at"`
+	} `json:"revocations"`
 }
 
 // catalogTrust is what a verified catalog contributes: the images the
@@ -92,10 +98,12 @@ type catalogTrust struct {
 	latest       time.Time
 }
 
-// parseTEECatalog reads the active images of one environment from a catalog
-// whose signature has already been checked. Events apply in the order they
-// are listed; an image counts once it is activated and stops once it is
-// deactivated.
+// parseTEECatalog reads the images one environment may run from a catalog
+// whose signature has already been checked: the active image, never a revoked
+// one. Revoking an image does not deactivate it in the catalog, so the
+// revocations are read separately. Deployment events apply in the order they
+// are listed; an action this build does not know is skipped, since ignoring
+// it cannot widen the trust.
 func parseTEECatalog(data []byte, environment string) (catalogTrust, error) {
 	var file teeCatalogFile
 	if err := json.Unmarshal(data, &file); err != nil {
@@ -113,14 +121,29 @@ func parseTEECatalog(data []byte, environment string) (catalogTrust, error) {
 		policies[application] = hash
 	}
 	trust := catalogTrust{applications: map[string]struct{}{}, policyHashes: map[[32]byte]struct{}{}}
-	active := map[string]bool{}
-	for _, event := range file.DeploymentEvents {
-		at, err := time.Parse(time.RFC3339, event.At)
+	// Every dated entry counts towards the newest one, so a replayed catalog
+	// that predates a revocation is older than the real one.
+	when := func(value string) (time.Time, error) {
+		at, err := time.Parse(time.RFC3339, value)
 		if err != nil {
-			return catalogTrust{}, fmt.Errorf("TEE release catalog has an unreadable event time %q", event.At)
+			return time.Time{}, fmt.Errorf("TEE release catalog has an unreadable time %q", value)
 		}
 		if at.After(trust.latest) {
 			trust.latest = at
+		}
+		return at, nil
+	}
+	revoked := map[string]bool{}
+	for _, revocation := range file.Revocations {
+		if _, err := when(revocation.At); err != nil {
+			return catalogTrust{}, err
+		}
+		revoked[strings.ToLower(revocation.ApplicationID)] = true
+	}
+	trusted := map[string]bool{}
+	for _, event := range file.DeploymentEvents {
+		if _, err := when(event.At); err != nil {
+			return catalogTrust{}, err
 		}
 		if event.Environment != environment {
 			continue
@@ -128,14 +151,15 @@ func parseTEECatalog(data []byte, environment string) (catalogTrust, error) {
 		application := strings.ToLower(event.ApplicationID)
 		switch event.Action {
 		case "activate":
-			active[application] = true
+			trusted[application] = true
 		case "deactivate":
-			delete(active, application)
-		default:
-			return catalogTrust{}, fmt.Errorf("TEE release catalog has an unknown action %q", event.Action)
+			delete(trusted, application)
 		}
 	}
-	for application := range active {
+	for application := range revoked {
+		delete(trusted, application)
+	}
+	for application := range trusted {
 		policy, ok := policies[application]
 		if !ok {
 			return catalogTrust{}, fmt.Errorf("TEE release catalog activates %s without a release entry", application)

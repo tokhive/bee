@@ -136,29 +136,123 @@ BEE_VERSION=0.1.0 sh scripts/package-macos.sh x64    # or arm64
 ```
 
 This builds the window, the `bee` it bundles (reporting `BEE_VERSION`) and the
-app, and leaves `Bee.app` and `Bee_<version>_<arch>.dmg` under
-`src-tauri/target/<triple>/release/bundle/`. `BEE_VERSION` is
+app, signs and checks it, and leaves the release files in `out/macos-<arch>/`
+(`aarch64` or `x64`): `Bee_<version>_<arch>.dmg` and, with the updater key,
+the update archive `Bee_<version>_<arch>.app.tar.gz`, its `.sig` and this
+architecture's manifest entry `darwin-<aarch64|x86_64>.json`. `BEE_VERSION` is
 major.minor.patch and is the version of both the app and its `bee`; leave it
 out for a development package, whose `bee` stays `dev` and so works against a
 software TEE such as the Hive repository's `hive-local`. A `bee` with a release
 version trusts only a real TEE's attestation. The app runs on macOS 12 and
 later.
 
-Without a certificate the bundle is signed ad hoc: it runs on the machine that
-built it, and on another Mac Gatekeeper refuses it until the person opens it
-from the context menu (Open). A release signs with a Developer ID certificate
-and notarises, which Tauri does when these are set:
+### Signing and notarisation
+
+The script signs; Tauri's own `APPLE_*` variables are ignored. Credentials are
+referred to by name only, never passed in the environment:
 
 | Variable | Meaning |
 | --- | --- |
-| `APPLE_SIGNING_IDENTITY` | `Developer ID Application: Name (TEAMID)` |
-| `APPLE_CERTIFICATE`, `APPLE_CERTIFICATE_PASSWORD` | The certificate as a base64 `.p12` and its password, when it is not already in the keychain. |
-| `APPLE_ID`, `APPLE_PASSWORD`, `APPLE_TEAM_ID` | Notarisation with an Apple ID and an app-specific password. |
-| `APPLE_API_ISSUER`, `APPLE_API_KEY`, `APPLE_API_KEY_PATH` | Notarisation with an App Store Connect API key instead. |
+| `BEE_SIGN_IDENTITY` | A Developer ID Application certificate in the keychain, `Developer ID Application: Name (TEAMID)`. Without it everything is signed ad hoc. |
+| `BEE_NOTARY_PROFILE` | A `notarytool` keychain profile, for example `bee-notary`. With it the app and the dmg are notarised, stapled and assessed with `spctl`; the script fails unless Apple accepts them. |
+| `BEE_NOTARY_KEYCHAIN` | The keychain holding that profile, when it is not the default one. |
+
+Create the profile once, entering the app-specific password at the prompt:
+
+```sh
+xcrun notarytool store-credentials bee-notary --apple-id <Apple ID> --team-id <TEAMID>
+```
+
+```sh
+BEE_VERSION=0.1.0 BEE_SIGN_IDENTITY="Developer ID Application: Name (TEAMID)" BEE_NOTARY_PROFILE=bee-notary sh scripts/package-macos.sh arm64
+```
+
+The background service inside the app (`Contents/MacOS/bee`) is always signed
+with the identifier `ai.tokhive.bee.service` and the app with
+`ai.tokhive.bee`, so the keychain's *Always Allow* for reading a Claude login,
+which macOS ties to identifier and team, survives updates. Without a
+certificate the bundle is signed ad hoc: it runs on the machine that built it,
+and on another Mac Gatekeeper refuses it until the person opens it from the
+context menu (Open).
 
 Quitting the app from its menu, the Dock or the tray stops the `bee` it
 started, whichever way macOS ends the process. A `bee` that was already
 running, from the command line or a service, is left alone.
+
+## Updates
+
+The app updates itself with the Tauri updater. It checks 30 seconds after it
+starts and then daily, and Settings → About checks on request; a found update
+marks the settings button and is installed from About, which downloads it,
+replaces the app and restarts it (stopping and restarting the app's own `bee`,
+and showing the window even when the app had started at login).
+
+Installed apps read the manifest at
+`https://github.com/tokhive/bee/releases/download/desktop-latest/latest.json`
+(`plugins.updater` in `src-tauri/tauri.conf.json`). The updater accepts an
+archive only with a valid signature by the update key for the very version the
+manifest announces (`requireSignedVersion`), so neither a tampered archive nor
+an older release under a newer number installs. A build without a public key
+in `tauri.conf.json` cannot check, and says so in About.
+
+**The update key.** Generate it once, on a trusted machine, with a password:
+
+```sh
+cd desktop && npx tauri signer generate -w ~/.tauri/bee-updater.key
+```
+
+Commit the public key (`~/.tauri/bee-updater.key.pub`, one base64 line) as
+`plugins.updater.pubkey`. Keep the private key and its password out of the
+repository: in a password manager with an offline backup, and as the
+`TAURI_SIGNING_PRIVATE_KEY` and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` secrets of
+the release workflow. Losing it means installed apps can no longer be updated;
+they would have to download a new app by hand. To sign locally, point the
+script at it:
+
+```sh
+TAURI_SIGNING_PRIVATE_KEY_PATH=~/.tauri/bee-updater.key TAURI_SIGNING_PRIVATE_KEY_PASSWORD=... BEE_VERSION=0.1.0 sh scripts/package-macos.sh
+```
+
+**Trying an update locally.** Build two versions against a temporary key and a
+local manifest, install the older one and check for updates in About:
+
+```sh
+npx tauri signer generate --ci -w /tmp/bee-test.key
+for v in 0.1.0 0.1.1; do
+  BEE_VERSION=$v TAURI_SIGNING_PRIVATE_KEY_PATH=/tmp/bee-test.key BEE_UPDATER_PUBKEY="$(cat /tmp/bee-test.key.pub)" \
+    BEE_UPDATER_ENDPOINT=http://127.0.0.1:8765/latest.json sh scripts/package-macos.sh && cp -R out/macos-aarch64 /tmp/bee-$v
+done
+mkdir -p /tmp/bee-updates && cp /tmp/bee-0.1.1/*.app.tar.gz /tmp/bee-updates/
+node scripts/updater-manifest.mjs --version 0.1.1 --base-url http://127.0.0.1:8765 /tmp/bee-0.1.1/darwin-aarch64.json >/tmp/bee-updates/latest.json
+python3 -m http.server 8765 --bind 127.0.0.1 --directory /tmp/bee-updates
+```
+
+`BEE_UPDATER_PUBKEY` and `BEE_UPDATER_ENDPOINT` exist only for this; never
+publish such a build.
+
+## Release
+
+A desktop release has the version of the command-line release whose commit it
+is built from: tag `desktop-vX.Y.Z` on the commit of `vX.Y.Z`. When only the
+app needs a fix, both get a new version.
+
+Pushing the tag runs the [desktop release workflow](../.github/workflows/desktop-release.yml):
+it builds, signs and notarises both architectures and runs
+`scripts/publish-macos.sh`, which creates the release `desktop-vX.Y.Z` with
+the dmgs and update archives, never marked *Latest* (that stays the
+command-line release, which `install.sh` downloads), and only then replaces
+`latest.json` in the release `desktop-latest`. Without Actions, do the same by
+hand on a Mac with the certificate, notary profile and update key:
+
+```sh
+git tag desktop-v0.1.0 v0.1.0^{commit} && git push origin desktop-v0.1.0
+for arch in arm64 x64; do BEE_VERSION=0.1.0 BEE_SIGN_IDENTITY=... BEE_NOTARY_PROFILE=bee-notary TAURI_SIGNING_PRIVATE_KEY_PATH=... sh scripts/package-macos.sh $arch; done
+BEE_VERSION=0.1.0 sh scripts/publish-macos.sh
+```
+
+The publish script refuses dmgs without a notarisation ticket. Notes in a file
+named by `BEE_RELEASE_NOTES` go into the release and are shown in About with
+the update.
 
 ## Tests
 

@@ -238,13 +238,18 @@ impl Service {
         let Some(pid) = pid else { return };
         terminate(pid);
         let deadline = Instant::now() + STOP_GRACE;
-        while alive(pid) {
+        // Bee is reaped here rather than left to the service's loop: while
+        // this thread blocks the main thread, a task waiting on it (a tray
+        // update) can keep the runtime from reaping, and an unreaped Bee
+        // still looks alive, which held a Cmd+Q for the whole grace period.
+        while !reap(pid) {
             if Instant::now() >= deadline {
                 eprintln!("[bee-desktop] bee did not stop within {STOP_GRACE:?}; killing it");
                 kill(pid);
+                let _ = reap(pid);
                 return;
             }
-            std::thread::sleep(Duration::from_millis(100));
+            std::thread::sleep(Duration::from_millis(50));
         }
     }
 
@@ -282,6 +287,25 @@ fn alive(_pid: u32) -> bool {
     false
 }
 
+/// Collects the child pid if it has exited and says whether it is gone,
+/// also when something else has already collected it.
+#[cfg(unix)]
+fn reap(pid: u32) -> bool {
+    use nix::errno::Errno;
+    use nix::sys::wait::{waitpid, WaitPidFlag, WaitStatus};
+    use nix::unistd::Pid;
+    match waitpid(Pid::from_raw(pid as i32), Some(WaitPidFlag::WNOHANG)) {
+        Ok(WaitStatus::StillAlive) => false,
+        Ok(_) | Err(Errno::ECHILD) => true,
+        Err(_) => !alive(pid),
+    }
+}
+
+#[cfg(not(unix))]
+fn reap(_pid: u32) -> bool {
+    true
+}
+
 #[cfg(unix)]
 fn terminate(pid: u32) {
     use nix::sys::signal::{kill as send, Signal};
@@ -309,15 +333,28 @@ mod tests {
     #[test]
     fn stop_blocking_ends_a_bee_that_is_still_running() {
         let service = Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true);
-        let mut child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
-        *service.child.lock().unwrap() = Some(child.id());
-        // A real Bee is reaped by the service's own loop; do the same here.
-        let reaper = std::thread::spawn(move || child.wait().unwrap());
+        let child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
+        let pid = child.id();
+        *service.child.lock().unwrap() = Some(pid);
+        // Nothing else reaps it, as when Cmd+Q blocks the main thread and the
+        // service's loop cannot run: an exited Bee must not look alive.
         let started = Instant::now();
         service.stop_blocking();
         assert!(started.elapsed() < Duration::from_secs(5), "took {:?}", started.elapsed());
         assert!(service.quitting.load(Ordering::SeqCst));
-        assert!(!reaper.join().unwrap().success(), "sleep ended by a signal, not by itself");
+        assert!(!alive(pid), "sleep was left a zombie");
+    }
+
+    #[test]
+    fn stop_blocking_accepts_a_bee_reaped_elsewhere() {
+        let service = Service::new(PathBuf::from("/tmp/none/bee.json"), PathBuf::from("bee"), true);
+        let mut child = std::process::Command::new("sleep").arg("30").spawn().unwrap();
+        *service.child.lock().unwrap() = Some(child.id());
+        child.kill().unwrap();
+        child.wait().unwrap();
+        let started = Instant::now();
+        service.stop_blocking();
+        assert!(started.elapsed() < Duration::from_millis(500), "took {:?}", started.elapsed());
     }
 
     #[tokio::test]

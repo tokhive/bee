@@ -3,7 +3,7 @@
 // GET /v1/explanations (regenerate it from the mock Bee when the catalog
 // changes: curl --unix-socket <dir>/control/bee.sock http://bee/v1/explanations).
 import { vi } from "vitest";
-import { BeeError, type Account, type Network, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot } from "../lib/bee";
+import { BeeError, type Account, type Network, type Overview, type PlatformState, type Settings, type Shell, type SharingState, type Snapshot, type UpdateState } from "../lib/bee";
 import catalog from "./explanations.json";
 
 export const claude: Account = {
@@ -81,6 +81,8 @@ type Handler = (method: string, path: string, body: unknown) => unknown;
 export type FakeShell = Shell & {
   push: (next: Snapshot) => void;
   requestQuit: () => void;
+  /** The shell reports a change of the app's update. */
+  pushUpdate: (state: UpdateState) => void;
   drop: (path: string) => void;
   calls: { method: string; path: string; body: unknown }[];
   answer: (handler: Handler) => void;
@@ -94,6 +96,8 @@ export function refuse(status: number, code: string): never {
 export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): FakeShell {
   const states = new Set<(s: Snapshot) => void>();
   const quits = new Set<() => void>();
+  const updates = new Set<(state: UpdateState) => void>();
+  let update: UpdateState = { state: "idle" };
   const drops = new Set<(p: string) => void>();
   let handler: Handler = () => ({});
   let current: Settings = { autostart: true, keep_in_tray: true, notify: true, language: "zh", resolved_language: "zh", tray_available: true, ...settings };
@@ -124,6 +128,13 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
     retryService: vi.fn(async () => {}),
     restartService: vi.fn(async () => true),
     exportDiagnostics: vi.fn(async () => "/tmp/bee-diagnostics.json"),
+    updateStatus: vi.fn(async () => update),
+    onUpdate: (listener) => {
+      updates.add(listener);
+      return () => updates.delete(listener);
+    },
+    checkUpdate: vi.fn(async () => update),
+    installUpdate: vi.fn(async () => {}),
     quit: vi.fn(async () => {}),
     onQuitRequest: (listener) => {
       quits.add(listener);
@@ -138,6 +149,10 @@ export function fakeShell(first: Snapshot, settings: Partial<Settings> = {}): Fa
     copy: vi.fn(async () => {}),
     push: (next) => states.forEach((listener) => listener(next)),
     requestQuit: () => quits.forEach((listener) => listener()),
+    pushUpdate: (next) => {
+      update = next;
+      updates.forEach((listener) => listener(next));
+    },
     drop: (path) => drops.forEach((listener) => listener(path)),
     answer: (next) => {
       handler = next;

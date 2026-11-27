@@ -5,7 +5,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import { getCurrentWebview } from "@tauri-apps/api/webview";
 import { open } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { toBeeError, type Shell, type Snapshot } from "./bee";
+import { toBeeError, type Shell, type Snapshot, type UpdateState } from "./bee";
 
 function subscribe(start: () => Promise<UnlistenFn>): () => void {
   let stopped = false;
@@ -64,6 +64,10 @@ export const tauriShell: Shell = {
       throw toBeeError(err);
     }
   },
+  updateStatus: () => invoke<UpdateState>("update_status"),
+  onUpdate: (listener) => subscribe(() => listen<UpdateState>("bee://update", (event) => listener(event.payload))),
+  checkUpdate: () => invoke<UpdateState>("check_update"),
+  installUpdate: () => invoke("install_update"),
   quit: () => invoke("quit_app"),
   onQuitRequest: (listener) => subscribe(() => listen("bee://quit-requested", () => listener())),
   openUrl: (url) => openUrl(url),

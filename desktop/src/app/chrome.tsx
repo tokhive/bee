@@ -10,10 +10,12 @@ import { maskEmail } from "../lib/format";
 import { globalIssue, managesAccounts, runFromCommandLine } from "../lib/model";
 import { cn } from "../lib/utils";
 import { useDiagnostics } from "./useDiagnostics";
+import { useUpdate } from "./useUpdate";
 
 export function Header() {
   const { snapshot, t, shell } = useApp();
   const { go } = useNav();
+  const updateReady = useUpdate(shell).state === "available";
   const overview = snapshot?.overview ?? null;
   const issue = snapshot ? globalIssue(snapshot) : "down";
   let connection: [string, string];
@@ -50,15 +52,17 @@ export function Header() {
         )}
         <button
           type="button"
-          className="inline-flex size-[30px] cursor-pointer items-center justify-center rounded-md border border-line bg-page hover:bg-sunken"
+          className="relative inline-flex size-[30px] cursor-pointer items-center justify-center rounded-md border border-line bg-page hover:bg-sunken"
           aria-label={t.header.settings}
-          title={t.header.settings}
+          aria-description={updateReady ? t.update.badge : undefined}
+          title={updateReady ? `${t.header.settings} · ${t.update.badge}` : t.header.settings}
           onClick={() => go({ name: "settings" })}
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             <circle cx="12" cy="12" r="3" />
             <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
           </svg>
+          {updateReady && <span aria-hidden="true" className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-info" />}
         </button>
       </div>
     </header>

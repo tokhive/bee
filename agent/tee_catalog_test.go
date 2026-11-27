@@ -197,8 +197,6 @@ func TestParseTEECatalogTrustsOnlyActiveImages(t *testing.T) {
 	}
 
 	for name, bad := range map[string][]byte{
-		"unknown action": catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA},
-			catalogEvent{"production", catalogImageA, "promote", "2026-11-20T02:55:13Z"}),
 		"no release entry": catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA},
 			catalogEvent{"production", catalogImageB, "activate", "2026-11-20T02:55:13Z"}),
 		"nothing active": catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA},
@@ -234,6 +232,67 @@ func TestVerifyTEECatalogNeedsTheReleaseKeyAndNamespace(t *testing.T) {
 	}
 	if err := verifyTEECatalog(data, []byte("not a signature")); err == nil {
 		t.Fatal("garbage was accepted as a signature")
+	}
+}
+
+// withRevocations adds tee's revocation records, which sit beside the
+// deployment events and do not deactivate anything.
+func withRevocations(t *testing.T, data []byte, revoked map[string]string) []byte {
+	t.Helper()
+	var file map[string]any
+	if err := json.Unmarshal(data, &file); err != nil {
+		t.Fatal(err)
+	}
+	var revocations []map[string]string
+	for application, at := range revoked {
+		revocations = append(revocations, map[string]string{"application_id": application, "at": at, "reason": "test", "reference_url": "https://example.com/advisory"})
+	}
+	file["revocations"] = revocations
+	out, err := json.Marshal(file)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
+// tee records a revocation without deactivating the image, so an image can be
+// active and revoked at once; it must not be trusted.
+func TestParseTEECatalogDropsRevokedImages(t *testing.T) {
+	base := catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA},
+		catalogEvent{"production", catalogImageA, "activate", "2026-11-20T02:55:13Z"})
+	if _, err := parseTEECatalog(withRevocations(t, base, map[string]string{catalogImageA: "2026-11-28T00:00:00Z"}), "production"); err == nil {
+		t.Fatal("a revoked image that is still active was trusted")
+	}
+	both := catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA, catalogImageB: catalogPolicyB},
+		catalogEvent{"production", catalogImageA, "activate", "2026-11-20T02:55:13Z"},
+		catalogEvent{"staging", catalogImageB, "activate", "2026-11-21T02:55:13Z"},
+		catalogEvent{"production", catalogImageA, "deactivate", "2026-11-22T02:55:13Z"},
+		catalogEvent{"production", catalogImageB, "activate", "2026-11-22T02:55:13Z"})
+	trust, err := parseTEECatalog(withRevocations(t, both, map[string]string{catalogImageA: "2026-11-28T00:00:00Z"}), "production")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := trust.applications[catalogImageB]; !ok || len(trust.applications) != 1 {
+		t.Fatalf("trusted images: %v", trust.applications)
+	}
+	// The revocation is the newest entry, so a replay of the catalog from
+	// before it is older and is refused by the caller.
+	if want := time.Date(2026, 11, 28, 0, 0, 0, 0, time.UTC); !trust.latest.Equal(want) {
+		t.Fatalf("latest entry %s", trust.latest)
+	}
+}
+
+// An action a later tee adds is skipped, not a reason to drop the catalog.
+func TestParseTEECatalogSkipsUnknownActions(t *testing.T) {
+	data := catalogJSON(t, map[string]string{catalogImageA: catalogPolicyA, catalogImageB: catalogPolicyB},
+		catalogEvent{"production", catalogImageA, "activate", "2026-11-20T02:55:13Z"},
+		catalogEvent{"production", catalogImageB, "promote", "2026-11-21T02:55:13Z"})
+	trust, err := parseTEECatalog(data, "production")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := trust.applications[catalogImageA]; !ok || len(trust.applications) != 1 {
+		t.Fatalf("trusted images: %v", trust.applications)
 	}
 }
 

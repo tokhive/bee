@@ -258,6 +258,14 @@ func antigravityLoad(token string, post antigravityPost) (antigravityAccount, er
 			account.onboarding = strings.TrimSpace(allowed.ID)
 		}
 	}
+	// With no default tier named, the account is onboarded with the tier it
+	// is on, and failing that the free tier, as CLIProxyAPI does.
+	if account.onboarding == "" {
+		account.onboarding = strings.TrimSpace(string(loaded.Current))
+	}
+	if account.onboarding == "" {
+		account.onboarding = "free-tier"
+	}
 	account.plan = antigravityPlan(account.tier)
 	if account.plan == "" {
 		return account, failf("BEE-ANTIGRAVITY-TIER", "tier %s", strconv.Quote(boundedFailureText(safeText(account.tier, token), 64)))

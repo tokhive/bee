@@ -24,6 +24,11 @@ type antigravityCapabilitySource struct {
 	metadataModels []string
 	metadataPlan   string
 	metadataAt     time.Time
+	// metadataLevels are the thinking levels the listing declares for each
+	// model; metadataSpent the listed models whose own quota was spent, with
+	// when it resets (fetchAvailableModels' quotaInfo).
+	metadataLevels map[string][]string
+	metadataSpent  map[string]time.Time
 	// metadataStored is the stored plan the metadata was read for. The plan
 	// reported is the one Google names, which a sign-in stored before a
 	// change of subscription does not show until its next refresh.
@@ -146,7 +151,7 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 	// from the one that serves this account's requests and from no other. The
 	// plan decides which; it is asked for where the stored plan is served,
 	// which is the same endpoint unless the subscription has just changed.
-	plan, models, body := s.metadataPlan, s.metadataModels, map[string]string{"project": credential.ProjectID}
+	plan, models, levels, spent, body := s.metadataPlan, s.metadataModels, s.metadataLevels, s.metadataSpent, map[string]string{"project": credential.ProjectID}
 	metadataFresh := s.metadataAt.IsZero() || s.metadataStored != credential.Plan || !now.Before(s.metadataAt.Add(capabilityMetadataTTL))
 	if metadataFresh {
 		account, err := antigravityLoad(credential.AccessToken, antigravityOn(ctx, transport, credential.base(), credential.AccessToken))
@@ -155,7 +160,8 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 		}
 		plan = account.plan
 		var listing struct {
-			Models map[string]json.RawMessage `json:"models"`
+			Models        map[string]json.RawMessage `json:"models"`
+			GroupedModels map[string]json.RawMessage `json:"groupedModels"`
 		}
 		if err := antigravityFetchModels.post(ctx, transport, antigravityBase(beewire.AntigravityHostFor(plan)), credential.AccessToken, body, &listing); err != nil {
 			return refused(err)
@@ -164,6 +170,8 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 			return fail("fetchAvailableModels lists no models")
 		}
 		models = antigravityModels(listing.Models)
+		levels = antigravityThinkingLevels(listing.GroupedModels, models)
+		spent = antigravitySpent(listing.Models, now)
 	}
 	var summary antigravityQuota
 	if err := antigravityQuotaSummary.post(ctx, transport, antigravityBase(beewire.AntigravityHostFor(plan)), credential.AccessToken, body, &summary); err != nil {
@@ -176,7 +184,7 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 	}
 	result := unknown
 	result.Status, result.Plan, result.Windows = "ready", plan, windows
-	result.Models = append(result.Models, models...)
+	result.Models, result.ThinkingLevels = antigravityAvailable(models, levels, spent, now)
 	result.MetadataObservedAt = s.metadataAt
 	if metadataFresh {
 		result.MetadataObservedAt = now
@@ -186,6 +194,7 @@ func (s *antigravityCapabilitySource) observe(ctx context.Context, credential an
 	}
 	if metadataFresh {
 		s.metadataModels, s.metadataPlan, s.metadataStored, s.metadataAt = models, plan, credential.Plan, now
+		s.metadataLevels, s.metadataSpent = levels, spent
 	}
 	s.cached, s.cachedAt = result, now
 	return result
@@ -204,6 +213,87 @@ func antigravityModels(listed map[string]json.RawMessage) []string {
 	}
 	sort.Strings(models)
 	return models[:min(len(models), 128)]
+}
+
+// antigravityThinkingLevels reads the thinking levels a listing declares for
+// each model, under groupedModels: a model gemini-4-argon declaring the level
+// "low" is listed as gemini-4-argon-low (CLIProxyAPI reads the same field).
+// Only levels whose model-level name is among the models supplied are kept.
+func antigravityThinkingLevels(grouped map[string]json.RawMessage, models []string) map[string][]string {
+	listed := make(map[string]bool, len(models))
+	for _, id := range models {
+		listed[id] = true
+	}
+	levels := map[string][]string{}
+	for model, raw := range grouped {
+		var group struct {
+			Levels []struct {
+				Suffix string `json:"thinkingSuffix"`
+			} `json:"supportedThinkingLevels"`
+		}
+		if json.Unmarshal(raw, &group) != nil {
+			continue
+		}
+		for _, level := range group.Levels {
+			suffix := strings.ToLower(level.Suffix)
+			if suffix != "" && len(levels[model]) < 8 && listed[model+"-"+suffix] && !slices.Contains(levels[model], suffix) {
+				levels[model] = append(levels[model], suffix)
+			}
+		}
+	}
+	if len(levels) == 0 {
+		return nil
+	}
+	return levels
+}
+
+// antigravitySpent are the listed models whose own quota is spent, with when
+// it resets: quotaInfo with nothing remaining (a fraction left out is zero, as
+// in the quota summary) and a reset still to come. sub2api reads the same.
+func antigravitySpent(listed map[string]json.RawMessage, now time.Time) map[string]time.Time {
+	spent := map[string]time.Time{}
+	for id, raw := range listed {
+		var model struct {
+			Quota *struct {
+				Remaining float64 `json:"remainingFraction"`
+				Reset     string  `json:"resetTime"`
+			} `json:"quotaInfo"`
+		}
+		if json.Unmarshal(raw, &model) != nil || model.Quota == nil || model.Quota.Remaining > 0 {
+			continue
+		}
+		if reset, err := time.Parse(time.RFC3339, model.Quota.Reset); err == nil && reset.After(now) {
+			spent[id] = reset
+		}
+	}
+	return spent
+}
+
+// antigravityAvailable are the models to report now, and their declared
+// levels: a model whose quota is spent is left out until it resets, so Hive
+// sends it no request the upstream would refuse.
+func antigravityAvailable(models []string, levels map[string][]string, spent map[string]time.Time, now time.Time) ([]string, map[string][]string) {
+	available := make([]string, 0, len(models))
+	kept := map[string]bool{}
+	for _, id := range models {
+		if reset, ok := spent[id]; ok && now.Before(reset) {
+			continue
+		}
+		available = append(available, id)
+		kept[id] = true
+	}
+	var declared map[string][]string
+	for model, suffixes := range levels {
+		for _, suffix := range suffixes {
+			if kept[model+"-"+suffix] {
+				if declared == nil {
+					declared = map[string][]string{}
+				}
+				declared[model] = append(declared[model], suffix)
+			}
+		}
+	}
+	return available, declared
 }
 
 // antigravityQuota is retrieveUserQuotaSummary's answer: for each group of

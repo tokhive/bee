@@ -43,6 +43,10 @@ type antigravityCredential struct {
 	// Rejected is the OAuth error Google ended this sign-in with. A refresh
 	// token it names is not offered to Google again.
 	Rejected string `json:"rejected,omitempty"`
+	// Private is whether Google confirmed the account's product-improvement
+	// setting off (antigravityKeepPrivate). Until it has, every refresh tries
+	// again.
+	Private bool `json:"private,omitempty"`
 }
 
 // String keeps a credential out of anything that formats one by accident.

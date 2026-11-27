@@ -55,6 +55,22 @@ func platformControl(ctx context.Context, client *http.Client, state localState,
 	return nil
 }
 
+// supplyNoticeText says what the upstream asked of the account's owner, with
+// where to do it when it said.
+func supplyNoticeText(notice beewire.SupplyNotice) string {
+	text := "the upstream asked: " + notice.Reason
+	switch notice.Reason {
+	case "validation_required":
+		text = "Google asks you to verify this account before it serves again"
+	case "terms_of_service":
+		text = "Google has suspended Antigravity for this account; you can appeal"
+	}
+	if notice.URL != "" {
+		text += ": " + notice.URL
+	}
+	return text
+}
+
 // supplyReasonLabels says each reason Hive gives for not sending work in a
 // few words, for bee supply-status and bee status.
 var supplyReasonLabels = map[string]string{

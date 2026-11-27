@@ -61,6 +61,11 @@ func (f *googleFake) RoundTrip(r *http.Request) (*http.Response, error) {
 	f.calls = append(f.calls, address)
 	answer := f.answer[address]
 	f.mu.Unlock()
+	// Every sign-in and refresh turns the product-improvement setting off;
+	// unless a test says otherwise, Google confirms it off.
+	if answer == nil && (address == googleDaily+"setUserSettings" || address == googleDaily+"fetchUserInfo") {
+		answer = googleAnswer(200, `{"userSettings":{}}`)
+	}
 	if answer == nil {
 		f.t.Errorf("unexpected request to %s", address)
 		return nil, errors.New("unexpected request")

@@ -33,19 +33,18 @@ type egressConfig struct {
 	ConnectProxy string `json:"connect_proxy,omitempty"`
 	// desktopProxy is set when ConnectProxy came from the desktop app's own
 	// network settings rather than from this file.
-	desktopProxy       bool
-	Targets            []string           `json:"targets"`
-	InboxKeyID         string             `json:"inbox_key_id"`
-	Credential         tee.Secret         `json:"credential"`
-	Codex              *codexSource       `json:"codex,omitempty"`
-	Claude             *claudeSource      `json:"claude,omitempty"`
-	Antigravity        *antigravitySource `json:"antigravity,omitempty"`
-	OpenAIAPI          *openaiAPISource   `json:"openai_api,omitempty"`
-	ClaudeAPI          *officialAPISource `json:"claude_api,omitempty"`
-	GeminiAPI          *officialAPISource `json:"gemini_api,omitempty"`
-	Reseller           *resellerSource    `json:"reseller,omitempty"`
-	Capabilities       *capabilitySource  `json:"capabilities,omitempty"`
-	capabilitySequence int64
+	desktopProxy bool
+	Targets      []string           `json:"targets"`
+	InboxKeyID   string             `json:"inbox_key_id"`
+	Credential   tee.Secret         `json:"credential"`
+	Codex        *codexSource       `json:"codex,omitempty"`
+	Claude       *claudeSource      `json:"claude,omitempty"`
+	Antigravity  *antigravitySource `json:"antigravity,omitempty"`
+	OpenAIAPI    *openaiAPISource   `json:"openai_api,omitempty"`
+	ClaudeAPI    *officialAPISource `json:"claude_api,omitempty"`
+	GeminiAPI    *officialAPISource `json:"gemini_api,omitempty"`
+	Reseller     *resellerSource    `json:"reseller,omitempty"`
+	Capabilities *capabilitySource  `json:"capabilities,omitempty"`
 	// synchronizeOverride replaces the platform workers in connection tests.
 	synchronizeOverride     func(context.Context, localState, string, io.Writer) (<-chan error, func())
 	accountGeneration       int64

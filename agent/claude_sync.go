@@ -28,7 +28,6 @@ type claudeSource struct {
 	lastState             string
 	maintenance           *claudeMaintenance
 	capabilities          claudeCapabilitySource
-	capabilitySequence    int64
 	capabilityRevision    string
 	lastCapabilitySync    time.Time
 	lastCapabilityAttempt time.Time
@@ -267,8 +266,7 @@ func (source *claudeSource) synchronize(ctx context.Context, state localState, l
 		if source.capabilityWanted != nil {
 			source.capabilityWanted.Store(false)
 		}
-		source.capabilitySequence++
-		snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, source.capabilitySequence, source.transport)
+		snapshot, err := source.capabilities.observe(ctx, credential, auth.AccountFingerprint, nextCapabilitySequence(), source.transport)
 		source.capabilities.announce(out)
 		if logCapabilityFailure("claude", &source.capabilities.logged, source.capabilities.failure) {
 			source.announceReady = true

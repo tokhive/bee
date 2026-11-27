@@ -18,6 +18,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/tokhive/bee/beewire"
@@ -361,6 +362,19 @@ func subscriptionSpendAvailable(raw json.RawMessage) bool {
 // as expired. Times without the reading compare on the wall clock.
 func wallNow() time.Time { return time.Now().Round(0) }
 
+// capabilitySequences numbers capability reports for the whole process.
+//
+// Hive keeps a platform's newest report per connection and refuses one whose
+// sequence is not above it (409 stale_observation). A counter kept by each
+// source started again at one whenever a desktop account was removed and added
+// back, because adding builds a new source on the connection already open, and
+// Hive then refused that account's reports until Bee reconnected. One counter
+// for every source only ever rises, so no source on the connection can fall
+// behind a number an earlier one used.
+var capabilitySequences atomic.Int64
+
+func nextCapabilitySequence() int64 { return capabilitySequences.Add(1) }
+
 func (s *capabilitySource) observe(ctx context.Context, credential codexCredential, sequence int64) beewire.Capabilities {
 	now := wallNow()
 	unknown := beewire.Capabilities{Sequence: sequence, ObservedAt: now, Status: "unknown", Models: []string{}, Windows: []beewire.QuotaWindow{}}
@@ -526,9 +540,8 @@ func (s *capabilitySource) observe(ctx context.Context, credential codexCredenti
 
 func (cfg *egressConfig) synchronizeCapabilities(ctx context.Context, state localState, lease string, force bool) error {
 	credential := *cfg.authorization
-	cfg.capabilitySequence++
 	cfg.Capabilities.home = cfg.Codex.Home
-	snapshot := cfg.Capabilities.observe(ctx, credential, cfg.capabilitySequence)
+	snapshot := cfg.Capabilities.observe(ctx, credential, nextCapabilitySequence())
 	if logCapabilityFailure("openai", &cfg.Capabilities.logged, cfg.Capabilities.failure) {
 		cfg.announceReady = true
 	}

@@ -24,7 +24,6 @@ type antigravitySource struct {
 	transport             http.RoundTripper
 	lastState             string
 	capabilities          antigravityCapabilitySource
-	capabilitySequence    int64
 	capabilityRevision    string
 	lastCapabilitySync    time.Time
 	lastCapabilityAttempt time.Time
@@ -238,8 +237,7 @@ func (source *antigravitySource) synchronize(ctx context.Context, state localSta
 		if source.capabilityWanted != nil {
 			source.capabilityWanted.Store(false)
 		}
-		source.capabilitySequence++
-		snapshot := source.capabilities.observe(ctx, credential, source.capabilitySequence, source.transport)
+		snapshot := source.capabilities.observe(ctx, credential, nextCapabilitySequence(), source.transport)
 		source.capabilities.announce(out)
 		if logCapabilityFailure(beewire.GooglePlatform, &source.capabilities.logged, source.capabilities.failure) {
 			source.announceReady = true

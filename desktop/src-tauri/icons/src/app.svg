@@ -1,0 +1,5 @@
+<!-- The app icon: the TokHive mark in Volt on a Graphite tile, inset to the macOS icon grid (824 of 1024). -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="#141517"/>
+  <g transform="translate(264.8 264.8) scale(4.944)"><path d="M50,6 L88.1,28 L88.1,72 L50,94 L11.9,72 L11.9,28 Z M11.9,36.5 h76.2 v9 h-76.2 Z M11.9,54.5 h76.2 v9 h-76.2 Z" fill="#C8F031" fill-rule="evenodd"/></g>
+</svg>

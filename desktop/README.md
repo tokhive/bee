@@ -65,6 +65,19 @@ Settings has a button that opens the folder, and the technical information
 there names it, so a person can find the log to send with a diagnostic report.
 A `bee` the app did not start writes where its own starter sends it.
 
+## Icons
+
+The app icon and the four menu bar icons (sharing, needs attention, all
+paused, background service stopped) are drawn from the TokHive mark in
+`src-tauri/icons/src/*.svg`. The menu bar icons are black on transparent and
+shown as macOS template images, so the system colours them for a light or dark
+menu bar. After changing a source, regenerate the PNG, ICNS and ICO files
+(needs `rsvg-convert` from librsvg):
+
+```sh
+sh scripts/build-icons.sh
+```
+
 ## Develop against the mock
 
 The mock serves the control interface with scenarios, so the window and tray

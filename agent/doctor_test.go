@@ -32,6 +32,9 @@ type fakeHive struct {
 	identityCode   string
 	accounts       map[string]beewire.PlatformAccount
 	supply         map[string]beewire.PlatformSupply
+	// health is what the liveness probe answers; nil is a Hive that has no
+	// build record in it, or none at all.
+	health map[string]any
 }
 
 func (h *fakeHive) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -40,6 +43,12 @@ func (h *fakeHive) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch {
+	case r.URL.Path == "/healthz":
+		if h.health == nil {
+			json.NewEncoder(w).Encode(map[string]any{"status": "ok"})
+			return
+		}
+		json.NewEncoder(w).Encode(h.health)
 	case r.URL.Path == "/api/bee/identity":
 		if h.identityStatus != 0 {
 			w.WriteHeader(h.identityStatus)
@@ -300,5 +309,31 @@ func TestDoctorWithoutEgressReportsOnlyWhatHiveSees(t *testing.T) {
 	}
 	if status(report, "egress", "").Status != "skip" || status(report, "supply", "openai").Status != "pass" || status(report, "account", "claude").Status != "skip" {
 		t.Fatalf("%+v", report)
+	}
+}
+
+func TestDoctorNamesTheHiveBuild(t *testing.T) {
+	for name, tc := range map[string]struct {
+		health map[string]any
+		want   string
+	}{
+		"tagged":   {map[string]any{"status": "ok", "build": map[string]any{"version": "v1.4.0", "commit": strings.Repeat("c", 40)}}, "Hive v1.4.0 (cccccccccccc)"},
+		"untagged": {map[string]any{"status": "ok", "build": map[string]any{"commit": strings.Repeat("d", 40), "dirty": true}}, "Hive dddddddddddd modified"},
+		"older":    {nil, "predates version reporting"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			fake := readyHive()
+			fake.health = tc.health
+			hive := httptest.NewServer(fake)
+			defer hive.Close()
+			config, egress := doctorFixture(t, hive.URL, time.Now().Add(time.Hour))
+			report, err := runDoctor(t, "--config", config, "--egress-config", egress)
+			if err != nil || !report.OK {
+				t.Fatalf("%v %+v", err, report)
+			}
+			if c := status(report, "hive", ""); c.Status != "pass" || !strings.Contains(c.Detail, tc.want) {
+				t.Fatalf("hive check: %+v", c)
+			}
+		})
 	}
 }

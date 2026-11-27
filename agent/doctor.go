@@ -283,8 +283,43 @@ func checkHive(ctx context.Context, report *doctorReport, state localState) bool
 		report.problem("hive", "", "fail", hiveProblem(err))
 		return false
 	}
-	report.pass("hive", "", fmt.Sprintf("reached %s as device %s", state.Hive, identity.ID))
+	report.pass("hive", "", fmt.Sprintf("reached %s as device %s; %s", state.Hive, identity.ID, hiveBuild(ctx, state.Hive)))
 	return true
+}
+
+// hiveBuild says which Hive build answered, from its unauthenticated liveness
+// probe. It is a note for whoever reads the report, so a probe that cannot be
+// read never fails the check: a Hive that predates the build record answers
+// without it, and that is worth saying because it is the likeliest reason a
+// newer Bee and its Hive disagree.
+func hiveBuild(ctx context.Context, origin string) string {
+	var health struct {
+		Build struct {
+			Version string `json:"version"`
+			Commit  string `json:"commit"`
+			Dirty   bool   `json:"dirty"`
+		} `json:"build"`
+	}
+	if err := call(ctx, httpClient(), origin, "/healthz", "GET", "", nil, &health); err != nil {
+		return "Hive version unavailable"
+	}
+	build := health.Build
+	if build.Commit != "" && len(build.Commit) > 12 {
+		build.Commit = build.Commit[:12]
+	}
+	version := build.Version
+	switch {
+	case version == "" && build.Commit == "":
+		return "Hive version unknown (this Hive predates version reporting)"
+	case version == "":
+		version = build.Commit
+	case build.Commit != "":
+		version += " (" + build.Commit + ")"
+	}
+	if build.Dirty {
+		version += " modified"
+	}
+	return "Hive " + version
 }
 
 // hiveProblem catalogues a failed Hive call.

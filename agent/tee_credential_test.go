@@ -186,6 +186,24 @@ func TestVerifyCredentialKeyTrustsEitherWhitelistOfARollout(t *testing.T) {
 	}
 }
 
+// The compiled-in pins are what every release ships. They must parse and must
+// name the image and whitelist production runs (tokhive/tee
+// releases/catalog.json); a typo here halts every Provider.
+func TestCompiledInTEEPinsTrustProduction(t *testing.T) {
+	trust, err := loadTEETrust()
+	if err != nil {
+		t.Fatalf("compiled-in pins: %v", err)
+	}
+	const production = "snp-app:e5328e9b35ba48d219bd5f8d573afd2fc075ee22b558f1a8679d7108232f8f76"
+	if _, ok := trust.applications[production]; !ok {
+		t.Fatalf("production image %s is not trusted", production)
+	}
+	digest, _ := hex.DecodeString("57bb83859816d1531e9c839c04d27b33b1a2a82a3e5b9dfaa179770bc2ae9337")
+	if !trust.trustsPolicy(digest) {
+		t.Fatal("the production whitelist is not trusted")
+	}
+}
+
 // The policy pin is a comma-separated list; any entry that is not a digest
 // fails closed, as an empty pin does.
 func TestLoadTEETrustReadsEveryPolicyPin(t *testing.T) {

@@ -26,7 +26,7 @@ func TestAntigravityModelFollowsTheThinkingLevelAnAccountLists(t *testing.T) {
 		{"gemini-4-hydrogen", "", ""},
 		{"gemini-4", "", ""},
 	} {
-		if got := AntigravityModel(listed, test.model, test.level); got != test.want {
+		if got := AntigravityModel(listed, nil, test.model, test.level); got != test.want {
 			t.Errorf("%s at %q: got %q, want %q", test.model, test.level, got, test.want)
 		}
 	}
@@ -165,7 +165,7 @@ func TestGoogleClaudeWindowsStopOnlyTheClaudeModels(t *testing.T) {
 		t.Fatal("the Gemini group's windows did not stop only the Gemini models")
 	}
 	// A Claude model listed only as its thinking variant is still served.
-	if c.ReasonFor(GooglePlatform, now, "claude-opus-4-6") != "" || AntigravityModel(c.Models, "claude-opus-4-6", "") != "claude-opus-4-6-thinking" {
+	if c.ReasonFor(GooglePlatform, now, "claude-opus-4-6") != "" || AntigravityModel(c.Models, nil, "claude-opus-4-6", "") != "claude-opus-4-6-thinking" {
 		t.Fatal("the thinking variant was not found")
 	}
 	for _, windows := range [][]QuotaWindow{

@@ -53,6 +53,14 @@ func (source *antigravitySource) refresh(ctx context.Context, task beewire.Maint
 			updated.ProjectID = account.project
 		}
 	}
+	if !updated.Private {
+		if err := antigravityKeepPrivate(ctx, source.transport, updated.AccessToken, updated.ProjectID); err != nil {
+			slog.Warn("Google's product-improvement setting is not confirmed off yet", "module", "antigravity", "error", safeText(err.Error(), updated.AccessToken))
+		} else {
+			updated.Private = true
+			slog.Info("turned off Google's product-improvement setting for the Antigravity account", "module", "antigravity")
+		}
+	}
 	if err := store.write(updated); err != nil {
 		return empty, fmt.Errorf("save the refreshed Antigravity sign-in: %w", err)
 	}

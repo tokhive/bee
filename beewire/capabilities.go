@@ -44,6 +44,14 @@ type Capabilities struct {
 	// can still be drawn on, an exhausted quota window does not stop the
 	// account being scheduled.
 	Credits *Credits `json:"credits,omitempty"`
+
+	// ThinkingLevels, for a Google account, names the thinking levels the
+	// upstream lists each model under: the model gemini-4-argon with levels
+	// low and high is listed as gemini-4-argon-low and gemini-4-argon-high.
+	// It comes from the listing's own declaration (supportedThinkingLevels),
+	// so a level Hive has no name for is still found. A report without it is
+	// read by the level names Hive knows.
+	ThinkingLevels map[string][]string `json:"thinking_levels,omitempty"`
 }
 
 // Credits is what the usage report says about an account's paid balance.
@@ -80,6 +88,34 @@ func (r CapabilityReport) MarshalJSON() ([]byte, error) {
 }
 
 var capabilityModelID = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._:-]{0,127}$`)
+
+// thinkingSuffix is a thinking level as an upstream names it in a model ID.
+var thinkingSuffix = regexp.MustCompile(`^[a-z0-9]{1,16}$`)
+
+// validThinkingLevels checks a report's thinking levels: a ready Google
+// report only, at most one entry per listed model, each level a short name,
+// and every model-level name among the listed models.
+func validThinkingLevels(platform, status string, levels map[string][]string, listed map[string]bool) bool {
+	if len(levels) == 0 {
+		return true
+	}
+	if platform != GooglePlatform || status != "ready" || len(levels) > maxCapabilityModels(platform) {
+		return false
+	}
+	for model, suffixes := range levels {
+		if !capabilityModelID.MatchString(model) || len(suffixes) == 0 || len(suffixes) > 8 {
+			return false
+		}
+		seen := map[string]bool{}
+		for _, suffix := range suffixes {
+			if !thinkingSuffix.MatchString(suffix) || seen[suffix] || !listed[model+"-"+suffix] {
+				return false
+			}
+			seen[suffix] = true
+		}
+	}
+	return true
+}
 
 var clientVersion = regexp.MustCompile(`^[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,6}(-[0-9A-Za-z.]{1,32})?$`)
 
@@ -166,6 +202,9 @@ func (c Capabilities) ValidFor(platform string, now time.Time) bool {
 			return false
 		}
 		seen[model] = true
+	}
+	if !validThinkingLevels(platform, c.Status, c.ThinkingLevels, seen) {
+		return false
 	}
 	if c.Status == "unknown" {
 		return len(c.Windows) == 0 && len(c.Models) == 0 && c.RetryAt == nil && c.Plan == ""
@@ -275,7 +314,7 @@ func (c Capabilities) ReasonFor(platform string, now time.Time, model string) st
 		if platform == GooglePlatform {
 			// The account lists upstream names, which may carry a thinking
 			// level the catalog's name does not.
-			if AntigravityModel(c.Models, model, "") != "" {
+			if AntigravityModel(c.Models, c.ThinkingLevels, model, "") != "" {
 				return ""
 			}
 			return ReasonModelUnavailable

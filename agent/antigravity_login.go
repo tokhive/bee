@@ -97,6 +97,14 @@ func (l antigravityLogin) run(ctx context.Context) (credential, previous antigra
 		return antigravityCredential{}, previous, antigravityProblem(err)
 	}
 	credential.ProjectID, credential.Tier, credential.Plan = account.project, account.tier, account.plan
+	// Supply does not wait on the product-improvement setting: a refresh
+	// tries again until Google confirms it off.
+	if err := antigravityKeepPrivate(ctx, l.transport, credential.AccessToken, credential.ProjectID); err != nil {
+		fmt.Fprintln(l.out, "Could not turn off Google's product-improvement setting for this account yet; Bee will try again:", safeText(err.Error(), credential.AccessToken))
+	} else {
+		credential.Private = true
+		fmt.Fprintln(l.out, "Turned off Google's product-improvement setting for this account.")
+	}
 	if !credential.valid() {
 		return antigravityCredential{}, previous, fail("BEE-ANTIGRAVITY-LOGIN", "Google's answers do not make a complete sign-in")
 	}

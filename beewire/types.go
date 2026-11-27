@@ -40,6 +40,19 @@ type PlatformSupply struct {
 	Paused   bool     `json:"paused"`
 	Ready    bool     `json:"ready"`
 	Reasons  []string `json:"reasons"`
+	// Notice is what the upstream last asked of the account's owner while
+	// refusing its requests, such as verifying the account or appealing a
+	// suspension. Only Hive sees those refusals.
+	Notice *SupplyNotice `json:"notice,omitempty"`
+}
+
+// SupplyNotice is an upstream's request to an account's owner: Reason is
+// validation_required or terms_of_service, URL where to act on it, when Google
+// gave one.
+type SupplyNotice struct {
+	Reason string    `json:"reason"`
+	URL    string    `json:"url,omitempty"`
+	At     time.Time `json:"at"`
 }
 
 // Authorization is Bee-reported control metadata, never proof of model access or quota.

@@ -212,11 +212,15 @@ func TestAntigravityLoginOnboardsAnAccountWithoutAProject(t *testing.T) {
 		t.Fatalf("onboarding: project=%q plan=%q polls=%d err=%v", stored.ProjectID, stored.Plan, polls, err)
 	}
 
-	// Without a default tier there is nothing to onboard the account with.
+	// Without a default tier the account is onboarded with the tier it is on.
 	fixture = newAntigravityLogin(t)
 	fixture.google.answer[googleProd+"loadCodeAssist"] = googleAnswer(200, `{"currentTier":{"id":"free-tier"}}`)
-	if code, _, _, _ := Coded(fixture.login.report(context.Background())); code != "BEE-ANTIGRAVITY-PROJECT" {
-		t.Fatal("an account without a project was accepted", code)
+	fixture.google.answer[googleProd+"onboardUser"] = googleAnswer(200, `{"done":true,"response":{"cloudaicompanionProject":"current-tier-project"}}`)
+	if err := fixture.login.report(context.Background()); err != nil {
+		t.Fatal("an account with no default tier was not onboarded with its own:", err)
+	}
+	if stored, err := fixture.login.store.read(); err != nil || stored.ProjectID != "current-tier-project" {
+		t.Fatalf("onboarded with the current tier: %q %v", stored.ProjectID, err)
 	}
 	// An onboarding that never finishes is given up on.
 	fixture = newAntigravityLogin(t)

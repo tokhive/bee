@@ -157,17 +157,20 @@ func status(ctx context.Context, client *http.Client, configPath string, state l
 		}
 		if supply.Ready {
 			fmt.Fprintf(out, "  %-10s taking new work\n", platform)
-			continue
-		}
-		var reasons []string
-		for _, reason := range supply.Reasons {
-			label, ok := supplyReasonLabels[reason]
-			if !ok {
-				label = reason
+		} else {
+			var reasons []string
+			for _, reason := range supply.Reasons {
+				label, ok := supplyReasonLabels[reason]
+				if !ok {
+					label = reason
+				}
+				reasons = append(reasons, label)
 			}
-			reasons = append(reasons, label)
+			fmt.Fprintf(out, "  %-10s not taking work: %s\n", platform, strings.Join(reasons, "; "))
 		}
-		fmt.Fprintf(out, "  %-10s not taking work: %s\n", platform, strings.Join(reasons, "; "))
+		if notice := supply.Notice; notice != nil {
+			fmt.Fprintf(out, "  %-10s %s\n", "", supplyNoticeText(*notice))
+		}
 	}
 	for _, source := range cfg.officialAPIs() {
 		officialAPIStatus(ctx, client, state, source, out)

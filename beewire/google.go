@@ -62,13 +62,15 @@ func ValidProjectID(id string) bool { return capabilityModelID.MatchString(id) }
 // first, then the published name, then the levels from the documented default
 // outwards. level is empty for a request that names none. A Claude model the
 // upstream lists only as its thinking variant (claude-opus-4-6-thinking) is
-// reached by that name last.
-func AntigravityModel(listed []string, model, level string) string {
+// reached by that name last. levels are the thinking levels the account's
+// listing declares for each model (Capabilities.ThinkingLevels): any it
+// declares beyond the names above are tried after them.
+func AntigravityModel(listed []string, levels map[string][]string, model, level string) string {
 	has := make(map[string]bool, len(listed))
 	for _, id := range listed {
 		has[id] = true
 	}
-	candidates := make([]string, 0, 7)
+	candidates := make([]string, 0, 8)
 	if level != "" {
 		candidates = append(candidates, model+"-"+level)
 	}
@@ -77,10 +79,32 @@ func AntigravityModel(listed []string, model, level string) string {
 		candidates = append(candidates, model+"-high")
 	}
 	candidates = append(candidates, model+"-medium", model+"-high", model+"-low", model+"-tiered", model+"-thinking")
+	for _, suffix := range levels[model] {
+		candidates = append(candidates, model+"-"+suffix)
+	}
 	for _, id := range candidates {
 		if has[id] {
 			return id
 		}
 	}
 	return ""
+}
+
+// AntigravityBase is the catalog model an upstream name serves: the model
+// whose declared thinking level it is, or for a report that declares none,
+// the name less a level suffix Hive knows.
+func AntigravityBase(levels map[string][]string, known []string, id string) string {
+	for model, suffixes := range levels {
+		for _, suffix := range suffixes {
+			if id == model+"-"+suffix {
+				return model
+			}
+		}
+	}
+	for _, suffix := range known {
+		if base, ok := strings.CutSuffix(id, suffix); ok {
+			return base
+		}
+	}
+	return id
 }

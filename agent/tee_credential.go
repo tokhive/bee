@@ -39,10 +39,13 @@ var (
 	// inbox key; remove the old one once it is retired. An image older than
 	// TEE 0.3.0 can't sign it, so pinning one keeps nothing working.
 	//
-	// snp-app:df38d993… is TEE 0.3.1, which production has run since
-	// 2026-11-20T02:55:13Z (tokhive/tee releases/catalog.json). Staging runs a
-	// different build of the same source and needs a build override.
-	TEEApplicationIDs = "snp-app:df38d99343f65e66ff10423dbf3148812d2e891af8f5e5db5d8255e9d608bbb5"
+	// snp-app:e5328e9b… is the production build of tee 027f671 (the vendor
+	// whitelist of tee#27), which production has run since
+	// 2026-11-27T03:07:53Z (tokhive/tee releases/catalog.json). snp-app:df38d993…
+	// is TEE 0.3.1, which it replaced; it stays for the rollback window. Staging
+	// runs different builds and needs a build override.
+	TEEApplicationIDs = "snp-app:e5328e9b35ba48d219bd5f8d573afd2fc075ee22b558f1a8679d7108232f8f76," +
+		"snp-app:df38d99343f65e66ff10423dbf3148812d2e891af8f5e5db5d8255e9d608bbb5"
 
 	// TEEPolicyHash is the comma-separated allowlist of SHA-256 digests of the
 	// whitelists the TEE may attest it loaded. On SEV-SNP the whitelist is
@@ -51,8 +54,10 @@ var (
 	// lists both digests beside both images, or a Bee would trust only one
 	// side of the switch; remove the old one with the old image.
 	//
-	// 8dde1990… is the whitelist of TEE 0.3.1.
-	TEEPolicyHash = "8dde1990d62099a666bb078a7b626f2c9335cd070e92e9a849d2ced2bff96a40"
+	// 57bb8385… is the whitelist of snp-app:e5328e9b…; 8dde1990… is the
+	// whitelist of TEE 0.3.1.
+	TEEPolicyHash = "57bb83859816d1531e9c839c04d27b33b1a2a82a3e5b9dfaa179770bc2ae9337," +
+		"8dde1990d62099a666bb078a7b626f2c9335cd070e92e9a849d2ced2bff96a40"
 
 	// TEEReleaseKeyPEM is the Secure Boot release-signing public key the TEE
 	// evidence is checked against. Empty leaves the key embedded in the pinned
